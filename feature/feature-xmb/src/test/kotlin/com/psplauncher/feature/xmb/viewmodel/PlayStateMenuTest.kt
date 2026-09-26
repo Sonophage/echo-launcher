@@ -24,9 +24,9 @@ class PlayStateMenuTest {
     private fun game() = XMBItem(id = "g1", title = "Crisis Core", gameId = 1L, platformId = "psp")
 
     @Test
-    fun `the game menu offers a way to mark it`() {
+    fun `the game menu offers a way onto a shelf`() {
         val ids = gameContextMenuItems(game(), state(), 1, false, null).mapNotNull { it.action }
-        assertTrue("no way into the Mark As submenu: $ids", "play_state" in ids)
+        assertTrue("no way into the Shelves submenu: $ids", "shelves" in ids)
     }
 
     @Test
