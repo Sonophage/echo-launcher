@@ -13,8 +13,8 @@ class NamePromptTextTest {
                 { s: XMBUiState -> s.renameAppText },
             ),
             Triple(
-                "collection name",
-                { s: XMBUiState -> s.copy(collectionNameDialog = CollectionNameDialogState(title = "New Collection")) },
+                "edit title",
+                { s: XMBUiState -> s.copy(collectionNameDialog = CollectionNameDialogState(title = "Edit Title")) },
                 { s: XMBUiState -> s.collectionNameDialog?.text },
             ),
             Triple(
@@ -41,7 +41,7 @@ class NamePromptTextTest {
 
     @Test
     fun `a prompt opens with its seed text already in the live field`() {
-        val seeded = CollectionNameDialogState(title = "Rename Collection", initialText = "Shooters")
+        val seeded = CollectionNameDialogState(title = "Edit Title", initialText = "Shooters")
         assertEquals("the live field starts at the seed", "Shooters", seeded.text)
     }
 
@@ -50,7 +50,7 @@ class NamePromptTextTest {
         val idle = XMBUiState()
         val after = idle.withNamePromptText("stray")
         assertEquals("no prompt open means no rename text", "", after.renameAppText)
-        assertNull("no prompt open means no collection prompt", after.collectionNameDialog)
+        assertNull("no prompt open means no text prompt", after.collectionNameDialog)
         assertEquals("the state is untouched", idle, after)
     }
 
@@ -59,12 +59,12 @@ class NamePromptTextTest {
         val both = XMBUiState(
             renameAppTarget = "com.example",
             renameAppCurrent = "Example",
-            collectionNameDialog = CollectionNameDialogState(title = "New Collection"),
+            collectionNameDialog = CollectionNameDialogState(title = "Edit Title"),
         ).withNamePromptText("Backlog")
 
         assertEquals("the rename prompt is checked first, so it takes the text", "Backlog", both.renameAppText)
         assertEquals(
-            "the collection prompt must not also take it",
+            "the text prompt must not also take it",
             "",
             both.collectionNameDialog?.text,
         )

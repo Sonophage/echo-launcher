@@ -22,12 +22,10 @@ class ContextMenusTest {
     private fun state(
         categories: List<Category> = listOf(category(BuiltInCategory.GAMES, gaming = true)),
         selectedCategoryIndex: Int = 0,
-        selectedCollectionId: Long? = null,
         selectedPlatformId: String? = null,
     ) = XMBUiState(
         categories = categories,
         selectedCategoryIndex = selectedCategoryIndex,
-        selectedCollectionId = selectedCollectionId,
         selectedPlatformId = selectedPlatformId,
     )
 
@@ -104,22 +102,6 @@ class ContextMenusTest {
             "Hide from Favorites",
             inFavorites.first { it.action == "hide_here" }.label,
         )
-    }
-
-    @Test
-    fun `remove from collection appears only inside one`() {
-        assertFalse("remove_from_collection" in ids(gameContextMenuItems(game(), state(), 1, false, null)))
-        assertTrue(
-            "remove_from_collection" in
-                ids(gameContextMenuItems(game(), state(selectedCollectionId = 7L), 1, false, null)),
-        )
-    }
-
-    @Test
-    fun `nothing destructive is offered from inside a collection`() {
-        val items = ids(gameContextMenuItems(game(), state(selectedCollectionId = 7L), 1, false, null))
-        assertFalse("remove_game" in items)
-        assertFalse("remove_app" in items)
     }
 
     @Test
@@ -298,22 +280,10 @@ class ContextMenusTest {
     }
 
     @Test
-    fun `a collection can only be moved when somewhere valid exists`() {
-        assertFalse(
-            "move_collection_category" in
-                ids(collectionRowContextMenuItems(isPinned = false, hasOtherCategory = false)),
-        )
-        assertTrue(
-            "move_collection_category" in
-                ids(collectionRowContextMenuItems(isPinned = false, hasOtherCategory = true)),
-        )
-    }
-
-    @Test
     fun `no menu ever repeats an id`() {
         val cats = listOf(category(BuiltInCategory.GAMES, gaming = true), category("retro", gaming = true))
         val states = listOf(
-            state(), state(cats, 1), state(selectedCollectionId = 7L),
+            state(), state(cats, 1),
             state(selectedPlatformId = XMBViewModel.MISSING_PLATFORM_ID),
         )
         states.forEach { st ->

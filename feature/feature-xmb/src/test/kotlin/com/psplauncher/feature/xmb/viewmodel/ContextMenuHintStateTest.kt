@@ -162,7 +162,6 @@ class ContextMenuHintStateTest {
     @Test
     fun `drilling into a platform makes the list sortable`() {
         assertTrue(eligibleState().copy(selectedPlatformId = "psp").canSortCurrentList)
-        assertTrue(eligibleState().copy(selectedCollectionId = 7L).canSortCurrentList)
     }
 
     @Test

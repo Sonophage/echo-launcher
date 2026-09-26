@@ -24,7 +24,6 @@ class DrillOutLadderTest {
             root.copy(photoNav = PhotoNav.Library("alb", "Trip")),
             root.copy(photoNav = PhotoNav.AllPhotos),
             root.copy(selectedPlatformId = "psp"),
-            root.copy(selectedCollectionId = 7L),
         )
         drilled.forEach { state ->
             assertTrue("$state should be a sub-item", state.isInSubItem)
@@ -62,8 +61,7 @@ class DrillOutLadderTest {
         assertEquals(DrillOutStep.MUSIC, state.drillOutStep)
     }
 
-    @Test fun `a games folder and a collection share the last rung`() {
+    @Test fun `a games folder takes the last rung`() {
         assertEquals(DrillOutStep.PLATFORM_FOLDER, root.copy(selectedPlatformId = "psp").drillOutStep)
-        assertEquals(DrillOutStep.PLATFORM_FOLDER, root.copy(selectedCollectionId = 7L).drillOutStep)
     }
 }

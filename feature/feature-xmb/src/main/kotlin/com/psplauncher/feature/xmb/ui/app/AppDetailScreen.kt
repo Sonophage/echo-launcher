@@ -70,7 +70,6 @@ import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.theme.LocalPFPColors
 import com.psplauncher.core.ui.theme.menuCursorEdge
 import com.psplauncher.core.ui.components.PspContextMenuOverlay
-import com.psplauncher.feature.xmb.ui.collection.CollectionPickerPanel
 import com.psplauncher.feature.xmb.ui.detail.ArtworkType
 import com.psplauncher.feature.xmb.ui.detail.displayLabel
 import com.psplauncher.core.ui.detail.DetailRowSpacing
@@ -99,7 +98,6 @@ private val ActionFill    = Color(0xFF1B1B26)
 fun AppDetailScreen(
     gameId: Long,
     onBack: () -> Unit,
-    collectionCategoryId: String = "games",
     pendingGamepadAction: GamepadAction? = null,
     onGamepadActionConsumed: () -> Unit = {},
 
@@ -117,9 +115,8 @@ fun AppDetailScreen(
         pendingArtworkType = null
     }
 
-    LaunchedEffect(gameId, collectionCategoryId) {
+    LaunchedEffect(gameId) {
         viewModel.prepareForOpen()
-        viewModel.setCollectionCategory(collectionCategoryId)
         viewModel.loadApp(gameId)
     }
     LaunchedEffect(state.closed) {
@@ -217,21 +214,6 @@ fun AppDetailScreen(
                 onPickLocal = { viewModel.requestLocalFilePick(state.artworkPickerType) },
                 onClear     = { viewModel.clearArtwork(state.artworkPickerType) },
                 onClose     = viewModel::closeArtworkPicker,
-            )
-        }
-
-        AnimatedVisibility(
-            visible = state.collectionPicker.visible,
-            enter   = fadeIn(),
-            exit    = fadeOut(),
-        ) {
-            CollectionPickerPanel(
-                ui                  = state.collectionPicker,
-                onRowClick          = viewModel::onCollectionRowClick,
-                onClose             = viewModel::closeCollectionPicker,
-                onCreateTextChanged = viewModel::onCreateCollectionTextChanged,
-                onConfirmCreate     = viewModel::confirmCreateCollection,
-                onCancelCreate      = viewModel::cancelCreateCollection,
             )
         }
         },

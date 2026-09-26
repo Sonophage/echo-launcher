@@ -38,12 +38,6 @@ class ContextMenuPredicateTest {
     }
 
     @Test
-    fun `collection row has a context menu`() {
-        val item = XMBItem(id = "c1", title = "RPGs", collectionId = 1L, type = XMBItemType.COLLECTION)
-        assertTrue(item.hasContextMenu(state(BuiltInCategory.GAMES, item)))
-    }
-
-    @Test
     fun `all-games folder has a context menu`() {
         val item = XMBItem(id = "all", title = "All Games", type = XMBItemType.ALL_GAMES)
         assertTrue(item.hasContextMenu(state(BuiltInCategory.GAMES, item)))

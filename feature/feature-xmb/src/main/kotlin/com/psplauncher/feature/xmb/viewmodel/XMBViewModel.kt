@@ -28,7 +28,6 @@ import com.psplauncher.core.data.database.entity.HiddenPlacementEntity
 import com.psplauncher.core.data.database.entity.PlatformEntity
 import com.psplauncher.core.data.datastore.pfpDataStore
 import com.psplauncher.core.data.repository.CategoryRepositoryImpl
-import com.psplauncher.core.data.repository.CollectionRepository
 import com.psplauncher.core.data.repository.ControllerMappingRepository
 import com.psplauncher.core.data.repository.CustomIconStore
 import com.psplauncher.core.data.repository.MemoryCardRepository
@@ -43,7 +42,6 @@ import com.psplauncher.core.domain.model.BuiltInCategory
 import com.psplauncher.core.domain.model.Category
 import com.psplauncher.core.domain.model.ControllerHintPolicy
 import com.psplauncher.core.domain.model.Game
-import com.psplauncher.core.domain.model.GameCollection
 import com.psplauncher.core.domain.model.GameContentType
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.feature.xmb.ui.detail.DetailPanelContent
@@ -148,10 +146,6 @@ data class XMBContextMenu(
 
     val isAddMenu: Boolean = false,
 
-    val collectionGameId: Long? = null,
-
-    val collectionRowId: Long? = null,
-
     val shortcutId: String? = null,
 
     val launchIntentUri: String? = null,
@@ -198,9 +192,6 @@ data class CollectionNameDialogState(
     val initialText: String = "",
 
     val text: String = initialText,
-    val forGameId: Long? = null,
-
-    val renameCollectionId: Long? = null,
 
     val editTitleGameId: Long? = null,
 
@@ -457,10 +448,6 @@ data class XMBUiState(
     val recentlyAddedCount: Int = 0,
     val selectedPlatformId: String? = null,
 
-    val selectedCollectionId: Long? = null,
-
-    val collections: List<GameCollection> = emptyList(),
-
     val musicNav: MusicNav = MusicNav.Root,
     val musicFolders: List<com.psplauncher.core.domain.model.MusicFolder> = emptyList(),
 
@@ -567,7 +554,6 @@ data class XMBUiState(
 
     val activeAppId: Long? = null,
 
-    val activeAppCollectionCategoryId: String = BuiltInCategory.GAMES,
     val pendingAppDetailAction: GamepadAction? = null,
 
     val videoNav: VideoNav = VideoNav.Root,
@@ -707,7 +693,7 @@ data class XMBUiState(
             booksNav is BooksNav.Series -> DrillOutStep.LIBRARY_SERIES
             booksNav is BooksNav.Shelf -> DrillOutStep.LIBRARY_SHELF
             booksNav != BooksNav.Root -> DrillOutStep.LIBRARY
-            selectedPlatformId != null || selectedCollectionId != null -> DrillOutStep.PLATFORM_FOLDER
+            selectedPlatformId != null -> DrillOutStep.PLATFORM_FOLDER
             else -> null
         }
 
@@ -1010,7 +996,6 @@ fun XMBItem.hasContextMenu(state: XMBUiState): Boolean {
                 (type == XMBItemType.PHOTO_FOLDER && id.startsWith("plib_"))
         ) -> true
         gameId != null -> true
-        collectionId != null && type == XMBItemType.COLLECTION -> true
         type == XMBItemType.ALL_GAMES -> true
         platformId != null -> true
         packageName != null -> true
@@ -1031,7 +1016,7 @@ fun XMBUiState.activeSortModes(): List<XmbSortMode>? {
         cat.id == BuiltInCategory.LIBRARY &&
             (booksNav == BooksNav.AllBooks || booksNav is BooksNav.Shelf) -> BOOK_SORTS
         cat.id == BuiltInCategory.GAMES &&
-            (selectedPlatformId != null || selectedCollectionId != null) -> GAME_SORTS
+            selectedPlatformId != null -> GAME_SORTS
         cat.isGamingCategory -> GAME_SORTS
         else -> null
     }
@@ -1150,7 +1135,6 @@ data class XMBItem(
     val insideCovers: List<String> = emptyList(),
     val gameId: Long? = null,
     val platformId: String? = null,
-    val collectionId: Long? = null,
     val iconKey: String? = null,
     val accentColor: Long? = null,
     val isFavorite: Boolean = false,
@@ -1236,7 +1220,6 @@ class XMBViewModel @Inject constructor(
     private val gameRepository: GameRepository,
     private val platformDao: PlatformDao,
     private val memoryCardRepository: MemoryCardRepository,
-    private val collectionRepository: CollectionRepository,
     private val categoryRepository: CategoryRepositoryImpl,
     private val appCategoryRepository: AppCategoryRepository,
     private val gameCategoryRepository: com.psplauncher.core.data.repository.GameCategoryRepository,
@@ -1620,12 +1603,11 @@ class XMBViewModel @Inject constructor(
                 memoryCardRepository.observeEnabled(),
                 gameRepository.observeAll(),
                 platformDao.observeAll(),
-                collectionRepository.observeCollections(),
                 gameRepository.observeFavorites(),
-            ) { cards, games, platforms, collections, favorites ->
-                CardsGamesPlatformsCollections(cards, games, platforms, collections, favorites)
+            ) { cards, games, platforms, favorites ->
+                CardsGamesPlatforms(cards, games, platforms, favorites)
             }
-                .collect { (cards, games, platforms, collections, favorites) ->
+                .collect { (cards, games, platforms, favorites) ->
                     platformCache = platforms.associateBy { it.id }
                     enabledCards  = cards
 
@@ -1653,31 +1635,25 @@ class XMBViewModel @Inject constructor(
                                 cards.any { c -> c.platformId == id }
                         }
 
-                    val validCollectionId = _uiState.value.selectedCollectionId
-                        ?.takeIf { id -> collections.any { c -> c.id == id } }
-
                     _uiState.update { it.copy(
                         platformGameCounts = counts,
                         allGamesCount = gamesOnlyTotal,
                         cardFanCovers = fanCovers,
                         favoritesCount = favoritesTotal,
                         selectedPlatformId = validPlatformId,
-                        selectedCollectionId = validCollectionId,
-                        collections = collections,
                     )}
 
-                    if (categoryShowsCollections(currentCategory())) {
+                    if (categoryShowsGameRows(currentCategory())) {
                         loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
                     }
                 }
         }
     }
 
-    private data class CardsGamesPlatformsCollections(
+    private data class CardsGamesPlatforms(
         val cards: List<MemoryCard>,
         val games: List<Game>,
         val platforms: List<PlatformEntity>,
-        val collections: List<GameCollection>,
         val favorites: List<Game>,
     )
 
@@ -1695,21 +1671,17 @@ class XMBViewModel @Inject constructor(
     private fun isAppCategory(categoryId: String): Boolean =
         categoryId != BuiltInCategory.SETTINGS && categoryId != BuiltInCategory.GAMES
 
-    private val nonCollectionCategoryIds = setOf(
+    private val nonGameRowCategoryIds = setOf(
         BuiltInCategory.FAVORITES, BuiltInCategory.RECENTLY_PLAYED, BuiltInCategory.MUSIC,
         BuiltInCategory.VIDEO, BuiltInCategory.PHOTO, BuiltInCategory.ANDROID,
         BuiltInCategory.APP_DRAWER, BuiltInCategory.SETTINGS,
     )
 
-    private fun categoryShowsCollections(category: Category?): Boolean {
+    private fun categoryShowsGameRows(category: Category?): Boolean {
         if (category == null) return false
-        return category.isGamingCategory || category.id !in nonCollectionCategoryIds
+        return category.isGamingCategory || category.id !in nonGameRowCategoryIds
     }
 
-    private fun collectionHomeCategoryId(): String {
-        val cat = currentCategory() ?: return BuiltInCategory.GAMES
-        return if (categoryShowsCollections(cat)) cat.id else BuiltInCategory.GAMES
-    }
 
     private fun loadItemsForCategory(category: Category?, keepCursorOnRow: Boolean = false) {
         currentItemsJob?.cancel()
@@ -1816,17 +1788,7 @@ class XMBViewModel @Inject constructor(
                 }
                 BuiltInCategory.GAMES -> {
                     val platformId = _uiState.value.selectedPlatformId
-                    val collectionId = _uiState.value.selectedCollectionId
-                    if (collectionId != null) {
-                        var keepCursor = keepCursorOnRow
-                        collectionRepository.observeGames(collectionId).collect { games ->
-                            val visible = games.notHiddenAt(HideLocationType.COLLECTION, collectionId.toString())
-                            val items = if (visible.isEmpty()) listOf(emptyCollectionItem())
-                                        else visible.gameSorted(_uiState.value.gameSortMode).toXmbItems()
-                            publishGameItems(items, keepCursor)
-                            keepCursor = true
-                        }
-                    } else if (platformId == ALL_GAMES_PLATFORM_ID) {
+                    if (platformId == ALL_GAMES_PLATFORM_ID) {
                         var keepCursor = keepCursorOnRow
                         gameRepository.observeAllGames().collect { games ->
                             val visible = games.notHiddenAt(HideLocationType.ALL_GAMES)
@@ -1874,8 +1836,7 @@ class XMBViewModel @Inject constructor(
                         combine(
                             memoryCardRepository.observeEnabled(),
                             gameRepository.observeAll(),
-                            collectionRepository.observeCollections(),
-                        ) { _, _, _ -> }.collect {
+                        ) { _, _ -> }.collect {
                             _uiState.update { it.copy(currentItems = memoryCardItems()) }
                         }
                     }
@@ -1963,18 +1924,6 @@ class XMBViewModel @Inject constructor(
                     }
                 }
                 else -> {
-                    val openCollectionId = _uiState.value.selectedCollectionId
-                    if (openCollectionId != null) {
-                        var keepCursor = keepCursorOnRow
-                        collectionRepository.observeGames(openCollectionId).collect { games ->
-                            val visible = games.notHiddenAt(HideLocationType.COLLECTION, openCollectionId.toString())
-                            val items = if (visible.isEmpty()) listOf(emptyCollectionItem())
-                                        else visible.gameSorted(_uiState.value.gameSortMode).toXmbItems()
-                            publishGameItems(items, keepCursor)
-                            keepCursor = true
-                        }
-                        return@launch
-                    }
                     if (category.isGamingCategory) {
                         val gameRows = gameCategoryRepository.itemsForCategory(category.id)
                             .filterIsInstance<com.psplauncher.core.data.repository.GameCategoryItem.GameItem>()
@@ -1984,21 +1933,7 @@ class XMBViewModel @Inject constructor(
                             if (xmb.gameId in pinnedGameIds) xmb.copy(subtitle = "Pinned") else xmb
                         }
 
-                        val collectionItems = _uiState.value.collections
-                            .filter { it.categoryId == category.id }
-                            .sortedByDescending { it.isPinned }
-                            .map { collection ->
-                                val games = countLabel(collection.gameCount, "game", "games")
-                                XMBItem(
-                                    id = "col_${collection.id}",
-                                    title = collection.name,
-                                    subtitle = if (collection.isPinned) "Pinned · $games" else games,
-                                    collectionId = collection.id,
-                                    iconKey = collection.iconKey,
-                                    type = XMBItemType.COLLECTION,
-                                )
-                            }
-                        val combined = collectionItems + gameItems
+                        val combined = gameItems
                         val items = if (combined.isEmpty()) listOf(emptyCategoryItem(category)) else combined
 
                         publishGameItems(items + addGamesItem(), keepCursorOnRow)
@@ -2007,21 +1942,7 @@ class XMBViewModel @Inject constructor(
                             .notHiddenAt(HideLocationType.CATEGORY, category.id)
                         val appItems = apps.map { it.toXmbItem(gameRepository.getAppEntry(it.packageName)) }
 
-                        val collectionItems = _uiState.value.collections
-                            .filter { it.categoryId == category.id }
-                            .sortedByDescending { it.isPinned }
-                            .map { collection ->
-                                val count = countLabel(collection.gameCount, "app", "apps")
-                                XMBItem(
-                                    id = "col_${collection.id}",
-                                    title = collection.name,
-                                    subtitle = if (collection.isPinned) "Pinned · $count" else count,
-                                    collectionId = collection.id,
-                                    iconKey = collection.iconKey,
-                                    type = XMBItemType.COLLECTION,
-                                )
-                            }
-                        val combined = collectionItems + appItems
+                        val combined = appItems
                         val items = if (combined.isEmpty()) listOf(emptyCategoryItem(category)) else combined
 
                         val lead = if (category.id == NETWORK_CATEGORY_ID) listOf(quickSearchItem()) else emptyList()
@@ -2075,7 +1996,7 @@ class XMBViewModel @Inject constructor(
     private fun addGamesItem(): XMBItem = XMBItem(
         id       = ADD_GAMES_ITEM_ID,
         title    = "Add Games",
-        subtitle = "Pick games and collections to add to this category",
+        subtitle = "Pick games to add to this category",
         type     = XMBItemType.ADD_ACTION,
     )
 
@@ -2237,10 +2158,6 @@ class XMBViewModel @Inject constructor(
         val s = _uiState.value
         val cat = currentCategory()
         return when {
-            s.selectedCollectionId != null -> {
-                val name = s.collections.firstOrNull { it.id == s.selectedCollectionId }?.name ?: "Collection"
-                Triple(HideLocationType.COLLECTION, s.selectedCollectionId.toString(), name)
-            }
             s.selectedPlatformId == FAVORITES_PLATFORM_ID || cat?.id == BuiltInCategory.FAVORITES ->
                 Triple(HideLocationType.FAVORITES, "", "Favorites")
 
@@ -2479,7 +2396,6 @@ class XMBViewModel @Inject constructor(
             catId == BuiltInCategory.PHOTO -> "photo_${photoNavKey(s.photoNav)}"
             catId == BuiltInCategory.LIBRARY -> "books_${booksNavKey(s.booksNav)}"
             catId == BuiltInCategory.SETTINGS -> "settings_root"
-            s.selectedCollectionId != null -> "col_${s.selectedCollectionId}"
             s.selectedPlatformId != null   -> "plat_${s.selectedPlatformId}"
             else                           -> "root"
         }
@@ -4063,8 +3979,6 @@ class XMBViewModel @Inject constructor(
         }
         if (booksTitle != null) return booksTitle
         return when {
-            s.selectedCollectionId != null ->
-                s.collections.firstOrNull { it.id == s.selectedCollectionId }?.name ?: "Collection"
             s.selectedPlatformId == ALL_GAMES_PLATFORM_ID -> "All Games"
             s.selectedPlatformId == FAVORITES_PLATFORM_ID -> "Favorites"
             s.selectedPlatformId == MISSING_PLATFORM_ID   -> "Missing"
@@ -4164,14 +4078,13 @@ class XMBViewModel @Inject constructor(
             val sibs = memoryCardItems().filter {
                 it.type == XMBItemType.ALL_GAMES || it.type == XMBItemType.FAVORITES ||
                     it.type == XMBItemType.MISSING ||
-                    it.type == XMBItemType.MEMORY_CARD || it.type == XMBItemType.COLLECTION
+                    it.type == XMBItemType.MEMORY_CARD
             }
             val idx = sibs.indexOfFirst { sib ->
                 when {
                     s.selectedPlatformId == ALL_GAMES_PLATFORM_ID -> sib.type == XMBItemType.ALL_GAMES
                     s.selectedPlatformId == FAVORITES_PLATFORM_ID -> sib.type == XMBItemType.FAVORITES
                     s.selectedPlatformId == MISSING_PLATFORM_ID   -> sib.type == XMBItemType.MISSING
-                    s.selectedCollectionId != null               -> sib.collectionId == s.selectedCollectionId
                     s.selectedPlatformId != null                 -> sib.platformId == s.selectedPlatformId
                     else -> false
                 }
@@ -4229,21 +4142,6 @@ class XMBViewModel @Inject constructor(
         } else null
         val header = listOfNotNull(allGamesItem, missingItem)
 
-        val collectionItems = _uiState.value.collections
-            .filter { it.categoryId == BuiltInCategory.GAMES }
-            .sortedByDescending { it.isPinned }
-            .map { collection ->
-            val games = countLabel(collection.gameCount, "game", "games")
-            XMBItem(
-                id           = "collection_${collection.id}",
-                title        = collection.name,
-                subtitle     = if (collection.isPinned) "Pinned · $games" else games,
-                collectionId = collection.id,
-                iconKey      = collection.iconKey,
-                type         = XMBItemType.COLLECTION,
-            )
-        }
-
         val visibleCards = enabledCards.filter { card ->
             card.platformId != WINDOWS_PLATFORM_ID ||
                 (_uiState.value.platformGameCounts[WINDOWS_PLATFORM_ID] ?: card.gameCount) > 0
@@ -4251,7 +4149,7 @@ class XMBViewModel @Inject constructor(
 
         if (visibleCards.isEmpty()) {
             return libraryColumn(
-                header + collectionItems + XMBItem(
+                header + XMBItem(
                     id       = NO_CONSOLES_ITEM_ID,
                     title    = "No consoles configured",
                     subtitle = "Open Library Manager to add a Memory Card",
@@ -4276,7 +4174,7 @@ class XMBViewModel @Inject constructor(
 
         val gapRow = if (totalGames == 0) setupGapItem() else null
         return libraryColumn(
-            header + collectionItems + cardRows + listOfNotNull(gapRow),
+            header + cardRows + listOfNotNull(gapRow),
             SearchScope.GAMES,
         )
     }
@@ -4301,13 +4199,6 @@ class XMBViewModel @Inject constructor(
             type     = XMBItemType.EMPTY,
         )
     }
-
-    private fun emptyCollectionItem(): XMBItem = XMBItem(
-        id       = EMPTY_COLLECTION_ITEM_ID,
-        title    = "This collection is empty",
-        subtitle = "Add games from any console with the options (△) menu.",
-        type     = XMBItemType.EMPTY,
-    )
 
     private fun emptyFavoritesItem(): XMBItem = XMBItem(
         id       = EMPTY_FAVORITES_ITEM_ID,
@@ -5069,26 +4960,6 @@ class XMBViewModel @Inject constructor(
         )}
     }
 
-    private fun openCollectionPicker(gameId: Long, selectIndex: Int? = 0) {
-        viewModelScope.launch {
-            val collections = collectionRepository.getAll()
-            val memberOf = collectionRepository.getCollectionIdsForGame(gameId).toSet()
-            val items = buildList {
-                collections.forEach { c ->
-                    add(XMBContextMenuItem(
-                        action = "col_${c.id}",
-                        label   = c.name,
-                        checked = c.id in memberOf,
-                    ))
-                }
-                add(XMBContextMenuItem("col_new", "Create New Collection"))
-            }
-            _uiState.update { it.copy(
-                activeContextMenu = XMBContextMenu(state = MenuState(title = "Add to Collection", rows = items, selectedIndex = selectIndex?.coerceIn(0, items.lastIndex.coerceAtLeast(0))), gameId = gameId, collectionGameId = gameId)
-            )}
-        }
-    }
-
     private fun openAppContextMenu(item: XMBItem, categoryIdOverride: String? = null) {
         val pkg = item.packageName ?: return
         val categoryId = categoryIdOverride ?: currentCategory()?.id
@@ -5096,36 +4967,6 @@ class XMBViewModel @Inject constructor(
         val items = appContextMenuItems(_uiState.value, categoryId, onRecentShelf = item.id.startsWith(RECENT_APP_ID_PREFIX))
         _uiState.update { it.copy(
             activeContextMenu = XMBContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = pkg, categoryContext = categoryId)
-        )}
-    }
-
-    private fun openCollectionRowContextMenu(collectionId: Long) {
-        val collection = _uiState.value.collections.firstOrNull { it.id == collectionId } ?: return
-
-        val hasOtherCategory = collectionMoveTargets(collection.categoryId).isNotEmpty()
-        val items = collectionRowContextMenuItems(
-            isPinned = collection.isPinned,
-            hasOtherCategory = hasOtherCategory,
-        )
-        _uiState.update { it.copy(
-            activeContextMenu = XMBContextMenu(state = MenuState(title = collection.name, rows = items), collectionRowId = collectionId)
-        )}
-    }
-
-    private fun collectionMoveTargets(fromCategoryId: String): List<Category> {
-        val fromIsGaming = _uiState.value.categories.firstOrNull { it.id == fromCategoryId }?.isGamingCategory
-            ?: (fromCategoryId == BuiltInCategory.GAMES)
-        return _uiState.value.categories.filter { cat ->
-            cat.id != fromCategoryId && categoryShowsCollections(cat) && cat.isGamingCategory == fromIsGaming
-        }
-    }
-
-    private fun openCollectionCategoryPicker(collectionId: Long, fromCategoryId: String) {
-        val items = collectionMoveTargets(fromCategoryId)
-            .map { cat -> XMBContextMenuItem("movecol_${cat.id}", cat.name) }
-        if (items.isEmpty()) return
-        _uiState.update { it.copy(
-            activeContextMenu = XMBContextMenu(state = MenuState(title = "Move Collection To", rows = items), collectionRowId = collectionId)
         )}
     }
 
@@ -5180,26 +5021,6 @@ class XMBViewModel @Inject constructor(
             val row = currentAddActions().firstOrNull { it.id == itemId }
             closeContextMenu()
             if (row != null) dispatchCategorySelection(row)
-            return
-        }
-
-        if (menu.collectionGameId != null) {
-            val gameId = menu.collectionGameId
-            val keepIndex = menu.selectedIndex
-            when {
-                itemId == "col_new" -> {
-                    closeContextMenu()
-                    promptCreateCollection(forGameId = gameId)
-                }
-                itemId.startsWith("col_") -> {
-                    val collectionId = itemId.removePrefix("col_").toLongOrNull() ?: return
-                    viewModelScope.launch {
-                        collectionRepository.toggleGame(collectionId, gameId)
-
-                        openCollectionPicker(gameId, keepIndex)
-                    }
-                }
-            }
             return
         }
 
@@ -5271,31 +5092,6 @@ class XMBViewModel @Inject constructor(
 
         if (menu.playlistId != null && menu.musicTrackId == null) {
             handlePlaylistRowAction(menu.playlistId, itemId)
-            return
-        }
-
-        if (menu.collectionRowId != null) {
-            val collectionId = menu.collectionRowId
-            when {
-                itemId.startsWith("movecol_") -> {
-                    val toCategory = itemId.removePrefix("movecol_")
-                    appAction { collectionRepository.setCategory(collectionId, toCategory) }
-                }
-                itemId == "open_collection"   -> openCollectionFolder(collectionId)
-                itemId == "rename_collection" -> promptRenameCollection(collectionId)
-                itemId == "move_collection_category" -> {
-                    val from = _uiState.value.collections.firstOrNull { it.id == collectionId }?.categoryId
-                        ?: BuiltInCategory.GAMES
-                    openCollectionCategoryPicker(collectionId, from)
-                }
-                itemId == "pin_collection"   -> appAction { collectionRepository.setPinned(collectionId, true) }
-                itemId == "unpin_collection" -> appAction { collectionRepository.setPinned(collectionId, false) }
-                itemId == "manage_collections" -> _uiState.update { it.copy(activeSettingsScreen = "settings_categories") }
-                itemId == "delete_collection"  -> appAction {
-                    collectionRepository.delete(collectionId)
-                    if (_uiState.value.selectedCollectionId == collectionId) closePlatformFolder()
-                }
-            }
             return
         }
 
@@ -5404,14 +5200,6 @@ class XMBViewModel @Inject constructor(
                     val gid = menu.gameId
                     appAction { gameRepository.clearLastPlayed(gid) }
                 }
-                "add_to_collection"      -> openCollectionPicker(menu.gameId)
-                "remove_from_collection" -> {
-                    val gid = menu.gameId
-                    _uiState.value.selectedCollectionId?.let { cid ->
-                        appAction { collectionRepository.removeGame(cid, gid) }
-                    }
-                }
-                "manage_collections"     -> _uiState.update { it.copy(activeSettingsScreen = "settings_categories") }
                 "add_category"           -> menu.categoryContext?.let { openGameCategoryPicker(menu.gameId, it, "add") }
                 "move_category"          -> menu.categoryContext?.let { openGameCategoryPicker(menu.gameId, it, "move") }
                 "remove_category"        -> menu.categoryContext?.let { cat ->
@@ -5500,7 +5288,6 @@ class XMBViewModel @Inject constructor(
                         memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
                     }
                     "favorite"          -> addAppToFavorites(pkg, menu.title)
-                    "add_to_collection" -> addAppToCollection(pkg, menu.title)
                     "move"      -> openCategoryPicker(pkg, menu.categoryContext, "move")
                     "add"       -> openCategoryPicker(pkg, menu.categoryContext, "add")
                     "remove"    -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.removeFromCategory(pkg, cat) } }
@@ -5615,23 +5402,6 @@ class XMBViewModel @Inject constructor(
         _uiState.update { it.copy(renameAppTarget = null, renameAppCurrent = null) }
     }
 
-    private fun promptCreateCollection(forGameId: Long? = null) {
-        _uiState.update { it.copy(
-            collectionNameDialog = CollectionNameDialogState(title = "New Collection", forGameId = forGameId)
-        )}
-    }
-
-    private fun promptRenameCollection(collectionId: Long) {
-        val name = _uiState.value.collections.firstOrNull { it.id == collectionId }?.name.orEmpty()
-        _uiState.update { it.copy(
-            collectionNameDialog = CollectionNameDialogState(
-                title = "Rename Collection",
-                initialText = name,
-                renameCollectionId = collectionId,
-            )
-        )}
-    }
-
     fun onConfirmCollectionName(name: String) {
         val dialog = _uiState.value.collectionNameDialog ?: return
         _uiState.update { it.copy(collectionNameDialog = null) }
@@ -5650,20 +5420,6 @@ class XMBViewModel @Inject constructor(
                 gameRepository.updateNote(dialog.editNoteGameId, name.trim().ifBlank { null })
             }
             return
-        }
-        if (name.isBlank()) return
-        viewModelScope.launch {
-            val renameId = dialog.renameCollectionId
-            if (renameId != null) {
-                collectionRepository.rename(renameId, name)
-            } else {
-                val id = collectionRepository.create(name, collectionHomeCategoryId())
-                dialog.forGameId?.let { collectionRepository.addGame(id, it) }
-            }
-
-            if (categoryShowsCollections(currentCategory())) {
-                loadItemsForCategory(currentCategory())
-            }
         }
     }
 
@@ -5735,7 +5491,6 @@ class XMBViewModel @Inject constructor(
             item != null && openBookContextMenu(item) -> Unit
             item != null && openPhotoContextMenu(item) -> Unit
             item?.gameId != null -> openGameContextMenu(item)
-            item?.collectionId != null && item.type == XMBItemType.COLLECTION -> openCollectionRowContextMenu(item.collectionId)
             item?.type == XMBItemType.ALL_GAMES -> openAllGamesContextMenu()
             item?.platformId != null -> openPlatformContextMenu(item.platformId)
             item?.packageName != null -> openAppContextMenu(item)
@@ -6142,7 +5897,7 @@ class XMBViewModel @Inject constructor(
         _uiState.update { it.copy(pendingGamePickerAction = null) }
     }
 
-    fun confirmGamePicker(selectedGameIds: Set<Long>, selectedCollectionIds: Set<Long>) {
+    fun confirmGamePicker(selectedGameIds: Set<Long>) {
         val categoryId = _uiState.value.gamePickerCategoryId ?: return
         menuSound.play(MenuSound.CONFIRM)
         closeGamePicker()
@@ -6150,10 +5905,6 @@ class XMBViewModel @Inject constructor(
         viewModelScope.launch {
             selectedGameIds.forEach { gameId ->
                 gameCategoryRepository.addGameToCategory(gameId, categoryId)
-            }
-
-            selectedCollectionIds.forEach { collectionId ->
-                collectionRepository.setCategory(collectionId, categoryId)
             }
 
             val category = _uiState.value.categories.getOrNull(_uiState.value.selectedCategoryIndex)
@@ -6345,7 +6096,7 @@ class XMBViewModel @Inject constructor(
         if (index != _uiState.value.selectedCategoryIndex) menuSound.play(MenuSound.SYSTEM_BROWSE)
         val category = _uiState.value.categories.getOrNull(index)
 
-        _uiState.update { it.copy(selectedCategoryIndex = index, selectedItemIndex = 0, recentRailVisible = false, selectedPlatformId = null, selectedCollectionId = null, musicNav = MusicNav.Root, videoNav = VideoNav.Root, photoNav = PhotoNav.Root, activeAppDrawerFilter = null) }
+        _uiState.update { it.copy(selectedCategoryIndex = index, selectedItemIndex = 0, recentRailVisible = false, selectedPlatformId = null, musicNav = MusicNav.Root, videoNav = VideoNav.Root, photoNav = PhotoNav.Root, activeAppDrawerFilter = null) }
         tintWaveForCategory(category)
         loadItemsForCategory(category)
     }
@@ -6496,7 +6247,7 @@ class XMBViewModel @Inject constructor(
 
         if (item != null && dispatchCategorySelection(item)) return
 
-        val silentRow = item?.id in setOf(NO_GAMES_ITEM_ID, EMPTY_COLLECTION_ITEM_ID, EMPTY_CATEGORY_ITEM_ID)
+        val silentRow = item?.id in setOf(NO_GAMES_ITEM_ID, EMPTY_CATEGORY_ITEM_ID)
 
         val launchesGame = item?.gameId != null && item.isRealGame
         val launches = item?.launchIntentUri != null ||
@@ -6565,13 +6316,7 @@ class XMBViewModel @Inject constructor(
                 return
             }
             NO_GAMES_ITEM_ID,
-            EMPTY_COLLECTION_ITEM_ID,
             EMPTY_CATEGORY_ITEM_ID -> return
-        }
-
-        if (item?.collectionId != null && item.type == XMBItemType.COLLECTION) {
-            openCollectionFolder(item.collectionId)
-            return
         }
 
         if (item != null) when (item.type) {
@@ -6675,7 +6420,6 @@ class XMBViewModel @Inject constructor(
             item != null && openBookContextMenu(item) -> Unit
             item != null && openPhotoContextMenu(item) -> Unit
             item?.gameId != null -> openGameContextMenu(item)
-            item?.collectionId != null && item.type == XMBItemType.COLLECTION -> openCollectionRowContextMenu(item.collectionId)
             item?.type == XMBItemType.ALL_GAMES -> openAllGamesContextMenu()
             item?.platformId != null -> openPlatformContextMenu(item.platformId)
             item?.packageName != null -> openAppContextMenu(item)
@@ -6698,14 +6442,13 @@ class XMBViewModel @Inject constructor(
             it.copy(
                 selectedCategoryIndex = gamesCategoryIndex.takeIf { index -> index >= 0 } ?: it.selectedCategoryIndex,
                 selectedPlatformId = ALL_GAMES_PLATFORM_ID,
-                selectedCollectionId = null,
             )
         }
     }
 
     private fun openShelf(cardId: String) {
         navigateRememberingCursor {
-            it.copy(selectedPlatformId = cardId, selectedCollectionId = null)
+            it.copy(selectedPlatformId = cardId)
         }
     }
 
@@ -6715,26 +6458,12 @@ class XMBViewModel @Inject constructor(
             it.copy(
                 selectedCategoryIndex = gamesCategoryIndex.takeIf { index -> index >= 0 } ?: it.selectedCategoryIndex,
                 selectedPlatformId = MISSING_PLATFORM_ID,
-                selectedCollectionId = null,
-            )
-        }
-    }
-
-    private fun openCollectionFolder(collectionId: Long) {
-        val targetCategoryId = _uiState.value.collections
-            .firstOrNull { it.id == collectionId }?.categoryId ?: BuiltInCategory.GAMES
-        val categoryIndex = _uiState.value.categories.indexOfFirst { it.id == targetCategoryId }
-        navigateRememberingCursor {
-            it.copy(
-                selectedCategoryIndex = categoryIndex.takeIf { index -> index >= 0 } ?: it.selectedCategoryIndex,
-                selectedPlatformId = null,
-                selectedCollectionId = collectionId,
             )
         }
     }
 
     private fun closePlatformFolder() = navigateRememberingCursor {
-        it.copy(selectedPlatformId = null, selectedCollectionId = null)
+        it.copy(selectedPlatformId = null)
     }
 
 
@@ -7053,14 +6782,13 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun openAppDetail(knownGameId: Long?, packageName: String) {
-        val collectionHome = collectionHomeCategoryId()
         if (knownGameId != null) {
-            _uiState.update { it.copy(activeAppId = knownGameId, activeAppCollectionCategoryId = collectionHome) }
+            _uiState.update { it.copy(activeAppId = knownGameId) }
             return
         }
         viewModelScope.launch {
             val id = ensureAppShortcut(packageName)
-            _uiState.update { it.copy(activeAppId = id, activeAppCollectionCategoryId = collectionHome) }
+            _uiState.update { it.copy(activeAppId = id) }
         }
     }
 
@@ -7098,16 +6826,6 @@ class XMBViewModel @Inject constructor(
         }
     }
 
-    private fun addAppToCollection(packageName: String, label: String) {
-        viewModelScope.launch {
-            runCatching { ensureAppShortcut(packageName) }
-                .onSuccess { id -> openCollectionPicker(id) }
-                .onFailure { e ->
-                    Timber.e(e, "Failed to prepare app shortcut for collection: $packageName")
-                    taskNotifier.failed("shortcut_col_$packageName", label, "Couldn't create shortcut: ${e.message}")
-                }
-        }
-    }
 
     private fun launchHarvestedShortcut(hostPackage: String?, shortcutId: String?) {
         if (hostPackage == null || shortcutId == null) return
@@ -8128,7 +7846,6 @@ class XMBViewModel @Inject constructor(
 
         private const val SETUP_GAP_ITEM_ID = "setup_gap"
         private const val NO_GAMES_ITEM_ID    = "no_games"
-        private const val EMPTY_COLLECTION_ITEM_ID = "empty_collection"
         private const val EMPTY_FAVORITES_ITEM_ID = "empty_favorites"
         private const val EMPTY_CATEGORY_ITEM_ID = "empty_category"
         private const val ALL_GAMES_ITEM_ID = "all_games"

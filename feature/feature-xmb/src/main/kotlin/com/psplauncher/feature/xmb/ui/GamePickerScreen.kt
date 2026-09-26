@@ -42,7 +42,7 @@ private val PickerText: Color @Composable @ReadOnlyComposable get() = LocalPfpTe
 
 @Composable
 fun GamePickerScreen(
-    onConfirm: (selectedGameIds: Set<Long>, selectedCollectionIds: Set<Long>) -> Unit,
+    onConfirm: (selectedGameIds: Set<Long>) -> Unit,
     onCancel: () -> Unit,
     pendingGamepadAction: GamepadAction? = null,
     onGamepadActionConsumed: () -> Unit = {},
@@ -53,8 +53,7 @@ fun GamePickerScreen(
     val listState = rememberLazyListState()
 
     val confirmAndClear: () -> Unit = {
-        val (gameIds, collectionIds) = viewModel.getSelectedItems()
-        onConfirm(gameIds, collectionIds)
+        onConfirm(viewModel.getSelectedItems())
         viewModel.clearSelection()
     }
     val cancelAndClear: () -> Unit = {
@@ -137,40 +136,10 @@ fun GamePickerScreen(
                     }
                 }
             }
-
-            if (state.pcShortcuts.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Collections",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = PickerText,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
-                            .background(
-                                if (PICKER_COLLECTIONS_HEADER == state.selectedItemId)
-                                    sf.tileSelectedInner.copy(alpha = 0.2f)
-                                else
-                                    Color.Transparent
-                            ),
-                    )
-                }
-
-                items(state.pcShortcuts) { collection ->
-                    GamePickerRow(
-                        title = collection.name,
-                        isSelected = pickerCollectionId(collection.id) == state.selectedItemId,
-                        isChecked = collection.id in state.selectedCollectionIds,
-                        onToggle = { viewModel.toggleCollectionSelection(collection.id) },
-                        modifier = Modifier.padding(start = 32.dp),
-                    )
-                }
-            }
         }
 
         GamePickerHintBar(
-            selectedCount = state.selectedGameIds.size + state.selectedCollectionIds.size,
+            selectedCount = state.selectedGameIds.size,
             colors = sf,
             modifier = Modifier.fillMaxWidth(),
             onAction = { action ->
