@@ -5169,6 +5169,9 @@ class XMBViewModel @Inject constructor(
                     "REFRESH"  -> fetchArtworkFor(gid)
                     else -> Timber.w("Details row '$what' has no handler")
                 }
+            } else if (itemId == "shelf_favorite") {
+                val onShelf = menu.items.firstOrNull { it.action == "shelf_favorite" }?.checked == true
+                toggleGameFavorite(menu.gameId, !onShelf)
             } else if (itemId.startsWith("pstate_")) {
                 val gid = menu.gameId
                 val choice = itemId.removePrefix("pstate_")
@@ -5226,7 +5229,7 @@ class XMBViewModel @Inject constructor(
                 "file_location"          -> showGameFileLocation(menu.gameId)
                 "change_emulator"        -> openEmulatorPickerMenu(menu.gameId)
                 "icon_display"           -> openIconDisplayPickerMenu(menu.gameId)
-                "play_state"             -> openPlayStatePickerMenu(menu.gameId)
+                "shelves"                -> openShelvesPickerMenu(menu.gameId)
 
                 "remove_game", "remove_missing" -> {
                     val gid = menu.gameId
@@ -5310,6 +5313,21 @@ class XMBViewModel @Inject constructor(
 
     private fun appAction(block: suspend () -> Unit) {
         viewModelScope.launch { block() }
+    }
+
+    private fun openShelvesPickerMenu(gameId: Long) {
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val current = PlayState.fromName(game.playState)
+            val items = buildList {
+                add(XMBContextMenuItem("shelf_favorite", "Favorites", checked = game.isFavorite))
+                PlayState.entries.forEach { state ->
+                    add(XMBContextMenuItem("pstate_${state.name}", state.label, checked = current == state))
+                }
+                add(XMBContextMenuItem("pstate_none", "Unmarked", checked = current == null))
+            }
+            _uiState.update { it.copy(activeContextMenu = XMBContextMenu(state = MenuState(title = "Shelves", rows = items), gameId = gameId))}
+        }
     }
 
     private fun openPlayStatePickerMenu(gameId: Long) {

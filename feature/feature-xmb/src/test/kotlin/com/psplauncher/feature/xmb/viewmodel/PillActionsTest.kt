@@ -104,15 +104,24 @@ class PillActionsTest {
     }
 
     @Test
-    fun `the favourite pill follows the row it is drawn under`() {
-        assertEquals("Favorite", pillsFor(game(isFavorite = false)).first { it.id == "favorite" }.label)
-        assertEquals("Unfavorite", pillsFor(game(isFavorite = true)).first { it.id == "unfavorite" }.label)
+    fun `the game pill row is exactly Play then Shelves`() {
+        assertEquals(listOf("play", "shelves"), pillsFor(game()).map { it.id })
+        assertEquals(listOf("Play", "Shelves"), pillsFor(game()).map { it.label })
+    }
+
+    @Test
+    fun `the pill row no longer changes with the row's favourite state`() {
+        assertEquals(
+            "Favourite is chosen inside the Shelves picker now, so the row must not restyle itself",
+            pillsFor(game(isFavorite = false)),
+            pillsFor(game(isFavorite = true)),
+        )
     }
 
     @Test
     fun `a package-backed game is offered no emulator to change`() {
-        assertTrue(pillsFor(game(androidApp = true)).none { it.id == "change_emulator" })
-        assertTrue(pillsFor(game(androidApp = false)).any { it.id == "change_emulator" })
+        assertTrue("change_emulator" !in gameMenuIds(game(androidApp = true)))
+        assertTrue("change_emulator" in gameMenuIds(game(androidApp = false)))
     }
 
     @Test

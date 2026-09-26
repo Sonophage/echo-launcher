@@ -35,16 +35,7 @@ internal fun gameContextMenuItems(
             add(XMBContextMenuItem("export_game", "Export Game", group = MenuGroup.SETTINGS))
         }
 
-        add(
-            XMBContextMenuItem(
-                action = if (item.isFavorite) "unfavorite" else "favorite",
-                label = if (item.isFavorite) "Remove from Favorites" else "Add to Favorites",
-                group = MenuGroup.LIBRARY,
-                pinnedToRoot = true,
-            ),
-        )
-
-        add(XMBContextMenuItem("play_state", "Mark As", group = MenuGroup.LIBRARY))
+        add(XMBContextMenuItem("shelves", "Shelves", group = MenuGroup.LIBRARY, pinnedToRoot = true))
         if (onRecentShelf) add(XMBContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY))
 
         if (inGamingCategory) {

@@ -164,14 +164,14 @@ class ContextMenusTest {
     }
 
     @Test
-    fun `favourite is a toggle, never both`() {
-        val off = ids(gameContextMenuItems(game(isFavorite = false), state(), 1, false, null))
-        assertTrue("favorite" in off)
-        assertFalse("unfavorite" in off)
-
-        val on = ids(gameContextMenuItems(game(isFavorite = true), state(), 1, false, null))
-        assertTrue("unfavorite" in on)
-        assertFalse("favorite" in on)
+    fun `one Shelves row replaces the favourite and mark-as rows`() {
+        listOf(false, true).forEach { fav ->
+            val items = ids(gameContextMenuItems(game(isFavorite = fav), state(), 1, false, null))
+            assertTrue("no way onto a shelf: $items", "shelves" in items)
+            assertFalse("favourite is still offered outside the picker", "favorite" in items)
+            assertFalse("unfavourite is still offered outside the picker", "unfavorite" in items)
+            assertFalse("Mark As is still offered outside the picker", "play_state" in items)
+        }
     }
 
     @Test

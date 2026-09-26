@@ -5,11 +5,10 @@ import com.psplauncher.core.domain.model.GamepadAction
 data class XmbPill(val id: String, val label: String)
 
 internal fun pillsFor(item: XMBItem): List<XmbPill> = when {
-    item.gameId != null -> buildList {
-        add(if (item.isFavorite) XmbPill("unfavorite", "Unfavorite") else XmbPill("favorite", "Favorite"))
-
-        if (!item.isAndroidApp) add(XmbPill("change_emulator", "Open with"))
-    }
+    item.gameId != null -> listOf(
+        XmbPill("play", "Play"),
+        XmbPill("shelves", "Shelves"),
+    )
 
     item.packageName != null &&
         item.platformId == null &&
