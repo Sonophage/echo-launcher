@@ -86,6 +86,8 @@ import com.psplauncher.core.ui.components.PspContextMenuOverlay
 import com.psplauncher.core.ui.components.HintBarHeight
 import com.psplauncher.core.ui.components.StatusStripHeight
 import com.psplauncher.core.ui.components.DiscLaunchCeremony
+import com.psplauncher.core.ui.components.XmbLetterRail
+import com.psplauncher.core.ui.components.letterAnchors
 import com.psplauncher.core.ui.components.ControllerHintEdgeGap
 import com.psplauncher.core.ui.preview.DevicePreviews
 import com.psplauncher.core.ui.preview.PfpPreview
@@ -207,6 +209,7 @@ fun XMBShellContainer(
         focusedPillIndex = uiState.focusedPillIndex,
         onCloseAppDrawer = viewModel::onCloseAppDrawer,
         onAddAppToOpenCategory = viewModel::addAppToOpenCategory,
+        onLaunchRomFromDrawer = viewModel::launchGameFromDrawer,
         onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
         onDrawerActionConsumed = viewModel::consumeDrawerAction,
@@ -365,8 +368,9 @@ fun XMBShell(
     onCloseAppDrawer: () -> Unit = {},
 
     onAddAppToOpenCategory: (String) -> Unit = {},
+    onLaunchRomFromDrawer: (Long) -> Unit = {},
 
-    onLetterRailTouch: (Float) -> Unit = {},
+    onLetterRailTouch: (Int) -> Unit = {},
     onLetterRailReleased: () -> Unit = {},
     onDrawerActionConsumed: () -> Unit = {},
     onCloseArtworkStudio: () -> Unit = {},
@@ -1069,14 +1073,13 @@ fun XMBShell(
 
             if (uiState.stripShowsXmbContext && chromeFade > 0f) {
                 XmbLetterRail(
-                    items = uiState.currentItems,
-                    letterJump = uiState.letterJump,
+                    letters = remember(uiState.currentItems) {
+                        letterAnchors(uiState.currentItems.map { it.title })?.map { it.letter }.orEmpty()
+                    },
+                    cursor = uiState.letterJump?.cursor,
                     onTouch = onLetterRailTouch,
                     onReleased = onLetterRailReleased,
                     modifier = Modifier
-                        .align(Alignment.CenterEnd)
-
-                        .padding(top = StatusStripHeight, bottom = HintBarHeight)
                         .alpha(chromeFade)
                         .zIndex(XmbChromeZ),
                 )
@@ -1151,10 +1154,12 @@ fun XMBShell(
                     onGamepadActionConsumed = onDrawerActionConsumed,
 
                     showControllerHint = uiState.showAppDrawerHint,
+                    letterRailHeld = uiState.drawerLetterRailHeld,
                     onPromptTapped = onPromptTapped,
 
                     onTouchInteraction = onTouchInput,
                     onAddToCrossBar = onAddAppToOpenCategory,
+                    onLaunchRom = onLaunchRomFromDrawer,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
