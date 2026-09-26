@@ -21,103 +21,31 @@ import com.psplauncher.feature.settings.viewmodel.CREATE_CATEGORY_FOCUS_KEY
 import com.psplauncher.feature.settings.viewmodel.CategoryManagerUiState
 import com.psplauncher.feature.settings.viewmodel.CategoryManagerViewModel
 import com.psplauncher.feature.settings.viewmodel.CategoryStep
-import com.psplauncher.feature.settings.viewmodel.CollectionsSettingsViewModel
-import com.psplauncher.core.domain.model.GameCollection
 
 @Composable
 fun CategoryManagerScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CategoryManagerViewModel = hiltViewModel(),
-    collectionsViewModel: CollectionsSettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
-    val collections by collectionsViewModel.collections.collectAsState()
-    val gamingCategories by collectionsViewModel.gamingCategories.collectAsState()
-
-    var openCollectionId by remember { mutableStateOf<Long?>(null) }
-    var dialog by remember { mutableStateOf<CollectionDialog?>(null) }
-    var pickCategoryForNewCollection by remember { mutableStateOf<String?>(null) }
-    var iconPickerFor by remember { mutableStateOf<Long?>(null) }
-    val openCollection = collections.firstOrNull { it.id == openCollectionId }
 
     val handleBack: () -> Unit = {
         when {
-            iconPickerFor != null               -> iconPickerFor = null
-            pickCategoryForNewCollection != null -> pickCategoryForNewCollection = null
-            dialog != null                      -> dialog = null
-            openCollectionId != null            -> openCollectionId = null
-            viewModel.onBack()                  -> Unit
-            else                                -> onBack()
+            viewModel.onBack() -> Unit
+            else               -> onBack()
         }
     }
 
     when {
-        openCollection != null -> CollectionDetailStep(
-            collection   = openCollection,
-            gamesFlow    = { collectionsViewModel.gamesIn(openCollection.id) },
-            onRename     = { dialog = CollectionDialog("Rename Collection", openCollection.id, openCollection.name) },
-            onChangeIcon = { iconPickerFor = openCollection.id },
-            onMoveUp     = { collectionsViewModel.moveUp(openCollection.id) },
-            onMoveDown   = { collectionsViewModel.moveDown(openCollection.id) },
-            onDelete     = { collectionsViewModel.delete(openCollection.id); openCollectionId = null },
-            onRemoveGame = { game -> collectionsViewModel.removeGame(openCollection.id, game.id) },
-            onBack       = handleBack,
-            modifier     = modifier,
-        )
         state.step == CategoryStep.PICK_ICON -> PickIconContent(state, viewModel, handleBack, modifier)
         state.step == CategoryStep.PICK_TYPE -> PickTypeContent(state, viewModel, handleBack, modifier)
         state.step == CategoryStep.DETAIL    -> CategoryDetailContent(state, viewModel, handleBack, modifier)
         else -> CategoryListContent(
             state = state,
             vm = viewModel,
-            collections = collections,
-            onCreateCollection = { dialog = CollectionDialog("New Collection") },
-            onOpenCollection = { openCollectionId = it.id },
             onBack = handleBack,
             modifier = modifier,
-        )
-    }
-
-    if (pickCategoryForNewCollection == null) {
-        dialog?.let { d ->
-            CollectionTextDialog(
-                title = d.title,
-                initial = d.initial,
-                onConfirm = { name ->
-                    if (d.renameId != null) {
-                        collectionsViewModel.rename(d.renameId, name)
-                        dialog = null
-                    } else {
-                        d.pendingName = name
-                        pickCategoryForNewCollection = gamingCategories.firstOrNull()?.id ?: "games"
-                    }
-                },
-                onCancel = { dialog = null },
-            )
-        }
-    }
-
-    dialog?.pendingName?.let { name ->
-        if (pickCategoryForNewCollection != null) {
-            CollectionCategoryPickerDialog(
-                categories = gamingCategories,
-                selectedCategoryId = pickCategoryForNewCollection ?: "games",
-                onCategorySelected = { categoryId ->
-                    collectionsViewModel.create(name, categoryId)
-                    pickCategoryForNewCollection = null
-                    dialog = null
-                },
-                onCancel = { pickCategoryForNewCollection = null },
-            )
-        }
-    }
-
-    iconPickerFor?.let { id ->
-        CollectionIconPickerDialog(
-            selectedIconKey = collections.firstOrNull { it.id == id }?.iconKey,
-            onPick = { key -> collectionsViewModel.setIcon(id, key); iconPickerFor = null },
-            onCancel = { iconPickerFor = null },
         )
     }
 
@@ -151,14 +79,11 @@ fun CategoryManagerScreen(
 private fun CategoryListContent(
     state: CategoryManagerUiState,
     vm: CategoryManagerViewModel,
-    collections: List<GameCollection>,
-    onCreateCollection: () -> Unit,
-    onOpenCollection: (GameCollection) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier,
 ) {
     SettingsPageScaffold(
-        subtitle = "Categories & Collections",
+        subtitle = "Categories",
         onBack = onBack,
         modifier = modifier,
         restoreFocusKey = state.returnFocusKey,
@@ -173,11 +98,6 @@ private fun CategoryListContent(
                 focusKey = CREATE_CATEGORY_FOCUS_KEY,
                 onClick  = { vm.startCreate() },
             )
-            SettingsRow(
-                label    = "Create Collection",
-                sublabel = "e.g. RPGs, Currently Playing, Best PSP Games",
-                onClick  = onCreateCollection,
-            )
 
             SettingsGroup("XMB Categories")
             state.categories.forEach { cat ->
@@ -187,23 +107,6 @@ private fun CategoryListContent(
                     focusKey = cat.id,
                     onClick  = { vm.openDetail(cat.id) },
                 )
-            }
-
-            SettingsGroup("Collections")
-            if (collections.isEmpty()) {
-                SettingsRow(
-                    label    = "No collections yet",
-                    sublabel = "Create one above, or add a game from its Options menu.",
-                )
-            } else {
-                collections.forEach { collection ->
-                    SettingsRow(
-                        label    = collection.name,
-                        sublabel = "${collection.gameCount} ${if (collection.gameCount == 1) "game" else "games"}",
-                        focusKey = "collection_${collection.id}",
-                        onClick  = { onOpenCollection(collection) },
-                    )
-                }
             }
         }
     }
@@ -247,7 +150,7 @@ private fun PickTypeContent(
             SettingsGroup(state.pendingName ?: "Category Type")
             SettingsRow(
                 label    = "Gaming",
-                sublabel = "For games and collections",
+                sublabel = "For games",
                 onClick  = { vm.chooseType(isGaming = true) },
             )
             SettingsRow(
@@ -288,7 +191,7 @@ private fun CategoryDetailContent(
             }
             SettingsToggleRow(
                 label    = "Gaming Category",
-                sublabel = "Gaming: games & collections · Non-gaming: apps",
+                sublabel = "Gaming: games · Non-gaming: apps",
                 checked  = cat.isGamingCategory,
                 onToggle = { vm.setGamingCategory(cat.id, it) },
             )

@@ -9,17 +9,14 @@ internal fun pillsFor(item: XMBItem): List<XmbPill> = when {
         add(if (item.isFavorite) XmbPill("unfavorite", "Unfavorite") else XmbPill("favorite", "Favorite"))
 
         if (!item.isAndroidApp) add(XmbPill("change_emulator", "Open with"))
-        add(XmbPill("add_to_collection", "Collection"))
     }
 
     item.packageName != null &&
-        item.collectionId == null &&
         item.platformId == null &&
         item.type == XMBItemType.STANDARD -> listOf(
         XmbPill("launch", "Launch"),
         XmbPill("edit_app", "Edit"),
         XmbPill("favorite", "Favorite"),
-        XmbPill("add_to_collection", "Collection"),
     )
 
     else -> emptyList()

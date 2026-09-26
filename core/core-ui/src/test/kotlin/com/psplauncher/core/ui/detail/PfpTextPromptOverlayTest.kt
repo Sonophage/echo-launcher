@@ -44,7 +44,7 @@ class PfpTextPromptOverlayTest {
             var text by remember { mutableStateOf(initial) }
             PfpScreenPreview {
                 PfpTextPromptOverlay(
-                    title = "New Collection",
+                    title = "Edit Title",
                     value = text,
                     placeholder = "e.g. RPGs, Currently Playing",
                     onValueChange = { text = it },
@@ -93,13 +93,13 @@ class PfpTextPromptOverlayTest {
 
         assertTrue("rendering must not act on its own", cancels == 0 && confirmed == null)
 
-        composeRule.onNodeWithText("New Collection")
+        composeRule.onNodeWithText("Edit Title")
             .performTouchInput { click(Offset(24f, 12f)) }
         composeRule.waitForIdle()
         assertEquals("a tap inside the card must not cancel", 0, cancels)
 
         composeRule.onAllNodes(isRoot())
-            .filterToOne(hasAnyDescendant(hasText("New Collection")))
+            .filterToOne(hasAnyDescendant(hasText("Edit Title")))
             .performTouchInput { click(Offset(4f, 4f)) }
         composeRule.waitForIdle()
         assertEquals("a tap on the scrim must cancel", 1, cancels)

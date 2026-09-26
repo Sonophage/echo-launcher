@@ -5,7 +5,6 @@ import com.psplauncher.core.domain.model.PlatformIds.WINDOWS as WINDOWS_PLATFORM
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import com.psplauncher.core.data.database.dao.CollectionDao
 import com.psplauncher.core.data.database.dao.GameDao
 import com.psplauncher.core.data.database.dao.MemoryCardDao
 import com.psplauncher.core.data.database.entity.GameEntity
@@ -31,16 +30,10 @@ private val SPOOF_PACKAGES = setOf(
     "com.tencent.tmgp.cf",
 )
 
-private val LAUNCHER_COLLECTION_NAMES = setOf(
-    "Winlator", "GameHub Lite", "BannerHub", "GameNative", "GameHub",
-)
-private const val PC_COLLECTION_ICON = "ic_desktop"
-
 @Singleton
 class LibraryConsolidation @Inject constructor(
     @ApplicationContext private val context: Context,
     private val gameDao: GameDao,
-    private val collectionDao: CollectionDao,
     private val memoryCardDao: MemoryCardDao,
 ) {
     suspend fun run() {
@@ -51,7 +44,6 @@ class LibraryConsolidation @Inject constructor(
             rehomeSpoofPackageEntries()
             mergeDuplicateWindowsGames()
             ensureWindowsCard()
-            removeMigratedLauncherCollections()
         }.onFailure { Timber.e(it, "Library consolidation failed") }
 
         context.pfpDataStore.edit { it[KEY_LIBRARY_CONSOLIDATED_V22] = true }
@@ -128,16 +120,6 @@ class LibraryConsolidation @Inject constructor(
                 .takeIf { it > 0L },
         )
         if (enriched != survivor) gameDao.update(enriched)
-
-        for (collectionId in collectionDao.getCollectionIdsForGame(loser.id)) {
-            collectionDao.addGame(
-                com.psplauncher.core.data.database.entity.CollectionGameEntity(
-                    collectionId = collectionId,
-                    gameId       = survivor.id,
-                    addedAt      = System.currentTimeMillis(),
-                )
-            )
-        }
     }
 
     private suspend fun ensureWindowsCard() {
@@ -159,26 +141,6 @@ class LibraryConsolidation @Inject constructor(
             )
         )
         Timber.i("Windows Memory Card created ($count games)")
-    }
-
-    private suspend fun removeMigratedLauncherCollections() {
-        var removed = 0
-        for (collection in collectionDao.getAll()) {
-            val launcherNamed = collection.name in LAUNCHER_COLLECTION_NAMES ||
-                collection.iconKey == PC_COLLECTION_ICON
-            if (!launcherNamed) continue
-
-            val memberIds = collectionDao.getGameIdsInCollection(collection.id)
-            if (memberIds.isEmpty()) continue
-            val allWindows = memberIds.all { id ->
-                gameDao.getById(id)?.platformId == WINDOWS_PLATFORM_ID
-            }
-            if (allWindows) {
-                collectionDao.delete(collection.id)
-                removed++
-            }
-        }
-        if (removed > 0) Timber.i("Removed $removed migrated launcher collection(s)")
     }
 
     private fun displayTitleOf(g: GameEntity): String =

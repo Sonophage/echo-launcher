@@ -450,7 +450,7 @@ fun XMBShell(
 
     onAppPickerColumnsMeasured: (Int) -> Unit = {},
     onAppPickerDismiss: () -> Unit = {},
-    onGamePickerConfirm: (Set<Long>, Set<Long>) -> Unit = { _, _ -> },
+    onGamePickerConfirm: (Set<Long>) -> Unit = { _ -> },
     onGamePickerDismiss: () -> Unit = {},
     onGamePickerActionConsumed: () -> Unit = {},
     onDismissInfoDialog: () -> Unit = {},
@@ -1419,7 +1419,6 @@ fun XMBShell(
             uiState.activeAppId?.let { appId ->
                 AppDetailScreen(
                     gameId = appId,
-                    collectionCategoryId = uiState.activeAppCollectionCategoryId,
                     onBack = onCloseAppDetail,
                     pendingGamepadAction = uiState.pendingAppDetailAction,
                     onGamepadActionConsumed = onAppDetailActionConsumed,

@@ -120,8 +120,7 @@ class PillActionsTest {
         val platformCard = XMBItem(id = "card_psp", title = "PSP", platformId = "psp")
         val settingsRow = XMBItem(id = "settings_open", title = "Settings")
         val track = XMBItem(id = "t1", title = "Blue Monday", type = XMBItemType.MUSIC_TRACK)
-        val collection = XMBItem(id = "col_1", title = "RPGs", collectionId = 1L, type = XMBItemType.COLLECTION)
-        listOf(platformCard, settingsRow, track, collection).forEach {
+        listOf(platformCard, settingsRow, track).forEach {
             assertEquals("${'$'}{it.id} must draw no pill row", emptyList<XmbPill>(), pillsFor(it))
         }
     }

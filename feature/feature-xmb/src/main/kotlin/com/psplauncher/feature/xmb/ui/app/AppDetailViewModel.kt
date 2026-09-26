@@ -3,12 +3,9 @@ package com.psplauncher.feature.xmb.ui.app
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.psplauncher.core.data.repository.CollectionRepository
 import com.psplauncher.core.domain.model.Game
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.domain.repository.GameRepository
-import com.psplauncher.feature.xmb.ui.collection.CollectionPickerOption
-import com.psplauncher.feature.xmb.ui.collection.CollectionPickerUi
 import com.psplauncher.feature.artwork.api.SgdbArtType
 import com.psplauncher.feature.artwork.api.SteamGridDbApi
 import com.psplauncher.feature.artwork.api.SgdbApiKeyProvider
@@ -40,12 +37,11 @@ enum class AppDetailOption(
     CHANGE_NAME("Change Display Name", MenuGroup.SETTINGS),
     CHANGE_ICON("Change Game Icon", MenuGroup.SETTINGS),
     CHANGE_BACKGROUND("Change Background", MenuGroup.SETTINGS),
-    ADD_TO_COLLECTION("Add to Collection", MenuGroup.LIBRARY),
     RESET_ARTWORK("Reset All Artwork", MenuGroup.REMOVE, isDestructive = true),
     ;
 
     companion object {
-        val OPTIONS_MENU = listOf(CHANGE_NAME, ADD_TO_COLLECTION)
+        val OPTIONS_MENU = listOf(CHANGE_NAME)
 
         val ARTWORK_MENU = listOf(CHANGE_ICON, CHANGE_BACKGROUND, RESET_ARTWORK)
 
@@ -67,8 +63,6 @@ data class AppDetailUiState(
     val showArtworkMenu: Boolean = false,
     val optionsIndex: Int = 0,
 
-    val collectionPicker: CollectionPickerUi = CollectionPickerUi(),
-
     val showArtworkPicker: Boolean = false,
     val artworkPickerType: ArtworkType = ArtworkType.ICON,
     val artworkPickerLoading: Boolean = false,
@@ -86,7 +80,6 @@ data class AppDetailUiState(
 @HiltViewModel
 class AppDetailViewModel @Inject constructor(
     private val gameRepository: GameRepository,
-    private val collectionRepository: CollectionRepository,
     private val steamGridDb: SteamGridDbApi,
     private val sgdbKeyProvider: SgdbApiKeyProvider,
     private val artworkStore: ArtworkStore,
@@ -95,14 +88,8 @@ class AppDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AppDetailUiState())
     val uiState: StateFlow<AppDetailUiState> = _uiState.asStateFlow()
 
-    private var collectionCategoryId: String = "games"
-
     fun prepareForOpen() {
         _uiState.value = AppDetailUiState()
-    }
-
-    fun setCollectionCategory(categoryId: String) {
-        collectionCategoryId = categoryId
     }
 
     fun loadApp(gameId: Long) {
@@ -312,10 +299,6 @@ class AppDetailViewModel @Inject constructor(
             if (action == GamepadAction.BACK) cancelNameEdit()
             return
         }
-        if (s.collectionPicker.visible) {
-            handleCollectionPickerInput(action)
-            return
-        }
         if (s.showArtworkPicker) {
             handlePickerGamepad(action)
             return
@@ -384,7 +367,6 @@ class AppDetailViewModel @Inject constructor(
     fun activateOption(option: AppDetailOption) {
         closeMenus()
         when (option) {
-            AppDetailOption.ADD_TO_COLLECTION -> openCollectionPicker()
             AppDetailOption.CHANGE_NAME       -> startEditingName()
             AppDetailOption.CHANGE_ICON       -> openArtworkPickerFor(ArtworkType.ICON)
             AppDetailOption.CHANGE_BACKGROUND -> openArtworkPickerFor(ArtworkType.BACKGROUND)
@@ -406,103 +388,6 @@ class AppDetailViewModel @Inject constructor(
                 onSgdbArtSelected(item.url)
             }
             GamepadAction.BACK -> closeArtworkPicker()
-            else -> Unit
-        }
-    }
-
-    fun onCollectionsClicked() = openCollectionPicker()
-
-    private fun openCollectionPicker() {
-        val gameId = _uiState.value.game?.id ?: return
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(collectionPicker = CollectionPickerUi(
-                    visible = true,
-                    options = buildCollectionOptions(gameId),
-                    selectedIndex = 0,
-                ))
-            }
-        }
-    }
-
-    private suspend fun buildCollectionOptions(gameId: Long): List<CollectionPickerOption> {
-        val memberOf = collectionRepository.getCollectionIdsForGame(gameId).toSet()
-        return collectionRepository.getAll().map {
-            CollectionPickerOption(id = it.id, name = it.name, checked = it.id in memberOf)
-        }
-    }
-
-    fun onCollectionRowClick(index: Int) {
-        _uiState.update { it.copy(collectionPicker = it.collectionPicker.copy(selectedIndex = index)) }
-        activateCollectionRow()
-    }
-
-    private fun moveCollectionPicker(delta: Int) {
-        _uiState.update {
-            val cp = it.collectionPicker
-
-            if (cp.rowCount <= 0) return@update it
-            it.copy(collectionPicker = cp.copy(selectedIndex = (cp.selectedIndex + delta).coerceIn(0, cp.rowCount - 1)))
-        }
-    }
-
-    private fun activateCollectionRow() {
-        val cp = _uiState.value.collectionPicker
-        val gameId = _uiState.value.game?.id ?: return
-        if (cp.isCreateRow) {
-            _uiState.update { it.copy(collectionPicker = it.collectionPicker.copy(showCreateDialog = true, createText = "")) }
-            return
-        }
-        val option = cp.options.getOrNull(cp.selectedIndex) ?: return
-        viewModelScope.launch {
-            collectionRepository.toggleGame(option.id, gameId)
-            _uiState.update { it.copy(collectionPicker = it.collectionPicker.copy(options = buildCollectionOptions(gameId))) }
-        }
-    }
-
-    fun onCreateCollectionTextChanged(text: String) {
-        _uiState.update { it.copy(collectionPicker = it.collectionPicker.copy(createText = text)) }
-    }
-
-    fun confirmCreateCollection() {
-        val gameId = _uiState.value.game?.id ?: return
-        val name = _uiState.value.collectionPicker.createText
-        if (name.isBlank()) { cancelCreateCollection(); return }
-        viewModelScope.launch {
-            val id = collectionRepository.create(name, collectionCategoryId)
-            collectionRepository.addGame(id, gameId)
-            _uiState.update {
-                it.copy(collectionPicker = it.collectionPicker.copy(
-                    showCreateDialog = false,
-                    createText = "",
-                    options = buildCollectionOptions(gameId),
-                ))
-            }
-        }
-    }
-
-    fun cancelCreateCollection() {
-        _uiState.update { it.copy(collectionPicker = it.collectionPicker.copy(showCreateDialog = false, createText = "")) }
-    }
-
-    fun closeCollectionPicker() {
-        _uiState.update { it.copy(collectionPicker = CollectionPickerUi()) }
-    }
-
-    private fun handleCollectionPickerInput(action: GamepadAction) {
-        if (_uiState.value.collectionPicker.showCreateDialog) {
-            when (action) {
-                GamepadAction.SELECT -> confirmCreateCollection()
-                GamepadAction.BACK   -> cancelCreateCollection()
-                else                 -> Unit
-            }
-            return
-        }
-        when (action) {
-            GamepadAction.NAVIGATE_UP   -> moveCollectionPicker(-1)
-            GamepadAction.NAVIGATE_DOWN -> moveCollectionPicker(+1)
-            GamepadAction.SELECT        -> activateCollectionRow()
-            GamepadAction.BACK          -> closeCollectionPicker()
             else -> Unit
         }
     }

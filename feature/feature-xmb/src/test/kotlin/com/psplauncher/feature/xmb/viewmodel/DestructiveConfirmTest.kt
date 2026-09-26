@@ -14,7 +14,6 @@ class DestructiveConfirmTest {
         "book" to bookContextMenuItems(hasOpenStamp = true),
         "music track" to musicTrackContextMenuItems(playlistId = 7L, hasPlayStamp = true),
         "playlist row" to playlistRowContextMenuItems(),
-        "collection row" to collectionRowContextMenuItems(isPinned = false, hasOtherCategory = true),
         "platform" to platformContextMenuItems("ps2", pinned = false, iconDisplayLabel = "Art"),
     )
 
@@ -25,7 +24,6 @@ class DestructiveConfirmTest {
         "book" to setOf("book_remove"),
         "music track" to setOf("remove_track"),
         "playlist row" to setOf("delete_playlist"),
-        "collection row" to setOf("delete_collection"),
         "platform" to setOf("remove"),
     )
 

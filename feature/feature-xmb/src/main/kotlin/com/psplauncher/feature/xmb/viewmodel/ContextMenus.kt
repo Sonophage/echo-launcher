@@ -23,7 +23,6 @@ internal fun gameContextMenuItems(
 
     hideLocation: Triple<HideLocationType, String, String>?,
 ): List<XMBContextMenuItem> {
-    val inCollection = state.selectedCollectionId != null
     val currentCat = state.currentCategoryOrNull()
     val inGamingCategory = currentCat?.isGamingCategory == true
     val inMissingBucket = state.selectedPlatformId == XMBViewModel.MISSING_PLATFORM_ID
@@ -47,9 +46,6 @@ internal fun gameContextMenuItems(
 
         add(XMBContextMenuItem("play_state", "Mark As", group = MenuGroup.LIBRARY))
         if (onRecentShelf) add(XMBContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY))
-        add(XMBContextMenuItem("add_to_collection", "Add to Collection", group = MenuGroup.LIBRARY))
-        if (inCollection) add(XMBContextMenuItem("remove_from_collection", "Remove from Collection", group = MenuGroup.LIBRARY))
-        add(XMBContextMenuItem("manage_collections", "Manage Collections", group = MenuGroup.LIBRARY))
 
         if (inGamingCategory) {
             val hasOtherCustomCategory = state.categories.any {
@@ -88,10 +84,10 @@ internal fun gameContextMenuItems(
         }
         if (inMissingBucket) {
             add(XMBContextMenuItem("remove_missing", "Remove permanently", isDestructive = true, group = MenuGroup.REMOVE))
-        } else if (item.platformId == PlatformIds.ANDROID && item.packageName != null && !inCollection) {
+        } else if (item.platformId == PlatformIds.ANDROID && item.packageName != null) {
             add(XMBContextMenuItem("unmark_game", "Unmark as Game", group = MenuGroup.REMOVE))
             add(XMBContextMenuItem("remove_app", "Remove from Library", isDestructive = true, group = MenuGroup.REMOVE))
-        } else if (!inCollection) {
+        } else {
             add(XMBContextMenuItem("remove_game", "Remove from Library", isDestructive = true, group = MenuGroup.REMOVE))
         }
     }
@@ -107,7 +103,6 @@ internal fun appContextMenuItems(
     add(XMBContextMenuItem("mark_game", "Mark as Game", group = MenuGroup.LIBRARY))
     add(XMBContextMenuItem("favorite", "Add to Favorites", group = MenuGroup.LIBRARY, pinnedToRoot = true))
     if (onRecentShelf) add(XMBContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY))
-    add(XMBContextMenuItem("add_to_collection", "Add to Collection", group = MenuGroup.LIBRARY))
 
     add(XMBContextMenuItem("edit_app", "Edit App Details", group = MenuGroup.SETTINGS))
     add(XMBContextMenuItem("rename", "Rename Shortcut", group = MenuGroup.SETTINGS))
@@ -235,23 +230,3 @@ internal fun allGamesContextMenuItems(iconDisplayLabel: String): List<XMBContext
     XMBContextMenuItem("icon_display_global", "Icon Display ($iconDisplayLabel)", group = MenuGroup.SETTINGS),
 )
 
-internal fun collectionRowContextMenuItems(
-    isPinned: Boolean,
-    hasOtherCategory: Boolean,
-): List<XMBContextMenuItem> = buildList {
-    add(XMBContextMenuItem("open_collection", "Open"))
-
-    add(XMBContextMenuItem("manage_collections", "Manage Collections", group = MenuGroup.LIBRARY))
-    add(XMBContextMenuItem("rename_collection", "Rename Collection", group = MenuGroup.SETTINGS))
-
-    if (hasOtherCategory) add(XMBContextMenuItem("move_collection_category", "Move to Category", group = MenuGroup.CATEGORY))
-    add(
-        XMBContextMenuItem(
-            if (isPinned) "unpin_collection" else "pin_collection",
-            if (isPinned) "Unpin" else "Pin",
-            group = MenuGroup.CATEGORY,
-        ),
-    )
-
-    add(XMBContextMenuItem("delete_collection", "Delete Collection", isDestructive = true, group = MenuGroup.REMOVE))
-}

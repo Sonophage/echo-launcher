@@ -4,10 +4,8 @@ import timber.log.Timber
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.psplauncher.core.domain.model.Game
-import com.psplauncher.core.domain.model.GameCollection
 import com.psplauncher.core.domain.model.MemoryCard
 import com.psplauncher.core.domain.repository.GameRepository
-import com.psplauncher.core.data.repository.CollectionRepository
 import com.psplauncher.core.data.repository.MemoryCardRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,16 +18,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-internal const val PICKER_COLLECTIONS_HEADER = "COLLECTIONS_HEADER"
 internal fun pickerPlatformId(platformId: String) = "platform_$platformId"
 internal fun pickerGameId(gameId: Long) = "game_$gameId"
-internal fun pickerCollectionId(collectionId: Long) = "collection_$collectionId"
 
 data class GamePickerState(
     val platformGroups: List<PlatformGameGroup> = emptyList(),
-    val pcShortcuts: List<GameCollection> = emptyList(),
     val selectedGameIds: Set<Long> = emptySet(),
-    val selectedCollectionIds: Set<Long> = emptySet(),
     val platformExpandedStates: Map<String, Boolean> = emptyMap(),
     val isLoading: Boolean = false,
     val selectedItemId: String? = null,
@@ -47,7 +41,6 @@ data class PlatformGameGroup(
 @HiltViewModel
 class GamePickerViewModel @Inject constructor(
     private val gameRepository: GameRepository,
-    private val collectionRepository: CollectionRepository,
     private val memoryCardRepository: MemoryCardRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(GamePickerState(isLoading = true, selectedItemId = null))
@@ -64,12 +57,6 @@ class GamePickerViewModel @Inject constructor(
                     Pair(cards, allGames)
                 }.collect { (cards, allGames) ->
                     try {
-                        val collections = try {
-                            collectionRepository.getAll()
-                        } catch (e: Exception) {
-                            emptyList()
-                        }
-
                         val platformGroups = cards.mapNotNull { card ->
                             val platformGames = allGames.filter {
                                 it.platformId == card.platformId &&
@@ -86,15 +73,12 @@ class GamePickerViewModel @Inject constructor(
                             }
                         }
 
-                        val allCollections = collections
-
                         val newExpandedStates = platformGroups.associate { group ->
                             group.platform.platformId to false
                         }
 
                         val newState = GamePickerState(
                             platformGroups = platformGroups,
-                            pcShortcuts = allCollections,
                             isLoading = false,
                             platformExpandedStates = newExpandedStates,
                             selectedItemId = if (_state.value.selectedItemId == null) {
@@ -126,17 +110,6 @@ class GamePickerViewModel @Inject constructor(
             state.copy(selectedGameIds = newSelected)
         }
         updateGroupCounts()
-    }
-
-    fun toggleCollectionSelection(collectionId: Long) {
-        _state.update { state ->
-            val newSelected = if (collectionId in state.selectedCollectionIds) {
-                state.selectedCollectionIds - collectionId
-            } else {
-                state.selectedCollectionIds + collectionId
-            }
-            state.copy(selectedCollectionIds = newSelected)
-        }
     }
 
     fun togglePlatformAllSelection(platformId: String, selectAll: Boolean) {
@@ -171,32 +144,16 @@ class GamePickerViewModel @Inject constructor(
         }
     }
 
-    fun getSelectedItems(): Pair<Set<Long>, Set<Long>> {
-        return _state.value.selectedGameIds to _state.value.selectedCollectionIds
-    }
+    fun getSelectedItems(): Set<Long> = _state.value.selectedGameIds
 
     fun clearSelection() {
         _state.update { state ->
             state.copy(
                 selectedGameIds = emptySet(),
-                selectedCollectionIds = emptySet(),
                 platformGroups = state.platformGroups.map { it.copy(selectedCount = 0) },
                 platformExpandedStates = state.platformGroups.associate { it.platform.platformId to false },
                 selectedItemId = state.platformGroups.firstOrNull()?.platform?.platformId?.let { pickerPlatformId(it) },
             )
-        }
-    }
-
-    fun addNewCollection(name: String) {
-        viewModelScope.launch {
-            try {
-                val newCollection = com.psplauncher.core.domain.model.GameCollection(
-                    name = name,
-                    gameCount = 0,
-                )
-            } catch (e: Exception) {
-                Timber.e(e, "Error creating collection")
-            }
         }
     }
 
@@ -238,17 +195,6 @@ class GamePickerViewModel @Inject constructor(
                 }
             }
         }
-
-        if (selectedId == PICKER_COLLECTIONS_HEADER) {
-            return
-        }
-
-        for (collection in state.pcShortcuts) {
-            if (pickerCollectionId(collection.id) == selectedId) {
-                toggleCollectionSelection(collection.id)
-                return
-            }
-        }
     }
 
     fun toggleSelectedPlatform() {
@@ -273,13 +219,6 @@ internal fun buildPickerItemIds(state: GamePickerState): List<String> {
             for (game in group.games) {
                 ids.add(pickerGameId(game.id))
             }
-        }
-    }
-
-    if (state.pcShortcuts.isNotEmpty()) {
-        ids.add(PICKER_COLLECTIONS_HEADER)
-        for (collection in state.pcShortcuts) {
-            ids.add(pickerCollectionId(collection.id))
         }
     }
 
