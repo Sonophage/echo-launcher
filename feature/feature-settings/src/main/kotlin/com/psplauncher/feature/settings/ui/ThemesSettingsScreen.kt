@@ -54,6 +54,8 @@ import com.psplauncher.core.ui.components.PfpColorChoices
 import com.psplauncher.core.ui.components.PspContextMenuOverlay
 import com.psplauncher.core.ui.components.hsvToArgbLong
 import com.psplauncher.core.ui.components.MenuRow
+import com.psplauncher.core.ui.components.MenuSelect
+import com.psplauncher.core.ui.components.chose
 import com.psplauncher.core.ui.components.MenuState
 import com.psplauncher.core.data.repository.PfpThemeStore
 import com.psplauncher.core.ui.preview.CombinedPreviews
@@ -353,14 +355,11 @@ private fun ThemesSettingsContent(
 
         menu?.let { m ->
             PspContextMenuOverlay(
-                state          = MenuState(
-                    title = m.title,
-                    rows = m.options.map {
-                        MenuRow(it, it.label, isDestructive = it.destructive, confirms = false)
-                    },
-                    selectedIndex = menuIndex.coerceIn(0, (m.options.size - 1).coerceAtLeast(0)),
-                ),
-                onRowActivated = { index -> m.options.getOrNull(index)?.action?.invoke(); menu = null },
+                state          = menuStateFor(m, menuIndex),
+                onRowActivated = { index ->
+                    (menuStateFor(m, menuIndex).chose(index) as? MenuSelect.Run)?.action?.action?.invoke()
+                    menu = null
+                },
                 onDismiss      = { menu = null },
             )
         }
@@ -393,6 +392,14 @@ private fun ThemesSettingsContent(
 }
 
 private data class ThemeMenuOption(val label: String, val destructive: Boolean = false, val action: () -> Unit)
+
+// The overlay draws rows through rowsShown(), which moves destructive rows last.
+// Resolve the tap against the drawn rows, not against m.options.
+private fun menuStateFor(m: ThemeMenu, selected: Int) = MenuState(
+    title = m.title,
+    rows = m.options.map { MenuRow(it, it.label, isDestructive = it.destructive, confirms = false) },
+    selectedIndex = selected.coerceIn(0, (m.options.size - 1).coerceAtLeast(0)),
+)
 private data class ThemeMenu(val title: String, val options: List<ThemeMenuOption>)
 
 @Composable

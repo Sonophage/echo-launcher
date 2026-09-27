@@ -44,7 +44,12 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.ControllerPrompt
+import com.psplauncher.core.ui.components.MenuRow
+import com.psplauncher.core.ui.components.MenuState
+import com.psplauncher.core.ui.components.MenuSelect
 import com.psplauncher.core.ui.components.PfpCheckMark
+import com.psplauncher.core.ui.components.PspContextMenuOverlay
+import com.psplauncher.core.ui.components.chose
 import com.psplauncher.core.ui.components.XmbScrim
 import com.psplauncher.feature.artwork.store.ArtworkKind
 
@@ -603,4 +608,31 @@ private fun reviewStatusColor(status: StudioReviewStatus): Color = when (status)
     StudioReviewStatus.KEPT    -> Color(0xFF7FA8D8)
     StudioReviewStatus.REMOVED -> Color(0xFFE57373)
     StudioReviewStatus.EMPTY   -> Color(0xFF6B7280)
+}
+
+/**
+ * The studio's menus, activated the way every other menu in the app is: through
+ * MenuState.chose(), which resolves the index against the DRAWN rows. Indexing the
+ * source list directly is what made "View File Information" run Clear Artwork.
+ *
+ * selectedIndex is still an index into the drawn rows, so the source lists also keep
+ * destructive rows last -- StudioMenuOrderTest pins that.
+ */
+@Composable
+internal fun <T : Any> StudioMenu(
+    title: String,
+    rows: List<MenuRow<T>>,
+    selectedIndex: Int,
+    onActivate: (T) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val state = MenuState(title = title, rows = rows, selectedIndex = selectedIndex)
+    PspContextMenuOverlay(
+        state = state,
+        onRowActivated = { index ->
+            (state.chose(index) as? MenuSelect.Run)?.let { onActivate(it.action) }
+        },
+        onDismiss = onDismiss,
+        scrim = Color(0xA6000000),
+    )
 }

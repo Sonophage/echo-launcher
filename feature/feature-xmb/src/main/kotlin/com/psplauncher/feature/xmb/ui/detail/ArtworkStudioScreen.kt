@@ -735,50 +735,39 @@ internal fun ArtworkStudioContent(
         }
 
         if (state.actionsOpen && !state.showFileInfo) {
-            val menuActions = state.availableActions
-            com.psplauncher.core.ui.components.PspContextMenuOverlay(
-                state = com.psplauncher.core.ui.components.MenuState(
-                    title = STUDIO_TABS[state.tabIndex].label,
-                    rows = menuActions.map {
-                        com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it == StudioAction.CLEAR, confirms = false)
-                    },
-                    selectedIndex = state.resolvedActionsIndex,
-                ),
-                onRowActivated = { index -> menuActions.getOrNull(index)?.let(actions::runAction) },
+            StudioMenu(
+                title = STUDIO_TABS[state.tabIndex].label,
+                rows = state.availableActions.map {
+                    com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it == StudioAction.CLEAR, confirms = false)
+                },
+                selectedIndex = state.resolvedActionsIndex,
+                onActivate = actions::runAction,
                 onDismiss = actions::closeActions,
-
-                scrim = Color(0xA6000000),
             )
         }
 
         state.confirmPrompt?.let { prompt ->
-            com.psplauncher.core.ui.components.PspContextMenuOverlay(
-                state = com.psplauncher.core.ui.components.MenuState(
-                    title = prompt.title,
-                    rows = prompt.rows.map {
-                        com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it.isDestructive, confirms = false)
-                    },
-                    selectedIndex = prompt.selectedIndex,
-                ),
-                onRowActivated = actions::resolveConfirm,
+            StudioMenu(
+                title = prompt.title,
+                rows = prompt.rows.map {
+                    com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it.isDestructive, confirms = false)
+                },
+                selectedIndex = prompt.selectedIndex,
+                onActivate = { row -> actions.resolveConfirm(prompt.rows.indexOf(row)) },
                 onDismiss = actions::dismissConfirm,
-                scrim = Color(0xA6000000),
             )
         }
 
         if (state.leavePromptOpen) {
             val waiting = state.selection.size + state.removals.size
-            com.psplauncher.core.ui.components.PspContextMenuOverlay(
-                state = com.psplauncher.core.ui.components.MenuState(
-                    title = if (waiting == 1) "1 change not applied" else "$waiting changes not applied",
-                    rows = StudioLeaveChoice.entries.map {
-                        com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it == StudioLeaveChoice.DISCARD, confirms = false)
-                    },
-                    selectedIndex = state.leavePromptIndex,
-                ),
-                onRowActivated = { index -> actions.resolveLeavePrompt(StudioLeaveChoice.entries[index]) },
+            StudioMenu(
+                title = if (waiting == 1) "1 change not applied" else "$waiting changes not applied",
+                rows = StudioLeaveChoice.entries.map {
+                    com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it == StudioLeaveChoice.DISCARD, confirms = false)
+                },
+                selectedIndex = state.leavePromptIndex,
+                onActivate = actions::resolveLeavePrompt,
                 onDismiss = { actions.resolveLeavePrompt(StudioLeaveChoice.STAY) },
-                scrim = Color(0xA6000000),
             )
         }
 
@@ -863,10 +852,9 @@ internal fun ArtworkStudioContent(
 
             if (state.cropOptionsOpen) {
                 val currentShape = CropShapeChoice.of(state.cropProfileOverride)
-                com.psplauncher.core.ui.components.PspContextMenuOverlay(
-                    state = com.psplauncher.core.ui.components.MenuState(
-                        title = "CROP OPTIONS",
-                        rows = state.cropOptionRows.map { row ->
+                StudioMenu(
+                    title = "CROP OPTIONS",
+                    rows = state.cropOptionRows.map { row ->
                             val shape = row.shape
                             if (shape == null) {
                                 com.psplauncher.core.ui.components.MenuRow(
@@ -880,12 +868,10 @@ internal fun ArtworkStudioContent(
                                     checked = shape == currentShape,
                                 )
                             }
-                        },
-                        selectedIndex = state.cropOptionsIndex,
-                    ),
-                    onRowActivated = actions::activateCropOption,
+                    },
+                    selectedIndex = state.cropOptionsIndex,
+                    onActivate = { row -> actions.activateCropOption(state.cropOptionRows.indexOf(row)) },
                     onDismiss = actions::closeCropOptions,
-                    scrim = Color(0xA6000000),
                 )
             }
         }
