@@ -301,13 +301,25 @@ class PortableArtworkLibrary @Inject constructor(
         withContext(Dispatchers.IO) {
             runCatching {
                 val tmp = java.io.File.createTempFile("pfpns_", suffix, cacheDir)
-                val ok = resolver.openInputStream(sourceUri)?.use { input ->
+                val ok = openSource(sourceUri)?.use { input ->
                     tmp.outputStream().use { out -> FileUtils.copy(input, out) }
                     true
                 } ?: false
                 if (ok && tmp.length() > 0) tmp else { tmp.delete(); null }
             }.onFailure { Timber.w(it, "copyUriToTemp failed for $sourceUri") }.getOrNull()
         }
+
+    internal fun openSource(uri: Uri): java.io.InputStream? {
+        val localPath = when {
+            uri.scheme == null -> uri.toString()
+            uri.scheme.equals("file", ignoreCase = true) -> uri.path
+            else -> null
+        }
+        if (localPath != null) {
+            return java.io.File(localPath).takeIf { it.isFile && it.length() > 0 }?.inputStream()
+        }
+        return resolver.openInputStream(uri)
+    }
 
     suspend fun deleteUri(uri: Uri): Boolean = withContext(Dispatchers.IO) {
         runCatching { DocumentsContract.deleteDocument(resolver, uri) }.getOrDefault(false)
