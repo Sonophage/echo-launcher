@@ -1172,7 +1172,6 @@ abstract class PFPDatabase : RoomDatabase() {
 
         val MIGRATION_53_54 = object : Migration(53, 54) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("PRAGMA defer_foreign_keys = TRUE")
                 db.execSQL(
                     "UPDATE games SET artwork_uri = hero_uri " +
                         "WHERE artwork_uri IS NULL AND hero_uri IS NOT NULL AND hero_uri <> ''"

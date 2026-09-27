@@ -133,6 +133,19 @@ class ArtworkImportManager @Inject constructor(
     fun cancelInternalMigration() =
         com.psplauncher.feature.artwork.migrate.InternalArtworkMigrationWorker.cancel(context)
 
+    suspend fun portableArtworkCount(): Int {
+        val worker = com.psplauncher.feature.artwork.migrate.PortableArtworkImportWorker
+        val namedByAColumn = worker.columnRefsOf(gameDao.getAll())
+        return artworkRecordDao.getAll()
+            .count { worker.shouldCopy(it.artworkType, it.documentUri, namedByAColumn) }
+    }
+
+    fun startPortableImport(): UUID =
+        com.psplauncher.feature.artwork.migrate.PortableArtworkImportWorker.enqueue(context)
+
+    fun cancelPortableImport() =
+        com.psplauncher.feature.artwork.migrate.PortableArtworkImportWorker.cancel(context)
+
     data class RelinkResult(
         val entriesScanned: Int,
         val gamesLinked: Int,
