@@ -22,6 +22,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ArtworkSettingsUiState(
+    val hasTmdbKey: Boolean = false,
+    val tmdbKeyDraft: String = "",
+    val matchingPosters: Boolean = false,
+    val posterMessage: String? = null,
     val hasApiKey: Boolean = false,
     val apiKeyMasked: String = "",
 
@@ -119,10 +123,17 @@ class ArtworkSettingsViewModel @Inject constructor(
     private val iconDisplayPreferences: com.psplauncher.core.data.repository.IconDisplayPreferences,
     private val cropPreviewPreferences: com.psplauncher.core.data.repository.CropPreviewPreferences,
     private val debugCredentialsLoader: com.psplauncher.feature.settings.debug.DebugCredentialsLoader,
+    private val tmdbKeyProvider: com.psplauncher.feature.artwork.api.TmdbApiKeyProvider,
+    private val posterFetcher: com.psplauncher.feature.artwork.api.VideoPosterFetcher,
 ) : ViewModel() {
     private val _extra = MutableStateFlow(ArtworkSettingsUiState())
 
     init {
+        viewModelScope.launch {
+            tmdbKeyProvider.keyFlow.collect { key ->
+                _extra.update { it.copy(hasTmdbKey = !key.isNullOrBlank()) }
+            }
+        }
         viewModelScope.launch {
             iconDisplayPreferences.modeFlow.collect { mode ->
                 _extra.update { it.copy(iconDisplayMode = mode) }
@@ -519,4 +530,52 @@ class ArtworkSettingsViewModel @Inject constructor(
     fun setPreferSteamGridDbHeroes(enabled: Boolean) {
         viewModelScope.launch { scrapePreferences.setPreferSteamGridDbHeroes(enabled) }
     }
+
+    fun setTmdbKeyDraft(v: String) = _extra.update { it.copy(tmdbKeyDraft = v) }
+
+    fun saveTmdbKey() {
+        val key = _extra.value.tmdbKeyDraft.trim()
+        if (key.isBlank()) return
+        viewModelScope.launch {
+            val protection = tmdbKeyProvider.saveKey(key)
+            _extra.update {
+                it.copy(
+                    tmdbKeyDraft = "",
+                    posterMessage =
+                        if (protection == com.psplauncher.core.common.security.SecretProtection.PROTECTED) "Key saved"
+                        else "Key saved (device keystore unavailable)",
+                )
+            }
+        }
+    }
+
+    fun clearTmdbKey() {
+        viewModelScope.launch {
+            tmdbKeyProvider.clearKey()
+            _extra.update { it.copy(posterMessage = "Key removed") }
+        }
+    }
+
+    fun fetchPosters(refresh: Boolean = false) {
+        if (_extra.value.matchingPosters) return
+        viewModelScope.launch {
+            _extra.update { it.copy(matchingPosters = true, posterMessage = null) }
+            val result = runCatching { posterFetcher.run(refreshExisting = refresh) }.getOrNull()
+            _extra.update {
+                it.copy(
+                    matchingPosters = false,
+                    posterMessage = result?.message() ?: "Could not reach TMDB",
+                )
+            }
+        }
+    }
+
+    fun clearPosters() {
+        viewModelScope.launch {
+            posterFetcher.clearAll()
+            _extra.update { it.copy(posterMessage = "Posters cleared") }
+        }
+    }
+
+    fun dismissPosterMessage() = _extra.update { it.copy(posterMessage = null) }
 }

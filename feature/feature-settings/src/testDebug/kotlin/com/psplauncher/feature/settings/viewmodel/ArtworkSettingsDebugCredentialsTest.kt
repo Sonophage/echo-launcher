@@ -69,6 +69,8 @@ class ArtworkSettingsDebugCredentialsTest {
             },
             cropPreviewPreferences = mockk(relaxed = true) { every { enabledFlow } returns flowOf(true) },
             debugCredentialsLoader = loader,
+            tmdbKeyProvider = mockk(relaxed = true) { every { keyFlow } returns flowOf(null) },
+            posterFetcher = mockk(relaxed = true),
         )
         backgroundScope.launch { vm.uiState.collect { } }
         return vm

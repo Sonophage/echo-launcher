@@ -1,6 +1,8 @@
 package com.psplauncher.feature.xmb.viewmodel
 
+import com.psplauncher.core.data.repository.MediaRootKind
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.ADD_MENU_ITEM_ID
+import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.mediaFoldersItemId
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.ALL_BOOKS_ITEM_ID
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.ALL_MUSIC_ITEM_ID
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.ALL_PHOTOS_ITEM_ID
@@ -91,6 +93,15 @@ internal fun XMBUiState.musicRootSections(): List<XMBItem> {
                 type     = XMBItemType.PLAYLIST,
             )
         )
+        add(
+            XMBItem(
+                id       = mediaFoldersItemId(MediaRootKind.MUSIC),
+                title    = "Folders",
+                subtitle = countLabel(folders.size, "folder", "folders"),
+                type          = XMBItemType.MEDIA_ROOT,
+                mediaRootKind = MediaRootKind.MUSIC,
+            )
+        )
     }.withColumnCovers(mediaCovers.music)
 }
 
@@ -141,6 +152,15 @@ internal fun XMBUiState.videoRootSections(): List<XMBItem> {
                 type     = XMBItemType.VIDEO_LIBRARY,
             )
         )
+        add(
+            XMBItem(
+                id       = mediaFoldersItemId(MediaRootKind.VIDEO),
+                title    = "Folders",
+                subtitle = countLabel(libraries.size, "folder", "folders"),
+                type          = XMBItemType.MEDIA_ROOT,
+                mediaRootKind = MediaRootKind.VIDEO,
+            )
+        )
     }.withColumnCovers(mediaCovers.video)
 }
 
@@ -174,6 +194,15 @@ internal fun XMBUiState.photoRootSections(cameraAvailable: Boolean): List<XMBIte
                 title    = "Albums",
                 subtitle = countLabel(libraries.size, "album", "albums"),
                 type     = XMBItemType.PHOTO_ALBUMS,
+            )
+        )
+        add(
+            XMBItem(
+                id       = mediaFoldersItemId(MediaRootKind.PHOTO),
+                title    = "Folders",
+                subtitle = countLabel(libraries.size, "folder", "folders"),
+                type          = XMBItemType.MEDIA_ROOT,
+                mediaRootKind = MediaRootKind.PHOTO,
             )
         )
     }.withColumnCovers(mediaCovers.photo)
@@ -232,6 +261,15 @@ internal fun XMBUiState.booksRootSections(): List<XMBItem> {
                 )
             )
         }
+        add(
+            XMBItem(
+                id       = mediaFoldersItemId(MediaRootKind.BOOK),
+                title    = "Folders",
+                subtitle = countLabel(shelves.size, "folder", "folders"),
+                type          = XMBItemType.MEDIA_ROOT,
+                mediaRootKind = MediaRootKind.BOOK,
+            )
+        )
         add(
             XMBItem(
                 id       = ALL_BOOKS_ITEM_ID,

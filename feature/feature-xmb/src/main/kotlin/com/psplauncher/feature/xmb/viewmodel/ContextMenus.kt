@@ -4,6 +4,7 @@ import com.psplauncher.core.domain.model.BuiltInCategory
 import com.psplauncher.core.domain.model.Category
 import com.psplauncher.core.domain.model.HideLocationType
 import com.psplauncher.core.domain.model.PlatformIds
+import com.psplauncher.core.data.repository.MediaRootKind
 import com.psplauncher.core.ui.components.MenuGroup
 
 internal fun XMBUiState.currentCategoryOrNull(): Category? =
@@ -133,7 +134,7 @@ internal fun videoFileContextMenuItems(
 
 internal fun videoLibraryContextMenuItems(): List<XMBContextMenuItem> = listOf(
     XMBContextMenuItem("video_lib_open", "Open"),
-    XMBContextMenuItem("video_lib_manage", "Manage in Settings", group = MenuGroup.SETTINGS),
+    XMBContextMenuItem("video_lib_manage", "Manage Folders", group = MenuGroup.SETTINGS),
 )
 
 internal fun videoPlaylistContextMenuItems(): List<XMBContextMenuItem> = listOf(
@@ -151,7 +152,7 @@ internal fun photoFileContextMenuItems(): List<XMBContextMenuItem> = listOf(
 internal fun photoLibraryContextMenuItems(): List<XMBContextMenuItem> = listOf(
     XMBContextMenuItem("photo_lib_open", "Open"),
     XMBContextMenuItem("photo_lib_scan", "Scan Album", group = MenuGroup.SETTINGS),
-    XMBContextMenuItem("photo_lib_manage", "Manage in Settings", group = MenuGroup.SETTINGS),
+    XMBContextMenuItem("photo_lib_manage", "Manage Folders", group = MenuGroup.SETTINGS),
 )
 
 internal fun bookContextMenuItems(hasOpenStamp: Boolean): List<XMBContextMenuItem> = buildList {
@@ -221,3 +222,73 @@ internal fun allGamesContextMenuItems(iconDisplayLabel: String): List<XMBContext
     XMBContextMenuItem("icon_display_global", "Icon Display ($iconDisplayLabel)", group = MenuGroup.SETTINGS),
 )
 
+internal const val MEDIA_APP_PREFIX = "media_app_"
+
+enum class MediaRootAction { RESCAN, RESCAN_DEEP, RELINK, REMOVE }
+
+enum class MediaFoldersAction { ADD_ROOT, RESCAN_ALL, RESCAN_ALL_DEEP, DEFAULT_APP, CLEAR_CACHE, PICK_APP }
+
+internal fun mediaRootActionOf(itemId: String): MediaRootAction? = when (itemId) {
+    "media_root_rescan"      -> MediaRootAction.RESCAN
+    "media_root_rescan_deep" -> MediaRootAction.RESCAN_DEEP
+    "media_root_relink"      -> MediaRootAction.RELINK
+    "media_root_remove"      -> MediaRootAction.REMOVE
+    else -> null
+}
+
+internal fun mediaFoldersActionOf(itemId: String): MediaFoldersAction? = when {
+    itemId == "media_add_root"           -> MediaFoldersAction.ADD_ROOT
+    itemId == "media_rescan_all"         -> MediaFoldersAction.RESCAN_ALL
+    itemId == "media_rescan_all_deep"    -> MediaFoldersAction.RESCAN_ALL_DEEP
+    itemId == "media_default_app"        -> MediaFoldersAction.DEFAULT_APP
+    itemId == "media_clear_cache"        -> MediaFoldersAction.CLEAR_CACHE
+    itemId.startsWith(MEDIA_APP_PREFIX)  -> MediaFoldersAction.PICK_APP
+    else -> null
+}
+
+internal fun mediaKindFolderWord(kind: MediaRootKind): String = when (kind) {
+    MediaRootKind.MUSIC -> "music"
+    MediaRootKind.VIDEO -> "video"
+    MediaRootKind.PHOTO -> "photo"
+    MediaRootKind.BOOK  -> "book"
+}
+
+internal fun mediaKindLabel(kind: MediaRootKind): String = when (kind) {
+    MediaRootKind.MUSIC -> "Music"
+    MediaRootKind.VIDEO -> "Video"
+    MediaRootKind.PHOTO -> "Photo"
+    MediaRootKind.BOOK  -> "Books"
+}
+
+internal fun mediaRootContextMenuItems(linked: Boolean, kind: MediaRootKind): List<XMBContextMenuItem> = buildList {
+    if (linked) add(XMBContextMenuItem("media_root_rescan", "Rescan This Folder"))
+    if (linked && kind == MediaRootKind.BOOK) {
+        add(XMBContextMenuItem("media_root_rescan_deep", "Deep Rescan", group = MenuGroup.SETTINGS))
+    }
+    add(XMBContextMenuItem("media_root_relink", "Relink Folder", group = MenuGroup.SETTINGS))
+    add(
+        XMBContextMenuItem(
+            "media_root_remove", "Remove Folder",
+            isDestructive = true, group = MenuGroup.REMOVE,
+        ),
+    )
+}
+
+internal fun mediaFoldersContextMenuItems(kind: MediaRootKind): List<XMBContextMenuItem> = buildList {
+    add(XMBContextMenuItem("media_add_root", "Add Folder"))
+    add(XMBContextMenuItem("media_rescan_all", "Rescan ${mediaKindLabel(kind)} Library", group = MenuGroup.LIBRARY))
+    if (kind == MediaRootKind.BOOK) {
+        add(XMBContextMenuItem("media_rescan_all_deep", "Deep Rescan", group = MenuGroup.LIBRARY))
+    }
+    when (kind) {
+        MediaRootKind.MUSIC -> add(XMBContextMenuItem("media_default_app", "Default Music Player", group = MenuGroup.SETTINGS))
+        MediaRootKind.VIDEO -> add(XMBContextMenuItem("media_default_app", "Default Video Player", group = MenuGroup.SETTINGS))
+        MediaRootKind.BOOK  -> add(XMBContextMenuItem("media_default_app", "Default Reader", group = MenuGroup.SETTINGS))
+        MediaRootKind.PHOTO -> Unit
+    }
+    when (kind) {
+        MediaRootKind.PHOTO -> add(XMBContextMenuItem("media_clear_cache", "Clear Thumbnail Cache", group = MenuGroup.SETTINGS))
+        MediaRootKind.BOOK  -> add(XMBContextMenuItem("media_clear_cache", "Clear Cover Cache", group = MenuGroup.SETTINGS))
+        else -> Unit
+    }
+}

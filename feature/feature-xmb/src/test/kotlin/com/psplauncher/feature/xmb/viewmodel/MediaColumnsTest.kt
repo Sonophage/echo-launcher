@@ -41,7 +41,7 @@ class MediaColumnsTest {
     @Test
     fun `music root is songs, artists, albums, playlists, in that order`() {
         assertEquals(
-            listOf("all_music", "music_artists", "music_albums", "playlists"),
+            listOf("all_music", "music_artists", "music_albums", "playlists", "media_folders_MUSIC"),
             ids(XMBUiState().musicRootSections()),
         )
     }
@@ -70,7 +70,7 @@ class MediaColumnsTest {
     @Test
     fun `video root leads with every video, the same order music reads in`() {
         assertEquals(
-            listOf("all_videos", "video_collections", "video_libraries"),
+            listOf("all_videos", "video_collections", "video_libraries", "media_folders_VIDEO"),
             ids(XMBUiState().videoRootSections()),
         )
     }
@@ -92,7 +92,7 @@ class MediaColumnsTest {
     @Test
     fun `photo root is all photos then albums once the camera is out of the way`() {
         assertEquals(
-            listOf("all_photos", "photo_albums"),
+            listOf("all_photos", "photo_albums", "media_folders_PHOTO"),
             ids(XMBUiState().photoRootSections(false)),
         )
     }

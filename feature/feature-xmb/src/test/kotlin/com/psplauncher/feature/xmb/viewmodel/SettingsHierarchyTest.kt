@@ -87,10 +87,6 @@ class SettingsHierarchyTest {
             settingsEntriesIn(SettingsSectionId.LIBRARY).map { it.id },
         )
         assertEquals(
-            listOf("settings_music", "settings_video", "settings_photo", "settings_books"),
-            settingsEntriesIn(SettingsSectionId.MEDIA).map { it.id },
-        )
-        assertEquals(
             listOf(
                 "settings_emulators_installed",
                 "settings_emulators_custom",
@@ -148,8 +144,8 @@ class SettingsHierarchyTest {
 
     @Test fun `every legacy flat settings row remains a resolvable route`() {
         listOf(
-            "settings_library", "settings_import_pc", "settings_music", "settings_video",
-            "settings_photo", "settings_categories", "settings_artwork",
+            "settings_library", "settings_import_pc",
+            "settings_categories", "settings_artwork",
             "settings_artwork_import", "settings_emulators",
             "settings_themes", "settings_display", "settings_controller", "settings_backup",
             "settings_logs", "settings_about", "settings_credits",

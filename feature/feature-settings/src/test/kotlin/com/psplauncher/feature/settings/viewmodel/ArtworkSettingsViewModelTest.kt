@@ -103,6 +103,10 @@ class ArtworkSettingsViewModelTest {
         iconDisplayPreferences = iconDisplayPreferences,
         cropPreviewPreferences = cropPreviewPreferences,
         debugCredentialsLoader = debugCredentialsLoader,
+        tmdbKeyProvider = mockk(relaxed = true) {
+            every { keyFlow } returns kotlinx.coroutines.flow.flowOf(null)
+        },
+        posterFetcher = mockk(relaxed = true),
     )
 
     private fun TestScope.activeViewModel(): ArtworkSettingsViewModel {
