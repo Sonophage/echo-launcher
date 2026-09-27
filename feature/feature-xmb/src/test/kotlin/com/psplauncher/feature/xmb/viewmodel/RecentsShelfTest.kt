@@ -85,3 +85,23 @@ class RecentsShelfTest {
         assertEquals(listOf("Skyrim", "Aja", "Dune"), merged.map { it.title })
     }
 }
+
+class ShelfCardTitleTest {
+    /**
+     * SHELF_CARD_IDS and shelfCardFor are a pair. A shelf column's id is not in
+     * enabledCards, so every name lookup falls through to shelfCardFor -- and when
+     * that returned null the raw id reached the screen as
+     * "Hide from __shelf_marked_PLAYING".
+     */
+    @org.junit.Test
+    fun `every shelf card id resolves to a title a person would recognise`() {
+        SHELF_CARD_IDS.forEach { id ->
+            val card = shelfCardFor(id)
+            org.junit.Assert.assertNotNull("$id resolves to no card", card)
+            org.junit.Assert.assertFalse(
+                "$id leaked into its own title",
+                card!!.title.contains("__") || card.title == id,
+            )
+        }
+    }
+}
