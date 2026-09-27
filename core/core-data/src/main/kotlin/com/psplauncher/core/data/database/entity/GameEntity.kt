@@ -60,26 +60,11 @@ data class GameEntity(
     @ColumnInfo(name = "artwork_uri")
     val artworkUri: String?,
 
-    @ColumnInfo(name = "hero_uri")
-    val heroUri: String?,
-
     @ColumnInfo(name = "logo_uri")
     val logoUri: String?,
 
     @ColumnInfo(name = "icon_uri")
     val iconUri: String? = null,
-
-    @ColumnInfo(name = "box_art_uri")
-    val boxArtUri: String? = null,
-
-    @ColumnInfo(name = "physical_media_uri")
-    val physicalMediaUri: String? = null,
-
-    @ColumnInfo(name = "box3d_uri")
-    val box3dUri: String? = null,
-
-    @ColumnInfo(name = "icon_display_mode")
-    val iconDisplayMode: String? = null,
 
     val description: String?,
     val developer: String?,
@@ -191,13 +176,8 @@ fun GameEntity.toDomain() = Game(
     packageName = packageName,
     emulatorPackage = emulatorPackage,
     artworkUri = artworkUri,
-    heroUri = heroUri,
     logoUri = logoUri,
     iconUri = iconUri,
-    boxArtUri = boxArtUri,
-    physicalMediaUri = physicalMediaUri,
-    box3dUri = box3dUri,
-    iconDisplayMode = iconDisplayMode,
     description = description,
     developer = developer,
     publisher = publisher,
@@ -246,13 +226,8 @@ fun Game.toEntity() = GameEntity(
     packageName = packageName,
     emulatorPackage = emulatorPackage,
     artworkUri = artworkUri,
-    heroUri = heroUri,
     logoUri = logoUri,
     iconUri = iconUri,
-    boxArtUri = boxArtUri,
-    physicalMediaUri = physicalMediaUri,
-    box3dUri = box3dUri,
-    iconDisplayMode = iconDisplayMode,
     description = description,
     developer = developer,
     publisher = publisher,

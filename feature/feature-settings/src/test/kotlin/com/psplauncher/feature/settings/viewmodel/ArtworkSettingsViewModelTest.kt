@@ -66,12 +66,10 @@ class ArtworkSettingsViewModelTest {
         every { metadataKeyProvider.hasSsCredentialsFlow }   returns flowOf(false)
 
         every { screenScraperApi.isEnabledFlow }         returns flowOf(false)
-        every { scrapePreferences.preferSteamGridDbHeroesFlow } returns flowOf(false)
         cropPreviewPreferences = mockk(relaxed = true) {
             every { enabledFlow } returns flowOf(true)
         }
         iconDisplayPreferences = mockk(relaxed = true) {
-            every { modeFlow } returns flowOf(com.psplauncher.core.domain.model.IconDisplayMode.DEFAULT)
             every { animatedIconsFlow } returns flowOf(true)
             every { snapPlacementFlow } returns flowOf(VideoSnapPlacement.ICON)
             every { gameMetadataFlow } returns flowOf(true)
@@ -228,17 +226,6 @@ class ArtworkSettingsViewModelTest {
         viewModel.cancelRescrapeAll()
         advanceUntilIdle()
         assertFalse(viewModel.uiState.value.confirmRescrapeAll)
-    }
-
-    @Test
-    fun `setPreferSteamGridDbHeroes persists to scrapePreferences`() = runTest(testDispatcher) {
-        viewModel = activeViewModel()
-        advanceUntilIdle()
-
-        viewModel.setPreferSteamGridDbHeroes(true)
-        advanceUntilIdle()
-
-        coVerify { scrapePreferences.setPreferSteamGridDbHeroes(true) }
     }
 
     @Test

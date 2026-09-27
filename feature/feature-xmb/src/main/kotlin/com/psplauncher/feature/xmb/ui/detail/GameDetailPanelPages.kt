@@ -8,12 +8,10 @@ enum class DetailPanelPage(val label: String) {
     LOGO("Logo"),
     INFO("Info"),
     VIDEO("Video"),
-    BOX_ART("Box Art"),
     GALLERY("Media"),
 }
 
 fun availablePanelPages(
-    hasBoxArt: Boolean,
     hasVideo: Boolean,
     hasGallery: Boolean,
     hasInfo: Boolean,
@@ -21,7 +19,6 @@ fun availablePanelPages(
     DetailPanelPage.entries.filter {
         when (it) {
             DetailPanelPage.LOGO -> true
-            DetailPanelPage.BOX_ART -> hasBoxArt
             DetailPanelPage.VIDEO -> hasVideo
             DetailPanelPage.GALLERY -> hasGallery
             DetailPanelPage.INFO -> hasInfo
@@ -41,7 +38,6 @@ data class DetailPanelContent(
     val title: String,
     val platformName: String,
     val logoUri: String? = null,
-    val boxArtUri: String? = null,
 
     val posterFallbackUri: String? = null,
     val metaLine: String? = null,
@@ -55,7 +51,6 @@ data class DetailPanelContent(
 ) {
     val pages: List<DetailPanelPage>
         get() = availablePanelPages(
-            hasBoxArt = boxArtUri != null,
             hasVideo = videoUri != null,
             hasGallery = media.isNotEmpty(),
             hasInfo = hasInfo,
@@ -87,8 +82,7 @@ fun detailPanelContentFor(
     title = game.displayTitle,
     platformName = platformName,
     logoUri = game.logoUri,
-    boxArtUri = game.boxArtUri,
-    posterFallbackUri = game.heroUri ?: game.artworkUri,
+    posterFallbackUri = game.artworkUri,
     metaLine = gameMetadataLine(game.releaseYear, game.genre, game.developer, game.players),
     description = game.description,
 
@@ -108,8 +102,7 @@ fun detailPanelContentFor(
         platformName = platformName,
 
         logoUri = item.logoUri.takeIf { item.hasVisibleLogo },
-        boxArtUri = item.boxArtUri,
-        posterFallbackUri = item.heroUri ?: item.artworkUri,
+        posterFallbackUri = item.artworkUri,
         metaLine = item.metadataLine,
         description = item.description,
         fileName = panelFileName(item.romPath),

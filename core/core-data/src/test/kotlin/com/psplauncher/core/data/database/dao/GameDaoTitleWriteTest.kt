@@ -42,7 +42,6 @@ class GameDaoTitleWriteTest {
                 packageName = null,
                 emulatorPackage = null,
                 artworkUri = null,
-                heroUri = null,
                 logoUri = null,
                 description = null,
                 developer = null,

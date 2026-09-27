@@ -55,7 +55,6 @@ import com.psplauncher.core.ui.theme.LocalPfpTextColors
 
 private fun DetailPanelPage.icon(): ImageVector = when (this) {
     DetailPanelPage.LOGO -> Icons.Filled.PictureInPictureAlt
-    DetailPanelPage.BOX_ART -> Icons.Filled.Inventory2
     DetailPanelPage.VIDEO -> Icons.Filled.PlayCircleOutline
     DetailPanelPage.GALLERY -> Icons.Filled.Image
     DetailPanelPage.INFO -> Icons.Filled.Info
@@ -142,7 +141,6 @@ fun GameDetailPanel(
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             when (resolvePanelPage(page, content.pages)) {
                 DetailPanelPage.LOGO -> LogoPage(content, titleFallback, halfHeightLogo)
-                DetailPanelPage.BOX_ART -> BoxArtPage(content)
                 DetailPanelPage.VIDEO -> VideoPage(content)
                 DetailPanelPage.GALLERY -> GalleryPage(content, focusedMediaId, onMediaTapped)
                 DetailPanelPage.INFO -> InfoPage(content)
@@ -195,17 +193,6 @@ private fun LogoPage(content: DetailPanelContent, titleFallback: Boolean, halfHe
             Text(text = content.platformName, color = LocalPfpTextColors.current.secondary, fontSize = 13.sp)
         }
     }
-}
-
-@Composable
-private fun BoxArtPage(content: DetailPanelContent) {
-    AsyncImage(
-        model = rememberArtworkModel(content.boxArtUri),
-        contentDescription = content.title,
-
-        contentScale = ContentScale.Fit,
-        modifier = Modifier.fillMaxSize().padding(8.dp),
-    )
 }
 
 @Composable

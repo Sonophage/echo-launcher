@@ -13,8 +13,7 @@ class DetailPanelContentTest {
         title = "Crash Bandicoot",
         platformId = "psx",
         logoUri = "file:///logo.png",
-        boxArtUri = "file:///box.png",
-        heroUri = "file:///hero.png",
+        artworkUri = "file:///bg.png",
         romPath = "/storage/roms/psx/Crash Bandicoot (USA).bin",
         description = "A marsupial runs right.",
         releaseYear = 1996,
@@ -28,8 +27,7 @@ class DetailPanelContentTest {
         title = "Crash Bandicoot",
         platformId = "psx",
         logoUri = "file:///logo.png",
-        boxArtUri = "file:///box.png",
-        heroUri = "file:///hero.png",
+        artworkUri = "file:///bg.png",
         romPath = "/storage/roms/psx/Crash Bandicoot (USA).bin",
         description = "A marsupial runs right.",
         metadataLine = "1996   ·   Platform   ·   Naughty Dog   ·   1 player",
@@ -42,7 +40,6 @@ class DetailPanelContentTest {
 
         assertEquals(fromGame.title, fromItem.title)
         assertEquals(fromGame.logoUri, fromItem.logoUri)
-        assertEquals(fromGame.boxArtUri, fromItem.boxArtUri)
         assertEquals(fromGame.posterFallbackUri, fromItem.posterFallbackUri)
         assertEquals(fromGame.description, fromItem.description)
         assertEquals(fromGame.fileName, fromItem.fileName)
@@ -112,7 +109,7 @@ class DetailPanelContentTest {
 
     @Test
     fun `a logo that will never be drawn is not offered as a logo`() {
-        val orphanLogo = item.copy(artworkUri = null, heroUri = null, boxArtUri = null)
+        val orphanLogo = item.copy(artworkUri = null)
 
         assertNull(detailPanelContentFor(orphanLogo, "PlayStation").logoUri)
     }
@@ -127,8 +124,8 @@ class DetailPanelContentTest {
     }
 
     @Test
-    fun `a row with no box art cannot be walked onto a box art page`() {
-        val noArt = detailPanelContentFor(item.copy(boxArtUri = null), "PlayStation")
+    fun `a row with no video and no gallery walks logo to info`() {
+        val noArt = detailPanelContentFor(item, "PlayStation")
 
         assertEquals(listOf(DetailPanelPage.LOGO, DetailPanelPage.INFO), noArt.pages)
         assertEquals(DetailPanelPage.INFO, stepPanelPage(DetailPanelPage.LOGO, noArt.pages, +1))

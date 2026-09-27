@@ -27,8 +27,7 @@ class GameDateAddedTest {
 
     private fun entityWith(dateAdded: Long? = null, playState: String? = null) = GameEntity(
         id = 7, title = "Crisis Core", platformId = "psp", romPath = "/roms/cc.iso",
-        packageName = null, emulatorPackage = null, artworkUri = null, heroUri = null,
-        logoUri = null, description = null, developer = null, publisher = null,
+        packageName = null, emulatorPackage = null, artworkUri = null, logoUri = null, description = null, developer = null, publisher = null,
         releaseYear = null, genre = null, steamGridDbId = null,
         dateAdded = dateAdded, playState = playState,
     )

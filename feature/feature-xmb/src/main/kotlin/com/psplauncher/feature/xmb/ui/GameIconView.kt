@@ -39,12 +39,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import coil3.compose.AsyncImage
 import com.psplauncher.core.ui.image.ArtworkRevisions
 import com.psplauncher.core.ui.image.rememberArtworkModel
-import com.psplauncher.core.domain.model.IconDisplayMode
 import com.psplauncher.core.ui.icons.GameIconStyle
 import com.psplauncher.feature.artwork.store.ArtworkDimensions
 import com.psplauncher.feature.xmb.R
 import com.psplauncher.feature.xmb.viewmodel.XMBItem
-import com.psplauncher.feature.xmb.viewmodel.resolveIconDisplay
 
 private val ICON_WIDTH  = 62.dp
 private val ICON_HEIGHT = 86.dp
@@ -87,64 +85,23 @@ fun GameIcon(
         }
 
         else -> {
-            val resolved = resolveIconDisplay(
-                item,
-                LocalIconDisplayMode.current,
-                LocalIconDisplayModeByPlatform.current,
-            )
-            when {
-                resolved.mode == IconDisplayMode.PHYSICAL_MEDIA && resolved.uri == null ->
-                    NaturalArtSlot(modifier) { artModifier ->
-                        PhysicalMediaIcon(
-                            platformId  = item.platformId,
-                            accentColor = item.accentColor?.let { Color(it) },
-                            title       = item.title,
-                            modifier    = artModifier,
-                        )
-                    }
-
-                resolved.uri == null &&
-                    (resolved.mode == IconDisplayMode.BOX_ART || resolved.mode == IconDisplayMode.BOX_3D) ->
-                    NaturalArtSlot(modifier) { artModifier ->
-                        BoxArtPlaceholderIcon(
-                            platformId  = item.platformId,
-                            accentColor = item.accentColor?.let { Color(it) },
-                            title       = item.title,
-                            modifier    = artModifier,
-                        )
-                    }
-
-                resolved.naturalAspect -> NaturalArtSlot(modifier) { artModifier ->
-                    NaturalAspectArtIcon(
-                        artworkUri  = resolved.uri!!,
-
-                        framed      = resolved.uri == item.boxArtUri,
-                        accentColor = item.accentColor?.let { Color(it) },
-                        title       = item.title,
-                        modifier    = artModifier,
+            val panelShowingVideo = LocalPanelShowingVideo.current
+            val video = LocalFocusedGameVideo.current?.takeIf {
+                it.gameId == item.gameId &&
+                    snapSiteFor(it.placement, panelShowingVideo) == SnapSite.TILE
+            }
+            Box(modifier = modifier) {
+                PspIcon0Icon(
+                    artworkUri  = item.iconUri,
+                    accentColor = item.accentColor?.let { Color(it) },
+                    title       = item.title,
+                    modifier    = Modifier.fillMaxSize(),
+                )
+                if (video != null) {
+                    Icon1VideoOverlay(
+                        videoUri = video.uri,
+                        modifier = Modifier.fillMaxSize().clip(PspShape),
                     )
-                }
-
-                else -> {
-                    val panelShowingVideo = LocalPanelShowingVideo.current
-                    val video = LocalFocusedGameVideo.current?.takeIf {
-                        it.gameId == item.gameId &&
-                            snapSiteFor(it.placement, resolved.mode, panelShowingVideo) == SnapSite.TILE
-                    }
-                    Box(modifier = modifier) {
-                        PspIcon0Icon(
-                            artworkUri  = resolved.uri,
-                            accentColor = item.accentColor?.let { Color(it) },
-                            title       = item.title,
-                            modifier    = Modifier.fillMaxSize(),
-                        )
-                        if (video != null) {
-                            Icon1VideoOverlay(
-                                videoUri = video.uri,
-                                modifier = Modifier.fillMaxSize().clip(PspShape),
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -160,91 +117,6 @@ private fun NaturalArtSlot(
 ) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         content(Modifier.fillMaxWidth().requiredHeight(NATURAL_ART_HEIGHT))
-    }
-}
-
-fun boxArtAspectFor(platformId: String?): Float = ArtworkDimensions.boxArt(platformId).aspectRatio
-
-@Composable
-private fun BoxArtPlaceholderIcon(
-    platformId: String?,
-    accentColor: Color?,
-    title: String,
-    modifier: Modifier = Modifier,
-) {
-    val accent = accentColor ?: Color(0xFF4A9EFF)
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .aspectRatio(boxArtAspectFor(platformId))
-                .clip(PspShape)
-                .background(
-                    Brush.verticalGradient(listOf(accent.copy(alpha = 0.6f), Color(0xFF0A0A0F)))
-                )
-                .border(1.dp, IconBorder, PspShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text       = title.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                fontSize   = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color      = Color.White.copy(alpha = 0.85f),
-            )
-        }
-    }
-}
-
-@Composable
-private fun NaturalAspectArtIcon(
-    artworkUri: String,
-    framed: Boolean,
-    accentColor: Color?,
-    title: String,
-    modifier: Modifier = Modifier,
-) {
-    val painter = coil3.compose.rememberAsyncImagePainter(
-        model = coil3.request.ImageRequest.Builder(LocalContext.current)
-            .data(artworkUri)
-            .size(coil3.size.Size.ORIGINAL)
-
-            .memoryCacheKey(ArtworkRevisions.cacheKey(artworkUri))
-            .build()
-    )
-
-    val state by painter.state.collectAsState()
-    val ratio = (state as? coil3.compose.AsyncImagePainter.State.Success)
-        ?.painter?.intrinsicSize
-        ?.takeIf { it.width > 0f && it.height > 0f }
-        ?.let { it.width / it.height }
-
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        when {
-            ratio != null -> Box(
-                modifier = Modifier
-                    .aspectRatio(ratio)
-                    .then(
-                        if (framed) Modifier
-                            .clip(PspShape)
-                            .background(Color(0xFF0A0A0F))
-                            .border(1.dp, IconBorder, PspShape)
-                        else Modifier
-                    ),
-            ) {
-                Image(
-                    painter            = painter,
-                    contentDescription = null,
-                    contentScale       = ContentScale.Fit,
-                    modifier           = Modifier.fillMaxSize(),
-                )
-            }
-            state is coil3.compose.AsyncImagePainter.State.Error -> PspIcon0Icon(
-                artworkUri  = null,
-                accentColor = accentColor,
-                title       = title,
-                modifier    = Modifier.fillMaxSize(),
-            )
-            else -> Unit
-        }
     }
 }
 

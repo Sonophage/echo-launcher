@@ -9,9 +9,8 @@ import org.junit.Test
 
 class StudioCropPreviewTest {
     @Test
-    fun `ICON0 and box art wear the framed PSP tile`() {
+    fun `the tile wears the framed PSP tile`() {
         assertEquals(CropPreviewChrome.PSP_TILE, cropPreviewChromeFor(ArtworkKind.ICON))
-        assertEquals(CropPreviewChrome.PSP_TILE, cropPreviewChromeFor(ArtworkKind.BOX_ART))
     }
 
     @Test
@@ -21,15 +20,12 @@ class StudioCropPreviewTest {
     }
 
     @Test
-    fun `3D box and physical media are frameless`() {
-        assertEquals(CropPreviewChrome.FRAMELESS, cropPreviewChromeFor(ArtworkKind.BOX_3D))
-        assertEquals(CropPreviewChrome.FRAMELESS, cropPreviewChromeFor(ArtworkKind.PHYSICAL_MEDIA))
-    }
-
-    @Test
     fun `kinds with no tile representation show no preview`() {
         val noPreview = listOf(
             ArtworkKind.HERO,
+            ArtworkKind.BOX_ART,
+            ArtworkKind.BOX_3D,
+            ArtworkKind.PHYSICAL_MEDIA,
             ArtworkKind.BACKGROUND,
             ArtworkKind.LOGO,
             ArtworkKind.SCREENSHOT,
@@ -42,15 +38,12 @@ class StudioCropPreviewTest {
     }
 
     @Test
-    fun `exactly six kinds preview`() {
+    fun `exactly three kinds preview`() {
         val previewing = ArtworkKind.entries.filter { cropPreviewChromeFor(it) != null }
         assertEquals(
             listOf(
                 ArtworkKind.ICON,
                 ArtworkKind.ICON1,
-                ArtworkKind.PHYSICAL_MEDIA,
-                ArtworkKind.BOX_ART,
-                ArtworkKind.BOX_3D,
                 ArtworkKind.VIDEO,
             ).sortedBy { it.ordinal },
             previewing.sortedBy { it.ordinal },
@@ -79,11 +72,8 @@ class StudioCropPreviewTest {
 
     @Test
     fun `captions name the tile the preview stands for`() {
-        assertEquals("XMB tile", cropPreviewCaptionFor(ArtworkKind.ICON))
-        assertEquals("Box Art tile", cropPreviewCaptionFor(ArtworkKind.BOX_ART))
-        assertEquals("3D Box tile", cropPreviewCaptionFor(ArtworkKind.BOX_3D))
-        assertEquals("Phys. Media tile", cropPreviewCaptionFor(ArtworkKind.PHYSICAL_MEDIA))
-        assertEquals("XMB icon animation", cropPreviewCaptionFor(ArtworkKind.ICON1))
+        assertEquals("Crossbar tile", cropPreviewCaptionFor(ArtworkKind.ICON))
+        assertEquals("Tile video", cropPreviewCaptionFor(ArtworkKind.ICON1))
         assertEquals("Media strip", cropPreviewCaptionFor(ArtworkKind.VIDEO))
     }
 }

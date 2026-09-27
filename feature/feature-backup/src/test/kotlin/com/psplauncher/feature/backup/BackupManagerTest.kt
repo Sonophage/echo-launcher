@@ -233,9 +233,9 @@ class BackupManagerTest {
         val filesDir = tempFolder.newFolder("filesDir")
         every { context.filesDir } returns filesDir
 
-        val oldPath = "/data/user/0/com.other.pkg/files/artwork/7/hero.jpg"
+        val oldPath = "/data/user/0/com.other.pkg/files/artwork/7/background.jpg"
         val backupFile = File(exportDir, "v2$BACKUP_FILE_EXTENSION")
-        buildV2ArtworkZip(backupFile, gameId = 7L, heroPath = oldPath)
+        buildV2ArtworkZip(backupFile, gameId = 7L, artworkPath = oldPath)
 
         val contentResolver = mockk<ContentResolver>()
         every { context.contentResolver } returns contentResolver
@@ -249,16 +249,15 @@ class BackupManagerTest {
         val result = ExportingBackupManager().restoreBackup(Uri.fromFile(backupFile))
 
         assertTrue("Expected Success, got $result", result is RestoreResult.Success)
-        val hero = inserted.captured.single().heroUri!!
-        val expected = File(filesDir, "artwork/7/hero.jpg")
-        assertEquals(expected.absolutePath.replace('\\', '/'), hero.replace('\\', '/'))
+        val artwork = inserted.captured.single().artworkUri!!
+        val expected = File(filesDir, "artwork/7/background.jpg")
+        assertEquals(expected.absolutePath.replace('\\', '/'), artwork.replace('\\', '/'))
         assertTrue("Bundled art should have been extracted", expected.exists())
     }
 
     private fun fakeGame(id: Long = 1L) = GameEntity(
         id = id, title = "Test Game $id", platformId = "psx", romPath = null,
-        packageName = null, emulatorPackage = null, artworkUri = null, heroUri = null,
-        logoUri = null, description = null, developer = null, publisher = null,
+        packageName = null, emulatorPackage = null, artworkUri = null, logoUri = null, description = null, developer = null, publisher = null,
         releaseYear = null, genre = null, steamGridDbId = null, createdAt = 0L,
     )
 
@@ -279,10 +278,10 @@ class BackupManagerTest {
         }
     }
 
-    private fun buildV2ArtworkZip(dest: File, gameId: Long, heroPath: String) {
+    private fun buildV2ArtworkZip(dest: File, gameId: Long, artworkPath: String) {
         val json = Json { prettyPrint = false }
         val manifest = BackupManifest(appVersionCode = 2, appVersionName = "2.0", createdAt = 0L, gameCount = 1, sessionCount = 0, categoryCount = 0)
-        val game = fakeGame(gameId).copy(heroUri = heroPath)
+        val game = fakeGame(gameId).copy(artworkUri = artworkPath)
         ZipOutputStream(dest.outputStream()).use { zip ->
             zip.putNextEntry(ZipEntry(BackupEntry.MANIFEST))
             zip.write(json.encodeToString(BackupManifest.serializer(), manifest).toByteArray())
@@ -290,7 +289,7 @@ class BackupManagerTest {
             zip.putNextEntry(ZipEntry(BackupEntry.GAMES))
             zip.write(json.encodeToString(kotlinx.serialization.builtins.ListSerializer(GameEntity.serializer()), listOf(game)).toByteArray())
             zip.closeEntry()
-            zip.putNextEntry(ZipEntry("${BACKUP_FILES_PREFIX}artwork/$gameId/hero.jpg"))
+            zip.putNextEntry(ZipEntry("${BACKUP_FILES_PREFIX}artwork/$gameId/background.jpg"))
             zip.write(byteArrayOf(1, 2, 3, 4))
             zip.closeEntry()
         }

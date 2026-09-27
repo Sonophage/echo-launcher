@@ -62,7 +62,6 @@ import com.psplauncher.feature.xmb.ui.detail.detailPanelContentFor
 import com.psplauncher.feature.xmb.ui.detail.stepPanelPage
 import com.psplauncher.core.domain.model.HiddenPlacement
 import com.psplauncher.core.domain.model.HideLocationType
-import com.psplauncher.core.domain.model.IconDisplayMode
 import com.psplauncher.core.domain.model.PlayState
 import com.psplauncher.core.domain.model.VideoSnapPlacement
 import com.psplauncher.core.domain.model.MemoryCard
@@ -643,10 +642,6 @@ data class XMBUiState(
 
     val iconStyle: GameIconStyle = GameIconStyle.PSP_RECTANGLE,
 
-    val iconDisplayMode: IconDisplayMode = IconDisplayMode.DEFAULT,
-
-    val iconDisplayModeByPlatform: Map<String, IconDisplayMode> = emptyMap(),
-
     val iconLegibility: com.psplauncher.core.domain.model.IconLegibilityStyle =
         com.psplauncher.core.domain.model.IconLegibilityStyle.DEFAULT,
 
@@ -1151,14 +1146,9 @@ data class XMBItem(
     val id: String,
     val title: String,
     val artworkUri: String? = null,
-    val heroUri: String? = null,
     val iconUri: String? = null,
     val logoUri: String? = null,
 
-    val boxArtUri: String? = null,
-    val physicalMediaUri: String? = null,
-    val box3dUri: String? = null,
-    val iconDisplayModeOverride: String? = null,
     val subtitle: String? = null,
 
     val metadataLine: String? = null,
@@ -1207,37 +1197,15 @@ data class XMBItem(
     val type: XMBItemType = XMBItemType.STANDARD,
 ) {
     val backdropArt: List<String>
-        get() = listOfNotNull(artworkUri, heroUri, coverUri, boxArtUri, iconUri)
+        get() = listOfNotNull(artworkUri, coverUri, iconUri)
             .filter { it.isNotBlank() && it != XMBViewModel.MEMORY_CARD_ASSET_URI }
 
     val shelfCoverArt: String?
-        get() = listOfNotNull(boxArtUri, coverUri, artworkUri, heroUri, iconUri)
+        get() = listOfNotNull(coverUri, artworkUri, iconUri)
             .firstOrNull { it.isNotBlank() && it != XMBViewModel.MEMORY_CARD_ASSET_URI }
 
     val hasVisibleLogo: Boolean
         get() = !logoUri.isNullOrBlank() && backdropArt.isNotEmpty()
-}
-
-data class ResolvedIcon(val uri: String?, val naturalAspect: Boolean, val mode: IconDisplayMode)
-
-fun resolveIconDisplay(
-    item: XMBItem,
-    globalMode: IconDisplayMode,
-    platformModes: Map<String, IconDisplayMode> = emptyMap(),
-): ResolvedIcon {
-    val mode = IconDisplayMode.fromName(item.iconDisplayModeOverride)
-        ?: item.platformId?.let { platformModes[it] }
-        ?: globalMode
-    return when (mode) {
-        IconDisplayMode.ICON0 ->
-            ResolvedIcon(item.iconUri, naturalAspect = false, mode = mode)
-        IconDisplayMode.BOX_ART ->
-            ResolvedIcon(item.boxArtUri, naturalAspect = true, mode = mode)
-        IconDisplayMode.PHYSICAL_MEDIA ->
-            ResolvedIcon(item.physicalMediaUri, naturalAspect = item.physicalMediaUri != null, mode = mode)
-        IconDisplayMode.BOX_3D ->
-            ResolvedIcon(item.box3dUri, naturalAspect = true, mode = mode)
-    }
 }
 
 data class BackgroundTaskInfo(
@@ -1342,7 +1310,7 @@ class XMBViewModel @Inject constructor(
             }
         }
         observeContextMenuHintIdle()
-        observeIconDisplayMode()
+        observeIconPreferences()
         observeFocusedGameVideo()
         observeFocusedItemAccent()
         observeBackgroundSettings()
@@ -2027,10 +1995,9 @@ class XMBViewModel @Inject constructor(
         subtitle     = if (pinned) "Pinned" else null,
         packageName  = packageName,
         isAndroidApp = true,
-        iconUri      = artwork?.let { it.iconUri ?: it.heroUri ?: it.artworkUri },
+        iconUri      = artwork?.let { it.iconUri ?: it.artworkUri },
 
-        artworkUri   = artwork?.let { it.artworkUri ?: it.heroUri },
-        heroUri      = artwork?.heroUri,
+        artworkUri   = artwork?.artworkUri,
         accentColor  = artwork?.let { platformCache[it.platformId]?.accentColor },
     )
 
@@ -3444,7 +3411,6 @@ class XMBViewModel @Inject constructor(
         title = title,
         subtitle = listOfNotNull("Game", platformCache[platformId]?.name).joinToString("  ·  "),
 
-        boxArtUri = boxArtUri,
         coverUri = artworkUri,
         gameId = id,
         platformId = platformId,
@@ -4662,13 +4628,8 @@ class XMBViewModel @Inject constructor(
             id           = g.id.toString(),
             title        = g.displayTitle,
             artworkUri   = g.artworkUri,
-            heroUri      = g.heroUri,
             iconUri      = g.iconUri,
             logoUri      = g.logoUri,
-            boxArtUri    = g.boxArtUri,
-            physicalMediaUri = g.physicalMediaUri,
-            box3dUri     = g.box3dUri,
-            iconDisplayModeOverride = g.iconDisplayMode,
             subtitle     = gameMetaLabel(g),
             metadataLine = gameMetadataLine(g.releaseYear, g.genre, g.developer, g.players),
             description  = g.description,
@@ -5285,7 +5246,6 @@ class XMBViewModel @Inject constructor(
             val items = platformContextMenuItems(
                 platformId = platformId,
                 pinned = card.pinned,
-                iconDisplayLabel = platformIconDisplayLabel(platformId),
                 emulatorLabel = choices?.let { it.resolvedName ?: "None" },
                 overrideCount = overrideCount,
                 romDirectory = card.romDirectory,
@@ -5464,41 +5424,7 @@ class XMBViewModel @Inject constructor(
 
     private fun openAllGamesContextMenu() {
         _uiState.update { it.copy(
-            activeContextMenu = XMBContextMenu(state = MenuState(title = "All Games", rows = allGamesContextMenuItems(it.iconDisplayMode.label)), isAllGames = true)
-        )}
-    }
-
-    private fun platformIconDisplayLabel(platformId: String): String {
-        val state = _uiState.value
-        val override = state.iconDisplayModeByPlatform[platformId]
-        return override?.label ?: "Global: ${state.iconDisplayMode.label}"
-    }
-
-    private fun openPlatformIconDisplayPickerMenu(platformId: String) {
-        val state = _uiState.value
-        val override = state.iconDisplayModeByPlatform[platformId]
-        val items = buildList {
-            add(XMBContextMenuItem(
-                action = "picondisp_default",
-                label   = "Use Global Setting (${state.iconDisplayMode.label})",
-                checked = override == null,
-            ))
-            IconDisplayMode.entries.forEach { mode ->
-                add(XMBContextMenuItem("picondisp_${mode.name}", mode.label, checked = override == mode))
-            }
-        }
-        _uiState.update { it.copy(
-            activeContextMenu = XMBContextMenu(state = MenuState(title = "Icon Display", rows = items), platformId = platformId)
-        )}
-    }
-
-    private fun openGlobalIconDisplayPickerMenu() {
-        val current = _uiState.value.iconDisplayMode
-        val items = IconDisplayMode.entries.map { mode ->
-            XMBContextMenuItem("gicondisp_${mode.name}", mode.label, checked = mode == current)
-        }
-        _uiState.update { it.copy(
-            activeContextMenu = XMBContextMenu(state = MenuState(title = "Icon Display", rows = items), isAllGames = true)
+            activeContextMenu = XMBContextMenu(state = MenuState(title = "All Games", rows = allGamesContextMenuItems()), isAllGames = true)
         )}
     }
 
@@ -5683,22 +5609,11 @@ class XMBViewModel @Inject constructor(
                 handleRomRootAction(menu.mediaRootUri, itemId)
             menu.mediaRootKind != null -> handleMediaFoldersAction(menu.mediaRootKind, itemId)
             menu.musicFolderId != null -> handleMusicFolderAction(menu.musicFolderId, itemId)
-            menu.isAllGames -> if (itemId.startsWith("gicondisp_")) {
-                IconDisplayMode.fromName(itemId.removePrefix("gicondisp_"))?.let { mode ->
-                    viewModelScope.launch { iconDisplayPreferences.setMode(mode) }
-                }
-            } else when (itemId) {
+            menu.isAllGames -> when (itemId) {
                 "library_manager" -> _uiState.update { it.copy(activeSettingsScreen = "settings_library") }
                 "import_pc_games" -> _uiState.update { it.copy(activeSettingsScreen = "settings_import_pc") }
-                "icon_display_global" -> openGlobalIconDisplayPickerMenu()
             }
-            menu.platformId != null -> if (itemId.startsWith("picondisp_")) {
-                val choice = itemId.removePrefix("picondisp_")
-                val pid = menu.platformId
-                viewModelScope.launch {
-                    iconDisplayPreferences.setPlatformMode(pid, IconDisplayMode.fromName(choice))
-                }
-            } else if (itemId.startsWith(PLATFORM_EMU_PREFIX)) {
+            menu.platformId != null -> if (itemId.startsWith(PLATFORM_EMU_PREFIX)) {
                 setPlatformEmulator(menu.platformId, itemId.removePrefix(PLATFORM_EMU_PREFIX))
             } else when (itemId) {
                 "default_emulator" -> openDefaultEmulatorMenu(menu.platformId)
@@ -5710,7 +5625,6 @@ class XMBViewModel @Inject constructor(
                 "card_move_down"   -> moveCard(menu.platformId, up = false)
                 "find_games"       -> openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
                 "import_pc_games"  -> _uiState.update { it.copy(activeSettingsScreen = "settings_import_pc") }
-                "icon_display_platform" -> openPlatformIconDisplayPickerMenu(menu.platformId)
                 "scan_roms"        -> scanCard(menu.platformId)
                 "scrape_missing_artwork" -> scrapeMissingArtworkForPlatform(menu.platformId)
                 "update_metadata"        -> updatePlatformMetadata(menu.platformId)
@@ -5767,12 +5681,6 @@ class XMBViewModel @Inject constructor(
                 appAction {
                     gameRepository.setPlayState(gid, PlayState.fromName(choice))
                 }
-            } else if (itemId.startsWith("icondisp_")) {
-                val gid = menu.gameId
-                val choice = itemId.removePrefix("icondisp_")
-                appAction {
-                    gameRepository.setIconDisplayMode(gid, IconDisplayMode.fromName(choice)?.name)
-                }
             } else if (itemId.startsWith("disc_pick_")) {
                 val discId = itemId.removePrefix("disc_pick_").toLongOrNull()
                 if (discId != null) {
@@ -5817,7 +5725,6 @@ class XMBViewModel @Inject constructor(
                 }
                 "file_location"          -> showGameFileLocation(menu.gameId)
                 "change_emulator"        -> openEmulatorPickerMenu(menu.gameId)
-                "icon_display"           -> openIconDisplayPickerMenu(menu.gameId)
                 "shelves"                -> openShelvesPickerMenu(menu.gameId)
 
                 "remove_game", "remove_missing" -> {
@@ -5930,27 +5837,6 @@ class XMBViewModel @Inject constructor(
                 }
             }
             _uiState.update { it.copy(activeContextMenu = XMBContextMenu(state = MenuState(title = "Mark As", rows = items), gameId = gameId))}
-        }
-    }
-
-    private fun openIconDisplayPickerMenu(gameId: Long) {
-        viewModelScope.launch {
-            val game = gameRepository.getById(gameId) ?: return@launch
-            val override = IconDisplayMode.fromName(game.iconDisplayMode)
-
-            val state = _uiState.value
-            val inherited = state.iconDisplayModeByPlatform[game.platformId] ?: state.iconDisplayMode
-            val items = buildList {
-                add(XMBContextMenuItem(
-                    action = "icondisp_default",
-                    label   = "Use Default (${inherited.label})",
-                    checked = override == null,
-                ))
-                IconDisplayMode.entries.forEach { mode ->
-                    add(XMBContextMenuItem("icondisp_${mode.name}", mode.label, checked = override == mode))
-                }
-            }
-            _uiState.update { it.copy(activeContextMenu = XMBContextMenu(state = MenuState(title = "Icon Display", rows = items), gameId = gameId))}
         }
     }
 
@@ -7210,8 +7096,7 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun artRefsOf(game: Game?): List<String> = listOfNotNull(
-        game?.artworkUri, game?.heroUri, game?.logoUri, game?.iconUri,
-        game?.boxArtUri, game?.physicalMediaUri, game?.box3dUri,
+        game?.artworkUri, game?.logoUri, game?.iconUri,
     )
 
     private fun openMetadataPreviewFor(gameId: Long) {
@@ -8209,17 +8094,7 @@ class XMBViewModel @Inject constructor(
         }
     }
 
-    private fun observeIconDisplayMode() {
-        viewModelScope.launch {
-            iconDisplayPreferences.modeFlow.collect { mode ->
-                _uiState.update { it.copy(iconDisplayMode = mode) }
-            }
-        }
-        viewModelScope.launch {
-            iconDisplayPreferences.platformModesFlow.collect { modes ->
-                _uiState.update { it.copy(iconDisplayModeByPlatform = modes) }
-            }
-        }
+    private fun observeIconPreferences() {
         viewModelScope.launch {
             iconDisplayPreferences.animatedIconsFlow.collect { enabled ->
                 animatedIconsEnabled = enabled
@@ -8291,7 +8166,6 @@ class XMBViewModel @Inject constructor(
                         !s.hasBlockingOverlay &&
                         com.psplauncher.feature.xmb.ui.snapSiteFor(
                             s.snapPlacement,
-                            resolveIconDisplay(item, s.iconDisplayMode, s.iconDisplayModeByPlatform).mode,
                             s.effectivePanelPage == DetailPanelPage.VIDEO,
                         ) != null
                     if (eligible) item.gameId else null

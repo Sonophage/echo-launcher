@@ -161,7 +161,7 @@ class MetadataApplyTest {
     private fun givenStoredGame(description: String? = "My own notes", developer: String? = null) {
         coEvery { gameDao.getById(1L) } returns GameEntity(
             id = 1L, title = "chrono_trigger", platformId = "snes", romPath = null,
-            packageName = null, emulatorPackage = null, artworkUri = null, heroUri = null, logoUri = null,
+            packageName = null, emulatorPackage = null, artworkUri = null, logoUri = null,
             description = description, developer = developer, publisher = null, releaseYear = 1995,
             genre = null, steamGridDbId = null, scrapedTitle = "Chrono Trigger",
         )
@@ -214,9 +214,8 @@ class MetadataApplyTest {
         coVerify {
             gameDao.updateMetadata(
                 id = 1L, description = "Time travel RPG", developer = "Square", publisher = null,
-                releaseYear = null, genre = null, artworkUri = null, heroUri = null, logoUri = null,
-                iconUri = null, boxArtUri = null, physicalMediaUri = null, box3dUri = null,
-                scrapedTitle = null, players = null, ageRating = null, franchise = null,
+                releaseYear = null, genre = null, artworkUri = null, logoUri = null,
+                iconUri = null, scrapedTitle = null, players = null, ageRating = null, franchise = null,
                 communityRating = null, releaseDate = null, ssId = null, igdbId = null,
                 steamGridDbId = null, romCrc32 = null,
             )

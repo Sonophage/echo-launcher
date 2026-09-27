@@ -128,18 +128,10 @@ class InternalArtworkMigrationWorker @AssistedInject constructor(
         when (kind) {
             ArtworkKind.ICON ->
                 if (game.iconUri == oldPath || !routing.isValidRef(game.iconUri)) gameDao.updateIconUri(gameId, uri)
-            ArtworkKind.HERO ->
-                if (game.heroUri == oldPath || !routing.isValidRef(game.heroUri)) gameDao.updateHero(gameId, uri)
             ArtworkKind.BACKGROUND ->
                 if (game.artworkUri == oldPath || !routing.isValidRef(game.artworkUri)) gameDao.updateArtwork(gameId, uri)
             ArtworkKind.LOGO ->
                 if (game.logoUri == oldPath || !routing.isValidRef(game.logoUri)) gameDao.updateLogo(gameId, uri)
-            ArtworkKind.BOX_ART ->
-                if (game.boxArtUri == oldPath || !routing.isValidRef(game.boxArtUri)) gameDao.updateBoxArt(gameId, uri)
-            ArtworkKind.PHYSICAL_MEDIA ->
-                if (game.physicalMediaUri == oldPath || !routing.isValidRef(game.physicalMediaUri)) gameDao.updatePhysicalMedia(gameId, uri)
-            ArtworkKind.BOX_3D ->
-                if (game.box3dUri == oldPath || !routing.isValidRef(game.box3dUri)) gameDao.updateBox3d(gameId, uri)
             else -> Unit
         }
     }

@@ -134,9 +134,6 @@ class GameRepositoryImpl @Inject constructor(
     override suspend fun updateBoxArt(id: Long, uri: String?) =
         gameDao.updateArtwork(id, uri)
 
-    override suspend fun updateHeroArt(id: Long, uri: String?) =
-        gameDao.updateHero(id, uri)
-
     override suspend fun updateLogoArt(id: Long, uri: String?) =
         gameDao.updateLogo(id, uri)
 
@@ -187,18 +184,6 @@ class GameRepositoryImpl @Inject constructor(
 
     override suspend fun updateUserTitleOverride(id: Long, override: String?) =
         gameDao.updateUserTitleOverride(id, override)
-
-    override suspend fun updateBoxArtTile(id: Long, uri: String?) =
-        gameDao.updateBoxArt(id, uri)
-
-    override suspend fun updatePhysicalMediaArt(id: Long, uri: String?) =
-        gameDao.updatePhysicalMedia(id, uri)
-
-    override suspend fun updateBox3dArt(id: Long, uri: String?) =
-        gameDao.updateBox3d(id, uri)
-
-    override suspend fun setIconDisplayMode(id: Long, mode: String?) =
-        gameDao.updateIconDisplayMode(id, mode)
 
     override suspend fun getMissingRoms(): List<Game> {
         val romPaths = gameDao.getAllRomPaths()

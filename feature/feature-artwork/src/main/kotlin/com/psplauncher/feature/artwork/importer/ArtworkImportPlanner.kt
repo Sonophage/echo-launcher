@@ -217,7 +217,6 @@ class ArtworkImportPlanner @Inject constructor(
     private fun needFor(game: GameEntity, kindName: String): Need {
         val ref = when (kindName) {
             ArtworkKind.ICON.name -> game.iconUri
-            ArtworkKind.HERO.name -> game.heroUri
             ArtworkKind.BACKGROUND.name -> game.artworkUri
             ArtworkKind.LOGO.name -> game.logoUri
             else -> return Need.MISSING
@@ -252,7 +251,6 @@ class ArtworkImportPlanner @Inject constructor(
             packageName = game.packageName,
             emulatorPackage = game.emulatorPackage,
             artworkUri = game.artworkUri,
-            heroUri = game.heroUri,
             logoUri = game.logoUri,
             iconUri = game.iconUri,
             description = game.description,

@@ -7,10 +7,8 @@ import org.junit.Test
 
 class RowArtSlotsTest {
     private val bySlot = mapOf(
-        "boxArtUri" to XMBItem(id = "1", title = "t", boxArtUri = "file:///box.png"),
         "coverUri" to XMBItem(id = "2", title = "t", coverUri = "file:///cover.png"),
         "artworkUri" to XMBItem(id = "3", title = "t", artworkUri = "file:///art.png"),
-        "heroUri" to XMBItem(id = "4", title = "t", heroUri = "file:///hero.png"),
         "iconUri" to XMBItem(id = "5", title = "t", iconUri = "file:///icon.png"),
     )
 
@@ -32,11 +30,10 @@ class RowArtSlotsTest {
     fun `the card prefers a portrait cover and the backdrop prefers a landscape`() {
         val all = XMBItem(
             id = "6", title = "t",
-            boxArtUri = "file:///box.png", coverUri = "file:///cover.png",
-            artworkUri = "file:///art.png", heroUri = "file:///hero.png",
+            coverUri = "file:///cover.png", artworkUri = "file:///art.png",
         )
 
-        assertEquals("file:///box.png", all.shelfCoverArt)
+        assertEquals("file:///cover.png", all.shelfCoverArt)
         assertEquals("file:///art.png", all.backdropArt.first())
     }
 

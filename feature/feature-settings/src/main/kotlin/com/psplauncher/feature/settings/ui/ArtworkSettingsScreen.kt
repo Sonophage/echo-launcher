@@ -1,7 +1,6 @@
 package com.psplauncher.feature.settings.ui
 
 import com.psplauncher.core.domain.model.VideoSnapPlacement
-import com.psplauncher.core.domain.model.IconDisplayMode
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -194,14 +193,6 @@ fun ArtworkSettingsScreen(
             if (section == null || section == ArtworkSection.ARTWORK) {
                 SettingsGroup("Art Preferences")
 
-                SettingsPickerRow(
-                    label    = "Game Icon Display",
-                    sublabel = "Default for every console — override per console or per game from their Options menus",
-                    options  = IconDisplayMode.entries.map { SettingsPickerOption(it.label) },
-                    selectedIndex = IconDisplayMode.entries.indexOf(state.iconDisplayMode),
-                    onPick   = { viewModel.setIconDisplayMode(IconDisplayMode.entries[it]) },
-                )
-
                 SettingsToggleRow(
                     label    = "Backdrop & Tint",
                     sublabel = "The focused item's artwork fills the background and its colour " +
@@ -260,20 +251,6 @@ fun ArtworkSettingsScreen(
                         "(Ⓨ toggles it inside the crop editor too)",
                     checked  = state.cropPreviewEnabled,
                     onToggle = { viewModel.setCropPreviewEnabled(it) },
-                )
-
-                SettingsToggleRow(
-                    label    = "Prefer SteamGridDB Heroes",
-                    sublabel = "Try SteamGridDB first for hero/banner art",
-                    checked  = state.preferSteamGridDbHeroes,
-                    onToggle = { viewModel.setPreferSteamGridDbHeroes(it) },
-                )
-
-                SettingsToggleRow(
-                    label    = "Download Hero Images",
-                    sublabel = "Wide banner art shown in game detail view",
-                    checked  = state.downloadHeroes,
-                    onToggle = { viewModel.setDownloadHeroes(it) },
                 )
 
                 SettingsToggleRow(

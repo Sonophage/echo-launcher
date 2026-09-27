@@ -300,12 +300,8 @@ class ArtworkImportExecutor @Inject constructor(
 
     private suspend fun updateGameColumn(gameId: Long, kind: ArtworkKind, uri: String) = when (kind) {
         ArtworkKind.ICON -> gameDao.updateIconUri(gameId, uri)
-        ArtworkKind.HERO -> gameDao.updateHero(gameId, uri)
         ArtworkKind.BACKGROUND -> gameDao.updateArtwork(gameId, uri)
         ArtworkKind.LOGO -> gameDao.updateLogo(gameId, uri)
-        ArtworkKind.BOX_ART -> gameDao.updateBoxArt(gameId, uri)
-        ArtworkKind.PHYSICAL_MEDIA -> gameDao.updatePhysicalMedia(gameId, uri)
-        ArtworkKind.BOX_3D -> gameDao.updateBox3d(gameId, uri)
         else -> Unit
     }
 

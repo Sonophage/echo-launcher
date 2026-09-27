@@ -15,8 +15,6 @@ class HoverPanelContentTest {
         platformId = "gbc",
         isRealGame = true,
         logoUri = "file:///logo.png",
-        boxArtUri = "file:///box.png",
-
         artworkUri = "file:///art.png",
     )
 
@@ -45,11 +43,11 @@ class HoverPanelContentTest {
         val walked = XMBUiState(
             currentItems = listOf(game, other),
             selectedItemIndex = 0,
-            panelPage = DetailPanelPage.BOX_ART,
+            panelPage = DetailPanelPage.GALLERY,
             panelPageGameId = 7L,
         )
 
-        assertEquals(DetailPanelPage.BOX_ART, walked.effectivePanelPage)
+        assertEquals(DetailPanelPage.GALLERY, walked.effectivePanelPage)
         assertEquals(
             "moving the cursor to the next row puts the panel back on its logo page",
             DetailPanelPage.LOGO,
@@ -61,7 +59,7 @@ class HoverPanelContentTest {
     fun `a page with no game attached to it is not honoured`() {
         val orphan = XMBUiState(
             currentItems = listOf(game),
-            panelPage = DetailPanelPage.BOX_ART,
+            panelPage = DetailPanelPage.GALLERY,
             panelPageGameId = null,
         )
 
@@ -87,7 +85,7 @@ class HoverPanelContentTest {
 
     @Test
     fun `there is no panel for a game with nothing behind it`() {
-        val bare = game.copy(artworkUri = null, heroUri = null, boxArtUri = null, iconUri = null)
+        val bare = game.copy(artworkUri = null, iconUri = null)
 
         assertNull(state(bare).hoverPanelContent)
     }

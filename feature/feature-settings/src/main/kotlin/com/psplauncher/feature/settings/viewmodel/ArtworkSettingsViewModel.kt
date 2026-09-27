@@ -58,8 +58,6 @@ data class ArtworkSettingsUiState(
     val confirmRescrapeAll: Boolean = false,
     val diskCacheSizeMb: String = "0 MB",
 
-    val iconDisplayMode: com.psplauncher.core.domain.model.IconDisplayMode =
-        com.psplauncher.core.domain.model.IconDisplayMode.DEFAULT,
 
     val animatedIcons: Boolean = true,
 
@@ -70,11 +68,9 @@ data class ArtworkSettingsUiState(
     val itemBackdrop: Boolean = true,
 
     val icon1LingerDelaySeconds: Float = 1.5f,
-    val downloadHeroes: Boolean = true,
     val downloadLogos: Boolean = true,
     val downloadManuals: Boolean = true,
     val downloadVideoSnaps: Boolean = false,
-    val preferSteamGridDbHeroes: Boolean = false,
 
     val artworkFolderGrantDead: Boolean = false,
 
@@ -132,11 +128,6 @@ class ArtworkSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             tmdbKeyProvider.keyFlow.collect { key ->
                 _extra.update { it.copy(hasTmdbKey = !key.isNullOrBlank()) }
-            }
-        }
-        viewModelScope.launch {
-            iconDisplayPreferences.modeFlow.collect { mode ->
-                _extra.update { it.copy(iconDisplayMode = mode) }
             }
         }
         viewModelScope.launch {
@@ -245,9 +236,8 @@ class ArtworkSettingsViewModel @Inject constructor(
         sgdbKeyProvider.apiKeyFlow,
         igdb,
         ssAccounts,
-        scrapePreferences.preferSteamGridDbHeroesFlow,
         _extra,
-    ) { sgdbKey, igdbPair, ss, preferSgdbHeroes, extra ->
+    ) { sgdbKey, igdbPair, ss, extra ->
         val (igdbClientId, hasIgdb) = igdbPair
         val (ssUsername, ssEnabled, hasSs) = ss
         extra.copy(
@@ -258,7 +248,6 @@ class ArtworkSettingsViewModel @Inject constructor(
             ssEnabled             = ssEnabled,
             hasSsCredentials      = hasSs,
             ssUsername            = ssUsername ?: "",
-            preferSteamGridDbHeroes = preferSgdbHeroes,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArtworkSettingsUiState())
 
@@ -272,7 +261,6 @@ class ArtworkSettingsViewModel @Inject constructor(
             val opts = scrapePreferences.getOptions()
             _extra.update {
                 it.copy(
-                    downloadHeroes     = opts.downloadHeroes,
                     downloadLogos      = opts.downloadClearLogos,
                     downloadManuals    = opts.downloadManuals,
                     downloadVideoSnaps = opts.downloadVideoSnaps,
@@ -478,10 +466,6 @@ class ArtworkSettingsViewModel @Inject constructor(
         }
     }
 
-    fun setIconDisplayMode(mode: com.psplauncher.core.domain.model.IconDisplayMode) {
-        viewModelScope.launch { iconDisplayPreferences.setMode(mode) }
-    }
-
     fun setAnimatedIcons(enabled: Boolean) {
         _extra.update { it.copy(animatedIcons = enabled) }
         viewModelScope.launch { iconDisplayPreferences.setAnimatedIcons(enabled) }
@@ -507,11 +491,6 @@ class ArtworkSettingsViewModel @Inject constructor(
         viewModelScope.launch { iconDisplayPreferences.setLingerDelaySeconds(clamped) }
     }
 
-    fun setDownloadHeroes(enabled: Boolean) {
-        _extra.update { it.copy(downloadHeroes = enabled) }
-        viewModelScope.launch { scrapePreferences.setDownloadHeroes(enabled) }
-    }
-
     fun setDownloadLogos(enabled: Boolean) {
         _extra.update { it.copy(downloadLogos = enabled) }
         viewModelScope.launch { scrapePreferences.setDownloadClearLogos(enabled) }
@@ -525,10 +504,6 @@ class ArtworkSettingsViewModel @Inject constructor(
     fun setDownloadVideoSnaps(enabled: Boolean) {
         _extra.update { it.copy(downloadVideoSnaps = enabled) }
         viewModelScope.launch { scrapePreferences.setDownloadVideoSnaps(enabled) }
-    }
-
-    fun setPreferSteamGridDbHeroes(enabled: Boolean) {
-        viewModelScope.launch { scrapePreferences.setPreferSteamGridDbHeroes(enabled) }
     }
 
     fun setTmdbKeyDraft(v: String) = _extra.update { it.copy(tmdbKeyDraft = v) }

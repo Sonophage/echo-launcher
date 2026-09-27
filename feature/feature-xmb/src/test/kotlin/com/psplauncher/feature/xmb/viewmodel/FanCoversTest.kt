@@ -6,8 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FanCoversTest {
-    private fun game(id: Long, box: String? = null, art: String? = null) =
-        Game(id = id, platformId = "gba", title = "g$id", romPath = "/r/$id", boxArtUri = box, artworkUri = art)
+    private fun game(id: Long, art: String? = null) =
+        Game(id = id, platformId = "gba", title = "g$id", romPath = "/r/$id", artworkUri = art)
 
     @Test
     fun `newest first, by id`() {
@@ -27,15 +27,12 @@ class FanCoversTest {
     }
 
     @Test
-    fun `box art wins over the generic artwork path`() {
-        assertEquals(
-            listOf("box"),
-            fanCoversOf(listOf(game(1, box = "box", art = "art"))),
-        )
+    fun `a game with no artwork contributes no cover`() {
         assertEquals(
             listOf("art"),
-            fanCoversOf(listOf(game(1, box = null, art = "art"))),
+            fanCoversOf(listOf(game(1, art = "art"))),
         )
+        assertTrue(fanCoversOf(listOf(game(1, art = null))).isEmpty())
     }
 
     @Test

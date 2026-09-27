@@ -44,16 +44,14 @@ class StartupDataPrep @Inject constructor(
         var repaired = 0
         gameDao.getAll().forEach { g ->
             val artwork = resolve(g.artworkUri, filesDir)
-            val hero    = resolve(g.heroUri, filesDir)
             val logo    = resolve(g.logoUri, filesDir)
             val icon    = resolve(g.iconUri, filesDir)
 
             if (artwork != g.artworkUri) gameDao.updateArtwork(g.id, artwork)
-            if (hero    != g.heroUri)    gameDao.updateHero(g.id, hero)
             if (logo    != g.logoUri)    gameDao.updateLogo(g.id, logo)
             if (icon    != g.iconUri)    gameDao.updateIconUri(g.id, icon)
 
-            if (artwork != g.artworkUri || hero != g.heroUri || logo != g.logoUri || icon != g.iconUri) {
+            if (artwork != g.artworkUri || logo != g.logoUri || icon != g.iconUri) {
                 repaired++
             }
         }

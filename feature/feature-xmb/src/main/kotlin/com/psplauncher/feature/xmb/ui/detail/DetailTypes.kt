@@ -1,11 +1,10 @@
 package com.psplauncher.feature.xmb.ui.detail
 
-enum class ArtworkType { ICON, HERO, BACKGROUND }
+enum class ArtworkType { ICON, BACKGROUND }
 
 val ArtworkType.displayLabel: String
     get() = when (this) {
         ArtworkType.ICON       -> "Game Icon"
-        ArtworkType.HERO       -> "Hero Banner"
         ArtworkType.BACKGROUND -> "Background"
     }
 

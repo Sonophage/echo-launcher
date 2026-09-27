@@ -83,10 +83,6 @@ class StudioGridCapacityTest {
         val expected = mapOf(
             ArtworkKind.ICON to StudioTileClass.LANDSCAPE,
             ArtworkKind.ICON1 to StudioTileClass.LANDSCAPE,
-            ArtworkKind.BOX_ART to StudioTileClass.PORTRAIT,
-            ArtworkKind.BOX_3D to StudioTileClass.PORTRAIT,
-            ArtworkKind.PHYSICAL_MEDIA to StudioTileClass.SQUARE,
-            ArtworkKind.HERO to StudioTileClass.LANDSCAPE,
             ArtworkKind.BACKGROUND to StudioTileClass.LANDSCAPE,
             ArtworkKind.LOGO to StudioTileClass.WIDE,
             ArtworkKind.SCREENSHOT to StudioTileClass.LANDSCAPE,
