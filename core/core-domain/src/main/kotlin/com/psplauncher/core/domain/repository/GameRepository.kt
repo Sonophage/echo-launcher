@@ -47,7 +47,6 @@ interface GameRepository {
     suspend fun updateFavoriteSortOrder(id: Long, order: Int)
     suspend fun updateNote(id: Long, note: String?)
     suspend fun updateBoxArt(id: Long, uri: String?)
-    suspend fun updateHeroArt(id: Long, uri: String?)
     suspend fun updateLogoArt(id: Long, uri: String?)
     suspend fun updateIconArt(id: Long, uri: String?)
     suspend fun setPreferredEmulator(id: Long, profileIdOrPackage: String?)
@@ -78,11 +77,6 @@ interface GameRepository {
 
     suspend fun updateUserTitleOverride(id: Long, override: String?)
 
-    suspend fun updateBoxArtTile(id: Long, uri: String?)
-    suspend fun updatePhysicalMediaArt(id: Long, uri: String?)
-    suspend fun updateBox3dArt(id: Long, uri: String?)
-
-    suspend fun setIconDisplayMode(id: Long, mode: String?)
 
     fun observeMissing(): Flow<List<Game>>
     suspend fun markSeen(romPaths: List<String>, seenAt: Long)

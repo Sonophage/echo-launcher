@@ -170,7 +170,7 @@ class ArtworkRepository @Inject constructor(
     private fun isValidArtworkRef(uri: String?): Boolean = artworkStore.isValidRef(uri)
 
     private fun primaryArtRefs(g: com.psplauncher.core.data.database.entity.GameEntity) =
-        listOf(g.artworkUri, g.boxArtUri, g.logoUri)
+        listOf(g.artworkUri, g.logoUri)
 
     private fun needsArtwork(g: com.psplauncher.core.data.database.entity.GameEntity): Boolean =
         primaryArtRefs(g).any { !isValidArtworkRef(it) }

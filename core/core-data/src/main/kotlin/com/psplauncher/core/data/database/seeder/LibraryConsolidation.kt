@@ -89,7 +89,7 @@ class LibraryConsolidation @Inject constructor(
             val survivor = rows.sortedWith(
                 compareByDescending<GameEntity> { it.launchShortcutId != null }
                     .thenByDescending { it.launchIntentUri != null }
-                    .thenByDescending { it.iconUri != null || it.heroUri != null || it.artworkUri != null }
+                    .thenByDescending { it.iconUri != null || it.artworkUri != null }
                     .thenBy { it.id }
             ).first()
 
@@ -108,7 +108,6 @@ class LibraryConsolidation @Inject constructor(
             launchShortcutId  = survivor.launchShortcutId ?: loser.launchShortcutId,
             launchIntentUri   = survivor.launchIntentUri ?: loser.launchIntentUri,
             artworkUri        = survivor.artworkUri ?: loser.artworkUri,
-            heroUri           = survivor.heroUri ?: loser.heroUri,
             logoUri           = survivor.logoUri ?: loser.logoUri,
             iconUri           = survivor.iconUri ?: loser.iconUri,
             userTitleOverride = survivor.userTitleOverride ?: loser.userTitleOverride,

@@ -51,7 +51,7 @@ object DebugGameFactory {
         DebugScenario.SINGLE_GAME     -> listOf(ps2Games().first())
         DebugScenario.LARGE_LIBRARY   -> largeLibrary()
         DebugScenario.MISSING_ROMS    -> ps2Games() + missingRomGames()
-        DebugScenario.NO_ARTWORK      -> (ps2Games() + gbaGames()).map { it.copy(artworkUri = null, heroUri = null) }
+        DebugScenario.NO_ARTWORK      -> (ps2Games() + gbaGames()).map { it.copy(artworkUri = null) }
     }
 
     private fun fakeGame(

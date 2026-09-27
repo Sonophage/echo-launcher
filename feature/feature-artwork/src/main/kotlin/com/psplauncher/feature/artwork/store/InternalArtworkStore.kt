@@ -142,6 +142,48 @@ class InternalArtworkStore @Inject constructor(
         if (dir.listFiles()?.isEmpty() == true) dir.delete()
     }
 
+    data class ReapReport(val deleted: Int, val bytes: Long)
+
+    suspend fun reapUnreferenced(
+        referenced: Set<String>,
+        liveGameIds: Set<Long>,
+        keptKinds: Set<ArtworkKind>,
+    ): ReapReport = withContext(Dispatchers.IO) {
+        var deleted = 0
+        var bytes = 0L
+        root.listFiles()?.forEach { dir ->
+            val gameId = dir.name.toLongOrNull()
+            if (!dir.isDirectory || gameId == null) return@forEach
+            val gameIsGone = gameId !in liveGameIds
+            dir.listFiles()?.forEach { f ->
+                if (!f.isFile) return@forEach
+                val kind = kindOf(f.name) ?: return@forEach
+                if (!gameIsGone && kind in keptKinds) return@forEach
+                if (f.absolutePath in referenced) return@forEach
+                val size = f.length()
+                if (f.delete()) {
+                    deleted++
+                    bytes += size
+                }
+            }
+            if (dir.listFiles()?.isEmpty() == true) dir.delete()
+        }
+        ReapReport(deleted, bytes)
+    }
+
+    private fun kindOf(fileName: String): ArtworkKind? = ArtworkKind.entries.firstOrNull { kind ->
+        ArtworkFileNaming.sortOrderFromFileName(kind, fileName) != null ||
+            fileName.startsWith("${kind.name.lowercase(Locale.US)}_")
+    }
+
+    suspend fun deleteUnderRoot(path: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val file = File(path).canonicalFile
+            val under = file.path.startsWith(root.canonicalFile.path + File.separator)
+            if (under && file.isFile) file.delete() else false
+        }.getOrDefault(false)
+    }
+
     suspend fun footprint(): Pair<Int, Long> = withContext(Dispatchers.IO) {
         var count = 0
         var bytes = 0L

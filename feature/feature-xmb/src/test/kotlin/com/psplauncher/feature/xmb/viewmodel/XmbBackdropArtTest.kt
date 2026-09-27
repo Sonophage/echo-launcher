@@ -6,16 +6,14 @@ import org.junit.Test
 
 class XmbBackdropArtTest {
     @Test
-    fun `a game reads its background slot first, then its hero`() {
+    fun `a game reads its background slot`() {
         val game = XMBItem(
             id = "g1",
             title = "Crash",
             artworkUri = "content://bg",
-            heroUri = "content://hero",
-            boxArtUri = "content://box",
             isRealGame = true,
         )
-        assertEquals(listOf("content://bg", "content://hero", "content://box"), game.backdropArt)
+        assertEquals(listOf("content://bg"), game.backdropArt)
     }
 
     @Test
@@ -57,8 +55,8 @@ class XmbBackdropArtTest {
     fun `a logo with any readable art behind it is a visible logo`() {
         listOf(
             XMBItem(id = "a", title = "x", logoUri = "content://l", artworkUri = "content://bg"),
-            XMBItem(id = "b", title = "x", logoUri = "content://l", heroUri = "content://hero"),
-            XMBItem(id = "c", title = "x", logoUri = "content://l", boxArtUri = "content://box"),
+            XMBItem(id = "b", title = "x", logoUri = "content://l", coverUri = "content://cover"),
+            XMBItem(id = "c", title = "x", logoUri = "content://l", iconUri = "content://icon"),
         ).forEach { assertTrue("${it.id} should draw its logo", it.hasVisibleLogo) }
     }
 

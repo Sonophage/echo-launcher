@@ -221,7 +221,7 @@ fun AppDetailScreen(
         Spacer(Modifier.height(16.dp))
 
         PfpDetailHeroBanner(
-            artworkUri  = game.artworkUri ?: game.heroUri,
+            artworkUri  = game.artworkUri,
             title       = game.displayTitle,
             platform    = game.packageName.orEmpty(),
             accentColor = pfpColors.accentColor,

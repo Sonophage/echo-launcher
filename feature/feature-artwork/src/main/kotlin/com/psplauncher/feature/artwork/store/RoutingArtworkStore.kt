@@ -195,11 +195,8 @@ class RoutingArtworkStore @Inject constructor(
 
     suspend fun deleteAssetAt(gameId: Long, kind: ArtworkKind, sortOrder: Int): Boolean {
         val rec = artworkRecordDao.getAt(gameId, kind.name, sortOrder) ?: return false
-        val target = portableTarget(gameId)
-        if (target != null) {
-            runCatching { library.deleteUri(Uri.parse(rec.documentUri)) }
-            rec.prevDocumentUri?.let { runCatching { library.deleteUri(Uri.parse(it)) } }
-        }
+        deleteAssetFile(rec.documentUri)
+        rec.prevDocumentUri?.let { deleteAssetFile(it) }
         artworkRecordDao.deleteAtAndCompact(gameId, kind.name, sortOrder)
         return true
     }
@@ -291,8 +288,8 @@ class RoutingArtworkStore @Inject constructor(
 
         val records = artworkRecordDao.findAll(gameId, kind.name)
         for (rec in records) {
-            runCatching { library.deleteUri(Uri.parse(rec.documentUri)) }
-            rec.prevDocumentUri?.let { runCatching { library.deleteUri(Uri.parse(it)) } }
+            deleteAssetFile(rec.documentUri)
+            rec.prevDocumentUri?.let { deleteAssetFile(it) }
             library.findInPath(tree, ArtworkPathResolver.originalsDirSegments(game.platformId, kind), rec.portableName)
                 ?.let { library.deleteUri(it.uri) }
             artworkRecordDao.deleteById(rec.id)
@@ -348,6 +345,11 @@ class RoutingArtworkStore @Inject constructor(
             cropRect = cropRect, hasOriginal = true, sortOrder = sortOrder,
             providerAssetId = rec?.providerAssetId ?: candidateAssetId,
         )
+    }
+
+    private suspend fun deleteAssetFile(uri: String) {
+        if (isPortableRef(uri)) runCatching { library.deleteUri(Uri.parse(uri)) }
+        else internal.deleteUnderRoot(uri)
     }
 
     private suspend fun portableTarget(gameId: Long): Pair<Uri, GameEntity>? {

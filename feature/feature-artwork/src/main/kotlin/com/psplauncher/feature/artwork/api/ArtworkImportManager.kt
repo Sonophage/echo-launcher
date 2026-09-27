@@ -133,6 +133,19 @@ class ArtworkImportManager @Inject constructor(
     fun cancelInternalMigration() =
         com.psplauncher.feature.artwork.migrate.InternalArtworkMigrationWorker.cancel(context)
 
+    suspend fun portableArtworkCount(): Int {
+        val worker = com.psplauncher.feature.artwork.migrate.PortableArtworkImportWorker
+        val namedByAColumn = worker.columnRefsOf(gameDao.getAll())
+        return artworkRecordDao.getAll()
+            .count { worker.shouldCopy(it.artworkType, it.documentUri, namedByAColumn) }
+    }
+
+    fun startPortableImport(): UUID =
+        com.psplauncher.feature.artwork.migrate.PortableArtworkImportWorker.enqueue(context)
+
+    fun cancelPortableImport() =
+        com.psplauncher.feature.artwork.migrate.PortableArtworkImportWorker.cancel(context)
+
     data class RelinkResult(
         val entriesScanned: Int,
         val gamesLinked: Int,
@@ -208,7 +221,6 @@ class ArtworkImportManager @Inject constructor(
         }
         for (record in gridRecords) {
             val game = gameDao.getById(record.gameId) ?: continue
-            if (game.boxArtUri == record.documentUri) gameDao.updateBoxArt(record.gameId, null)
             val fileName = record.relativePath.substringAfterLast('/')
             val hasIconRecord = artworkRecordDao.get(record.gameId, ArtworkKind.ICON.name) != null
             if (!hasIconRecord && fileName.isNotBlank()) {
@@ -411,11 +423,7 @@ class ArtworkImportManager @Inject constructor(
                         if (isColumnKind && kind.name !in lockedTypes(gameId)) {
                             val current = when (kind) {
                                 ArtworkKind.ICON -> game.iconUri
-                                ArtworkKind.HERO -> game.heroUri
                                 ArtworkKind.BACKGROUND -> game.artworkUri
-                                ArtworkKind.BOX_ART -> game.boxArtUri
-                                ArtworkKind.PHYSICAL_MEDIA -> game.physicalMediaUri
-                                ArtworkKind.BOX_3D -> game.box3dUri
                                 else -> game.logoUri
                             }
 
@@ -424,11 +432,7 @@ class ArtworkImportManager @Inject constructor(
                             if (replaceable) {
                                 when (kind) {
                                     ArtworkKind.ICON -> gameDao.updateIconUri(gameId, uri)
-                                    ArtworkKind.HERO -> gameDao.updateHero(gameId, uri)
                                     ArtworkKind.BACKGROUND -> gameDao.updateArtwork(gameId, uri)
-                                    ArtworkKind.BOX_ART -> gameDao.updateBoxArt(gameId, uri)
-                                    ArtworkKind.PHYSICAL_MEDIA -> gameDao.updatePhysicalMedia(gameId, uri)
-                                    ArtworkKind.BOX_3D -> gameDao.updateBox3d(gameId, uri)
                                     else -> gameDao.updateLogo(gameId, uri)
                                 }
                                 linkedIds.add(gameId)
@@ -527,6 +531,7 @@ class ArtworkImportManager @Inject constructor(
         var missingFiles = 0
         for (prior in priorRecords.values) {
             if (prior.id in matchedPriorIds) continue
+            if (!com.psplauncher.feature.artwork.store.isPortableRef(prior.documentUri)) continue
             missingFiles++
             artworkRecordDao.deleteById(prior.id)
             val game = games.firstOrNull { it.id == prior.gameId } ?: continue
@@ -534,12 +539,8 @@ class ArtworkImportManager @Inject constructor(
             if (prior.sortOrder != 0) continue
             when (prior.artworkType) {
                 ArtworkKind.ICON.name -> if (game.iconUri == prior.documentUri) gameDao.updateIconUri(game.id, null)
-                ArtworkKind.HERO.name -> if (game.heroUri == prior.documentUri) gameDao.updateHero(game.id, null)
                 ArtworkKind.BACKGROUND.name -> if (game.artworkUri == prior.documentUri) gameDao.updateArtwork(game.id, null)
                 ArtworkKind.LOGO.name -> if (game.logoUri == prior.documentUri) gameDao.updateLogo(game.id, null)
-                ArtworkKind.BOX_ART.name -> if (game.boxArtUri == prior.documentUri) gameDao.updateBoxArt(game.id, null)
-                ArtworkKind.PHYSICAL_MEDIA.name -> if (game.physicalMediaUri == prior.documentUri) gameDao.updatePhysicalMedia(game.id, null)
-                ArtworkKind.BOX_3D.name -> if (game.box3dUri == prior.documentUri) gameDao.updateBox3d(game.id, null)
             }
         }
 

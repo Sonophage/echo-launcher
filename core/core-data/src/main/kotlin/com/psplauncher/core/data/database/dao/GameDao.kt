@@ -214,14 +214,11 @@ interface GameDao {
     @Query("UPDATE games SET artwork_uri = :artworkUri WHERE id = :id")
     suspend fun updateArtwork(id: Long, artworkUri: String?)
 
-    @Query("UPDATE games SET hero_uri = :heroUri WHERE id = :id")
-    suspend fun updateHero(id: Long, heroUri: String?)
-
     @Query("UPDATE games SET logo_uri = :logoUri WHERE id = :id")
     suspend fun updateLogo(id: Long, logoUri: String?)
 
-    @Query("UPDATE games SET hero_uri = :heroUri, logo_uri = :logoUri WHERE id = :id")
-    suspend fun updateHeroAndLogo(id: Long, heroUri: String?, logoUri: String?)
+    @Query("UPDATE games SET logo_uri = :logoUri WHERE id = :id")
+    suspend fun updateLogoOnly(id: Long, logoUri: String?)
 
     @Query(
         """
@@ -294,12 +291,8 @@ interface GameDao {
             release_year    = COALESCE(:releaseYear,  release_year),
             genre           = COALESCE(:genre,        genre),
             artwork_uri     = COALESCE(:artworkUri,   artwork_uri),
-            hero_uri        = COALESCE(:heroUri,      hero_uri),
             logo_uri        = COALESCE(:logoUri,      logo_uri),
             icon_uri        = COALESCE(:iconUri,      icon_uri),
-            box_art_uri     = COALESCE(:boxArtUri,    box_art_uri),
-            physical_media_uri = COALESCE(:physicalMediaUri, physical_media_uri),
-            box3d_uri       = COALESCE(:box3dUri,     box3d_uri),
             scraped_title   = COALESCE(:scrapedTitle, scraped_title),
             players         = COALESCE(:players,      players),
             age_rating      = COALESCE(:ageRating,    age_rating),
@@ -321,12 +314,8 @@ interface GameDao {
         releaseYear: Int? = null,
         genre: String? = null,
         artworkUri: String? = null,
-        heroUri: String? = null,
         logoUri: String? = null,
         iconUri: String? = null,
-        boxArtUri: String? = null,
-        physicalMediaUri: String? = null,
-        box3dUri: String? = null,
         scrapedTitle: String? = null,
         players: String? = null,
         ageRating: String? = null,
@@ -421,22 +410,9 @@ interface GameDao {
     @Query("UPDATE games SET icon_uri = :iconUri WHERE id = :id")
     suspend fun updateIconUri(id: Long, iconUri: String?)
 
-    @Query("UPDATE games SET box_art_uri = :boxArtUri WHERE id = :id")
-    suspend fun updateBoxArt(id: Long, boxArtUri: String?)
-
-    @Query("UPDATE games SET physical_media_uri = :physicalMediaUri WHERE id = :id")
-    suspend fun updatePhysicalMedia(id: Long, physicalMediaUri: String?)
-
-    @Query("UPDATE games SET box3d_uri = :box3dUri WHERE id = :id")
-    suspend fun updateBox3d(id: Long, box3dUri: String?)
-
-    @Query("UPDATE games SET icon_display_mode = :mode WHERE id = :id")
-    suspend fun updateIconDisplayMode(id: Long, mode: String?)
-
     @Query(
         """
-        UPDATE games SET artwork_uri = NULL, hero_uri = NULL, logo_uri = NULL, icon_uri = NULL,
-            box_art_uri = NULL, physical_media_uri = NULL, box3d_uri = NULL
+        UPDATE games SET artwork_uri = NULL, logo_uri = NULL, icon_uri = NULL
     """
     )
     suspend fun clearAllArtworkRefs()
@@ -444,10 +420,10 @@ interface GameDao {
     @Query("UPDATE games SET artwork_key = COALESCE(artwork_key, :artworkKey) WHERE id = :id")
     suspend fun mintArtworkKey(id: Long, artworkKey: String)
 
-    @Query("UPDATE games SET artwork_uri = NULL, hero_uri = NULL, logo_uri = NULL, icon_uri = NULL")
+    @Query("UPDATE games SET artwork_uri = NULL, logo_uri = NULL, icon_uri = NULL")
     suspend fun clearAllArtwork()
 
-    @Query("UPDATE games SET artwork_uri = NULL, hero_uri = NULL, logo_uri = NULL, icon_uri = NULL WHERE id = :id")
+    @Query("UPDATE games SET artwork_uri = NULL, logo_uri = NULL, icon_uri = NULL WHERE id = :id")
     suspend fun clearArtworkForGame(id: Long)
 
     @Query("DELETE FROM games")

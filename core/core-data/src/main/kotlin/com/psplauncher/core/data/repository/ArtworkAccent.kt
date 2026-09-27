@@ -49,8 +49,6 @@ class ArtworkAccent @Inject constructor(
 
     data class Resolved(val uri: String, val accent: Long?)
 
-    suspend fun firstReadable(vararg candidates: String?): String? = resolve(*candidates)?.uri
-
     suspend fun isReadable(uri: String): Boolean = resolve(uri) != null
 
     private fun accentOf(bitmap: Bitmap, uri: String): Long? {

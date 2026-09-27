@@ -62,7 +62,7 @@ import com.psplauncher.core.data.database.entity.VideoLibraryEntity
 import com.psplauncher.core.data.database.entity.VideoPlaylistEntity
 import com.psplauncher.core.data.database.entity.VideoPlaylistItemEntity
 
-const val PFP_DATABASE_VERSION = 53
+const val PFP_DATABASE_VERSION = 54
 
 @Database(
     entities = [
@@ -1170,6 +1170,50 @@ abstract class PFPDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_53_54 = object : Migration(53, 54) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "UPDATE games SET artwork_uri = hero_uri " +
+                        "WHERE artwork_uri IS NULL AND hero_uri IS NOT NULL AND hero_uri <> ''"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `games_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `platform_id` TEXT NOT NULL, `rom_path` TEXT, `rom_uri` TEXT, `disc_set_key` TEXT, `disc_number` INTEGER, `is_disc_primary` INTEGER NOT NULL, `region` TEXT, `package_name` TEXT, `emulator_package` TEXT, `artwork_uri` TEXT, `logo_uri` TEXT, `icon_uri` TEXT, `description` TEXT, `developer` TEXT, `publisher` TEXT, `release_year` INTEGER, `genre` TEXT, `players` TEXT, `age_rating` TEXT, `franchise` TEXT, `community_rating` REAL, `release_date` TEXT, `steam_grid_db_id` INTEGER, `ss_id` INTEGER, `tgdb_id` INTEGER, `igdb_id` INTEGER, `rom_crc32` TEXT, `artwork_key` TEXT, `is_favorite` INTEGER NOT NULL, `favorite_sort_order` INTEGER NOT NULL, `total_play_time_millis` INTEGER NOT NULL, `last_played_at` INTEGER, `date_added` INTEGER, `play_state` TEXT, `user_note` TEXT, `is_manual_entry` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `scraped_title` TEXT, `user_title_override` TEXT, `content_type` TEXT NOT NULL, `launch_shortcut_id` TEXT, `launch_intent_uri` TEXT, `launch_token` TEXT, `storefront` TEXT, `storefront_game_id` TEXT, `is_missing` INTEGER NOT NULL, `last_seen_at` INTEGER)"
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO games_new (id, title, platform_id, rom_path, rom_uri, disc_set_key, disc_number, is_disc_primary,
+                region, package_name, emulator_package, artwork_uri, logo_uri, icon_uri, description,
+                developer, publisher, release_year, genre, players, age_rating, franchise,
+                community_rating, release_date, steam_grid_db_id, ss_id, tgdb_id, igdb_id, rom_crc32,
+                artwork_key, is_favorite, favorite_sort_order, total_play_time_millis, last_played_at,
+                date_added, play_state, user_note, is_manual_entry, created_at, scraped_title,
+                user_title_override, content_type, launch_shortcut_id, launch_intent_uri, launch_token,
+                storefront, storefront_game_id, is_missing, last_seen_at)
+                    SELECT id, title, platform_id, rom_path, rom_uri, disc_set_key, disc_number, is_disc_primary,
+                region, package_name, emulator_package, artwork_uri, logo_uri, icon_uri, description,
+                developer, publisher, release_year, genre, players, age_rating, franchise,
+                community_rating, release_date, steam_grid_db_id, ss_id, tgdb_id, igdb_id, rom_crc32,
+                artwork_key, is_favorite, favorite_sort_order, total_play_time_millis, last_played_at,
+                date_added, play_state, user_note, is_manual_entry, created_at, scraped_title,
+                user_title_override, content_type, launch_shortcut_id, launch_intent_uri, launch_token,
+                storefront, storefront_game_id, is_missing, last_seen_at FROM games
+                """
+                )
+                db.execSQL("DROP TABLE games")
+                db.execSQL("ALTER TABLE games_new RENAME TO games")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_games_platform_id` ON `games` (`platform_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_games_is_favorite` ON `games` (`is_favorite`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_games_last_played_at` ON `games` (`last_played_at`)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_games_rom_path` ON `games` (`rom_path`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_games_artwork_key` ON `games` (`artwork_key`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_games_disc_set_key` ON `games` (`disc_set_key`)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_games_storefront_storefront_game_id` " +
+                        "ON `games` (`storefront`, `storefront_game_id`)"
+                )
+            }
+        }
+
         val MIGRATION_48_49 = object : Migration(48, 49) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE music_tracks ADD COLUMN last_played_at INTEGER")
@@ -1238,6 +1282,7 @@ abstract class PFPDatabase : RoomDatabase() {
             MIGRATION_50_51,
             MIGRATION_51_52,
             MIGRATION_52_53,
+            MIGRATION_53_54,
         )
     }
 }

@@ -252,7 +252,6 @@ class AppDetailViewModel @Inject constructor(
         val gameId = _uiState.value.game?.id ?: return
         viewModelScope.launch {
             gameRepository.updateIconArt(gameId, null)
-            gameRepository.updateHeroArt(gameId, null)
             gameRepository.updateBoxArt(gameId, null)
             val updated = gameRepository.getById(gameId)
             _uiState.update {
@@ -403,20 +402,17 @@ class AppDetailViewModel @Inject constructor(
     private suspend fun saveArtwork(gameId: Long, type: ArtworkType, path: String?) {
         when (type) {
             ArtworkType.ICON       -> gameRepository.updateIconArt(gameId, path)
-            ArtworkType.HERO       -> gameRepository.updateHeroArt(gameId, path)
             ArtworkType.BACKGROUND -> gameRepository.updateBoxArt(gameId, path)
         }
     }
 
     private fun ArtworkType.toSgdbArtType() = when (this) {
         ArtworkType.ICON       -> SgdbArtType.GRID
-        ArtworkType.HERO       -> SgdbArtType.HERO
         ArtworkType.BACKGROUND -> SgdbArtType.HERO
     }
 
     private fun ArtworkType.toKind() = when (this) {
         ArtworkType.ICON       -> ArtworkKind.ICON
-        ArtworkType.HERO       -> ArtworkKind.HERO
         ArtworkType.BACKGROUND -> ArtworkKind.BACKGROUND
     }
 }

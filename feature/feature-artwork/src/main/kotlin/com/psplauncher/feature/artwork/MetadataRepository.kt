@@ -190,7 +190,7 @@ class MetadataRepository @Inject constructor(
                 if (match != null) {
                     sgdbGameId  = match.id
                     sgdbGridUrl = steamGridDb.getBestGridUrl(match.id)
-                    if (options.downloadHeroes) sgdbHeroUrl = steamGridDb.getBestHeroUrl(match.id)
+                    sgdbHeroUrl = steamGridDb.getBestHeroUrl(match.id)
                     if (options.downloadClearLogos) sgdbLogoUrl = steamGridDb.getBestLogoUrl(match.id)
                 }
             }.onFailure { Timber.w(it, "SteamGridDB error for '$bestTitle'") }
@@ -243,10 +243,7 @@ class MetadataRepository @Inject constructor(
         val steamArt    = candidates.steamArt
 
         val finalBoxArtUrl = steamArt?.boxArtUrl ?: ssInfo?.artworkUrl ?: igdbInfo?.artworkUrl ?: sgdbGridUrl
-        val finalHeroUrl   = if (options.preferSteamGridDbHeroes)
-            sgdbHeroUrl ?: steamArt?.heroUrl ?: ssInfo?.heroUrl ?: igdbInfo?.heroUrl
-        else
-            steamArt?.heroUrl ?: ssInfo?.heroUrl ?: igdbInfo?.heroUrl ?: sgdbHeroUrl
+        val finalBannerUrl = steamArt?.heroUrl ?: ssInfo?.heroUrl ?: igdbInfo?.heroUrl ?: sgdbHeroUrl
         val finalLogoUrl = if (options.downloadClearLogos)
             steamArt?.logoUrl ?: ssInfo?.logoUrl ?: igdbInfo?.logoUrl ?: sgdbLogoUrl
         else null
@@ -260,36 +257,16 @@ class MetadataRepository @Inject constructor(
             return path
         }
 
-        var heroPath: String? = null
         var backgroundPath: String? = null
         var logoPath: String? = null
-        var boxArtPath: String? = null
-        var physicalMediaPath: String? = null
-        var box3dPath: String? = null
 
         if (!options.metadataOnly) {
-        if (options.downloadHeroes) onAssetProgress?.invoke(src, "Hero")
-        heroPath = if (options.downloadHeroes) finalHeroUrl?.let { savedTracked(ArtworkKind.HERO, it, fromSs = it == ssInfo?.heroUrl) } else null
-
         onAssetProgress?.invoke(src, "Background")
-        backgroundPath = heroPath
-            ?: finalHeroUrl?.let { savedTracked(ArtworkKind.BACKGROUND, it, fromSs = it == ssInfo?.heroUrl) }
+        backgroundPath = finalBannerUrl?.let { savedTracked(ArtworkKind.BACKGROUND, it, fromSs = it == ssInfo?.heroUrl) }
             ?: finalBoxArtUrl?.let { savedTracked(ArtworkKind.BACKGROUND, it, fromSs = it == ssInfo?.artworkUrl) }
 
         if (options.downloadClearLogos) onAssetProgress?.invoke(src, "Logo")
         logoPath = finalLogoUrl?.let { savedTracked(ArtworkKind.LOGO, it, fromSs = it == ssInfo?.logoUrl) }
-
-        val boxArtSrcUrl = ssInfo?.boxArtUrl ?: igdbInfo?.artworkUrl
-        if (boxArtSrcUrl != null) onAssetProgress?.invoke(src, "Box Art")
-        boxArtPath = boxArtSrcUrl?.let { savedTracked(ArtworkKind.BOX_ART, it, fromSs = it == ssInfo?.boxArtUrl) }
-        physicalMediaPath = ssInfo?.physicalMediaUrl?.let {
-            onAssetProgress?.invoke("ScreenScraper", "Physical Media")
-            savedTracked(ArtworkKind.PHYSICAL_MEDIA, it, fromSs = true)
-        }
-        box3dPath = ssInfo?.box3dUrl?.let {
-            onAssetProgress?.invoke("ScreenScraper", "3D Box")
-            savedTracked(ArtworkKind.BOX_3D, it, fromSs = true)
-        }
 
         ssInfo?.screenshotUrl?.let {
             onAssetProgress?.invoke("ScreenScraper", "Screenshot")
@@ -346,12 +323,8 @@ class MetadataRepository @Inject constructor(
             releaseYear  = ssInfo?.releaseYear ?: steamDetails?.releaseYear,
             genre        = ssInfo?.genre ?: steamDetails?.genre,
 
-            artworkUri   = if (options.metadataOnly) null else backgroundPath ?: finalHeroUrl ?: finalBoxArtUrl,
-            heroUri      = if (options.metadataOnly) null else heroPath ?: finalHeroUrl,
+            artworkUri   = if (options.metadataOnly) null else backgroundPath ?: finalBannerUrl ?: finalBoxArtUrl,
             logoUri      = if (options.metadataOnly) null else logoPath ?: finalLogoUrl,
-            boxArtUri    = boxArtPath,
-            physicalMediaUri = physicalMediaPath,
-            box3dUri     = box3dPath,
             players      = ssInfo?.players,
             ageRating    = ssInfo?.ageRating,
             franchise    = ssInfo?.franchise,
@@ -378,12 +351,8 @@ class MetadataRepository @Inject constructor(
                 }
                 for (kind in failedSsKinds) {
                     val url = when (kind) {
-                        ArtworkKind.HERO           -> fresh.heroUrl
                         ArtworkKind.BACKGROUND     -> fresh.heroUrl ?: fresh.artworkUrl
                         ArtworkKind.LOGO           -> fresh.logoUrl
-                        ArtworkKind.BOX_ART        -> fresh.boxArtUrl
-                        ArtworkKind.PHYSICAL_MEDIA -> fresh.physicalMediaUrl
-                        ArtworkKind.BOX_3D         -> fresh.box3dUrl
                         ArtworkKind.SCREENSHOT     -> fresh.screenshotUrl
                         ArtworkKind.MANUAL         -> fresh.manualUrl
                         ArtworkKind.ICON1          -> fresh.videoUrl
@@ -391,19 +360,15 @@ class MetadataRepository @Inject constructor(
                     } ?: continue
                     val path = artworkStore.saveFromUrl(gameId, kind, url) ?: continue
                     when (kind) {
-                        ArtworkKind.HERO           -> gameDao.updateMetadata(gameId, heroUri = path)
                         ArtworkKind.BACKGROUND     -> gameDao.updateMetadata(gameId, artworkUri = path)
                         ArtworkKind.LOGO           -> gameDao.updateMetadata(gameId, logoUri = path)
-                        ArtworkKind.BOX_ART        -> gameDao.updateMetadata(gameId, boxArtUri = path)
-                        ArtworkKind.PHYSICAL_MEDIA -> gameDao.updateMetadata(gameId, physicalMediaUri = path)
-                        ArtworkKind.BOX_3D         -> gameDao.updateMetadata(gameId, box3dUri = path)
                         else                       -> Unit
                     }
                 }
             }
         }
 
-        prewarm(backgroundPath, heroPath, logoPath)
+        prewarm(backgroundPath, logoPath)
         if (!options.metadataOnly) fetchHorizontalIcon(gameId, bestTitle, sgdbGameId)
 
         Timber.i("Metadata from $src: '$bestTitle' (scrapedTitle='$newScrapedTitle')")

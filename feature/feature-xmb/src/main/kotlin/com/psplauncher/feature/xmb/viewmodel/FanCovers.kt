@@ -10,7 +10,7 @@ const val INSIDE_COVER_COUNT = 4
 
 fun fanCoversOf(games: List<Game>, limit: Int = INSIDE_COVER_COUNT): List<String> = games
     .sortedWith(compareByDescending<Game> { it.dateAdded ?: 0L }.thenByDescending { it.id })
-    .mapNotNull { it.boxArtUri ?: it.artworkUri }
+    .mapNotNull { it.artworkUri }
     .take(limit)
 
 internal fun fanCoversToDraw(insideCovers: List<String>, cardArtGrid: Boolean): List<String> =

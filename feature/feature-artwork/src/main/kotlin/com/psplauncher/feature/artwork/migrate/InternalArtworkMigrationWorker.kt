@@ -17,6 +17,7 @@ import com.psplauncher.core.ui.notification.BackgroundTaskNotifier
 import com.psplauncher.feature.artwork.importer.ImportSummary
 import com.psplauncher.feature.artwork.store.ArtworkKind
 import com.psplauncher.feature.artwork.store.ArtworkTempIO
+import com.psplauncher.feature.artwork.store.isPortableRef
 import com.psplauncher.feature.artwork.store.InternalArtworkStore
 import com.psplauncher.feature.artwork.store.RoutingArtworkStore
 import dagger.assisted.Assisted
@@ -60,14 +61,14 @@ class InternalArtworkMigrationWorker @AssistedInject constructor(
                 val game = games[asset.gameId]
                 if (game == null) { skipped++; return@forEachIndexed }
 
-                val record = artworkRecordDao.get(asset.gameId, asset.kind.name)
-                val portableValid = record != null && routing.isValidRef(record.documentUri)
+                val portable = artworkRecordDao.get(asset.gameId, asset.kind.name)
+                    ?.takeIf { isPortableRef(it.documentUri) }
                 when {
-                    portableValid -> {
+                    portable != null && routing.isValidRef(portable.documentUri) -> {
                         internal.deleteKind(asset.gameId, asset.kind)
                         skipped++
                     }
-                    record != null && (record.locked || record.userAssigned) -> skipped++
+                    portable != null && (portable.locked || portable.userAssigned) -> skipped++
                     else -> {
                         val sizeBytes = asset.sizeBytes
                         val tmp = runCatching {
@@ -87,7 +88,7 @@ class InternalArtworkMigrationWorker @AssistedInject constructor(
                         if (uri == null) {
                             failed++
                         } else {
-                            repointColumn(asset.gameId, asset.kind, asset.file.absolutePath, uri)
+                            repointColumns(asset.gameId, asset.kind, asset.file.absolutePath, uri)
                             internal.deleteKind(asset.gameId, asset.kind)
                             migrated++
                             bytes += sizeBytes
@@ -123,23 +124,19 @@ class InternalArtworkMigrationWorker @AssistedInject constructor(
         return Result.success(workDataOf(KEY_MIGRATED to migrated, KEY_FAILED to failed))
     }
 
-    private suspend fun repointColumn(gameId: Long, kind: ArtworkKind, oldPath: String, uri: String) {
+    private suspend fun repointColumns(gameId: Long, kind: ArtworkKind, oldPath: String, uri: String) {
         val game = gameDao.getById(gameId) ?: return
+        if (game.iconUri == oldPath) gameDao.updateIconUri(gameId, uri)
+        if (game.artworkUri == oldPath) gameDao.updateArtwork(gameId, uri)
+        if (game.logoUri == oldPath) gameDao.updateLogo(gameId, uri)
+
         when (kind) {
             ArtworkKind.ICON ->
-                if (game.iconUri == oldPath || !routing.isValidRef(game.iconUri)) gameDao.updateIconUri(gameId, uri)
-            ArtworkKind.HERO ->
-                if (game.heroUri == oldPath || !routing.isValidRef(game.heroUri)) gameDao.updateHero(gameId, uri)
+                if (!routing.isValidRef(game.iconUri)) gameDao.updateIconUri(gameId, uri)
             ArtworkKind.BACKGROUND ->
-                if (game.artworkUri == oldPath || !routing.isValidRef(game.artworkUri)) gameDao.updateArtwork(gameId, uri)
+                if (!routing.isValidRef(game.artworkUri)) gameDao.updateArtwork(gameId, uri)
             ArtworkKind.LOGO ->
-                if (game.logoUri == oldPath || !routing.isValidRef(game.logoUri)) gameDao.updateLogo(gameId, uri)
-            ArtworkKind.BOX_ART ->
-                if (game.boxArtUri == oldPath || !routing.isValidRef(game.boxArtUri)) gameDao.updateBoxArt(gameId, uri)
-            ArtworkKind.PHYSICAL_MEDIA ->
-                if (game.physicalMediaUri == oldPath || !routing.isValidRef(game.physicalMediaUri)) gameDao.updatePhysicalMedia(gameId, uri)
-            ArtworkKind.BOX_3D ->
-                if (game.box3dUri == oldPath || !routing.isValidRef(game.box3dUri)) gameDao.updateBox3d(gameId, uri)
+                if (!routing.isValidRef(game.logoUri)) gameDao.updateLogo(gameId, uri)
             else -> Unit
         }
     }

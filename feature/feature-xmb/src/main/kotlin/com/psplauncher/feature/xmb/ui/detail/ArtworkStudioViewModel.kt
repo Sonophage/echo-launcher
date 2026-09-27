@@ -435,8 +435,7 @@ enum class StudioAction(val label: String) {
 }
 
 val CROPPABLE_KINDS = setOf(
-    ArtworkKind.ICON, ArtworkKind.ICON1, ArtworkKind.BOX_ART, ArtworkKind.BOX_3D,
-    ArtworkKind.PHYSICAL_MEDIA, ArtworkKind.HERO, ArtworkKind.BACKGROUND, ArtworkKind.LOGO,
+    ArtworkKind.ICON, ArtworkKind.ICON1, ArtworkKind.BACKGROUND, ArtworkKind.LOGO,
     ArtworkKind.SCREENSHOT, ArtworkKind.TITLESCREEN,
 )
 
@@ -448,10 +447,6 @@ private const val MAX_QUERY_LENGTH = 120
 
 private val SS_TYPES_FOR_KIND: Map<ArtworkKind, List<String>> = mapOf(
     ArtworkKind.ICON           to listOf("mixrbv2", "mixrbv1", "screenmarquee", "steamgrid", "box-2D"),
-    ArtworkKind.BOX_ART        to listOf("box-2D"),
-    ArtworkKind.BOX_3D         to listOf("box-3D"),
-    ArtworkKind.PHYSICAL_MEDIA to listOf("support-2D", "support-texture"),
-    ArtworkKind.HERO           to listOf("fanart", "ss"),
     ArtworkKind.BACKGROUND     to listOf("fanart", "ss", "box-2D"),
     ArtworkKind.LOGO           to listOf("wheel", "wheel-hd"),
     ArtworkKind.SCREENSHOT     to listOf("ss", "sstitle"),
@@ -467,20 +462,16 @@ private val BACKGROUND_SOURCES = listOf(
     StudioSource.IGDB to MatchProvider.IGDB,
 )
 
-private val SHOW_ALL_ART_KINDS = setOf(ArtworkKind.BOX_3D, ArtworkKind.PHYSICAL_MEDIA, ArtworkKind.SCREENSHOT)
+private val SHOW_ALL_ART_KINDS = setOf(ArtworkKind.SCREENSHOT)
 
 val STUDIO_TABS = listOf(
-    StudioTab(ArtworkKind.ICON,           "ICON0",       "XMB tile · 144×80 · crop",                       StudioTileClass.LANDSCAPE),
-    StudioTab(ArtworkKind.ICON1,          "ICON1",       "XMB icon animation · 60 s muted snap",           StudioTileClass.LANDSCAPE),
-    StudioTab(ArtworkKind.BOX_ART,        "BOX ART",     "XMB tile (Box Art mode) · natural aspect",       StudioTileClass.PORTRAIT),
-    StudioTab(ArtworkKind.BOX_3D,         "3D BOX",      "XMB tile (3D Box mode) · natural aspect",        StudioTileClass.PORTRAIT),
-    StudioTab(ArtworkKind.PHYSICAL_MEDIA, "PHYS. MEDIA", "XMB tile (Physical Media mode) · natural aspect", StudioTileClass.SQUARE),
-    StudioTab(ArtworkKind.HERO,           "HERO",        "Game Details banner · wide · crop",              StudioTileClass.LANDSCAPE),
-    StudioTab(ArtworkKind.BACKGROUND,     "BACKGROUND",  "XMB hover background · full screen",             StudioTileClass.LANDSCAPE),
-    StudioTab(ArtworkKind.LOGO,           "LOGO",        "PIC0 overlay · transparent PNG · fit",           StudioTileClass.WIDE),
-    StudioTab(ArtworkKind.SCREENSHOT,     "SCREENSHOT",  "Game Details media strip",                       StudioTileClass.LANDSCAPE),
-    StudioTab(ArtworkKind.MANUAL,         "MANUAL",      "In-app PDF manual",                              StudioTileClass.PORTRAIT),
-    StudioTab(ArtworkKind.VIDEO,          "VIDEO",       "Game Details media strip · full video",          StudioTileClass.LANDSCAPE),
+    StudioTab(ArtworkKind.ICON,           "TILE",         "Crossbar tile · 144×80 · crop",                 StudioTileClass.LANDSCAPE),
+    StudioTab(ArtworkKind.ICON1,          "TILE VIDEO",   "Plays on the tile after you rest on it",        StudioTileClass.LANDSCAPE),
+    StudioTab(ArtworkKind.BACKGROUND,     "BACKGROUND",   "XMB hover background · full screen",            StudioTileClass.LANDSCAPE),
+    StudioTab(ArtworkKind.LOGO,           "LOGO",         "PIC0 overlay · transparent PNG · fit",          StudioTileClass.WIDE),
+    StudioTab(ArtworkKind.SCREENSHOT,     "SCREENSHOT",   "Hover panel media strip",                       StudioTileClass.LANDSCAPE),
+    StudioTab(ArtworkKind.MANUAL,         "MANUAL",       "In-app PDF manual",                             StudioTileClass.PORTRAIT),
+    StudioTab(ArtworkKind.VIDEO,          "PREVIEW VIDEO", "Hover panel media strip · full video",         StudioTileClass.LANDSCAPE),
 )
 
 @HiltViewModel
@@ -609,8 +600,6 @@ class ArtworkStudioViewModel @Inject constructor(
 
     private fun sgdbTypesFor(kind: ArtworkKind): List<SgdbArtType> = when (kind) {
         ArtworkKind.ICON    -> listOf(SgdbArtType.GRID)
-        ArtworkKind.BOX_ART -> listOf(SgdbArtType.GRID)
-        ArtworkKind.HERO,
         ArtworkKind.BACKGROUND -> listOf(SgdbArtType.HERO)
         ArtworkKind.LOGO    -> listOf(SgdbArtType.LOGO)
         in SHOW_ALL_ART_KINDS -> SgdbArtType.entries
@@ -619,10 +608,6 @@ class ArtworkStudioViewModel @Inject constructor(
 
     private fun legacyUriFor(kind: ArtworkKind, game: Game?): String? = when (kind) {
         ArtworkKind.ICON           -> game?.iconUri
-        ArtworkKind.BOX_ART        -> game?.boxArtUri
-        ArtworkKind.BOX_3D         -> game?.box3dUri
-        ArtworkKind.PHYSICAL_MEDIA -> game?.physicalMediaUri
-        ArtworkKind.HERO           -> game?.heroUri
         ArtworkKind.BACKGROUND     -> game?.artworkUri
         ArtworkKind.LOGO           -> game?.logoUri
         else                       -> null
@@ -892,8 +877,7 @@ class ArtworkStudioViewModel @Inject constructor(
             )
         }
         val url = when (kind) {
-            ArtworkKind.BOX_ART                        -> info.artworkUrl
-            ArtworkKind.HERO, ArtworkKind.BACKGROUND   -> info.heroUrl
+            ArtworkKind.BACKGROUND                     -> info.heroUrl
             ArtworkKind.LOGO                           -> info.logoUrl
             else                                       -> null
         } ?: return emptyList()
@@ -2058,10 +2042,6 @@ class ArtworkStudioViewModel @Inject constructor(
     private suspend fun repointColumn(kind: ArtworkKind, path: String?) {
         when (kind) {
             ArtworkKind.ICON           -> gameRepository.updateIconArt(gameId, path)
-            ArtworkKind.BOX_ART        -> gameRepository.updateBoxArtTile(gameId, path)
-            ArtworkKind.BOX_3D         -> gameRepository.updateBox3dArt(gameId, path)
-            ArtworkKind.PHYSICAL_MEDIA -> gameRepository.updatePhysicalMediaArt(gameId, path)
-            ArtworkKind.HERO           -> gameRepository.updateHeroArt(gameId, path)
             ArtworkKind.BACKGROUND     -> gameRepository.updateBoxArt(gameId, path)
             ArtworkKind.LOGO           -> gameRepository.updateLogoArt(gameId, path)
             else                       -> Unit

@@ -507,8 +507,6 @@ fun XMBShell(
 
           com.psplauncher.core.ui.icons.LocalCustomIcons provides uiState.customIcons,
 
-          LocalIconDisplayMode provides uiState.iconDisplayMode,
-          LocalIconDisplayModeByPlatform provides uiState.iconDisplayModeByPlatform,
           LocalFocusedGameVideo provides uiState.focusedGameVideo,
 
           LocalPanelShowingVideo provides (uiState.effectivePanelPage == DetailPanelPage.VIDEO),
@@ -605,7 +603,7 @@ fun XMBShell(
             }
 
             val backgroundSnap = uiState.focusedGameVideo?.takeIf {
-                shellSnapSite(it.placement, panelShowingVideo) == SnapSite.BACKGROUND &&
+                snapSiteFor(it.placement, panelShowingVideo) == SnapSite.BACKGROUND &&
                     it.gameId == selectedItem?.gameId
             }
 

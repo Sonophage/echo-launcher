@@ -15,6 +15,7 @@ import com.psplauncher.feature.artwork.importer.ArtworkImportWorker
 import com.psplauncher.feature.artwork.importer.DetectedImportSource
 import com.psplauncher.feature.artwork.importer.ImportPlan
 import com.psplauncher.feature.artwork.migrate.InternalArtworkMigrationWorker
+import com.psplauncher.feature.artwork.migrate.PortableArtworkImportWorker
 import com.psplauncher.feature.artwork.portable.PortableArtworkLibrary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -59,6 +60,11 @@ data class ArtworkImportUiState(
     val migrationRunning: Boolean = false,
     val migrationDone: Int = 0,
     val migrationTotal: Int = 0,
+
+    val portableFiles: Int = 0,
+    val portableImportRunning: Boolean = false,
+    val portableImportDone: Int = 0,
+    val portableImportTotal: Int = 0,
 
     val reports: List<ReportUi> = emptyList(),
     val error: String? = null,
@@ -107,6 +113,11 @@ class ArtworkImportViewModel @Inject constructor(
             WorkManager.getInstance(context)
                 .getWorkInfosForUniqueWorkFlow(InternalArtworkMigrationWorker.UNIQUE_NAME)
                 .collect { infos -> onMigrationWorkInfos(infos) }
+        }
+        viewModelScope.launch {
+            WorkManager.getInstance(context)
+                .getWorkInfosForUniqueWorkFlow(PortableArtworkImportWorker.UNIQUE_NAME)
+                .collect { infos -> onPortableImportWorkInfos(infos) }
         }
         viewModelScope.launch { refreshInternalFootprint() }
     }
@@ -302,6 +313,18 @@ class ArtworkImportViewModel @Inject constructor(
 
     fun cancelInternalMigration() = importManager.cancelInternalMigration()
 
+    fun startPortableImport() {
+        if (_uiState.value.portableImportRunning) return
+        importManager.startPortableImport()
+        _uiState.value = _uiState.value.copy(
+            portableImportRunning = true,
+            portableImportDone = 0,
+            portableImportTotal = 0,
+        )
+    }
+
+    fun cancelPortableImport() = importManager.cancelPortableImport()
+
     fun dismissError() {
         _uiState.value = _uiState.value.copy(error = null, notice = null)
     }
@@ -338,9 +361,27 @@ class ArtworkImportViewModel @Inject constructor(
         }
     }
 
+    private fun onPortableImportWorkInfos(infos: List<WorkInfo>) {
+        val active = infos.firstOrNull { !it.state.isFinished }
+        if (active != null) {
+            _uiState.value = _uiState.value.copy(
+                portableImportRunning = true,
+                portableImportDone = active.progress.getInt(PortableArtworkImportWorker.KEY_PROGRESS_DONE, 0),
+                portableImportTotal = active.progress.getInt(PortableArtworkImportWorker.KEY_PROGRESS_TOTAL, 0),
+            )
+        } else if (_uiState.value.portableImportRunning) {
+            _uiState.value = _uiState.value.copy(portableImportRunning = false)
+            viewModelScope.launch { refreshInternalFootprint() }
+            rescan()
+        }
+    }
+
     private suspend fun refreshInternalFootprint() {
         runCatching { importManager.internalArtworkFootprint() }.onSuccess { (files, bytes) ->
             _uiState.value = _uiState.value.copy(internalFiles = files, internalBytes = bytes)
+        }
+        runCatching { importManager.portableArtworkCount() }.onSuccess { count ->
+            _uiState.value = _uiState.value.copy(portableFiles = count)
         }
     }
 

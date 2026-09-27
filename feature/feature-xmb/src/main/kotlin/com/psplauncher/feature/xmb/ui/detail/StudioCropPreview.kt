@@ -37,20 +37,14 @@ import kotlin.math.roundToInt
 enum class CropPreviewChrome { PSP_TILE, FRAMELESS }
 
 fun cropPreviewChromeFor(kind: ArtworkKind): CropPreviewChrome? = when (kind) {
-    ArtworkKind.ICON, ArtworkKind.BOX_ART, ArtworkKind.ICON1 -> CropPreviewChrome.PSP_TILE
-
-    ArtworkKind.BOX_3D, ArtworkKind.PHYSICAL_MEDIA, ArtworkKind.VIDEO -> CropPreviewChrome.FRAMELESS
-
-    ArtworkKind.HERO, ArtworkKind.BACKGROUND, ArtworkKind.LOGO,
-    ArtworkKind.SCREENSHOT, ArtworkKind.TITLESCREEN, ArtworkKind.MANUAL -> null
+    ArtworkKind.ICON, ArtworkKind.ICON1 -> CropPreviewChrome.PSP_TILE
+    ArtworkKind.VIDEO -> CropPreviewChrome.FRAMELESS
+    else -> null
 }
 
 fun cropPreviewCaptionFor(kind: ArtworkKind): String? = when (kind) {
-    ArtworkKind.ICON -> "XMB tile"
-    ArtworkKind.ICON1 -> "XMB icon animation"
-    ArtworkKind.BOX_ART -> "Box Art tile"
-    ArtworkKind.BOX_3D -> "3D Box tile"
-    ArtworkKind.PHYSICAL_MEDIA -> "Phys. Media tile"
+    ArtworkKind.ICON -> "Crossbar tile"
+    ArtworkKind.ICON1 -> "Tile video"
     ArtworkKind.VIDEO -> "Media strip"
     else -> null
 }

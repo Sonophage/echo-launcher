@@ -14,7 +14,7 @@ class DestructiveConfirmTest {
         "book" to bookContextMenuItems(hasOpenStamp = true),
         "music track" to musicTrackContextMenuItems(playlistId = 7L, hasPlayStamp = true),
         "playlist row" to playlistRowContextMenuItems(),
-        "platform" to platformContextMenuItems("ps2", pinned = false, iconDisplayLabel = "Art"),
+        "platform" to platformContextMenuItems("ps2", pinned = false),
     )
 
     private val gatedByDesign = mapOf(

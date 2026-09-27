@@ -35,7 +35,6 @@ class GameUpsertCascadeTest {
         packageName = "app.gamenative",
         emulatorPackage = null,
         artworkUri = null,
-        heroUri = null,
         logoUri = null,
         description = null,
         developer = null,

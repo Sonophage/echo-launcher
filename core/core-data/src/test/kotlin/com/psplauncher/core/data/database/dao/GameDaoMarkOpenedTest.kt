@@ -44,7 +44,6 @@ class GameDaoMarkOpenedTest {
         packageName = pkg,
         emulatorPackage = null,
         artworkUri = null,
-        heroUri = null,
         logoUri = null,
         description = null,
         developer = null,

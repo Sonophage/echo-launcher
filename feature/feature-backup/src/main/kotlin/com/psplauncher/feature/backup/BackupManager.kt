@@ -222,7 +222,6 @@ open class BackupManager @Inject constructor(
         val remappedGames = games.map { g ->
             g.copy(
                 artworkUri = rewriteFilesPath(g.artworkUri, filesDirPath),
-                heroUri    = rewriteFilesPath(g.heroUri, filesDirPath),
                 logoUri    = rewriteFilesPath(g.logoUri, filesDirPath),
                 iconUri    = rewriteFilesPath(g.iconUri, filesDirPath),
             )
@@ -469,10 +468,6 @@ open class BackupManager @Inject constructor(
 
         stringPreferencesKey("display_icon_legibility"),
         stringPreferencesKey("display_xmb_layout_adjust"),
-        stringPreferencesKey("pref_icon_display_mode"),
-
-        stringPreferencesKey("pref_icon_display_mode_by_platform"),
-
         stringPreferencesKey("pref_video_snap_placement"),
 
         stringPreferencesKey("ra_username"),
@@ -573,8 +568,6 @@ open class BackupManager @Inject constructor(
             booleanPreferencesKey("sound_menu_music"),
 
             booleanPreferencesKey("pref_dl_clear_logos"),
-            booleanPreferencesKey("pref_dl_heroes"),
-            booleanPreferencesKey("pref_sgdb_heroes"),
 
             booleanPreferencesKey("library_setup_complete"),
 

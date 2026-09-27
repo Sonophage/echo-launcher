@@ -139,6 +139,33 @@ fun ArtworkImportScreen(
                     }
                 }
 
+                if (state.portableFiles > 0 || state.portableImportRunning) {
+                    SettingsGroup("App Storage")
+                    if (state.portableImportRunning) {
+                        SettingsRow(
+                            label    = "Copying artwork into the app…",
+                            sublabel = if (state.portableImportTotal > 0)
+                                "${state.portableImportDone} / ${state.portableImportTotal} — runs in the background"
+                            else "Runs in the background — you can leave this screen",
+                        )
+                        SettingsRow(
+                            label    = "Cancel Copy",
+                            sublabel = "Your folder stays linked and nothing in it is touched",
+                            onClick  = { viewModel.cancelPortableImport() },
+                        )
+                    } else {
+                        SettingsRow(
+                            label    = "Copy Into App Storage",
+                            sublabel = "${state.portableFiles} artwork files in your linked folder are " +
+                                "still used. Copying them into the app means you can delete that " +
+                                "folder — the originals are never modified, and the folder is " +
+                                "unlinked when the copy finishes.",
+                            onClick  = if (state.importRunning || state.migrationRunning) null
+                                else ({ viewModel.startPortableImport() }),
+                        )
+                    }
+                }
+
                 SettingsGroup("Export")
 
                 SettingsRow(

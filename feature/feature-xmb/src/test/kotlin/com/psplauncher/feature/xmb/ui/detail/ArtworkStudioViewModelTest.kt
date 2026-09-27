@@ -812,7 +812,7 @@ class ArtworkStudioViewModelTest {
         val vm = loadedOn(StudioSource.STEAMGRIDDB)
         vm.onGridMeasured(635f, 259f)
 
-        vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == ArtworkKind.BOX_ART })
+        vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == ArtworkKind.MANUAL })
         advanceUntilIdle()
 
         assertEquals(7, vm.uiState.value.gridColumns)
@@ -1103,7 +1103,7 @@ class ArtworkStudioViewModelTest {
         coEvery { igdbApi.fetchGameInfoById(55L) } returns igdb("igdb-by-id")
         val vm = loadedOn(StudioSource.IGDB)
 
-        listOf(ArtworkKind.BOX_ART, ArtworkKind.LOGO).forEach { kind ->
+        listOf(ArtworkKind.BACKGROUND, ArtworkKind.LOGO).forEach { kind ->
             vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == kind })
             advanceUntilIdle()
             vm.selectSource(vm.sourcesForTab().indexOf(StudioSource.IGDB))
@@ -1430,7 +1430,7 @@ class ArtworkStudioViewModelTest {
     fun `SteamGridDB searches once however many tabs are browsed`() = runTest(testDispatcher) {
         val vm = loadedOn(StudioSource.STEAMGRIDDB)
 
-        listOf(ArtworkKind.BOX_ART, ArtworkKind.HERO).forEach { kind ->
+        listOf(ArtworkKind.BACKGROUND, ArtworkKind.LOGO).forEach { kind ->
             vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == kind })
             advanceUntilIdle()
             vm.selectSource(vm.sourcesForTab().indexOf(StudioSource.STEAMGRIDDB))
@@ -1442,8 +1442,9 @@ class ArtworkStudioViewModelTest {
             matchEvidence.searchByTitle(com.psplauncher.feature.artwork.match.MatchProvider.STEAMGRIDDB, any(), any())
         }
 
-        coVerify(exactly = 2) { steamGridDb.getArt(77L, SgdbArtType.GRID, any(), any(), any()) }
+        coVerify(exactly = 1) { steamGridDb.getArt(77L, SgdbArtType.GRID, any(), any(), any()) }
         coVerify(exactly = 1) { steamGridDb.getArt(77L, SgdbArtType.HERO, any(), any(), any()) }
+        coVerify(exactly = 1) { steamGridDb.getArt(77L, SgdbArtType.LOGO, any(), any(), any()) }
     }
 
     @Test
@@ -1985,7 +1986,7 @@ class ArtworkStudioViewModelTest {
 
         vm.selectSource(vm.sourcesForTab().indexOf(StudioSource.STEAMGRIDDB))
         advanceUntilIdle()
-        assertEquals("SteamGridDB has no VIDEO artwork", vm.uiState.value.message)
+        assertEquals("SteamGridDB has no PREVIEW VIDEO artwork", vm.uiState.value.message)
         assertEquals(StudioSource.SCREENSCRAPER, vm.sourcesForTab()[vm.uiState.value.sourceIndex])
 
         vm.cycleSource(+1)
@@ -1995,8 +1996,8 @@ class ArtworkStudioViewModelTest {
     }
 
     @Test
-    fun `on the 3D Box tab SteamGridDB offers every art type it has`() = runTest(testDispatcher) {
-        val vm = loadedOnTab(ArtworkKind.BOX_3D)
+    fun `on the Screenshot tab SteamGridDB offers every art type it has`() = runTest(testDispatcher) {
+        val vm = loadedOnTab(ArtworkKind.SCREENSHOT)
 
         vm.selectSource(vm.sourcesForTab().indexOf(StudioSource.STEAMGRIDDB))
         advanceUntilIdle()
@@ -2019,16 +2020,16 @@ class ArtworkStudioViewModelTest {
         assertEquals(listOf("igdb-box", "igdb-fanart"), vm.uiState.value.results.map { it.url })
     }
 
-    private suspend fun kotlinx.coroutines.test.TestScope.boxArtGridOnSgdb(
+    private suspend fun kotlinx.coroutines.test.TestScope.tileGridOnSgdb(
         stored: com.psplauncher.feature.artwork.store.StudioArtworkSlot? = null,
     ): ArtworkStudioViewModel {
         coEvery { steamGridDb.getArt(any(), any(), any(), any(), any()) } answers {
             val type = secondArg<SgdbArtType>()
             Result.success((1..2).map { SgdbArtItem(id = it.toLong(), url = "${type.endpoint}$it") })
         }
-        coEvery { routingStore.studioAssetsOnDisk(1L, ArtworkKind.BOX_ART) } returns listOfNotNull(stored)
+        coEvery { routingStore.studioAssetsOnDisk(1L, ArtworkKind.ICON) } returns listOfNotNull(stored)
         val vm = loadedOn(StudioSource.STEAMGRIDDB)
-        vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == ArtworkKind.BOX_ART })
+        vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == ArtworkKind.ICON })
         advanceUntilIdle()
         vm.selectSource(vm.sourcesForTab().indexOf(StudioSource.STEAMGRIDDB))
         advanceUntilIdle()
@@ -2036,15 +2037,15 @@ class ArtworkStudioViewModelTest {
         return vm
     }
 
-    private fun storedBoxArt(originUrl: String, providerAssetId: String? = null) =
+    private fun storedTile(originUrl: String, providerAssetId: String? = null) =
         com.psplauncher.feature.artwork.store.StudioArtworkSlot(
-            sortOrder = 0, documentUri = "content://box", provider = "SteamGridDB",
+            sortOrder = 0, documentUri = "content://tile", provider = "SteamGridDB",
             originUrl = originUrl, providerAssetId = providerAssetId, sizeBytes = 1,
         )
 
     @Test
     fun `the tile already in the single-art slot reads as current`() = runTest(testDispatcher) {
-        val vm = boxArtGridOnSgdb(storedBoxArt("grids1", providerAssetId = "grids:1"))
+        val vm = tileGridOnSgdb(storedTile("grids1", providerAssetId = "grids:1"))
 
         val results = vm.uiState.value.results
 
@@ -2054,7 +2055,7 @@ class ArtworkStudioViewModelTest {
 
     @Test
     fun `Apply on the current tile asks first, and Cancel leaves the slot untouched`() = runTest(testDispatcher) {
-        val vm = boxArtGridOnSgdb(storedBoxArt("grids1", providerAssetId = "grids:1"))
+        val vm = tileGridOnSgdb(storedTile("grids1", providerAssetId = "grids:1"))
         vm.handleGamepadAction(GamepadAction.SELECT)
 
         vm.applyCandidate()
@@ -2080,7 +2081,7 @@ class ArtworkStudioViewModelTest {
         coEvery {
             routingStore.studioApplyFromUrl(any(), any(), any(), any(), any(), any())
         } returns "content://replaced"
-        val vm = boxArtGridOnSgdb(storedBoxArt("grids1", providerAssetId = "grids:1"))
+        val vm = tileGridOnSgdb(storedTile("grids1", providerAssetId = "grids:1"))
         vm.handleGamepadAction(GamepadAction.SELECT)
         vm.applyCandidate()
 
@@ -2088,7 +2089,7 @@ class ArtworkStudioViewModelTest {
         advanceUntilIdle()
 
         coVerify {
-            routingStore.studioApplyFromUrl(1L, ArtworkKind.BOX_ART, "grids1", any(), any(), "grids:1")
+            routingStore.studioApplyFromUrl(1L, ArtworkKind.ICON, "grids1", any(), any(), "grids:1")
         }
         assertEquals(null, vm.uiState.value.confirmPrompt)
         assertEquals("content://replaced", vm.uiState.value.currentUri)
@@ -2099,7 +2100,7 @@ class ArtworkStudioViewModelTest {
         coEvery {
             routingStore.studioApplyFromUrl(any(), any(), any(), any(), any(), any())
         } returns "content://grids2"
-        val vm = boxArtGridOnSgdb(storedBoxArt("grids1", providerAssetId = "grids:1"))
+        val vm = tileGridOnSgdb(storedTile("grids1", providerAssetId = "grids:1"))
         vm.handleGamepadAction(GamepadAction.NAVIGATE_RIGHT)
         vm.handleGamepadAction(GamepadAction.SELECT)
 
@@ -2107,12 +2108,12 @@ class ArtworkStudioViewModelTest {
         advanceUntilIdle()
 
         assertEquals(null, vm.uiState.value.confirmPrompt)
-        coVerify { routingStore.studioApplyFromUrl(1L, ArtworkKind.BOX_ART, "grids2", any(), any(), "grids:2") }
+        coVerify { routingStore.studioApplyFromUrl(1L, ArtworkKind.ICON, "grids2", any(), any(), "grids:2") }
     }
 
     @Test
     fun `a record stored without an asset id is still matched by its URL`() = runTest(testDispatcher) {
-        val vm = boxArtGridOnSgdb(storedBoxArt("grids1"))
+        val vm = tileGridOnSgdb(storedTile("grids1"))
 
         assertEquals(StudioTileMark.CURRENT, vm.uiState.value.tileMarkOf(vm.uiState.value.results[0]))
     }
@@ -2206,7 +2207,7 @@ class ArtworkStudioViewModelTest {
         val one = screenshotGridOnSgdb(perType = 1)
         assertFalse("one asset has no order", StudioAction.MANAGE_ASSETS in one.uiState.value.availableActions)
 
-        val single = boxArtGridOnSgdb(storedBoxArt("grids1"))
+        val single = tileGridOnSgdb(storedTile("grids1"))
         assertFalse("single-art tab", StudioAction.MANAGE_ASSETS in single.uiState.value.availableActions)
         single.openAssetManager()
         assertFalse("and it refuses to open there", single.uiState.value.managerOpen)

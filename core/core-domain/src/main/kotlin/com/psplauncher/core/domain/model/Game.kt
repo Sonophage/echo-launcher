@@ -16,15 +16,9 @@ data class Game(
     val packageName: String?      = null,
     val emulatorPackage: String?  = null,
     val artworkUri: String?       = null,
-    val heroUri: String?          = null,
     val logoUri: String?          = null,
     val iconUri: String?          = null,
 
-    val boxArtUri: String?        = null,
-    val physicalMediaUri: String? = null,
-    val box3dUri: String?         = null,
-
-    val iconDisplayMode: String?  = null,
     val description: String?      = null,
     val developer: String?        = null,
     val publisher: String?        = null,
@@ -76,6 +70,6 @@ data class Game(
 ) {
     val displayTitle: String get() = userTitleOverride ?: scrapedTitle ?: title
 
-    val discFaceUri: String? get() = listOfNotNull(boxArtUri, box3dUri, artworkUri, heroUri, iconUri)
+    val discFaceUri: String? get() = listOfNotNull(artworkUri, iconUri)
         .firstOrNull { it.isNotBlank() }
 }

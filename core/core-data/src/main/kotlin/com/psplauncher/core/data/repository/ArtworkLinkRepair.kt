@@ -33,7 +33,8 @@ class ArtworkLinkRepair @Inject constructor(
             checked++
             if (artworkAccent.isReadable(current)) continue
 
-            val replacement = artworkAccent.firstReadable(game.heroUri, game.boxArtUri, game.iconUri)
+            val icon = game.iconUri?.takeIf { it.isNotBlank() }
+            val replacement = if (icon != null && artworkAccent.isReadable(icon)) icon else null
             gameDao.updateArtwork(game.id, replacement)
             if (replacement != null) repointed++ else cleared++
         }

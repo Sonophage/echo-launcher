@@ -36,8 +36,6 @@ class BackupKeyCoverageTest {
             "display_card_art_grid",
             "display_text_shadow",
             "pref_animated_icons",
-            "pref_icon_display_mode",
-            "pref_icon_display_mode_by_platform",
             "pref_icon1_linger_delay_seconds",
             "pref_video_snap_placement",
             "pref_xmb_game_metadata",

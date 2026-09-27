@@ -54,15 +54,13 @@ class ArtworkSettingsDebugCredentialsTest {
             artworkLinkRepair = mockk(relaxed = true),
             artworkRepository = mockk(relaxed = true) { coEvery { computeStatus() } returns ArtworkStatus() },
             scrapePreferences = mockk(relaxed = true) {
-                every { preferSteamGridDbHeroesFlow } returns flowOf(false)
                 coEvery { getOptions() } returns ScrapeOptions()
             },
             igdbApi = mockk(relaxed = true),
             screenScraperApi = mockk(relaxed = true) { every { isEnabledFlow } returns flowOf(false) },
             artworkFolderRepository = mockk(relaxed = true) { coEvery { getTreeUri() } returns null },
             iconDisplayPreferences = mockk(relaxed = true) {
-                every { modeFlow } returns flowOf(com.psplauncher.core.domain.model.IconDisplayMode.DEFAULT)
-                every { animatedIconsFlow } returns flowOf(true)
+                    every { animatedIconsFlow } returns flowOf(true)
                 every { snapPlacementFlow } returns flowOf(VideoSnapPlacement.ICON)
                 every { gameMetadataFlow } returns flowOf(true)
                 every { lingerDelaySecondsFlow } returns flowOf(1.5f)

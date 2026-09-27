@@ -68,7 +68,6 @@ internal fun gameContextMenuItems(
         add(XMBContextMenuItem("detail_REFRESH", "Refresh Artwork", group = MenuGroup.METADATA))
 
         if (!item.isAndroidApp) add(XMBContextMenuItem("change_emulator", "Change Emulator", group = MenuGroup.SETTINGS))
-        add(XMBContextMenuItem("icon_display", "Icon Display", group = MenuGroup.SETTINGS))
         add(XMBContextMenuItem("file_location", "View File Location", group = MenuGroup.SETTINGS))
 
         hideLocation?.let { (_, _, label) ->
@@ -192,8 +191,6 @@ internal fun nowPlayingContextMenuItems(isPlaying: Boolean): List<XMBContextMenu
 internal fun platformContextMenuItems(
     platformId: String,
     pinned: Boolean,
-    iconDisplayLabel: String,
-
     emulatorLabel: String? = null,
     overrideCount: Int = 0,
     romDirectory: String? = null,
@@ -221,7 +218,6 @@ internal fun platformContextMenuItems(
         )
     }
 
-    add(XMBContextMenuItem("icon_display_platform", "Icon Display ($iconDisplayLabel)", group = MenuGroup.SETTINGS))
     add(XMBContextMenuItem("rename_card", "Rename Memory Card", group = MenuGroup.SETTINGS))
     if (romDirectory != null) {
         add(XMBContextMenuItem("card_rom_directory", "ROM Folder ($romDirectory)", group = MenuGroup.SETTINGS))
@@ -240,10 +236,9 @@ internal fun platformContextMenuItems(
     }
 }
 
-internal fun allGamesContextMenuItems(iconDisplayLabel: String): List<XMBContextMenuItem> = listOf(
+internal fun allGamesContextMenuItems(): List<XMBContextMenuItem> = listOf(
     XMBContextMenuItem("import_pc_games", "Import PC Games"),
     XMBContextMenuItem("library_manager", "Manage Library", group = MenuGroup.SETTINGS),
-    XMBContextMenuItem("icon_display_global", "Icon Display ($iconDisplayLabel)", group = MenuGroup.SETTINGS),
 )
 
 internal const val MEDIA_APP_PREFIX = "media_app_"
