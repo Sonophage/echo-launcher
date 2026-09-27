@@ -88,7 +88,7 @@ class InternalArtworkMigrationWorker @AssistedInject constructor(
                         if (uri == null) {
                             failed++
                         } else {
-                            repointColumn(asset.gameId, asset.kind, asset.file.absolutePath, uri)
+                            repointColumns(asset.gameId, asset.kind, asset.file.absolutePath, uri)
                             internal.deleteKind(asset.gameId, asset.kind)
                             migrated++
                             bytes += sizeBytes
@@ -124,15 +124,19 @@ class InternalArtworkMigrationWorker @AssistedInject constructor(
         return Result.success(workDataOf(KEY_MIGRATED to migrated, KEY_FAILED to failed))
     }
 
-    private suspend fun repointColumn(gameId: Long, kind: ArtworkKind, oldPath: String, uri: String) {
+    private suspend fun repointColumns(gameId: Long, kind: ArtworkKind, oldPath: String, uri: String) {
         val game = gameDao.getById(gameId) ?: return
+        if (game.iconUri == oldPath) gameDao.updateIconUri(gameId, uri)
+        if (game.artworkUri == oldPath) gameDao.updateArtwork(gameId, uri)
+        if (game.logoUri == oldPath) gameDao.updateLogo(gameId, uri)
+
         when (kind) {
             ArtworkKind.ICON ->
-                if (game.iconUri == oldPath || !routing.isValidRef(game.iconUri)) gameDao.updateIconUri(gameId, uri)
+                if (!routing.isValidRef(game.iconUri)) gameDao.updateIconUri(gameId, uri)
             ArtworkKind.BACKGROUND ->
-                if (game.artworkUri == oldPath || !routing.isValidRef(game.artworkUri)) gameDao.updateArtwork(gameId, uri)
+                if (!routing.isValidRef(game.artworkUri)) gameDao.updateArtwork(gameId, uri)
             ArtworkKind.LOGO ->
-                if (game.logoUri == oldPath || !routing.isValidRef(game.logoUri)) gameDao.updateLogo(gameId, uri)
+                if (!routing.isValidRef(game.logoUri)) gameDao.updateLogo(gameId, uri)
             else -> Unit
         }
     }
