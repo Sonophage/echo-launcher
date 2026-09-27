@@ -176,6 +176,14 @@ class InternalArtworkStore @Inject constructor(
             fileName.startsWith("${kind.name.lowercase(Locale.US)}_")
     }
 
+    suspend fun deleteUnderRoot(path: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val file = File(path).canonicalFile
+            val under = file.path.startsWith(root.canonicalFile.path + File.separator)
+            if (under && file.isFile) file.delete() else false
+        }.getOrDefault(false)
+    }
+
     suspend fun footprint(): Pair<Int, Long> = withContext(Dispatchers.IO) {
         var count = 0
         var bytes = 0L
