@@ -86,8 +86,8 @@ data class StudioQueueSummary(
 
 enum class StudioLeaveChoice(val label: String) {
     APPLY("Apply and Close"),
-    DISCARD("Discard Changes"),
     STAY("Stay"),
+    DISCARD("Discard Changes"),
 }
 
 enum class CropOption {
@@ -388,7 +388,6 @@ data class ArtworkStudioUiState(
             }
             if (info?.hasPrevious == true) add(StudioAction.RESTORE_PREVIOUS)
             if (info?.originUrl != null) add(StudioAction.RESET_DEFAULT)
-            if (hasCurrent) add(StudioAction.CLEAR)
             if (hasCurrent) add(StudioAction.FILE_INFO)
 
             if (sgdbSourceActive) add(StudioAction.TOGGLE_MATURE)
@@ -396,6 +395,8 @@ data class ArtworkStudioUiState(
             if (matchProvider != null) add(StudioAction.CHANGE_MATCH)
             if (matchIsConfirmed) add(StudioAction.FORGET_MATCH)
             add(StudioAction.CHANGE_PROVIDER)
+
+            if (hasCurrent) add(StudioAction.CLEAR)
         }
 
     val resolvedActionsIndex: Int
@@ -417,12 +418,12 @@ enum class StudioAction(val label: String) {
     CROP_BEFORE_APPLY("Crop Before Applying"),
     RESTORE_PREVIOUS("Restore Previous"),
     RESET_DEFAULT("Reset to Scraped Default"),
-    CLEAR("Clear Artwork"),
     FILE_INFO("View File Information"),
     TOGGLE_MATURE("Mature Content (SteamGridDB)"),
-    CHANGE_PROVIDER("Change Provider"),
     CHANGE_MATCH("Change Match"),
     FORGET_MATCH("Forget Match"),
+    CHANGE_PROVIDER("Change Provider"),
+    CLEAR("Clear Artwork"),
 }
 
 val CROPPABLE_KINDS = setOf(

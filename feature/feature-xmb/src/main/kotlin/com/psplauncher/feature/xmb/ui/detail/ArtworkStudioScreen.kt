@@ -179,9 +179,10 @@ internal fun ArtworkStudioContent(
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
-                        0f to pfpColors.backgroundBottom.copy(alpha = 0.94f),
-                        0.55f to pfpColors.backgroundBottom.copy(alpha = 0.72f),
-                        1f to pfpColors.backgroundBottom.copy(alpha = 0.30f),
+                        0f to com.psplauncher.core.ui.components.XmbScrim,
+                        0.45f to com.psplauncher.core.ui.components.XmbScrim.copy(alpha = 0.88f),
+                        0.72f to com.psplauncher.core.ui.components.XmbScrim.copy(alpha = 0.55f),
+                        1f to com.psplauncher.core.ui.components.XmbScrim.copy(alpha = 0.20f),
                     )
                 ),
         )

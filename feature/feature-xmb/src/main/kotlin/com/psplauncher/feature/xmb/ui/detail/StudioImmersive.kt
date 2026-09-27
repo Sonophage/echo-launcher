@@ -45,6 +45,7 @@ import coil3.compose.AsyncImage
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.ControllerPrompt
 import com.psplauncher.core.ui.components.PfpCheckMark
+import com.psplauncher.core.ui.components.XmbScrim
 import com.psplauncher.feature.artwork.store.ArtworkKind
 
 private val STUDIO_RESULT_GAP = 8.dp
@@ -320,10 +321,11 @@ internal fun StudioProviderPicker(
     Box(
         Modifier
             .fillMaxSize()
+            .background(background)
             .background(
                 Brush.verticalGradient(
-                    0f to background.copy(alpha = 0.98f),
-                    1f to background,
+                    0f to XmbScrim,
+                    1f to XmbScrim.copy(alpha = 0.97f),
                 )
             )
             .clickable(enabled = false) {},
@@ -362,7 +364,7 @@ internal fun StudioProviderPicker(
             }
 
             Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!showTouchControls) {
                     ControllerPrompt(
                         action = GamepadAction.SELECT,
@@ -456,10 +458,11 @@ internal fun StudioReviewPanel(
     Box(
         Modifier
             .fillMaxSize()
+            .background(background)
             .background(
                 Brush.verticalGradient(
-                    0f to background.copy(alpha = 0.98f),
-                    1f to background,
+                    0f to XmbScrim,
+                    1f to XmbScrim.copy(alpha = 0.97f),
                 )
             )
             .clickable(enabled = false) {},
@@ -505,7 +508,7 @@ internal fun StudioReviewPanel(
             }
 
             Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(30.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     summary.line,
                     color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp,
