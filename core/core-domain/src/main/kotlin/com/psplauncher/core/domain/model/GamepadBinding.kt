@@ -37,6 +37,8 @@ val DEFAULT_BINDINGS = listOf(
     GamepadBinding(KeyEvent.KEYCODE_DPAD_RIGHT,    GamepadAction.NAVIGATE_RIGHT),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_L1,     GamepadAction.PREV_CATEGORY),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_R1,     GamepadAction.NEXT_CATEGORY),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_L2,     GamepadAction.PREV_PAGE),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_R2,     GamepadAction.NEXT_PAGE),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_START,  GamepadAction.HOME),
 
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.OPEN_SEARCH),
@@ -97,6 +99,8 @@ fun GamepadAction.displayLabel(): String = when (this) {
     GamepadAction.OPEN_SEARCH       -> "Search Your Libraries"
     GamepadAction.PREV_CATEGORY     -> "Previous Tab (App Drawer)"
     GamepadAction.NEXT_CATEGORY     -> "Next Tab (App Drawer)"
+    GamepadAction.PREV_PAGE         -> "Previous Page"
+    GamepadAction.NEXT_PAGE         -> "Next Page"
     GamepadAction.HOME              -> "Start (Confirm in pickers)"
 }
 

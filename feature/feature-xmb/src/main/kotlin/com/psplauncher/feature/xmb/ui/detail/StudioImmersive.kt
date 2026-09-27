@@ -66,7 +66,6 @@ internal fun resultsColumnWidth(): Dp =
 internal fun StudioSlotPill(
     label: String,
     selected: Boolean,
-    focused: Boolean,
     filled: Boolean,
     offered: Boolean,
     accent: Color,
@@ -82,11 +81,6 @@ internal fun StudioSlotPill(
                     selected -> Color.White.copy(alpha = 0.92f)
                     else     -> Color.White.copy(alpha = 0.10f)
                 }
-            )
-            .border(
-                1.dp,
-                if (focused) accent else Color.Transparent,
-                RoundedCornerShape(12.dp),
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp),
@@ -128,7 +122,7 @@ internal fun StudioMatchLine(
 ) {
     val provider = state.matchProvider ?: return
     Spacer(Modifier.height(10.dp))
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(20.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         val matched = state.matchTitle
         if (!state.matchResolving && matched != null) {
             PfpCheckMark(Color(0xFF66BB6A), size = 11.dp)
@@ -254,7 +248,7 @@ internal fun StudioResultsColumn(
                     userScrollEnabled = false,
                 ) {
                     itemsIndexed(state.results) { index, art ->
-                        val focused = state.zone == StudioZone.GRID && state.gridIndex == index
+                        val focused = state.gridIndex == index
                         val previewing = art.isVideo && (focused || touchPreviewIndex == index)
                         Box(
                             modifier = Modifier
@@ -317,30 +311,48 @@ internal fun StudioProviderPicker(
     cards: List<StudioProviderCard>,
     focusedIndex: Int,
     gameTitle: String?,
+    matchLabel: String?,
     accent: Color,
     background: Color,
     showTouchControls: Boolean,
     onPick: (Int) -> Unit,
+    onChangeMatch: () -> Unit,
     onClose: () -> Unit,
 ) {
     Box(
         Modifier
             .fillMaxSize()
             .background(background)
-            .background(
-                Brush.verticalGradient(
-                    0f to XmbScrim,
-                    1f to XmbScrim.copy(alpha = 0.97f),
-                )
-            )
+            .background(Brush.verticalGradient(0f to XmbScrim, 1f to XmbScrim.copy(alpha = 0.97f)))
             .clickable(enabled = false) {},
     ) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 16.dp)) {
-            Text(
-                gameTitle ?: "Artwork Studio",
-                color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
+        Column(Modifier.fillMaxSize().padding(start = 26.dp, end = 26.dp, top = 16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    gameTitle ?: "Artwork Studio",
+                    color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    matchLabel?.let { "Matched as $it" } ?: "No match yet",
+                    color = Color.White.copy(alpha = 0.4f), fontSize = 10.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "CHANGE MATCH",
+                    color = Color.White.copy(alpha = 0.8f), fontSize = 9.sp,
+                    fontWeight = FontWeight.SemiBold, maxLines = 1,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(Color.White.copy(alpha = 0.10f))
+                        .clickable(onClick = onChangeMatch)
+                        .padding(horizontal = 7.dp, vertical = 3.dp),
+                )
+            }
             Spacer(Modifier.height(2.dp))
             Text(
                 "Where should the artwork come from?",
@@ -389,6 +401,7 @@ internal fun StudioProviderPicker(
                         .padding(horizontal = 12.dp, vertical = 5.dp),
                 )
             }
+            Spacer(Modifier.height(14.dp))
         }
     }
 }
@@ -401,13 +414,15 @@ private fun StudioProviderCardView(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // the pick reads as brightness: the chosen card is lit, the rest recede
+    val dim = if (focused) 1f else 0.38f
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = if (focused) 0.13f else 0.06f))
+            .background(Color.White.copy(alpha = if (focused) 0.13f else 0.04f))
             .border(
                 if (focused) 2.dp else 1.dp,
-                if (focused) accent else Color.White.copy(alpha = 0.10f),
+                if (focused) accent else Color.White.copy(alpha = 0.07f),
                 RoundedCornerShape(12.dp),
             )
             .clickable(onClick = onClick)
@@ -415,35 +430,54 @@ private fun StudioProviderCardView(
     ) {
         Text(
             card.source.label,
-            color = if (card.pickable) Color.White else Color.White.copy(alpha = 0.45f),
+            color = Color.White.copy(alpha = if (card.pickable) dim else dim * 0.6f),
             fontSize = 14.sp, fontWeight = FontWeight.Bold,
             maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(8.dp))
-        Text(
-            if (card.servesAll) "Every slot" else "${card.serves} of ${card.total} slots",
-            color = if (card.servesAll) Color(0xFF66BB6A) else Color(0xFFE0A030),
-            fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-        )
-        if (!card.servesAll) {
-            Text(
-                STUDIO_TABS.filterNot { servesKind(card.source, it.kind) }
-                    .joinToString(", ") { it.label.lowercase() },
-                color = Color.White.copy(alpha = 0.4f), fontSize = 9.sp, lineHeight = 11.sp,
-                maxLines = 3, overflow = TextOverflow.Ellipsis,
-            )
+
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(alpha = 0.30f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            val sample = card.sampleUri
+            if (sample != null) {
+                AsyncImage(
+                    model = sample,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    alpha = dim,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Text(
+                    "no sample yet",
+                    color = Color.White.copy(alpha = 0.18f * dim + 0.06f), fontSize = 9.sp,
+                )
+            }
         }
-        Spacer(Modifier.weight(1f))
+
+        Spacer(Modifier.height(8.dp))
+        Text(
+            card.scansFor,
+            color = (if (card.servesAll) Color(0xFF66BB6A) else Color(0xFFE0A030)).copy(alpha = dim),
+            fontSize = 9.5.sp, lineHeight = 12.sp,
+            maxLines = 3, overflow = TextOverflow.Ellipsis,
+        )
         card.quota?.let {
             Text(
                 "$it requests today",
-                color = Color.White.copy(alpha = 0.45f), fontSize = 9.sp, maxLines = 1,
+                color = Color.White.copy(alpha = 0.45f * dim), fontSize = 9.sp, maxLines = 1,
             )
         }
         card.reason?.let {
             Text(
                 it,
-                color = Color(0xFFE0A030), fontSize = 9.sp, lineHeight = 11.sp,
+                color = Color(0xFFE0A030).copy(alpha = dim), fontSize = 9.sp, lineHeight = 11.sp,
                 maxLines = 3, overflow = TextOverflow.Ellipsis,
             )
         }
@@ -453,6 +487,8 @@ private fun StudioProviderCardView(
 @Composable
 internal fun StudioReviewPanel(
     summary: StudioReviewSummary,
+    beforeOf: (ArtworkKind) -> String?,
+    afterOf: (ArtworkKind) -> String?,
     gameTitle: String?,
     accent: Color,
     background: Color,
@@ -464,15 +500,10 @@ internal fun StudioReviewPanel(
         Modifier
             .fillMaxSize()
             .background(background)
-            .background(
-                Brush.verticalGradient(
-                    0f to XmbScrim,
-                    1f to XmbScrim.copy(alpha = 0.97f),
-                )
-            )
+            .background(Brush.verticalGradient(0f to XmbScrim, 1f to XmbScrim.copy(alpha = 0.97f)))
             .clickable(enabled = false) {},
     ) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 16.dp)) {
+        Column(Modifier.fillMaxSize().padding(start = 26.dp, end = 26.dp, top = 16.dp)) {
             Text(
                 gameTitle ?: "Artwork Studio",
                 color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp,
@@ -480,34 +511,30 @@ internal fun StudioReviewPanel(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                "Where this artwork will show up",
+                "Before and after",
                 color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(12.dp))
 
+            val changed = summary.entries.filter {
+                it.status == StudioReviewStatus.NEW || it.status == StudioReviewStatus.REMOVED
+            }
             Row(
                 Modifier.fillMaxWidth().weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                StudioReviewSurface(
-                    title = "Home",
-                    caption = "The crossbar row and the screen behind it",
-                    kinds = listOf(ArtworkKind.BACKGROUND, ArtworkKind.LOGO, ArtworkKind.ICON),
-                    summary = summary,
+                StudioBeforeAfterColumn(
+                    heading = "Now",
+                    entries = changed,
+                    uriOf = beforeOf,
+                    dim = true,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
-                StudioReviewSurface(
-                    title = "Game detail",
-                    caption = "The hover panel, and the tile once you rest on it",
-                    kinds = listOf(ArtworkKind.ICON1, ArtworkKind.SCREENSHOT),
-                    summary = summary,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                )
-                StudioReviewSurface(
-                    title = "Media",
-                    caption = "The media strip and the in-app reader",
-                    kinds = listOf(ArtworkKind.VIDEO, ArtworkKind.MANUAL),
-                    summary = summary,
+                StudioBeforeAfterColumn(
+                    heading = "After applying",
+                    entries = changed,
+                    uriOf = afterOf,
+                    dim = false,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
             }
@@ -530,7 +557,7 @@ internal fun StudioReviewPanel(
                     Spacer(Modifier.width(6.dp))
                 }
                 Text(
-                    "Apply Changes",
+                    "Apply and Close",
                     color = if (summary.removed > 0) Color(0xFFE57373) else Color(0xFF45C46A),
                     fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
@@ -550,16 +577,17 @@ internal fun StudioReviewPanel(
                         .padding(horizontal = 14.dp, vertical = 7.dp),
                 )
             }
+            Spacer(Modifier.height(14.dp))
         }
     }
 }
 
 @Composable
-private fun StudioReviewSurface(
-    title: String,
-    caption: String,
-    kinds: List<ArtworkKind>,
-    summary: StudioReviewSummary,
+private fun StudioBeforeAfterColumn(
+    heading: String,
+    entries: List<StudioReviewEntry>,
+    uriOf: (ArtworkKind) -> String?,
+    dim: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -569,35 +597,60 @@ private fun StudioReviewSurface(
             .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
             .padding(14.dp),
     ) {
-        Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         Text(
-            caption,
-            color = Color.White.copy(alpha = 0.42f), fontSize = 9.sp, lineHeight = 11.sp,
-            maxLines = 2, overflow = TextOverflow.Ellipsis,
+            heading,
+            color = if (dim) Color.White.copy(alpha = 0.5f) else Color.White,
+            fontSize = 12.sp, fontWeight = FontWeight.Bold,
         )
-        Spacer(Modifier.height(10.dp))
-        kinds.forEach { kind ->
-            val entry = summary.entries.firstOrNull { it.kind == kind } ?: return@forEach
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-            ) {
-                Text(
-                    entry.label,
-                    color = Color.White.copy(alpha = if (entry.status == StudioReviewStatus.EMPTY) 0.35f else 0.85f),
-                    fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    entry.status.label,
-                    color = reviewStatusColor(entry.status),
-                    fontSize = 8.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(reviewStatusColor(entry.status).copy(alpha = 0.14f))
-                        .padding(horizontal = 5.dp, vertical = 2.dp),
-                )
+        Spacer(Modifier.height(8.dp))
+        if (entries.isEmpty()) {
+            Text(
+                "Nothing changes",
+                color = Color.White.copy(alpha = 0.35f), fontSize = 10.sp,
+            )
+            return@Column
+        }
+        Row(
+            Modifier.fillMaxWidth().weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            entries.take(4).forEach { entry ->
+                Column(Modifier.weight(1f)) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val uri = uriOf(entry.kind)
+                        when {
+                            uri != null -> AsyncImage(
+                                model = uri,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                alpha = if (dim) 0.45f else 1f,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                            else -> Text(
+                                if (dim) "empty" else "cleared",
+                                color = Color.White.copy(alpha = 0.3f), fontSize = 9.sp,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        entry.label,
+                        color = Color.White.copy(alpha = if (dim) 0.4f else 0.8f),
+                        fontSize = 8.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        entry.status.label,
+                        color = reviewStatusColor(entry.status).copy(alpha = if (dim) 0.5f else 1f),
+                        fontSize = 8.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                    )
+                }
             }
         }
     }

@@ -82,7 +82,6 @@ private fun sampleStudioState(slotWidthDp: Float, slotHeightDp: Float): ArtworkS
         isLoading = false,
         tabIndex = tabIndex,
         sourceIndex = StudioSource.entries.indexOf(StudioSource.STEAMGRIDDB),
-        zone = StudioZone.GRID,
         gridIndex = minOf(6, onPage - 1),
         gridColumns = capacity.columns,
         gridRows = capacity.rows,

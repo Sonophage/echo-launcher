@@ -12,6 +12,12 @@ enum class StudioTileClass(val aspect: Double, val minTileWidthDp: Double) {
 data class StudioGridCapacity(val columns: Int, val rows: Int) {
     val pageSize: Int get() = columns * rows
 
+    fun cappedTo(maxTiles: Int): StudioGridCapacity {
+        if (maxTiles <= 0 || pageSize <= maxTiles) return this
+        val cols = minOf(columns, maxTiles)
+        return StudioGridCapacity(cols, (maxTiles / cols).coerceAtLeast(1))
+    }
+
     companion object {
         val UNMEASURED = StudioGridCapacity(columns = 4, rows = 5)
 
@@ -23,7 +29,17 @@ data class StudioGridCapacity(val columns: Int, val rows: Int) {
 
         private const val FIT_EPSILON = 1e-6
 
-        fun of(widthDp: Float, heightDp: Float, tileClass: StudioTileClass): StudioGridCapacity {
+        /**
+         * [maxTiles] caps the page so a narrow column shows a few large results rather
+         * than many small ones. Columns are kept and rows give way, because the column
+         * count is what the left/right cursor walks.
+         */
+        fun of(
+            widthDp: Float,
+            heightDp: Float,
+            tileClass: StudioTileClass,
+            maxTiles: Int = Int.MAX_VALUE,
+        ): StudioGridCapacity {
             val width = widthDp.toDouble()
             val height = heightDp.toDouble()
             val columns = fits(width, tileClass.minTileWidthDp).coerceIn(MIN_COLUMNS, MAX_COLUMNS)
@@ -31,7 +47,7 @@ data class StudioGridCapacity(val columns: Int, val rows: Int) {
             val tileWidth = ((width - GAP_DP * (columns - 1)) / columns).coerceAtLeast(0.0)
             val tileHeight = tileWidth / tileClass.aspect
             val rows = fits(height, tileHeight).coerceIn(MIN_ROWS, MAX_ROWS)
-            return StudioGridCapacity(columns, rows)
+            return StudioGridCapacity(columns, rows).cappedTo(maxTiles)
         }
 
         private fun fits(span: Double, tile: Double): Int =

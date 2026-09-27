@@ -75,6 +75,7 @@ import coil3.compose.AsyncImage
 import com.psplauncher.core.common.format.formatByteSize
 import com.psplauncher.core.common.logging.LogRedaction
 import com.psplauncher.core.domain.model.GamepadAction
+import com.psplauncher.core.ui.components.ControllerPrompt
 import com.psplauncher.core.ui.components.PfpHintBar
 import com.psplauncher.core.ui.components.ControllerPromptItem
 import com.psplauncher.core.ui.theme.LocalPFPColors
@@ -162,7 +163,7 @@ internal fun ArtworkStudioContent(
                 )
             ),
     ) {
-        val focusedArt = state.results.getOrNull(state.gridIndex)?.takeIf { state.zone == StudioZone.GRID }
+        val focusedArt = state.results.getOrNull(state.gridIndex)
         val backdrop = focusedArt?.takeIf { !it.isVideo }?.let { it.thumb ?: it.url } ?: state.currentUri
         if (backdrop != null) {
             androidx.compose.runtime.key(state.previewVersion, backdrop) {
@@ -187,7 +188,11 @@ internal fun ArtworkStudioContent(
                 ),
         )
 
-        Column(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 14.dp)) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(start = 26.dp, end = 26.dp, top = 14.dp),
+        ) {
             val tab = STUDIO_TABS[state.tabIndex]
 
             Row(Modifier.weight(1f)) {
@@ -243,6 +248,40 @@ internal fun ArtworkStudioContent(
                     StudioMatchLine(state = state, actions = actions, accent = accent)
 
                     Spacer(Modifier.weight(1f))
+
+                    val pending = state.reviewSummary
+                    if (pending.hasChanges) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(bottom = 8.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(alpha = 0.10f))
+                                .clickable(onClick = actions::applyChanges)
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                        ) {
+                            if (!showTouchControls) {
+                                ControllerPrompt(
+                                    action = GamepadAction.HOME,
+                                    label = "",
+                                    glyphSize = 12.dp,
+                                    labelColor = Color.White.copy(alpha = 0.5f),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                            }
+                            Text(
+                                "Apply Changes",
+                                color = Color(0xFF45C46A), fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold, maxLines = 1,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                pending.line,
+                                color = Color.White.copy(alpha = 0.55f), fontSize = 10.sp,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
 
                     state.message?.let {
                         Text(
@@ -304,19 +343,23 @@ internal fun ArtworkStudioContent(
 
             Spacer(Modifier.height(8.dp))
 
+            val visible = state.visibleSlots
             val slotListState = rememberLazyListState()
-            LaunchedEffect(state.tabIndex) { slotListState.animateScrollToItem(state.tabIndex) }
+            LaunchedEffect(state.tabIndex) {
+                val at = visible.indexOfFirst { it.kind == STUDIO_TABS[state.tabIndex].kind }
+                if (at >= 0) slotListState.animateScrollToItem(at)
+            }
             LazyRow(
                 state = slotListState,
                 modifier = Modifier.fillMaxWidth().height(30.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                lazyItemsIndexed(STUDIO_TABS) { index, slot ->
+                lazyItemsIndexed(visible) { _, slot ->
+                    val index = STUDIO_TABS.indexOfFirst { it.kind == slot.kind }
                     StudioSlotPill(
                         label = slot.label,
                         selected = state.tabIndex == index,
-                        focused = state.zone == StudioZone.TABS && state.tabIndex == index,
                         filled = slot.kind in state.filledSlots,
                         offered = servesKind(state.source, slot.kind),
                         accent = accent,
@@ -327,41 +370,42 @@ internal fun ArtworkStudioContent(
 
             PfpHintBar(
                 items = buildList {
-                    when (state.zone) {
-                        StudioZone.TABS -> {
-                            add(
-                                ControllerPromptItem(
-                                    GamepadAction.SELECT,
-                                    if (state.sourceServesTab) "Results" else "Pick File",
-                                )
-                            )
-                            add(ControllerPromptItem(GamepadAction.BACK, "Close"))
-                        }
-                        StudioZone.GRID -> {
-                            add(ControllerPromptItem(GamepadAction.SELECT, if (state.selectsMultiple) "Check" else "Preview / Apply"))
-                            add(ControllerPromptItem(GamepadAction.BACK, "Slots"))
-                        }
-                    }
-
-                    if (state.reviewSummary.hasChanges) add(ControllerPromptItem(GamepadAction.HOME, "Review"))
+                    add(
+                        ControllerPromptItem(
+                            GamepadAction.SELECT,
+                            when {
+                                !state.sourceServesTab || state.source == StudioSource.LOCAL -> "Pick File"
+                                state.selectsMultiple -> "Check"
+                                else -> "Use This"
+                            },
+                        )
+                    )
+                    add(ControllerPromptItem(GamepadAction.BACK, "Close"))
+                    if (visible.size > 1) add(ControllerPromptItem(GamepadAction.NEXT_CATEGORY, "Slot"))
+                    if (state.pageCount > 1) add(ControllerPromptItem(GamepadAction.NEXT_PAGE, "Page"))
                     add(ControllerPromptItem(GamepadAction.CHANGE_SORT, "Search"))
                     add(ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"))
                 },
-                modifier = Modifier.padding(top = 6.dp),
-
                 onAction = actions::handleGamepadAction,
             )
         }
 
         if (state.providerPickerOpen) {
             StudioProviderPicker(
-                cards = providerCards(state.unavailableSources, state.requestsToday, state.dailyRequestCap),
+                cards = providerCards(
+                    unavailable = state.unavailableSources,
+                    requestsToday = state.requestsToday,
+                    dailyCap = state.dailyRequestCap,
+                    sampleFor = state::sampleFor,
+                ),
                 focusedIndex = state.sourceIndex,
                 gameTitle = state.game?.displayTitle,
+                matchLabel = state.matchTitle,
                 accent = accent,
                 background = pfpColors.backgroundBottom,
                 showTouchControls = showTouchControls,
                 onPick = actions::selectSource,
+                onChangeMatch = actions::onChangeMatchPressed,
                 onClose = { actions.handleGamepadAction(GamepadAction.BACK) },
             )
         }
@@ -369,6 +413,8 @@ internal fun ArtworkStudioContent(
         if (state.reviewOpen) {
             StudioReviewPanel(
                 summary = state.reviewSummary,
+                beforeOf = state::storedUriOf,
+                afterOf = state::pendingUriOf,
                 gameTitle = state.game?.displayTitle,
                 accent = accent,
                 background = pfpColors.backgroundBottom,

@@ -376,7 +376,6 @@ class ArtworkStudioViewModelTest {
         advanceUntilIdle()
         vm.selectSource(vm.sourcesForTab().indexOf(StudioSource.STEAMGRIDDB))
         advanceUntilIdle()
-        vm.handleGamepadAction(GamepadAction.SELECT)
         return vm
     }
 
@@ -428,16 +427,38 @@ class ArtworkStudioViewModelTest {
     }
 
     @Test
-    fun `A on a single-art tab still previews the tile and picks nothing`() = runTest(testDispatcher) {
+    fun `A on a single-art tab picks the result and moves to the next slot`() = runTest(testDispatcher) {
         coEvery { steamGridDb.getArt(any(), any(), any(), any(), any()) } returns
             Result.success(listOf(SgdbArtItem(id = 1L, url = "art1")))
         val vm = loadedOn(StudioSource.STEAMGRIDDB)
-        vm.handleGamepadAction(GamepadAction.SELECT)
-        vm.handleGamepadAction(GamepadAction.SELECT)
+        val slotBefore = vm.uiState.value.tabIndex
 
-        assertEquals("art1", vm.uiState.value.candidate?.url)
-        vm.toggleSelection(0)
-        assertTrue(vm.uiState.value.selection.isEmpty())
+        vm.handleGamepadAction(GamepadAction.SELECT)
+        advanceUntilIdle()
+
+        assertEquals("nothing is confirmed on the way", null, vm.uiState.value.candidate)
+        assertEquals(1, vm.uiState.value.selection.size)
+        assertEquals("art1", vm.uiState.value.selection.values.first().url)
+        assertTrue("it moved on", vm.uiState.value.tabIndex != slotBefore)
+    }
+
+    @Test
+    fun `a single-art slot holds one pick, so a second replaces the first`() = runTest(testDispatcher) {
+        coEvery { steamGridDb.getArt(any(), any(), any(), any(), any()) } returns
+            Result.success((1..2).map { SgdbArtItem(id = it.toLong(), url = "art$it") })
+        val vm = loadedOn(StudioSource.STEAMGRIDDB)
+        val slot = vm.uiState.value.tabIndex
+
+        vm.handleGamepadAction(GamepadAction.SELECT)
+        advanceUntilIdle()
+        vm.selectTab(slot)
+        advanceUntilIdle()
+        vm.handleGamepadAction(GamepadAction.NAVIGATE_RIGHT)
+        vm.handleGamepadAction(GamepadAction.SELECT)
+        advanceUntilIdle()
+
+        assertEquals(1, vm.uiState.value.selection.size)
+        assertEquals("art2", vm.uiState.value.selection.values.first().url)
     }
 
     @Test
@@ -450,22 +471,6 @@ class ArtworkStudioViewModelTest {
         assertTrue(StudioAction.CROP_BEFORE_APPLY in actions)
 
         assertFalse(StudioAction.CROP in actions)
-    }
-
-    @Test
-    fun `leaving the grid withdraws Crop Before Applying`() = runTest(testDispatcher) {
-        val vm = screenshotGridOnSgdb(perType = 2)
-        vm.handleGamepadAction(GamepadAction.NAVIGATE_RIGHT)
-        advanceUntilIdle()
-        assertTrue(StudioAction.CROP_BEFORE_APPLY in vm.uiState.value.availableActions)
-
-        vm.handleGamepadAction(GamepadAction.BACK)
-        advanceUntilIdle()
-
-        assertFalse(
-            "there is no focused pick outside the grid",
-            StudioAction.CROP_BEFORE_APPLY in vm.uiState.value.availableActions,
-        )
     }
 
     @Test
@@ -726,7 +731,7 @@ class ArtworkStudioViewModelTest {
     fun `B from the categories with picks asks first, and Stay or Discard do what they say`() = runTest(testDispatcher) {
         val vm = screenshotGridOnSgdb(perType = 2)
         vm.toggleSelection(0)
-        repeat(2) { vm.handleGamepadAction(GamepadAction.BACK) }
+        vm.handleGamepadAction(GamepadAction.BACK)
 
         assertTrue(vm.uiState.value.leavePromptOpen)
         assertFalse(vm.uiState.value.closed)
@@ -748,7 +753,7 @@ class ArtworkStudioViewModelTest {
     fun `Apply and Close queues the picks and closes`() = runTest(testDispatcher) {
         val vm = screenshotGridOnSgdb(perType = 2)
         vm.toggleSelection(0)
-        repeat(2) { vm.handleGamepadAction(GamepadAction.BACK) }
+        vm.handleGamepadAction(GamepadAction.BACK)
 
         vm.handleGamepadAction(GamepadAction.SELECT)
         advanceUntilIdle()
@@ -763,45 +768,61 @@ class ArtworkStudioViewModelTest {
             coEvery { steamGridDb.getArt(any(), any(), any(), any(), any()) } returns
                 Result.success((1..30).map { SgdbArtItem(id = it.toLong(), url = "art$it") })
             val vm = loadedOn(StudioSource.STEAMGRIDDB)
-            vm.handleGamepadAction(GamepadAction.SELECT)
+            vm.onGridMeasured(246f, 300f)
 
             vm.nextPage()
-            repeat(3) { vm.handleGamepadAction(GamepadAction.NAVIGATE_RIGHT) }
-            assertEquals("art24", vm.uiState.value.let { it.results[it.gridIndex].url })
+            vm.handleGamepadAction(GamepadAction.NAVIGATE_RIGHT)
+            val focused = vm.uiState.value.let { it.results[it.gridIndex].url }
 
             vm.onGridMeasured(635f, 259f)
 
             val state = vm.uiState.value
-            assertEquals(5, state.gridColumns)
-            assertEquals(3, state.gridRows)
-            assertEquals(1, state.page)
-            assertEquals(16, state.rangeStart)
-            assertEquals(8, state.gridIndex)
-            assertEquals("art24", state.results[state.gridIndex].url)
-            assertEquals(StudioZone.GRID, state.zone)
+            assertEquals("the page is capped so a narrow column stays readable", 4, state.pageSize)
+            assertEquals(focused, state.results[state.gridIndex].url)
         }
 
     @Test
-    fun `D-pad up and down move by the measured column count`() = runTest(testDispatcher) {
+    fun `the D-pad walks the results and nothing else`() = runTest(testDispatcher) {
         coEvery { steamGridDb.getArt(any(), any(), any(), any(), any()) } returns
             Result.success((1..30).map { SgdbArtItem(id = it.toLong(), url = "art$it") })
         val vm = loadedOn(StudioSource.STEAMGRIDDB)
-        vm.onGridMeasured(635f, 259f)
-        vm.handleGamepadAction(GamepadAction.SELECT)
+        vm.onGridMeasured(246f, 300f)
+        val tabBefore = vm.uiState.value.tabIndex
+        val pageBefore = vm.uiState.value.page
+
+        assertEquals(2, vm.uiState.value.gridColumns)
 
         vm.handleGamepadAction(GamepadAction.NAVIGATE_DOWN)
-        assertEquals(5, vm.uiState.value.gridIndex)
+        assertEquals(2, vm.uiState.value.gridIndex)
         vm.handleGamepadAction(GamepadAction.NAVIGATE_DOWN)
-        assertEquals(10, vm.uiState.value.gridIndex)
-        vm.handleGamepadAction(GamepadAction.NAVIGATE_DOWN)
-        assertEquals("the slot row sits under the results", StudioZone.TABS, vm.uiState.value.zone)
-        assertEquals("and the focused result is held", 10, vm.uiState.value.gridIndex)
+        assertEquals("the last row is the end of the D-pad's world", 2, vm.uiState.value.gridIndex)
+        vm.handleGamepadAction(GamepadAction.NAVIGATE_UP)
+        assertEquals(0, vm.uiState.value.gridIndex)
 
-        vm.handleGamepadAction(GamepadAction.NAVIGATE_UP)
-        assertEquals("up climbs back into the results", StudioZone.GRID, vm.uiState.value.zone)
-        assertEquals(10, vm.uiState.value.gridIndex)
-        vm.handleGamepadAction(GamepadAction.NAVIGATE_UP)
-        assertEquals(5, vm.uiState.value.gridIndex)
+        assertEquals("the D-pad never changes slot", tabBefore, vm.uiState.value.tabIndex)
+        assertEquals("the D-pad never changes page", pageBefore, vm.uiState.value.page)
+    }
+
+    @Test
+    fun `the shoulders change slot and the triggers change page`() = runTest(testDispatcher) {
+        coEvery { steamGridDb.getArt(any(), any(), any(), any(), any()) } returns
+            Result.success((1..30).map { SgdbArtItem(id = it.toLong(), url = "art$it") })
+        val vm = loadedOn(StudioSource.STEAMGRIDDB)
+        vm.onGridMeasured(246f, 300f)
+        advanceUntilIdle()
+
+        val firstSlot = vm.uiState.value.tabIndex
+        vm.handleGamepadAction(GamepadAction.NEXT_CATEGORY)
+        advanceUntilIdle()
+        assertTrue("R1 moves off the slot it was on", vm.uiState.value.tabIndex != firstSlot)
+
+        vm.selectTab(firstSlot)
+        advanceUntilIdle()
+        assertEquals(0, vm.uiState.value.page)
+        vm.handleGamepadAction(GamepadAction.NEXT_PAGE)
+        assertEquals("R2 pages the results", 1, vm.uiState.value.page)
+        vm.handleGamepadAction(GamepadAction.PREV_PAGE)
+        assertEquals(0, vm.uiState.value.page)
     }
 
     @Test
@@ -812,8 +833,9 @@ class ArtworkStudioViewModelTest {
         vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == ArtworkKind.MANUAL })
         advanceUntilIdle()
 
-        assertEquals(7, vm.uiState.value.gridColumns)
-        assertEquals(2, vm.uiState.value.gridRows)
+        assertEquals("the page is capped at four tiles", 4, vm.uiState.value.pageSize)
+        assertEquals(4, vm.uiState.value.gridColumns)
+        assertEquals(1, vm.uiState.value.gridRows)
     }
 
     @Test
@@ -829,7 +851,7 @@ class ArtworkStudioViewModelTest {
         vm.selectSource(vm.sourcesForTab().indexOf(StudioSource.STEAMGRIDDB))
         advanceUntilIdle()
 
-        assertEquals(15, vm.uiState.value.skeletonCount)
+        assertEquals(4, vm.uiState.value.skeletonCount)
         slow.complete(emptyList())
         advanceUntilIdle()
     }
@@ -2081,7 +2103,6 @@ class ArtworkStudioViewModelTest {
         advanceUntilIdle()
         vm.selectSource(vm.sourcesForTab().indexOf(StudioSource.STEAMGRIDDB))
         advanceUntilIdle()
-        vm.handleGamepadAction(GamepadAction.SELECT)
         return vm
     }
 
@@ -2104,7 +2125,7 @@ class ArtworkStudioViewModelTest {
     @Test
     fun `Apply on the current tile asks first, and Cancel leaves the slot untouched`() = runTest(testDispatcher) {
         val vm = tileGridOnSgdb(storedTile("grids1", providerAssetId = "grids:1"))
-        vm.handleGamepadAction(GamepadAction.SELECT)
+        vm.openCandidate(0)
 
         vm.applyCandidate()
 
@@ -2130,7 +2151,7 @@ class ArtworkStudioViewModelTest {
             routingStore.studioApplyFromUrl(any(), any(), any(), any(), any(), any())
         } returns "content://replaced"
         val vm = tileGridOnSgdb(storedTile("grids1", providerAssetId = "grids:1"))
-        vm.handleGamepadAction(GamepadAction.SELECT)
+        vm.openCandidate(0)
         vm.applyCandidate()
 
         vm.resolveConfirm(StudioReplaceChoice.entries.indexOf(StudioReplaceChoice.REPLACE))
@@ -2149,8 +2170,7 @@ class ArtworkStudioViewModelTest {
             routingStore.studioApplyFromUrl(any(), any(), any(), any(), any(), any())
         } returns "content://grids2"
         val vm = tileGridOnSgdb(storedTile("grids1", providerAssetId = "grids:1"))
-        vm.handleGamepadAction(GamepadAction.NAVIGATE_RIGHT)
-        vm.handleGamepadAction(GamepadAction.SELECT)
+        vm.openCandidate(1)
 
         vm.applyCandidate()
         advanceUntilIdle()

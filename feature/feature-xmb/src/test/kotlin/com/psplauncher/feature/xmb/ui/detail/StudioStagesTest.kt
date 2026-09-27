@@ -29,7 +29,11 @@ class StudioStagesTest {
         assertFalse(byName.getValue(StudioSource.IGDB).servesAll)
         assertEquals(
             STUDIO_TABS.size - NO_IMAGE_PROVIDER_KINDS.size,
-            byName.getValue(StudioSource.STEAMGRIDDB).serves,
+            byName.getValue(StudioSource.STEAMGRIDDB).slots.size,
+        )
+        assertEquals(
+            "Scans for tile, background, logo, screenshot",
+            byName.getValue(StudioSource.STEAMGRIDDB).scansFor,
         )
     }
 
@@ -58,6 +62,41 @@ class StudioStagesTest {
         assertEquals(
             "SteamGridDB has no PREVIEW VIDEO artwork. Choose a file from this device, or change provider.",
             slotNotOfferedReason(StudioSource.STEAMGRIDDB, tab),
+        )
+    }
+
+    @Test
+    fun `a provider hides the slots it cannot serve, but Local File keeps them all`() {
+        val onSgdb = ArtworkStudioUiState(
+            sourceIndex = StudioSource.entries.indexOf(StudioSource.STEAMGRIDDB),
+        )
+        assertFalse(
+            onSgdb.visibleSlots.any { it.kind == ArtworkKind.ICON1 },
+            "SteamGridDB has no tile video, so the pill is not drawn",
+        )
+
+        val onLocal = ArtworkStudioUiState(
+            sourceIndex = StudioSource.entries.indexOf(StudioSource.LOCAL),
+        )
+        assertEquals(
+            STUDIO_TABS.size,
+            onLocal.visibleSlots.size,
+            "Local File is the way back to a slot another provider hides",
+        )
+    }
+
+    @Test
+    fun `a slot the provider came back empty on drops out, unless you are standing on it`() {
+        val sgdb = StudioSource.entries.indexOf(StudioSource.STEAMGRIDDB)
+        val onIcon = ArtworkStudioUiState(
+            sourceIndex = sgdb,
+            tabIndex = STUDIO_TABS.indexOfFirst { it.kind == ArtworkKind.ICON },
+            emptySlots = setOf(ArtworkKind.LOGO, ArtworkKind.ICON),
+        )
+        assertFalse(onIcon.visibleSlots.any { it.kind == ArtworkKind.LOGO })
+        assertTrue(
+            onIcon.visibleSlots.any { it.kind == ArtworkKind.ICON },
+            "the slot under the cursor cannot vanish from under it",
         )
     }
 

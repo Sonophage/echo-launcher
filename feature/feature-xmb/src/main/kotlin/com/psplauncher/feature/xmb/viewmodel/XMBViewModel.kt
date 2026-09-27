@@ -5202,6 +5202,9 @@ class XMBViewModel @Inject constructor(
 
             GamepadAction.OPEN_CONTEXT_MENU -> openContextMenuForFocusedItem()
 
+            // the crossbar does not page; the triggers are the Artwork Studio's
+            GamepadAction.PREV_PAGE,
+            GamepadAction.NEXT_PAGE     -> Unit
             GamepadAction.HOME          -> toggleNotifications()
 
             GamepadAction.CHANGE_SORT ->

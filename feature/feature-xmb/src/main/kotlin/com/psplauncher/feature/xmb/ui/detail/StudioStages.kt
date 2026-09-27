@@ -11,13 +11,17 @@ internal fun servesKind(source: StudioSource, kind: ArtworkKind): Boolean = when
 
 data class StudioProviderCard(
     val source: StudioSource,
-    val serves: Int,
+    val slots: List<String>,
     val total: Int,
     val reason: String?,
     val quota: String?,
+    val sampleUri: String?,
 ) {
     val pickable: Boolean get() = reason == null
-    val servesAll: Boolean get() = serves == total
+    val servesAll: Boolean get() = slots.size == total
+
+    /** What it will go looking for, named, rather than a count to decode. */
+    val scansFor: String get() = "Scans for " + slots.joinToString(", ") { it.lowercase() }
 }
 
 fun providerQuotaLabel(requestsToday: Int?, dailyCap: Int?): String = when {
@@ -35,13 +39,15 @@ fun providerCards(
     unavailable: Set<StudioSource>,
     requestsToday: Int?,
     dailyCap: Int?,
+    sampleFor: (StudioSource) -> String? = { null },
 ): List<StudioProviderCard> = StudioSource.entries.map { source ->
     StudioProviderCard(
         source = source,
-        serves = STUDIO_TABS.count { servesKind(source, it.kind) },
+        slots = STUDIO_TABS.filter { servesKind(source, it.kind) }.map { it.label },
         total = STUDIO_TABS.size,
         reason = if (source in unavailable) providerUnavailableReason(source) else null,
         quota = if (source == StudioSource.SCREENSCRAPER) providerQuotaLabel(requestsToday, dailyCap) else null,
+        sampleUri = sampleFor(source),
     )
 }
 
