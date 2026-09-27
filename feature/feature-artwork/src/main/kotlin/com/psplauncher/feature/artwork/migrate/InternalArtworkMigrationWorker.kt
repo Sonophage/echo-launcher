@@ -60,14 +60,14 @@ class InternalArtworkMigrationWorker @AssistedInject constructor(
                 val game = games[asset.gameId]
                 if (game == null) { skipped++; return@forEachIndexed }
 
-                val record = artworkRecordDao.get(asset.gameId, asset.kind.name)
-                val portableValid = record != null && routing.isValidRef(record.documentUri)
+                val portable = artworkRecordDao.get(asset.gameId, asset.kind.name)
+                    ?.takeIf { isPortableRef(it.documentUri) }
                 when {
-                    portableValid -> {
+                    portable != null && routing.isValidRef(portable.documentUri) -> {
                         internal.deleteKind(asset.gameId, asset.kind)
                         skipped++
                     }
-                    record != null && (record.locked || record.userAssigned) -> skipped++
+                    portable != null && (portable.locked || portable.userAssigned) -> skipped++
                     else -> {
                         val sizeBytes = asset.sizeBytes
                         val tmp = runCatching {
@@ -160,6 +160,8 @@ class InternalArtworkMigrationWorker @AssistedInject constructor(
     }
 
     companion object {
+        fun isPortableRef(uri: String): Boolean = uri.startsWith("content://", ignoreCase = true)
+
         const val UNIQUE_NAME = "pfp_internal_artwork_migration"
         const val TASK_ID = "internal_artwork_migration"
         private const val LABEL = "Moving artwork into your folder"
