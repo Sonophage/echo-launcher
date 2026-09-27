@@ -37,6 +37,8 @@ import com.psplauncher.core.data.repository.SafGrants
 import com.psplauncher.core.data.music.MusicIntentResolver
 import com.psplauncher.core.data.repository.mediaRootDisplayName
 import com.psplauncher.core.data.repository.mediaRootRows
+import com.psplauncher.feature.launcher.PlatformEmulatorChoices
+import com.psplauncher.feature.launcher.platformEmulatorChoices
 import com.psplauncher.core.data.repository.MemoryCardRepository
 import com.psplauncher.core.data.repository.PfpThemeStore
 import com.psplauncher.core.ui.icons.CustomIcon
@@ -208,6 +210,8 @@ data class CollectionNameDialogState(
     val editNoteGameId: Long? = null,
 
     val quickSearch: Boolean = false,
+
+    val renameCardPlatformId: String? = null,
 
     val placeholder: String = "e.g. RPGs, Currently Playing",
     val confirmLabel: String = "Save",
@@ -1288,6 +1292,7 @@ class XMBViewModel @Inject constructor(
     private val bookScanner: com.psplauncher.feature.library.scanner.BookScanner,
     private val musicIntentResolver: com.psplauncher.core.data.music.MusicIntentResolver,
     private val videoIntentResolver: com.psplauncher.core.data.video.VideoIntentResolver,
+    private val autoCoreMemory: com.psplauncher.feature.launcher.AutoCoreMemory,
 ) : ViewModel() {
     private var currentMusicTracks: List<MusicTrack> = emptyList()
     private var currentMusicTracksRaw: List<MusicTrack> = emptyList()
@@ -5229,15 +5234,89 @@ class XMBViewModel @Inject constructor(
 
     private fun openPlatformContextMenu(platformId: String) {
         val card = enabledCards.firstOrNull { it.platformId == platformId } ?: return
-        val items = platformContextMenuItems(
-            platformId = platformId,
-            pinned = card.pinned,
-            iconDisplayLabel = platformIconDisplayLabel(platformId),
-        )
+        viewModelScope.launch {
+            val choices = platformChoices(platformId)
+            val overrideCount = if (platformId in NON_EMULATOR_PLATFORM_IDS) 0
+                else gameRepository.getByPlatform(platformId).count { !it.emulatorPackage.isNullOrBlank() }
 
-        _uiState.update { it.copy(
-            activeContextMenu = XMBContextMenu(state = MenuState(title = card.displayName, rows = items), platformId = platformId)
-        )}
+            val items = platformContextMenuItems(
+                platformId = platformId,
+                pinned = card.pinned,
+                iconDisplayLabel = platformIconDisplayLabel(platformId),
+                emulatorLabel = choices?.let { it.resolvedName ?: "None" },
+                overrideCount = overrideCount,
+                romDirectory = card.romDirectory,
+            )
+
+            _uiState.update { it.copy(
+                activeContextMenu = XMBContextMenu(state = MenuState(title = card.displayName, rows = items), platformId = platformId)
+            )}
+        }
+    }
+
+    private suspend fun platformChoices(platformId: String): PlatformEmulatorChoices? {
+        if (platformId in NON_EMULATOR_PLATFORM_IDS) return null
+        val card = enabledCards.firstOrNull { it.platformId == platformId }
+        return platformEmulatorChoices(
+            platformId = platformId,
+            installedProfiles = emulatorProfileRepository.getInstalledProfiles(),
+            rememberedCoreId = autoCoreMemory.rememberedIds()[platformId],
+            memoryCardEmulatorId = card?.emulatorId,
+            platformDefaultPackage = platformDao.getById(platformId)?.preferredEmulatorPackage,
+        )
+    }
+
+    private fun openDefaultEmulatorMenu(platformId: String) {
+        viewModelScope.launch {
+            val choices = platformChoices(platformId) ?: return@launch
+            val rows = buildList {
+                add(
+                    XMBContextMenuItem(
+                        "emu_automatic",
+                        "Automatic (Recommended)",
+                        checked = choices.isAutomatic,
+                    ),
+                )
+                choices.choices.forEach { choice ->
+                    add(
+                        XMBContextMenuItem(
+                            "$PLATFORM_EMU_PREFIX${choice.profileId}",
+                            if (choice.isRecommended) "${choice.name}  ·  Recommended" else choice.name,
+                            checked = choice.isCurrent,
+                        ),
+                    )
+                }
+            }
+            _uiState.update { it.copy(
+                activeContextMenu = XMBContextMenu(
+                    state = MenuState(title = "Default Emulator", rows = rows),
+                    platformId = platformId,
+                ),
+            )}
+        }
+    }
+
+    private fun setPlatformEmulator(platformId: String, profileId: String?) {
+        appAction { memoryCardRepository.setEmulator(platformId, profileId) }
+    }
+
+    private fun clearPlatformEmulatorOverrides(platformId: String) {
+        appAction { gameRepository.clearPreferredEmulatorForPlatform(platformId) }
+    }
+
+    private fun moveCard(platformId: String, up: Boolean) {
+        appAction { memoryCardRepository.move(platformId, up) }
+    }
+
+    private fun promptRenameCard(platformId: String) {
+        val card = enabledCards.firstOrNull { it.platformId == platformId } ?: return
+        closeContextMenu()
+        _uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+            title = "Rename Memory Card",
+            subtitle = "The name this console shows under on the crossbar.",
+            initialText = card.displayName,
+            renameCardPlatformId = platformId,
+        ))}
     }
 
     private fun openAllGamesContextMenu() {
@@ -5474,7 +5553,16 @@ class XMBViewModel @Inject constructor(
                 viewModelScope.launch {
                     iconDisplayPreferences.setPlatformMode(pid, IconDisplayMode.fromName(choice))
                 }
+            } else if (itemId.startsWith(PLATFORM_EMU_PREFIX)) {
+                setPlatformEmulator(menu.platformId, itemId.removePrefix(PLATFORM_EMU_PREFIX))
             } else when (itemId) {
+                "default_emulator" -> openDefaultEmulatorMenu(menu.platformId)
+                "emu_automatic"    -> setPlatformEmulator(menu.platformId, null)
+                "clear_emulator_overrides" -> clearPlatformEmulatorOverrides(menu.platformId)
+                "rename_card"      -> promptRenameCard(menu.platformId)
+                "card_rom_directory" -> Unit
+                "card_move_up"     -> moveCard(menu.platformId, up = true)
+                "card_move_down"   -> moveCard(menu.platformId, up = false)
                 "find_games"       -> openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
                 "import_pc_games"  -> _uiState.update { it.copy(activeSettingsScreen = "settings_import_pc") }
                 "icon_display_platform" -> openPlatformIconDisplayPickerMenu(menu.platformId)
@@ -5793,6 +5881,12 @@ class XMBViewModel @Inject constructor(
             viewModelScope.launch {
                 gameRepository.updateNote(dialog.editNoteGameId, name.trim().ifBlank { null })
             }
+            return
+        }
+        if (dialog.renameCardPlatformId != null) {
+            val trimmed = name.trim()
+            if (trimmed.isEmpty()) return
+            appAction { memoryCardRepository.rename(dialog.renameCardPlatformId, trimmed) }
             return
         }
     }
@@ -8267,6 +8361,8 @@ class XMBViewModel @Inject constructor(
         private const val APP_SHORTCUT_PLATFORM_ID = "app_shortcut"
 
         private const val ADD_MUSIC_FOLDER_ITEM_ID = "add_music_folder"
+        private val NON_EMULATOR_PLATFORM_IDS = setOf(ANDROID_PLATFORM_ID, WINDOWS_PLATFORM_ID)
+        private const val PLATFORM_EMU_PREFIX = "pemu_pick_"
         internal const val MEDIA_APP_NONE = "__none__"
         private const val VIDEO_PLAYER_BUILTIN = "builtin"
         private const val VIDEO_PLAYER_ASK = "ask"
