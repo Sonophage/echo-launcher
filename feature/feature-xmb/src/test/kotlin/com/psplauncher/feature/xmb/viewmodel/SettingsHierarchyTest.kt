@@ -91,7 +91,6 @@ class SettingsHierarchyTest {
                 "settings_emulators_installed",
                 "settings_emulators_custom",
                 "settings_emulators_retroarch",
-                "settings_emulators_assign",
             ),
             settingsEntriesIn(SettingsSectionId.EMULATORS).map { it.id },
         )

@@ -36,7 +36,10 @@ import com.psplauncher.core.data.repository.MediaScannedEntry
 import com.psplauncher.core.data.repository.SafGrants
 import com.psplauncher.core.data.music.MusicIntentResolver
 import com.psplauncher.core.data.repository.mediaRootDisplayName
+import com.psplauncher.core.data.repository.RomFolderEntry
+import com.psplauncher.core.data.repository.isRomDirUnder
 import com.psplauncher.core.data.repository.mediaRootRows
+import com.psplauncher.core.data.repository.romFolderEntries
 import com.psplauncher.feature.launcher.PlatformEmulatorChoices
 import com.psplauncher.feature.launcher.platformEmulatorChoices
 import com.psplauncher.core.data.repository.MemoryCardRepository
@@ -349,7 +352,12 @@ data class PhotoViewerRequest(
     val openWallpaperPreview: Boolean = false,
 )
 
-data class MediaRootPick(val kind: MediaRootKind, val relinkFrom: String? = null)
+sealed interface RootTarget {
+    data class Media(val kind: MediaRootKind) : RootTarget
+    data object Rom : RootTarget
+}
+
+data class RootPick(val target: RootTarget, val relinkFrom: String? = null)
 
 sealed interface MusicNav {
     data object Root : MusicNav
@@ -435,6 +443,7 @@ enum class DrillOutStep {
 
     LIBRARY_SERIES,
     LIBRARY,
+    ROM_FOLDERS,
 
     PLATFORM_FOLDER,
 }
@@ -469,7 +478,8 @@ data class XMBUiState(
     val selectedPlatformId: String? = null,
 
     val musicNav: MusicNav = MusicNav.Root,
-    val mediaRootPick: MediaRootPick? = null,
+    val rootPick: RootPick? = null,
+    val romFoldersOpen: Boolean = false,
     val musicFolders: List<com.psplauncher.core.domain.model.MusicFolder> = emptyList(),
 
     val mediaCovers: MediaCovers = MediaCovers(),
@@ -714,6 +724,7 @@ data class XMBUiState(
             booksNav is BooksNav.Series -> DrillOutStep.LIBRARY_SERIES
             booksNav is BooksNav.Shelf -> DrillOutStep.LIBRARY_SHELF
             booksNav != BooksNav.Root -> DrillOutStep.LIBRARY
+            romFoldersOpen -> DrillOutStep.ROM_FOLDERS
             selectedPlatformId != null -> DrillOutStep.PLATFORM_FOLDER
             else -> null
         }
@@ -1019,6 +1030,7 @@ fun XMBItem.hasContextMenu(state: XMBUiState): Boolean {
                 (type == XMBItemType.PHOTO_FOLDER && id.startsWith("plib_"))
         ) -> true
         mediaRootKind != null && type == XMBItemType.MEDIA_ROOT -> true
+        type == XMBItemType.MEDIA_ROOT -> true
         gameId != null -> true
         type == XMBItemType.ALL_GAMES -> true
         platformId != null -> true
@@ -1293,6 +1305,7 @@ class XMBViewModel @Inject constructor(
     private val musicIntentResolver: com.psplauncher.core.data.music.MusicIntentResolver,
     private val videoIntentResolver: com.psplauncher.core.data.video.VideoIntentResolver,
     private val autoCoreMemory: com.psplauncher.feature.launcher.AutoCoreMemory,
+    private val romRootRepository: com.psplauncher.core.data.repository.RomRootRepository,
 ) : ViewModel() {
     private var currentMusicTracks: List<MusicTrack> = emptyList()
     private var currentMusicTracksRaw: List<MusicTrack> = emptyList()
@@ -1387,8 +1400,13 @@ class XMBViewModel @Inject constructor(
                 openEmulatorPickerMenu(gameId)
             }
             LaunchRecoveryAction.PER_SYSTEM_DEFAULTS -> {
+                val gameId = _uiState.value.launchRecovery?.gameId
                 launchDispatcher.dismissRecovery()
-                _uiState.update { it.copy(activeSettingsScreen = "settings_emulators_assign") }
+                viewModelScope.launch {
+                    val platformId = gameId?.let { gameRepository.getById(it) }?.platformId
+                    if (platformId != null) openDefaultEmulatorMenu(platformId)
+                    else _uiState.update { it.copy(activeSettingsScreen = "settings_library") }
+                }
             }
 
             LaunchRecoveryAction.OPEN_LIBRARY -> {
@@ -1821,7 +1839,9 @@ class XMBViewModel @Inject constructor(
                 }
                 BuiltInCategory.GAMES -> {
                     val platformId = _uiState.value.selectedPlatformId
-                    if (platformId == ALL_GAMES_PLATFORM_ID) {
+                    if (_uiState.value.romFoldersOpen) {
+                        _uiState.update { it.copy(currentItems = romFolderItems()) }
+                    } else if (platformId == ALL_GAMES_PLATFORM_ID) {
                         var keepCursor = keepCursorOnRow
                         gameRepository.observeAllGames().collect { games ->
                             val visible = games.notHiddenAt(HideLocationType.ALL_GAMES)
@@ -3894,21 +3914,38 @@ class XMBViewModel @Inject constructor(
     }
 
     fun requestMediaRootPick(kind: MediaRootKind, relinkFrom: String? = null) {
-        _uiState.update { it.copy(mediaRootPick = MediaRootPick(kind, relinkFrom)) }
+        _uiState.update { it.copy(rootPick = RootPick(RootTarget.Media(kind), relinkFrom)) }
+    }
+
+    fun requestRomRootPick(relinkFrom: String? = null) {
+        _uiState.update { it.copy(rootPick = RootPick(RootTarget.Rom, relinkFrom)) }
     }
 
     fun onMediaRootPicked(uri: Uri?) {
-        val request = _uiState.value.mediaRootPick ?: return
-        _uiState.update { it.copy(mediaRootPick = null) }
+        val request = _uiState.value.rootPick ?: return
+        _uiState.update { it.copy(rootPick = null) }
         if (uri == null) return
         viewModelScope.launch {
-            mediaRootRepository.persist(uri)
-            if (request.relinkFrom != null) {
-                mediaRootRepository.replace(request.kind, request.relinkFrom, uri.toString())
-            } else {
-                mediaRootRepository.add(request.kind, uri.toString())
+            when (val target = request.target) {
+                is RootTarget.Media -> {
+                    mediaRootRepository.persist(uri)
+                    if (request.relinkFrom != null) {
+                        mediaRootRepository.replace(target.kind, request.relinkFrom, uri.toString())
+                    } else {
+                        mediaRootRepository.add(target.kind, uri.toString())
+                    }
+                    rescanMediaKind(target.kind)
+                }
+                RootTarget.Rom -> {
+                    romRootRepository.persist(uri, writable = true)
+                    if (request.relinkFrom != null) {
+                        romRootRepository.replace(request.relinkFrom, uri.toString())
+                    } else {
+                        romRootRepository.add(uri.toString())
+                    }
+                    refreshRomFolders()
+                }
             }
-            rescanMediaKind(request.kind)
         }
     }
 
@@ -4531,8 +4568,14 @@ class XMBViewModel @Inject constructor(
         }
 
         val gapRow = if (totalGames == 0) setupGapItem() else null
+        val foldersRow = XMBItem(
+            id       = ROM_FOLDERS_ITEM_ID,
+            title    = "Folders",
+            subtitle = countLabel(visibleCards.size, "console", "consoles"),
+            type     = XMBItemType.MEDIA_ROOT,
+        )
         return libraryColumn(
-            header + cardRows + listOfNotNull(gapRow),
+            header + cardRows + listOfNotNull(gapRow) + foldersRow,
             SearchScope.GAMES,
         )
     }
@@ -5270,10 +5313,11 @@ class XMBViewModel @Inject constructor(
         viewModelScope.launch {
             val choices = platformChoices(platformId) ?: return@launch
             val rows = buildList {
+                val recommended = choices.choices.firstOrNull { it.isRecommended }?.name
                 add(
                     XMBContextMenuItem(
                         "emu_automatic",
-                        "Automatic (Recommended)",
+                        if (recommended != null) "Automatic  ·  $recommended" else "Automatic",
                         checked = choices.isAutomatic,
                     ),
                 )
@@ -5281,7 +5325,7 @@ class XMBViewModel @Inject constructor(
                     add(
                         XMBContextMenuItem(
                             "$PLATFORM_EMU_PREFIX${choice.profileId}",
-                            if (choice.isRecommended) "${choice.name}  ·  Recommended" else choice.name,
+                            choice.name,
                             checked = choice.isCurrent,
                         ),
                     )
@@ -5317,6 +5361,105 @@ class XMBViewModel @Inject constructor(
             initialText = card.displayName,
             renameCardPlatformId = platformId,
         ))}
+    }
+
+
+    private suspend fun romFolderItems(): List<XMBItem> {
+        val roots = romRootRepository.getAll()
+        val persisted = SafGrants.persistedReadUris(context.contentResolver)
+        val entries = romFolderEntries(
+            roots = roots,
+            persistedReadUris = persisted,
+            cards = enabledCards,
+            rawPathOfTree = { com.psplauncher.core.data.repository.RomRootRepository.rawPathOfTree(it) },
+            fallbackName = { "ROM Root" },
+        )
+
+        return entries.map { entry ->
+            when (entry) {
+                is RomFolderEntry.Root -> XMBItem(
+                    id       = "romroot_${entry.treeUri}",
+                    title    = entry.name,
+                    subtitle = if (!entry.linked) "Access lost — Relink to grant it again"
+                        else countLabel(entry.consoleCount, "console", "consoles") +
+                            "  ·  " + countLabel(entry.gameCount, "game", "games"),
+                    type         = XMBItemType.MEDIA_ROOT,
+                    mediaRootUri = entry.treeUri,
+                )
+                is RomFolderEntry.Console -> XMBItem(
+                    id         = "romcard_${entry.platformId}",
+                    title      = entry.displayName,
+                    subtitle   = if (!entry.underRoot) "Not under any granted folder"
+                        else entry.romDirectory ?: countLabel(entry.gameCount, "game", "games"),
+                    platformId = entry.platformId,
+                    type       = XMBItemType.MEMORY_CARD,
+                )
+            }
+        } + XMBItem(
+            id       = ADD_ROM_ROOT_ITEM_ID,
+            title    = "Add ROM Folder",
+            subtitle = if (roots.isEmpty()) "Grant the folder your ROMs live in"
+                       else "Grant another folder — an SD card, say",
+            type     = XMBItemType.ADD_ACTION,
+        )
+    }
+
+    private fun openRomFolders() = navigateRememberingCursor { it.copy(romFoldersOpen = true) }
+
+    private fun closeRomFolders() = navigateRememberingCursor { it.copy(romFoldersOpen = false) }
+
+    private fun refreshRomFolders() {
+        if (!_uiState.value.romFoldersOpen) return
+        viewModelScope.launch { _uiState.update { it.copy(currentItems = romFolderItems()) } }
+    }
+
+    private fun romRootContextMenuItems(linked: Boolean): List<XMBContextMenuItem> = buildList {
+        if (linked) add(XMBContextMenuItem("rom_root_scan", "Scan This Folder"))
+        add(XMBContextMenuItem("rom_root_relink", "Relink Folder", group = MenuGroup.SETTINGS))
+        add(
+            XMBContextMenuItem(
+                "rom_root_remove", "Remove Folder",
+                isDestructive = true, group = MenuGroup.REMOVE,
+            ),
+        )
+    }
+
+    private fun openRomRootContextMenu(item: XMBItem) {
+        val treeUri = item.mediaRootUri ?: return
+        val linked = item.subtitle?.startsWith("Access lost") != true
+        _uiState.update { it.copy(
+            activeContextMenu = XMBContextMenu(
+                state = MenuState(title = item.title, rows = romRootContextMenuItems(linked)),
+                mediaRootUri = treeUri,
+            ),
+        )}
+    }
+
+    private fun scanCardsUnderRoot(treeUri: String) {
+        val rawPath = com.psplauncher.core.data.repository.RomRootRepository.rawPathOfTree(treeUri)
+        if (rawPath == null) {
+            SystemToasts.post("Cannot read that folder", "Relink it and try again.", ToastKind.ERROR)
+            return
+        }
+        val under = enabledCards.filter { card ->
+            card.romDirectory?.let { isRomDirUnder(it, rawPath) } == true
+        }
+        if (under.isEmpty()) {
+            SystemToasts.post("No consoles under this folder", "Scan a console to create one.", ToastKind.ERROR)
+            return
+        }
+        under.forEach { scanCard(it.platformId) }
+    }
+
+    private fun handleRomRootAction(treeUri: String, itemId: String) {
+        when (itemId) {
+            "rom_root_scan"   -> scanCardsUnderRoot(treeUri)
+            "rom_root_relink" -> requestRomRootPick(relinkFrom = treeUri)
+            "rom_root_remove" -> appAction {
+                romRootRepository.remove(treeUri)
+                refreshRomFolders()
+            }
+        }
     }
 
     private fun openAllGamesContextMenu() {
@@ -5536,6 +5679,8 @@ class XMBViewModel @Inject constructor(
             menu.musicTrackId != null -> handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId)
             menu.mediaRootKind != null && menu.mediaRootUri != null ->
                 handleMediaRootAction(menu.mediaRootKind, menu.mediaRootUri, itemId)
+            menu.mediaRootKind == null && menu.mediaRootUri != null ->
+                handleRomRootAction(menu.mediaRootUri, itemId)
             menu.mediaRootKind != null -> handleMediaFoldersAction(menu.mediaRootKind, itemId)
             menu.musicFolderId != null -> handleMusicFolderAction(menu.musicFolderId, itemId)
             menu.isAllGames -> if (itemId.startsWith("gicondisp_")) {
@@ -5560,7 +5705,7 @@ class XMBViewModel @Inject constructor(
                 "emu_automatic"    -> setPlatformEmulator(menu.platformId, null)
                 "clear_emulator_overrides" -> clearPlatformEmulatorOverrides(menu.platformId)
                 "rename_card"      -> promptRenameCard(menu.platformId)
-                "card_rom_directory" -> Unit
+                "card_rom_directory" -> openRomFolders()
                 "card_move_up"     -> moveCard(menu.platformId, up = true)
                 "card_move_down"   -> moveCard(menu.platformId, up = false)
                 "find_games"       -> openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
@@ -5954,6 +6099,7 @@ class XMBViewModel @Inject constructor(
         val state = _uiState.value
         val item = state.currentItems.getOrNull(state.selectedItemIndex)
         when {
+            item?.mediaRootUri != null && item.mediaRootKind == null -> openRomRootContextMenu(item)
             item?.mediaRootUri != null -> openMediaRootContextMenu(item)
             item?.mediaRootKind != null && item.type == XMBItemType.MEDIA_ROOT ->
                 openMediaFoldersContextMenu(item)
@@ -6567,7 +6713,7 @@ class XMBViewModel @Inject constructor(
         if (index != _uiState.value.selectedCategoryIndex) menuSound.play(MenuSound.SYSTEM_BROWSE)
         val category = _uiState.value.categories.getOrNull(index)
 
-        _uiState.update { it.copy(selectedCategoryIndex = index, selectedItemIndex = 0, recentRailVisible = false, selectedPlatformId = null, musicNav = MusicNav.Root, videoNav = VideoNav.Root, photoNav = PhotoNav.Root, activeAppDrawerFilter = null) }
+        _uiState.update { it.copy(selectedCategoryIndex = index, selectedItemIndex = 0, recentRailVisible = false, selectedPlatformId = null, musicNav = MusicNav.Root, videoNav = VideoNav.Root, photoNav = PhotoNav.Root, romFoldersOpen = false, activeAppDrawerFilter = null) }
         tintWaveForCategory(category)
         loadItemsForCategory(category)
     }
@@ -6655,6 +6801,7 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun dispatchCategorySelection(item: XMBItem): Boolean {
+        romFolderSelection(item)?.let { return it }
         mediaRootSelection(item)?.let { return it }
         return when (item.menuHostCategory(currentCategory()?.id)) {
             BuiltInCategory.MUSIC   -> handleMusicSelection(item)
@@ -6663,6 +6810,19 @@ class XMBViewModel @Inject constructor(
             BuiltInCategory.LIBRARY -> handleBooksSelection(item)
             else -> false
         }
+    }
+
+    private fun romFolderSelection(item: XMBItem): Boolean? = when {
+        item.id == ROM_FOLDERS_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT); openRomFolders(); true
+        }
+        item.id == ADD_ROM_ROOT_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT); requestRomRootPick(); true
+        }
+        item.id.startsWith("romroot_") -> {
+            menuSound.play(MenuSound.SELECT); openRomRootContextMenu(item); true
+        }
+        else -> null
     }
 
     private fun mediaRootSelection(item: XMBItem): Boolean? {
@@ -6714,6 +6874,7 @@ class XMBViewModel @Inject constructor(
             DrillOutStep.LIBRARY_SERIES -> openBooksView(BooksNav.SeriesList)
             DrillOutStep.LIBRARY_SHELF -> openBooksView(BooksNav.Shelves)
             DrillOutStep.LIBRARY -> closeBooksView()
+            DrillOutStep.ROM_FOLDERS -> closeRomFolders()
             DrillOutStep.PLATFORM_FOLDER -> closePlatformFolder()
             null -> return false
         }
@@ -6904,6 +7065,7 @@ class XMBViewModel @Inject constructor(
         if (_uiState.value.hasBlockingOverlay) return
         val item = _uiState.value.currentItems.getOrNull(index)
         when {
+            item?.mediaRootUri != null && item.mediaRootKind == null -> openRomRootContextMenu(item)
             item?.mediaRootUri != null -> openMediaRootContextMenu(item)
             item?.mediaRootKind != null && item.type == XMBItemType.MEDIA_ROOT ->
                 openMediaFoldersContextMenu(item)
@@ -8361,6 +8523,8 @@ class XMBViewModel @Inject constructor(
         private const val APP_SHORTCUT_PLATFORM_ID = "app_shortcut"
 
         private const val ADD_MUSIC_FOLDER_ITEM_ID = "add_music_folder"
+        private const val ADD_ROM_ROOT_ITEM_ID = "add_rom_root"
+        internal const val ROM_FOLDERS_ITEM_ID = "rom_folders"
         private val NON_EMULATOR_PLATFORM_IDS = setOf(ANDROID_PLATFORM_ID, WINDOWS_PLATFORM_ID)
         private const val PLATFORM_EMU_PREFIX = "pemu_pick_"
         internal const val MEDIA_APP_NONE = "__none__"

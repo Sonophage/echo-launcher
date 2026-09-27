@@ -21,7 +21,7 @@ sealed interface RomFolderEntry {
     ) : RomFolderEntry
 }
 
-internal fun isUnder(romDirectory: String, rootRawPath: String): Boolean {
+fun isRomDirUnder(romDirectory: String, rootRawPath: String): Boolean {
     val dir = romDirectory.trimEnd('/')
     val root = rootRawPath.trimEnd('/')
     return dir == root || dir.startsWith("$root/")
@@ -40,7 +40,7 @@ fun romFolderEntries(
         val rawPath = rawPathOfTree(treeUri)
         val mine = if (rawPath == null) emptyList() else cards.filter { card ->
             val dir = card.romDirectory
-            dir != null && card.platformId !in claimed && isUnder(dir, rawPath)
+            dir != null && card.platformId !in claimed && isRomDirUnder(dir, rawPath)
         }
         mine.forEach { claimed.add(it.platformId) }
 

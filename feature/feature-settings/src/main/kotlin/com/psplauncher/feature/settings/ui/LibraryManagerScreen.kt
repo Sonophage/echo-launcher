@@ -73,12 +73,6 @@ fun LibraryManagerScreen(
         state = state,
         onBack = { if (!viewModel.onBack()) onBack() },
         onAddAndroidApps = onAddAndroidApps,
-        onAddRomRoot = { it?.let { viewModel.addRomRoot(it) } },
-        onRelinkRomRoot = { _, uri ->
-            if (uri != null) viewModel.onRomRootRelinkPicked(uri)
-        },
-        onBeginRelink = { viewModel.beginRelinkRomRoot(it.treeUri) ?: Uri.EMPTY },
-        onRemoveRomRoot = { viewModel.removeRomRoot(it.treeUri) },
         onOpenCardDetail = { viewModel.openCardDetail(it) },
         onStartAddConsole = { viewModel.startAddConsole() },
         onRequestRomFolderSetup = { viewModel.requestRomFolderSetup() },
@@ -121,10 +115,6 @@ private fun LibraryManagerContent(
     state: LibraryManagerUiState,
     onBack: () -> Unit,
     onAddAndroidApps: () -> Unit,
-    onAddRomRoot: (Uri?) -> Unit,
-    onRelinkRomRoot: (RootFolderRow, Uri?) -> Unit,
-    onBeginRelink: (RootFolderRow) -> Uri,
-    onRemoveRomRoot: (RootFolderRow) -> Unit,
     onOpenCardDetail: (String) -> Unit,
     onStartAddConsole: () -> Unit,
     onRequestRomFolderSetup: () -> Unit,
@@ -163,7 +153,7 @@ private fun LibraryManagerContent(
     val handleBack: () -> Unit = onBack
 
     when (state.step) {
-        LibraryStep.LIST          -> LibraryListContent(state, handleBack, onAddRomRoot, onRelinkRomRoot, onBeginRelink, onRemoveRomRoot, onOpenCardDetail, onStartAddConsole, onRequestRomFolderSetup, onScanAllConsoles, onDismissMessage, modifier)
+        LibraryStep.LIST          -> LibraryListContent(state, handleBack, onOpenCardDetail, onStartAddConsole, onRequestRomFolderSetup, onScanAllConsoles, onDismissMessage, modifier)
         LibraryStep.PICK_PLATFORM -> PickPlatformContent(state, onBack = handleBack, onPlatformChosen = onPlatformChosen, modifier = modifier)
         LibraryStep.PICK_EMULATOR -> PickEmulatorContent(state, onBack = handleBack, onEmulatorChosen = onEmulatorChosen, modifier = modifier)
         LibraryStep.SCAN_PROMPT   -> ScanPromptContent(state, onBack = handleBack, onConfirmAddConsole = onConfirmAddConsole, modifier = modifier)
@@ -188,10 +178,6 @@ private fun LibraryManagerContent(
 private fun LibraryListContent(
     state: LibraryManagerUiState,
     onBack: () -> Unit,
-    onAddRomRoot: (Uri?) -> Unit,
-    onRelinkRomRoot: (RootFolderRow, Uri?) -> Unit,
-    onBeginRelink: (RootFolderRow) -> Uri,
-    onRemoveRomRoot: (RootFolderRow) -> Unit,
     onOpenCardDetail: (String) -> Unit,
     onStartAddConsole: () -> Unit,
     onRequestRomFolderSetup: () -> Unit,
@@ -199,15 +185,6 @@ private fun LibraryListContent(
     onDismissMessage: () -> Unit,
     modifier: Modifier,
 ) {
-    val addRootPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri -> onAddRomRoot(uri) }
-
-    var relinkTarget by remember { mutableStateOf<RootFolderRow?>(null) }
-    val relinkRootPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri -> relinkTarget?.let { onRelinkRomRoot(it, uri) }; relinkTarget = null }
-
     SettingsPageScaffold(
         subtitle = "Library Manager",
         onBack = onBack,
@@ -217,19 +194,6 @@ private fun LibraryListContent(
         val scrollState = rememberScrollState()
         LocalSettingsScrollStateRegistrar.current(scrollState)
         Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
-            RootAccessSection(
-                groupTitle  = "ROM Root Access",
-                roots       = state.romRoots,
-                addLabel    = "Add ROM Root",
-                addSublabel = "Grant a root folder (e.g. /Roms) — or a second location like an SD card",
-                onAddRoot    = { addRootPicker.launch(null) },
-                onRelinkRoot = {
-                    relinkTarget = it
-                    relinkRootPicker.launch(onBeginRelink(it))
-                },
-                onRemoveRoot = { onRemoveRomRoot(it) },
-            )
-
             SettingsGroup("Consoles")
 
             val consoleCards = state.cards
@@ -800,10 +764,6 @@ fun LibraryManagerScreenPreview() {
             state = SettingsPreviewData.libraryListState,
             onBack = {},
             onAddAndroidApps = {},
-            onAddRomRoot = {},
-            onRelinkRomRoot = { _, _ -> },
-            onBeginRelink = { Uri.EMPTY },
-            onRemoveRomRoot = {},
             onOpenCardDetail = {},
             onStartAddConsole = {},
             onRequestRomFolderSetup = {},
