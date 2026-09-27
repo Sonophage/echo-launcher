@@ -18,6 +18,8 @@ internal fun primaryVerbFor(item: XMBItem?): String? = when {
     item.type == XMBItemType.LIBRARY_BOOK -> "Read"
     item.type == XMBItemType.PHOTO_FILE -> "View"
     item.type == XMBItemType.ADD_ACTION -> "Add"
+
+    item.mediaRootUri != null -> "Manage"
     item.type == XMBItemType.SEARCH -> "Search"
     item.packageName != null -> "Launch"
     else -> "Open"

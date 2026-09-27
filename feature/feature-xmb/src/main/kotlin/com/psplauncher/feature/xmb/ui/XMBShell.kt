@@ -160,8 +160,8 @@ fun XMBShellContainer(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
     ) { uri -> viewModel.onMediaRootPicked(uri) }
 
-    androidx.compose.runtime.LaunchedEffect(uiState.mediaRootPick) {
-        val pick = uiState.mediaRootPick ?: return@LaunchedEffect
+    androidx.compose.runtime.LaunchedEffect(uiState.rootPick) {
+        val pick = uiState.rootPick ?: return@LaunchedEffect
         mediaRootPicker.launch(
             pick.relinkFrom?.let { runCatching { android.net.Uri.parse(it) }.getOrNull() },
         )

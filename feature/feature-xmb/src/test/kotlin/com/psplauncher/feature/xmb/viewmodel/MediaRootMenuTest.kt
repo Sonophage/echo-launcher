@@ -145,4 +145,20 @@ class MediaRootMenuTest {
             )
         }
     }
+
+    @Test
+    fun `a root row's verb says what confirm does, which is open its menu`() {
+        val root = XMBItem(
+            id = "romroot_x",
+            title = "ROMs",
+            type = XMBItemType.MEDIA_ROOT,
+            mediaRootUri = "content://tree/x",
+        )
+
+        assertEquals(
+            "confirm on a root raises Rescan/Relink/Remove; promising Open makes it read like a drill-in",
+            "Manage",
+            primaryVerbFor(root),
+        )
+    }
 }

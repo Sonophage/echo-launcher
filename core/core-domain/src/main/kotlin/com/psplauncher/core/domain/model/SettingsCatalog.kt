@@ -34,7 +34,6 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_emulators_installed", "Installed", "Detected emulator profiles", SettingsSectionId.EMULATORS),
     SettingsEntry("settings_emulators_custom", "Custom Emulators", "Custom profiles & Add Custom Emulator", SettingsSectionId.EMULATORS),
     SettingsEntry("settings_emulators_retroarch", "RetroArch", "Core detection & linking", SettingsSectionId.EMULATORS),
-    SettingsEntry("settings_emulators_assign", "Per-System Defaults", "Default emulator & core per console, and per-game overrides", SettingsSectionId.EMULATORS),
 
     SettingsEntry("settings_themes", "Theme", "Colour scheme, accent & theme packs", SettingsSectionId.APPEARANCE),
     SettingsEntry("settings_appearance", "Wallpaper & Text", "Wallpaper, wave, motion & legibility", SettingsSectionId.APPEARANCE),

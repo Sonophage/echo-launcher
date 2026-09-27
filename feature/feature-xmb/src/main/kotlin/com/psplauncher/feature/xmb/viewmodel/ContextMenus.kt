@@ -193,6 +193,10 @@ internal fun platformContextMenuItems(
     platformId: String,
     pinned: Boolean,
     iconDisplayLabel: String,
+
+    emulatorLabel: String? = null,
+    overrideCount: Int = 0,
+    romDirectory: String? = null,
 ): List<XMBContextMenuItem> = buildList {
     if (platformId == PlatformIds.ANDROID) add(XMBContextMenuItem("find_games", "Find Games"))
     else add(XMBContextMenuItem("scan_roms", "Scan This Console"))
@@ -203,11 +207,31 @@ internal fun platformContextMenuItems(
     add(XMBContextMenuItem("update_metadata", "Update Metadata", group = MenuGroup.SETTINGS))
     add(XMBContextMenuItem("scrape_missing_artwork", "Scrape Missing Artwork", group = MenuGroup.SETTINGS))
 
+    if (emulatorLabel != null) {
+        add(XMBContextMenuItem("default_emulator", "Default Emulator ($emulatorLabel)", group = MenuGroup.SETTINGS))
+    }
+    if (overrideCount > 0) {
+        add(
+            XMBContextMenuItem(
+                "clear_emulator_overrides",
+                "Clear $overrideCount Game Override(s)",
+                isDestructive = true,
+                group = MenuGroup.SETTINGS,
+            ),
+        )
+    }
+
     add(XMBContextMenuItem("icon_display_platform", "Icon Display ($iconDisplayLabel)", group = MenuGroup.SETTINGS))
+    add(XMBContextMenuItem("rename_card", "Rename Memory Card", group = MenuGroup.SETTINGS))
+    if (romDirectory != null) {
+        add(XMBContextMenuItem("card_rom_directory", "ROM Folder ($romDirectory)", group = MenuGroup.SETTINGS))
+    }
     add(XMBContextMenuItem("library_manager", "Open in Library Manager", group = MenuGroup.SETTINGS))
 
     if (pinned) add(XMBContextMenuItem("unpin", "Unpin", group = MenuGroup.CATEGORY))
     else add(XMBContextMenuItem("pin", "Pin To Top", group = MenuGroup.CATEGORY))
+    add(XMBContextMenuItem("card_move_up", "Move Up", group = MenuGroup.CATEGORY))
+    add(XMBContextMenuItem("card_move_down", "Move Down", group = MenuGroup.CATEGORY))
 
     add(XMBContextMenuItem("hide", "Hide From Games", group = MenuGroup.REMOVE))
 

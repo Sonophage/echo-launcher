@@ -25,7 +25,6 @@ val SETTINGS_SCREEN_ROUTES: Set<String> = setOf(
     "settings_emulators_installed",
     "settings_emulators_custom",
     "settings_emulators_retroarch",
-    "settings_emulators_assign",
     "settings_themes",
     "settings_display",
 
@@ -119,7 +118,6 @@ fun SettingsNavHost(
             "settings_emulators_installed" -> EmulatorsSettingsScreen(onBack = onBack, section = EmulatorSettingsSection.INSTALLED, modifier = modifier)
             "settings_emulators_custom" -> EmulatorsSettingsScreen(onBack = onBack, section = EmulatorSettingsSection.CUSTOM, modifier = modifier)
             "settings_emulators_retroarch" -> EmulatorsSettingsScreen(onBack = onBack, section = EmulatorSettingsSection.RETROARCH, modifier = modifier)
-            "settings_emulators_assign" -> EmulatorAssignmentScreen(onBack = onBack, modifier = modifier)
             "settings_themes"     -> ThemesSettingsScreen(
                 onBack = onBack,
                 onOpenColorSchemePicker = onOpenColorSchemePicker,
