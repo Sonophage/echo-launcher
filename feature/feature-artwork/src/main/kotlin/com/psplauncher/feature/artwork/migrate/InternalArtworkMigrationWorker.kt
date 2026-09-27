@@ -17,6 +17,7 @@ import com.psplauncher.core.ui.notification.BackgroundTaskNotifier
 import com.psplauncher.feature.artwork.importer.ImportSummary
 import com.psplauncher.feature.artwork.store.ArtworkKind
 import com.psplauncher.feature.artwork.store.ArtworkTempIO
+import com.psplauncher.feature.artwork.store.isPortableRef
 import com.psplauncher.feature.artwork.store.InternalArtworkStore
 import com.psplauncher.feature.artwork.store.RoutingArtworkStore
 import dagger.assisted.Assisted
@@ -160,8 +161,6 @@ class InternalArtworkMigrationWorker @AssistedInject constructor(
     }
 
     companion object {
-        fun isPortableRef(uri: String): Boolean = uri.startsWith("content://", ignoreCase = true)
-
         const val UNIQUE_NAME = "pfp_internal_artwork_migration"
         const val TASK_ID = "internal_artwork_migration"
         private const val LABEL = "Moving artwork into your folder"

@@ -1,6 +1,6 @@
 package com.psplauncher.feature.artwork.migrate
 
-import com.psplauncher.feature.artwork.migrate.InternalArtworkMigrationWorker.Companion.isPortableRef
+import com.psplauncher.feature.artwork.store.isPortableRef
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -25,5 +25,10 @@ class PortableRefTest {
     @Test
     fun `a remote url is not a portable copy either`() {
         assertFalse(isPortableRef("https://cdn2.steamgriddb.com/hero/abc.png"))
+    }
+
+    @Test
+    fun `nothing at all is not a portable copy`() {
+        assertFalse(isPortableRef(null))
     }
 }

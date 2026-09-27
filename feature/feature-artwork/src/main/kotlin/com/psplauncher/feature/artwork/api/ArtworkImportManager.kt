@@ -531,6 +531,7 @@ class ArtworkImportManager @Inject constructor(
         var missingFiles = 0
         for (prior in priorRecords.values) {
             if (prior.id in matchedPriorIds) continue
+            if (!com.psplauncher.feature.artwork.store.isPortableRef(prior.documentUri)) continue
             missingFiles++
             artworkRecordDao.deleteById(prior.id)
             val game = games.firstOrNull { it.id == prior.gameId } ?: continue
