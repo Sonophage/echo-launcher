@@ -72,6 +72,7 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.datastore.preferences)
+    implementation(libs.androidx.documentfile)
     implementation(libs.workmanager.ktx)
     implementation(libs.hilt.android)
     implementation(libs.hilt.work)

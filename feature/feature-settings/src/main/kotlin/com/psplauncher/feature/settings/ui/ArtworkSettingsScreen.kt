@@ -369,6 +369,55 @@ fun ArtworkSettingsScreen(
                     )
                 }
 
+                SettingsGroup("Posters (TMDB)")
+
+                SettingsTextFieldRow(
+                    label         = if (state.hasTmdbKey) "TMDB API Key (saved)" else "TMDB API Key",
+                    value         = state.tmdbKeyDraft,
+                    onValueChange = viewModel::setTmdbKeyDraft,
+                    placeholder   = if (state.hasTmdbKey) "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022  (tap to replace)" else "Paste your TMDB key",
+                    isPassword    = true,
+                    helper        = "Film posters for the Video library. Get a free key at themoviedb.org/settings/api",
+                )
+
+                if (state.tmdbKeyDraft.isNotBlank()) {
+                    SettingsRow(label = "Save TMDB Key", onClick = viewModel::saveTmdbKey)
+                }
+
+                if (state.hasTmdbKey) {
+                    SettingsRow(
+                        label    = "Match Posters",
+                        sublabel = when {
+                            state.matchingPosters       -> "Matching\u2026"
+                            state.posterMessage != null -> state.posterMessage
+                            else -> "Find a poster for every film that does not have one"
+                        },
+                        focusKey = "video_match_posters",
+                        onClick  = if (state.matchingPosters) null else ({ viewModel.fetchPosters(false) }),
+                    )
+                    SettingsRow(
+                        label    = "Re-match All Posters",
+                        sublabel = "Match again, including films that already have one",
+                        onClick  = if (state.matchingPosters) null else ({ viewModel.fetchPosters(true) }),
+                    )
+                    SettingsRow(
+                        label    = "Clear Posters",
+                        sublabel = "Go back to the thumbnails taken from the files",
+                        onClick  = if (state.matchingPosters) null else ({ viewModel.clearPosters() }),
+                    )
+                    SettingsRow(
+                        label    = "Remove TMDB Key",
+                        sublabel = "Posters stop being fetched",
+                        onClick  = { viewModel.clearTmdbKey() },
+                    )
+                } else {
+                    SettingsRow(
+                        label    = "Match Posters",
+                        sublabel = "Add a TMDB key above first",
+                        onClick  = null,
+                    )
+                }
+
                 SettingsGroup("ScreenScraper")
 
                 SettingsValueRow(

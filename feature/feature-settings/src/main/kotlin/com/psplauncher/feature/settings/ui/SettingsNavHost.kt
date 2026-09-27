@@ -16,10 +16,6 @@ val SETTINGS_SCREEN_ROUTES: Set<String> = setOf(
     "settings_initial_setup_first",
     "settings_library",
     "settings_import_pc",
-    "settings_music",
-    "settings_video",
-    "settings_photo",
-    "settings_books",
     "settings_categories",
     "settings_artwork",
     "settings_artwork_sources",
@@ -110,10 +106,6 @@ fun SettingsNavHost(
             "settings_library"    -> LibraryManagerScreen(onBack = onBack, onAddAndroidApps = onAddAndroidApps, modifier = modifier)
 
             "settings_import_pc"  -> LibraryManagerScreen(onBack = onBack, onAddAndroidApps = onAddAndroidApps, startInImportPc = true, modifier = modifier)
-            "settings_music"      -> MusicSettingsScreen(onBack = onBack, modifier = modifier)
-            "settings_video"      -> VideoSettingsScreen(onBack = onBack, modifier = modifier)
-            "settings_photo"      -> PhotoSettingsScreen(onBack = onBack, modifier = modifier)
-            "settings_books"      -> BooksSettingsScreen(onBack = onBack, modifier = modifier)
 
             "settings_categories" -> CategoryManagerScreen(onBack = onBack, modifier = modifier)
             "settings_artwork"    -> ArtworkSettingsScreen(

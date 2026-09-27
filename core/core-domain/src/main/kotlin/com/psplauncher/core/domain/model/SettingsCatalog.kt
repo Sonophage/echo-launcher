@@ -12,7 +12,6 @@ enum class SettingsSectionId(
     EMULATORS("settings_section_emulators", "Emulators", "Launch profiles & RetroArch cores"),
     APPEARANCE("settings_section_appearance", "Appearance", "Theme, wallpaper, layout & boot"),
     INTERFACE("settings_section_interface", "Interface", "Sound, categories, controls & touch"),
-    MEDIA("settings_section_media", "Media", "Music, video & photo settings"),
     SYSTEM("settings_section_system", "System", "About, logs, backup, setup & credits"),
 }
 
@@ -48,10 +47,6 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_touch", "Touch", "On-screen button, swipe & hints", SettingsSectionId.INTERFACE),
     SettingsEntry("settings_performance", "Performance", "Thermal, battery saver & direct launch", SettingsSectionId.INTERFACE),
 
-    SettingsEntry("settings_music", "Music", "Music folders & default player", SettingsSectionId.MEDIA),
-    SettingsEntry("settings_video", "Video", "Video libraries, scanning & playback", SettingsSectionId.MEDIA),
-    SettingsEntry("settings_photo", "Photo", "Photo libraries & scanning", SettingsSectionId.MEDIA),
-    SettingsEntry("settings_books", "Books", "Book folders & reader", SettingsSectionId.MEDIA),
 
     SettingsEntry("settings_initial_setup", "Setup Wizard", "Guided folder & account setup", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_about", "About", "PSPLauncher", SettingsSectionId.SYSTEM),

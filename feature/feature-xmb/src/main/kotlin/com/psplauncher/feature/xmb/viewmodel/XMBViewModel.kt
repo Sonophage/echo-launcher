@@ -10,6 +10,7 @@ import com.psplauncher.core.domain.model.PlatformIds.ANDROID as ANDROID_PLATFORM
 
 import com.psplauncher.core.domain.model.PlatformIds.WINDOWS as WINDOWS_PLATFORM_ID
 
+import android.net.Uri
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
@@ -30,6 +31,12 @@ import com.psplauncher.core.data.datastore.pfpDataStore
 import com.psplauncher.core.data.repository.CategoryRepositoryImpl
 import com.psplauncher.core.data.repository.ControllerMappingRepository
 import com.psplauncher.core.data.repository.CustomIconStore
+import com.psplauncher.core.data.repository.MediaRootKind
+import com.psplauncher.core.data.repository.MediaScannedEntry
+import com.psplauncher.core.data.repository.SafGrants
+import com.psplauncher.core.data.music.MusicIntentResolver
+import com.psplauncher.core.data.repository.mediaRootDisplayName
+import com.psplauncher.core.data.repository.mediaRootRows
 import com.psplauncher.core.data.repository.MemoryCardRepository
 import com.psplauncher.core.data.repository.PfpThemeStore
 import com.psplauncher.core.ui.icons.CustomIcon
@@ -170,6 +177,9 @@ data class XMBContextMenu(
     val photoFileId: String? = null,
 
     val photoLibraryId: String? = null,
+
+    val mediaRootUri: String? = null,
+    val mediaRootKind: MediaRootKind? = null,
 ) {
     val title: String get() = state.title
     val items: List<XMBContextMenuItem> get() = state.rows
@@ -292,6 +302,7 @@ data class AppPickerState(
 
 sealed interface VideoNav {
     data object Root : VideoNav
+    data object Folders : VideoNav
     data object AllVideos : VideoNav
 
     data object Collections : VideoNav
@@ -308,6 +319,7 @@ private val VideoNav.isVideoCollectionChild: Boolean
 
 sealed interface BooksNav {
     data object Root : BooksNav
+    data object Folders : BooksNav
     data object AllBooks : BooksNav
     data object Shelves : BooksNav
     data class Shelf(val id: String, val name: String) : BooksNav
@@ -321,6 +333,7 @@ data class BookSeries(val name: String, val bookCount: Int, val coverUri: String
 
 sealed interface PhotoNav {
     data object Root : PhotoNav
+    data object Folders : PhotoNav
     data object AllPhotos : PhotoNav
     data object Albums : PhotoNav
     data class Library(val id: String, val name: String) : PhotoNav
@@ -332,8 +345,11 @@ data class PhotoViewerRequest(
     val openWallpaperPreview: Boolean = false,
 )
 
+data class MediaRootPick(val kind: MediaRootKind, val relinkFrom: String? = null)
+
 sealed interface MusicNav {
     data object Root : MusicNav
+    data object Folders : MusicNav
     data object AllMusic : MusicNav
     data object Playlists : MusicNav
     data class Playlist(val id: Long, val name: String) : MusicNav
@@ -449,6 +465,7 @@ data class XMBUiState(
     val selectedPlatformId: String? = null,
 
     val musicNav: MusicNav = MusicNav.Root,
+    val mediaRootPick: MediaRootPick? = null,
     val musicFolders: List<com.psplauncher.core.domain.model.MusicFolder> = emptyList(),
 
     val mediaCovers: MediaCovers = MediaCovers(),
@@ -866,6 +883,8 @@ enum class XMBItemType {
 
     SEARCH,
 
+    MEDIA_ROOT,
+
     ADD_ACTION,
     EMPTY,
 }
@@ -995,6 +1014,7 @@ fun XMBItem.hasContextMenu(state: XMBUiState): Boolean {
             (type == XMBItemType.PHOTO_FILE && id.startsWith("pho_")) ||
                 (type == XMBItemType.PHOTO_FOLDER && id.startsWith("plib_"))
         ) -> true
+        mediaRootKind != null && type == XMBItemType.MEDIA_ROOT -> true
         gameId != null -> true
         type == XMBItemType.ALL_GAMES -> true
         platformId != null -> true
@@ -1151,6 +1171,9 @@ data class XMBItem(
 
     val musicFolderId: String? = null,
 
+    val mediaRootUri: String? = null,
+    val mediaRootKind: MediaRootKind? = null,
+
     val musicGroupKey: String? = null,
     val mediaUri: String? = null,
     val mimeType: String? = null,
@@ -1260,6 +1283,11 @@ class XMBViewModel @Inject constructor(
     private val mediaLaunchGate: com.psplauncher.core.data.launch.MediaLaunchGate,
 
     private val uiMediaAudioPlayer: com.psplauncher.core.ui.media.UiMediaAudioPlayer,
+    private val mediaRootRepository: com.psplauncher.core.data.repository.MediaRootRepository,
+    private val videoScanner: com.psplauncher.feature.library.scanner.VideoScanner,
+    private val bookScanner: com.psplauncher.feature.library.scanner.BookScanner,
+    private val musicIntentResolver: com.psplauncher.core.data.music.MusicIntentResolver,
+    private val videoIntentResolver: com.psplauncher.core.data.video.VideoIntentResolver,
 ) : ViewModel() {
     private var currentMusicTracks: List<MusicTrack> = emptyList()
     private var currentMusicTracksRaw: List<MusicTrack> = emptyList()
@@ -1842,6 +1870,9 @@ class XMBViewModel @Inject constructor(
                     }
                 }
                 BuiltInCategory.MUSIC -> when (val nav = _uiState.value.musicNav) {
+                    MusicNav.Folders -> mediaRootRepository.roots(MediaRootKind.MUSIC).collect {
+                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.MUSIC)) }
+                    }
                     MusicNav.Root -> {
                         clearMusicTrackCache()
                         _uiState.update { it.copy(currentItems = musicRootItems()) }
@@ -1860,6 +1891,9 @@ class XMBViewModel @Inject constructor(
                     }
                 }
                 BuiltInCategory.VIDEO -> when (val nav = _uiState.value.videoNav) {
+                    VideoNav.Folders -> mediaRootRepository.roots(MediaRootKind.VIDEO).collect {
+                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.VIDEO)) }
+                    }
                     VideoNav.Root -> _uiState.update { it.copy(currentItems = videoRootItems()) }
                     VideoNav.Collections -> _uiState.update { it.copy(currentItems = videoCollectionsItems()) }
                     VideoNav.AllVideos -> videoRepository.observeAllVideos().collect { videos ->
@@ -1887,6 +1921,9 @@ class XMBViewModel @Inject constructor(
                     }
                 }
                 BuiltInCategory.PHOTO -> when (val nav = _uiState.value.photoNav) {
+                    PhotoNav.Folders -> mediaRootRepository.roots(MediaRootKind.PHOTO).collect {
+                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.PHOTO)) }
+                    }
                     PhotoNav.Root -> _uiState.update { it.copy(currentItems = photoRootItems()) }
                     PhotoNav.AllPhotos -> photoRepository.observeAllPhotos().collect { photos ->
                         setPhotoItems(photos, emptyAllPhotosItem())
@@ -1899,6 +1936,9 @@ class XMBViewModel @Inject constructor(
                     }
                 }
                 BuiltInCategory.LIBRARY -> when (val nav = _uiState.value.booksNav) {
+                    BooksNav.Folders -> mediaRootRepository.roots(MediaRootKind.BOOK).collect {
+                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.BOOK)) }
+                    }
                     BooksNav.Root -> _uiState.update { it.copy(currentItems = booksRootItems()) }
                     BooksNav.Shelves -> bookRepository.observeLibraries().collect { shelves ->
                         _uiState.update { it.copy(bookLibraries = shelves, currentItems = bookShelfItems()) }
@@ -2358,7 +2398,7 @@ class XMBViewModel @Inject constructor(
         item.id == VIDEO_LIBRARIES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Libraries); true }
         item.id == ADD_VIDEOS_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            _uiState.update { it.copy(activeSettingsScreen = "settings_video") }
+            openMediaFolders(MediaRootKind.VIDEO)
             true
         }
         item.id == ADD_VIDEO_APPS_ITEM_ID -> {
@@ -2414,6 +2454,7 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun musicNavKey(nav: MusicNav): String = when (nav) {
+        MusicNav.Folders     -> "folders"
         MusicNav.Root        -> "root"
         MusicNav.AllMusic    -> "all"
         MusicNav.Playlists   -> "playlists"
@@ -2421,6 +2462,7 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun videoNavKey(nav: VideoNav): String = when (nav) {
+        VideoNav.Folders         -> "folders"
         VideoNav.Root            -> "root"
         VideoNav.AllVideos       -> "all"
         VideoNav.Collections     -> "collections"
@@ -2543,7 +2585,7 @@ class XMBViewModel @Inject constructor(
                 val name = _uiState.value.currentItems.firstOrNull { it.id == "vlib_$libraryId" }?.title.orEmpty()
                 openVideoView(VideoNav.Library(libraryId, name))
             }
-            "video_lib_manage" -> _uiState.update { it.copy(activeSettingsScreen = "settings_video") }
+            "video_lib_manage" -> openMediaFolders(MediaRootKind.VIDEO)
         }
     }
 
@@ -2710,7 +2752,7 @@ class XMBViewModel @Inject constructor(
         item.id == BOOK_SERIES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.SeriesList); true }
         item.id == ADD_BOOK_FOLDER_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            _uiState.update { it.copy(activeSettingsScreen = "settings_books") }
+            openMediaFolders(MediaRootKind.BOOK)
             true
         }
         item.type == XMBItemType.LIBRARY_SERIES -> {
@@ -2755,6 +2797,7 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun booksNavKey(nav: BooksNav): String = when (nav) {
+        BooksNav.Folders  -> "folders"
         BooksNav.Root     -> "root"
         BooksNav.AllBooks -> "all"
         BooksNav.Shelves  -> "shelves"
@@ -2892,7 +2935,7 @@ class XMBViewModel @Inject constructor(
         item.id == CAMERA_ITEM_ID -> { menuSound.play(MenuSound.LAUNCH); launchCamera(); true }
         item.id == ADD_PHOTO_LIBRARY_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            _uiState.update { it.copy(activeSettingsScreen = "settings_photo") }
+            openMediaFolders(MediaRootKind.PHOTO)
             true
         }
         item.id == ADD_PHOTO_APPS_ITEM_ID -> {
@@ -2920,6 +2963,7 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun photoNavKey(nav: PhotoNav): String = when (nav) {
+        PhotoNav.Folders    -> "folders"
         PhotoNav.Root       -> "root"
         PhotoNav.AllPhotos  -> "all"
         PhotoNav.Albums     -> "albums"
@@ -3010,29 +3054,27 @@ class XMBViewModel @Inject constructor(
                 val name = _uiState.value.photoLibraries.firstOrNull { it.id == libraryId }?.displayName.orEmpty()
                 openPhotoView(PhotoNav.Library(libraryId, name))
             }
-            "photo_lib_scan" -> scanPhotoLibrary(libraryId)
-            "photo_lib_manage" -> _uiState.update { it.copy(activeSettingsScreen = "settings_photo") }
+            "photo_lib_scan" -> appAction { scanPhotoLibrary(libraryId) }
+            "photo_lib_manage" -> openMediaFolders(MediaRootKind.PHOTO)
         }
     }
 
-    private fun scanPhotoLibrary(libraryId: String) {
-        viewModelScope.launch {
-            val library = photoRepository.getLibrary(libraryId) ?: return@launch
-            val taskId = "photo_scan_${library.id}"
-            val notifier = BackgroundTaskNotifier(context)
-            notifier.running(taskId, "Scanning ${library.displayName}", null)
-            val existing = photoRepository.getPhotosForLibrary(library.id)
-            photoScanner.scan(library, deep = false, existing = existing).collect { result ->
-                when (result) {
-                    is com.psplauncher.feature.library.scanner.PhotoScanResult.Progress ->
-                        notifier.running(taskId, "Scanning ${result.libraryName}", null)
-                    is com.psplauncher.feature.library.scanner.PhotoScanResult.Complete -> {
-                        photoRepository.replacePhotosForLibrary(result.libraryId, result.photos, System.currentTimeMillis())
-                        notifier.complete(taskId, "Scanned ${library.displayName}", "${result.photos.size} photos")
-                    }
-                    is com.psplauncher.feature.library.scanner.PhotoScanResult.Error ->
-                        notifier.failed(taskId, "Scan failed: ${library.displayName}", result.message)
+    private suspend fun scanPhotoLibrary(libraryId: String) {
+        val library = photoRepository.getLibrary(libraryId) ?: return
+        val taskId = "photo_scan_${library.id}"
+        val notifier = BackgroundTaskNotifier(context)
+        notifier.running(taskId, "Scanning ${library.displayName}", null)
+        val existing = photoRepository.getPhotosForLibrary(library.id)
+        photoScanner.scan(library, deep = false, existing = existing).collect { result ->
+            when (result) {
+                is com.psplauncher.feature.library.scanner.PhotoScanResult.Progress ->
+                    notifier.running(taskId, "Scanning ${result.libraryName}", null)
+                is com.psplauncher.feature.library.scanner.PhotoScanResult.Complete -> {
+                    photoRepository.replacePhotosForLibrary(result.libraryId, result.photos, System.currentTimeMillis())
+                    notifier.complete(taskId, "Scanned ${library.displayName}", "${result.photos.size} photos")
                 }
+                is com.psplauncher.feature.library.scanner.PhotoScanResult.Error ->
+                    notifier.failed(taskId, "Scan failed: ${library.displayName}", result.message)
             }
         }
     }
@@ -3541,7 +3583,7 @@ class XMBViewModel @Inject constructor(
         item.id == MUSIC_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Albums); true }
         item.id == ADD_MUSIC_FOLDER_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            _uiState.update { it.copy(activeSettingsScreen = "settings_music") }
+            openMediaFolders(MediaRootKind.MUSIC)
             true
         }
         item.id == CREATE_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreatePlaylist(); true }
@@ -3775,10 +3817,283 @@ class XMBViewModel @Inject constructor(
         }
     }
 
+
+    private fun mediaRootKindOf(categoryId: String?): MediaRootKind? = when (categoryId) {
+        BuiltInCategory.MUSIC   -> MediaRootKind.MUSIC
+        BuiltInCategory.VIDEO   -> MediaRootKind.VIDEO
+        BuiltInCategory.PHOTO   -> MediaRootKind.PHOTO
+        BuiltInCategory.LIBRARY -> MediaRootKind.BOOK
+        else -> null
+    }
+
+    private fun mediaKindNouns(kind: MediaRootKind): Pair<String, String> = when (kind) {
+        MediaRootKind.MUSIC -> "track" to "tracks"
+        MediaRootKind.VIDEO -> "video" to "videos"
+        MediaRootKind.PHOTO -> "photo" to "photos"
+        MediaRootKind.BOOK  -> "book" to "books"
+    }
+
+    private suspend fun scannedEntriesFor(kind: MediaRootKind): List<MediaScannedEntry> = when (kind) {
+        MediaRootKind.MUSIC -> musicRepository.getFolders().map {
+            MediaScannedEntry(it.treeUri, it.displayName, it.trackCount, it.lastScannedAt)
+        }
+        MediaRootKind.VIDEO -> videoRepository.getLibraries().map {
+            MediaScannedEntry(it.treeUri, it.displayName, it.videoCount, it.lastScannedAt)
+        }
+        MediaRootKind.PHOTO -> photoRepository.getLibraries().map {
+            MediaScannedEntry(it.treeUri, it.displayName, it.photoCount, it.lastScannedAt)
+        }
+        MediaRootKind.BOOK -> bookRepository.getLibraries().map {
+            MediaScannedEntry(it.treeUri, it.displayName, it.bookCount, it.lastScannedAt)
+        }
+    }
+
+    private suspend fun mediaFolderItems(kind: MediaRootKind): List<XMBItem> {
+        val roots = mediaRootRepository.getAll(kind)
+        val persisted = SafGrants.persistedReadUris(context.contentResolver)
+        val rows = mediaRootRows(roots, persisted, scannedEntriesFor(kind)) { treeUri ->
+            mediaRootDisplayName(context, treeUri, mediaKindLabel(kind))
+        }
+        val (one, many) = mediaKindNouns(kind)
+
+        return rows.map { row ->
+            XMBItem(
+                id       = mediaRootItemId(kind, row.treeUri),
+                title    = row.name,
+                subtitle = row.itemCount.let { count ->
+                    when {
+                        !row.linked   -> "Access lost — Relink to grant it again"
+                        count == null -> "Not scanned yet"
+                        else          -> countLabel(count, one, many)
+                    }
+                },
+                type          = XMBItemType.MEDIA_ROOT,
+                mediaRootUri  = row.treeUri,
+                mediaRootKind = kind,
+            )
+        } + XMBItem(
+            id       = addMediaRootItemId(kind),
+            title    = "Add Folder",
+            subtitle = if (rows.isEmpty()) "Grant a ${mediaKindFolderWord(kind)} folder to start"
+                       else "Grant another ${mediaKindFolderWord(kind)} folder",
+            type          = XMBItemType.ADD_ACTION,
+            mediaRootKind = kind,
+        )
+    }
+
+    private fun openMediaFolders(kind: MediaRootKind) = when (kind) {
+        MediaRootKind.MUSIC -> openMusicView(MusicNav.Folders)
+        MediaRootKind.VIDEO -> openVideoView(VideoNav.Folders)
+        MediaRootKind.PHOTO -> openPhotoView(PhotoNav.Folders)
+        MediaRootKind.BOOK  -> openBooksView(BooksNav.Folders)
+    }
+
+    fun requestMediaRootPick(kind: MediaRootKind, relinkFrom: String? = null) {
+        _uiState.update { it.copy(mediaRootPick = MediaRootPick(kind, relinkFrom)) }
+    }
+
+    fun onMediaRootPicked(uri: Uri?) {
+        val request = _uiState.value.mediaRootPick ?: return
+        _uiState.update { it.copy(mediaRootPick = null) }
+        if (uri == null) return
+        viewModelScope.launch {
+            mediaRootRepository.persist(uri)
+            if (request.relinkFrom != null) {
+                mediaRootRepository.replace(request.kind, request.relinkFrom, uri.toString())
+            } else {
+                mediaRootRepository.add(request.kind, uri.toString())
+            }
+            rescanMediaKind(request.kind)
+        }
+    }
+
+    private fun removeMediaRoot(kind: MediaRootKind, treeUri: String) {
+        appAction {
+            mediaRootRepository.remove(kind, treeUri)
+            rescanMediaKind(kind)
+        }
+    }
+
+    private suspend fun pruneOrphanEntries(kind: MediaRootKind, roots: List<String>) {
+        when (kind) {
+            MediaRootKind.MUSIC -> musicRepository.getFolders()
+                .filter { it.treeUri !in roots }.forEach { musicRepository.removeFolder(it.id) }
+            MediaRootKind.VIDEO -> videoRepository.getLibraries()
+                .filter { it.treeUri !in roots }.forEach { videoRepository.removeLibrary(it.id) }
+            MediaRootKind.PHOTO -> photoRepository.getLibraries()
+                .filter { it.treeUri !in roots }.forEach { photoRepository.removeLibrary(it.id) }
+            MediaRootKind.BOOK -> bookRepository.getLibraries()
+                .filter { it.treeUri !in roots }.forEach { bookRepository.removeLibrary(it.id) }
+        }
+    }
+
+    private suspend fun entryIdForRoot(kind: MediaRootKind, treeUri: String): String {
+        val name = mediaRootDisplayName(context, treeUri, mediaKindLabel(kind))
+        return when (kind) {
+            MediaRootKind.MUSIC ->
+                (musicRepository.getFolders().firstOrNull { it.treeUri == treeUri }
+                    ?: musicRepository.addFolder(name, treeUri)).id
+            MediaRootKind.VIDEO ->
+                (videoRepository.getLibraries().firstOrNull { it.treeUri == treeUri }
+                    ?: videoRepository.addLibrary(name, treeUri)).id
+            MediaRootKind.PHOTO ->
+                (photoRepository.getLibraries().firstOrNull { it.treeUri == treeUri }
+                    ?: photoRepository.addLibrary(name, treeUri)).id
+            MediaRootKind.BOOK ->
+                (bookRepository.getLibraries().firstOrNull { it.treeUri == treeUri }
+                    ?: bookRepository.addLibrary(name, treeUri)).id
+        }
+    }
+
+    private suspend fun scanOneRoot(kind: MediaRootKind, treeUri: String, deep: Boolean) {
+        val entryId = entryIdForRoot(kind, treeUri)
+        when (kind) {
+            MediaRootKind.MUSIC -> scanMusicFolder(entryId)
+            MediaRootKind.VIDEO -> scanVideoLibrary(entryId, deep)
+            MediaRootKind.PHOTO -> scanPhotoLibrary(entryId)
+            MediaRootKind.BOOK  -> scanBookLibrary(entryId, deep)
+        }
+    }
+
+    private fun rescanMediaRoot(kind: MediaRootKind, treeUri: String, deep: Boolean = false) {
+        viewModelScope.launch { scanOneRoot(kind, treeUri, deep) }
+    }
+
+    private fun rescanMediaKind(kind: MediaRootKind, deep: Boolean = false) {
+        viewModelScope.launch {
+            val roots = mediaRootRepository.getAll(kind)
+            pruneOrphanEntries(kind, roots)
+            roots.forEach { scanOneRoot(kind, it, deep) }
+        }
+    }
+
+    private fun openMediaRootContextMenu(item: XMBItem) {
+        val kind = item.mediaRootKind ?: return
+        val treeUri = item.mediaRootUri ?: return
+        val linked = item.subtitle?.startsWith("Access lost") != true
+        _uiState.update {
+            it.copy(
+                activeContextMenu = XMBContextMenu(
+                    state = MenuState(
+                        title = item.title,
+                        rows = mediaRootContextMenuItems(linked, kind),
+                    ),
+                    mediaRootUri = treeUri,
+                    mediaRootKind = kind,
+                ),
+            )
+        }
+    }
+
+    private fun handleMediaRootAction(kind: MediaRootKind, treeUri: String, itemId: String) {
+        when (mediaRootActionOf(itemId)) {
+            MediaRootAction.RESCAN      -> rescanMediaRoot(kind, treeUri)
+            MediaRootAction.RESCAN_DEEP -> rescanMediaRoot(kind, treeUri, deep = true)
+            MediaRootAction.RELINK      -> requestMediaRootPick(kind, relinkFrom = treeUri)
+            MediaRootAction.REMOVE      -> removeMediaRoot(kind, treeUri)
+            null -> Unit
+        }
+    }
+
+
+    private fun openMediaFoldersContextMenu(item: XMBItem) {
+        val kind = item.mediaRootKind ?: return
+        _uiState.update {
+            it.copy(
+                activeContextMenu = XMBContextMenu(
+                    state = MenuState(title = item.title, rows = mediaFoldersContextMenuItems(kind)),
+                    mediaRootKind = kind,
+                ),
+            )
+        }
+    }
+
+    private fun openDefaultMediaAppMenu(kind: MediaRootKind) {
+        viewModelScope.launch {
+            val current: String? = when (kind) {
+                MediaRootKind.MUSIC -> musicRepository.observeDefaultPlayerPackage().first()
+                MediaRootKind.VIDEO -> videoRepository.observeDefaultVideoPlayer().first()
+                MediaRootKind.BOOK  -> bookRepository.observeDefaultReader().first()
+                MediaRootKind.PHOTO -> return@launch
+            }
+
+            val choices: List<Pair<String?, String>> = when (kind) {
+                MediaRootKind.MUSIC -> listOf(
+                    MusicIntentResolver.BUILTIN to "PSPLauncher",
+                    null to "System Default",
+                ) + musicIntentResolver.availablePlayers().map { it.packageName to it.label }
+
+                MediaRootKind.VIDEO -> listOf(
+                    VIDEO_PLAYER_BUILTIN to "PSPLauncher",
+                    VIDEO_PLAYER_ASK to "System Default",
+                ) + videoIntentResolver.availablePlayers().map { it.packageName to it.label }
+
+                MediaRootKind.BOOK -> listOf(
+                    null to "Ask Every Time",
+                ) + bookIntentResolver.availableReaders().map { it.packageName to it.label }
+
+                MediaRootKind.PHOTO -> return@launch
+            }
+
+            val rows = choices.map { (pkg, label) ->
+                XMBContextMenuItem(
+                    "$MEDIA_APP_PREFIX${pkg ?: MEDIA_APP_NONE}",
+                    label,
+                    checked = current == pkg,
+                )
+            }
+            _uiState.update {
+                it.copy(
+                    activeContextMenu = XMBContextMenu(
+                        state = MenuState(title = "Default App", rows = rows),
+                        mediaRootKind = kind,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun setDefaultMediaApp(kind: MediaRootKind, packageName: String?) {
+        appAction {
+            when (kind) {
+                MediaRootKind.MUSIC -> musicRepository.setDefaultPlayerPackage(packageName)
+                MediaRootKind.VIDEO -> videoRepository.setDefaultVideoPlayer(packageName)
+                MediaRootKind.BOOK  -> bookRepository.setDefaultReader(packageName)
+                MediaRootKind.PHOTO -> Unit
+            }
+        }
+    }
+
+    private fun clearMediaCache(kind: MediaRootKind) {
+        appAction {
+            val removed = when (kind) {
+                MediaRootKind.PHOTO -> photoScanner.clearThumbnailCache()
+                MediaRootKind.BOOK  -> bookScanner.clearCoverCache()
+                else -> return@appAction
+            }
+            SystemToasts.post("Cleared $removed cached file(s)", "Rescan to regenerate them.", ToastKind.SUCCESS)
+        }
+    }
+
+    private fun handleMediaFoldersAction(kind: MediaRootKind, itemId: String) {
+        when (mediaFoldersActionOf(itemId)) {
+            MediaFoldersAction.ADD_ROOT        -> requestMediaRootPick(kind)
+            MediaFoldersAction.RESCAN_ALL      -> rescanMediaKind(kind)
+            MediaFoldersAction.RESCAN_ALL_DEEP -> rescanMediaKind(kind, deep = true)
+            MediaFoldersAction.DEFAULT_APP     -> openDefaultMediaAppMenu(kind)
+            MediaFoldersAction.CLEAR_CACHE     -> clearMediaCache(kind)
+            MediaFoldersAction.PICK_APP        -> setDefaultMediaApp(
+                kind,
+                itemId.removePrefix(MEDIA_APP_PREFIX).takeIf { it != MEDIA_APP_NONE },
+            )
+            null -> Unit
+        }
+    }
+
     private fun handleMusicFolderAction(folderId: String, itemId: String) {
         when (itemId) {
-            "scan_folder" -> scanMusicFolder(folderId)
-            "rename_folder" -> _uiState.update { it.copy(activeSettingsScreen = "settings_music") }
+            "scan_folder" -> appAction { scanMusicFolder(folderId) }
+            "rename_folder" -> openMediaFolders(MediaRootKind.MUSIC)
             "enable_folder" -> appAction { musicRepository.setFolderEnabled(folderId, true) }
             "disable_folder" -> appAction { musicRepository.setFolderEnabled(folderId, false) }
             "remove_folder" -> appAction { musicRepository.removeFolder(folderId) }
@@ -3830,21 +4145,55 @@ class XMBViewModel @Inject constructor(
         }
     }
 
-    private fun scanMusicFolder(folderId: String) {
-        viewModelScope.launch {
-            val folder = musicRepository.getFolder(folderId) ?: return@launch
-            val taskId = "music_scan_$folderId"
-            addBackgroundTask(BackgroundTaskInfo(taskId, "Scanning ${folder.displayName}", null))
-            musicScanner.scan(folder).collect { result ->
-                when (result) {
-                    is com.psplauncher.feature.library.scanner.MusicScanResult.Progress -> Unit
-                    is com.psplauncher.feature.library.scanner.MusicScanResult.Complete -> {
-                        musicRepository.replaceTracksForFolder(result.folderId, result.tracks, System.currentTimeMillis())
-                        completeBackgroundTask(taskId, "${result.tracks.size} tracks")
-                    }
-                    is com.psplauncher.feature.library.scanner.MusicScanResult.Error ->
-                        failBackgroundTask(taskId, result.message)
+    private suspend fun scanMusicFolder(folderId: String) {
+        val folder = musicRepository.getFolder(folderId) ?: return
+        val taskId = "music_scan_$folderId"
+        addBackgroundTask(BackgroundTaskInfo(taskId, "Scanning ${folder.displayName}", null))
+        musicScanner.scan(folder).collect { result ->
+            when (result) {
+                is com.psplauncher.feature.library.scanner.MusicScanResult.Progress -> Unit
+                is com.psplauncher.feature.library.scanner.MusicScanResult.Complete -> {
+                    musicRepository.replaceTracksForFolder(result.folderId, result.tracks, System.currentTimeMillis())
+                    completeBackgroundTask(taskId, "${result.tracks.size} tracks")
                 }
+                is com.psplauncher.feature.library.scanner.MusicScanResult.Error ->
+                    failBackgroundTask(taskId, result.message)
+            }
+        }
+    }
+
+    private suspend fun scanVideoLibrary(libraryId: String, deep: Boolean = false) {
+        val library = videoRepository.getLibrary(libraryId) ?: return
+        val taskId = "video_scan_$libraryId"
+        addBackgroundTask(BackgroundTaskInfo(taskId, "Scanning ${library.displayName}", null))
+        val existing = videoRepository.getVideosForLibrary(libraryId)
+        videoScanner.scan(library, deep = deep, existing = existing).collect { result ->
+            when (result) {
+                is com.psplauncher.feature.library.scanner.VideoScanResult.Progress -> Unit
+                is com.psplauncher.feature.library.scanner.VideoScanResult.Complete -> {
+                    videoRepository.replaceVideosForLibrary(result.libraryId, result.videos, System.currentTimeMillis())
+                    completeBackgroundTask(taskId, "${result.videos.size} videos")
+                }
+                is com.psplauncher.feature.library.scanner.VideoScanResult.Error ->
+                    failBackgroundTask(taskId, result.message)
+            }
+        }
+    }
+
+    private suspend fun scanBookLibrary(libraryId: String, deep: Boolean = false) {
+        val library = bookRepository.getLibrary(libraryId) ?: return
+        val taskId = "book_scan_$libraryId"
+        addBackgroundTask(BackgroundTaskInfo(taskId, "Scanning ${library.displayName}", null))
+        val existing = bookRepository.getBooksForLibrary(libraryId)
+        bookScanner.scan(library, deep = deep, existing = existing).collect { result ->
+            when (result) {
+                is com.psplauncher.feature.library.scanner.BookScanResult.Progress -> Unit
+                is com.psplauncher.feature.library.scanner.BookScanResult.Complete -> {
+                    bookRepository.replaceBooksForLibrary(result.libraryId, result.books, System.currentTimeMillis())
+                    completeBackgroundTask(taskId, "${result.books.size} books")
+                }
+                is com.psplauncher.feature.library.scanner.BookScanResult.Error ->
+                    failBackgroundTask(taskId, result.message)
             }
         }
     }
@@ -3945,6 +4294,7 @@ class XMBViewModel @Inject constructor(
             MusicNav.AllMusic    -> "Music"
             MusicNav.Playlists   -> "Playlist"
             is MusicNav.Playlist -> nav.name
+            MusicNav.Folders     -> "Folders"
             MusicNav.Root        -> null
         }
         if (musicTitle != null) return musicTitle
@@ -3958,6 +4308,7 @@ class XMBViewModel @Inject constructor(
             is VideoNav.Playlist     -> nav.name
             VideoNav.Libraries       -> "Video Libraries"
             is VideoNav.Library      -> nav.name
+            VideoNav.Folders         -> "Folders"
             VideoNav.Root            -> null
         }
         if (videoTitle != null) return videoTitle
@@ -3966,6 +4317,7 @@ class XMBViewModel @Inject constructor(
             PhotoNav.AllPhotos  -> "All Photos"
             PhotoNav.Albums     -> "Albums"
             is PhotoNav.Library -> nav.name
+            PhotoNav.Folders    -> "Folders"
             PhotoNav.Root       -> null
         }
         if (photoTitle != null) return photoTitle
@@ -3975,6 +4327,7 @@ class XMBViewModel @Inject constructor(
             is BooksNav.Shelf -> nav.name
             BooksNav.SeriesList -> "Series"
             is BooksNav.Series  -> nav.name
+            BooksNav.Folders  -> "Folders"
             BooksNav.Root     -> null
         }
         if (booksTitle != null) return booksTitle
@@ -5102,6 +5455,9 @@ class XMBViewModel @Inject constructor(
                 "music_close"      -> stopAndCloseMusicPlayer()
             }
             menu.musicTrackId != null -> handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId)
+            menu.mediaRootKind != null && menu.mediaRootUri != null ->
+                handleMediaRootAction(menu.mediaRootKind, menu.mediaRootUri, itemId)
+            menu.mediaRootKind != null -> handleMediaFoldersAction(menu.mediaRootKind, itemId)
             menu.musicFolderId != null -> handleMusicFolderAction(menu.musicFolderId, itemId)
             menu.isAllGames -> if (itemId.startsWith("gicondisp_")) {
                 IconDisplayMode.fromName(itemId.removePrefix("gicondisp_"))?.let { mode ->
@@ -5504,6 +5860,9 @@ class XMBViewModel @Inject constructor(
         val state = _uiState.value
         val item = state.currentItems.getOrNull(state.selectedItemIndex)
         when {
+            item?.mediaRootUri != null -> openMediaRootContextMenu(item)
+            item?.mediaRootKind != null && item.type == XMBItemType.MEDIA_ROOT ->
+                openMediaFoldersContextMenu(item)
             item != null && openMusicContextMenu(item) -> Unit
             item != null && openVideoContextMenu(item) -> Unit
             item != null && openBookContextMenu(item) -> Unit
@@ -6201,14 +6560,32 @@ class XMBViewModel @Inject constructor(
         }
     }
 
-    private fun dispatchCategorySelection(item: XMBItem): Boolean =
-        when (item.menuHostCategory(currentCategory()?.id)) {
+    private fun dispatchCategorySelection(item: XMBItem): Boolean {
+        mediaRootSelection(item)?.let { return it }
+        return when (item.menuHostCategory(currentCategory()?.id)) {
             BuiltInCategory.MUSIC   -> handleMusicSelection(item)
             BuiltInCategory.VIDEO   -> handleVideoSelection(item)
             BuiltInCategory.PHOTO   -> handlePhotoSelection(item)
             BuiltInCategory.LIBRARY -> handleBooksSelection(item)
             else -> false
         }
+    }
+
+    private fun mediaRootSelection(item: XMBItem): Boolean? {
+        val kind = item.mediaRootKind ?: return null
+        return when {
+            item.id == mediaFoldersItemId(kind) -> {
+                menuSound.play(MenuSound.SELECT); openMediaFolders(kind); true
+            }
+            item.id == addMediaRootItemId(kind) -> {
+                menuSound.play(MenuSound.SELECT); requestMediaRootPick(kind); true
+            }
+            item.mediaRootUri != null -> {
+                menuSound.play(MenuSound.SELECT); openMediaRootContextMenu(item); true
+            }
+            else -> null
+        }
+    }
 
     private fun markControllerInput() {
         lastInteractionMs = SystemClock.elapsedRealtime()
@@ -6433,6 +6810,9 @@ class XMBViewModel @Inject constructor(
         if (_uiState.value.hasBlockingOverlay) return
         val item = _uiState.value.currentItems.getOrNull(index)
         when {
+            item?.mediaRootUri != null -> openMediaRootContextMenu(item)
+            item?.mediaRootKind != null && item.type == XMBItemType.MEDIA_ROOT ->
+                openMediaFoldersContextMenu(item)
             item != null && openMusicContextMenu(item) -> Unit
             item != null && openVideoContextMenu(item) -> Unit
             item != null && openBookContextMenu(item) -> Unit
@@ -7887,6 +8267,12 @@ class XMBViewModel @Inject constructor(
         private const val APP_SHORTCUT_PLATFORM_ID = "app_shortcut"
 
         private const val ADD_MUSIC_FOLDER_ITEM_ID = "add_music_folder"
+        internal const val MEDIA_APP_NONE = "__none__"
+        private const val VIDEO_PLAYER_BUILTIN = "builtin"
+        private const val VIDEO_PLAYER_ASK = "ask"
+        internal fun mediaRootItemId(kind: MediaRootKind, treeUri: String) = "mediaroot_${kind.name}_$treeUri"
+        internal fun addMediaRootItemId(kind: MediaRootKind) = "add_mediaroot_${kind.name}"
+        internal fun mediaFoldersItemId(kind: MediaRootKind) = "media_folders_${kind.name}"
         internal const val ALL_MUSIC_ITEM_ID = "all_music"
         internal const val NOW_PLAYING_ITEM_ID = "now_playing"
         internal const val PLAYLISTS_ITEM_ID = "playlists"

@@ -156,6 +156,17 @@ fun XMBShellContainer(
         viewModel.onThemeShareConsumed()
     }
 
+    val mediaRootPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+    ) { uri -> viewModel.onMediaRootPicked(uri) }
+
+    androidx.compose.runtime.LaunchedEffect(uiState.mediaRootPick) {
+        val pick = uiState.mediaRootPick ?: return@LaunchedEffect
+        mediaRootPicker.launch(
+            pick.relinkFrom?.let { runCatching { android.net.Uri.parse(it) }.getOrNull() },
+        )
+    }
+
     Box(Modifier.fillMaxSize()) {
     XMBShell(
         uiState = uiState,
