@@ -658,13 +658,15 @@ fun XMBShell(
                 animationSpec = tween(if (launching) 260 else 1200),
                 label = "xmbWaveGlow",
             )
-            WaveOverlay(
-                waveStyle = effectiveWaveStyle,
-                accentArgb = uiState.focusedItemAccentArgb ?: uiState.wallpaperAccent,
-                modifier = Modifier.fillMaxSize(),
-                speedScale = waveSpeed,
-                glowScale = waveGlow,
-            )
+            if (waveVisible(uiState.customWallpaperPath != null, uiState.waveOverWallpaper)) {
+                WaveOverlay(
+                    waveStyle = effectiveWaveStyle,
+                    accentArgb = uiState.focusedItemAccentArgb ?: uiState.wallpaperAccent,
+                    modifier = Modifier.fillMaxSize(),
+                    speedScale = waveSpeed,
+                    glowScale = waveGlow,
+                )
+            }
 
             val chromeFade by animateFloatAsState(
                 if (uiState.activeContextMenu != null) 0f else 1f,
