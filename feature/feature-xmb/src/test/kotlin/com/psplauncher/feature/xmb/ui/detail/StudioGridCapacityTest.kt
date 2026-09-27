@@ -63,9 +63,15 @@ class StudioGridCapacityTest {
     }
 
     @Test
-    fun `a tiny or unmeasured slot clamps to at least 3 by 1`() {
-        assertEquals(3 to 1, capacity(100f, 40f, StudioTileClass.LANDSCAPE))
-        assertEquals(3 to 1, capacity(0f, 0f, StudioTileClass.PORTRAIT))
+    fun `a tiny or unmeasured slot clamps to at least 1 by 1`() {
+        assertEquals(1 to 1, capacity(100f, 40f, StudioTileClass.LANDSCAPE))
+        assertEquals(1 to 1, capacity(0f, 0f, StudioTileClass.PORTRAIT))
+    }
+
+    @Test
+    fun `the immersive results column is narrow and still holds a readable page`() {
+        assertEquals(2 to 3, capacity(246f, 300f, StudioTileClass.LANDSCAPE))
+        assertEquals(1 to 2, capacity(150f, 300f, StudioTileClass.LANDSCAPE))
     }
 
     @Test

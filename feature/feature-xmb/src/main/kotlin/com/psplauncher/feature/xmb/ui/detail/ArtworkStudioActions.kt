@@ -7,8 +7,8 @@ interface ArtworkStudioActions {
 
     fun selectTab(index: Int)
     fun sourcesForTab(): List<StudioSource>
-    fun sourceBadge(source: StudioSource): String?
     fun selectSource(index: Int)
+    fun openProviderPicker()
     fun requestLocalPick()
     fun toggleNsfw()
 
@@ -34,6 +34,8 @@ interface ArtworkStudioActions {
     fun nextPage()
 
     fun applyChanges()
+    fun closeReview()
+    fun applyReviewed()
 
     fun resolveConfirm(index: Int)
     fun dismissConfirm()

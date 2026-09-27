@@ -16,7 +16,7 @@ data class StudioGridCapacity(val columns: Int, val rows: Int) {
         val UNMEASURED = StudioGridCapacity(columns = 4, rows = 5)
 
         private const val GAP_DP = 8.0
-        private const val MIN_COLUMNS = 3
+        private const val MIN_COLUMNS = 1
         private const val MAX_COLUMNS = 8
         private const val MIN_ROWS = 1
         private const val MAX_ROWS = 6

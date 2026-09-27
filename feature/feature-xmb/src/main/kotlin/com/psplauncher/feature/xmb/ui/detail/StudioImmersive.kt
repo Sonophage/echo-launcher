@@ -1,0 +1,603 @@
+package com.psplauncher.feature.xmb.ui.detail
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.psplauncher.core.domain.model.GamepadAction
+import com.psplauncher.core.ui.components.ControllerPrompt
+import com.psplauncher.core.ui.components.PfpCheckMark
+import com.psplauncher.feature.artwork.store.ArtworkKind
+
+private val STUDIO_RESULT_GAP = 8.dp
+
+fun slotNotOfferedReason(source: StudioSource, tab: StudioTab): String =
+    "${source.label} has no ${tab.label} artwork. Choose a file from this device, or change provider."
+
+@Composable
+internal fun resultsColumnWidth(): Dp =
+    if (LocalConfiguration.current.screenWidthDp >= STUDIO_WIDE_WINDOW_DP) 320.dp else 246.dp
+
+@Composable
+internal fun StudioSlotPill(
+    label: String,
+    selected: Boolean,
+    focused: Boolean,
+    filled: Boolean,
+    offered: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .height(24.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                when {
+                    selected -> Color.White.copy(alpha = 0.92f)
+                    else     -> Color.White.copy(alpha = 0.10f)
+                }
+            )
+            .border(
+                1.dp,
+                if (focused) accent else Color.Transparent,
+                RoundedCornerShape(12.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp),
+    ) {
+        Box(
+            Modifier
+                .size(5.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(
+                    when {
+                        !offered -> Color(0xFFE0A030).copy(alpha = 0.7f)
+                        filled && selected -> accent
+                        filled   -> Color(0xFF66BB6A)
+                        selected -> Color.Black.copy(alpha = 0.25f)
+                        else     -> Color.White.copy(alpha = 0.22f)
+                    }
+                ),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            label,
+            color = when {
+                selected -> Color(0xFF0B0D12)
+                !offered -> Color.White.copy(alpha = 0.40f)
+                else     -> Color.White.copy(alpha = 0.72f)
+            },
+            fontSize = 9.5.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+internal fun StudioMatchLine(
+    state: ArtworkStudioUiState,
+    actions: ArtworkStudioActions,
+    accent: Color,
+) {
+    val provider = state.matchProvider ?: return
+    Spacer(Modifier.height(10.dp))
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(20.dp)) {
+        val matched = state.matchTitle
+        if (!state.matchResolving && matched != null) {
+            PfpCheckMark(Color(0xFF66BB6A), size = 11.dp)
+        } else {
+            Text(
+                if (state.matchResolving) "◌" else "!",
+                color = if (state.matchResolving) Color.White.copy(alpha = 0.4f) else Color(0xFFE0A030),
+                fontSize = 10.sp, fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.width(6.dp))
+        Text(
+            when {
+                matched != null && !state.matchResolving -> "Matched as $matched"
+                state.matchResolving -> "Matching on ${provider.label}…"
+                state.matchFailed    -> "${provider.label} didn't answer"
+                else                 -> "No ${provider.label} match"
+            },
+            color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (state.canChangeMatch) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "CHANGE MATCH",
+                color = Color.White.copy(alpha = 0.8f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(Color.White.copy(alpha = 0.10f))
+                    .clickable { actions.onChangeMatchPressed() }
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun StudioResultsColumn(
+    state: ArtworkStudioUiState,
+    actions: ArtworkStudioActions,
+    accent: Color,
+    markColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val tab = STUDIO_TABS[state.tabIndex]
+    BoxWithConstraints(modifier) {
+        val slotWidth = maxWidth
+        val slotHeight = maxHeight
+        LaunchedEffect(slotWidth, slotHeight, state.tabIndex) {
+            actions.onGridMeasured(slotWidth.value, slotHeight.value)
+        }
+        val columns = state.gridColumns
+        val rows = state.gridRows
+        val tileWidth = (slotWidth - STUDIO_RESULT_GAP * (columns - 1)) / columns
+        val tileHeight = maxOf(
+            0.dp,
+            minOf(
+                tileWidth / tab.tileClass.aspect.toFloat(),
+                (slotHeight - STUDIO_RESULT_GAP * (rows - 1)) / rows,
+            ),
+        )
+
+        when {
+            state.resultsLoading -> LazyVerticalGrid(
+                columns = GridCells.Fixed(columns),
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(STUDIO_RESULT_GAP),
+                verticalArrangement = Arrangement.spacedBy(STUDIO_RESULT_GAP),
+                userScrollEnabled = false,
+            ) {
+                items(state.skeletonCount) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(tileHeight)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(alpha = 0.06f)),
+                    )
+                }
+            }
+
+            !state.sourceServesTab || state.source == StudioSource.LOCAL -> Box(
+                Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color.White.copy(alpha = 0.05f))
+                    .clickable(onClick = actions::requestLocalPick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "Choose a file from this device",
+                    color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 10.dp),
+                )
+            }
+
+            state.results.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    when {
+                        state.source in state.unavailableSources ->
+                            "${state.source.label} needs an account or key. Settings ▸ Artwork ▸ Scraping Sources."
+                        state.source != StudioSource.SCREENSCRAPER -> "No results"
+                        state.matchResolving -> "Looking for this game on ScreenScraper…"
+                        state.matchFailed    -> "ScreenScraper didn't answer. Use Change Match to search again."
+                        state.match == null  -> "No ScreenScraper match. Use Change Match to pick one."
+                        else                 -> "ScreenScraper has no ${tab.label} for this game"
+                    },
+                    color = Color.White.copy(alpha = 0.45f), fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
+            }
+
+            else -> {
+                var touchPreviewIndex by remember(state.results) { mutableIntStateOf(-1) }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(STUDIO_RESULT_GAP),
+                    verticalArrangement = Arrangement.spacedBy(STUDIO_RESULT_GAP),
+                    userScrollEnabled = false,
+                ) {
+                    itemsIndexed(state.results) { index, art ->
+                        val focused = state.zone == StudioZone.GRID && state.gridIndex == index
+                        val previewing = art.isVideo && (focused || touchPreviewIndex == index)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(tileHeight)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF10101A))
+                                .border(
+                                    if (focused) 2.dp else 1.dp,
+                                    if (focused) accent else Color.White.copy(alpha = 0.1f),
+                                    RoundedCornerShape(8.dp),
+                                )
+                                .combinedClickable(
+                                    onClick = {
+                                        if (state.selectsMultiple) actions.toggleSelection(index)
+                                        else actions.openCandidate(index)
+                                    },
+                                    onLongClick = {
+                                        if (art.isVideo) touchPreviewIndex =
+                                            if (touchPreviewIndex == index) -1 else index
+                                    },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            when {
+                                previewing -> StudioVideoTilePreview(url = art.url, modifier = Modifier.fillMaxSize())
+                                art.isVideo -> Text(
+                                    "▶ VIDEO",
+                                    color = Color.White.copy(alpha = 0.75f), fontSize = 11.sp,
+                                )
+                                tab.kind == ArtworkKind.MANUAL -> Text(
+                                    "PDF",
+                                    color = Color.White.copy(alpha = 0.75f),
+                                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                )
+                                else -> AsyncImage(
+                                    model = art.thumb ?: art.url,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+
+                            StudioTileBadge(
+                                mark = state.tileMarkOf(art),
+                                accent = accent,
+                                markColor = markColor,
+                                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun StudioProviderPicker(
+    cards: List<StudioProviderCard>,
+    focusedIndex: Int,
+    gameTitle: String?,
+    accent: Color,
+    background: Color,
+    showTouchControls: Boolean,
+    onPick: (Int) -> Unit,
+    onClose: () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    0f to background.copy(alpha = 0.98f),
+                    1f to background,
+                )
+            )
+            .clickable(enabled = false) {},
+    ) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 16.dp)) {
+            Text(
+                gameTitle ?: "Artwork Studio",
+                color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "Where should the artwork come from?",
+                color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "One provider for the whole pass. Change it any time from Options.",
+                color = Color.White.copy(alpha = 0.5f), fontSize = 10.5.sp,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                Modifier.fillMaxWidth().weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                cards.forEachIndexed { index, card ->
+                    StudioProviderCardView(
+                        card = card,
+                        focused = index == focusedIndex,
+                        accent = accent,
+                        onClick = { onPick(index) },
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(24.dp)) {
+                if (!showTouchControls) {
+                    ControllerPrompt(
+                        action = GamepadAction.SELECT,
+                        label = "Use this provider",
+                        glyphSize = 13.dp,
+                        labelColor = Color.White.copy(alpha = 0.6f),
+                    )
+                    Spacer(Modifier.width(14.dp))
+                }
+                Text(
+                    "Close",
+                    color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.White.copy(alpha = 0.07f))
+                        .clickable(onClick = onClose)
+                        .padding(horizontal = 12.dp, vertical = 5.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudioProviderCardView(
+    card: StudioProviderCard,
+    focused: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = if (focused) 0.13f else 0.06f))
+            .border(
+                if (focused) 2.dp else 1.dp,
+                if (focused) accent else Color.White.copy(alpha = 0.10f),
+                RoundedCornerShape(12.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+    ) {
+        Text(
+            card.source.label,
+            color = if (card.pickable) Color.White else Color.White.copy(alpha = 0.45f),
+            fontSize = 14.sp, fontWeight = FontWeight.Bold,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            if (card.servesAll) "Every slot" else "${card.serves} of ${card.total} slots",
+            color = if (card.servesAll) Color(0xFF66BB6A) else Color(0xFFE0A030),
+            fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+        )
+        if (!card.servesAll) {
+            Text(
+                STUDIO_TABS.filterNot { servesKind(card.source, it.kind) }
+                    .joinToString(", ") { it.label.lowercase() },
+                color = Color.White.copy(alpha = 0.4f), fontSize = 9.sp, lineHeight = 11.sp,
+                maxLines = 3, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        card.quota?.let {
+            Text(
+                "$it requests today",
+                color = Color.White.copy(alpha = 0.45f), fontSize = 9.sp, maxLines = 1,
+            )
+        }
+        card.reason?.let {
+            Text(
+                it,
+                color = Color(0xFFE0A030), fontSize = 9.sp, lineHeight = 11.sp,
+                maxLines = 3, overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun StudioReviewPanel(
+    summary: StudioReviewSummary,
+    gameTitle: String?,
+    accent: Color,
+    background: Color,
+    showTouchControls: Boolean,
+    onApply: () -> Unit,
+    onBack: () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    0f to background.copy(alpha = 0.98f),
+                    1f to background,
+                )
+            )
+            .clickable(enabled = false) {},
+    ) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 16.dp)) {
+            Text(
+                gameTitle ?: "Artwork Studio",
+                color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "Where this artwork will show up",
+                color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                Modifier.fillMaxWidth().weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                StudioReviewSurface(
+                    title = "Home",
+                    caption = "The crossbar row and the screen behind it",
+                    kinds = listOf(ArtworkKind.BACKGROUND, ArtworkKind.LOGO, ArtworkKind.ICON),
+                    summary = summary,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+                StudioReviewSurface(
+                    title = "Game detail",
+                    caption = "The hover panel, and the tile once you rest on it",
+                    kinds = listOf(ArtworkKind.ICON1, ArtworkKind.SCREENSHOT),
+                    summary = summary,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+                StudioReviewSurface(
+                    title = "Media",
+                    caption = "The media strip and the in-app reader",
+                    kinds = listOf(ArtworkKind.VIDEO, ArtworkKind.MANUAL),
+                    summary = summary,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(30.dp)) {
+                Text(
+                    summary.line,
+                    color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(Modifier.weight(1f))
+                if (!showTouchControls) {
+                    ControllerPrompt(
+                        action = GamepadAction.SELECT,
+                        label = "",
+                        glyphSize = 13.dp,
+                        labelColor = Color.White.copy(alpha = 0.5f),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
+                Text(
+                    "Apply Changes",
+                    color = if (summary.removed > 0) Color(0xFFE57373) else Color(0xFF45C46A),
+                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable(enabled = summary.hasChanges, onClick = onApply)
+                        .padding(horizontal = 16.dp, vertical = 7.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "Back",
+                    color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.07f))
+                        .clickable(onClick = onBack)
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudioReviewSurface(
+    title: String,
+    caption: String,
+    kinds: List<ArtworkKind>,
+    summary: StudioReviewSummary,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.05f))
+            .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
+            .padding(14.dp),
+    ) {
+        Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(
+            caption,
+            color = Color.White.copy(alpha = 0.42f), fontSize = 9.sp, lineHeight = 11.sp,
+            maxLines = 2, overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(10.dp))
+        kinds.forEach { kind ->
+            val entry = summary.entries.firstOrNull { it.kind == kind } ?: return@forEach
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+            ) {
+                Text(
+                    entry.label,
+                    color = Color.White.copy(alpha = if (entry.status == StudioReviewStatus.EMPTY) 0.35f else 0.85f),
+                    fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    entry.status.label,
+                    color = reviewStatusColor(entry.status),
+                    fontSize = 8.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(reviewStatusColor(entry.status).copy(alpha = 0.14f))
+                        .padding(horizontal = 5.dp, vertical = 2.dp),
+                )
+            }
+        }
+    }
+}
+
+private fun reviewStatusColor(status: StudioReviewStatus): Color = when (status) {
+    StudioReviewStatus.NEW     -> Color(0xFF45C46A)
+    StudioReviewStatus.KEPT    -> Color(0xFF7FA8D8)
+    StudioReviewStatus.REMOVED -> Color(0xFFE57373)
+    StudioReviewStatus.EMPTY   -> Color(0xFF6B7280)
+}
