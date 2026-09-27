@@ -26,6 +26,9 @@ import com.psplauncher.core.ui.wave.WaveBackground
 import com.psplauncher.core.ui.wave.WaveLayers
 import com.psplauncher.core.ui.wave.WaveStyle
 
+fun waveVisible(hasWallpaper: Boolean, waveOverWallpaper: Boolean): Boolean =
+    !hasWallpaper || waveOverWallpaper
+
 @Composable
 fun XmbBackground(
     waveStyle: WaveStyle,
@@ -43,6 +46,7 @@ fun XmbBackground(
     val hasWallpaper = customWallpaperPath != null
     val motionPlaying = hasWallpaper && motionWallpaperPath != null &&
         motionDecision != MotionWallpaperPolicy.Decision.POSTER
+    val drawsWave = waveVisible(hasWallpaper, waveOverWallpaper) && !waveDrawnByCaller
 
     Box(modifier.fillMaxSize()) {
         when {
@@ -53,10 +57,10 @@ fun XmbBackground(
                 modifier = Modifier.fillMaxSize(),
             )
             hasWallpaper -> WallpaperBackground(customWallpaperPath, Modifier.fillMaxSize())
-            else -> WaveBackground(waveStyle, Modifier.fillMaxSize(), drawWave = !waveDrawnByCaller)
+            else -> WaveBackground(waveStyle, Modifier.fillMaxSize(), drawWave = drawsWave)
         }
 
-        if (hasWallpaper && waveOverWallpaper && !waveDrawnByCaller) {
+        if (hasWallpaper && drawsWave) {
             WaveOverlay(waveStyle, wallpaperAccent, Modifier.fillMaxSize())
         }
     }
