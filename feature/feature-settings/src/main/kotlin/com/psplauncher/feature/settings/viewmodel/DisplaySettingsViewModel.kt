@@ -114,6 +114,7 @@ private val WAVE_STYLE_LABELS = mapOf(
     WaveStyle.REDUCED        to "Reduced",
     WaveStyle.STATIC         to "Static",
     WaveStyle.REDUCED_STATIC to "Reduced + Static",
+    WaveStyle.OFF            to "Off",
 )
 
 private data class Transient(
