@@ -1,15 +1,19 @@
 package com.psplauncher.feature.xmb.ui
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import com.psplauncher.core.ui.icons.appIconBitmap
+import com.psplauncher.themekit.AccentDeriver
+import com.psplauncher.themekit.BmpImage
 
 sealed interface XmbBackdrop {
     data class Art(val uri: String) : XmbBackdrop
@@ -17,22 +21,42 @@ sealed interface XmbBackdrop {
     data class AppIcon(val packageName: String) : XmbBackdrop
 }
 
-private const val SOURCE_PX = 24
+private const val SOURCE_PX = 192
 
-private const val BACKDROP_ALPHA = 0.55f
+val AppBackdropBase = Color(0xFF05050C)
+
+private const val TOP_MIX = 0.34f
+private const val MID_MIX = 0.15f
+
+fun appBackdropStops(accent: Color): List<Color> = listOf(
+    lerp(AppBackdropBase, accent, TOP_MIX),
+    lerp(AppBackdropBase, accent, MID_MIX),
+    AppBackdropBase,
+)
+
+/**
+ * The whole icon, not the adaptive foreground: an adaptive icon usually carries
+ * its brand colour in the background layer behind a white or black glyph, so the
+ * foreground alone yields no hue for a great many apps.
+ */
+fun appIconAccent(icon: ImageBitmap): Color? {
+    val pixels = IntArray(icon.width * icon.height)
+    icon.readPixels(pixels)
+    return AccentDeriver.deriveAccent(BmpImage(icon.width, icon.height, pixels))?.let { Color(it) }
+}
 
 @Composable
-fun XmbAppIconBackdrop(packageName: String, modifier: Modifier = Modifier) {
+fun XmbAppIconBackdrop(
+    packageName: String,
+    fallbackAccent: Color,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
 
-    val icon = remember(packageName) { context.appIconBitmap(packageName, sizePx = SOURCE_PX) } ?: return
+    val icon = remember(packageName) {
+        context.appIconBitmap(packageName, sizePx = SOURCE_PX, foregroundOnly = false)
+    }
+    val accent = remember(icon) { icon?.let(::appIconAccent) } ?: fallbackAccent
 
-    Image(
-        bitmap = icon,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-
-        filterQuality = FilterQuality.High,
-        modifier = modifier.fillMaxSize().alpha(BACKDROP_ALPHA),
-    )
+    Box(modifier.fillMaxSize().background(Brush.linearGradient(appBackdropStops(accent))))
 }

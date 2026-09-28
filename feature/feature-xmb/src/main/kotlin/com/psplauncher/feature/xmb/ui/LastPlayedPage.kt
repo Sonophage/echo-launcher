@@ -49,6 +49,8 @@ import com.psplauncher.feature.xmb.viewmodel.XMBItem
 
 private val CardWidth: Dp = 104.dp
 
+private val AppLogoSize: Dp = 104.dp
+
 @Composable
 fun LastPlayedPage(
     items: List<XMBItem>,
@@ -131,15 +133,25 @@ fun LastPlayedPage(
                 } else {
                     val focused = items.getOrNull(selectedIndex)
                     Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = when {
-                                focused != null -> focused.title
-                                filter == RecentFilter.ALL -> "Nothing played yet."
-                                else -> "No recent ${filter.label.lowercase()}."
-                            },
-                            color = LocalPfpTextColors.current.secondary,
-                            fontSize = if (focused != null) 22.sp else 15.sp,
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            if (focused != null && focused.isInstalledApp) {
+                                AndroidAppIcon(
+                                    packageName = focused.packageName,
+                                    title = focused.title,
+                                    size = AppLogoSize,
+                                )
+                                Spacer(Modifier.height(18.dp))
+                            }
+                            Text(
+                                text = when {
+                                    focused != null -> focused.title
+                                    filter == RecentFilter.ALL -> "Nothing played yet."
+                                    else -> "No recent ${filter.label.lowercase()}."
+                                },
+                                color = LocalPfpTextColors.current.secondary,
+                                fontSize = if (focused != null) 22.sp else 15.sp,
+                            )
+                        }
                     }
                 }
             }
@@ -188,7 +200,7 @@ fun RecentFilterRow(
 private fun RecentCard(item: XMBItem, focused: Boolean, onClick: () -> Unit) {
     PfpMediaCard(
         title = item.title,
-        art = item.shelfCoverArt,
+        art = item.tileArt,
         subtitle = null,
 
         initialOnly = item.isInstalledApp,

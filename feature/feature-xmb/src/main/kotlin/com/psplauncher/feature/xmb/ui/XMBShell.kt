@@ -627,22 +627,27 @@ fun XMBShell(
                                     .then(if (backgroundSnap != null) Modifier.xmbStillOverVideo() else Modifier),
                             )
 
-                            is XmbBackdrop.AppIcon -> XmbAppIconBackdrop(bg.packageName)
+                            is XmbBackdrop.AppIcon -> XmbAppIconBackdrop(
+                                packageName = bg.packageName,
+                                fallbackAccent = xmbGameAccent,
+                            )
                             null -> Unit
                         }
 
-                        val scrimBase = androidx.compose.ui.graphics.lerp(
-                            Color(0xFF05050C), xmbGameAccent, 0.22f,
-                        )
-                        Box(
-                            Modifier.fillMaxSize().background(
-                                Brush.horizontalGradient(
-                                    0.0f to scrimBase.copy(alpha = 0.65f),
-                                    0.5f to scrimBase.copy(alpha = 0.50f),
-                                    1.0f to scrimBase.copy(alpha = 0.75f),
+                        if (bg !is XmbBackdrop.AppIcon) {
+                            val scrimBase = androidx.compose.ui.graphics.lerp(
+                                Color(0xFF05050C), xmbGameAccent, 0.22f,
+                            )
+                            Box(
+                                Modifier.fillMaxSize().background(
+                                    Brush.horizontalGradient(
+                                        0.0f to scrimBase.copy(alpha = 0.65f),
+                                        0.5f to scrimBase.copy(alpha = 0.50f),
+                                        1.0f to scrimBase.copy(alpha = 0.75f),
+                                    )
                                 )
                             )
-                        )
+                        }
 
                         if (backgroundSnap != null) {
                             Box(Modifier.fillMaxSize().background(Color(0x5905050C)))
