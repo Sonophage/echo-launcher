@@ -6,14 +6,12 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,16 +21,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.itemsIndexed as lazyItemsIndexed
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -44,7 +36,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,7 +46,6 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -85,8 +75,8 @@ import coil3.compose.AsyncImage
 import com.psplauncher.core.common.format.formatByteSize
 import com.psplauncher.core.common.logging.LogRedaction
 import com.psplauncher.core.domain.model.GamepadAction
-import com.psplauncher.core.ui.components.PfpHintBar
 import com.psplauncher.core.ui.components.ControllerPrompt
+import com.psplauncher.core.ui.components.PfpHintBar
 import com.psplauncher.core.ui.components.ControllerPromptItem
 import com.psplauncher.core.ui.theme.LocalPFPColors
 import com.psplauncher.core.ui.theme.menuCursorEdge
@@ -94,7 +84,7 @@ import com.psplauncher.feature.artwork.store.ArtworkKind
 
 private val STUDIO_GRID_GAP = 8.dp
 
-private const val STUDIO_WIDE_WINDOW_DP = 1000
+internal const val STUDIO_WIDE_WINDOW_DP = 1000
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -173,549 +163,163 @@ internal fun ArtworkStudioContent(
                 )
             ),
     ) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 14.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().height(36.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { actions.handleGamepadAction(GamepadAction.BACK) },
-                ) {
-                    Text(
-                        "◀",
-                        color = Color.White.copy(alpha = 0.55f),
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(end = 12.dp),
-                    )
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            state.game?.displayTitle ?: "Artwork Studio",
-                            color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.widthIn(max = 320.dp),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            buildString {
-                                append("Artwork Studio")
-                                state.game?.platformId?.takeIf { it.isNotBlank() }
-                                    ?.let { append(" · ${it.uppercase()}") }
-                            },
-                            color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp,
-                            maxLines = 1,
-                        )
-                    }
-                }
-                Spacer(Modifier.weight(1f))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .padding(start = 12.dp)
-                        .widthIn(max = 300.dp)
-                        .height(28.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White.copy(alpha = 0.10f))
-                        .border(
-                            1.dp,
-                            if (state.queryIsCustom) accent.copy(alpha = 0.6f) else Color.Transparent,
-                            RoundedCornerShape(8.dp),
-                        )
-                        .clickable(onClick = actions::openSearch)
-                        .padding(horizontal = 10.dp),
-                ) {
-                    if (!showTouchControls) {
-                        ControllerPrompt(
-                            action = GamepadAction.CHANGE_SORT,
-                            label = "",
-                            glyphSize = 13.dp,
-                            labelColor = Color.White.copy(alpha = 0.45f),
-                        )
-                    }
-                    Text(
-                        state.query.ifBlank { "—" },
-                        color = if (state.queryIsCustom) accent else Color.White.copy(alpha = 0.92f),
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false).padding(start = 4.dp),
-                    )
-                    Spacer(Modifier.weight(1f))
-                    if (state.queryIsCustom) {
-                        Text(
-                            "Reset",
-                            color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .clickable(onClick = actions::resetSearchToTitle)
-                                .padding(horizontal = 6.dp, vertical = 3.dp),
-                        )
-                    } else {
-                        Text(
-                            "game title",
-                            color = Color.White.copy(alpha = 0.45f), fontSize = 9.sp,
-                        )
-                    }
-                }
+        val focusedArt = state.results.getOrNull(state.gridIndex)
+        val backdrop = focusedArt?.takeIf { !it.isVideo }?.let { it.thumb ?: it.url } ?: state.currentUri
+        if (backdrop != null) {
+            androidx.compose.runtime.key(state.previewVersion, backdrop) {
+                AsyncImage(
+                    model = backdrop,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
-
-            StudioStatusRow(
-                stats = studioStats(
-                    filledKinds = state.filledKinds,
-                    totalKinds = STUDIO_TABS.size,
-                    foundResults = state.totalResults,
-                    resultsLoading = state.resultsLoading,
-                    requestsToday = state.requestsToday,
-                    dailyCap = state.dailyRequestCap,
+        }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        0f to com.psplauncher.core.ui.components.XmbScrim,
+                        0.45f to com.psplauncher.core.ui.components.XmbScrim.copy(alpha = 0.88f),
+                        0.72f to com.psplauncher.core.ui.components.XmbScrim.copy(alpha = 0.55f),
+                        1f to com.psplauncher.core.ui.components.XmbScrim.copy(alpha = 0.20f),
+                    )
                 ),
-                accent = accent,
-            )
+        )
 
-            Spacer(Modifier.height(8.dp))
-
-            val tabListState = rememberLazyListState()
-            LaunchedEffect(state.tabIndex) { tabListState.animateScrollToItem(state.tabIndex) }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().height(28.dp),
-            ) {
-                if (!showTouchControls) {
-                    ControllerPrompt(
-                        action = GamepadAction.PREV_CATEGORY,
-                        label = "",
-                        glyphSize = 14.dp,
-                        labelColor = Color.White.copy(alpha = 0.45f),
-                        modifier = Modifier.padding(end = 6.dp),
-                    )
-                }
-                LazyRow(
-                    state = tabListState,
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    lazyItemsIndexed(STUDIO_TABS) { index, tab ->
-                        val selected = state.tabIndex == index
-                        val focusedZone = state.zone == StudioZone.TABS && selected
-                        Box(
-                            modifier = Modifier
-                                .height(24.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (selected) accent.copy(alpha = 0.28f) else Color.White.copy(alpha = 0.07f))
-                                .border(
-                                    1.dp,
-                                    if (focusedZone) accent else Color.Transparent,
-                                    RoundedCornerShape(6.dp),
-                                )
-                                .clickable { actions.selectTab(index) }
-                                .padding(horizontal = 8.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                tab.label,
-                                color = if (selected) Color.White else Color.White.copy(alpha = 0.62f),
-                                fontSize = 10.5.sp,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                }
-                if (!showTouchControls) {
-                    ControllerPrompt(
-                        action = GamepadAction.NEXT_CATEGORY,
-                        label = "",
-                        glyphSize = 14.dp,
-                        labelColor = Color.White.copy(alpha = 0.45f),
-                        modifier = Modifier.padding(start = 6.dp),
-                    )
-                }
-            }
-
-            val railWidth =
-                if (LocalConfiguration.current.screenWidthDp >= STUDIO_WIDE_WINDOW_DP) 200.dp else 150.dp
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(start = 26.dp, end = 26.dp, top = 14.dp),
+        ) {
+            val tab = STUDIO_TABS[state.tabIndex]
 
             Row(Modifier.weight(1f)) {
-                Column(Modifier.width(railWidth).fillMaxHeight()) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            STUDIO_TABS[state.tabIndex].label,
-                            color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                        )
-
-                        Text(
-                            STUDIO_TABS[state.tabIndex].contract,
-                            color = Color.White.copy(alpha = 0.55f), fontSize = 9.5.sp, lineHeight = 12.sp,
-                        )
-                        Spacer(Modifier.height(6.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f, fill = false)
-                                .aspectRatio(STUDIO_TABS[state.tabIndex].tileClass.aspect.toFloat())
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFF080E1E).copy(alpha = 0.55f))
-                                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(6.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            val curKindName = STUDIO_TABS[state.tabIndex].kind.name
-                            when {
-                                state.currentUri != null && curKindName in setOf("MANUAL", "VIDEO", "ICON1") -> Text(
-                                    when (curKindName) {
-                                        "MANUAL" -> "PDF stored"
-                                        "ICON1"  -> "Icon video stored"
-                                        else     -> "Video stored"
-                                    },
-                                    color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp,
-                                )
-
-                                state.currentUri != null -> androidx.compose.runtime.key(state.previewVersion) {
-                                    AsyncImage(
-                                        model = state.currentUri,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize().padding(6.dp),
-                                    )
-                                }
-                                else -> Text("No artwork set", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-                            }
+                Column(Modifier.weight(1f).fillMaxHeight().padding(end = 18.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        state.game?.platformId?.takeIf { it.isNotBlank() }?.let {
+                            Text(
+                                it.uppercase(),
+                                color = Color.White.copy(alpha = 0.55f), fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold, maxLines = 1,
+                            )
+                            Text(
+                                "  ·  ",
+                                color = Color.White.copy(alpha = 0.3f), fontSize = 10.sp,
+                            )
                         }
-                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "${state.filledKinds} of ${STUDIO_TABS.size} filled",
+                            color = Color.White.copy(alpha = 0.55f), fontSize = 10.sp, maxLines = 1,
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        state.game?.displayTitle ?: "Artwork Studio",
+                        color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold,
+                        lineHeight = 34.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        listOfNotNull(tab.label, focusedArt?.label).joinToString("  ·  "),
+                        color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        tab.contract,
+                        color = Color.White.copy(alpha = 0.45f), fontSize = 10.sp,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        when {
+                            !state.sourceServesTab ->
+                                slotNotOfferedReason(state.source, tab)
+                            focusedArt != null ->
+                                "Previewing result ${state.rangeStart + state.gridIndex} from ${state.source.label}"
+                            else -> "Browsing ${state.source.label}"
+                        },
+                        color = if (state.sourceServesTab) accent else Color(0xFFE0A030),
+                        fontSize = 11.sp, lineHeight = 14.sp,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    )
 
-                        StudioOptionsControl(showTouchControls = showTouchControls, onClick = actions::openActions)
+                    StudioMatchLine(state = state, actions = actions, accent = accent)
+
+                    Spacer(Modifier.weight(1f))
+
+                    val pending = state.reviewSummary
+                    if (pending.hasChanges) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(bottom = 8.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(alpha = 0.10f))
+                                .clickable(onClick = actions::applyChanges)
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                        ) {
+                            if (!showTouchControls) {
+                                ControllerPrompt(
+                                    action = GamepadAction.HOME,
+                                    label = "",
+                                    glyphSize = 12.dp,
+                                    labelColor = Color.White.copy(alpha = 0.5f),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                            }
+                            Text(
+                                "Apply Changes",
+                                color = Color(0xFF45C46A), fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold, maxLines = 1,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                pending.line,
+                                color = Color.White.copy(alpha = 0.55f), fontSize = 10.sp,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
 
                     state.message?.let {
                         Text(
-                            it, color = accent, fontSize = 11.sp,
+                            it, color = accent, fontSize = 11.sp, maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.clickable(onClick = actions::dismissMessage),
                         )
                     }
                 }
 
-                Spacer(Modifier.width(18.dp))
-
-                Column(Modifier.weight(1f).fillMaxHeight()) {
+                Column(Modifier.width(resultsColumnWidth()).fillMaxHeight()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(24.dp)
-                            .horizontalScroll(rememberScrollState()),
+                        modifier = Modifier.fillMaxWidth().height(20.dp),
                     ) {
-                        val sources = actions.sourcesForTab()
-                        sources.forEachIndexed { index, source ->
-                            val selected = state.sourceIndex == index
-                            val focusedZone = state.zone == StudioZone.SOURCES && selected
-
-                            val badge = actions.sourceBadge(source)
-                            val available = badge == null
-                            Box(
-                                modifier = Modifier
-                                    .height(24.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (selected) accent.copy(alpha = 0.24f) else Color.White.copy(alpha = 0.07f))
-                                    .border(1.dp, if (focusedZone) accent else Color.Transparent, RoundedCornerShape(6.dp))
-                                    .clickable {
-                                        actions.selectSource(index)
-                                        if (source == StudioSource.LOCAL) actions.requestLocalPick()
-                                    }
-                                    .padding(horizontal = 8.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    if (badge == null) source.label else "${source.label} · $badge",
-                                    color = when {
-                                        !available -> Color.White.copy(alpha = 0.28f)
-                                        selected   -> Color.White
-                                        else       -> Color.White.copy(alpha = 0.62f)
-                                    },
-                                    fontSize = 10.5.sp,
-                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                                    maxLines = 1,
-                                )
-                            }
-                        }
-
-                        val sgdbActive = sources.getOrNull(state.sourceIndex) == StudioSource.STEAMGRIDDB
-                        if (sgdbActive) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(start = 4.dp)
-                                    .height(18.dp)
-                                    .clip(RoundedCornerShape(9.dp))
-                                    .background(Color.Black.copy(alpha = 0.18f))
-                                    .clickable(onClick = actions::toggleNsfw)
-                                    .padding(horizontal = 8.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    if (state.includeNsfw) "Mature on" else "Mature off",
-                                    color = if (state.includeNsfw) Color(0xFFE57373) else Color.White.copy(alpha = 0.6f),
-                                    fontSize = 9.sp, lineHeight = 12.sp,
-                                    maxLines = 1,
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(6.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().height(22.dp),
-                    ) {
-                        if (state.matchProvider != null) {
-                            val matched = state.matchTitle
-                            if (!state.matchResolving && matched != null) {
-                                com.psplauncher.core.ui.components.PfpCheckMark(Color(0xFF66BB6A), size = 12.dp)
-                            } else {
-                                Text(
-                                    if (state.matchResolving) "◌" else "!",
-                                    color = if (state.matchResolving) Color.White.copy(alpha = 0.4f) else Color(0xFFE0A030),
-                                    fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                                )
-                            }
-                            Spacer(Modifier.width(7.dp))
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                if (matched != null && !state.matchResolving) {
-                                    Text(
-                                        "Matched as ",
-                                        color = Color.White.copy(alpha = 0.75f), fontSize = 10.5.sp,
-                                        maxLines = 1,
-                                    )
-                                    Text(
-                                        matched,
-                                        color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false),
-                                    )
-                                } else {
-                                    Text(
-                                        when {
-                                            state.matchResolving -> "Matching on ${state.matchProvider.label}…"
-                                            state.matchFailed    -> "${state.matchProvider.label} didn't answer"
-
-                                            else                 -> "No ${state.matchProvider.label} match"
-                                        },
-                                        color = Color.White.copy(alpha = 0.6f), fontSize = 10.5.sp,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false),
-                                    )
-                                }
-                                if (state.matchIsConfirmed) {
-                                    Spacer(Modifier.width(7.dp))
-                                    Text(
-                                        "Confirmed",
-                                        color = Color(0xFF66BB6A), fontSize = 9.sp,
-                                        maxLines = 1,
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(5.dp))
-                                            .background(Color(0xFF66BB6A).copy(alpha = 0.14f))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                                    )
-                                }
-                            }
-
-                            if (state.matchIsConfirmed) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .clickable(onClick = actions::forgetMatch)
-                                        .padding(horizontal = 6.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        "FORGET",
-                                        color = Color.White.copy(alpha = 0.5f), fontSize = 9.5.sp,
-                                        maxLines = 1,
-                                    )
-                                }
-                                Spacer(Modifier.width(6.dp))
-                            }
-
-                            val canChange = state.canChangeMatch
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .clickable { actions.onChangeMatchPressed() }
-                                    .padding(horizontal = 6.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    "CHANGE MATCH",
-                                    color = if (canChange) Color.White else Color.White.copy(alpha = 0.35f),
-                                    fontSize = 9.5.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                )
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(6.dp))
-
-                    BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-                        val slotWidth = maxWidth
-                        val slotHeight = maxHeight
-                        LaunchedEffect(slotWidth, slotHeight) {
-                            actions.onGridMeasured(slotWidth.value, slotHeight.value)
-                        }
-                        val columns = state.gridColumns
-                        val rows = state.gridRows
-
-                        val tileWidth = (slotWidth - STUDIO_GRID_GAP * (columns - 1)) / columns
-                        val tileHeight = maxOf(
-                            0.dp,
-                            minOf(
-                                tileWidth / STUDIO_TABS[state.tabIndex].tileClass.aspect.toFloat(),
-                                (slotHeight - STUDIO_GRID_GAP * (rows - 1)) / rows,
-                            ),
+                        Text(
+                            state.source.label.uppercase(),
+                            color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
-
-                        val activeSource = actions.sourcesForTab().getOrNull(state.sourceIndex)
-                        when {
-                            state.resultsLoading -> LazyVerticalGrid(
-                                columns = GridCells.Fixed(columns),
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalArrangement = Arrangement.spacedBy(STUDIO_GRID_GAP),
-                                verticalArrangement = Arrangement.spacedBy(STUDIO_GRID_GAP),
-                                userScrollEnabled = false,
-                            ) {
-                                items(state.skeletonCount) {
-                                    Box(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(tileHeight)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(Color.White.copy(alpha = 0.06f)),
-                                    )
-                                }
-                            }
-                            activeSource == StudioSource.LOCAL -> Box(
-                                Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color.White.copy(alpha = 0.05f))
-                                    .clickable(onClick = actions::requestLocalPick),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    "Press Confirm to choose a file from this device",
-                                    color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp,
-                                )
-                            }
-                            state.results.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text(
-                                    when {
-                                        activeSource != null &&
-                                            activeSource in state.unavailableSources ->
-                                            "${activeSource.label} needs an account or key. Add one under Settings, Artwork, Scraping Sources."
-                                        activeSource != StudioSource.SCREENSCRAPER -> "No results"
-
-                                        state.matchResolving -> "Looking for this game on ScreenScraper…"
-                                        state.matchFailed    -> "ScreenScraper didn't answer. Use Change Match to search again."
-                                        state.match == null  -> "No ScreenScraper match for this game. Use Change Match to pick one."
-                                        else                 -> "ScreenScraper has nothing of this type for this game"
-                                    },
-                                    color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp,
-                                )
-                            }
-                            else -> {
-                                var touchPreviewIndex by remember(state.results) { mutableIntStateOf(-1) }
-
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(columns),
-                                    modifier = Modifier.fillMaxSize(),
-                                    horizontalArrangement = Arrangement.spacedBy(STUDIO_GRID_GAP),
-                                    verticalArrangement = Arrangement.spacedBy(STUDIO_GRID_GAP),
-                                    userScrollEnabled = false,
-                                ) {
-                                    itemsIndexed(state.results) { index, art ->
-                                        val focused = state.zone == StudioZone.GRID && state.gridIndex == index
-                                        val previewing = art.isVideo && (focused || touchPreviewIndex == index)
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(tileHeight)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(Color(0xFF10101A))
-                                                .border(
-                                                    if (focused) 2.dp else 1.dp,
-                                                    if (focused) accent else Color.White.copy(alpha = 0.1f),
-                                                    RoundedCornerShape(8.dp),
-                                                )
-                                                .combinedClickable(
-
-                                                    onClick = {
-                                                        if (state.selectsMultiple) actions.toggleSelection(index)
-                                                        else actions.openCandidate(index)
-                                                    },
-                                                    onLongClick = {
-                                                        if (art.isVideo) touchPreviewIndex =
-                                                            if (touchPreviewIndex == index) -1 else index
-                                                    },
-                                                ),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            when {
-                                                previewing -> StudioVideoTilePreview(
-                                                    url = art.url,
-                                                    modifier = Modifier.fillMaxSize(),
-                                                )
-                                                art.isVideo -> Text(
-                                                    "▶ VIDEO",
-                                                    color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp,
-                                                )
-                                                STUDIO_TABS[state.tabIndex].kind ==
-                                                    com.psplauncher.feature.artwork.store.ArtworkKind.MANUAL -> Text(
-                                                    "PDF",
-                                                    color = Color.White.copy(alpha = 0.75f),
-                                                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                                                )
-                                                else -> AsyncImage(
-                                                    model = art.thumb ?: art.url,
-                                                    contentDescription = null,
-                                                    contentScale = ContentScale.Crop,
-                                                    modifier = Modifier.fillMaxSize(),
-                                                )
-                                            }
-
-                                            if (!previewing) art.label?.let {
-                                                Text(
-                                                    it, color = Color.White.copy(alpha = 0.85f), fontSize = 9.sp,
-                                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                                    modifier = Modifier
-                                                        .align(Alignment.BottomStart)
-                                                        .fillMaxWidth()
-                                                        .background(
-                                                            Brush.verticalGradient(
-                                                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)),
-                                                            ),
-                                                        )
-                                                        .padding(horizontal = 5.dp, vertical = 3.dp),
-                                                )
-                                            }
-
-                                            StudioTileBadge(
-                                                mark = state.tileMarkOf(art),
-                                                accent = accent,
-                                                markColor = pfpColors.backgroundBottom,
-                                                modifier = Modifier
-                                                    .align(Alignment.TopEnd)
-                                                    .padding(5.dp),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            if (state.totalResults > 0)
+                                "${state.rangeStart + state.gridIndex} / ${state.totalResults}"
+                            else "—",
+                            color = Color.White.copy(alpha = 0.55f), fontSize = 10.sp, maxLines = 1,
+                        )
                     }
+                    Spacer(Modifier.height(6.dp))
+
+                    StudioResultsColumn(
+                        state = state,
+                        actions = actions,
+                        accent = accent,
+                        markColor = pfpColors.backgroundBottom,
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                    )
 
                     Spacer(Modifier.height(6.dp))
                     StudioPageLine(
@@ -735,32 +339,88 @@ internal fun ArtworkStudioContent(
                         onRemoveFailed = actions::removeFailed,
                     )
                 }
+                }
+
+            Spacer(Modifier.height(8.dp))
+
+            val visible = state.visibleSlots
+            val slotListState = rememberLazyListState()
+            LaunchedEffect(state.tabIndex) {
+                val at = visible.indexOfFirst { it.kind == STUDIO_TABS[state.tabIndex].kind }
+                if (at >= 0) slotListState.animateScrollToItem(at)
+            }
+            LazyRow(
+                state = slotListState,
+                modifier = Modifier.fillMaxWidth().height(30.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                lazyItemsIndexed(visible) { _, slot ->
+                    val index = STUDIO_TABS.indexOfFirst { it.kind == slot.kind }
+                    StudioSlotPill(
+                        label = slot.label,
+                        selected = state.tabIndex == index,
+                        filled = slot.kind in state.filledSlots,
+                        offered = servesKind(state.source, slot.kind),
+                        accent = accent,
+                        onClick = { actions.selectTab(index) },
+                    )
+                }
             }
 
             PfpHintBar(
                 items = buildList {
-                    when (state.zone) {
-                        StudioZone.TABS -> {
-                            add(ControllerPromptItem(GamepadAction.SELECT, "Sources"))
-                            add(ControllerPromptItem(GamepadAction.BACK, "Close"))
-                        }
-                        StudioZone.SOURCES -> {
-                            add(ControllerPromptItem(GamepadAction.SELECT, "Browse / Pick File"))
-                            add(ControllerPromptItem(GamepadAction.BACK, "Back"))
-                        }
-                        StudioZone.GRID -> {
-                            add(ControllerPromptItem(GamepadAction.SELECT, if (state.selectsMultiple) "Check" else "Preview / Apply"))
-                            add(ControllerPromptItem(GamepadAction.BACK, "Back"))
-                        }
-                    }
-
-                    if (state.queueSummary.hasChanges) add(ControllerPromptItem(GamepadAction.HOME, "Apply"))
+                    add(
+                        ControllerPromptItem(
+                            GamepadAction.SELECT,
+                            when {
+                                !state.sourceServesTab || state.source == StudioSource.LOCAL -> "Pick File"
+                                state.selectsMultiple -> "Check"
+                                else -> "Use This"
+                            },
+                        )
+                    )
+                    add(ControllerPromptItem(GamepadAction.BACK, "Close"))
+                    if (visible.size > 1) add(ControllerPromptItem(GamepadAction.NEXT_CATEGORY, "Slot"))
+                    if (state.pageCount > 1) add(ControllerPromptItem(GamepadAction.NEXT_PAGE, "Page"))
                     add(ControllerPromptItem(GamepadAction.CHANGE_SORT, "Search"))
                     add(ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"))
                 },
-                modifier = Modifier.padding(top = 6.dp),
-
                 onAction = actions::handleGamepadAction,
+            )
+        }
+
+        if (state.providerPickerOpen) {
+            StudioProviderPicker(
+                cards = providerCards(
+                    unavailable = state.unavailableSources,
+                    requestsToday = state.requestsToday,
+                    dailyCap = state.dailyRequestCap,
+                    sampleFor = state::sampleFor,
+                ),
+                focusedIndex = state.sourceIndex,
+                gameTitle = state.game?.displayTitle,
+                matchLabel = state.matchTitle,
+                accent = accent,
+                background = pfpColors.backgroundBottom,
+                showTouchControls = showTouchControls,
+                onPick = actions::selectSource,
+                onChangeMatch = actions::onChangeMatchPressed,
+                onClose = { actions.handleGamepadAction(GamepadAction.BACK) },
+            )
+        }
+
+        if (state.reviewOpen) {
+            StudioReviewPanel(
+                summary = state.reviewSummary,
+                beforeOf = state::storedUriOf,
+                afterOf = state::pendingUriOf,
+                gameTitle = state.game?.displayTitle,
+                accent = accent,
+                background = pfpColors.backgroundBottom,
+                showTouchControls = showTouchControls,
+                onApply = actions::applyReviewed,
+                onBack = actions::closeReview,
             )
         }
 
@@ -1121,50 +781,39 @@ internal fun ArtworkStudioContent(
         }
 
         if (state.actionsOpen && !state.showFileInfo) {
-            val menuActions = state.availableActions
-            com.psplauncher.core.ui.components.PspContextMenuOverlay(
-                state = com.psplauncher.core.ui.components.MenuState(
-                    title = STUDIO_TABS[state.tabIndex].label,
-                    rows = menuActions.map {
-                        com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it == StudioAction.CLEAR, confirms = false)
-                    },
-                    selectedIndex = state.resolvedActionsIndex,
-                ),
-                onRowActivated = { index -> menuActions.getOrNull(index)?.let(actions::runAction) },
+            StudioMenu(
+                title = STUDIO_TABS[state.tabIndex].label,
+                rows = state.availableActions.map {
+                    com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it == StudioAction.CLEAR, confirms = false)
+                },
+                selectedIndex = state.resolvedActionsIndex,
+                onActivate = actions::runAction,
                 onDismiss = actions::closeActions,
-
-                scrim = Color(0xA6000000),
             )
         }
 
         state.confirmPrompt?.let { prompt ->
-            com.psplauncher.core.ui.components.PspContextMenuOverlay(
-                state = com.psplauncher.core.ui.components.MenuState(
-                    title = prompt.title,
-                    rows = prompt.rows.map {
-                        com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it.isDestructive, confirms = false)
-                    },
-                    selectedIndex = prompt.selectedIndex,
-                ),
-                onRowActivated = actions::resolveConfirm,
+            StudioMenu(
+                title = prompt.title,
+                rows = prompt.rows.map {
+                    com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it.isDestructive, confirms = false)
+                },
+                selectedIndex = prompt.selectedIndex,
+                onActivate = { row -> actions.resolveConfirm(prompt.rows.indexOf(row)) },
                 onDismiss = actions::dismissConfirm,
-                scrim = Color(0xA6000000),
             )
         }
 
         if (state.leavePromptOpen) {
             val waiting = state.selection.size + state.removals.size
-            com.psplauncher.core.ui.components.PspContextMenuOverlay(
-                state = com.psplauncher.core.ui.components.MenuState(
-                    title = if (waiting == 1) "1 change not applied" else "$waiting changes not applied",
-                    rows = StudioLeaveChoice.entries.map {
-                        com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it == StudioLeaveChoice.DISCARD, confirms = false)
-                    },
-                    selectedIndex = state.leavePromptIndex,
-                ),
-                onRowActivated = { index -> actions.resolveLeavePrompt(StudioLeaveChoice.entries[index]) },
+            StudioMenu(
+                title = if (waiting == 1) "1 change not applied" else "$waiting changes not applied",
+                rows = StudioLeaveChoice.entries.map {
+                    com.psplauncher.core.ui.components.MenuRow(it, it.label, isDestructive = it == StudioLeaveChoice.DISCARD, confirms = false)
+                },
+                selectedIndex = state.leavePromptIndex,
+                onActivate = actions::resolveLeavePrompt,
                 onDismiss = { actions.resolveLeavePrompt(StudioLeaveChoice.STAY) },
-                scrim = Color(0xA6000000),
             )
         }
 
@@ -1249,10 +898,9 @@ internal fun ArtworkStudioContent(
 
             if (state.cropOptionsOpen) {
                 val currentShape = CropShapeChoice.of(state.cropProfileOverride)
-                com.psplauncher.core.ui.components.PspContextMenuOverlay(
-                    state = com.psplauncher.core.ui.components.MenuState(
-                        title = "CROP OPTIONS",
-                        rows = state.cropOptionRows.map { row ->
+                StudioMenu(
+                    title = "CROP OPTIONS",
+                    rows = state.cropOptionRows.map { row ->
                             val shape = row.shape
                             if (shape == null) {
                                 com.psplauncher.core.ui.components.MenuRow(
@@ -1266,12 +914,10 @@ internal fun ArtworkStudioContent(
                                     checked = shape == currentShape,
                                 )
                             }
-                        },
-                        selectedIndex = state.cropOptionsIndex,
-                    ),
-                    onRowActivated = actions::activateCropOption,
+                    },
+                    selectedIndex = state.cropOptionsIndex,
+                    onActivate = { row -> actions.activateCropOption(state.cropOptionRows.indexOf(row)) },
                     onDismiss = actions::closeCropOptions,
-                    scrim = Color(0xA6000000),
                 )
             }
         }
@@ -1285,7 +931,7 @@ internal fun ArtworkStudioContent(
 }
 
 @Composable
-private fun StudioTileBadge(
+internal fun StudioTileBadge(
     mark: StudioTileMark,
     accent: Color,
     markColor: Color,
@@ -1581,7 +1227,7 @@ private fun decodeDisplayBitmap(path: String): android.graphics.Bitmap? {
 }
 
 @Composable
-private fun StudioVideoTilePreview(url: String, modifier: Modifier = Modifier) {
+internal fun StudioVideoTilePreview(url: String, modifier: Modifier = Modifier) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var videoSize by remember(url) {
@@ -1731,60 +1377,3 @@ private fun StudioPdfPage(
     }
 }
 
-@Composable
-private fun StudioStatusRow(stats: List<StudioStat>, accent: Color) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth().height(STUDIO_STATUS_HEIGHT),
-    ) {
-        stats.forEach { stat ->
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.06f))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        stat.label.uppercase(),
-                        color = Color.White.copy(alpha = 0.45f),
-                        fontSize = 9.sp,
-                        maxLines = 1,
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        stat.value,
-                        color = Color.White.copy(alpha = 0.92f),
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-
-                stat.fraction?.let { f ->
-                    Spacer(Modifier.height(4.dp))
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(Color.White.copy(alpha = 0.12f)),
-                    ) {
-                        Box(
-                            Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(f)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(accent.copy(alpha = 0.85f)),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-private val STUDIO_STATUS_HEIGHT = 34.dp

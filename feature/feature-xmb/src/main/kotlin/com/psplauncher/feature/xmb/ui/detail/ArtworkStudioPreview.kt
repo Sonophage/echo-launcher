@@ -9,13 +9,14 @@ import com.psplauncher.feature.artwork.match.GameCandidate
 import com.psplauncher.feature.artwork.match.GameMatch
 import com.psplauncher.feature.artwork.match.MatchProvider
 import com.psplauncher.feature.artwork.match.MatchTier
+import com.psplauncher.feature.artwork.store.ArtworkKind
 
 private object PreviewStudioActions : ArtworkStudioActions {
     override fun handleGamepadAction(action: GamepadAction) = Unit
     override fun selectTab(index: Int) = Unit
     override fun sourcesForTab(): List<StudioSource> = StudioSource.entries
-    override fun sourceBadge(source: StudioSource): String? = null
     override fun selectSource(index: Int) = Unit
+    override fun openProviderPicker() = Unit
     override fun requestLocalPick() = Unit
     override fun toggleNsfw() = Unit
     override fun openSearch() = Unit
@@ -37,6 +38,8 @@ private object PreviewStudioActions : ArtworkStudioActions {
     override fun previousPage() = Unit
     override fun nextPage() = Unit
     override fun applyChanges() = Unit
+    override fun closeReview() = Unit
+    override fun applyReviewed() = Unit
     override fun resolveConfirm(index: Int) = Unit
     override fun dismissConfirm() = Unit
     override fun retryFailed() = Unit
@@ -79,7 +82,6 @@ private fun sampleStudioState(slotWidthDp: Float, slotHeightDp: Float): ArtworkS
         isLoading = false,
         tabIndex = tabIndex,
         sourceIndex = StudioSource.entries.indexOf(StudioSource.STEAMGRIDDB),
-        zone = StudioZone.GRID,
         gridIndex = minOf(6, onPage - 1),
         gridColumns = capacity.columns,
         gridRows = capacity.rows,
@@ -103,6 +105,8 @@ private fun sampleStudioState(slotWidthDp: Float, slotHeightDp: Float): ArtworkS
         ),
         matchProvider = MatchProvider.STEAMGRIDDB,
         hasSgdbKey = true,
+        providerPickerOpen = false,
+        filledSlots = setOf(ArtworkKind.ICON, ArtworkKind.BACKGROUND, ArtworkKind.LOGO),
     )
 }
 

@@ -46,6 +46,23 @@ class MenuTest {
     }
 
     @Test
+    fun `the drawn index does not address the source list once a destructive row moves`() {
+        val rows = listOf(
+            MenuRow("keep", "Keep"),
+            MenuRow("delete", "Delete", isDestructive = true, confirms = false),
+            MenuRow("info", "Info"),
+        )
+        val state = MenuState("t", rows)
+
+        assertEquals(listOf("Keep", "Info", "Delete"), state.rowsShown().map { it.label })
+
+        // Drawn row 1 is Info, but rows[1] is the delete. A call site that does
+        // sourceList[index] instead of chose(index) runs the delete on an Info tap.
+        assertEquals("info", (state.chose(1) as MenuSelect.Run).action)
+        assertEquals("delete", rows[1].action)
+    }
+
+    @Test
     fun `a withheld action is drawn nowhere, so a duplicate cannot be reached twice`() {
         val state = menu().copy(withheld = setOf(Act.FAVOURITE, Act.MARK))
 

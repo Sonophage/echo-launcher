@@ -25,6 +25,8 @@ enum class GamepadAction {
     OPEN_SEARCH,
     PREV_CATEGORY,
     NEXT_CATEGORY,
+    PREV_PAGE,
+    NEXT_PAGE,
     HOME,
 }
 

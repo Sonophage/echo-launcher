@@ -60,8 +60,6 @@ data class StudioArt(
     val providerAssetId: String? = null,
 )
 
-enum class StudioZone { TABS, SOURCES, GRID }
-
 enum class StudioQueueState { QUEUED, DOWNLOADING, ADDED, FAILED }
 
 data class StudioQueueItem(
@@ -86,8 +84,8 @@ data class StudioQueueSummary(
 
 enum class StudioLeaveChoice(val label: String) {
     APPLY("Apply and Close"),
-    DISCARD("Discard Changes"),
     STAY("Stay"),
+    DISCARD("Discard Changes"),
 }
 
 enum class CropOption {
@@ -113,22 +111,14 @@ enum class CropShapeChoice(val label: String, val storedKey: String?) {
     }
 }
 
-enum class StudioApplyChoice(val label: String) {
-    APPLY("Apply"),
-    CANCEL("Cancel"),
-}
-
 enum class StudioReplaceChoice(val label: String) {
     CANCEL("Cancel"),
     REPLACE("Replace Anyway"),
 }
 
-enum class StudioConfirmKind { APPLY, REPLACE }
-
 data class StudioConfirmRow(val label: String, val isDestructive: Boolean = false)
 
 data class StudioConfirmPrompt(
-    val kind: StudioConfirmKind,
     val title: String,
     val rows: List<StudioConfirmRow>,
     val selectedIndex: Int,
@@ -143,18 +133,11 @@ fun studioAssetCount(kind: ArtworkKind, count: Int): String {
     return if (count == 1) "1 $noun" else "$count ${noun}s"
 }
 
-fun studioApplyTitle(kind: ArtworkKind, toAdd: Int, toRemove: Int): String = when {
-    toAdd > 0 && toRemove > 0 -> "Add ${studioAssetCount(kind, toAdd)} and remove $toRemove?"
-    toRemove > 0              -> "Remove ${studioAssetCount(kind, toRemove)}?"
-    else                      -> "Add ${studioAssetCount(kind, toAdd)}?"
-}
-
 data class ArtworkStudioUiState(
     val game: Game? = null,
     val isLoading: Boolean = true,
     val tabIndex: Int = 0,
     val sourceIndex: Int = 0,
-    val zone: StudioZone = StudioZone.TABS,
     val gridIndex: Int = 0,
 
     val gridColumns: Int = StudioGridCapacity.UNMEASURED.columns,
@@ -198,7 +181,13 @@ data class ArtworkStudioUiState(
 
     val currentUri: String? = null,
 
-    val filledKinds: Int = 0,
+    val filledSlots: Set<ArtworkKind> = emptySet(),
+    val emptySlots: Set<ArtworkKind> = emptySet(),
+    val storedUris: Map<ArtworkKind, String> = emptyMap(),
+    val providerSamples: Map<StudioSource, String> = emptyMap(),
+
+    val providerPickerOpen: Boolean = true,
+    val reviewOpen: Boolean = false,
 
     val requestsToday: Int? = null,
     val dailyRequestCap: Int? = null,
@@ -219,9 +208,6 @@ data class ArtworkStudioUiState(
 
     val leavePromptOpen: Boolean = false,
     val leavePromptIndex: Int = 0,
-
-    val applyConfirmOpen: Boolean = false,
-    val applyConfirmIndex: Int = 0,
 
     val replacePromptOpen: Boolean = false,
     val replacePromptIndex: Int = 0,
@@ -277,6 +263,48 @@ data class ArtworkStudioUiState(
     val cropB: Float = 1f,
     val closed: Boolean = false,
 ) {
+    val filledKinds: Int get() = filledSlots.size
+
+    fun storedUriOf(kind: ArtworkKind): String? = storedUris[kind]
+
+    /**
+     * A card's picture, without asking the network before a provider is even chosen.
+     * Whatever that provider returned earlier this session, else the art the game
+     * already carries, so the row is not four empty boxes on a first open.
+     */
+    fun sampleFor(source: StudioSource): String? =
+        providerSamples[source] ?: storedUris[ArtworkKind.ICON] ?: storedUris.values.firstOrNull()
+
+    fun pendingUriOf(kind: ArtworkKind): String? {
+        val picked = selection.entries.firstOrNull { it.key.kind == kind }?.value
+        if (picked != null) return picked.thumb ?: picked.url
+        if (removals.keys.any { it.kind == kind }) return null
+        return storedUris[kind]
+    }
+
+    val reviewSummary: StudioReviewSummary
+        get() = studioReviewSummary(
+            selection = selection.keys.map { it.kind }.toSet(),
+            removals = removals.keys.map { it.kind }.toSet(),
+            filled = filledSlots,
+        )
+
+    val source: StudioSource get() = StudioSource.entries[sourceIndex.coerceIn(0, StudioSource.entries.lastIndex)]
+
+    val sourceServesTab: Boolean
+        get() = STUDIO_TABS.getOrNull(tabIndex)?.let { servesKind(source, it.kind) } == true
+
+    /**
+     * Local File serves every slot and has no results to come back empty, so it keeps
+     * the full row -- it is the way back to a slot another provider hides.
+     */
+    val visibleSlots: List<StudioTab>
+        get() = STUDIO_TABS.filterIndexed { index, tab ->
+            index == tabIndex ||
+                source == StudioSource.LOCAL ||
+                (servesKind(source, tab.kind) && tab.kind !in emptySlots)
+        }
+
     val skeletonCount: Int get() = if (resultsLoading) pageSize else 0
 
     val pageSize: Int get() = gridColumns * gridRows
@@ -302,7 +330,7 @@ data class ArtworkStudioUiState(
         get() = STUDIO_TABS.getOrNull(tabIndex)?.kind?.let { kind -> selection.keys.count { it.kind == kind } } ?: 0
 
     val canPreviewFocused: Boolean
-        get() = zone == StudioZone.GRID && selectsMultiple && results.getOrNull(gridIndex) != null
+        get() = selectsMultiple && results.getOrNull(gridIndex) != null
 
     fun queueStateOf(art: StudioArt): StudioQueueState? {
         val kind = STUDIO_TABS.getOrNull(tabIndex)?.kind ?: return null
@@ -357,18 +385,7 @@ data class ArtworkStudioUiState(
 
     val confirmPrompt: StudioConfirmPrompt?
         get() = when {
-            applyConfirmOpen -> StudioConfirmPrompt(
-                kind = StudioConfirmKind.APPLY,
-                title = STUDIO_TABS.getOrNull(tabIndex)
-                    ?.let { studioApplyTitle(it.kind, queueSummary.toAdd, queueSummary.toRemove) }
-                    ?: "Apply changes?",
-                rows = StudioApplyChoice.entries.map {
-                    StudioConfirmRow(it.label, isDestructive = it == StudioApplyChoice.APPLY && queueSummary.toRemove > 0)
-                },
-                selectedIndex = applyConfirmIndex,
-            )
             replacePromptOpen -> StudioConfirmPrompt(
-                kind = StudioConfirmKind.REPLACE,
                 title = "${STUDIO_TABS.getOrNull(tabIndex)?.label ?: "This artwork"} is already this image",
                 rows = StudioReplaceChoice.entries.map {
                     StudioConfirmRow(it.label, isDestructive = it == StudioReplaceChoice.REPLACE)
@@ -382,7 +399,7 @@ data class ArtworkStudioUiState(
         get() = buildList {
             val kind = STUDIO_TABS.getOrNull(tabIndex)?.kind
             val hasCurrent = currentUri != null
-            if (queueSummary.hasChanges) add(StudioAction.APPLY_CHANGES)
+            if (reviewSummary.hasChanges) add(StudioAction.APPLY_CHANGES)
             if (canPreviewFocused) add(StudioAction.PREVIEW)
             if (queueSummary.failed > 0) {
                 add(StudioAction.RETRY_FAILED)
@@ -392,20 +409,22 @@ data class ArtworkStudioUiState(
             if (selectsMultiple && library.slots.size > 1) add(StudioAction.MANAGE_ASSETS)
             if (hasCurrent && kind != null && kind in CROPPABLE_KINDS) add(StudioAction.CROP)
 
-            if (zone == StudioZone.GRID && kind != null && kind in CROPPABLE_KINDS &&
+            if (kind != null && kind in CROPPABLE_KINDS &&
                 results.getOrNull(gridIndex)?.isVideo == false
             ) {
                 add(StudioAction.CROP_BEFORE_APPLY)
             }
             if (info?.hasPrevious == true) add(StudioAction.RESTORE_PREVIOUS)
             if (info?.originUrl != null) add(StudioAction.RESET_DEFAULT)
-            if (hasCurrent) add(StudioAction.CLEAR)
             if (hasCurrent) add(StudioAction.FILE_INFO)
 
             if (sgdbSourceActive) add(StudioAction.TOGGLE_MATURE)
 
             if (matchProvider != null) add(StudioAction.CHANGE_MATCH)
             if (matchIsConfirmed) add(StudioAction.FORGET_MATCH)
+            add(StudioAction.CHANGE_PROVIDER)
+
+            if (hasCurrent) add(StudioAction.CLEAR)
         }
 
     val resolvedActionsIndex: Int
@@ -427,11 +446,12 @@ enum class StudioAction(val label: String) {
     CROP_BEFORE_APPLY("Crop Before Applying"),
     RESTORE_PREVIOUS("Restore Previous"),
     RESET_DEFAULT("Reset to Scraped Default"),
-    CLEAR("Clear Artwork"),
     FILE_INFO("View File Information"),
     TOGGLE_MATURE("Mature Content (SteamGridDB)"),
     CHANGE_MATCH("Change Match"),
     FORGET_MATCH("Forget Match"),
+    CHANGE_PROVIDER("Change Provider"),
+    CLEAR("Clear Artwork"),
 }
 
 val CROPPABLE_KINDS = setOf(
@@ -441,11 +461,13 @@ val CROPPABLE_KINDS = setOf(
 
 typealias StudioArtworkInfo = com.psplauncher.feature.artwork.store.StudioArtworkInfo
 
+internal const val STUDIO_PAGE_TILES = 4
+
 private const val CROP_PAN_STEP = 0.03f
 
 private const val MAX_QUERY_LENGTH = 120
 
-private val SS_TYPES_FOR_KIND: Map<ArtworkKind, List<String>> = mapOf(
+internal val SS_TYPES_FOR_KIND: Map<ArtworkKind, List<String>> = mapOf(
     ArtworkKind.ICON           to listOf("mixrbv2", "mixrbv1", "screenmarquee", "steamgrid", "box-2D"),
     ArtworkKind.BACKGROUND     to listOf("fanart", "ss", "box-2D"),
     ArtworkKind.LOGO           to listOf("wheel", "wheel-hd"),
@@ -455,7 +477,7 @@ private val SS_TYPES_FOR_KIND: Map<ArtworkKind, List<String>> = mapOf(
     ArtworkKind.ICON1          to listOf("video-normalized", "video"),
 )
 
-private val NO_IMAGE_PROVIDER_KINDS = setOf(ArtworkKind.ICON1, ArtworkKind.MANUAL, ArtworkKind.VIDEO)
+internal val NO_IMAGE_PROVIDER_KINDS = setOf(ArtworkKind.ICON1, ArtworkKind.MANUAL, ArtworkKind.VIDEO)
 
 private val BACKGROUND_SOURCES = listOf(
     StudioSource.STEAMGRIDDB to MatchProvider.STEAMGRIDDB,
@@ -538,8 +560,9 @@ class ArtworkStudioViewModel @Inject constructor(
     fun load(gameId: Long) {
         _uiState.update { s ->
             s.copy(
-                closed = false, zone = StudioZone.TABS, selection = emptyMap(), removals = emptyMap(),
-                leavePromptOpen = false, applyConfirmOpen = false, replacePromptOpen = false,
+                closed = false, selection = emptyMap(), removals = emptyMap(),
+                providerPickerOpen = true, reviewOpen = false,
+                leavePromptOpen = false, replacePromptOpen = false,
                 managerOpen = false,
                 queue = s.queue.filter { it.state == StudioQueueState.QUEUED || it.state == StudioQueueState.DOWNLOADING },
             )
@@ -591,13 +614,6 @@ class ArtworkStudioViewModel @Inject constructor(
 
     override fun sourcesForTab(): List<StudioSource> = StudioSource.entries
 
-    private fun servesKind(source: StudioSource, kind: ArtworkKind): Boolean = when (source) {
-        StudioSource.SCREENSCRAPER -> SS_TYPES_FOR_KIND.containsKey(kind)
-        StudioSource.STEAMGRIDDB,
-        StudioSource.IGDB          -> kind !in NO_IMAGE_PROVIDER_KINDS
-        StudioSource.LOCAL         -> true
-    }
-
     private fun sgdbTypesFor(kind: ArtworkKind): List<SgdbArtType> = when (kind) {
         ArtworkKind.ICON    -> listOf(SgdbArtType.GRID)
         ArtworkKind.BACKGROUND -> listOf(SgdbArtType.HERO)
@@ -624,10 +640,11 @@ class ArtworkStudioViewModel @Inject constructor(
 
     private suspend fun refreshFilledCount() {
         val game = _uiState.value.game
-        val filled = STUDIO_TABS.count { tab ->
-            artworkStore.find(gameId, tab.kind) != null || !legacyUriFor(tab.kind, game).isNullOrBlank()
-        }
-        _uiState.update { it.copy(filledKinds = filled) }
+        val stored = STUDIO_TABS.mapNotNull { tab ->
+            val uri = artworkStore.find(gameId, tab.kind) ?: legacyUriFor(tab.kind, game)
+            uri?.takeIf { it.isNotBlank() }?.let { tab.kind to it }
+        }.toMap()
+        _uiState.update { it.copy(filledSlots = stored.keys, storedUris = stored) }
     }
 
     private suspend fun refreshLibrary() {
@@ -639,8 +656,9 @@ class ArtworkStudioViewModel @Inject constructor(
         loadJob?.cancel()
         val token = ++generation
         val state = _uiState.value
-        val source = sourcesForTab().getOrNull(state.sourceIndex) ?: StudioSource.LOCAL
         val kind = tab().kind
+        val chosen = state.source
+        val source = if (servesKind(chosen, kind)) chosen else StudioSource.LOCAL
         val provider = providerFor(source)
         val known = knownMatch(state, provider)
         _uiState.update {
@@ -752,7 +770,18 @@ class ArtworkStudioViewModel @Inject constructor(
         if (token != generation || key != activeKey) return
         _uiState.update {
             val page = StudioPage.of(all, pageIndex, it.pageSize)
+            val kind = STUDIO_TABS[it.tabIndex].kind
+            val local = !it.sourceServesTab || it.source == StudioSource.LOCAL
+            val sample = page.items.firstOrNull { art -> !art.isVideo }?.let { art -> art.thumb ?: art.url }
             it.copy(
+                providerSamples =
+                    if (local || sample == null) it.providerSamples
+                    else it.providerSamples + (it.source to sample),
+                emptySlots = when {
+                    local -> it.emptySlots
+                    page.totalResults == 0 -> it.emptySlots + kind
+                    else -> it.emptySlots - kind
+                },
                 resultsLoading = false,
                 results = page.items,
                 totalResults = page.totalResults,
@@ -772,7 +801,9 @@ class ArtworkStudioViewModel @Inject constructor(
     }
 
     private fun capacityFor(tabIndex: Int): StudioGridCapacity? =
-        gridSlotDp?.let { (width, height) -> StudioGridCapacity.of(width, height, STUDIO_TABS[tabIndex].tileClass) }
+        gridSlotDp?.let { (width, height) ->
+            StudioGridCapacity.of(width, height, STUDIO_TABS[tabIndex].tileClass, STUDIO_PAGE_TILES)
+        }
 
     private fun applyCapacity(capacity: StudioGridCapacity) {
         val before = _uiState.value
@@ -890,12 +921,11 @@ class ArtworkStudioViewModel @Inject constructor(
         val capacity = capacityFor(tabIndex)
         _uiState.update {
             it.copy(
-                tabIndex = tabIndex, sourceIndex = 0, zone = StudioZone.TABS,
+                tabIndex = tabIndex,
                 gridColumns = capacity?.columns ?: it.gridColumns,
                 gridRows = capacity?.rows ?: it.gridRows,
             )
         }
-        landOnAvailableSource()
 
         viewModelScope.launch { refreshCurrent() }
 
@@ -914,25 +944,14 @@ class ArtworkStudioViewModel @Inject constructor(
             _uiState.update { it.copy(message = unavailableReason(source)) }
             return
         }
-        _uiState.update { it.copy(sourceIndex = clamped, zone = StudioZone.SOURCES) }
+        _uiState.update {
+            it.copy(
+                sourceIndex = clamped, actionsOpen = false, providerPickerOpen = false,
+                emptySlots = emptySet(),
+            )
+        }
 
         loadResults()
-    }
-
-    fun cycleSource(delta: Int) {
-        val sources = sourcesForTab()
-
-        val count = sources.size
-        if (count == 0) return
-
-        var index = _uiState.value.sourceIndex
-        repeat(count) {
-            index = (index + delta).mod(count)
-            if (isSourceAvailable(sources[index])) {
-                selectSource(index)
-                return
-            }
-        }
     }
 
     private suspend fun refreshSsIdentityAfterBrowse(): Boolean {
@@ -956,19 +975,11 @@ class ArtworkStudioViewModel @Inject constructor(
         }
     }
 
-    fun isSourceAvailable(source: StudioSource): Boolean = sourceBadge(source) == null
+    fun isSourceAvailable(source: StudioSource): Boolean =
+        source !in _uiState.value.unavailableSources
 
-    override fun sourceBadge(source: StudioSource): String? = when {
-        !servesKind(source, tab().kind)                -> "n/a"
-        source in _uiState.value.unavailableSources    -> "no key"
-        else                                           -> null
-    }
-
-    private fun unavailableReason(source: StudioSource): String = when {
-        !servesKind(source, tab().kind) -> "${source.label} has no ${tab().label} artwork"
-        source == StudioSource.IGDB     -> "IGDB needs a Client ID and Secret — add them in Settings ▸ Artwork"
-        else                            -> "${source.label} needs an API key — add one in Settings ▸ Artwork"
-    }
+    private fun unavailableReason(source: StudioSource): String =
+        "${source.label} ${providerUnavailableReason(source).replaceFirstChar { it.lowercase() }}"
 
     private fun landOnAvailableSource() {
         val sources = sourcesForTab()
@@ -1352,10 +1363,38 @@ class ArtworkStudioViewModel @Inject constructor(
         }
     }
 
+    /**
+     * A picks the focused result for this slot and moves to the next pill. A slot that
+     * holds several assets keeps toggling instead, or one press would end the visit.
+     */
+    fun pickFocused() {
+        val s = _uiState.value
+        if (s.selectsMultiple) {
+            toggleSelection(s.gridIndex)
+            return
+        }
+        val art = s.results.getOrNull(s.gridIndex) ?: return
+        val kind = STUDIO_TABS[s.tabIndex].kind
+        val key = StudioArtKey.of(kind, art)
+        _uiState.update {
+            it.copy(selection = it.selection.filterKeys { k -> k.kind != kind } + (key to art))
+        }
+        advanceSlot()
+    }
+
+    private fun advanceSlot() {
+        val s = _uiState.value
+        val visible = s.visibleSlots
+        if (visible.size < 2) return
+        val here = visible.indexOfFirst { it.kind == STUDIO_TABS[s.tabIndex].kind }
+        val next = visible[(here + 1).mod(visible.size)]
+        selectTab(STUDIO_TABS.indexOfFirst { it.kind == next.kind })
+    }
+
     override fun applyChanges() = _uiState.update { s ->
         val over = s.overCapacityBy
         when {
-            !s.queueSummary.hasChanges -> s
+            !s.reviewSummary.hasChanges -> s
             over > 0 -> s.copy(
                 actionsOpen = false,
                 message = STUDIO_TABS.getOrNull(s.tabIndex)?.kind?.let { kind ->
@@ -1363,20 +1402,33 @@ class ArtworkStudioViewModel @Inject constructor(
                     "A game holds ${studioAssetCount(kind, capacity)} at most — uncheck $over to apply"
                 } ?: s.message,
             )
-            else -> s.copy(applyConfirmOpen = true, applyConfirmIndex = 0, actionsOpen = false)
+            else -> s.copy(reviewOpen = true, actionsOpen = false)
         }
     }
 
-    fun resolveApplyConfirm(choice: StudioApplyChoice) {
-        _uiState.update { it.copy(applyConfirmOpen = false) }
-        if (choice == StudioApplyChoice.APPLY) {
-            val kind = tab().kind
-            commit { it.kind == kind }
+    override fun openProviderPicker() = _uiState.update {
+        it.copy(providerPickerOpen = true, actionsOpen = false)
+    }
+
+    private fun moveProviderCursor(delta: Int) = _uiState.update {
+        it.copy(sourceIndex = (it.sourceIndex + delta).mod(StudioSource.entries.size))
+    }
+
+    private fun backOutOfStudio() {
+        val s = _uiState.value
+        if (s.selection.isNotEmpty() || s.removals.isNotEmpty()) {
+            _uiState.update { it.copy(leavePromptOpen = true, leavePromptIndex = 0, providerPickerOpen = false) }
+        } else {
+            close()
         }
     }
 
-    private fun moveApplyConfirmCursor(delta: Int) = _uiState.update {
-        it.copy(applyConfirmIndex = (it.applyConfirmIndex + delta).mod(StudioApplyChoice.entries.size))
+    override fun closeReview() = _uiState.update { it.copy(reviewOpen = false) }
+
+    override fun applyReviewed() {
+        _uiState.update { it.copy(reviewOpen = false) }
+        commit { true }
+        close()
     }
 
     fun resolveReplacePrompt(choice: StudioReplaceChoice) {
@@ -1448,27 +1500,18 @@ class ArtworkStudioViewModel @Inject constructor(
     }
 
     override fun resolveConfirm(index: Int) {
-        when (_uiState.value.confirmPrompt?.kind) {
-            StudioConfirmKind.APPLY   -> StudioApplyChoice.entries.getOrNull(index)?.let(::resolveApplyConfirm)
-            StudioConfirmKind.REPLACE -> StudioReplaceChoice.entries.getOrNull(index)?.let(::resolveReplacePrompt)
-            null -> Unit
-        }
+        if (_uiState.value.confirmPrompt == null) return
+        StudioReplaceChoice.entries.getOrNull(index)?.let(::resolveReplacePrompt)
     }
 
     override fun dismissConfirm() {
-        when (_uiState.value.confirmPrompt?.kind) {
-            StudioConfirmKind.APPLY   -> resolveApplyConfirm(StudioApplyChoice.CANCEL)
-            StudioConfirmKind.REPLACE -> resolveReplacePrompt(StudioReplaceChoice.CANCEL)
-            null -> Unit
-        }
+        if (_uiState.value.confirmPrompt == null) return
+        resolveReplacePrompt(StudioReplaceChoice.CANCEL)
     }
 
     private fun moveConfirmCursor(delta: Int) {
-        when (_uiState.value.confirmPrompt?.kind) {
-            StudioConfirmKind.APPLY   -> moveApplyConfirmCursor(delta)
-            StudioConfirmKind.REPLACE -> moveReplacePromptCursor(delta)
-            null -> Unit
-        }
+        if (_uiState.value.confirmPrompt == null) return
+        moveReplacePromptCursor(delta)
     }
 
     private fun commit(which: (StudioArtKey) -> Boolean) {
@@ -1718,6 +1761,7 @@ class ArtworkStudioViewModel @Inject constructor(
             StudioAction.CLEAR            -> { closeActions(); clearCurrent() }
             StudioAction.FILE_INFO        -> _uiState.update { it.copy(showFileInfo = true) }
             StudioAction.TOGGLE_MATURE    -> toggleNsfw()
+            StudioAction.CHANGE_PROVIDER  -> openProviderPicker()
 
             StudioAction.CHANGE_MATCH     -> onChangeMatchPressed()
             StudioAction.FORGET_MATCH     -> forgetMatch()
@@ -2228,55 +2272,51 @@ class ArtworkStudioViewModel @Inject constructor(
             return
         }
 
+        if (s.providerPickerOpen) {
+            when (action) {
+                GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_UP    -> moveProviderCursor(-1)
+                GamepadAction.NAVIGATE_RIGHT, GamepadAction.NAVIGATE_DOWN -> moveProviderCursor(+1)
+                GamepadAction.SELECT -> selectSource(s.sourceIndex)
+                GamepadAction.BACK   -> backOutOfStudio()
+                else -> Unit
+            }
+            return
+        }
+
+        if (s.reviewOpen) {
+            when (action) {
+                GamepadAction.SELECT -> applyReviewed()
+                GamepadAction.BACK   -> closeReview()
+                else -> Unit
+            }
+            return
+        }
+
         when (action) {
-            GamepadAction.BACK -> when (s.zone) {
-                StudioZone.TABS    ->
-                    if (s.selection.isNotEmpty() || s.removals.isNotEmpty()) {
-                        _uiState.update { it.copy(leavePromptOpen = true, leavePromptIndex = 0) }
-                    }
-                    else close()
-                StudioZone.SOURCES -> _uiState.update { it.copy(zone = StudioZone.TABS) }
-                StudioZone.GRID    -> _uiState.update { it.copy(zone = StudioZone.SOURCES) }
-            }
-            GamepadAction.NAVIGATE_LEFT -> when (s.zone) {
-                StudioZone.TABS    -> cycleTab(-1)
-                StudioZone.SOURCES -> cycleSource(-1)
-                StudioZone.GRID    ->
-                    if (s.gridIndex > 0) _uiState.update { it.copy(gridIndex = s.gridIndex - 1) }
-            }
-            GamepadAction.NAVIGATE_RIGHT -> when (s.zone) {
-                StudioZone.TABS    -> cycleTab(+1)
-                StudioZone.SOURCES -> cycleSource(+1)
-                StudioZone.GRID    ->
-                    if (s.gridIndex < s.results.lastIndex) _uiState.update { it.copy(gridIndex = s.gridIndex + 1) }
-            }
-            GamepadAction.NAVIGATE_UP -> if (s.zone == StudioZone.GRID && s.gridIndex >= s.gridColumns) {
-                _uiState.update { it.copy(gridIndex = s.gridIndex - s.gridColumns) }
-            }
-            GamepadAction.NAVIGATE_DOWN -> if (s.zone == StudioZone.GRID &&
-                s.gridIndex + s.gridColumns <= s.results.lastIndex
-            ) {
-                _uiState.update { it.copy(gridIndex = s.gridIndex + s.gridColumns) }
-            }
-            GamepadAction.PREV_CATEGORY -> when (s.zone) {
-                StudioZone.TABS    -> cycleTab(-1)
-                StudioZone.SOURCES -> cycleSource(-1)
-                StudioZone.GRID    -> previousPage()
-            }
-            GamepadAction.NEXT_CATEGORY -> when (s.zone) {
-                StudioZone.TABS    -> cycleTab(+1)
-                StudioZone.SOURCES -> cycleSource(+1)
-                StudioZone.GRID    -> nextPage()
-            }
-            GamepadAction.SELECT -> when (s.zone) {
-                StudioZone.TABS    -> _uiState.update { it.copy(zone = StudioZone.SOURCES) }
+            GamepadAction.BACK -> backOutOfStudio()
 
-                StudioZone.SOURCES ->
-                    if (sourcesForTab().getOrNull(s.sourceIndex) == StudioSource.LOCAL) requestLocalPick()
-                    else _uiState.update { it.copy(zone = StudioZone.GRID) }
+            GamepadAction.NAVIGATE_LEFT ->
+                if (s.gridIndex > 0) _uiState.update { it.copy(gridIndex = s.gridIndex - 1) }
+            GamepadAction.NAVIGATE_RIGHT ->
+                if (s.gridIndex < s.results.lastIndex) _uiState.update { it.copy(gridIndex = s.gridIndex + 1) }
+            GamepadAction.NAVIGATE_UP ->
+                if (s.gridIndex >= s.gridColumns) {
+                    _uiState.update { it.copy(gridIndex = s.gridIndex - s.gridColumns) }
+                }
+            GamepadAction.NAVIGATE_DOWN ->
+                if (s.gridIndex + s.gridColumns <= s.results.lastIndex) {
+                    _uiState.update { it.copy(gridIndex = s.gridIndex + s.gridColumns) }
+                }
 
-                StudioZone.GRID    -> if (s.selectsMultiple) toggleSelection(s.gridIndex) else openCandidate(s.gridIndex)
-            }
+            GamepadAction.PREV_CATEGORY -> cycleTab(-1)
+            GamepadAction.NEXT_CATEGORY -> cycleTab(+1)
+
+            GamepadAction.PREV_PAGE -> previousPage()
+            GamepadAction.NEXT_PAGE -> nextPage()
+
+            GamepadAction.SELECT ->
+                if (!s.sourceServesTab || s.source == StudioSource.LOCAL) requestLocalPick()
+                else pickFocused()
 
             GamepadAction.CHANGE_SORT, GamepadAction.OPEN_SEARCH -> openSearch()
 

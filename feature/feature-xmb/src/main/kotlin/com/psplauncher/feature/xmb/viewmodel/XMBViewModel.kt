@@ -2186,6 +2186,11 @@ class XMBViewModel @Inject constructor(
 
     private fun categoryDisplayName(id: String): String = _uiState.value.categoryDisplayNameOf(id)
 
+    private fun knownPlatformName(platformId: String): String? =
+        enabledCards.firstOrNull { it.platformId == platformId }?.displayName
+            ?: shelfCardFor(platformId)?.title
+            ?: platformCache[platformId]?.name
+
     private fun currentHideLocation(): Triple<HideLocationType, String, String>? {
         val s = _uiState.value
         val cat = currentCategory()
@@ -2200,8 +2205,7 @@ class XMBViewModel @Inject constructor(
                 Triple(HideLocationType.ALL_GAMES, "", "All Games")
 
             s.selectedPlatformId != null -> {
-                val name = enabledCards.firstOrNull { it.platformId == s.selectedPlatformId }?.displayName
-                    ?: s.selectedPlatformId
+                val name = knownPlatformName(s.selectedPlatformId) ?: s.selectedPlatformId
                 Triple(HideLocationType.PLATFORM, s.selectedPlatformId, name)
             }
 
@@ -4344,9 +4348,7 @@ class XMBViewModel @Inject constructor(
             s.selectedPlatformId == FAVORITES_PLATFORM_ID -> "Favorites"
             s.selectedPlatformId == MISSING_PLATFORM_ID   -> "Missing"
             s.selectedPlatformId != null ->
-                enabledCards.firstOrNull { it.platformId == s.selectedPlatformId }?.displayName
-                    ?: platformCache[s.selectedPlatformId]?.name
-                    ?: s.selectedPlatformId
+                knownPlatformName(s.selectedPlatformId) ?: s.selectedPlatformId
             else -> null
         }
     }
@@ -5200,6 +5202,9 @@ class XMBViewModel @Inject constructor(
 
             GamepadAction.OPEN_CONTEXT_MENU -> openContextMenuForFocusedItem()
 
+            // the crossbar does not page; the triggers are the Artwork Studio's
+            GamepadAction.PREV_PAGE,
+            GamepadAction.NEXT_PAGE     -> Unit
             GamepadAction.HOME          -> toggleNotifications()
 
             GamepadAction.CHANGE_SORT ->
@@ -6505,7 +6510,7 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun cardName(platformId: String): String =
-        enabledCards.firstOrNull { it.platformId == platformId }?.displayName ?: platformId.uppercase()
+        knownPlatformName(platformId) ?: platformId.uppercase()
 
     private fun scrapeMissingArtworkForPlatform(platformId: String) {
         viewModelScope.launch {
