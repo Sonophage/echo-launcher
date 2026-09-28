@@ -198,9 +198,15 @@ class AppDrawerViewModel @Inject constructor(
         _uiState.update { it.copy(selectedIndex = index.coerceIn(0, size - 1), usingTouch = true) }
     }
 
+    fun launchFirstResult() {
+        val first = _uiState.value.visibleApps.firstOrNull() ?: return
+        launchApp(first.packageName)
+    }
+
     fun launchApp(packageName: String) {
         val app = _uiState.value.visibleApps.firstOrNull { it.packageName == packageName }
         menuSound.play(MenuSound.LAUNCH)
+        if (_uiState.value.searchQuery.isNotEmpty()) setSearchQuery("")
 
         if (app?.gameId != null) {
             _uiState.update { it.copy(pendingRomLaunch = app.gameId) }

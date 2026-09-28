@@ -101,6 +101,11 @@ fun AppDrawerScreen(
     val keyboard = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    val closeDrawer = {
+        viewModel.setSearchQuery("")
+        onBack()
+    }
+
     LaunchedEffect(pendingGamepadAction) {
         if (pendingGamepadAction != null) {
             val overlayOpen = state.menuApp != null || state.confirmUninstall != null ||
@@ -120,7 +125,7 @@ fun AppDrawerScreen(
                 overlayOpen -> viewModel.handleGamepadAction(pendingGamepadAction)
 
                 pendingGamepadAction == GamepadAction.BACK ->
-                    if (state.letterFilter != null) viewModel.clearLetterFilter() else onBack()
+                    if (state.letterFilter != null) viewModel.clearLetterFilter() else closeDrawer()
                 pendingGamepadAction == GamepadAction.CHANGE_SORT -> {
                     searchActive = !searchActive
                     if (!searchActive) viewModel.setSearchQuery("")
@@ -174,7 +179,7 @@ fun AppDrawerScreen(
 
         onBack = {
             onTouchInteraction()
-            onBack()
+            closeDrawer()
         },
         onSearchQueryChange = { viewModel.setSearchQuery(it) },
         onSearchToggle = { active ->
@@ -182,7 +187,11 @@ fun AppDrawerScreen(
             searchActive = active
             if (!active) viewModel.setSearchQuery("")
         },
-        onSearchDone = { keyboard?.hide() },
+        onSearchDone = {
+            viewModel.launchFirstResult()
+            searchActive = false
+            keyboard?.hide()
+        },
         onFilterSelected = { filter ->
             onTouchInteraction()
             viewModel.setFilter(filter)
