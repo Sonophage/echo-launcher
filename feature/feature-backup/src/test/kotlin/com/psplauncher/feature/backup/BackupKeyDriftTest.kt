@@ -29,6 +29,11 @@ class BackupKeyDriftTest {
 
         "retroarch_cached_core_files" to "rebuilt by the core scan",
         "auto_resolved_cores" to "rebuilt by emulator detection",
+
+        "recent_app_dismissals" to
+            "device-local and self-clearing: each stamp only means anything compared against " +
+            "THIS device's UsageStats history, which no restore carries. Restoring them onto a " +
+            "device with a different history would withhold apps the owner never dismissed there.",
     )
 
     private val repoRoot: File by lazy {
