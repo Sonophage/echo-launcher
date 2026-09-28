@@ -208,6 +208,56 @@ class AppDrawerViewModelTest {
     }
 
     @Test
+    fun `Enter launches the first row the search left standing, not the whole list`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.setFilter(AppFilter.EMULATORS)
+        viewModel.setSearchQuery("ppss")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(
+            "the query should leave exactly one row standing",
+            listOf("org.ppsspp.ppsspp"),
+            viewModel.uiState.value.visibleApps.map { it.packageName },
+        )
+
+        viewModel.launchFirstResult()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify { repository.launchApp("org.ppsspp.ppsspp") }
+    }
+
+    @Test
+    fun `Enter on a search that matches nothing launches nothing`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.setSearchQuery("no app is called this")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.launchFirstResult()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify(exactly = 0) { repository.launchApp(any()) }
+    }
+
+    @Test
+    fun `launching an app clears the query, so the drawer is not still filtered on the way back`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.setFilter(AppFilter.EMULATORS)
+        viewModel.setSearchQuery("ppss")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.launchApp("org.ppsspp.ppsspp")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("", state.searchQuery)
+        assertEquals(
+            "every row in the tab should be back",
+            fakeApps().count { it.isEmulator },
+            state.sectionApps.size,
+        )
+    }
+
+    @Test
     fun `openUsageAccessSettings delegates to repository`() = runTest {
         viewModel.openUsageAccessSettings()
         verify { repository.openUsageAccessSettings() }
