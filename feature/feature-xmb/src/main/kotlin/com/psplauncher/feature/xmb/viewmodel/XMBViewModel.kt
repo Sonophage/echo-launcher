@@ -21,6 +21,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -2188,6 +2189,21 @@ class XMBViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Drops an app off the Last Played shelf until it is used again. Deliberately not
+     * persistHide: hiding is permanent until undone in Settings, and these are two
+     * different things that used to be one.
+     */
+    private fun dismissAppFromRecents(packageName: String) {
+        viewModelScope.launch {
+            context.pfpDataStore.edit { prefs ->
+                prefs[KEY_RECENT_APP_DISMISSALS] = withRecentDismissal(
+                    prefs[KEY_RECENT_APP_DISMISSALS].orEmpty(), packageName, System.currentTimeMillis(),
+                )
+            }
+        }
+    }
+
     private fun categoryDisplayName(id: String): String = _uiState.value.categoryDisplayNameOf(id)
 
     private fun knownPlatformName(platformId: String): String? =
@@ -4231,11 +4247,17 @@ class XMBViewModel @Inject constructor(
             _uiState.map { it.recentFilter }.distinctUntilChanged(),
             _uiState.map { it.recentsIncludeApps }.distinctUntilChanged(),
             appCategoryRepository.changes().onStart { emit(Unit) },
-        ) { filter, includeApps, _ -> filter to includeApps }
-            .map { (filter, includeApps) ->
+            context.pfpDataStore.data
+                .map { it[KEY_RECENT_APP_DISMISSALS].orEmpty() }
+                .distinctUntilChanged(),
+        ) { filter, includeApps, _, dismissals -> Triple(filter, includeApps, dismissals) }
+            .map { (filter, includeApps, dismissals) ->
                 if (!includeApps) return@map filter to emptyList<Pair<Long, XMBItem>>()
+                val dismissedAt = parseRecentDismissals(dismissals)
                 val rows = appCategoryRepository.allInstalledApps()
                     .filter { it.lastUsedAt > 0L }
+
+                    .filterNot { dismissedFromRecents(it.lastUsedAt, dismissedAt[it.packageName]) }
 
                     .filterNot { isHiddenAt(HiddenPlacement.appKey(it.packageName), HideLocationType.RECENTS) }
                     .sortedByDescending { it.lastUsedAt }
@@ -5804,9 +5826,7 @@ class XMBViewModel @Inject constructor(
                         persistHide(HiddenPlacement.appKey(pkg), menu.title, HideLocationType.CATEGORY, cat, categoryDisplayName(cat))
                     }
 
-                    "remove_from_recent" -> persistHide(
-                        HiddenPlacement.appKey(pkg), menu.title, HideLocationType.RECENTS, "", "Recently Played",
-                    )
+                    "remove_from_recent" -> dismissAppFromRecents(pkg)
                     "hide_everywhere" -> appAction { appCategoryRepository.setHidden(pkg, true) }
                     "rename"    -> _uiState.update {
                         it.copy(renameAppTarget = pkg, renameAppCurrent = menu.title, renameAppText = menu.title)
@@ -8451,6 +8471,8 @@ class XMBViewModel @Inject constructor(
         private const val ADD_LIBRARY_APPS_ITEM_ID = "add_library_apps"
 
         private const val RECENTLY_PLAYED_LIMIT = 15
+
+        private val KEY_RECENT_APP_DISMISSALS = stringSetPreferencesKey("recent_app_dismissals")
         internal const val ADD_MENU_ITEM_ID = "add_menu"
         internal const val QUICK_SEARCH_ITEM_ID = "quick_search"
         internal const val SEARCH_ITEM_ID = "library_search"

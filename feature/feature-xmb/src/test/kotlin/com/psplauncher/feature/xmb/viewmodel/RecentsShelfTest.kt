@@ -1,6 +1,8 @@
 package com.psplauncher.feature.xmb.viewmodel
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RecentsShelfTest {
@@ -103,5 +105,63 @@ class ShelfCardTitleTest {
                 card!!.title.contains("__") || card.title == id,
             )
         }
+    }
+}
+
+/**
+ * Remove from Recent used to write a HiddenPlacement for apps, which is permanent
+ * until undone in Settings -- while the same menu row on a game or a track simply
+ * cleared the play stamp and let it come back. These pin the app case to the game
+ * case: dropped now, back the moment it is used again.
+ */
+class RecentAppDismissalTest {
+    private val dismissedAt = 1_000L
+
+    @Test
+    fun `an app used again after being dismissed comes back`() {
+        assertFalse(
+            "using the app again is exactly what should undo a dismissal",
+            dismissedFromRecents(lastUsedAt = dismissedAt + 1, dismissedAt = dismissedAt),
+        )
+    }
+
+    @Test
+    fun `an app not used since being dismissed stays off the shelf`() {
+        assertTrue(dismissedFromRecents(lastUsedAt = dismissedAt - 1, dismissedAt = dismissedAt))
+
+        assertTrue(
+            "a dismissal must cover the launch that caused it, or the app never leaves",
+            dismissedFromRecents(lastUsedAt = dismissedAt, dismissedAt = dismissedAt),
+        )
+    }
+
+    @Test
+    fun `an app that was never dismissed is untouched`() {
+        assertFalse(dismissedFromRecents(lastUsedAt = 5L, dismissedAt = null))
+    }
+
+    @Test
+    fun `dismissing the same app twice replaces the stamp instead of stacking`() {
+        val once = withRecentDismissal(emptySet(), "com.example.app", 10L)
+        val twice = withRecentDismissal(once, "com.example.app", 20L)
+
+        assertEquals("one entry per package, or the set grows without bound", 1, twice.size)
+        assertEquals(20L, parseRecentDismissals(twice)["com.example.app"])
+    }
+
+    @Test
+    fun `dismissing one app leaves the others alone`() {
+        val set = withRecentDismissal(withRecentDismissal(emptySet(), "a.b.c", 10L), "d.e.f", 20L)
+        val parsed = parseRecentDismissals(set)
+
+        assertEquals(10L, parsed["a.b.c"])
+        assertEquals(20L, parsed["d.e.f"])
+    }
+
+    @Test
+    fun `a malformed entry is ignored rather than crashing the shelf`() {
+        val parsed = parseRecentDismissals(setOf("no-separator", "|123", "a.b.c|notanumber", "a.b.c|7"))
+
+        assertEquals("only the well formed entry survives", mapOf("a.b.c" to 7L), parsed)
     }
 }
