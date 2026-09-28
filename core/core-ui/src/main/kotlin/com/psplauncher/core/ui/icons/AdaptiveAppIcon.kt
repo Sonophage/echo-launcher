@@ -17,10 +17,14 @@ private const val ADAPTIVE_SAFE_ZONE = 72
 
 val AppIconContainerShape = RoundedCornerShape(14.dp)
 
-fun Context.appIconBitmap(packageName: String, sizePx: Int = 192): ImageBitmap? =
+fun Context.appIconBitmap(
+    packageName: String,
+    sizePx: Int = 192,
+    foregroundOnly: Boolean = true,
+): ImageBitmap? =
     runCatching {
         val icon: Drawable = packageManager.getApplicationIcon(packageName)
-        val layer = (icon as? AdaptiveIconDrawable)?.foreground
+        val layer = (icon as? AdaptiveIconDrawable)?.foreground?.takeIf { foregroundOnly }
         val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         if (layer != null) {
