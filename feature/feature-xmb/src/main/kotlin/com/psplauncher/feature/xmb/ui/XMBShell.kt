@@ -181,6 +181,7 @@ fun XMBShellContainer(
         onRecentRailToggled = viewModel::toggleRecentRail,
         onDrawerTypedCharConsumed = viewModel::onDrawerTypedCharConsumed,
         onNotificationsToggled = viewModel::toggleNotifications,
+        onLaunchRecentTop = viewModel::launchRecentTop,
         onNotificationsDismissed = viewModel::closeNotifications,
         onNoticeTapped = viewModel::onNoticeTapped,
         onNoticeDismissTapped = viewModel::onNoticeDismissTapped,
@@ -336,6 +337,7 @@ fun XMBShell(
 
     onDrawerTypedCharConsumed: () -> Unit = {},
     onNotificationsToggled: () -> Unit = {},
+    onLaunchRecentTop: () -> Unit = {},
     onNotificationsDismissed: () -> Unit = {},
     onNoticeTapped: (String) -> Unit = {},
     onNoticeDismissTapped: (String) -> Unit = {},
@@ -1022,12 +1024,19 @@ fun XMBShell(
                 StripLiveActivity(art = null, title = "Refreshing artwork", detail = it)
             }
 
-            val liveActivity = flash?.let { StripLiveActivity(art = null, title = it.title, detail = it.message) }
+            val foregroundActivity = flash?.let { StripLiveActivity(art = null, title = it.title, detail = it.message) }
                 ?: busyActivity
                 ?: musicActivity
                 ?: (notifications.size + androidNotices.size)
                     .takeIf { it > 0 }
                     ?.let { StripLiveActivity(art = null, title = countLabel(it, "notification"), detail = null) }
+
+            val recentActivity = uiState.recentTop?.let { top ->
+                StripLiveActivity(art = top.shelfCoverArt, title = top.title, detail = top.subtitle)
+            }
+
+            val islandIsRecent = foregroundActivity == null && recentActivity != null
+            val liveActivity = foregroundActivity ?: recentActivity
 
             val xmbContext = uiState.stripShowsXmbContext
 
@@ -1038,7 +1047,7 @@ fun XMBShell(
                 onSortTapped = onXmbSortTapped,
                 live = liveActivity,
 
-                onLiveAreaTapped = onNotificationsToggled,
+                onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
 
                 hints = StripHints(
                     shoulder = uiState.panelStripOpen && xmbContext,

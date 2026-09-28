@@ -37,6 +37,64 @@ class RecentsShelfTest {
         )
     }
 
+    private fun musicTrack(id: String, title: String, album: String? = null) =
+        com.psplauncher.core.domain.model.MusicTrack(
+            id = id, folderId = "f1", uri = "content://$id", displayName = "$id.mp3",
+            title = title, album = album, lastPlayedAt = 900L,
+        )
+
+    @Test
+    fun `the island can open every shape the recents shelf holds`() {
+        val shapes = listOf<Pair<String, XMBItem>>(
+            "a game" to XMBItem(id = "1", title = "Skyrim", gameId = 1L, isRealGame = true),
+            "an Android game" to XMBItem(
+                id = "2", title = "Vampire Survivors", gameId = 2L, isRealGame = true,
+                packageName = "com.poncle.vampiresurvivors", isAndroidApp = true,
+            ),
+            "a recent app" to XMBItem(
+                id = "${XMBViewModel.RECENT_APP_ID_PREFIX}com.discord", title = "Discord",
+                subtitle = "App", packageName = "com.discord", isAndroidApp = true,
+            ),
+            "a harvested shortcut" to XMBItem(
+                id = "3", title = "Playlist", packageName = "com.spotify.music", shortcutId = "pl1",
+            ),
+            "a stored intent" to XMBItem(id = "4", title = "Maps", launchIntentUri = "intent://maps"),
+            "a video" to XMBItem(id = "vid_9", title = "Akira", type = XMBItemType.VIDEO_FILE),
+            "a book" to XMBItem(id = "book_9", title = "Dune", type = XMBItemType.LIBRARY_BOOK),
+        )
+
+        shapes.forEach { (what, item) ->
+            assertTrue(
+                "$what reaches the shelf but the island cannot open it, so tapping the island " +
+                    "would do nothing",
+                recentLaunchFor(item) != null,
+            )
+        }
+    }
+
+    @Test
+    fun `a run of tracks from one album reaches the shelf as an album, and the island opens it`() {
+        val singles = listOf(musicTrack("t1", "Deacon Blues", album = "Aja")).recentMusicRows()
+        assertEquals(RecentLaunch.TRACK, recentLaunchFor(singles.single().second))
+
+        val run = listOf(
+            musicTrack("t1", "Black Cow", album = "Aja"),
+            musicTrack("t2", "Aja", album = "Aja"),
+        ).recentMusicRows()
+
+        assertEquals(
+            "two tracks from one album collapse to an album row, which is what the island gets",
+            XMBItemType.MUSIC_GROUP,
+            run.single().second.type,
+        )
+        assertEquals(RecentLaunch.ALBUM, recentLaunchFor(run.single().second))
+    }
+
+    @Test
+    fun `a row with nothing to launch is not offered to the island`() {
+        assertEquals(null, recentLaunchFor(XMBItem(id = "x", title = "Folders")))
+    }
+
     @Test
     fun `the cycle visits every filter once and returns to All`() {
         val seen = generateSequence(RecentFilter.ALL) { it.next(includeApps = false) }

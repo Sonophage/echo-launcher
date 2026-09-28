@@ -678,6 +678,7 @@ data class XMBUiState(
     val androidNotices: List<AndroidNotice> = emptyList(),
 
     val resumeGame: Game? = null,
+    val recentTop: XMBItem? = null,
     val panelPage: DetailPanelPage = DetailPanelPage.LOGO,
     val panelPageGameId: Long? = null,
     val librarySetupComplete: Boolean = false,
@@ -1340,6 +1341,7 @@ class XMBViewModel @Inject constructor(
         observeHiddenPlacements()
         observeAndroidNotices()
         observeResumeGame()
+        observeRecentTop()
         observeShelfCounts()
         collectGamepadActions()
         consumeWindowsSetupPrompt()
@@ -4243,16 +4245,21 @@ class XMBViewModel @Inject constructor(
     private fun recentFilterAndApps(): Flow<Pair<RecentFilter, List<Pair<Long, XMBItem>>>> =
         combine(
             _uiState.map { it.recentFilter }.distinctUntilChanged(),
+            recentAppRows(),
+        ) { filter, rows -> filter to rows }
+
+    private fun recentAppRows(): Flow<List<Pair<Long, XMBItem>>> =
+        combine(
             _uiState.map { it.recentsIncludeApps }.distinctUntilChanged(),
             appCategoryRepository.changes().onStart { emit(Unit) },
             context.pfpDataStore.data
                 .map { it[KEY_RECENT_APP_DISMISSALS].orEmpty() }
                 .distinctUntilChanged(),
-        ) { filter, includeApps, _, dismissals -> Triple(filter, includeApps, dismissals) }
-            .map { (filter, includeApps, dismissals) ->
-                if (!includeApps) return@map filter to emptyList<Pair<Long, XMBItem>>()
+        ) { includeApps, _, dismissals -> includeApps to dismissals }
+            .map { (includeApps, dismissals) ->
+                if (!includeApps) return@map emptyList()
                 val dismissedAt = parseRecentDismissals(dismissals)
-                val rows = appCategoryRepository.allInstalledApps()
+                appCategoryRepository.allInstalledApps()
                     .filter { it.lastUsedAt > 0L }
 
                     .filterNot { dismissedFromRecents(it.lastUsedAt, dismissedAt[it.packageName]) }
@@ -4270,7 +4277,6 @@ class XMBViewModel @Inject constructor(
                             isAndroidApp = true,
                         )
                     }
-                filter to rows
             }
 
     private fun cycleRecentFilter() =
@@ -6079,6 +6085,64 @@ class XMBViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    private fun observeRecentTop() {
+        viewModelScope.launch {
+            combine(
+                gameRepository.observeRecentlyPlayed(RECENTLY_PLAYED_LIMIT),
+                musicRepository.observeRecentlyPlayedTracks(RECENTLY_PLAYED_LIMIT),
+                bookRepository.observeRecentlyOpenedBooks(RECENTLY_PLAYED_LIMIT),
+                videoRepository.observeRecentlyWatched(),
+                recentAppRows(),
+            ) { games, tracks, books, videos, appRows ->
+                val visibleGames = games.notHiddenAt(HideLocationType.ALL_GAMES)
+                mergeRecents(
+                    games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(visibleGames.toXmbItems()),
+                    music  = tracks.recentMusicRows(),
+                    books  = books.map { it.lastOpenedAt ?: 0L }.zip(bookItems(books)),
+                    videos = videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
+                    apps   = appRows,
+                    filter = RecentFilter.ALL,
+                    limit  = RECENTLY_PLAYED_LIMIT,
+                ).firstOrNull { recentLaunchFor(it) != null }
+            }.collect { top ->
+                _uiState.update { it.copy(recentTop = top) }
+            }
+        }
+    }
+
+    fun launchRecentTop() {
+        val item = _uiState.value.recentTop ?: return
+        _uiState.update { it.copy(activeAppDrawerFilter = null, pendingDrawerAction = null) }
+
+        when (recentLaunchFor(item)) {
+            RecentLaunch.GAME  -> item.gameId?.let { launchGameDirectly(it) }
+            RecentLaunch.STORED_INTENT -> item.launchIntentUri?.let { launchStoredIntent(it, item.title) }
+            RecentLaunch.SHORTCUT -> {
+                val pkg = item.packageName ?: return
+                val shortcut = item.shortcutId ?: return
+                launchHarvestedShortcut(pkg, shortcut)
+            }
+            RecentLaunch.APP   -> item.packageName?.let { launchAppWithDisc(it, item.shelfCoverArt) }
+            RecentLaunch.VIDEO -> {
+                menuSound.play(MenuSound.SELECT)
+                _uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
+            }
+            RecentLaunch.BOOK  -> {
+                menuSound.play(MenuSound.SELECT)
+                openBook(item.id.removePrefix("book_"))
+            }
+            RecentLaunch.TRACK -> {
+                menuSound.play(MenuSound.SELECT)
+                openMusicPlayerForItem(item)
+            }
+            RecentLaunch.ALBUM -> item.musicGroupKey?.let {
+                menuSound.play(MenuSound.SELECT)
+                openMusicBrowser(MusicBrowserView.Album(item.title, it))
+            }
+            null -> Unit
         }
     }
 
