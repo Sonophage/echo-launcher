@@ -29,13 +29,7 @@ class AppPickerThreeRowsTest {
     @Test
     fun `three full tile rows fit above the footer on a small screen`() {
         val apps = (1..28).map { i ->
-            AppPickerEntry(
-                packageName = "com.test.app$i",
-                label = "App $i",
-                icon = android.graphics.drawable.ColorDrawable(
-                    if (i % 2 == 0) android.graphics.Color.GRAY else android.graphics.Color.DKGRAY,
-                ),
-            )
+            AppPickerEntry(packageName = "com.test.app$i", label = "App $i")
         }
         val state = AppPickerState(
             title = "Add Apps",
