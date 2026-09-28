@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.aspectRatio
@@ -212,6 +213,8 @@ fun AndroidAppIcon(
     packageName: String?,
     title: String,
     modifier: Modifier = Modifier,
+
+    size: Dp = 52.dp,
 ) {
     val context = LocalContext.current
 
@@ -234,7 +237,7 @@ fun AndroidAppIcon(
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
     Box(
         modifier = Modifier
-            .size(52.dp)
+            .size(size)
             .clip(SquircleShape)
             .background(Color(0xFF1A1A20)),
         contentAlignment = Alignment.Center,

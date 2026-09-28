@@ -1204,6 +1204,10 @@ data class XMBItem(
         get() = listOfNotNull(coverUri, artworkUri, iconUri)
             .firstOrNull { it.isNotBlank() && it != XMBViewModel.MEMORY_CARD_ASSET_URI }
 
+    val tileArt: String?
+        get() = listOfNotNull(iconUri, coverUri, artworkUri)
+            .firstOrNull { it.isNotBlank() && it != XMBViewModel.MEMORY_CARD_ASSET_URI }
+
     val hasVisibleLogo: Boolean
         get() = !logoUri.isNullOrBlank() && backdropArt.isNotEmpty()
 }

@@ -37,6 +37,37 @@ class RowArtSlotsTest {
         assertEquals("file:///art.png", all.backdropArt.first())
     }
 
+    /**
+     * toXmbItems fills artworkUri, iconUri and logoUri and never coverUri, so this is the
+     * shape a real recently played game arrives in. The test above states that the card
+     * prefers a portrait cover -- but it says so using a coverUri no game ever carries, so
+     * it passed while the recents card drew ArtworkKind.BACKGROUND, a 16:9 image, inside a
+     * 2:3 card. The tile (ArtworkKind.ICON -> iconUri) is the curated crossbar image.
+     */
+    @Test
+    fun `a recents row shaped like a real game shows the tile, not the background`() {
+        val asBuiltByToXmbItems = XMBItem(
+            id = "10", title = "t",
+            artworkUri = "file:///background.png",
+            iconUri = "file:///tile.png",
+            logoUri = "file:///logo.png",
+        )
+
+        assertEquals("file:///tile.png", asBuiltByToXmbItems.tileArt)
+
+        assertEquals("file:///background.png", asBuiltByToXmbItems.backdropArt.first())
+    }
+
+    @Test
+    fun `the tile falls back so a row that has only a background still draws something`() {
+        assertEquals(
+            "file:///background.png",
+            XMBItem(id = "11", title = "t", artworkUri = "file:///background.png").tileArt,
+        )
+        assertNull(XMBItem(id = "12", title = "t").tileArt)
+        assertNull(XMBItem(id = "13", title = "t", iconUri = "  ").tileArt)
+    }
+
     @Test
     fun `a row with no art at all has none, rather than an empty string`() {
         val bare = XMBItem(id = "7", title = "t")
