@@ -672,7 +672,7 @@ fun XMBShell(
                 animationSpec = tween(if (launching) 260 else 1200),
                 label = "xmbWaveGlow",
             )
-            if (waveVisible(uiState.customWallpaperPath != null, uiState.waveOverWallpaper)) {
+            if (waveVisible(uiState.customWallpaperPath != null, uiState.waveOverWallpaper, effectiveWaveStyle)) {
                 WaveOverlay(
                     waveStyle = effectiveWaveStyle,
                     accentArgb = uiState.focusedItemAccentArgb ?: uiState.wallpaperAccent,
