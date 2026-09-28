@@ -135,6 +135,32 @@ class MediaColumnsTest {
     }
 
     @Test
+    fun `a media column leads with its apps and keeps the add rows last`() {
+        val sections = listOf(XMBItem(id = "all_music", title = "Songs"))
+        val apps = listOf(XMBItem(id = "app_spotify", title = "Spotify"))
+        val addRows = listOf(
+            XMBItem(id = "add_music_folder", title = "Add Music Folder"),
+            XMBItem(id = "add_music_apps", title = "Add Music Apps"),
+        )
+
+        assertEquals(
+            listOf("app_spotify", "all_music", "add_menu"),
+            ids(mediaColumn(sections, apps, addRows)),
+        )
+    }
+
+    @Test
+    fun `a column with no apps still reads sections then add`() {
+        val sections = listOf(XMBItem(id = "all_music", title = "Songs"))
+        val addRows = listOf(XMBItem(id = "add_music_apps", title = "Add Music Apps"))
+
+        assertEquals(
+            listOf("all_music", "add_music_apps"),
+            ids(mediaColumn(sections, emptyList(), addRows)),
+        )
+    }
+
+    @Test
     fun `one add row is shown as itself and several collapse into one menu`() {
         val folder = XMBItem(id = "add_music_folder", title = "Add Music Folder")
         val apps = XMBItem(id = "add_music_apps", title = "Add Music Apps")

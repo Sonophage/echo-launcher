@@ -282,6 +282,12 @@ internal fun XMBUiState.booksRootSections(): List<XMBItem> {
     }.withColumnCovers(mediaCovers.books)
 }
 
+internal fun mediaColumn(
+    sections: List<XMBItem>,
+    apps: List<XMBItem>,
+    addRows: List<XMBItem>,
+): List<XMBItem> = apps + sections + collapseAddRows(addRows)
+
 internal fun collapseAddRows(rows: List<XMBItem>): List<XMBItem> = when {
     rows.size <= 1 -> rows
     else -> listOf(
