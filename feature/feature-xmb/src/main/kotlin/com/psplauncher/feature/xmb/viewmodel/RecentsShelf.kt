@@ -21,6 +21,22 @@ enum class RecentFilter(val label: String) {
     }
 }
 
+internal enum class RecentLaunch { GAME, STORED_INTENT, SHORTCUT, APP, VIDEO, BOOK, TRACK, ALBUM }
+
+internal fun recentLaunchFor(item: XMBItem): RecentLaunch? = when {
+    item.type == XMBItemType.VIDEO_FILE   -> RecentLaunch.VIDEO
+    item.type == XMBItemType.LIBRARY_BOOK -> RecentLaunch.BOOK
+    item.type == XMBItemType.MUSIC_TRACK  -> RecentLaunch.TRACK
+    item.type == XMBItemType.MUSIC_GROUP && item.musicGroupKey != null -> RecentLaunch.ALBUM
+
+    item.gameId != null && item.isRealGame              -> RecentLaunch.GAME
+    item.launchIntentUri != null                        -> RecentLaunch.STORED_INTENT
+    item.shortcutId != null && item.packageName != null -> RecentLaunch.SHORTCUT
+    item.packageName != null                            -> RecentLaunch.APP
+
+    else -> null
+}
+
 internal fun mergeRecents(
     games: List<Pair<Long, XMBItem>>,
     music: List<Pair<Long, XMBItem>>,

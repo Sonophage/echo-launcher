@@ -340,6 +340,28 @@ class ContextMenusTest {
     }
 
     @Test
+    fun `Remove from Recent is one press from the root in every menu that offers it`() {
+        val menus = listOf(
+            "game" to gameContextMenuItems(game(), state(), 1, onRecentShelf = true, null),
+            "app" to appContextMenuItems(state(), categoryId = BuiltInCategory.GAMES, onRecentShelf = true),
+            "video" to videoFileContextMenuItems(
+                isFavorite = false, resumePositionMs = 0, hasWatchStamp = true, inPlaylist = false,
+            ),
+            "book" to bookContextMenuItems(hasOpenStamp = true),
+            "track" to musicTrackContextMenuItems(playlistId = null, hasPlayStamp = true),
+        )
+
+        menus.forEach { (name, items) ->
+            val root = MenuState(name, items).rowsShown().map { it.label }
+            assertTrue(
+                "$name: Remove from Recent folded into a submenu, so dropping something off the " +
+                    "shelf costs two presses instead of one",
+                "Remove from Recent" in root,
+            )
+        }
+    }
+
+    @Test
     fun `a group's rows land together, whichever of them exists`() {
         val main = category(BuiltInCategory.GAMES, gaming = true)
         val shooters = category("shooters", gaming = true)
