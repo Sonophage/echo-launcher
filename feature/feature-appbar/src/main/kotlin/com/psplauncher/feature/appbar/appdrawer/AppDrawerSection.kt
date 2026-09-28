@@ -1,8 +1,6 @@
 package com.psplauncher.feature.appbar.appdrawer
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -24,22 +21,18 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.psplauncher.core.ui.components.PfpMonogram
 import com.psplauncher.core.ui.theme.StorefrontColors
-import com.psplauncher.core.ui.theme.menuCursorEdge
 import com.psplauncher.feature.appbar.AppFilter
 import com.psplauncher.feature.appbar.InstalledApp
 import com.psplauncher.feature.appbar.SECTION_LIST_ROWS
@@ -149,7 +142,7 @@ private fun BigTile(
             .width(TileCell)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
-        Monogram(app.label, TileSize, TileCorner, TileGlyph, focused, colors)
+        PfpMonogram(app.label, TileSize, TileCorner, TileGlyph, focused, colors)
         Spacer(Modifier.height(6.dp))
         Text(
             text = app.label,
@@ -179,7 +172,7 @@ private fun ListRow(
             .height(ListRowHeight)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
-        Monogram(app.label, ListTileSize, ListTileCorner, ListGlyph, focused, colors)
+        PfpMonogram(app.label, ListTileSize, ListTileCorner, ListGlyph, focused, colors)
         Spacer(Modifier.width(8.dp))
         Text(
             text = app.label,
@@ -188,34 +181,6 @@ private fun ListRow(
             fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun Monogram(
-    label: String,
-    size: Dp,
-    corner: Dp,
-    glyphSize: TextUnit,
-    focused: Boolean,
-    colors: StorefrontColors,
-) {
-    val shape = RoundedCornerShape(corner)
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(size)
-            .clip(shape)
-            .background(colors.accentHue.copy(alpha = if (focused) 0.38f else 0.14f))
-            .then(if (focused) Modifier.border(2.dp, menuCursorEdge(), shape) else Modifier),
-    ) {
-        Text(
-
-            text = label.trim().firstOrNull()?.uppercase() ?: "?",
-            color = colors.textPrimary,
-            fontSize = glyphSize,
-            fontWeight = FontWeight.Bold,
         )
     }
 }

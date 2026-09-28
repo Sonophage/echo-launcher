@@ -276,8 +276,6 @@ sealed interface AppPickerTarget {
 data class AppPickerEntry(
     val packageName: String,
     val label: String,
-
-    val icon: android.graphics.drawable.Drawable? = null,
 )
 
 const val PICKER_GRID_COLUMNS = 7
@@ -6226,7 +6224,7 @@ class XMBViewModel @Inject constructor(
             val installed = appCategoryRepository.allInstalledApps()
 
             val entries = installed.map {
-                AppPickerEntry(packageName = it.packageName, label = it.label, icon = it.icon)
+                AppPickerEntry(packageName = it.packageName, label = it.label)
             }
             val membership: Set<String> = when (target) {
                 is AppPickerTarget.AndroidGames ->

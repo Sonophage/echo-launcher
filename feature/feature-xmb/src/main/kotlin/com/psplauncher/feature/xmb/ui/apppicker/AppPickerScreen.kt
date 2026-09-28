@@ -2,7 +2,6 @@ package com.psplauncher.feature.xmb.ui.apppicker
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,10 +45,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
-import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.PfpCheckBadge
+import com.psplauncher.core.ui.components.PfpMonogram
 import com.psplauncher.core.ui.components.PfpSearchField
 import com.psplauncher.core.ui.components.StatusStripHeight
 import com.psplauncher.core.ui.theme.StorefrontColors
@@ -272,6 +273,9 @@ private fun AppPickerGrid(
 
 private val TILE_BORDER = 1.dp
 
+private const val MONOGRAM_CORNER = 0.25f
+private const val MONOGRAM_GLYPH = 0.42f
+
 internal val FRAME_ROOM = 8.dp
 
 internal val MIN_ARTWORK_SIZE = 48.dp
@@ -344,18 +348,17 @@ private fun AppPickerTile(
                     .matchParentSize()
                     .background(colors.tileSelectedInner.copy(alpha = 0.10f * check)),
             )
-            val icon = entry.icon
-            if (icon != null) {
-                Image(
-                    painter = rememberDrawablePainter(icon),
-                    contentDescription = entry.label,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(artworkSize),
-                )
-            } else {
-                Spacer(Modifier.size(artworkSize))
-            }
+            PfpMonogram(
+                label = entry.label,
+                size = artworkSize,
+                corner = artworkSize * MONOGRAM_CORNER,
+                glyphSize = (artworkSize.value * MONOGRAM_GLYPH).sp,
+                focused = false,
+                colors = colors,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .semantics { contentDescription = entry.label },
+            )
 
             PfpCheckBadge(
                 fill = colors.tileSelectedEdge,
