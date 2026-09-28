@@ -8450,7 +8450,7 @@ class XMBViewModel @Inject constructor(
         private const val ADD_BOOK_FOLDER_ITEM_ID = "add_book_folder"
         private const val ADD_LIBRARY_APPS_ITEM_ID = "add_library_apps"
 
-        private const val RECENTLY_PLAYED_LIMIT = 20
+        private const val RECENTLY_PLAYED_LIMIT = 15
         internal const val ADD_MENU_ITEM_ID = "add_menu"
         internal const val QUICK_SEARCH_ITEM_ID = "quick_search"
         internal const val SEARCH_ITEM_ID = "library_search"
