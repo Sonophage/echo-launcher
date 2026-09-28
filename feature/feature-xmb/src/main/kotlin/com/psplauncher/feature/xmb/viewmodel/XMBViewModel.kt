@@ -2056,7 +2056,7 @@ class XMBViewModel @Inject constructor(
 
     private suspend fun musicRootItems(): List<XMBItem> =
         libraryColumn(
-            _uiState.value.musicRootSections() + musicAppItems() + collapseAddRows(musicAddActions()),
+            mediaColumn(_uiState.value.musicRootSections(), musicAppItems(), musicAddActions()),
             SearchScope.MUSIC,
         )
 
@@ -2272,7 +2272,7 @@ class XMBViewModel @Inject constructor(
 
     private suspend fun videoRootItems(): List<XMBItem> =
         libraryColumn(
-            _uiState.value.videoRootSections() + videoAppItems() + collapseAddRows(videoAddActions()),
+            mediaColumn(_uiState.value.videoRootSections(), videoAppItems(), videoAddActions()),
             SearchScope.VIDEOS,
         )
 
@@ -2685,7 +2685,7 @@ class XMBViewModel @Inject constructor(
 
     private suspend fun booksRootItems(): List<XMBItem> =
         libraryColumn(
-            _uiState.value.booksRootSections() + bookAppItems() + collapseAddRows(booksAddActions()),
+            mediaColumn(_uiState.value.booksRootSections(), bookAppItems(), booksAddActions()),
             SearchScope.BOOKS,
         )
 
@@ -2863,7 +2863,7 @@ class XMBViewModel @Inject constructor(
 
     private suspend fun photoRootItems(): List<XMBItem> =
         libraryColumn(
-            _uiState.value.photoRootSections(cameraAvailable) + photoAppItems() + collapseAddRows(photoAddActions()),
+            mediaColumn(_uiState.value.photoRootSections(cameraAvailable), photoAppItems(), photoAddActions()),
             SearchScope.PHOTOS,
         )
 
