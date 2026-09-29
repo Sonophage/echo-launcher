@@ -20,6 +20,40 @@ data class AndroidNotice(
     val canDismiss: Boolean = false,
 )
 
+data class NoticeExtras(
+    val title: String? = null,
+    val bigTitle: String? = null,
+    val text: String? = null,
+    val bigText: String? = null,
+    val message: String? = null,
+    val subText: String? = null,
+    val infoText: String? = null,
+)
+
+fun noticeOf(
+    key: String,
+    appLabel: String,
+    postedAt: Long,
+    extras: NoticeExtras,
+    isGroupSummary: Boolean = false,
+    canOpen: Boolean = false,
+    canDismiss: Boolean = false,
+): AndroidNotice? {
+    if (isGroupSummary) return null
+    return AndroidNotice(
+        key = key,
+        appLabel = appLabel,
+        title = firstFilled(extras.title, extras.bigTitle) ?: appLabel,
+        text = firstFilled(extras.text, extras.bigText, extras.message, extras.subText, extras.infoText),
+        postedAt = postedAt,
+        canOpen = canOpen,
+        canDismiss = canDismiss,
+    )
+}
+
+private fun firstFilled(vararg candidates: String?): String? =
+    candidates.firstOrNull { !it.isNullOrBlank() }?.trim()
+
 object AndroidNotifications {
     private val _active = MutableStateFlow<List<AndroidNotice>>(emptyList())
 

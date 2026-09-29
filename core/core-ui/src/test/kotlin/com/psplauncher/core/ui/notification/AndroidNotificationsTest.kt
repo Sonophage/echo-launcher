@@ -1,6 +1,8 @@
 package com.psplauncher.core.ui.notification
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -35,5 +37,38 @@ class AndroidNotificationsTest {
     @Test
     fun `it starts empty, which is what ungranted access looks like`() {
         assertTrue(AndroidNotifications.active.value.isEmpty())
+    }
+
+    @Test
+    fun `a notification carrying neither title nor text still draws, under the app's name`() {
+        val notice = noticeOf("k", "Stremio", 5L, NoticeExtras())
+        assertNotNull("a custom-RemoteViews notification has no title or text extras and must not vanish", notice)
+        assertEquals("Stremio", notice!!.title)
+        assertNull(notice.text)
+    }
+
+    @Test
+    fun `a group summary is dropped, or a bundled app draws twice`() {
+        assertNull(
+            noticeOf("k", "Gmail", 5L, NoticeExtras(title = "3 new messages"), isGroupSummary = true),
+        )
+    }
+
+    @Test
+    fun `text falls back big text, then a message line, then sub text, then info text`() {
+        fun textOf(e: NoticeExtras) = noticeOf("k", "App", 5L, e)!!.text
+
+        assertEquals("plain", textOf(NoticeExtras(text = "plain", bigText = "big", message = "msg")))
+        assertEquals("big", textOf(NoticeExtras(bigText = "big", message = "msg", subText = "sub")))
+        assertEquals("msg", textOf(NoticeExtras(message = "msg", subText = "sub", infoText = "info")))
+        assertEquals("sub", textOf(NoticeExtras(subText = "sub", infoText = "info")))
+        assertEquals("info", textOf(NoticeExtras(infoText = "info")))
+    }
+
+    @Test
+    fun `a blank extra is not a value, so it does not shadow the one behind it`() {
+        val notice = noticeOf("k", "App", 5L, NoticeExtras(title = "   ", text = "", bigText = "real"))
+        assertEquals("App", notice!!.title)
+        assertEquals("real", notice.text)
     }
 }

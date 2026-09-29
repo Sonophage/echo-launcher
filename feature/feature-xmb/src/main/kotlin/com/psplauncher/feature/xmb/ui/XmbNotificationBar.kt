@@ -19,10 +19,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -111,7 +114,7 @@ fun XmbNotificationBar(
                 }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(ColumnGap),
-                    modifier = Modifier.padding(horizontal = EdgeGap),
+                    modifier = Modifier.weight(1f).padding(horizontal = EdgeGap),
                 ) {
                     NoticeColumn(label = "System", modifier = Modifier.weight(1f)) {
                         when {
@@ -120,17 +123,30 @@ fun XmbNotificationBar(
                                 onClick = onGrantAndroidAccess,
                             )
                             android.isEmpty() -> EmptyNote("Nothing from other apps")
-                            else -> android.take(ColumnRows).forEach { notice ->
-                                NoticeCard(
-                                    lead = notice.appLabel,
-                                    title = notice.title ?: notice.appLabel,
-                                    detail = notice.text,
-                                    accent = null,
-                                    focused = (focus as? NoticeFocus.Notice)?.key == notice.key,
+                            else -> {
+                                val focusedKey = (focus as? NoticeFocus.Notice)?.key
+                                val listState = rememberLazyListState()
+                                LaunchedEffect(focusedKey, android) {
+                                    val at = android.indexOfFirst { it.key == focusedKey }
+                                    if (at >= 0) listState.animateScrollToItem(at)
+                                }
+                                LazyColumn(
+                                    state = listState,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    items(android, key = { it.key }) { notice ->
+                                        NoticeCard(
+                                            lead = notice.appLabel,
+                                            title = notice.title ?: notice.appLabel,
+                                            detail = notice.text,
+                                            accent = null,
+                                            focused = focusedKey == notice.key,
 
-                                    onClick = if (notice.canOpen) ({ onNoticeTapped(notice.key) }) else null,
-                                    onDismiss = if (notice.canDismiss) ({ onNoticeDismissTapped(notice.key) }) else null,
-                                )
+                                            onClick = if (notice.canOpen) ({ onNoticeTapped(notice.key) }) else null,
+                                            onDismiss = if (notice.canDismiss) ({ onNoticeDismissTapped(notice.key) }) else null,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
