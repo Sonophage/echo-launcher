@@ -177,7 +177,6 @@ fun XMBShellContainer(
         onXmbSortTapped = viewModel::onSortLabelTapped,
         onPanelPageTapped = viewModel::onPanelPageTapped,
         onRecentFilterTapped = viewModel::setRecentFilter,
-        onRecentRailToggled = viewModel::toggleRecentRail,
         onDrawerTypedCharConsumed = viewModel::onDrawerTypedCharConsumed,
         onNotificationsToggled = viewModel::toggleNotifications,
         onLaunchRecentTop = viewModel::launchRecentTop,
@@ -189,6 +188,7 @@ fun XMBShellContainer(
         onNoticeMediaNext = viewModel::onNoticeMediaNext,
         onOpenAppDrawer = viewModel::onOpenAppDrawer,
         onItemTap = viewModel::onItemTap,
+        onRecentCardTap = viewModel::onRecentCardTap,
         onItemLongPress = viewModel::onItemLongPress,
         onPlatformLongPress = viewModel::onPlatformLongPress,
         onUserInteraction = viewModel::onUserInteraction,
@@ -332,7 +332,6 @@ fun XMBShell(
     onPanelPageTapped: (DetailPanelPage) -> Unit = {},
 
     onRecentFilterTapped: (RecentFilter) -> Unit = {},
-    onRecentRailToggled: () -> Unit = {},
 
     onDrawerTypedCharConsumed: () -> Unit = {},
     onNotificationsToggled: () -> Unit = {},
@@ -346,6 +345,7 @@ fun XMBShell(
     onOpenAppDrawer: () -> Unit = {},
 
     onItemTap: (Int) -> Unit = {},
+    onRecentCardTap: (Int) -> Unit = {},
     onItemLongPress: (Int) -> Unit = {},
     onPlatformLongPress: (Int) -> Unit = {},
     onUserInteraction: () -> Unit = {},
@@ -733,8 +733,7 @@ fun XMBShell(
                     filter = uiState.recentFilter,
                     railVisible = uiState.recentRailVisible,
                     onPageTapped = onPanelPageTapped,
-                    onCardTapped = onItemTap,
-                    onArtTapped = onRecentRailToggled,
+                    onCardTapped = onRecentCardTap,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(top = StripHeight)

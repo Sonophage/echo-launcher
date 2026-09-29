@@ -4287,11 +4287,6 @@ class XMBViewModel @Inject constructor(
         _uiState.update { it.copy(recentFilter = filter, selectedItemIndex = 0) }
     }
 
-    fun toggleRecentRail() {
-        if (!_uiState.value.onLastPlayedHome) return
-        menuSound.play(MenuSound.SYSTEM_BROWSE)
-        _uiState.update { it.copy(recentRailVisible = !it.recentRailVisible) }
-    }
 
     private fun cycleSort() {
         _uiState.value.musicBrowser?.let { browser ->
@@ -6734,7 +6729,12 @@ class XMBViewModel @Inject constructor(
         val max = (s.currentItems.size - 1).coerceAtLeast(0)
         val next = (s.selectedItemIndex + delta).coerceIn(0, max)
         if (next == s.selectedItemIndex) return false
-        _uiState.update { it.copy(selectedItemIndex = next) }
+        _uiState.update {
+            it.copy(
+                selectedItemIndex = next,
+                recentRailVisible = it.recentRailVisible || it.onLastPlayedHome,
+            )
+        }
         menuSound.play(MenuSound.SCROLL)
         return true
     }
@@ -6742,6 +6742,13 @@ class XMBViewModel @Inject constructor(
     fun stepItem(steps: Int) {
         markTouchInput()
         moveItemCursor(steps)
+    }
+
+    fun onRecentCardTap(index: Int) {
+        markTouchInput()
+        val s = _uiState.value
+        if (s.hasBlockingOverlay || index !in s.currentItems.indices) return
+        onItemSelected(index)
     }
 
     fun onItemTap(index: Int) {
