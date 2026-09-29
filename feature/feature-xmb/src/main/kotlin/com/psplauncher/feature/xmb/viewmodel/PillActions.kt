@@ -33,7 +33,7 @@ internal fun pillNav(action: GamepadAction, current: Int?, count: Int): PillNav 
     if (count <= 0) return PillNav.Pass
     return when (action) {
         GamepadAction.NAVIGATE_RIGHT -> when {
-            current == null -> PillNav.Move(0)
+            current == null -> PillNav.Pass
             current < count - 1 -> PillNav.Move(current + 1)
             else -> PillNav.ExitAndPass
         }
@@ -47,6 +47,14 @@ internal fun pillNav(action: GamepadAction, current: Int?, count: Int): PillNav 
         GamepadAction.NAVIGATE_DOWN -> if (current == null) PillNav.Move(0) else PillNav.Pass
         else -> PillNav.Pass
     }
+}
+
+internal enum class DownStep { LeaveRowAndStepItem, EnterRow, StepItem }
+
+internal fun downStep(inPillRow: Boolean, pillRowVisible: Boolean): DownStep = when {
+    inPillRow -> DownStep.LeaveRowAndStepItem
+    pillRowVisible -> DownStep.EnterRow
+    else -> DownStep.StepItem
 }
 
 data class PillCursor(val itemId: String, val index: Int)

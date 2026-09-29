@@ -5166,15 +5166,21 @@ class XMBViewModel @Inject constructor(
                 }
                 if (!moveItemCursor(-1)) gamepadInputHandler.cancelRepeat()
             }
-            GamepadAction.NAVIGATE_DOWN -> {
-                if (state.activePillIndex() != null) {
-                    gamepadInputHandler.cancelRepeat()
-                    return
-                }
-                if (moveItemCursor(+1)) return
+            GamepadAction.NAVIGATE_DOWN -> when (
+                downStep(
+                    inPillRow = state.activePillIndex() != null,
+                    pillRowVisible = state.pillRowVisible,
+                )
+            ) {
+                DownStep.LeaveRowAndStepItem ->
+                    if (moveItemCursor(+1)) _uiState.update { it.copy(pillCursor = null) }
+                    else gamepadInputHandler.cancelRepeat()
 
-                if (state.pillRowVisible && pillPressHandled(action, state)) return
-                gamepadInputHandler.cancelRepeat()
+                DownStep.EnterRow ->
+                    if (!pillPressHandled(action, state)) gamepadInputHandler.cancelRepeat()
+
+                DownStep.StepItem ->
+                    if (!moveItemCursor(+1)) gamepadInputHandler.cancelRepeat()
             }
             GamepadAction.NAVIGATE_LEFT -> {
                 if (state.activePillIndex() != null && pillPressHandled(action, state)) return
