@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.psplauncher.core.ui.notification.AndroidNotice
+import com.psplauncher.core.ui.notification.NoticeExtras
+import com.psplauncher.core.ui.notification.noticeOf
 import com.psplauncher.core.ui.notification.AndroidNotifications
 import timber.log.Timber
 
@@ -69,21 +71,33 @@ class PfpNotificationListener : NotificationListenerService(), AndroidNotificati
     }
 
     private fun StatusBarNotification.toNotice(): AndroidNotice? {
-        val extras = notification?.extras ?: return null
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
-        val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+        val n = notification ?: return null
+        val extras = n.extras ?: return null
 
-        if (title.isNullOrBlank() && text.isNullOrBlank()) return null
-        return AndroidNotice(
+        return noticeOf(
             key = key,
             appLabel = appLabelFor(packageName),
-            title = title,
-            text = text,
             postedAt = postTime,
-            canOpen = notification?.contentIntent != null,
-
+            extras = NoticeExtras(
+                title = extras.string(Notification.EXTRA_TITLE),
+                bigTitle = extras.string(Notification.EXTRA_TITLE_BIG),
+                text = extras.string(Notification.EXTRA_TEXT),
+                bigText = extras.string(Notification.EXTRA_BIG_TEXT),
+                message = extras.lastMessage(),
+                subText = extras.string(Notification.EXTRA_SUB_TEXT),
+                infoText = extras.string(Notification.EXTRA_INFO_TEXT),
+            ),
+            isGroupSummary = n.flags and Notification.FLAG_GROUP_SUMMARY != 0,
+            canOpen = n.contentIntent != null,
             canDismiss = isClearable,
         )
+    }
+
+    private fun Bundle.string(key: String): String? = getCharSequence(key)?.toString()
+
+    private fun Bundle.lastMessage(): String? {
+        val lines = getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+        return lines?.lastOrNull { !it.toString().isBlank() }?.toString()
     }
 
     private fun appLabelFor(pkg: String): String = runCatching {
