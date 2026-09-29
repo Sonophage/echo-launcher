@@ -3258,6 +3258,11 @@ class XMBViewModel @Inject constructor(
         onSearchQueryChange(query)
     }
 
+    fun openAppSearch(initialQuery: String) {
+        openSearch(SearchScope.APPS)
+        if (initialQuery.isNotEmpty()) onSearchQueryChange(initialQuery)
+    }
+
     fun openSearch(scope: SearchScope) {
         menuSound.play(MenuSound.SELECT)
         _uiState.update { it.copy(search = SearchState(scope = scope)) }
@@ -3274,7 +3279,8 @@ class XMBViewModel @Inject constructor(
             val wantsTracks = scope == SearchScope.ALL || scope == SearchScope.MUSIC
             searchTracks = if (wantsTracks) musicRepository.observeAllTracks().first() else emptyList()
 
-            searchApps = if (scope == SearchScope.ALL) appCategoryRepository.allInstalledApps() else emptyList()
+            val wantsApps = scope == SearchScope.ALL || scope == SearchScope.APPS
+            searchApps = if (wantsApps) appCategoryRepository.allInstalledApps() else emptyList()
             _uiState.update { it.copy(search = it.search?.copy(loaded = true)) }
             rebuildSearchRows()
         }

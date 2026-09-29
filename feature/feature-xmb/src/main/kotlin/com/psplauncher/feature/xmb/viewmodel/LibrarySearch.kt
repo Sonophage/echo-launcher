@@ -31,6 +31,10 @@ enum class SearchScope(
         "Search Music", "Titles, artists and albums",
         "No music yet", "Set a root folder in Settings ▸ Media ▸ Music",
     ),
+    APPS(
+        "Search Apps", "Installed apps and their package names",
+        "No apps yet", "Nothing is installed that can be launched",
+    ),
 }
 
 fun normalizeForSearch(text: String): String =

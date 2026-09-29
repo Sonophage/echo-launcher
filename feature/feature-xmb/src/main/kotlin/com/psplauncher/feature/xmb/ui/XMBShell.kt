@@ -221,6 +221,7 @@ fun XMBShellContainer(
         onCloseAppDrawer = viewModel::onCloseAppDrawer,
         onAddAppToOpenCategory = viewModel::addAppToOpenCategory,
         onLaunchRomFromDrawer = viewModel::launchGameFromDrawer,
+        onOpenAppSearch = viewModel::openAppSearch,
         onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
         onDrawerActionConsumed = viewModel::consumeDrawerAction,
@@ -381,6 +382,7 @@ fun XMBShell(
 
     onAddAppToOpenCategory: (String) -> Unit = {},
     onLaunchRomFromDrawer: (Long) -> Unit = {},
+    onOpenAppSearch: (String) -> Unit = {},
 
     onLetterRailTouch: (Int) -> Unit = {},
     onLetterRailReleased: () -> Unit = {},
@@ -1183,6 +1185,7 @@ fun XMBShell(
                     onTouchInteraction = onTouchInput,
                     onAddToCrossBar = onAddAppToOpenCategory,
                     onLaunchRom = onLaunchRomFromDrawer,
+                    onOpenAppSearch = onOpenAppSearch,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

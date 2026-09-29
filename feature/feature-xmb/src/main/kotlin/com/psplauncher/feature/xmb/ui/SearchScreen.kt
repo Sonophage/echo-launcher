@@ -1,10 +1,7 @@
 package com.psplauncher.feature.xmb.ui
 
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.TextRange
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,11 +25,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,11 +48,12 @@ import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.ControllerPromptItem
 import com.psplauncher.core.ui.components.HintBarHeight
 import com.psplauncher.core.ui.components.PfpHintBar
+import com.psplauncher.core.ui.components.PfpSearchField
+import com.psplauncher.core.ui.theme.deriveStorefrontColors
 import com.psplauncher.core.ui.components.StatusStripHeight
 import com.psplauncher.core.ui.image.rememberArtworkModel
 import com.psplauncher.core.ui.theme.LocalPFPColors
 import com.psplauncher.core.ui.theme.menuCursor
-import com.psplauncher.core.ui.theme.menuCursorEdge
 import com.psplauncher.feature.xmb.viewmodel.SearchState
 import com.psplauncher.feature.xmb.viewmodel.isInstalledApp
 import com.psplauncher.core.ui.components.PfpMediaCard
@@ -142,32 +135,16 @@ fun SearchScreen(
                 Spacer(Modifier.height(14.dp))
             }
 
-            var field by remember { mutableStateOf(TextFieldValue(state.query, TextRange(state.query.length))) }
-            LaunchedEffect(state.query) {
-                if (state.query != field.text) {
-                    field = TextFieldValue(state.query, TextRange(state.query.length))
-                }
-            }
-            OutlinedTextField(
-                value = field,
-                onValueChange = {
-                    field = it
-                    onQueryChange(it.text)
-                },
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = SecondaryText) },
-                placeholder = { Text("Search", color = SecondaryText.copy(alpha = 0.7f)) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = PrimaryText,
-                    unfocusedTextColor = PrimaryText,
-                    focusedBorderColor = menuCursorEdge(),
-                    unfocusedBorderColor = Color(0x33FFFFFF),
-                    cursorColor = menuCursorEdge(),
-                    focusedContainerColor = Color(0x22FFFFFF),
-                    unfocusedContainerColor = Color(0x14FFFFFF),
-                ),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+            PfpSearchField(
+                query = state.query,
+                active = true,
+                focusRequester = focusRequester,
+                placeholder = state.scope.label,
+                onActivate = {},
+                onQueryChange = onQueryChange,
+                onDone = {},
+                colors = deriveStorefrontColors(),
+                modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(Modifier.height(12.dp))

@@ -63,7 +63,6 @@ data class AppDrawerUiState(
     val otherApps: List<InstalledApp> = emptyList(),
 
     val activeFilter: AppFilter = AppFilter.DEFAULT,
-    val searchQuery: String = "",
     val isLoading: Boolean = true,
     val selectedIndex: Int = 0,
 
@@ -173,11 +172,6 @@ class AppDrawerViewModel @Inject constructor(
         applyFilter()
     }
 
-    fun setSearchQuery(query: String) {
-        _uiState.update { it.copy(searchQuery = query, selectedIndex = 0, letterFilter = null) }
-        applyFilter()
-    }
-
     fun onAppSelected(index: Int) {
         _uiState.update { it.copy(selectedIndex = index) }
     }
@@ -198,15 +192,9 @@ class AppDrawerViewModel @Inject constructor(
         _uiState.update { it.copy(selectedIndex = index.coerceIn(0, size - 1), usingTouch = true) }
     }
 
-    fun launchFirstResult() {
-        val first = _uiState.value.visibleApps.firstOrNull() ?: return
-        launchApp(first.packageName)
-    }
-
     fun launchApp(packageName: String) {
         val app = _uiState.value.visibleApps.firstOrNull { it.packageName == packageName }
         menuSound.play(MenuSound.LAUNCH)
-        if (_uiState.value.searchQuery.isNotEmpty()) setSearchQuery("")
 
         if (app?.gameId != null) {
             _uiState.update { it.copy(pendingRomLaunch = app.gameId) }
@@ -462,14 +450,10 @@ class AppDrawerViewModel @Inject constructor(
 
     private fun applyFilter() {
         val state = _uiState.value
-        val query = state.searchQuery.trim().lowercase()
 
         val inTab = state.allApps
             .filter { app ->
                 state.activeFilter.matches(app)
-            }
-            .filter { app ->
-                query.isEmpty() || app.label.lowercase().contains(query)
             }
             .let { apps ->
                 if (state.activeFilter == AppFilter.RECENT) {
@@ -487,7 +471,6 @@ class AppDrawerViewModel @Inject constructor(
 
         val rest = state.allApps
             .filter { app -> !state.activeFilter.matches(app) }
-            .filter { app -> query.isEmpty() || app.label.lowercase().contains(query) }
 
         val letters = letterMenuFor((inTab + rest).map { it.label })
         val pick = state.letterFilter?.takeIf { it in letters }

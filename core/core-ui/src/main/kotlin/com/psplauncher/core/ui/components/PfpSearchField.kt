@@ -54,6 +54,8 @@ fun PfpSearchField(
     onDone: () -> Unit,
     colors: StorefrontColors,
     modifier: Modifier = Modifier,
+
+    readOnly: Boolean = false,
 ) {
     val edge by animateColorAsState(
         targetValue = if (active) colors.searchBorder else colors.searchBorder.copy(alpha = 0.35f),
@@ -77,6 +79,15 @@ fun PfpSearchField(
     ) {
         SearchGlyph(colors)
         Spacer(Modifier.width(10.dp))
+
+        if (readOnly) {
+            Text(
+                placeholder,
+                color = colors.textSecondary.copy(alpha = 0.55f),
+                fontSize = 15.sp,
+            )
+            return@Row
+        }
 
         val field = remember(query) { TextFieldValue(query, selection = TextRange(query.length)) }
         BasicTextField(
