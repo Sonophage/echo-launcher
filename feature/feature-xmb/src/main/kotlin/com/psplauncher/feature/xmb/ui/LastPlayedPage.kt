@@ -64,8 +64,6 @@ fun LastPlayedPage(
     railVisible: Boolean,
     onPageTapped: (DetailPanelPage) -> Unit,
     onCardTapped: (Int) -> Unit,
-
-    onArtTapped: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val focused = items.getOrNull(selectedIndex)
@@ -108,7 +106,7 @@ fun LastPlayedPage(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = onArtTapped,
+                        onClick = { onCardTapped(selectedIndex) },
                     ),
             ) {
                 Spacer(Modifier.height(10.dp))
