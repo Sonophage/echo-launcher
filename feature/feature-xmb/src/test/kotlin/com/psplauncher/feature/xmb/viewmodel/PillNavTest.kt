@@ -16,9 +16,9 @@ class PillNavTest {
     }
 
     @Test
-    fun `right and down enter the row, left does not`() {
-        assertEquals(PillNav.Move(0), pillNav(right, current = null, count = 4))
+    fun `down enters the row and neither left nor right does, so the crossbar owns the horizontal`() {
         assertEquals(PillNav.Move(0), pillNav(down, current = null, count = 4))
+        assertEquals(PillNav.Pass, pillNav(right, current = null, count = 4))
         assertEquals(PillNav.Pass, pillNav(left, current = null, count = 4))
     }
 
@@ -36,7 +36,7 @@ class PillNavTest {
 
     @Test
     fun `a single pill is entered and left, never walked`() {
-        assertEquals(PillNav.Move(0), pillNav(right, current = null, count = 1))
+        assertEquals(PillNav.Pass, pillNav(right, current = null, count = 1))
         assertEquals(PillNav.Move(0), pillNav(down, current = null, count = 1))
         assertEquals(PillNav.ExitAndPass, pillNav(right, current = 0, count = 1))
         assertEquals(PillNav.ExitAndPass, pillNav(left, current = 0, count = 1))
@@ -58,18 +58,34 @@ class PillNavTest {
     }
 
     @Test
-    fun `the crossbar stays reachable, and costs five presses from a four-pill row`() {
-        var current: Int? = null
-        var presses = 0
-        repeat(20) {
-            if (presses > 0 && current == null) return@repeat
-            presses++
-            when (val nav = pillNav(right, current, count = 4)) {
-                is PillNav.Move -> current = nav.index
-                PillNav.ExitAndPass -> current = null
-                PillNav.Pass -> current = null
-            }
+    fun `stepping a category costs one press however many pills the row has`() {
+        listOf(0, 1, 2, 3, 4, 9).forEach { count ->
+            assertEquals(
+                "a $count-pill row must not swallow a press meant for the next category",
+                PillNav.Pass,
+                pillNav(right, current = null, count = count),
+            )
         }
-        assertEquals("presses to step one category from a four-pill row", 5, presses)
+    }
+
+    @Test
+    fun `a press is still only consumed once you are deliberately inside the row`() {
+        assertEquals(PillNav.Move(1), pillNav(right, current = 0, count = 4))
+        assertEquals(PillNav.ExitAndPass, pillNav(right, current = 3, count = 4))
+    }
+
+    @Test
+    fun `down reaches the pill row before it steps the item, or the row is only reachable at the foot of a column`() {
+        assertEquals(DownStep.EnterRow, downStep(inPillRow = false, pillRowVisible = true))
+    }
+
+    @Test
+    fun `down out of the pill row lands on the next item, so the row is a stop and not a trap`() {
+        assertEquals(DownStep.LeaveRowAndStepItem, downStep(inPillRow = true, pillRowVisible = true))
+    }
+
+    @Test
+    fun `a row with no pills is stepped straight past`() {
+        assertEquals(DownStep.StepItem, downStep(inPillRow = false, pillRowVisible = false))
     }
 }
