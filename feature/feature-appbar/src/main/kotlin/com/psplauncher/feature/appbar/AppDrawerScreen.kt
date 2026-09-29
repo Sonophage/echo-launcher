@@ -22,17 +22,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -65,12 +62,6 @@ import com.psplauncher.feature.appbar.appdrawer.HEADER_HEIGHT
 
 @OptIn(ExperimentalComposeUiApi::class)
 
-private val NAVIGATION_ACTIONS = setOf(
-    GamepadAction.NAVIGATE_UP,
-    GamepadAction.NAVIGATE_DOWN,
-    GamepadAction.NAVIGATE_LEFT,
-    GamepadAction.NAVIGATE_RIGHT,
-)
 
 @Composable
 fun AppDrawerScreen(
@@ -93,43 +84,26 @@ fun AppDrawerScreen(
 
     onLaunchRom: (Long) -> Unit = {},
 
+    onOpenAppSearch: (String) -> Unit = {},
+
     onPromptTapped: ((GamepadAction) -> Unit)? = null,
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var searchActive by remember { mutableStateOf(false) }
-    val keyboard = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    val closeDrawer = {
-        viewModel.setSearchQuery("")
-        onBack()
-    }
+    val closeDrawer = { onBack() }
 
     LaunchedEffect(pendingGamepadAction) {
         if (pendingGamepadAction != null) {
             val overlayOpen = state.menuApp != null || state.confirmUninstall != null ||
-                searchActive || state.letterCursor != null
+                state.letterCursor != null
             when {
-                searchActive && pendingGamepadAction == GamepadAction.BACK -> {
-                    searchActive = false
-                    viewModel.setSearchQuery("")
-                    keyboard?.hide()
-                }
-
-                searchActive && pendingGamepadAction in NAVIGATION_ACTIONS -> {
-                    searchActive = false
-                    keyboard?.hide()
-                    viewModel.handleGamepadAction(pendingGamepadAction)
-                }
                 overlayOpen -> viewModel.handleGamepadAction(pendingGamepadAction)
 
                 pendingGamepadAction == GamepadAction.BACK ->
                     if (state.letterFilter != null) viewModel.clearLetterFilter() else closeDrawer()
-                pendingGamepadAction == GamepadAction.CHANGE_SORT -> {
-                    searchActive = !searchActive
-                    if (!searchActive) viewModel.setSearchQuery("")
-                }
+                pendingGamepadAction == GamepadAction.CHANGE_SORT -> onOpenAppSearch("")
                 else -> viewModel.handleGamepadAction(pendingGamepadAction)
             }
             onGamepadActionConsumed()
@@ -149,15 +123,13 @@ fun AppDrawerScreen(
     LaunchedEffect(typedChar) {
         val ch = typedChar ?: return@LaunchedEffect
 
-        searchActive = true
-        viewModel.setSearchQuery(state.searchQuery + ch)
+        onOpenAppSearch(ch.toString())
         onTypedCharConsumed()
     }
 
     val appliedInitial = remember { mutableStateOf(false) }
     if (!appliedInitial.value) {
         viewModel.setFilter(initialFilter)
-        viewModel.setSearchQuery("")
         appliedInitial.value = true
     }
 
@@ -174,23 +146,15 @@ fun AppDrawerScreen(
 
         onListRowsMeasured = viewModel::setSectionListRows,
         state = state,
-        searchActive = searchActive,
         showControllerHint = showControllerHint,
 
         onBack = {
             onTouchInteraction()
             closeDrawer()
         },
-        onSearchQueryChange = { viewModel.setSearchQuery(it) },
-        onSearchToggle = { active ->
+        onOpenSearch = {
             onTouchInteraction()
-            searchActive = active
-            if (!active) viewModel.setSearchQuery("")
-        },
-        onSearchDone = {
-            viewModel.launchFirstResult()
-            searchActive = false
-            keyboard?.hide()
+            onOpenAppSearch("")
         },
         onFilterSelected = { filter ->
             onTouchInteraction()
@@ -198,21 +162,12 @@ fun AppDrawerScreen(
         },
         onAppTapped = { index ->
             onTouchInteraction()
-
-            if (searchActive) {
-                searchActive = false
-                keyboard?.hide()
-            }
             viewModel.onAppTapped(index)
         },
         onAppLaunched = { viewModel.launchApp(it) },
         onAppMenu = { viewModel.openAppMenu(it) },
         onTouchBrowse = { index ->
             onTouchInteraction()
-            if (searchActive) {
-                searchActive = false
-                keyboard?.hide()
-            }
             viewModel.onTouchBrowse(index)
         },
         onMenuRowActivated = { index ->
@@ -243,12 +198,9 @@ fun AppDrawerScreen(
 @Composable
 internal fun AppDrawerContent(
     state: AppDrawerUiState,
-    searchActive: Boolean,
     showControllerHint: Boolean,
     onBack: () -> Unit,
-    onSearchQueryChange: (String) -> Unit,
-    onSearchToggle: (Boolean) -> Unit,
-    onSearchDone: () -> Unit,
+    onOpenSearch: () -> Unit,
     onFilterSelected: (AppFilter) -> Unit,
     onAppTapped: (Int) -> Unit,
     onAppLaunched: (String) -> Unit,
@@ -269,20 +221,7 @@ internal fun AppDrawerContent(
 
     onListRowsMeasured: (Int) -> Unit = {},
 ) {
-    val searchFocus = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
     val sf = deriveStorefrontColors()
-
-    LaunchedEffect(searchActive) {
-        if (searchActive) {
-            withFrameNanos {}
-            withFrameNanos {}
-            runCatching { searchFocus.requestFocus() }
-            keyboard?.show()
-        } else {
-            keyboard?.hide()
-        }
-    }
 
     Box(
         modifier = modifier
@@ -314,7 +253,6 @@ internal fun AppDrawerContent(
                     state.visibleApps.isEmpty() -> {
                         EmptyDrawerMessage(
                             filter = state.activeFilter,
-                            hasQuery = state.searchQuery.isNotBlank(),
                             hasUsageAccess = state.hasUsageAccess,
                             onGrantUsageAccess = onGrantUsageAccess,
                             colors = sf,
@@ -339,15 +277,7 @@ internal fun AppDrawerContent(
                 }
             }
 
-            AppDrawerHeader(
-                searchQuery = state.searchQuery,
-                searchActive = searchActive,
-                searchFocus = searchFocus,
-                onSearchToggle = onSearchToggle,
-                onSearchChange = onSearchQueryChange,
-                onSearchDone = onSearchDone,
-                colors = sf,
-            )
+            AppDrawerHeader(onOpenSearch = onOpenSearch, colors = sf)
 
             val hintAlpha by animateFloatAsState(
                 targetValue = if (showControllerHint && state.confirmUninstall == null) 1f else 0f,
@@ -392,7 +322,6 @@ internal fun AppDrawerContent(
 @Composable
 private fun EmptyDrawerMessage(
     filter: AppFilter,
-    hasQuery: Boolean,
     hasUsageAccess: Boolean,
     onGrantUsageAccess: () -> Unit,
     colors: StorefrontColors,
@@ -401,7 +330,6 @@ private fun EmptyDrawerMessage(
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = when {
-                hasQuery -> "No apps match your search"
                 filter == AppFilter.GAMES -> "No games found"
                 filter == AppFilter.EMULATORS -> "No emulators installed"
                 filter == AppFilter.RECENT && !hasUsageAccess -> "Usage access needed"
@@ -414,7 +342,6 @@ private fun EmptyDrawerMessage(
         Spacer(Modifier.height(8.dp))
         Text(
             text = when {
-                hasQuery -> "Try a different search term"
                 filter == AppFilter.GAMES -> "Apps marked as games in the Play Store appear here"
                 filter == AppFilter.EMULATORS -> "Install RetroArch, PPSSPP, or another emulator"
                 filter == AppFilter.RECENT && !hasUsageAccess -> "Grant access so PSP can sort apps by last used time"
@@ -520,13 +447,9 @@ private fun AppDrawerPreviewContent() {
     )
     AppDrawerContent(
         state = mockState,
-        searchActive = false,
-
         showControllerHint = true,
         onBack = {},
-        onSearchQueryChange = {},
-        onSearchToggle = {},
-        onSearchDone = {},
+        onOpenSearch = {},
         onFilterSelected = {},
         onAppTapped = {},
         onAppLaunched = {},

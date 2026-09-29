@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -16,12 +17,7 @@ internal val HEADER_HEIGHT = 56.dp
 
 @Composable
 internal fun AppDrawerHeader(
-    searchQuery: String,
-    searchActive: Boolean,
-    searchFocus: FocusRequester,
-    onSearchToggle: (Boolean) -> Unit,
-    onSearchChange: (String) -> Unit,
-    onSearchDone: () -> Unit,
+    onOpenSearch: () -> Unit,
     colors: StorefrontColors,
 ) {
     Row(
@@ -32,14 +28,15 @@ internal fun AppDrawerHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PfpSearchField(
-            query = searchQuery,
-            active = searchActive,
-            focusRequester = searchFocus,
+            query = "",
+            active = false,
+            focusRequester = remember { FocusRequester() },
             placeholder = "Search apps",
-            onActivate = { onSearchToggle(true) },
-            onQueryChange = onSearchChange,
-            onDone = onSearchDone,
+            onActivate = onOpenSearch,
+            onQueryChange = {},
+            onDone = {},
             colors = colors,
+            readOnly = true,
         )
     }
 }

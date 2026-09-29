@@ -51,12 +51,9 @@ class AppDrawerSectionFitsTest {
             PfpScreenPreview {
                 AppDrawerContent(
                     state = state,
-                    searchActive = false,
                     showControllerHint = false,
                     onBack = {},
-                    onSearchQueryChange = {},
-                    onSearchToggle = {},
-                    onSearchDone = {},
+                    onOpenSearch = {},
                     onFilterSelected = {},
                     onAppTapped = {},
                     onAppLaunched = {},
