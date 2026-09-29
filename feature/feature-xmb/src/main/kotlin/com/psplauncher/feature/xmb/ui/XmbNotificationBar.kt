@@ -96,7 +96,7 @@ fun XmbNotificationBar(
                         Brush.verticalGradient(
                             0f to SheetScrim,
                             ScrimHold to SheetScrim,
-                            1f to Color.Transparent,
+                            1f to SheetScrim.copy(alpha = ScrimTail),
                         ),
                     )
 
@@ -391,9 +391,11 @@ private val EdgeGap = 20.dp
 
 private const val ColumnRows = 5
 
-private val SheetScrim = Color(0xF2050200)
+private val SheetScrim = Color(0xFA050200)
 
-private const val ScrimHold = 0.34f
+private const val ScrimHold = 0.78f
+
+private const val ScrimTail = 0.55f
 
 private val TitleSize = NotificationBarStyle.TitleSp.sp
 private val DetailSize = NotificationBarStyle.DetailSp.sp

@@ -51,8 +51,8 @@ import com.psplauncher.core.ui.components.PfpHintBar
 import com.psplauncher.core.ui.components.PfpSearchField
 import com.psplauncher.core.ui.theme.deriveStorefrontColors
 import com.psplauncher.core.ui.components.StatusStripHeight
+import com.psplauncher.core.ui.components.XmbScrim
 import com.psplauncher.core.ui.image.rememberArtworkModel
-import com.psplauncher.core.ui.theme.LocalPFPColors
 import com.psplauncher.core.ui.theme.menuCursor
 import com.psplauncher.feature.xmb.viewmodel.SearchState
 import com.psplauncher.feature.xmb.viewmodel.isInstalledApp
@@ -93,15 +93,15 @@ fun SearchScreen(
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
-    val pfpColors = LocalPFPColors.current
     Box(
         modifier = modifier
             .fillMaxSize()
 
             .background(
                 Brush.verticalGradient(
-                    0f to pfpColors.backgroundTop.copy(alpha = 0.72f),
-                    1f to pfpColors.backgroundBottom.copy(alpha = 0.90f),
+                    0f to XmbScrim.copy(alpha = 0.86f),
+                    0.40f to XmbScrim,
+                    1f to XmbScrim,
                 )
             ),
     ) {
