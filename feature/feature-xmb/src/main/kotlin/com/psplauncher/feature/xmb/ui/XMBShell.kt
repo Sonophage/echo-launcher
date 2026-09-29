@@ -8,7 +8,6 @@ import com.psplauncher.core.ui.notification.SystemToasts
 import com.psplauncher.core.ui.notification.ToastKind
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.delay
-import com.psplauncher.feature.xmb.viewmodel.countLabel
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -1027,9 +1026,6 @@ fun XMBShell(
             val foregroundActivity = flash?.let { StripLiveActivity(art = null, title = it.title, detail = it.message) }
                 ?: busyActivity
                 ?: musicActivity
-                ?: (notifications.size + androidNotices.size)
-                    .takeIf { it > 0 }
-                    ?.let { StripLiveActivity(art = null, title = countLabel(it, "notification"), detail = null) }
 
             val recentActivity = uiState.recentTop?.let { top ->
                 StripLiveActivity(art = top.shelfCoverArt, title = top.title, detail = top.subtitle)
@@ -1048,6 +1044,9 @@ fun XMBShell(
                 live = liveActivity,
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
+
+                noticeCount = notifications.size + androidNotices.size,
+                onNoticeCountTapped = onNotificationsToggled,
 
                 hints = StripHints(
                     shoulder = uiState.panelStripOpen && xmbContext,

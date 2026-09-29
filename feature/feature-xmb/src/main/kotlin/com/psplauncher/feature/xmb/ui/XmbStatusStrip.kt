@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,11 +57,14 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.psplauncher.core.ui.components.StatusStripHeight
 import com.psplauncher.feature.xmb.R
+import com.psplauncher.feature.xmb.viewmodel.countLabel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -113,6 +117,9 @@ fun XmbPspStatusStrip(
     hints: StripHints = StripHints(),
 
     onLiveAreaTapped: (() -> Unit)? = null,
+
+    noticeCount: Int = 0,
+    onNoticeCountTapped: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 
     centre: (@Composable BoxScope.() -> Unit)? = null,
@@ -264,6 +271,38 @@ fun XmbPspStatusStrip(
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            if (noticeCount > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(5.dp))
+                        .then(
+                            if (onNoticeCountTapped != null) {
+                                Modifier.clickable(onClick = onNoticeCountTapped)
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .semantics { contentDescription = countLabel(noticeCount, "notification") }
+                        .padding(horizontal = 4.dp),
+                ) {
+                    Icon(
+                        imageVector        = Icons.Filled.Notifications,
+                        contentDescription = null,
+                        tint               = StripMuted,
+                        modifier           = Modifier.size(StripIconSize * 0.85f),
+                    )
+                    Text(
+                        text       = noticeCount.toString(),
+                        color      = StripPrimary,
+                        fontSize   = StripFontSize,
+                        lineHeight = StripFontSize * 1.25f,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+
             if (sys.controllerConnected) {
                 Icon(
                     imageVector        = Icons.Filled.SportsEsports,
