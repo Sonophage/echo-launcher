@@ -65,6 +65,28 @@ fun StickSensitivity.displayLabel(): String = when (this) {
     StickSensitivity.HIGH     -> "High"
 }
 
+enum class TriggerSensitivity(val label: String, val press: Float, val release: Float) {
+    LOW("Low", press = 0.85f, release = 0.55f),
+    STANDARD("Standard", press = 0.6f, release = 0.3f),
+    HIGH("High", press = 0.35f, release = 0.15f);
+
+    companion object {
+        fun fromName(value: String?): TriggerSensitivity =
+            entries.firstOrNull { it.name == value } ?: STANDARD
+    }
+}
+
+enum class ShoulderHoldTime(val label: String, val millis: Long) {
+    SHORT("Short", 250L),
+    STANDARD("Standard", 400L),
+    LONG("Long", 650L);
+
+    companion object {
+        fun fromName(value: String?): ShoulderHoldTime =
+            entries.firstOrNull { it.name == value } ?: STANDARD
+    }
+}
+
 fun ScrollSpeed.displayLabel(): String = when (this) {
     ScrollSpeed.RELAXED  -> "Relaxed"
     ScrollSpeed.STANDARD -> "Standard"
@@ -77,6 +99,8 @@ data class ControllerLayoutPrefs(
     val displayType: ControllerDisplayType     = ControllerDisplayType.XBOX,
     val scrollSpeed: ScrollSpeed               = ScrollSpeed.STANDARD,
     val stickSensitivity: StickSensitivity     = StickSensitivity.STANDARD,
+    val triggerSensitivity: TriggerSensitivity = TriggerSensitivity.STANDARD,
+    val shoulderHoldTime: ShoulderHoldTime     = ShoulderHoldTime.STANDARD,
 
     val leftBacksOut: Boolean                  = true,
 )

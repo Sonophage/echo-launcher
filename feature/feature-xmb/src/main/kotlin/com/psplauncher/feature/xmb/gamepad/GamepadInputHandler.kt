@@ -51,7 +51,6 @@ sealed interface ShoulderHold {
     data class End(override val action: GamepadAction) : ShoulderHold
 }
 
-internal const val SHOULDER_HOLD_MS = 400L
 
 @Singleton
 class GamepadInputHandler @Inject constructor(
@@ -72,6 +71,11 @@ class GamepadInputHandler @Inject constructor(
     var scrollSpeed: ScrollSpeed = ScrollSpeed.STANDARD
 
     var stickSensitivity: StickSensitivity = StickSensitivity.STANDARD
+
+    var triggerSensitivity: com.psplauncher.core.domain.model.TriggerSensitivity =
+        com.psplauncher.core.domain.model.TriggerSensitivity.STANDARD
+
+    var shoulderHoldMs: Long = com.psplauncher.core.domain.model.ShoulderHoldTime.STANDARD.millis
 
     var scope: CoroutineScope? = null
 
@@ -172,8 +176,8 @@ class GamepadInputHandler @Inject constructor(
         val left = maxOf(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE))
         val right = maxOf(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS))
 
-        val leftNow = triggerDown(leftTriggerDown, left)
-        val rightNow = triggerDown(rightTriggerDown, right)
+        val leftNow = triggerDown(leftTriggerDown, left, triggerSensitivity)
+        val rightNow = triggerDown(rightTriggerDown, right, triggerSensitivity)
 
         var fired = false
         if (leftNow && !leftTriggerDown) fired = emit(GamepadAction.PREV_PAGE, physical = true) || fired
@@ -268,7 +272,7 @@ class GamepadInputHandler @Inject constructor(
         shoulderJob?.cancel()
         shoulderHeld = null
         shoulderJob = scope?.launch {
-            delay(SHOULDER_HOLD_MS)
+            delay(shoulderHoldMs)
             shoulderHeld = action
             _shoulderHolds.tryEmit(ShoulderHold.Start(action))
         }
@@ -331,9 +335,9 @@ internal fun rampStepFor(repeats: Int, stickMagnitude: Float, fullTilt: Float): 
 internal fun rampedInterval(step: Int, base: Long, fast: Long, rampSteps: Int): Long =
     if (step >= rampSteps) fast else base - (base - fast) * step / rampSteps
 
-internal const val TRIGGER_PRESS = 0.6f
-
-internal const val TRIGGER_RELEASE = 0.3f
-
-internal fun triggerDown(wasDown: Boolean, value: Float): Boolean =
-    if (wasDown) value > TRIGGER_RELEASE else value >= TRIGGER_PRESS
+internal fun triggerDown(
+    wasDown: Boolean,
+    value: Float,
+    sensitivity: com.psplauncher.core.domain.model.TriggerSensitivity =
+        com.psplauncher.core.domain.model.TriggerSensitivity.STANDARD,
+): Boolean = if (wasDown) value > sensitivity.release else value >= sensitivity.press

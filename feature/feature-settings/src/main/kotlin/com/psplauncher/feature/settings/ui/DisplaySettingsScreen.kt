@@ -2,6 +2,7 @@ package com.psplauncher.feature.settings.ui
 
 import com.psplauncher.core.domain.model.ControllerHintPolicy
 import com.psplauncher.core.domain.model.IconLegibilityStyle
+import com.psplauncher.core.data.repository.InterfacePreferences as IP
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -268,6 +269,14 @@ fun DisplaySettingsScreen(
                     onToggle = { viewModel.setRecentsIncludeApps(it) },
                 )
 
+                SettingsPickerRow(
+                    label    = "Last Played Size",
+                    sublabel = "How many games, tracks, books, videos and apps the Last Played column keeps",
+                    options  = IP.LAST_PLAYED_SIZES.map { SettingsPickerOption("$it") },
+                    selectedIndex = IP.LAST_PLAYED_SIZES.indexOf(state.interfaceChoices.lastPlayedSize),
+                    onPick   = { viewModel.setLastPlayedSize(IP.LAST_PLAYED_SIZES[it]) },
+                )
+
                 SettingsToggleRow(
                     label    = "Card Art Grid",
                     sublabel = "Show a console card as four covers from inside it, instead of its console icon",
@@ -287,6 +296,22 @@ fun DisplaySettingsScreen(
                     sublabel = "Drop shadow behind row helper text — keeps it readable over bright wallpaper regions",
                     checked  = state.textShadow,
                     onToggle = { viewModel.setTextShadow(it) },
+                )
+
+                SettingsGroup("Status Bar")
+
+                SettingsToggleRow(
+                    label    = "Show Device Notifications",
+                    sublabel = "List Android's notifications in the bar and count them. Off, the bar shows only PSPLauncher's own",
+                    checked  = state.interfaceChoices.showDeviceNotifications,
+                    onToggle = { viewModel.setShowDeviceNotifications(it) },
+                )
+
+                SettingsToggleRow(
+                    label    = "Last Opened In The Island",
+                    sublabel = "With nothing playing or running, show the last thing you opened. Off, the island stays empty",
+                    checked  = state.interfaceChoices.islandShowsRecent,
+                    onToggle = { viewModel.setIslandShowsRecent(it) },
                 )
             }
             if (section == null || section == DisplaySection.LAYOUT) {
@@ -449,6 +474,24 @@ fun DisplaySettingsScreen(
                     enabled  = state.contextMenuHintEnabled,
                     valueFormatter = { formatHintDelay(it) },
                 )
+
+                SettingsGroup("Video Player")
+
+                SettingsPickerRow(
+                    label    = "Seek Step",
+                    sublabel = "How far left and right skip while a video plays",
+                    options  = IP.VIDEO_SEEK_STEPS_SECONDS.map { SettingsPickerOption("$it s") },
+                    selectedIndex = IP.VIDEO_SEEK_STEPS_SECONDS.indexOf(state.interfaceChoices.videoSeekStepSeconds),
+                    onPick   = { viewModel.setVideoSeekStepSeconds(IP.VIDEO_SEEK_STEPS_SECONDS[it]) },
+                )
+
+                SettingsPickerRow(
+                    label    = "Hide Controls After",
+                    sublabel = "How long the player's controls stay up after the last press",
+                    options  = IP.VIDEO_CONTROLS_HIDE_MS.map { SettingsPickerOption("${it / 1000.0} s".replace(".0 s", " s")) },
+                    selectedIndex = IP.VIDEO_CONTROLS_HIDE_MS.indexOf(state.interfaceChoices.videoControlsHideMs),
+                    onPick   = { viewModel.setVideoControlsHideMs(IP.VIDEO_CONTROLS_HIDE_MS[it]) },
+                )
             }
             if (section == null || section == DisplaySection.PERFORMANCE) {
                 SettingsGroup("Performance")
@@ -465,6 +508,14 @@ fun DisplaySettingsScreen(
                     sublabel = "Freeze the background (wave or motion wallpaper) when Battery Saver is active",
                     checked  = state.respectBatterySaver,
                     onToggle = { viewModel.setRespectBatterySaver(it) },
+                )
+
+                SettingsToggleRow(
+                    label    = "Rescan On Return",
+                    sublabel = "Look for new and missing games when you come back to the launcher, at most every five minutes. " +
+                        "Inserting a card still rescans either way",
+                    checked  = state.interfaceChoices.rescanOnReturn,
+                    onToggle = { viewModel.setRescanOnReturn(it) },
                 )
 
             }

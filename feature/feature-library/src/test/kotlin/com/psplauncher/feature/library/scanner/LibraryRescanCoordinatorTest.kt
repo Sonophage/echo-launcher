@@ -28,8 +28,8 @@ class LibraryRescanCoordinatorTest {
         coEvery { libraryScanner.scanAllEnabled(true) } returns listOf(outcome)
     }
 
-    private fun coordinator(scope: kotlinx.coroutines.CoroutineScope) =
-        LibraryRescanCoordinator(libraryScanner, romRootDiscoveryScanner, scope)
+    private fun coordinator(scope: kotlinx.coroutines.CoroutineScope, rescanOnReturn: Boolean = true) =
+        LibraryRescanCoordinator(libraryScanner, romRootDiscoveryScanner, scope) { rescanOnReturn }
 
     @Test
     fun `onResume scans the first time`() = runTest {
@@ -55,6 +55,20 @@ class LibraryRescanCoordinatorTest {
             coordinator.onResume()
             advanceUntilIdle()
         }
+        coVerify(exactly = 1) { libraryScanner.scanAllEnabled(true) }
+    }
+
+    @Test
+    fun `with Rescan on Return off, coming back does not scan`() = runTest {
+        coordinator(this, rescanOnReturn = false).onResume()
+        advanceUntilIdle()
+        coVerify(exactly = 0) { libraryScanner.scanAllEnabled(any()) }
+    }
+
+    @Test
+    fun `with Rescan on Return off, inserting a card still scans`() = runTest {
+        coordinator(this, rescanOnReturn = false).onMediaMounted()
+        advanceUntilIdle()
         coVerify(exactly = 1) { libraryScanner.scanAllEnabled(true) }
     }
 

@@ -475,6 +475,8 @@ open class BackupManager @Inject constructor(
 
             stringPreferencesKey("controller_scroll_speed"),
             stringPreferencesKey("controller_stick_sensitivity"),
+            stringPreferencesKey("controller_trigger_sensitivity"),
+            stringPreferencesKey("controller_shoulder_hold"),
 
             stringPreferencesKey("controller_mappings_v1"),
             stringPreferencesKey("controller_confirm_back_layout"),
@@ -539,6 +541,9 @@ open class BackupManager @Inject constructor(
             booleanPreferencesKey("display_card_art_grid"),
             booleanPreferencesKey("display_recents_include_apps"),
             booleanPreferencesKey("display_text_shadow"),
+            com.psplauncher.core.data.repository.InterfacePreferences.KEY_SHOW_DEVICE_NOTIFICATIONS,
+            com.psplauncher.core.data.repository.InterfacePreferences.KEY_ISLAND_SHOWS_RECENT,
+            com.psplauncher.core.data.repository.InterfacePreferences.KEY_RESCAN_ON_RETURN,
             booleanPreferencesKey("pref_animated_icons"),
             booleanPreferencesKey("pref_xmb_game_metadata"),
 
@@ -586,7 +591,11 @@ open class BackupManager @Inject constructor(
                     BACKED_UP_INT_KEYS.map { it.name }
                 ).toSet()
 
-        private val BACKED_UP_INT_KEYS = listOf<androidx.datastore.preferences.core.Preferences.Key<Int>>()
+        private val BACKED_UP_INT_KEYS = listOf(
+            com.psplauncher.core.data.repository.InterfacePreferences.KEY_LAST_PLAYED_SIZE,
+            com.psplauncher.core.data.repository.InterfacePreferences.KEY_VIDEO_SEEK_STEP_SECONDS,
+            com.psplauncher.core.data.repository.InterfacePreferences.KEY_VIDEO_CONTROLS_HIDE_MS,
+        )
 
         private val BACKED_UP_LONG_KEYS = listOf(
 

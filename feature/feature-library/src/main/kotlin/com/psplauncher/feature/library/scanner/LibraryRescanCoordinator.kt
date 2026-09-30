@@ -1,17 +1,37 @@
 package com.psplauncher.feature.library.scanner
 
+import android.content.Context
+import com.psplauncher.core.data.repository.InterfacePreferences
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @Singleton
-class LibraryRescanCoordinator @Inject constructor(
+class LibraryRescanCoordinator internal constructor(
     libraryScanner: LibraryScanner,
     romRootDiscoveryScanner: RomRootDiscoveryScanner,
-    @RescanApplicationScope scope: CoroutineScope,
+    private val scope: CoroutineScope,
+    private val rescanOnReturn: suspend () -> Boolean,
 ) {
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        libraryScanner: LibraryScanner,
+        romRootDiscoveryScanner: RomRootDiscoveryScanner,
+        @RescanApplicationScope scope: CoroutineScope,
+    ) : this(
+        libraryScanner,
+        romRootDiscoveryScanner,
+        scope,
+        { InterfacePreferences.current(context).rescanOnReturn },
+    )
+
     private val bus = RescanTriggerBus(libraryScanner, romRootDiscoveryScanner, scope)
 
-    fun onResume() = bus.submit(RescanTrigger.AppResumed)
+    fun onResume() {
+        scope.launch { if (rescanOnReturn()) bus.submit(RescanTrigger.AppResumed) }
+    }
+
     fun onMediaMounted() = bus.submit(RescanTrigger.MediaMounted)
 }

@@ -8,7 +8,9 @@ import com.psplauncher.core.domain.model.ConfirmBackLayout
 import com.psplauncher.core.domain.model.ControllerDisplayType
 import com.psplauncher.core.domain.model.ControllerLayoutPrefs
 import com.psplauncher.core.domain.model.ScrollSpeed
+import com.psplauncher.core.domain.model.ShoulderHoldTime
 import com.psplauncher.core.domain.model.StickSensitivity
+import com.psplauncher.core.domain.model.TriggerSensitivity
 import com.psplauncher.core.domain.model.XYLayout
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
@@ -42,6 +44,8 @@ class ControllerResetTest {
         repository.setDisplayType(ControllerDisplayType.NINTENDO)
         repository.setScrollSpeed(ScrollSpeed.FAST)
         repository.setStickSensitivity(StickSensitivity.LOW)
+        repository.setTriggerSensitivity(TriggerSensitivity.HIGH)
+        repository.setShoulderHoldTime(ShoulderHoldTime.LONG)
         repository.setLeftBacksOut(false)
 
         val changed = repository.prefs.first()
@@ -67,7 +71,7 @@ class ControllerResetTest {
             .filterNot { Modifier.isStatic(it.modifiers) }
             .map { it.name }
         assertEquals(
-            6,
+            8,
             fields.size,
             "ControllerLayoutPrefs is now $fields. Clear the new key in resetAllPrefs and set it in the test above",
         )

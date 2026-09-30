@@ -36,15 +36,15 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_emulators_retroarch", "RetroArch", "Core detection & linking", SettingsSectionId.EMULATORS),
 
     SettingsEntry("settings_themes", "Theme", "Colour scheme, accent & theme packs", SettingsSectionId.LOOK_AND_FEEL),
-    SettingsEntry("settings_appearance", "Wallpaper & Text", "Wallpaper, wave, motion & legibility", SettingsSectionId.LOOK_AND_FEEL),
+    SettingsEntry("settings_appearance", "Wallpaper & Text", "Wallpaper, wave, legibility, Last Played & status bar", SettingsSectionId.LOOK_AND_FEEL),
     SettingsEntry("settings_layout", "Layout", "XMB layout & custom icons", SettingsSectionId.LOOK_AND_FEEL),
     SettingsEntry("settings_boot", "Boot", "Boot sequence, boot video & GameBoot", SettingsSectionId.LOOK_AND_FEEL),
 
     SettingsEntry("settings_audio", "Sound", "Menu sounds, menu music & boot audio", SettingsSectionId.LOOK_AND_FEEL),
     SettingsEntry("settings_categories", "Categories", "XMB categories & the collections inside them", SettingsSectionId.LOOK_AND_FEEL),
-    SettingsEntry("settings_controller", "Controller", "Button swaps, prompts, stick & scrolling", SettingsSectionId.LOOK_AND_FEEL),
-    SettingsEntry("settings_touch", "Touch", "On-screen button, sensitivity & hints", SettingsSectionId.LOOK_AND_FEEL),
-    SettingsEntry("settings_performance", "Performance", "Thermal & battery saver", SettingsSectionId.LOOK_AND_FEEL),
+    SettingsEntry("settings_controller", "Controller", "Button swaps, prompts, stick, triggers & scrolling", SettingsSectionId.LOOK_AND_FEEL),
+    SettingsEntry("settings_touch", "Touch", "On-screen button, hints & the video player", SettingsSectionId.LOOK_AND_FEEL),
+    SettingsEntry("settings_performance", "Performance", "Thermal, battery saver & rescanning", SettingsSectionId.LOOK_AND_FEEL),
 
     SettingsEntry("settings_permissions", "Permissions", "What PSPLauncher can reach, and how to grant it", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_about", "About", "PSPLauncher", SettingsSectionId.SYSTEM),

@@ -24,6 +24,8 @@ private val KEY_XY_LAYOUT    = stringPreferencesKey("controller_xy_layout")
 private val KEY_DISPLAY_TYPE = stringPreferencesKey("controller_display_type")
 private val KEY_SCROLL_SPEED = stringPreferencesKey("controller_scroll_speed")
 private val KEY_STICK_SENSITIVITY = stringPreferencesKey("controller_stick_sensitivity")
+private val KEY_TRIGGER_SENSITIVITY = stringPreferencesKey("controller_trigger_sensitivity")
+private val KEY_SHOULDER_HOLD = stringPreferencesKey("controller_shoulder_hold")
 private val KEY_LEFT_BACKS_OUT = booleanPreferencesKey("controller_left_backs_out")
 
 @Singleton
@@ -47,6 +49,10 @@ class ControllerLayoutRepository @Inject constructor(
                 ?: ScrollSpeed.STANDARD,
             stickSensitivity = com.psplauncher.core.domain.model.StickSensitivity
                 .fromName(store[KEY_STICK_SENSITIVITY]),
+            triggerSensitivity = com.psplauncher.core.domain.model.TriggerSensitivity
+                .fromName(store[KEY_TRIGGER_SENSITIVITY]),
+            shoulderHoldTime = com.psplauncher.core.domain.model.ShoulderHoldTime
+                .fromName(store[KEY_SHOULDER_HOLD]),
 
             leftBacksOut = store[KEY_LEFT_BACKS_OUT] ?: true,
         )
@@ -88,6 +94,14 @@ class ControllerLayoutRepository @Inject constructor(
         Timber.i("StickSensitivity set: $value")
     }
 
+    suspend fun setTriggerSensitivity(value: com.psplauncher.core.domain.model.TriggerSensitivity) {
+        context.pfpDataStore.edit { it[KEY_TRIGGER_SENSITIVITY] = value.name }
+    }
+
+    suspend fun setShoulderHoldTime(value: com.psplauncher.core.domain.model.ShoulderHoldTime) {
+        context.pfpDataStore.edit { it[KEY_SHOULDER_HOLD] = value.name }
+    }
+
     suspend fun setScrollSpeed(speed: ScrollSpeed) {
         context.pfpDataStore.edit { it[KEY_SCROLL_SPEED] = speed.name }
         Timber.i("ScrollSpeed set: $speed")
@@ -106,6 +120,8 @@ class ControllerLayoutRepository @Inject constructor(
             store.remove(KEY_SCROLL_SPEED)
             store.remove(KEY_LEFT_BACKS_OUT)
             store.remove(KEY_STICK_SENSITIVITY)
+            store.remove(KEY_TRIGGER_SENSITIVITY)
+            store.remove(KEY_SHOULDER_HOLD)
         }
         mappingRepository.resetToDefaults()
         Timber.i("Controller layout prefs reset to defaults")
