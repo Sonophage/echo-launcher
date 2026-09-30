@@ -821,7 +821,7 @@ class ArtworkStudioViewModelTest {
             vm.onGridMeasured(635f, 259f)
 
             val state = vm.uiState.value
-            assertEquals("the page is capped so a narrow column stays readable", 4, state.pageSize)
+            assertEquals("the page is capped so tiles stay readable", STUDIO_PAGE_TILES, state.pageSize)
             assertEquals(focused, state.results[state.gridIndex].url)
         }
 
@@ -878,9 +878,14 @@ class ArtworkStudioViewModelTest {
         vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == ArtworkKind.MANUAL })
         advanceUntilIdle()
 
-        assertEquals("the page is capped at four tiles", 4, vm.uiState.value.pageSize)
-        assertEquals(4, vm.uiState.value.gridColumns)
-        assertEquals(1, vm.uiState.value.gridRows)
+        // MANUAL is a portrait slot, so it takes the four-across preference
+        assertEquals("the page is capped", STUDIO_PAGE_TILES, vm.uiState.value.pageSize)
+        assertEquals(
+            "portrait slots go four across",
+            studioMaxColumns(StudioTileClass.PORTRAIT),
+            vm.uiState.value.gridColumns,
+        )
+        assertEquals(2, vm.uiState.value.gridRows)
     }
 
     @Test
@@ -896,7 +901,7 @@ class ArtworkStudioViewModelTest {
         vm.selectSource(vm.sourcesForTab().indexOf(StudioSource.STEAMGRIDDB))
         advanceUntilIdle()
 
-        assertEquals(4, vm.uiState.value.skeletonCount)
+        assertEquals("a skeleton per tile on the measured page", STUDIO_PAGE_TILES, vm.uiState.value.skeletonCount)
         slow.complete(emptyList())
         advanceUntilIdle()
     }

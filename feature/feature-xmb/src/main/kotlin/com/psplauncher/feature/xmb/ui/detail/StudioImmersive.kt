@@ -59,8 +59,12 @@ fun slotNotOfferedReason(source: StudioSource, tab: StudioTab): String =
     "${source.label} has no ${tab.label} artwork. Choose a file from this device, or change provider."
 
 @Composable
+// Scales with the panel instead of stepping at a threshold. The step was 1000dp,
+// which the 821dp handheld never met, so it always took the narrow 246dp branch and
+// showed two tiles across. At 60% of an 821dp panel this is ~493dp, which holds four
+// tiles of the same 119dp width the 246dp column gave for two.
 internal fun resultsColumnWidth(): Dp =
-    if (LocalConfiguration.current.screenWidthDp >= STUDIO_WIDE_WINDOW_DP) 320.dp else 246.dp
+    (LocalConfiguration.current.screenWidthDp * 0.60f).dp.coerceIn(246.dp, 560.dp)
 
 @Composable
 internal fun StudioSlotPill(

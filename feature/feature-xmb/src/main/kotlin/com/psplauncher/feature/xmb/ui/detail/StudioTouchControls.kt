@@ -3,6 +3,11 @@ package com.psplauncher.feature.xmb.ui.detail
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -51,9 +56,13 @@ internal fun StudioPageLine(
     onRetryFailed: () -> Unit = {},
     onRemoveFailed: () -> Unit = {},
 ) {
+    // The counts sit on one line and the pager on its own beneath. They shared a row
+    // until the page count reached two digits, at which point the pager was what gave
+    // way and "Next" clipped.
+    Column(modifier = modifier.fillMaxWidth()) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.fillMaxWidth().height(if (showTouchControls) 40.dp else 16.dp),
+        modifier = Modifier.fillMaxWidth().height(if (showTouchControls) 26.dp else 16.dp),
     ) {
         if (totalResults > 0) {
             // Weighted so THIS gives way when the row is tight. Without it the pager
@@ -78,10 +87,15 @@ internal fun StudioPageLine(
                 modifier = Modifier.padding(start = if (totalResults > 0) 10.dp else 0.dp),
             )
         }
-        Spacer(Modifier.weight(1f))
+    }
 
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.End,
+        modifier = Modifier.fillMaxWidth().height(if (showTouchControls) 30.dp else 16.dp),
+    ) {
         if (pageCount > 1 && showTouchControls) {
-            TouchPagePill("‹ Prev", enabled = hasPreviousPage, onClick = onPreviousPage)
+            TouchPagePill("Prev", enabled = hasPreviousPage, leading = true, onClick = onPreviousPage)
             Text(
                 "Page ${page + 1} / $pageCount",
                 color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp,
@@ -89,7 +103,7 @@ internal fun StudioPageLine(
                 softWrap = false,
                 modifier = Modifier.padding(horizontal = 6.dp),
             )
-            TouchPagePill("Next ›", enabled = hasNextPage, onClick = onNextPage)
+            TouchPagePill("Next", enabled = hasNextPage, leading = false, onClick = onNextPage)
         } else if (pageCount > 1) {
             ControllerPrompt(
                 action = GamepadAction.PREV_CATEGORY,
@@ -111,6 +125,7 @@ internal fun StudioPageLine(
                 labelColor = Color.White.copy(alpha = 0.45f),
             )
         }
+    }
     }
 }
 
@@ -209,23 +224,53 @@ internal fun StudioManualPager(
     val hasPrevious = page > 0
     val hasNext = page < pageCount - 1
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-        ManualPagerButton("‹ Prev", hasPrevious, showTouchControls, onPreviousPage)
+        ManualPagerButton("Prev", hasPrevious, showTouchControls, leading = true, onPreviousPage)
         Text(
             "Page ${page + 1} / ${pageCount.coerceAtLeast(1)}",
             color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp,
             modifier = Modifier.padding(horizontal = 8.dp),
         )
-        ManualPagerButton("Next ›", hasNext, showTouchControls, onNextPage)
+        ManualPagerButton("Next", hasNext, showTouchControls, leading = false, onNextPage)
     }
 }
 
 @Composable
-private fun TouchPagePill(label: String, enabled: Boolean, onClick: () -> Unit) {
-    XmbHeaderPill(
-        label = label,
-        onClick = { if (enabled) onClick() },
-        modifier = Modifier.alpha(if (enabled) 1f else 0.4f),
-    )
+private fun TouchPagePill(label: String, enabled: Boolean, leading: Boolean, onClick: () -> Unit) {
+    // The chevron was a "‹"/"›" character sitting beside the word, which renders at a
+    // different weight and baseline from the label and read as a stray > sign. A real
+    // icon matches the text metrics instead.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .alpha(if (enabled) 1f else 0.4f)
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color.White.copy(alpha = 0.07f))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        if (leading) {
+            Icon(
+                Icons.Filled.KeyboardArrowLeft,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.size(14.dp),
+            )
+        }
+        Text(
+            label,
+            color = Color.White.copy(alpha = 0.85f),
+            fontSize = 11.sp, lineHeight = 12.sp, fontWeight = FontWeight.Medium,
+            maxLines = 1,
+        )
+        if (!leading) {
+            Icon(
+                Icons.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.size(14.dp),
+            )
+        }
+    }
 }
 
 @Composable
@@ -242,9 +287,15 @@ private fun PageArrow(glyph: String, enabled: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ManualPagerButton(label: String, enabled: Boolean, showTouchControls: Boolean, onClick: () -> Unit) {
+private fun ManualPagerButton(
+    label: String,
+    enabled: Boolean,
+    showTouchControls: Boolean,
+    leading: Boolean,
+    onClick: () -> Unit,
+) {
     if (showTouchControls) {
-        TouchPagePill(label, enabled, onClick)
+        TouchPagePill(label, enabled, leading, onClick)
     } else {
         Text(
             label, color = Color.White.copy(alpha = if (enabled) 0.85f else 0.3f),
