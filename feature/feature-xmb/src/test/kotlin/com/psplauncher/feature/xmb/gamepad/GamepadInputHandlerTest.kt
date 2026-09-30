@@ -309,11 +309,64 @@ class GamepadInputHandlerTest {
         return event
     }
 
+    @Test
+    fun `the axes keep paging after a key event, because the pad must not latch off`() = runTest {
+        var now = 0L
+        handler.clock = { now }
+        handler.actions.test {
+            handler.onMotionEvent(motionEvent(rTrigger = 1f))
+            assertEquals(GamepadAction.NEXT_PAGE, awaitItem())
+            handler.onMotionEvent(motionEvent(rTrigger = 0f))
+
+            // R2 is bound to NEXT_PAGE, so the key emits in its own right; consume it.
+            // An earlier build marked the pad here and ignored its axes from then on,
+            // which is why paging worked once and then stopped.
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_R2, KeyEvent.ACTION_DOWN))
+            assertEquals(GamepadAction.NEXT_PAGE, awaitItem())
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_R2, KeyEvent.ACTION_UP))
+
+            now += 1_000L
+            handler.onMotionEvent(motionEvent(rTrigger = 1f))
+            assertEquals(
+                "the axes must still page after a key event",
+                GamepadAction.NEXT_PAGE,
+                awaitItem(),
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `an axis press is dropped when the same page just came from a key`() = runTest {
+        var now = 0L
+        handler.clock = { now }
+        handler.actions.test {
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_R2, KeyEvent.ACTION_DOWN))
+            assertEquals(GamepadAction.NEXT_PAGE, awaitItem())
+
+            // a pad that reports the same pull as key AND axis must turn one page
+            handler.onMotionEvent(motionEvent(rTrigger = 1f))
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the left trigger pages the other way`() = runTest {
+        handler.actions.test {
+            handler.onMotionEvent(motionEvent(lTrigger = 1f))
+            assertEquals(GamepadAction.PREV_PAGE, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     private fun motionEvent(
         axisX: Float = 0f,
         axisY: Float = 0f,
         hatX: Float = 0f,
         hatY: Float = 0f,
+        lTrigger: Float = 0f,
+        rTrigger: Float = 0f,
     ): MotionEvent {
         val event = mockk<MotionEvent>(relaxed = true)
 
@@ -322,6 +375,10 @@ class GamepadInputHandlerTest {
         every { event.getAxisValue(MotionEvent.AXIS_Y) } returns axisY
         every { event.getAxisValue(MotionEvent.AXIS_HAT_X) } returns hatX
         every { event.getAxisValue(MotionEvent.AXIS_HAT_Y) } returns hatY
+        every { event.getAxisValue(MotionEvent.AXIS_LTRIGGER) } returns lTrigger
+        every { event.getAxisValue(MotionEvent.AXIS_RTRIGGER) } returns rTrigger
+        every { event.getAxisValue(MotionEvent.AXIS_BRAKE) } returns 0f
+        every { event.getAxisValue(MotionEvent.AXIS_GAS) } returns 0f
         every { event.source } returns android.view.InputDevice.SOURCE_JOYSTICK
         return event
     }

@@ -262,10 +262,7 @@ internal fun StudioResultsColumn(
                                     RoundedCornerShape(8.dp),
                                 )
                                 .combinedClickable(
-                                    onClick = {
-                                        if (state.selectsMultiple) actions.toggleSelection(index)
-                                        else actions.openCandidate(index)
-                                    },
+                                    onClick = { actions.pickAt(index) },
                                     onLongClick = {
                                         if (art.isVideo) touchPreviewIndex =
                                             if (touchPreviewIndex == index) -1 else index

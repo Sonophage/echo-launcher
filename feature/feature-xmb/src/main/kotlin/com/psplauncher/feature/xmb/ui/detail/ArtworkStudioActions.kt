@@ -29,6 +29,8 @@ interface ArtworkStudioActions {
 
     fun onGridMeasured(widthDp: Float, heightDp: Float)
     fun openCandidate(index: Int)
+
+    fun pickAt(index: Int)
     fun toggleSelection(index: Int)
     fun previousPage()
     fun nextPage()
