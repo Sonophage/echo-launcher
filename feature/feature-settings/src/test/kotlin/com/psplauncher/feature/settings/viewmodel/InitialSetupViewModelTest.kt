@@ -63,16 +63,15 @@ class InitialSetupViewModelTest {
     private lateinit var vm: InitialSetupViewModel
 
     private fun buildVm() = InitialSetupViewModel(
-        context, romRoots, mediaRoots, artworkImport, retroArchLink, vita3KLibrary, autoConfig,
+        context, romRoots, mediaRoots, artworkImport, RetroArchSetup(retroArchLink, autoConfig), vita3KLibrary,
         sgdbKeys, metadataKeys, igdbApi, screenScraperApi,
         scanRunner, romRootScanRunner,
-        mockk(relaxed = true),
-        mockk(relaxed = true),
-        mockk(relaxed = true),
+        StandardRomFolders(mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)),
         launcherShortcuts,
         mockk<com.psplauncher.feature.artwork.api.TmdbApiKeyProvider>(relaxed = true) {
             every { keyFlow } returns flowOf(null)
         },
+        ArtworkFolderSetup(artworkImport),
     )
 
     @Before fun setUp() {

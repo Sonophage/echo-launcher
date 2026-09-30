@@ -78,6 +78,7 @@ data class ArtworkImportUiState(
 class ArtworkImportViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val importManager: ArtworkImportManager,
+    private val artworkFolderSetup: ArtworkFolderSetup,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ArtworkImportUiState())
     val uiState: StateFlow<ArtworkImportUiState> = _uiState.asStateFlow()
@@ -124,27 +125,16 @@ class ArtworkImportViewModel @Inject constructor(
 
     fun onFolderPicked(uri: Uri) {
         viewModelScope.launch {
-            val result = importManager.linkFolder(uri)
-            if (result == null) {
-                _uiState.value = _uiState.value.copy(
-                    error = "Could not set up the artwork library in that folder — it may be read-only.",
-                )
+            val linked = artworkFolderSetup.link(uri)
+            if (linked == null) {
+                _uiState.value = _uiState.value.copy(error = ArtworkFolderSetup.COULD_NOT_LINK)
                 return@launch
             }
 
-            val scan = runCatching { importManager.relinkLibrary() }.getOrNull()
             refreshInternalFootprint()
             _uiState.value = _uiState.value.copy(
                 notice = buildString {
-                    append(
-                        if (result.existingLibrary) "Existing PSP artwork library reconnected."
-                        else "Artwork library created.",
-                    )
-                    if (scan != null && scan.gamesLinked > 0) {
-                        append(" ${scan.gamesLinked} games linked from ${scan.entriesScanned} files already in the folder.")
-                    } else if (!result.existingLibrary) {
-                        append(" Place other launchers' media under import/.")
-                    }
+                    append(artworkFolderSetup.describe(linked))
                     if (_uiState.value.internalFiles > 0) {
                         append(" ${_uiState.value.internalFiles} artwork files are still in app storage — see Move Into Folder below.")
                     }

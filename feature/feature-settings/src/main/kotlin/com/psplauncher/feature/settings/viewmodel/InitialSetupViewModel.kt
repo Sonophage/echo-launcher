@@ -12,7 +12,6 @@ import com.psplauncher.core.data.repository.FolderLinkStatus
 import com.psplauncher.core.data.repository.MediaRootKind
 import com.psplauncher.core.data.repository.MediaRootRepository
 import com.psplauncher.core.data.repository.CoreInventory
-import com.psplauncher.core.data.repository.RetroArchLink
 import com.psplauncher.core.data.repository.RomRootRepository
 import com.psplauncher.core.data.repository.Vita3KLibrary
 import com.psplauncher.core.data.repository.SafGrants
@@ -23,7 +22,6 @@ import com.psplauncher.feature.artwork.api.ScreenScraperApi
 import com.psplauncher.feature.artwork.api.SgdbApiKeyProvider
 import com.psplauncher.feature.artwork.importer.DetectedImportSource
 import com.psplauncher.feature.artwork.portable.PortableArtworkLibrary
-import com.psplauncher.feature.launcher.EmulatorAutoConfigService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -129,21 +127,18 @@ class InitialSetupViewModel @Inject constructor(
     private val romRootRepository: RomRootRepository,
     private val mediaRootRepository: MediaRootRepository,
     private val artworkImportManager: ArtworkImportManager,
-    private val retroArchLink: RetroArchLink,
+    private val retroArchSetup: RetroArchSetup,
     private val vita3KLibrary: Vita3KLibrary,
-    private val autoConfig: EmulatorAutoConfigService,
     private val sgdbKeys: SgdbApiKeyProvider,
     private val metadataKeys: MetadataApiKeyProvider,
     private val igdbApi: IgdbApi,
     private val screenScraperApi: ScreenScraperApi,
     private val wizardMediaScanRunner: com.psplauncher.feature.settings.media.WizardMediaScanRunner,
     private val romRootScanRunner: RomRootScanRunner,
-    private val romScanner: com.psplauncher.feature.library.scanner.RomScanner,
-    private val folderHintResolver: com.psplauncher.core.data.platform.PlatformFolderHintResolver,
-    private val memoryCardRepository: com.psplauncher.core.data.repository.MemoryCardRepository,
-
+    private val standardRomFolders: StandardRomFolders,
     private val launcherShortcuts: com.psplauncher.feature.appbar.LauncherShortcutRepository,
     private val tmdbKeys: com.psplauncher.feature.artwork.api.TmdbApiKeyProvider,
+    private val artworkFolderSetup: ArtworkFolderSetup,
 ) : ViewModel() {
     private val scratch = MutableStateFlow(InitialSetupUiState())
 
@@ -328,11 +323,7 @@ class InitialSetupViewModel @Inject constructor(
     fun createStandardRomFolders() {
         val firstRoot = scratch.value.romRoots.firstOrNull()?.treeUri ?: return
         viewModelScope.launch {
-            val names = memoryCardRepository.availablePlatformCatalog()
-                .map { folderHintResolver.esDeFolderName(it.id) }
-                .filter { it.isNotBlank() && it != "android" }
-                .distinct()
-            val result = romScanner.createSubfolders(firstRoot, names)
+            val result = standardRomFolders.createUnder(firstRoot)
             scratch.update {
                 it.copy(
                     message = "Created ${result.created} console folder(s)" +
@@ -371,30 +362,17 @@ class InitialSetupViewModel @Inject constructor(
 
     fun onArtworkFolderPicked(uri: Uri) {
         viewModelScope.launch {
-            val result = artworkImportManager.linkFolder(uri)
-            if (result == null) {
-                scratch.update {
-                    it.copy(message = "Could not set up an artwork library in that folder. Pick a writable folder.")
-                }
+            val linked = artworkFolderSetup.link(uri)
+            if (linked == null) {
+                scratch.update { it.copy(message = ArtworkFolderSetup.COULD_NOT_LINK) }
                 return@launch
             }
 
-            val scan = runCatching { artworkImportManager.relinkLibrary() }.getOrNull()
             val sources = runCatching { artworkImportManager.detectSources() }.getOrDefault(emptyList())
             detectedArtworkSources = sources
             scratch.update {
                 it.copy(
-                    message = buildString {
-                        append(
-                            if (result.existingLibrary) "Existing artwork library reconnected."
-                            else "Artwork library created."
-                        )
-                        if (scan != null && scan.gamesLinked > 0) {
-                            append(" ${scan.gamesLinked} game(s) linked from files already in the folder.")
-                        } else if (sources.isEmpty()) {
-                            append(" Place other launchers' media under its import/ folder to gather it here.")
-                        }
-                    },
+                    message = artworkFolderSetup.describe(linked),
                     artworkSources = sources.map { s -> ArtworkSourceUi(s.label, s.systems.size) },
                 )
             }
@@ -445,8 +423,7 @@ class InitialSetupViewModel @Inject constructor(
     fun linkRetroArch(uri: Uri) {
         viewModelScope.launch {
             scratch.update { it.copy(retroArchDetecting = true) }
-            retroArchLink.save(uri)
-            autoConfig.runOnStartup()
+            retroArchSetup.link(uri)
             readRetroArchState("RetroArch linked — installed cores are now offered in Emulators.")
         }
     }
@@ -455,15 +432,14 @@ class InitialSetupViewModel @Inject constructor(
         if (!scratch.value.retroArchLinked) return
         viewModelScope.launch {
             scratch.update { it.copy(retroArchDetecting = true) }
-            autoConfig.runOnStartup()
+            retroArchSetup.redetect()
             readRetroArchState("RetroArch cores re-checked.")
         }
     }
 
     fun unlinkRetroArch() {
         viewModelScope.launch {
-            retroArchLink.clear()
-            autoConfig.runOnStartup()
+            retroArchSetup.unlink()
             scratch.update {
                 it.copy(
                     retroArchLinked = false,
@@ -476,7 +452,7 @@ class InitialSetupViewModel @Inject constructor(
     }
 
     private suspend fun readRetroArchState(doneMessage: String? = null) {
-        val inventory = retroArchLink.inventory()
+        val inventory = retroArchSetup.inventory()
         scratch.update {
             it.copy(
                 retroArchDetecting = false,
