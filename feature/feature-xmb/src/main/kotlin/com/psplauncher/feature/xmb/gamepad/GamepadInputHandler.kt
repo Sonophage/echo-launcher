@@ -176,12 +176,8 @@ class GamepadInputHandler @Inject constructor(
         val rightNow = triggerDown(rightTriggerDown, right)
 
         var fired = false
-        if (leftNow && !leftTriggerDown && !isDuplicatePage(GamepadAction.PREV_PAGE)) {
-            emit(GamepadAction.PREV_PAGE, physical = true); fired = true
-        }
-        if (rightNow && !rightTriggerDown && !isDuplicatePage(GamepadAction.NEXT_PAGE)) {
-            emit(GamepadAction.NEXT_PAGE, physical = true); fired = true
-        }
+        if (leftNow && !leftTriggerDown) fired = emit(GamepadAction.PREV_PAGE, physical = true) || fired
+        if (rightNow && !rightTriggerDown) fired = emit(GamepadAction.NEXT_PAGE, physical = true) || fired
 
         leftTriggerDown = leftNow
         rightTriggerDown = rightNow
@@ -195,20 +191,28 @@ class GamepadInputHandler @Inject constructor(
     // ignored from then on. That is why paging worked and then stopped — one stray
     // key event, even an unmapped one, disabled the axes for good. A window cannot
     // latch, and it mirrors isDuplicateDirection, which the stick and D-pad share.
-    private fun isDuplicatePage(action: GamepadAction): Boolean {
-        val last = lastPageEmitAt[action] ?: return false
-        return clock() - last < DUPLICATE_WINDOW_MS
-    }
+
 
     fun emitAction(action: GamepadAction) = emit(action)
 
-    private fun emit(action: GamepadAction, physical: Boolean = false) {
-        if (physical && action.isDirectional()) lastDirectionalEmitAt[action] = clock()
+    /**
+     * Returns whether the action was actually emitted.
+     *
+     * A page action is gated here rather than at either call site, because this pad
+     * sends L2 as a key AND an axis but R2 as an axis only. Gating the axis alone let
+     * L2 fire twice per pull — once from each path — so it went back two pages at a
+     * time, reached the first page in a few pulls, and then looked stuck.
+     */
+    private fun emit(action: GamepadAction, physical: Boolean = false): Boolean {
         if (action == GamepadAction.PREV_PAGE || action == GamepadAction.NEXT_PAGE) {
+            val last = lastPageEmitAt[action]
+            if (last != null && clock() - last < DUPLICATE_WINDOW_MS) return false
             lastPageEmitAt[action] = clock()
         }
+        if (physical && action.isDirectional()) lastDirectionalEmitAt[action] = clock()
         _actions.tryEmit(action)
         Timber.v("Gamepad action: $action")
+        return true
     }
 
     private fun startRepeat(action: GamepadAction) {

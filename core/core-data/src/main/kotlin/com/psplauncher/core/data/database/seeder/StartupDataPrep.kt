@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.psplauncher.core.data.database.dao.ArtworkRecordDao
 import com.psplauncher.core.data.database.dao.GameDao
 import com.psplauncher.core.data.datastore.pfpDataStore
 import com.psplauncher.core.data.wallpaper.WallpaperLuminanceProbe
@@ -20,6 +21,7 @@ import javax.inject.Singleton
 class StartupDataPrep @Inject constructor(
     @ApplicationContext private val context: Context,
     private val gameDao: GameDao,
+    private val artworkRecordDao: ArtworkRecordDao,
 ) {
     suspend fun run(currentVersionCode: Int) {
         val prefs = context.pfpDataStore.data.first()
@@ -28,6 +30,7 @@ class StartupDataPrep @Inject constructor(
         runCatching {
             if (!alreadyPrepped) {
                 normalizeGameArtwork()
+                repointColumnsAtTheirRecords()
                 normalizeWallpaper()
             }
 
@@ -38,6 +41,32 @@ class StartupDataPrep @Inject constructor(
         context.pfpDataStore.edit { it[KEY_DATA_PREP_VERSION] = currentVersionCode }
         Timber.i("Startup data prep complete for versionCode=$currentVersionCode")
     }
+
+    /**
+     * The studio wrote the file and the record but left the games column naming the old
+     * file. Where a pick changed the extension — a PNG over a JPG — the column ended up
+     * naming something that had been deleted, and the crossbar silently fell back to
+     * other art. The record is the one that was right, so the column is taken from it.
+     *
+     * Only where the user picked the art, and only the primary asset, so nothing the
+     * scraper chose is overwritten.
+     */
+    private suspend fun repointColumnsAtTheirRecords() {
+        var repaired = 0
+        gameDao.getAll().forEach { g ->
+            val icon = primaryUserAsset(g.id, "ICON")
+            val artwork = primaryUserAsset(g.id, "BACKGROUND")
+            val logo = primaryUserAsset(g.id, "LOGO")
+
+            if (icon != null && icon != g.iconUri) { gameDao.updateIconUri(g.id, icon); repaired++ }
+            if (artwork != null && artwork != g.artworkUri) { gameDao.updateArtwork(g.id, artwork); repaired++ }
+            if (logo != null && logo != g.logoUri) { gameDao.updateLogo(g.id, logo); repaired++ }
+        }
+        if (repaired > 0) Timber.i("Repointed $repaired artwork column(s) at the record that owns them")
+    }
+
+    private suspend fun primaryUserAsset(gameId: Long, type: String): String? =
+        artworkRecordDao.getAt(gameId, type, 0)?.takeIf { it.userAssigned }?.documentUri
 
     private suspend fun normalizeGameArtwork() {
         val filesDir = context.filesDir.absolutePath
