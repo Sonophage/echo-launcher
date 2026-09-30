@@ -31,7 +31,7 @@ class VideoIntentResolver @Inject constructor(
             intent = buildViewIntent(video, playerPackage),
             chooserTitle = CHOOSER_TITLE,
             noHandlerMessage =
-                "No video player could open this file. Install a player or pick one in Settings → Video.",
+                "No video player could open this file. Install a player or pick one from Video → Folders → Default Video Player.",
             logLabel = "video \"${video.displayTitle}\"",
         )
 

@@ -19,14 +19,12 @@ val SETTINGS_SCREEN_ROUTES: Set<String> = setOf(
     "settings_categories",
     "settings_artwork",
     "settings_artwork_sources",
-    "settings_artwork_import",
     "settings_emulators",
 
     "settings_emulators_installed",
     "settings_emulators_custom",
     "settings_emulators_retroarch",
     "settings_themes",
-    "settings_display",
 
     "settings_appearance",
     "settings_layout",
@@ -114,7 +112,6 @@ fun SettingsNavHost(
             "settings_artwork_sources" -> ArtworkSettingsScreen(
                 onBack = onBack, section = ArtworkSection.SOURCES, modifier = modifier,
             )
-            "settings_artwork_import" -> ArtworkImportScreen(onBack = onBack, modifier = modifier)
             "settings_emulators"  -> EmulatorsSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_emulators_installed" -> EmulatorsSettingsScreen(onBack = onBack, section = EmulatorSettingsSection.INSTALLED, modifier = modifier)
             "settings_emulators_custom" -> EmulatorsSettingsScreen(onBack = onBack, section = EmulatorSettingsSection.CUSTOM, modifier = modifier)
@@ -122,14 +119,6 @@ fun SettingsNavHost(
             "settings_themes"     -> ThemesSettingsScreen(
                 onBack = onBack,
                 onOpenColorSchemePicker = onOpenColorSchemePicker,
-                modifier = modifier,
-            )
-            "settings_display"    -> DisplaySettingsScreen(
-                onBack = onBack,
-                onOpenXmbLayoutAdjust = onOpenXmbLayoutAdjust,
-                onOpenCustomIcons = onOpenCustomIcons,
-                onPreviewBootSequence = onPreviewBootSequence,
-                onPreviewGameBoot = onPreviewGameBoot,
                 modifier = modifier,
             )
             "settings_appearance" -> DisplaySettingsScreen(

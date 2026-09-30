@@ -105,6 +105,7 @@ class ControllerLayoutRepository @Inject constructor(
             store.remove(KEY_DISPLAY_TYPE)
             store.remove(KEY_SCROLL_SPEED)
             store.remove(KEY_LEFT_BACKS_OUT)
+            store.remove(KEY_STICK_SENSITIVITY)
         }
         mappingRepository.resetToDefaults()
         Timber.i("Controller layout prefs reset to defaults")

@@ -16,8 +16,6 @@ class TriggerEdgeTest {
 
     @Test
     fun `it stays down until it is well clear of the press point, so one pull is not two pages`() {
-        // an analog trigger dithers around its value; without the gap it would
-        // cross the press point repeatedly on a single pull.
         assertTrue("still held just under the press point", triggerDown(wasDown = true, value = 0.55f))
         assertTrue(triggerDown(wasDown = true, value = TRIGGER_RELEASE + 0.01f))
         assertFalse(triggerDown(wasDown = true, value = TRIGGER_RELEASE))

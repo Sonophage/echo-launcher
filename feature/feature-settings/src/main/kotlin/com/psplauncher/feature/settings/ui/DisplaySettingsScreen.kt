@@ -1,7 +1,6 @@
 package com.psplauncher.feature.settings.ui
 
 import com.psplauncher.core.domain.model.ControllerHintPolicy
-import com.psplauncher.core.domain.model.TextLegibilityStyle
 import com.psplauncher.core.domain.model.IconLegibilityStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,16 +41,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
-import com.psplauncher.core.ui.components.HsvColorPickerDialog
-import com.psplauncher.core.ui.components.hexOf
-import com.psplauncher.core.ui.components.hsvToArgbLong
 import com.psplauncher.core.ui.motion.MotionWallpaperBackground
 import com.psplauncher.core.ui.motion.MotionWallpaperPolicy
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.domain.model.UiMediaSlot
-import com.psplauncher.core.ui.theme.LocalPFPColors
-import com.psplauncher.core.ui.theme.composite
-import com.psplauncher.core.ui.theme.solveScrimColor
 import com.psplauncher.feature.settings.viewmodel.DisplaySettingsUiState
 import com.psplauncher.feature.settings.viewmodel.DisplaySettingsViewModel
 
@@ -71,11 +63,6 @@ fun DisplaySettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    var fontPickerOpen by remember { mutableStateOf(false) }
-    var pickerHue by remember { mutableFloatStateOf(0f) }
-    var pickerSat by remember { mutableFloatStateOf(0f) }
-    var pickerVal by remember { mutableFloatStateOf(1f) }
-    var pickerChannel by remember { mutableIntStateOf(0) }
 
     var pspConfirmFocus by remember { mutableStateOf<Int?>(null) }
 
@@ -301,46 +288,6 @@ fun DisplaySettingsScreen(
                     checked  = state.textShadow,
                     onToggle = { viewModel.setTextShadow(it) },
                 )
-
-                SettingsValueRow(
-                    label    = "Font Colour",
-                    sublabel = "Colour for labels and body text across the interface",
-                    value    = state.textColorArgb
-                        ?.let { hexOf(Color(it and 0xFFFFFFFFL)) }
-                        ?: "Theme Default",
-                    onClick  = {
-                        val seed = state.textColorArgb ?: 0xFFFFFFFFL
-                        val hsv = FloatArray(3)
-                        android.graphics.Color.colorToHSV((seed and 0xFFFFFF).toInt(), hsv)
-                        pickerHue = hsv[0]; pickerSat = hsv[1]; pickerVal = hsv[2]
-                        pickerChannel = 0
-                        fontPickerOpen = true
-                    },
-                )
-
-                if (state.textColorArgb != null) {
-                    SettingsRow(
-                        label    = "Reset Font Colour",
-                        sublabel = "Go back to the colour the current theme supplies",
-                        onClick  = { viewModel.setTextColor(null) },
-                    )
-
-                    SettingsToggleRow(
-                        label    = "Use My Exact Colour",
-                        sublabel = "Render the colour exactly as picked. Legibility protection still " +
-                            "applies — text may get a shadow or a plate behind it",
-                        checked  = state.textColorExact,
-                        onToggle = { viewModel.setTextColorExact(it) },
-                    )
-                }
-
-                SettingsPickerRow(
-                    label    = "Text Legibility",
-                    sublabel = "How text separates from what is behind it",
-                    options  = TextLegibilityStyle.entries.map { SettingsPickerOption(it.label) },
-                    selectedIndex = TextLegibilityStyle.entries.indexOf(state.textLegibility),
-                    onPick   = { viewModel.setTextLegibility(TextLegibilityStyle.entries[it]) },
-                )
             }
             if (section == null || section == DisplaySection.LAYOUT) {
                 SettingsGroup("XMB Layout")
@@ -391,7 +338,7 @@ fun DisplaySettingsScreen(
 
                 SettingsToggleRow(
                     label    = "Show Boot Sequence on Resume",
-                    sublabel = "Also play when returning from a game",
+                    sublabel = "Also play when you come back to the launcher from another app",
                     onFocusChangedExternal = { if (it) focusedSlot = null },
                     checked  = state.showBootOnResume,
                     onToggle = { viewModel.setShowBootOnResume(it) },
@@ -551,55 +498,11 @@ fun DisplaySettingsScreen(
         }
     }
 
-    if (fontPickerOpen) {
-        val pfp = LocalPFPColors.current
-        val anchors = remember(pfp.backgroundTop, pfp.backgroundBottom) {
-            composite(solveScrimColor(pfp.backgroundTop, 0.72f).copy(alpha = 0.72f), Color.White) to
-                composite(solveScrimColor(pfp.backgroundBottom, 0.90f).copy(alpha = 0.90f), Color.White)
-        }
-        HsvColorPickerDialog(
-            title           = "Font Colour",
-            hue             = pickerHue,
-            saturation      = pickerSat,
-            brightness      = pickerVal,
-            selectedChannel = pickerChannel,
-            accent          = SettingsAccent,
-            subtext         = SettingsSubtext,
-            contrastAnchors = anchors,
-            onChannelFraction = { channel, fraction ->
-                pickerChannel = channel
-                when (channel) {
-                    0 -> pickerHue = (fraction * 360f).coerceIn(0f, 360f)
-                    1 -> pickerSat = fraction.coerceIn(0f, 1f)
-                    else -> pickerVal = fraction.coerceIn(0f, 1f)
-                }
-            },
-            onConfirm = {
-                viewModel.setTextColor(hsvToArgbLong(pickerHue, pickerSat, pickerVal))
-                fontPickerOpen = false
-            },
-            onCancel = { fontPickerOpen = false },
-        )
-    }
-
     pspConfirmFocus?.let { focused ->
         PspLayoutConfirmPanel(
             focusedOption = focused,
             onCancel = { pspConfirmFocus = null },
             onApply = { viewModel.applyPspLayout(); pspConfirmFocus = null },
-        )
-    }
-
-    if (state.textContrastNotice != null) {
-        SettingsActionsOverlay(
-            title = "Font colour adjusted",
-            message = state.textContrastNotice!!,
-            actions = listOf(
-                "OK" to { viewModel.dismissTextContrastNotice() },
-                "Use my exact colour" to { viewModel.setTextColorExact(true) },
-                "Don't warn again" to { viewModel.suppressTextContrastNotice() },
-            ),
-            onCancel = { viewModel.dismissTextContrastNotice() },
         )
     }
 

@@ -10,10 +10,6 @@ class SearchTileFitsTest {
 
     @Test
     fun `with the keyboard up a card still has room for its name`() {
-        // The name is the point of a search result. A card is its art at ArtRatio
-        // plus the text under it, and with the keyboard up the grid band is only
-        // SEARCH_GRID_BAND_WITH_IME tall, so the tile has to be narrow enough that
-        // both fit. Raising SEARCH_TILE_TARGET_WIDTH_IME pushes the name off screen.
         val height = cardHeightDp(SEARCH_TILE_TARGET_WIDTH_IME.value)
         assertTrue(
             "a ${SEARCH_TILE_TARGET_WIDTH_IME.value}dp tile is ${height}dp tall, " +

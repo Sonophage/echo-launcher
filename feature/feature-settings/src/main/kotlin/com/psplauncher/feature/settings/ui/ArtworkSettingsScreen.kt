@@ -221,7 +221,7 @@ fun ArtworkSettingsScreen(
                     options  = listOf(
                         SettingsPickerOption(
                             VideoSnapPlacement.ICON.label,
-                            "Inside the 144x80 tile over the static icon. Needs Custom Icon mode.",
+                            "Inside the 144x80 tile over the static icon.",
                         ),
                         SettingsPickerOption(
                             VideoSnapPlacement.BACKGROUND.label,
@@ -255,7 +255,7 @@ fun ArtworkSettingsScreen(
 
                 SettingsToggleRow(
                     label    = "Download Clear Logos",
-                    sublabel = "Transparent logo PNGs overlaid on hero art",
+                    sublabel = "Transparent logo PNGs",
                     checked  = state.downloadLogos,
                     onToggle = { viewModel.setDownloadLogos(it) },
                 )

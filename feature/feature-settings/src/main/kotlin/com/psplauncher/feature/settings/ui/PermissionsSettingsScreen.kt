@@ -38,8 +38,6 @@ fun PermissionsSettingsScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Granting happens in the system settings app, so the only honest moment to re-read
-    // the state is when we come back to the foreground.
     var readToken by remember { mutableIntStateOf(0) }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -112,10 +110,6 @@ private fun isGranted(context: Context, permission: AppPermission): Boolean = wh
     } ?: false
 }
 
-/**
- * Usage access is an app op, not a permission, so checkSelfPermission always says no
- * for it however it was granted.
- */
 private fun hasUsageAccess(context: Context): Boolean = runCatching {
     val ops = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
     val mode = ops.unsafeCheckOpNoThrow(

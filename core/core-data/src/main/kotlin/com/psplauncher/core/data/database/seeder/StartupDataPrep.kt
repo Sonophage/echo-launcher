@@ -34,9 +34,6 @@ class StartupDataPrep @Inject constructor(
                 normalizeWallpaper()
             }
 
-            // Keyed to the repair, not to the app version. Inside the block above it
-            // would never run for anyone already on the version that introduced it,
-            // which is every device that had already launched once.
             if (prefs[KEY_ART_COLUMN_REPAIR] != true) {
                 repointColumnsAtTheirRecords()
                 context.pfpDataStore.edit { it[KEY_ART_COLUMN_REPAIR] = true }
@@ -50,15 +47,6 @@ class StartupDataPrep @Inject constructor(
         Timber.i("Startup data prep complete for versionCode=$currentVersionCode")
     }
 
-    /**
-     * The studio wrote the file and the record but left the games column naming the old
-     * file. Where a pick changed the extension — a PNG over a JPG — the column ended up
-     * naming something that had been deleted, and the crossbar silently fell back to
-     * other art. The record is the one that was right, so the column is taken from it.
-     *
-     * Only where the user picked the art, and only the primary asset, so nothing the
-     * scraper chose is overwritten.
-     */
     private suspend fun repointColumnsAtTheirRecords() {
         var repaired = 0
         gameDao.getAll().forEach { g ->

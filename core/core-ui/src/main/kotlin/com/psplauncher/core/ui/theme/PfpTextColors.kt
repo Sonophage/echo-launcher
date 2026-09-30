@@ -7,19 +7,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.lerp
 
 @Immutable
-sealed interface TextProtection {
-    data object None : TextProtection
-
-    data object Shadow : TextProtection
-
-    @Immutable
-    data class Plate(val color: Color, val alpha: Float) : TextProtection
-
-    @Immutable
-    data class Outline(val color: Color) : TextProtection
-}
-
-@Immutable
 data class PfpTextColors(
 
     val primary: Color,
@@ -35,8 +22,6 @@ data class PfpTextColors(
     val adjusted: Boolean,
 
     val achievedRatio: Float,
-
-    val protection: TextProtection,
 )
 
 val DefaultPfpTextColors = PfpTextColors(
@@ -47,7 +32,6 @@ val DefaultPfpTextColors = PfpTextColors(
     requested = Color.White,
     adjusted = false,
     achievedRatio = 21f,
-    protection = TextProtection.Shadow,
 )
 
 val LocalPfpTextColors = staticCompositionLocalOf { DefaultPfpTextColors }

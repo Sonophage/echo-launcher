@@ -698,7 +698,6 @@ data class XMBUiState(
 
     val layoutSpec: com.psplauncher.themekit.XmbLayoutSpec = com.psplauncher.themekit.XmbLayoutSpec.DEFAULT,
 
-    val xmbScale: Float = 1f,
 
     val xmbLayoutAdjustMap: Map<String, com.psplauncher.themekit.XmbLayoutAdjust> = emptyMap(),
 
@@ -1478,9 +1477,6 @@ class XMBViewModel @Inject constructor(
         val iconsStamp: Long?,
         val layoutJson: String?,
 
-        val xmbScale: Float?,
-        val barTopOverride: Float?,
-
         val layoutAdjustJson: String?,
 
         val customIconsStamp: Long?,
@@ -1498,15 +1494,13 @@ class XMBViewModel @Inject constructor(
                         iconColor = prefs[KEY_ICON_COLOR],
                         iconsStamp = prefs[com.psplauncher.core.data.repository.PfpThemeStore.KEY_THEME_ICONS_STAMP],
                         layoutJson = prefs[com.psplauncher.core.data.repository.PfpThemeStore.KEY_THEME_LAYOUT],
-                        xmbScale = prefs[KEY_XMB_SCALE],
-                        barTopOverride = prefs[KEY_BAR_TOP_FRACTION],
                         layoutAdjustJson = prefs[KEY_XMB_LAYOUT_ADJUST],
                         customIconsStamp = prefs[CustomIconStore.KEY_CUSTOM_ICONS_STAMP],
                         textColor = prefs[KEY_TEXT_COLOR],
                     )
                 }
                 .distinctUntilChanged()
-                .collect { (name, accentOverride, iconColorArgb, iconsStamp, layoutJson, xmbScale, barTopOverride, layoutAdjustJson, customIconsStamp, textColorArgb) ->
+                .collect { (name, accentOverride, iconColorArgb, iconsStamp, layoutJson, layoutAdjustJson, customIconsStamp, textColorArgb) ->
                     val base = if (accentOverride != null) {
                         DefaultPFPColors.withWaveTint(
                             androidx.compose.ui.graphics.Color(accentOverride and 0xFFFFFFFFL),
@@ -1535,11 +1529,6 @@ class XMBViewModel @Inject constructor(
 
                     val themeSpec = com.psplauncher.themekit.XmbLayoutSpecCodec.decode(layoutJson)
                         ?: com.psplauncher.themekit.XmbLayoutSpec.DEFAULT
-                    val layoutSpec = if (barTopOverride != null) {
-                        com.psplauncher.themekit.XmbLayoutSpecCodec.sanitize(
-                            themeSpec.copy(barTopFraction = barTopOverride)
-                        )
-                    } else themeSpec
 
                     val adjustMap = com.psplauncher.themekit.XmbLayoutAdjustCodec.decode(layoutAdjustJson)
                     _uiState.update {
@@ -1547,8 +1536,7 @@ class XMBViewModel @Inject constructor(
                             themeColors = baseThemeColors,
                             iconOverrides = iconOverrides,
                             customIcons = customIcons,
-                            layoutSpec = layoutSpec,
-                            xmbScale = (xmbScale ?: 1f).coerceIn(0.75f, 1.3f),
+                            layoutSpec = themeSpec,
                             xmbLayoutAdjustMap = adjustMap,
                         )
                     }
@@ -2143,7 +2131,7 @@ class XMBViewModel @Inject constructor(
     private fun emptyAllMusicItem(): XMBItem = XMBItem(
         id       = EMPTY_CATEGORY_ITEM_ID,
         title    = "No music found",
-        subtitle = "Add a music folder in Settings → Music",
+        subtitle = "Add a music folder from the Folders row",
         type     = XMBItemType.EMPTY,
     )
 
@@ -2319,7 +2307,7 @@ class XMBViewModel @Inject constructor(
                 XMBItem(
                     id = EMPTY_CATEGORY_ITEM_ID,
                     title = "No video libraries yet",
-                    subtitle = "Set a root folder in Settings → Video",
+                    subtitle = "Add a folder from the Folders row",
                     type = XMBItemType.EMPTY,
                 ),
             )
@@ -2373,7 +2361,7 @@ class XMBViewModel @Inject constructor(
     private fun emptyAllVideosItem(): XMBItem = XMBItem(
         id       = EMPTY_CATEGORY_ITEM_ID,
         title    = "No videos found",
-        subtitle = "Add a video library in Settings → Video",
+        subtitle = "Add a video folder from the Folders row",
         type     = XMBItemType.EMPTY,
     )
 
@@ -2901,7 +2889,7 @@ class XMBViewModel @Inject constructor(
                 XMBItem(
                     id = EMPTY_CATEGORY_ITEM_ID,
                     title = "No albums yet",
-                    subtitle = "Set a root folder in Settings → Photo",
+                    subtitle = "Add a folder from the Folders row",
                     type = XMBItemType.EMPTY,
                 ),
             )
@@ -2939,7 +2927,7 @@ class XMBViewModel @Inject constructor(
     private fun emptyLibraryPhotosItem(): XMBItem = XMBItem(
         id       = EMPTY_CATEGORY_ITEM_ID,
         title    = "No photos in this album",
-        subtitle = "Scan it from its ⚙ Options menu or in Settings → Photo",
+        subtitle = "Scan it from its ⚙ Options menu",
         type     = XMBItemType.EMPTY,
     )
 
@@ -7759,7 +7747,7 @@ class XMBViewModel @Inject constructor(
         val bucket = com.psplauncher.themekit.XmbFormFactor.forSmallestWidthDp(swDp).key
         val s = _uiState.value
         val seed = s.xmbLayoutAdjustMap[bucket] ?: com.psplauncher.themekit.XmbLayoutAdjust(
-            scale = s.xmbScale,
+            scale = 1f,
             barLeftFraction = 0f,
             barTopFraction = s.layoutSpec.barTopFraction,
         )
@@ -8414,8 +8402,6 @@ class XMBViewModel @Inject constructor(
 
         private val KEY_TEXT_COLOR        = longPreferencesKey("display_text_color")
 
-        private val KEY_XMB_SCALE         = androidx.datastore.preferences.core.floatPreferencesKey("display_xmb_scale")
-        private val KEY_BAR_TOP_FRACTION  = androidx.datastore.preferences.core.floatPreferencesKey("display_bar_top_fraction")
 
         internal const val WAVE_IDLE_MS = 12_000L
 

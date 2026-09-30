@@ -152,8 +152,8 @@ class SettingsHierarchyTest {
         listOf(
             "settings_library", "settings_import_pc",
             "settings_categories", "settings_artwork",
-            "settings_artwork_import", "settings_emulators",
-            "settings_themes", "settings_display", "settings_controller", "settings_backup",
+            "settings_emulators",
+            "settings_themes", "settings_controller", "settings_backup",
             "settings_logs", "settings_about", "settings_credits",
             "settings_initial_setup", "settings_initial_setup_first",
         ).forEach { id ->
@@ -178,9 +178,9 @@ class SettingsHierarchyTest {
         assertTrue("settings_audio route missing", SETTINGS_SCREEN_ROUTES.contains("settings_audio"))
     }
 
-    @Test fun `the Interface audio row is titled Sound with a menu-and-boot subtitle`() {
+    @Test fun `the Interface audio row is titled Sound and names music as well as sounds`() {
         val row = settingsEntriesIn(SettingsSectionId.INTERFACE).first { it.id == "settings_audio" }
         assertEquals("Sound", row.title)
-        assertEquals("Menu & boot sounds", row.subtitle)
+        assertEquals("Menu sounds, menu music & boot audio", row.subtitle)
     }
 }

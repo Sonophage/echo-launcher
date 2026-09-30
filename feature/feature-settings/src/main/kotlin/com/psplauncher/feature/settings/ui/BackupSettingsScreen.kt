@@ -83,7 +83,7 @@ fun BackupSettingsScreen(
                 }
             SettingsValueRow(label = "ROM Files",           value = "✗  (not included)")
 
-            SettingsValueRow(label = "API Keys",            value = "✗  (re-enter after a reinstall)")
+            SettingsValueRow(label = "API Keys",            value = "✓  (re-enter on another device or after a reinstall)")
 
             SettingsGroup("Restore")
 

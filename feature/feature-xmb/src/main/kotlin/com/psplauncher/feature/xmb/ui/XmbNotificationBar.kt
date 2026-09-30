@@ -377,13 +377,6 @@ private fun MediaRow(
     }
 }
 
-/**
- * Round transport keys, the primary one carrying the cursor accent the rest of the UI
- * uses for the thing under your hand. These were unicode characters in text pills —
- * U+23EE, U+23F8, U+25B6 — which come from whatever font happens to have them, so
- * they sat at different weights and baselines from each other and from the app's own
- * icons, and the resume case was a word in the same component as two glyphs.
- */
 @Composable
 private fun TransportButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -409,7 +402,6 @@ private fun TransportButton(
     }
 }
 
-/** The resume case has no transport, so it stays a labelled pill rather than a glyph. */
 @Composable
 private fun TransportLabel(label: String, onClick: () -> Unit) {
     Row(

@@ -13,13 +13,8 @@ class BackupKeyCoverageTest {
     }
 
     @Test
-    fun `font colour and text legibility keys are backed up`() {
-        assertCovered(
-            "display_text_color",
-            "display_text_color_exact",
-            "display_text_legibility",
-            "display_text_contrast_notice_suppressed",
-        )
+    fun `the theme's text colour is backed up`() {
+        assertCovered("display_text_color")
     }
 
     @Test
@@ -31,7 +26,6 @@ class BackupKeyCoverageTest {
     fun `icon and text appearance settings are backed up`() {
         assertCovered(
             "display_icon_legibility",
-            "display_solid_unfocused_icons",
             "display_fade_by_distance",
             "display_card_art_grid",
             "display_text_shadow",
@@ -45,8 +39,6 @@ class BackupKeyCoverageTest {
     @Test
     fun `XMB geometry is backed up`() {
         assertCovered(
-            "display_xmb_scale",
-            "display_bar_top_fraction",
             "display_xmb_layout_adjust",
         )
     }

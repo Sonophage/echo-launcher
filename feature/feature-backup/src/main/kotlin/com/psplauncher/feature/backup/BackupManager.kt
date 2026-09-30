@@ -143,7 +143,7 @@ open class BackupManager @Inject constructor(
         val exported = exportToBackupFolder(backupFolder, tempFile, fileName)
         tempFile.delete()
         if (exported == null) {
-            error("Could not write to the backup folder. Re-link it under Settings → Folder Access.")
+            error("Could not write to the backup folder. Re-link it under Settings → Backup & Restore → Backup Folder.")
         }
         fileName
     }.fold(
@@ -464,8 +464,6 @@ open class BackupManager @Inject constructor(
         stringPreferencesKey("display_custom_wallpaper"),
         stringPreferencesKey("display_motion_wallpaper"),
 
-        stringPreferencesKey("display_text_legibility"),
-
         stringPreferencesKey("display_icon_legibility"),
         stringPreferencesKey("display_xmb_layout_adjust"),
         stringPreferencesKey("pref_video_snap_placement"),
@@ -535,10 +533,7 @@ open class BackupManager @Inject constructor(
             booleanPreferencesKey("theme_accent_from_wallpaper"),
             booleanPreferencesKey("interface_context_menu_hint"),
 
-            booleanPreferencesKey("display_text_color_exact"),
-            booleanPreferencesKey("display_text_contrast_notice_suppressed"),
 
-            booleanPreferencesKey("display_solid_unfocused_icons"),
             booleanPreferencesKey("display_fade_by_distance"),
             booleanPreferencesKey("display_card_art_grid"),
             booleanPreferencesKey("display_recents_include_apps"),
@@ -578,8 +573,6 @@ open class BackupManager @Inject constructor(
         private val BACKED_UP_FLOAT_KEYS = listOf(
             floatPreferencesKey("interface_context_menu_hint_delay_seconds"),
 
-            floatPreferencesKey("display_xmb_scale"),
-            floatPreferencesKey("display_bar_top_fraction"),
             floatPreferencesKey("pref_icon1_linger_delay_seconds"),
         )
 

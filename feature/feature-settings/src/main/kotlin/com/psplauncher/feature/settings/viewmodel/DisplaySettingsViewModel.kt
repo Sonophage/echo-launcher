@@ -8,7 +8,6 @@ import android.net.Uri
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,17 +22,10 @@ import com.psplauncher.core.domain.model.ControllerHintPolicy
 import com.psplauncher.core.domain.model.UiMediaKind
 import com.psplauncher.core.domain.model.UiMediaSlot
 import com.psplauncher.core.domain.model.IconLegibilityStyle
-import com.psplauncher.core.domain.model.TextLegibilityStyle
-import com.psplauncher.core.domain.model.XmbColorScheme
-import com.psplauncher.core.domain.model.lightBackgroundAnchors
 import com.psplauncher.core.domain.model.resolve
 import com.psplauncher.core.domain.model.TouchNavButtonMode
 import com.psplauncher.core.domain.model.TouchSensitivity
 import com.psplauncher.core.domain.model.XYLayout
-import com.psplauncher.core.ui.theme.TextContrastRole
-import com.psplauncher.core.ui.theme.clampLightnessForContrast
-import com.psplauncher.core.ui.theme.composite
-import com.psplauncher.core.ui.theme.solveScrimColor
 import com.psplauncher.core.ui.wave.WaveStyle
 import com.psplauncher.themekit.MotionLimits
 import com.psplauncher.themekit.UiMediaLimits
@@ -79,16 +71,6 @@ private val KEY_RECENTS_INCLUDE_APPS = booleanPreferencesKey("display_recents_in
 
 private val KEY_TEXT_SHADOW = booleanPreferencesKey("display_text_shadow")
 
-private val KEY_TEXT_COLOR = longPreferencesKey("display_text_color")
-
-private val KEY_TEXT_COLOR_EXACT = booleanPreferencesKey("display_text_color_exact")
-
-private val KEY_TEXT_LEGIBILITY = stringPreferencesKey("display_text_legibility")
-
-private val KEY_TEXT_NOTICE_SUPPRESSED = booleanPreferencesKey("display_text_contrast_notice_suppressed")
-
-private val KEY_ACCENT_OVERRIDE = longPreferencesKey("theme_accent_override")
-private val KEY_COLOR_SCHEME    = stringPreferencesKey("display_color_scheme")
 internal val KEY_CUSTOM_WALLPAPER  = stringPreferencesKey("display_custom_wallpaper")
 
 internal val KEY_MOTION_WALLPAPER  = stringPreferencesKey("display_motion_wallpaper")
@@ -120,7 +102,6 @@ private val WAVE_STYLE_LABELS = mapOf(
 private data class Transient(
     val bootPreviewVisible: Boolean,
     val gameBootPreviewVisible: Boolean,
-    val textContrastNotice: String?,
     val xyLayout: XYLayout,
 )
 
@@ -141,14 +122,6 @@ data class DisplaySettingsUiState(
     val recentsIncludeApps: Boolean = false,
 
     val textShadow: Boolean = true,
-
-    val textColorArgb: Long? = null,
-
-    val textColorExact: Boolean = false,
-    val textLegibility: TextLegibilityStyle = TextLegibilityStyle.DEFAULT,
-    val textContrastNoticeSuppressed: Boolean = false,
-
-    val textContrastNotice: String? = null,
 
     val contextMenuHintDelaySeconds: Float = ControllerHintPolicy.DEFAULT_DELAY_SECONDS,
     val touchSensitivity: TouchSensitivity = TouchSensitivity.NORMAL,
@@ -197,8 +170,6 @@ class DisplaySettingsViewModel @Inject constructor(
     private val _bootPreviewVisible = MutableStateFlow(false)
     private val _gameBootPreviewVisible = MutableStateFlow(false)
 
-    private val _textContrastNotice = MutableStateFlow<String?>(null)
-
     private var pendingUiMediaSlot: UiMediaSlot? = null
 
     val uiState: StateFlow<DisplaySettingsUiState> = combine(
@@ -210,10 +181,9 @@ class DisplaySettingsViewModel @Inject constructor(
         combine(
             _bootPreviewVisible,
             _gameBootPreviewVisible,
-            _textContrastNotice,
             controllerLayout.prefs,
-        ) { boot, gameBoot, notice, layout ->
-            Transient(boot, gameBoot, notice, layout.xyLayout)
+        ) { boot, gameBoot, layout ->
+            Transient(boot, gameBoot, layout.xyLayout)
         },
     ) { prefs, msg, importing, previewVisible, transient ->
 
@@ -238,11 +208,6 @@ class DisplaySettingsViewModel @Inject constructor(
             cardArtGrid          = prefs[KEY_CARD_ART_GRID] ?: true,
             recentsIncludeApps   = prefs[KEY_RECENTS_INCLUDE_APPS] ?: false,
             textShadow           = prefs[KEY_TEXT_SHADOW] ?: true,
-            textColorArgb        = prefs[KEY_TEXT_COLOR],
-            textColorExact       = prefs[KEY_TEXT_COLOR_EXACT] ?: false,
-            textLegibility       = TextLegibilityStyle.fromName(prefs[KEY_TEXT_LEGIBILITY]),
-            textContrastNoticeSuppressed = prefs[KEY_TEXT_NOTICE_SUPPRESSED] ?: false,
-            textContrastNotice   = transient.textContrastNotice,
             contextMenuHintEnabled = prefs[KEY_CONTEXT_MENU_HINT] ?: ControllerHintPolicy.DEFAULT_ENABLED,
             contextMenuHintDelaySeconds = ControllerHintPolicy.clampDelay(
                 prefs[KEY_CONTEXT_MENU_HINT_DELAY_SECONDS] ?: ControllerHintPolicy.DEFAULT_DELAY_SECONDS
@@ -331,82 +296,6 @@ class DisplaySettingsViewModel @Inject constructor(
 
     fun applyPspLayout() = save { PspXmbLayout.write(it, PspXmbLayout.forWindow(context)) }
 
-    fun setTextColor(argb: Long?) {
-        viewModelScope.launch {
-            context.pfpDataStore.edit { prefs ->
-                if (argb != null) prefs[KEY_TEXT_COLOR] = argb else prefs.remove(KEY_TEXT_COLOR)
-            }
-            _textContrastNotice.value = noticeFor(argb)
-        }
-    }
-
-    fun setTextColorExact(v: Boolean) {
-        viewModelScope.launch {
-            context.pfpDataStore.edit { it[KEY_TEXT_COLOR_EXACT] = v }
-
-            if (v) _textContrastNotice.value = null
-        }
-    }
-
-    fun setTextLegibility(style: TextLegibilityStyle) = save { it[KEY_TEXT_LEGIBILITY] = style.name }
-
-    fun dismissTextContrastNotice() {
-        _textContrastNotice.value = null
-    }
-
-    fun suppressTextContrastNotice() {
-        _textContrastNotice.value = null
-        save { it[KEY_TEXT_NOTICE_SUPPRESSED] = true }
-    }
-
-    private suspend fun noticeFor(argb: Long?): String? {
-        if (argb == null) return null
-        val prefs = context.pfpDataStore.data.first()
-        if (prefs[KEY_TEXT_COLOR_EXACT] == true) return null
-        if (prefs[KEY_TEXT_NOTICE_SUPPRESSED] == true) return null
-
-        val picked = androidx.compose.ui.graphics.Color(argb and 0xFFFFFFFFL)
-        val worst = settingsBackdropAnchors(prefs)
-            .minByOrNull { clampLightnessForContrast(picked, it).achievedRatio } ?: return null
-        val resolved = clampLightnessForContrast(picked, worst, TextContrastRole.BODY.threshold)
-
-        return when {
-            !resolved.adjusted && resolved.meetsTarget -> null
-            resolved.adjusted -> "Adjusted for readability — the colour you picked reads at " +
-                String.format("%.1f:1", contrastOf(picked, worst)) + " here, below the 4.5:1 bar."
-            else -> "That colour can't reach 4.5:1 on this background, so text will get a " +
-                "contrast plate behind it."
-        }
-    }
-
-    private fun settingsBackdropAnchors(
-        prefs: androidx.datastore.preferences.core.Preferences,
-    ): List<androidx.compose.ui.graphics.Color> {
-        val accentOverride = prefs[KEY_ACCENT_OVERRIDE]
-        val anchors: Pair<Long, Long> = if (accentOverride != null) {
-            lightBackgroundAnchors(accentOverride and 0xFFFFFFFFL)
-        } else {
-            val scheme = runCatching {
-                XmbColorScheme.valueOf(
-                    prefs[KEY_COLOR_SCHEME] ?: XmbColorScheme.CLASSIC_BLUE.name,
-                )
-            }.getOrDefault(XmbColorScheme.CLASSIC_BLUE)
-            val palette = scheme.resolve(java.time.LocalDate.now().monthValue)
-            palette.backgroundTop to palette.backgroundBottom
-        }
-        fun backdrop(argb: Long, alpha: Float) = composite(
-            solveScrimColor(androidx.compose.ui.graphics.Color(argb and 0xFFFFFFFFL), alpha)
-                .copy(alpha = alpha),
-            androidx.compose.ui.graphics.Color.White,
-        )
-        return listOf(backdrop(anchors.first, 0.72f), backdrop(anchors.second, 0.90f))
-    }
-
-    private fun contrastOf(
-        fg: androidx.compose.ui.graphics.Color,
-        bg: androidx.compose.ui.graphics.Color,
-    ): Float = com.psplauncher.core.ui.theme.contrastRatio(fg, bg).toFloat()
-
     fun setShowBootSequence(v: Boolean)      = save { it[KEY_SHOW_BOOT]       = v }
     fun setShowBootOnResume(v: Boolean)      = save { it[KEY_BOOT_ON_RESUME]  = v }
     fun setThermalThrottleAware(v: Boolean)  = save { it[KEY_THERMAL_AWARE]   = v }
@@ -414,7 +303,7 @@ class DisplaySettingsViewModel @Inject constructor(
     fun setWaveOverWallpaper(v: Boolean)     = save { it[KEY_WAVE_OVER_WALLPAPER] = v }
     fun setContextMenuHintEnabled(v: Boolean) = save { it[KEY_CONTEXT_MENU_HINT] = v }
     fun setContextMenuHintDelaySeconds(v: Float) = save {
-        it[KEY_CONTEXT_MENU_HINT_DELAY_SECONDS] = v.coerceIn(1f, 5f)
+        it[KEY_CONTEXT_MENU_HINT_DELAY_SECONDS] = ControllerHintPolicy.clampDelay(v)
     }
 
     fun setTouchNavButtonMode(mode: TouchNavButtonMode) = save { it[KEY_TOUCH_NAV_BUTTON] = mode.name }
