@@ -497,10 +497,10 @@ val STUDIO_TABS = listOf(
     StudioTab(ArtworkKind.ICON,           "TILE",         "Crossbar tile · vertical box art · crop",       StudioTileClass.PORTRAIT),
     StudioTab(ArtworkKind.ICON1,          "TILE VIDEO",   "Plays on the tile after you rest on it",        StudioTileClass.LANDSCAPE),
     StudioTab(ArtworkKind.BACKGROUND,     "BACKGROUND",   "XMB hover background · full screen",            StudioTileClass.LANDSCAPE),
-    StudioTab(ArtworkKind.LOGO,           "LOGO",         "PIC0 overlay · transparent PNG · fit",          StudioTileClass.WIDE),
     StudioTab(ArtworkKind.SCREENSHOT,     "SCREENSHOT",   "Hover panel media strip",                       StudioTileClass.LANDSCAPE),
     StudioTab(ArtworkKind.MANUAL,         "MANUAL",       "In-app PDF manual",                             StudioTileClass.PORTRAIT),
     StudioTab(ArtworkKind.VIDEO,          "PREVIEW VIDEO", "Hover panel media strip · full video",         StudioTileClass.LANDSCAPE),
+    StudioTab(ArtworkKind.LOGO,           "LOGO",         "PIC0 overlay · transparent PNG · fit",          StudioTileClass.WIDE),
 )
 
 @HiltViewModel
@@ -1369,6 +1369,12 @@ class ArtworkStudioViewModel @Inject constructor(
                 _uiState.update { it.copy(manualDownloading = false, candidateManualPath = tmp?.absolutePath) }
             }
         }
+    }
+
+    /** A touch on a result does what A does: pick it. Apply stays to the end. */
+    override fun pickAt(index: Int) {
+        _uiState.update { it.copy(gridIndex = index) }
+        pickFocused()
     }
 
     override fun toggleSelection(index: Int) = _uiState.update { s ->

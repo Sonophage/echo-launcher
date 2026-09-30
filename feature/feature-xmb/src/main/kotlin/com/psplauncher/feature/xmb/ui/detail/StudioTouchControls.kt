@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -55,10 +56,15 @@ internal fun StudioPageLine(
         modifier = modifier.fillMaxWidth().height(if (showTouchControls) 40.dp else 16.dp),
     ) {
         if (totalResults > 0) {
+            // Weighted so THIS gives way when the row is tight. Without it the pager
+            // pills are what get squeezed, and "Next" clipped once the page count
+            // reached two digits and widened the label beside it.
             Text(
                 "$rangeStart–$rangeEnd of $totalResults",
                 color = Color.White.copy(alpha = 0.6f), fontSize = 9.5.sp, lineHeight = 12.sp,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
         }
 
@@ -80,7 +86,8 @@ internal fun StudioPageLine(
                 "Page ${page + 1} / $pageCount",
                 color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp,
                 maxLines = 1,
-                modifier = Modifier.padding(horizontal = 10.dp),
+                softWrap = false,
+                modifier = Modifier.padding(horizontal = 6.dp),
             )
             TouchPagePill("Next ›", enabled = hasNextPage, onClick = onNextPage)
         } else if (pageCount > 1) {

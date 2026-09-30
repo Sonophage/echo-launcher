@@ -81,7 +81,7 @@ class GamepadInputHandler @Inject constructor(
 
     private var leftTriggerDown = false
     private var rightTriggerDown = false
-    private val padsThatSendTriggerKeys = HashSet<Int>()
+    private val lastPageEmitAt = mutableMapOf<GamepadAction, Long>()
     private var lastStickAction: GamepadAction? = null
 
     @Volatile private var stickMagnitude: Float = 0f
@@ -100,10 +100,6 @@ class GamepadInputHandler @Inject constructor(
                 capture(event.keyCode)
             }
             return true
-        }
-
-        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_L2 || event.keyCode == KeyEvent.KEYCODE_BUTTON_R2) {
-            padsThatSendTriggerKeys += event.deviceId
         }
 
         val action = currentMappings.actionFor(event.keyCode) ?: return false
@@ -173,8 +169,6 @@ class GamepadInputHandler @Inject constructor(
     }
 
     private fun handleTriggers(event: MotionEvent): Boolean {
-        if (sendsTriggerKeys(event.deviceId)) return false
-
         val left = maxOf(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE))
         val right = maxOf(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS))
 
@@ -182,25 +176,37 @@ class GamepadInputHandler @Inject constructor(
         val rightNow = triggerDown(rightTriggerDown, right)
 
         var fired = false
-        if (leftNow && !leftTriggerDown) { emit(GamepadAction.PREV_PAGE, physical = true); fired = true }
-        if (rightNow && !rightTriggerDown) { emit(GamepadAction.NEXT_PAGE, physical = true); fired = true }
+        if (leftNow && !leftTriggerDown && !isDuplicatePage(GamepadAction.PREV_PAGE)) {
+            emit(GamepadAction.PREV_PAGE, physical = true); fired = true
+        }
+        if (rightNow && !rightTriggerDown && !isDuplicatePage(GamepadAction.NEXT_PAGE)) {
+            emit(GamepadAction.NEXT_PAGE, physical = true); fired = true
+        }
 
         leftTriggerDown = leftNow
         rightTriggerDown = rightNow
         return fired
     }
 
-    // A pad that sends L2/R2 as keys must not also page from its axes, or one pull
-    // turns two pages. Asking InputDevice.hasKeys does NOT answer that: Generic.kl
-    // declares `key 312 BUTTON_L2` AND `axis 0x0a LTRIGGER` for every generic pad,
-    // so hasKeys is true even on pads that only ever send the axes. The only honest
-    // signal is having actually seen a key event, so that is what this records.
-    private fun sendsTriggerKeys(deviceId: Int): Boolean = deviceId in padsThatSendTriggerKeys
+    // A pad that sends L2/R2 as BOTH a key and an axis must not turn two pages on one
+    // pull, so an axis press is dropped when the same action just came from a key.
+    //
+    // This used to latch: the first L2/R2 key event marked the pad and its axes were
+    // ignored from then on. That is why paging worked and then stopped — one stray
+    // key event, even an unmapped one, disabled the axes for good. A window cannot
+    // latch, and it mirrors isDuplicateDirection, which the stick and D-pad share.
+    private fun isDuplicatePage(action: GamepadAction): Boolean {
+        val last = lastPageEmitAt[action] ?: return false
+        return clock() - last < DUPLICATE_WINDOW_MS
+    }
 
     fun emitAction(action: GamepadAction) = emit(action)
 
     private fun emit(action: GamepadAction, physical: Boolean = false) {
         if (physical && action.isDirectional()) lastDirectionalEmitAt[action] = clock()
+        if (action == GamepadAction.PREV_PAGE || action == GamepadAction.NEXT_PAGE) {
+            lastPageEmitAt[action] = clock()
+        }
         _actions.tryEmit(action)
         Timber.v("Gamepad action: $action")
     }

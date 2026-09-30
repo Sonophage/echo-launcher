@@ -32,7 +32,7 @@ class StudioStagesTest {
             byName.getValue(StudioSource.STEAMGRIDDB).slots.size,
         )
         assertEquals(
-            "Scans for tile, background, logo, screenshot",
+            "Scans for tile, background, screenshot, logo",
             byName.getValue(StudioSource.STEAMGRIDDB).scansFor,
         )
     }
