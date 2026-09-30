@@ -115,7 +115,7 @@ class BackupKeyCoverageTest {
 
         val danglingStamp = listOf("theme_icons_stamp")
 
-        val sessionState = listOf("achievements_sync_last", "session_blob")
+        val sessionState = listOf("session_blob")
 
         val derivedCaches = listOf("display_wallpaper_luma", "wallpaper_accent")
 

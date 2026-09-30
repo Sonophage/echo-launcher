@@ -41,8 +41,6 @@ class InitialSetupGateTest {
             "sgdb_api_key",
             "igdb_client_id",
             "ss_username",
-            "ra_username",
-            "steam_id64",
             "tmdb_api_key",
         ).forEach { key ->
             assertTrue(
