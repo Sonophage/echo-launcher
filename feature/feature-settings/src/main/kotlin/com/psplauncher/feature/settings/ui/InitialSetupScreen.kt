@@ -1,5 +1,11 @@
 package com.psplauncher.feature.settings.ui
 
+import androidx.compose.runtime.mutableIntStateOf
+import com.psplauncher.core.domain.model.settingsEntryFor
+import com.psplauncher.feature.settings.permissions.AppPermissions
+import com.psplauncher.feature.settings.permissions.GrantRoute
+import com.psplauncher.feature.settings.permissions.isGranted
+import com.psplauncher.feature.settings.permissions.systemScreenIntent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -106,12 +112,13 @@ fun InitialSetupScreen(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri -> if (uri != null) viewModel.linkVitaFolder(uri) }
 
-    val notificationRequest = rememberLauncherForActivityResult(
+    var grantToken by remember { mutableIntStateOf(0) }
+    val permissionRequest = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { viewModel.refreshGrants() }
+    ) { grantToken++; viewModel.refreshGrants() }
     val systemScreen = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { viewModel.refreshGrants() }
+    ) { grantToken++; viewModel.refreshGrants() }
 
     val openSettingsScreen = LocalSettingsOpenScreen.current
 
@@ -138,15 +145,10 @@ fun InitialSetupScreen(
             SetupStep.WELCOME -> WelcomePage(onStart = { viewModel.nextStep() })
             SetupStep.PERMISSIONS -> PermissionsPage(
                 state = state,
-                onRefresh = viewModel::refreshGrants,
-                onGrantNotifications = {
-                    notificationRequest.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                },
-                onOpenUsageAccess = {
-                    systemScreen.launch(
-                        android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                    )
-                },
+                grantToken = grantToken,
+                onRefresh = { grantToken++; viewModel.refreshGrants() },
+                onRequest = { permissionRequest.launch(it) },
+                onOpenSystemScreen = { systemScreen.launch(it) },
                 onSetAsHome = { systemScreen.launch(viewModel.homeRoleIntent()) },
                 onContinue = { viewModel.nextStep() },
             )
@@ -247,6 +249,7 @@ fun InitialSetupScreen(
             SetupStep.SERVICES -> ServicesPage(
                 state = state,
                 onConnectSgdb = viewModel::connectSgdb,
+                onConnectTmdb = viewModel::connectTmdb,
                 onTestIgdb = viewModel::testIgdbCredentials,
                 onConnectIgdb = viewModel::connectIgdb,
                 onTestSs = viewModel::testSsCredentials,
@@ -312,7 +315,7 @@ private fun headingFor(step: SetupStep): String = when (step) {
 }
 
 private fun hintFor(step: SetupStep): String? = when (step) {
-    SetupStep.PERMISSIONS -> "Three optional grants. Everything works without them — each one just turns something on."
+    SetupStep.PERMISSIONS -> "All optional. Everything works without them; each one just turns something on. Settings > System > Permissions has the full list."
     SetupStep.BOOKS     -> "EPUBs and comics. Add several roots to span internal storage and an SD card."
     SetupStep.PERSONALIZE -> "Each row opens the real screen and comes back here, so nothing you set is a wizard-only copy."
     SetupStep.WELCOME   -> "A few short steps to point the launcher at your stuff — every step is optional and can be changed later in Settings."
@@ -321,7 +324,7 @@ private fun hintFor(step: SetupStep): String? = when (step) {
     SetupStep.VIDEO     -> "Add several roots to span internal storage and an SD card."
     SetupStep.PHOTO     -> "Add several roots to span internal storage and an SD card."
     SetupStep.ARTWORK   -> "One folder hosts the artwork library — you can import into it right after."
-    SetupStep.SERVICES  -> "All optional and free. SteamGridDB, IGDB, and ScreenScraper fetch game artwork and metadata."
+    SetupStep.SERVICES  -> "All optional and free. SteamGridDB, IGDB, and ScreenScraper fetch game artwork and metadata; TMDB fetches video posters."
     SetupStep.VITA      -> "Vita3K is installed — one grant links every installed Vita title for discovery and trophies."
     SetupStep.RETROARCH -> "Lets the launcher know exactly which cores you have, so only those are offered."
     SetupStep.FINISH    -> "Everything below can be adjusted anytime in Settings."
@@ -330,9 +333,10 @@ private fun hintFor(step: SetupStep): String? = when (step) {
 @Composable
 private fun PermissionsPage(
     state: InitialSetupUiState,
+    grantToken: Int,
     onRefresh: () -> Unit,
-    onGrantNotifications: () -> Unit,
-    onOpenUsageAccess: () -> Unit,
+    onRequest: (String) -> Unit,
+    onOpenSystemScreen: (android.content.Intent) -> Unit,
     onSetAsHome: () -> Unit,
     onContinue: () -> Unit,
 ) {
@@ -341,21 +345,24 @@ private fun PermissionsPage(
         onPauseOrDispose { }
     }
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val rows = remember { AppPermissions.forWizard(Build.VERSION.SDK_INT) }
+    rows.forEachIndexed { index, permission ->
+        val granted = remember(permission.id, grantToken) { isGranted(context, permission) }
         WizardValueRow(
-            label = "Notifications",
-            value = if (state.hasNotifications) "Granted" else "Grant…",
-            sublabel = "Tells you when a scan or a download has finished",
-            focusKey = "perm_notifications",
-            onClick = { if (!state.hasNotifications) onGrantNotifications() },
+            label = permission.label,
+            value = if (granted) "Granted" else "Grant…",
+            sublabel = permission.why,
+            focusKey = if (index == 0) "perm_first" else null,
+            onClick = {
+                if (!granted) when (permission.route) {
+                    GrantRoute.REQUEST -> permission.manifestName?.let(onRequest)
+                    GrantRoute.SYSTEM_SCREEN -> onOpenSystemScreen(systemScreenIntent(context, permission))
+                    GrantRoute.INSTALL_TIME -> Unit
+                }
+            },
         )
     }
-    WizardValueRow(
-        label = "Usage Access",
-        value = if (state.hasUsageAccess) "Granted" else "Grant…",
-        sublabel = "Sorts the app drawer by what you opened last",
-        onClick = { if (!state.hasUsageAccess) onOpenUsageAccess() },
-    )
     WizardValueRow(
         label = "PSPLauncher as Home",
         value = if (state.isHomeLauncher) "Active" else "Set…",
@@ -369,6 +376,15 @@ private fun PermissionsPage(
     WizardContinueRow("ROM Folders", onContinue)
 }
 
+internal val PERSONALIZE_SCREENS = listOf(
+    "settings_themes",
+    "settings_appearance",
+    "settings_layout",
+    "settings_audio",
+    "settings_boot",
+    "settings_controller",
+)
+
 @Composable
 private fun PersonalizePage(
     autoFit: Boolean,
@@ -376,27 +392,15 @@ private fun PersonalizePage(
     onOpenScreen: (String) -> Unit,
     onContinue: () -> Unit,
 ) {
-    WizardRow(
-        label = "Theme",
-        sublabel = "Colour scheme, accent and theme packs",
-        focusKey = "personalize_theme",
-        onClick = { onOpenScreen("settings_themes") },
-    )
-    WizardRow(
-        label = "Sound",
-        sublabel = "Menu sounds, menu music, and the boot and launch cues",
-        onClick = { onOpenScreen("settings_audio") },
-    )
-    WizardRow(
-        label = "Boot Logo",
-        sublabel = "The boot sequence, your own boot video, and GameBoot",
-        onClick = { onOpenScreen("settings_boot") },
-    )
-    WizardRow(
-        label = "Wallpaper & Layout",
-        sublabel = "Wallpaper, the wave, and where the crossbar sits",
-        onClick = { onOpenScreen("settings_layout") },
-    )
+    PERSONALIZE_SCREENS.map { requireNotNull(settingsEntryFor(it)) { "$it is not in the catalog" } }
+        .forEachIndexed { index, entry ->
+            WizardRow(
+                label = entry.title,
+                sublabel = entry.subtitle,
+                focusKey = if (index == 0) "personalize_theme" else null,
+                onClick = { onOpenScreen(entry.id) },
+            )
+        }
 
     WizardSectionHeader("Screen Size")
     WizardCheckboxRow(
@@ -562,6 +566,7 @@ private fun InitialSetupUiState.sizeLabelForSources(): String {
 private fun ServicesPage(
     state: InitialSetupUiState,
     onConnectSgdb: (String) -> Unit,
+    onConnectTmdb: (String) -> Unit,
     onTestIgdb: (String, String) -> Unit,
     onConnectIgdb: (String, String) -> Unit,
     onTestSs: (String, String) -> Unit,
@@ -570,6 +575,7 @@ private fun ServicesPage(
     nextLabel: String,
 ) {
     var sgdbKeyDraft by remember(state.hasSgdb) { mutableStateOf("") }
+    var tmdbKeyDraft by remember(state.hasTmdb) { mutableStateOf("") }
     var igdbIdDraft by remember(state.hasIgdb) { mutableStateOf("") }
     var igdbSecretDraft by remember(state.hasIgdb) { mutableStateOf("") }
     var ssUserDraft by remember(state.hasScreenScraper) { mutableStateOf("") }
@@ -577,7 +583,7 @@ private fun ServicesPage(
 
     WizardInfoText(
         "All accounts are optional and free. SteamGridDB, IGDB, and ScreenScraper " +
-            "fetch game artwork and metadata for your library."
+            "fetch game artwork and metadata for your library; TMDB fetches video posters."
     )
 
     WizardSectionHeader("SteamGridDB")
@@ -590,6 +596,18 @@ private fun ServicesPage(
     )
     if (sgdbKeyDraft.isNotBlank()) {
         WizardRow(label = "Connect SteamGridDB", onClick = { onConnectSgdb(sgdbKeyDraft) })
+    }
+
+    WizardSectionHeader("TMDB (video posters)")
+    WizardTextField(
+        label = if (state.hasTmdb) "API Key (saved)" else "API Key",
+        value = tmdbKeyDraft,
+        onValueChange = { tmdbKeyDraft = it },
+        placeholder = if (state.hasTmdb) "••••••••  (tap to replace)" else "Paste your TMDB key",
+        isPassword = true,
+    )
+    if (tmdbKeyDraft.isNotBlank()) {
+        WizardRow(label = "Connect TMDB", onClick = { onConnectTmdb(tmdbKeyDraft) })
     }
 
     WizardSectionHeader("IGDB (Twitch)")
@@ -784,7 +802,7 @@ private fun rootsShortLabel(roots: List<RootFolderRow>): String =
 @Composable
 private fun WizardPagePreview(
     stepNumber: Int,
-    stepCount: Int = 9,
+    stepCount: Int = SetupStep.entries.size,
     heading: String,
     hint: String?,
     backEnabled: Boolean = true,
@@ -810,7 +828,7 @@ private val prefix = "content://preview/tree/primary%3A"
 @Composable
 private fun WelcomePagePreview() {
     WizardPagePreview(
-        stepNumber = 1,
+        stepNumber = SetupStep.WELCOME.ordinal + 1,
         heading = "Welcome to PSPLauncher.",
         hint = "A few short steps to point the launcher at your stuff — every step is optional and can be changed later in Settings.",
     ) {
@@ -822,7 +840,7 @@ private fun WelcomePagePreview() {
 @Composable
 private fun RomRootsPagePreview() {
     WizardPagePreview(
-        stepNumber = 2,
+        stepNumber = SetupStep.ROM_ROOTS.ordinal + 1,
         heading = "Choose your ROM folders.",
         hint = "Add one or more root folders — each console's games live in a subfolder under them.",
     ) {
@@ -884,7 +902,7 @@ private fun MediaRootsPagePreview(
 @CombinedPreviews
 @Composable
 private fun MusicRootsPagePreview() = MediaRootsPagePreview(
-    stepNumber = 3,
+    stepNumber = SetupStep.MUSIC.ordinal + 1,
     heading = "Choose your music folders.",
     hint = "Add several roots to span internal storage and an SD card.",
     kindLabel = "Music",
@@ -895,7 +913,7 @@ private fun MusicRootsPagePreview() = MediaRootsPagePreview(
 @CombinedPreviews
 @Composable
 private fun VideoRootsPagePreview() = MediaRootsPagePreview(
-    stepNumber = 4,
+    stepNumber = SetupStep.VIDEO.ordinal + 1,
     heading = "Choose your video folders.",
     hint = "Add several roots to span internal storage and an SD card.",
     kindLabel = "Video",
@@ -906,19 +924,19 @@ private fun VideoRootsPagePreview() = MediaRootsPagePreview(
 @CombinedPreviews
 @Composable
 private fun PhotoRootsPagePreview() = MediaRootsPagePreview(
-    stepNumber = 5,
+    stepNumber = SetupStep.PHOTO.ordinal + 1,
     heading = "Choose your photo folders.",
     hint = "Add several roots to span internal storage and an SD card.",
     kindLabel = "Photo",
     kind = MediaRootKind.PHOTO,
-    nextLabel = "Artwork",
+    nextLabel = "Books",
 )
 
 @CombinedPreviews
 @Composable
 private fun ArtworkPagePreview() {
     WizardPagePreview(
-        stepNumber = 6,
+        stepNumber = SetupStep.ARTWORK.ordinal + 1,
         heading = "Choose your artwork folder.",
         hint = "One folder hosts the artwork library — you can import into it right after.",
     ) {
@@ -941,7 +959,7 @@ private fun ArtworkPagePreview() {
 @Composable
 private fun ServicesPagePreview() {
     WizardPagePreview(
-        stepNumber = 7,
+        stepNumber = SetupStep.SERVICES.ordinal + 1,
         heading = "Connect your artwork sources.",
         hint = "All optional and free. SteamGridDB, IGDB, and ScreenScraper fetch game artwork and metadata.",
     ) {
@@ -953,12 +971,13 @@ private fun ServicesPagePreview() {
                 ssUsername = "scraper_user",
             ),
             onConnectSgdb = {},
+            onConnectTmdb = {},
             onTestIgdb = { _, _ -> },
             onConnectIgdb = { _, _ -> },
             onTestSs = { _, _ -> },
             onConnectSs = { _, _ -> },
             onContinue = {},
-            nextLabel = "Achievement Services",
+            nextLabel = "Vita Data Folder",
         )
     }
 }
@@ -967,7 +986,7 @@ private fun ServicesPagePreview() {
 @Composable
 private fun VitaPagePreview() {
     WizardPagePreview(
-        stepNumber = 9,
+        stepNumber = SetupStep.VITA.ordinal + 1,
         heading = "Set your Vita data folder.",
         hint = "Vita3K is installed — one grant links every installed Vita title for discovery and trophies.",
     ) {
@@ -988,7 +1007,7 @@ private fun VitaPagePreview() {
 @Composable
 private fun RetroArchPagePreview() {
     WizardPagePreview(
-        stepNumber = 10,
+        stepNumber = SetupStep.RETROARCH.ordinal + 1,
         heading = "Link RetroArch's cores folder.",
         hint = "Lets the launcher know exactly which cores you have, so only those are offered.",
     ) {
@@ -1010,7 +1029,7 @@ private fun RetroArchPagePreview() {
 @Composable
 private fun FinishPagePreview() {
     WizardPagePreview(
-        stepNumber = 11,
+        stepNumber = SetupStep.FINISH.ordinal + 1,
         heading = "You're all set!",
         hint = "Everything below can be adjusted anytime in Settings.",
     ) {
