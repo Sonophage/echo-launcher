@@ -7,6 +7,9 @@ import kotlin.test.assertTrue
 
 class BackupKeyDriftTest {
     private val deliberatelyNotBackedUp = mapOf(
+        "art_column_repair_done" to
+            "a one-time local repair of this device's artwork columns; carrying it would " +
+            "stop the repair running on a device that still needs it",
 
         "db_seeded_v1" to "seed marker",
         "debug_seeded_v1" to "seed marker",

@@ -2,6 +2,7 @@ package com.psplauncher.core.data.database.seeder
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.psplauncher.core.data.database.dao.ArtworkRecordDao
@@ -30,8 +31,15 @@ class StartupDataPrep @Inject constructor(
         runCatching {
             if (!alreadyPrepped) {
                 normalizeGameArtwork()
-                repointColumnsAtTheirRecords()
                 normalizeWallpaper()
+            }
+
+            // Keyed to the repair, not to the app version. Inside the block above it
+            // would never run for anyone already on the version that introduced it,
+            // which is every device that had already launched once.
+            if (prefs[KEY_ART_COLUMN_REPAIR] != true) {
+                repointColumnsAtTheirRecords()
+                context.pfpDataStore.edit { it[KEY_ART_COLUMN_REPAIR] = true }
             }
 
             healWallpaperSurvey()
@@ -128,6 +136,8 @@ class StartupDataPrep @Inject constructor(
 
     private companion object {
         val KEY_DATA_PREP_VERSION = intPreferencesKey("data_prep_version")
+
+        val KEY_ART_COLUMN_REPAIR = booleanPreferencesKey("art_column_repair_done")
         val KEY_CUSTOM_WALLPAPER  = stringPreferencesKey("display_custom_wallpaper")
         const val FILES_MARKER = "/files/"
     }
