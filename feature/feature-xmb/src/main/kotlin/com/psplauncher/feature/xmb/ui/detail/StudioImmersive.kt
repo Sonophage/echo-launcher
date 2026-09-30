@@ -411,70 +411,34 @@ private fun StudioProviderCardView(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // the pick reads as brightness: the chosen card is lit, the rest recede
     val dim = if (focused) 1f else 0.38f
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = if (focused) 0.13f else 0.04f))
-            .border(
-                if (focused) 2.dp else 1.dp,
-                if (focused) accent else Color.White.copy(alpha = 0.07f),
-                RoundedCornerShape(12.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-    ) {
-        Text(
-            card.source.label,
-            color = Color.White.copy(alpha = if (card.pickable) dim else dim * 0.6f),
-            fontSize = 14.sp, fontWeight = FontWeight.Bold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(8.dp))
-
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black.copy(alpha = 0.30f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            val sample = card.sampleUri
-            if (sample != null) {
-                AsyncImage(
-                    model = sample,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alpha = dim,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Text(
-                    "no sample yet",
-                    color = Color.White.copy(alpha = 0.18f * dim + 0.06f), fontSize = 9.sp,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
+    com.psplauncher.core.ui.components.PfpArtCard(
+        title = card.source.label,
+        artUri = card.sampleUri,
+        focused = focused,
+        accent = accent,
+        titleAlpha = if (card.pickable) dim else dim * 0.6f,
+        onClick = onClick,
+        modifier = modifier,
+    ) { d ->
         Text(
             card.scansFor,
-            color = (if (card.servesAll) Color(0xFF66BB6A) else Color(0xFFE0A030)).copy(alpha = dim),
+            color = (if (card.servesAll) com.psplauncher.core.ui.components.PfpArtCardComplete
+                     else com.psplauncher.core.ui.components.PfpArtCardPartial).copy(alpha = d),
             fontSize = 9.5.sp, lineHeight = 12.sp,
             maxLines = 3, overflow = TextOverflow.Ellipsis,
         )
         card.quota?.let {
             Text(
                 "$it requests today",
-                color = Color.White.copy(alpha = 0.45f * dim), fontSize = 9.sp, maxLines = 1,
+                color = Color.White.copy(alpha = 0.45f * d), fontSize = 9.sp, maxLines = 1,
             )
         }
         card.reason?.let {
             Text(
                 it,
-                color = Color(0xFFE0A030).copy(alpha = dim), fontSize = 9.sp, lineHeight = 11.sp,
+                color = com.psplauncher.core.ui.components.PfpArtCardPartial.copy(alpha = d),
+                fontSize = 9.sp, lineHeight = 11.sp,
                 maxLines = 3, overflow = TextOverflow.Ellipsis,
             )
         }
