@@ -66,8 +66,9 @@ class ControllerNavigationState(
     }
 
     fun moveHorizontal(delta: Int): String? {
-        focusedKey = engine.moveHorizontalActive(delta)
-        return focusedKey
+        val moved = engine.moveHorizontalActive(delta)
+        focusedKey = engine.focusedKey
+        return moved
     }
 
     fun focusFirst(): String? {

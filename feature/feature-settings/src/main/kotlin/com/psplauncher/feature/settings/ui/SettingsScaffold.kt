@@ -354,6 +354,10 @@ fun SettingsScaffold(
         mutableStateMapOf<String, SnapshotStateList<Pair<String, FocusRequester>>>()
     }
 
+    var focusedRow by remember { mutableStateOf<FocusRequester?>(null) }
+
+    var userSteered by remember { mutableStateOf(false) }
+
     LaunchedEffect(navigationOrder, rowPositions) {
         snapshotFlow {
             val sorted = navigationOrder.sortedBy { (fr, _) -> rowPositions[fr] ?: Float.MAX_VALUE }
@@ -364,13 +368,17 @@ fun SettingsScaffold(
         }
             .collect { (entries, geometry) ->
                 navigationState.updateItems(entries.map { it.second }, geometry)
+                if (!userSteered && restoreFocusKey == null) {
+                    entries.firstOrNull { it.second.focusable && it.second.enabled && it.second.selectable }?.first
+                        ?.takeIf { it !== focusedRow }
+                        ?.let { runCatching { it.requestFocus() } }
+                }
             }
     }
 
     val firstVisibleContentY = remember { mutableStateOf<Float?>(null) }
 
     val contentViewportHeight = remember { mutableStateOf<Float?>(null) }
-    var focusedRow by remember { mutableStateOf<FocusRequester?>(null) }
 
     var lastFocusedY by remember { mutableStateOf<Float?>(null) }
     var refocusTick by remember { mutableIntStateOf(0) }
@@ -465,6 +473,7 @@ fun SettingsScaffold(
 
     LaunchedEffect(pendingAction) {
         if (pendingAction == null) return@LaunchedEffect
+        userSteered = true
 
         cursorVisible.value = true
         navigationState.markControllerInput()
@@ -631,6 +640,7 @@ fun SettingsScaffold(
             focusedRowClick.value = click; focusRedirected = true
         },
         LocalSettingsTouchInput provides {
+            userSteered = true
             cursorVisible.value = false
             touchScrolled.value = true
             navigationState.markTouchInput()

@@ -220,12 +220,17 @@ class ControllerNavigationStateTest {
         assertEquals("row:a", state.moveHorizontal(1))
 
         assertEquals("row:b", state.moveHorizontal(1))
-        assertEquals("row:b", state.moveHorizontal(1))
+        assertNull("RIGHT past the last action moves nothing", state.moveHorizontal(1))
+        assertEquals("row:b", state.focusedKey)
 
         assertEquals("row:a", state.moveHorizontal(-1))
         assertEquals("row", state.moveHorizontal(-1))
 
-        assertEquals("row", state.moveHorizontal(-1))
+        assertNull(
+            "LEFT from the row itself moves nothing, and must say so, or the settings rail is unreachable",
+            state.moveHorizontal(-1),
+        )
+        assertEquals("row", state.focusedKey)
 
         assertEquals("row:a", state.moveHorizontal(1))
         assertTrue(state.select())

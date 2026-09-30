@@ -1,6 +1,8 @@
 package com.psplauncher.feature.settings.ui
 
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Column
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -72,4 +74,25 @@ private fun SettingsPageTitle(title: String) {
             .focusProperties { canFocus = false }
             .padding(start = 40.dp, end = 40.dp, top = 10.dp, bottom = 0.dp),
     )
+}
+
+@Composable
+internal fun rememberReadOnlyPageScroll(
+    scrollState: androidx.compose.foundation.ScrollState,
+): (GamepadAction) -> Boolean {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val stepPx = with(androidx.compose.ui.platform.LocalDensity.current) { 120.dp.toPx() }
+    return remember(scrollState, stepPx) {
+        { action ->
+            when (action) {
+                GamepadAction.NAVIGATE_UP -> {
+                    scope.launch { scrollState.animateScrollBy(-stepPx) }; true
+                }
+                GamepadAction.NAVIGATE_DOWN -> {
+                    scope.launch { scrollState.animateScrollBy(stepPx) }; true
+                }
+                else -> false
+            }
+        }
+    }
 }
