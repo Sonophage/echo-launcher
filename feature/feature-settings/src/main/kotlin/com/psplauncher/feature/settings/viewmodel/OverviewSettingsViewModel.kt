@@ -25,6 +25,8 @@ data class OverviewUiState(
     val artwork: ArtworkStatus = ArtworkStatus(),
 
     val artworkCacheBytes: Long? = null,
+    val libraryArt: String? = null,
+    val artworkArt: String? = null,
     val loading: Boolean = true,
 )
 
@@ -47,10 +49,19 @@ class OverviewSettingsViewModel @Inject constructor(
                 bookRepository.observeAllBooks(),
                 videoRepository.observeAllVideos(),
             ) { games, tracks, books, videos ->
-                listOf(games.size, tracks.size, books.size, videos.size)
-            }.collect { (games, tracks, books, videos) ->
+                val recent = games.maxByOrNull { it.lastPlayedAt ?: 0L }
+                OverviewUiState(
+                    games = games.size, tracks = tracks.size, books = books.size, videos = videos.size,
+                    libraryArt = recent?.let { it.artworkUri ?: it.iconUri },
+                    artworkArt = games.firstOrNull { it !== recent && it.iconUri != null }?.iconUri,
+                    loading = false,
+                )
+            }.collect { counts ->
                 _state.update {
-                    it.copy(games = games, tracks = tracks, books = books, videos = videos, loading = false)
+                    it.copy(
+                        games = counts.games, tracks = counts.tracks, books = counts.books, videos = counts.videos,
+                        libraryArt = counts.libraryArt, artworkArt = counts.artworkArt, loading = false,
+                    )
                 }
             }
         }
