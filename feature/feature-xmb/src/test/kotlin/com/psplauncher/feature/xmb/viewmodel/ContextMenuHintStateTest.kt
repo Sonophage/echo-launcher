@@ -299,7 +299,7 @@ class ContextMenuHintStateTest {
     fun `settings hint shows on the Display screen too`() {
         assertTrue(
             shouldShowSettingsHint(
-                settingsEligibleState("settings_display"),
+                settingsEligibleState("settings_appearance"),
                 IDLE_MS,
             )
         )

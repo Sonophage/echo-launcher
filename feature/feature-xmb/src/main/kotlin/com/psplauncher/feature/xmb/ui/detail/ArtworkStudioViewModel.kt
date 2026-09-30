@@ -463,14 +463,6 @@ typealias StudioArtworkInfo = com.psplauncher.feature.artwork.store.StudioArtwor
 
 internal const val STUDIO_PAGE_TILES = 8
 
-/**
- * How many results the studio puts across its column, by tile shape. A landscape
- * tile at a portrait tile's width is barely half as tall, so four across left the
- * horizontal slots looking small beside the box art. Two across gives them roughly
- * the same height. This is the studio's own preference: StudioTileClass.minTileWidthDp
- * is the general rule and is pinned by StudioGridCapacityTest across every reference
- * canvas, so it is not the place to express it.
- */
 internal fun studioMaxColumns(tileClass: StudioTileClass): Int = when (tileClass) {
     StudioTileClass.PORTRAIT -> 4
     StudioTileClass.SQUARE -> 3
@@ -500,8 +492,6 @@ private val BACKGROUND_SOURCES = listOf(
 
 private val SHOW_ALL_ART_KINDS = setOf(ArtworkKind.SCREENSHOT)
 
-// SteamGridDB's grids endpoint holds portrait AND landscape art. Unfiltered it
-// returns both, which is why the tile slot offered horizontal options.
 internal val SGDB_PORTRAIT_GRIDS = listOf("600x900", "342x482", "660x930")
 
 internal fun sgdbGridDimensions(kind: ArtworkKind, type: SgdbArtType): List<String> =
@@ -963,11 +953,6 @@ class ArtworkStudioViewModel @Inject constructor(
 
     fun cycleTab(delta: Int) {
         val s = _uiState.value
-        // Stepping forward off the last slot used to wrap to the first, walking back
-        // over slots already answered. The pass is finished there, so offer the
-        // review. This is the only route that works from a multi-select slot such as
-        // SCREENSHOT, where picking toggles and never advances — and on SteamGridDB
-        // SCREENSHOT is the last visible slot.
         if (delta > 0) {
             val visible = s.visibleSlots
             val here = visible.indexOfFirst { it.kind == STUDIO_TABS[s.tabIndex].kind }
@@ -1393,7 +1378,6 @@ class ArtworkStudioViewModel @Inject constructor(
         }
     }
 
-    /** A touch on a result does what A does: pick it. Apply stays to the end. */
     override fun pickAt(index: Int) {
         _uiState.update { it.copy(gridIndex = index) }
         pickFocused()
@@ -1440,9 +1424,6 @@ class ArtworkStudioViewModel @Inject constructor(
         val here = visible.indexOfFirst { it.kind == STUDIO_TABS[s.tabIndex].kind }
         if (here < 0) return
 
-        // Picking on the last slot used to wrap round to the first, which walks you
-        // back over slots you have already answered. The pass is finished, so offer
-        // the review instead; applyChanges is a no-op when nothing was picked.
         if (here == visible.lastIndex) {
             applyChanges()
             return

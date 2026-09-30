@@ -158,11 +158,30 @@ class DisplaySettingsViewModelLegibilityTest {
         }
     }
 
+    @Test
+    fun `hint delay goes back to Always after the slider has moved`() = runTest(dispatcher) {
+        vm.setContextMenuHintDelaySeconds(3f)
+        eventually("hint delay persisted at 3s") {
+            context.pfpDataStore.data.first()[KEY_HINT_DELAY] == 3f
+        }
+
+        vm.setContextMenuHintDelaySeconds(0f)
+        eventually("the second write landed") {
+            context.pfpDataStore.data.first()[KEY_HINT_DELAY] != 3f
+        }
+        assertEquals(
+            "0 is Always and must be stored as 0, not clamped up to 1",
+            0f,
+            context.pfpDataStore.data.first()[KEY_HINT_DELAY],
+        )
+    }
+
     private companion object {
         val KEY_ICON_LEGIBILITY = stringPreferencesKey("display_icon_legibility")
         val KEY_FADE_BY_DISTANCE = booleanPreferencesKey("display_fade_by_distance")
 
         val KEY_SOLID_UNFOCUSED_ICONS = booleanPreferencesKey("display_solid_unfocused_icons")
         val KEY_TEXT_SHADOW = booleanPreferencesKey("display_text_shadow")
+        val KEY_HINT_DELAY = androidx.datastore.preferences.core.floatPreferencesKey("interface_context_menu_hint_delay_seconds")
     }
 }

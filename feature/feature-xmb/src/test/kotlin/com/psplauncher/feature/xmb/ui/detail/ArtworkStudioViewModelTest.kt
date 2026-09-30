@@ -731,8 +731,8 @@ class ArtworkStudioViewModelTest {
     fun `B from the categories with picks asks first, and Stay or Discard do what they say`() = runTest(testDispatcher) {
         val vm = screenshotGridOnSgdb(perType = 2)
         vm.toggleSelection(0)
-        vm.handleGamepadAction(GamepadAction.BACK)   // out to the provider picker
-        vm.handleGamepadAction(GamepadAction.BACK)   // and only then out of the studio
+        vm.handleGamepadAction(GamepadAction.BACK)
+        vm.handleGamepadAction(GamepadAction.BACK)
 
         assertTrue(vm.uiState.value.leavePromptOpen)
         assertFalse(vm.uiState.value.closed)
@@ -762,7 +762,7 @@ class ArtworkStudioViewModelTest {
             vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == last })
             advanceUntilIdle()
 
-            vm.pickFocused()          // SCREENSHOT is multi-select, so this toggles
+            vm.pickFocused()
             advanceUntilIdle()
             assertEquals("a pick on a multi-select slot stays put", 1, vm.uiState.value.selection.size)
 
@@ -796,8 +796,8 @@ class ArtworkStudioViewModelTest {
     fun `Apply and Close queues the picks and closes`() = runTest(testDispatcher) {
         val vm = screenshotGridOnSgdb(perType = 2)
         vm.toggleSelection(0)
-        vm.handleGamepadAction(GamepadAction.BACK)   // out to the provider picker
-        vm.handleGamepadAction(GamepadAction.BACK)   // and only then out of the studio
+        vm.handleGamepadAction(GamepadAction.BACK)
+        vm.handleGamepadAction(GamepadAction.BACK)
 
         vm.handleGamepadAction(GamepadAction.SELECT)
         advanceUntilIdle()
@@ -830,7 +830,6 @@ class ArtworkStudioViewModelTest {
         coEvery { steamGridDb.getArt(any(), any(), any(), any(), any()) } returns
             Result.success((1..30).map { SgdbArtItem(id = it.toLong(), url = "art$it") })
         val vm = loadedOn(StudioSource.STEAMGRIDDB)
-        // tall enough for two rows of portrait tiles; one row leaves DOWN nothing to do
         vm.onGridMeasured(246f, 360f)
         val tabBefore = vm.uiState.value.tabIndex
         val pageBefore = vm.uiState.value.page
@@ -878,7 +877,6 @@ class ArtworkStudioViewModelTest {
         vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == ArtworkKind.MANUAL })
         advanceUntilIdle()
 
-        // MANUAL is a portrait slot, so it takes the four-across preference
         assertEquals("the page is capped", STUDIO_PAGE_TILES, vm.uiState.value.pageSize)
         assertEquals(
             "portrait slots go four across",

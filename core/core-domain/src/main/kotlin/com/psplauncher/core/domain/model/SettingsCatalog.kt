@@ -8,7 +8,7 @@ enum class SettingsSectionId(
     val subtitle: String,
 ) {
     OVERVIEW("settings_section_overview", "Overview", "Library, artwork & build"),
-    LIBRARY("settings_section_library", "Library", "Library Manager, collections, artwork & hidden games"),
+    LIBRARY("settings_section_library", "Library", "Library Manager, artwork, scraping & hidden games"),
     EMULATORS("settings_section_emulators", "Emulators", "Launch profiles & RetroArch cores"),
     APPEARANCE("settings_section_appearance", "Appearance", "Theme, wallpaper, layout & boot"),
     INTERFACE("settings_section_interface", "Interface", "Sound, categories, controls & touch"),
@@ -37,14 +37,14 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
 
     SettingsEntry("settings_themes", "Theme", "Colour scheme, accent & theme packs", SettingsSectionId.APPEARANCE),
     SettingsEntry("settings_appearance", "Wallpaper & Text", "Wallpaper, wave, motion & legibility", SettingsSectionId.APPEARANCE),
-    SettingsEntry("settings_layout", "Layout", "XMB layout, custom icons & orientation", SettingsSectionId.APPEARANCE),
+    SettingsEntry("settings_layout", "Layout", "XMB layout & custom icons", SettingsSectionId.APPEARANCE),
     SettingsEntry("settings_boot", "Boot", "Boot sequence, boot video & GameBoot", SettingsSectionId.APPEARANCE),
 
-    SettingsEntry("settings_audio", "Sound", "Menu & boot sounds", SettingsSectionId.INTERFACE),
+    SettingsEntry("settings_audio", "Sound", "Menu sounds, menu music & boot audio", SettingsSectionId.INTERFACE),
     SettingsEntry("settings_categories", "Categories", "XMB categories & the collections inside them", SettingsSectionId.INTERFACE),
-    SettingsEntry("settings_controller", "Controller", "Button mapping", SettingsSectionId.INTERFACE),
-    SettingsEntry("settings_touch", "Touch", "On-screen button, swipe & hints", SettingsSectionId.INTERFACE),
-    SettingsEntry("settings_performance", "Performance", "Thermal, battery saver & direct launch", SettingsSectionId.INTERFACE),
+    SettingsEntry("settings_controller", "Controller", "Button swaps, prompts, stick & scrolling", SettingsSectionId.INTERFACE),
+    SettingsEntry("settings_touch", "Touch", "On-screen button, sensitivity & hints", SettingsSectionId.INTERFACE),
+    SettingsEntry("settings_performance", "Performance", "Thermal & battery saver", SettingsSectionId.INTERFACE),
 
 
     SettingsEntry("settings_initial_setup", "Setup Wizard", "Guided folder & account setup", SettingsSectionId.SYSTEM),

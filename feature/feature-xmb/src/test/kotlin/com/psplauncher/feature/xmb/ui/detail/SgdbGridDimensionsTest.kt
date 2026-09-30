@@ -25,8 +25,6 @@ class SgdbGridDimensionsTest {
 
     @Test
     fun `the filter is a grid thing, so the other endpoints are left unfiltered`() {
-        // heroes, logos and icons have their own shapes; a grid size filter would
-        // match nothing and the slot would come back empty.
         listOf(SgdbArtType.HERO, SgdbArtType.LOGO, SgdbArtType.ICON).forEach { type ->
             assertEquals(
                 "$type must not carry grid dimensions",
@@ -38,8 +36,6 @@ class SgdbGridDimensionsTest {
 
     @Test
     fun `slots that want the whole catalogue still get it`() {
-        // SCREENSHOT browses every type; narrowing its grids to box art would hide
-        // most of what it is for.
         assertEquals(
             emptyList<String>(),
             sgdbGridDimensions(ArtworkKind.SCREENSHOT, SgdbArtType.GRID),

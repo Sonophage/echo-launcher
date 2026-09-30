@@ -184,25 +184,10 @@ class GamepadInputHandler @Inject constructor(
         return fired
     }
 
-    // A pad that sends L2/R2 as BOTH a key and an axis must not turn two pages on one
-    // pull, so an axis press is dropped when the same action just came from a key.
-    //
-    // This used to latch: the first L2/R2 key event marked the pad and its axes were
-    // ignored from then on. That is why paging worked and then stopped — one stray
-    // key event, even an unmapped one, disabled the axes for good. A window cannot
-    // latch, and it mirrors isDuplicateDirection, which the stick and D-pad share.
 
 
     fun emitAction(action: GamepadAction) = emit(action)
 
-    /**
-     * Returns whether the action was actually emitted.
-     *
-     * A page action is gated here rather than at either call site, because this pad
-     * sends L2 as a key AND an axis but R2 as an axis only. Gating the axis alone let
-     * L2 fire twice per pull — once from each path — so it went back two pages at a
-     * time, reached the first page in a few pulls, and then looked stuck.
-     */
     private fun emit(action: GamepadAction, physical: Boolean = false): Boolean {
         if (action == GamepadAction.PREV_PAGE || action == GamepadAction.NEXT_PAGE) {
             val last = lastPageEmitAt[action]

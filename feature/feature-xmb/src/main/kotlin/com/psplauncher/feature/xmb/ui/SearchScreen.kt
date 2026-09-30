@@ -156,10 +156,6 @@ fun SearchScreen(
                     Spacer(Modifier.weight(1f))
                 } else {
                     BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                        // With the keyboard up the grid band is only about 150dp tall.
-                        // A card is its art at 2:3 plus roughly 55dp of name and
-                        // subtitle, so a full-width tile leaves no room for the name
-                        // and the name is the point of a search result.
                         val target = if (imeUp) SEARCH_TILE_TARGET_WIDTH_IME else SEARCH_TILE_TARGET_WIDTH
                         val measured = ((maxWidth + SEARCH_TILE_GAP) / (target + SEARCH_TILE_GAP))
                             .toInt()
@@ -264,10 +260,8 @@ internal val SEARCH_TILE_TARGET_WIDTH = 93.dp
 
 internal val SEARCH_TILE_TARGET_WIDTH_IME = 62.dp
 
-/** Field to keyboard on the 462dp panel, measured on the Konker. */
 internal val SEARCH_GRID_BAND_WITH_IME = 150.dp
 
-/** Gap, two lines of title and a subtitle under the art. */
 internal val SEARCH_CARD_TEXT_HEIGHT = 55.dp
 
 private val SEARCH_TILE_GAP = 14.dp

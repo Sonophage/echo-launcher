@@ -56,18 +56,12 @@ internal fun StudioPageLine(
     onRetryFailed: () -> Unit = {},
     onRemoveFailed: () -> Unit = {},
 ) {
-    // The counts sit on one line and the pager on its own beneath. They shared a row
-    // until the page count reached two digits, at which point the pager was what gave
-    // way and "Next" clipped.
     Column(modifier = modifier.fillMaxWidth()) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().height(if (showTouchControls) 26.dp else 16.dp),
     ) {
         if (totalResults > 0) {
-            // Weighted so THIS gives way when the row is tight. Without it the pager
-            // pills are what get squeezed, and "Next" clipped once the page count
-            // reached two digits and widened the label beside it.
             Text(
                 "$rangeStart–$rangeEnd of $totalResults",
                 color = Color.White.copy(alpha = 0.6f), fontSize = 9.5.sp, lineHeight = 12.sp,
@@ -236,9 +230,6 @@ internal fun StudioManualPager(
 
 @Composable
 private fun TouchPagePill(label: String, enabled: Boolean, leading: Boolean, onClick: () -> Unit) {
-    // The chevron was a "‹"/"›" character sitting beside the word, which renders at a
-    // different weight and baseline from the label and read as a stray > sign. A real
-    // icon matches the text metrics instead.
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

@@ -18,7 +18,7 @@ class StatusStripVisibilityTest {
     fun `the launcher's own screens keep it`() {
         val chrome = mapOf(
             "App Drawer" to crossbar().copy(activeAppDrawerFilter = "DEFAULT"),
-            "Settings" to crossbar().copy(activeSettingsScreen = "settings_display"),
+            "Settings" to crossbar().copy(activeSettingsScreen = "settings_appearance"),
             "Search" to crossbar().copy(search = SearchState(scope = SearchScope.ALL)),
             "App detail" to crossbar().copy(activeAppId = 1L),
 

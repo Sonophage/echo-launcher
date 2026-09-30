@@ -95,14 +95,6 @@ class ThemesSettingsViewModel @Inject constructor(
         }
     }
 
-    fun setAccentColor(argb: Long?) {
-        viewModelScope.launch {
-            context.pfpDataStore.edit { prefs ->
-                if (argb != null) prefs[KEY_ACCENT_OVERRIDE] = argb else prefs.remove(KEY_ACCENT_OVERRIDE)
-            }
-        }
-    }
-
     fun setAccentFromWallpaper(enabled: Boolean) {
         viewModelScope.launch {
             context.pfpDataStore.edit { prefs ->

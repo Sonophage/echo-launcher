@@ -2,26 +2,14 @@ package com.psplauncher.feature.settings.permissions
 
 import android.os.Build
 
-/**
- * How a permission is asked for, which decides what tapping its row does.
- */
 enum class GrantRoute {
-    /** A runtime permission the app can request in a dialog. */
     REQUEST,
 
-    /** Special access that only the system settings app can grant. */
     SYSTEM_SCREEN,
 
-    /** Granted at install and never revocable, so the row is informational. */
     INSTALL_TIME,
 }
 
-/**
- * One line in the permissions list.
- *
- * [why] is what the permission buys the user, not what the API is called. A row that
- * cannot say what it is for does not belong on this screen.
- */
 data class AppPermission(
     val id: String,
     val label: String,
@@ -36,15 +24,6 @@ object AppPermissions {
     const val USAGE_ACCESS = "usage_access"
     const val NOTIFICATION_LISTENER = "notification_listener"
 
-    /**
-     * Everything the manifest declares that a person could reasonably want to see or
-     * change, plus the two special accesses that are not manifest permissions at all.
-     *
-     * Deliberately absent: ACCESS_NETWORK_STATE, INTERNET, FOREGROUND_SERVICE,
-     * FOREGROUND_SERVICE_MEDIA_PLAYBACK and RECEIVE_BOOT_COMPLETED. They are granted at
-     * install, cannot be revoked, and listing them would pad the screen with rows that
-     * never change and never need an action.
-     */
     val ALL: List<AppPermission> = listOf(
         AppPermission(
             id = USAGE_ACCESS,
@@ -114,11 +93,9 @@ object AppPermissions {
         ),
     )
 
-    /** The rows worth drawing on this device: a permission for an Android it never runs is noise. */
     fun forSdk(sdk: Int): List<AppPermission> = ALL.filter { sdk >= it.minSdk && sdk <= it.maxSdk }
 }
 
-/** What the row says on its right-hand side. */
 fun permissionStateLabel(granted: Boolean, route: GrantRoute): String = when {
     granted -> "Granted"
     route == GrantRoute.INSTALL_TIME -> "Unavailable"

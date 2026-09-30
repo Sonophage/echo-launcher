@@ -462,17 +462,6 @@ class RoutingArtworkStore @Inject constructor(
         return saved.uriString
     }
 
-    /**
-     * The record is not the only thing that points at a slot's art: three kinds also
-     * have a column on `games`, and the crossbar reads those. The studio wrote the file
-     * and updated the record but left the column naming the old file, so a pick whose
-     * extension differed from what was there — a PNG over a JPG — left icon_uri naming
-     * a file that no longer existed, and the tile silently fell back to the next art in
-     * tileArt, which is the landscape background.
-     *
-     * Only for a pick the user made, and only for the primary asset: a second or third
-     * screenshot is not what a column points at.
-     */
     private suspend fun repointGameColumn(gameId: Long, kind: ArtworkKind, sortOrder: Int, uri: String) {
         when (gameArtColumnFor(kind, sortOrder)) {
             GameArtColumn.ICON -> gameDao.updateIconUri(gameId, uri)
@@ -532,15 +521,8 @@ data class StudioArtworkSlot(
     val sizeBytes: Long,
 )
 
-/** The three columns on `games` that name a piece of art. */
 enum class GameArtColumn { ICON, ARTWORK, LOGO }
 
-/**
- * Which column on `games`, if any, a saved asset has to be written into as well as
- * its record. ArtworkReferences reads exactly these three columns, so this mapping
- * and that one are a pair: a kind that reaches a column here must be readable there,
- * or the reaper counts live art as unreferenced.
- */
 fun gameArtColumnFor(kind: ArtworkKind, sortOrder: Int): GameArtColumn? {
     if (sortOrder != 0) return null
     return when (kind) {

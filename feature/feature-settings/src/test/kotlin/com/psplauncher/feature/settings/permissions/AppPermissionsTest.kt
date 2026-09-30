@@ -9,7 +9,6 @@ import org.junit.Test
 class AppPermissionsTest {
     @Test
     fun `every row says what the permission is for`() {
-        // A row that cannot say what it buys the user is a row nobody can act on.
         AppPermissions.ALL.forEach {
             assertTrue("${it.id} has no reason", it.why.isNotBlank())
             assertTrue("${it.id} has no label", it.label.isNotBlank())
@@ -62,8 +61,6 @@ class AppPermissionsTest {
 
     @Test
     fun `every row the manifest backs is actually declared in the manifest`() {
-        // A row for a permission the app never declares would sit at Not granted for
-        // ever, and tapping it would ask for something the system will refuse.
         val manifest = java.io.File("../../app/src/main/AndroidManifest.xml")
             .takeIf { it.exists() }
             ?: java.io.File("app/src/main/AndroidManifest.xml")

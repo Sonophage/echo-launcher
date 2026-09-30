@@ -32,7 +32,7 @@ class BookIntentResolver @Inject constructor(
             intent = buildViewIntent(book, readerPackage),
             chooserTitle = CHOOSER_TITLE,
             noHandlerMessage =
-                "No reader could open this book. Install one, or pick it in Settings → Library.",
+                "No reader could open this book. Install one, or pick it from Folders → Default Reader.",
             logLabel = "book \"${book.displayTitle}\"",
         )
 

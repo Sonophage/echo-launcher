@@ -58,7 +58,7 @@ class EnterOpensAppDrawerTest {
             ).enterOpensAppDrawer,
         )
         assertFalse(onCrossbar().copy(notificationsOpen = true).enterOpensAppDrawer)
-        assertFalse(onCrossbar().copy(activeSettingsScreen = "settings_display").enterOpensAppDrawer)
+        assertFalse(onCrossbar().copy(activeSettingsScreen = "settings_appearance").enterOpensAppDrawer)
     }
 
     @Test

@@ -147,7 +147,7 @@ fun ControllerSettingsScreen(
             SettingsGroup("Reset")
             SettingsRow(
                 label    = "Reset All Controller Settings",
-                sublabel = "Restores default swap and type presets",
+                sublabel = "Returns every controller setting to its default",
                 onClick  = { viewModel.resetToDefaults() },
             )
         }

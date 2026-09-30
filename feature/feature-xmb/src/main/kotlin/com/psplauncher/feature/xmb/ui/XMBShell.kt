@@ -530,7 +530,7 @@ fun XMBShell(
                     com.psplauncher.themekit.XmbFormFactor.forSmallestWidthDp(config.smallestScreenWidthDp).key
                 ]
                 ?: com.psplauncher.themekit.XmbLayoutAdjust(
-                    scale = uiState.xmbScale,
+                    scale = 1f,
                     barLeftFraction = 0f,
                     barTopFraction = uiState.layoutSpec.barTopFraction,
                 )
