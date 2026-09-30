@@ -22,7 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
@@ -109,7 +109,7 @@ private fun SettingsSectionId.icon(): ImageVector = when (this) {
     SettingsSectionId.OVERVIEW -> Icons.Filled.Dashboard
     SettingsSectionId.LIBRARY -> Icons.Filled.VideogameAsset
     SettingsSectionId.EMULATORS -> Icons.Filled.Build
-    SettingsSectionId.APPEARANCE -> Icons.Filled.Palette
-    SettingsSectionId.INTERFACE -> Icons.Filled.Tune
+    SettingsSectionId.LOOK_AND_FEEL -> Icons.Filled.Palette
     SettingsSectionId.SYSTEM -> Icons.Outlined.Info
+    SettingsSectionId.SETUP -> Icons.Filled.AutoFixHigh
 }
