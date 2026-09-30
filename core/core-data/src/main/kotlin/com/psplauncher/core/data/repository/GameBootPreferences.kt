@@ -30,7 +30,7 @@ class GameBootPreferences @Inject constructor(
 
         private val KEY_GAMEBOOT_MODE = stringPreferencesKey("display_gameboot_mode")
 
-        private val KEY_INITIAL_SETUP_SEEN = booleanPreferencesKey("initial_setup_seen")
+        private val KEY_INITIAL_SETUP_SEEN = InitialSetupFlag.KEY_SEEN
 
         private const val LEGACY_MODE_OFF = "OFF"
 

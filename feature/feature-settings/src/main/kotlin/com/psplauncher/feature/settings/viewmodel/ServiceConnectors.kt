@@ -1,9 +1,15 @@
 package com.psplauncher.feature.settings.viewmodel
 
+import com.psplauncher.core.common.security.SecretProtection
 import com.psplauncher.feature.artwork.api.IgdbApi
 import com.psplauncher.feature.artwork.api.ScreenScraperApi
 
 internal object ServiceConnectors {
+    fun unprotectedWarning(what: String, protection: SecretProtection): String? =
+        if (protection == SecretProtection.PROTECTED) null
+        else "$what was saved, but this device's secure keystore was unavailable, so it is " +
+            "stored unencrypted. Clearing and re-entering it later will try again."
+
     suspend fun testIgdb(igdbApi: IgdbApi, clientId: String, clientSecret: String): String =
         if (igdbApi.testCredentials(clientId.trim(), clientSecret.trim())) "Valid"
         else "Invalid — check Client ID and Secret"

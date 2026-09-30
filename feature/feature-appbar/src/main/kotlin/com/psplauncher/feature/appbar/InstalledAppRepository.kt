@@ -4,13 +4,11 @@ import android.content.Context
 import android.content.Intent
 import com.psplauncher.core.common.launch.LaunchTransition
 import com.psplauncher.core.common.launch.LaunchTransition.withoutTransition
-import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.net.Uri
-import android.os.Process
 import android.provider.Settings
 import com.psplauncher.core.domain.model.KnownEmulatorPackages
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -114,17 +112,7 @@ class InstalledAppRepository @Inject constructor(
         }
     }
 
-    fun hasUsageAccess(): Boolean {
-        val appOps = context.getSystemService(AppOpsManager::class.java) ?: return false
-
-        @Suppress("DEPRECATION")
-        val mode = appOps.unsafeCheckOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            context.packageName,
-        )
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
+    fun hasUsageAccess(): Boolean = com.psplauncher.core.data.permission.UsageAccess.isGranted(context)
 
     fun openAppInfo(packageName: String) {
         val intent = Intent(
@@ -146,7 +134,7 @@ class InstalledAppRepository @Inject constructor(
     }
 
     fun openUsageAccessSettings() {
-        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+        val intent = com.psplauncher.core.data.permission.UsageAccess.settingsIntent()
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         runCatching {
             context.startActivity(intent)

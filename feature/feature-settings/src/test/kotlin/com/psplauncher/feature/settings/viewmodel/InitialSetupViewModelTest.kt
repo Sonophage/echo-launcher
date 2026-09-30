@@ -58,8 +58,6 @@ class InitialSetupViewModelTest {
     private val screenScraperApi = mockk<ScreenScraperApi>()
     private val scanRunner = mockk<com.psplauncher.feature.settings.media.WizardMediaScanRunner>(relaxed = true)
     private val romRootScanRunner = mockk<RomRootScanRunner>(relaxed = true)
-    private val installedApps =
-        mockk<com.psplauncher.feature.appbar.InstalledAppRepository>(relaxed = true)
     private val launcherShortcuts =
         mockk<com.psplauncher.feature.appbar.LauncherShortcutRepository>(relaxed = true)
     private lateinit var vm: InitialSetupViewModel
@@ -71,8 +69,10 @@ class InitialSetupViewModelTest {
         mockk(relaxed = true),
         mockk(relaxed = true),
         mockk(relaxed = true),
-        installedApps,
         launcherShortcuts,
+        mockk<com.psplauncher.feature.artwork.api.TmdbApiKeyProvider>(relaxed = true) {
+            every { keyFlow } returns flowOf(null)
+        },
     )
 
     @Before fun setUp() {
@@ -140,21 +140,17 @@ class InitialSetupViewModelTest {
         job.cancel()
     }
 
-    @Test fun `grants are re-read on demand, not cached from construction`() = runTest(dispatcher) {
-        every { installedApps.hasUsageAccess() } returns false
+    @Test fun `the Home role is re-read on demand, not cached from construction`() = runTest(dispatcher) {
         every { launcherShortcuts.isDefaultLauncher() } returns false
         vm = buildVm()
         val job = collectState()
         advanceUntilIdle()
-        assertFalse(vm.uiState.value.hasUsageAccess)
         assertFalse(vm.uiState.value.isHomeLauncher)
 
-        every { installedApps.hasUsageAccess() } returns true
         every { launcherShortcuts.isDefaultLauncher() } returns true
         vm.refreshGrants()
         advanceUntilIdle()
 
-        assertTrue(vm.uiState.value.hasUsageAccess)
         assertTrue(vm.uiState.value.isHomeLauncher)
         job.cancel()
     }
@@ -489,5 +485,27 @@ class InitialSetupViewModelTest {
 
         coVerify(exactly = 0) { sgdbKeys.saveKey(any()) }
         coVerify(exactly = 0) { metadataKeys.saveIgdbCredentials(any(), any()) }
+    }
+
+    @Test fun `a pasted key is saved without the spaces around it`() = runTest(dispatcher) {
+        val job = collectState()
+        coEvery { sgdbKeys.saveKey(any()) } returns com.psplauncher.core.common.security.SecretProtection.PROTECTED
+        vm.connectSgdb("  abc123  ")
+        advanceUntilIdle()
+        coVerify(exactly = 1) { sgdbKeys.saveKey("abc123") }
+        assertEquals("SteamGridDB connected", vm.uiState.value.message)
+        job.cancel()
+    }
+
+    @Test fun `a key the keystore could not protect says so instead of saying connected`() = runTest(dispatcher) {
+        val job = collectState()
+        coEvery { sgdbKeys.saveKey(any()) } returns com.psplauncher.core.common.security.SecretProtection.UNPROTECTED
+        vm.connectSgdb("abc123")
+        advanceUntilIdle()
+        assertTrue(
+            "the wizard said connected for a key stored unencrypted",
+            vm.uiState.value.message.orEmpty().contains("stored unencrypted"),
+        )
+        job.cancel()
     }
 }

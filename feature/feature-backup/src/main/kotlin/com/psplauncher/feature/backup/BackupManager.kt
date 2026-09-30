@@ -572,7 +572,7 @@ open class BackupManager @Inject constructor(
 
             booleanPreferencesKey("library_setup_complete"),
 
-            booleanPreferencesKey("initial_setup_seen"),
+            com.psplauncher.core.data.repository.InitialSetupFlag.KEY_SEEN,
 
         )
 

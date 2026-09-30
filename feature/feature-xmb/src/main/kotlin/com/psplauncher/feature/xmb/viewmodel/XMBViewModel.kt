@@ -8439,7 +8439,7 @@ class XMBViewModel @Inject constructor(
         private val KEY_XMB_LAYOUT_ADJUST = stringPreferencesKey("display_xmb_layout_adjust")
         private val KEY_SETUP_COMPLETE    = booleanPreferencesKey("library_setup_complete")
 
-        private val KEY_INITIAL_SETUP_SEEN = booleanPreferencesKey("initial_setup_seen")
+        private val KEY_INITIAL_SETUP_SEEN = com.psplauncher.core.data.repository.InitialSetupFlag.KEY_SEEN
 
         internal fun returnAddressFor(screenId: String?): String? =
             screenId.takeIf { it in WIZARD_SCREEN_IDS }
@@ -8454,9 +8454,6 @@ class XMBViewModel @Inject constructor(
         private val EXISTING_CONFIG_STRING_KEYS = listOf(
             stringPreferencesKey("library_rom_root_tree_uris"),
             stringPreferencesKey("library_rom_root_tree_uri"),
-            stringPreferencesKey("music_root_tree_uris"),
-            stringPreferencesKey("video_root_tree_uris"),
-            stringPreferencesKey("photo_root_tree_uris"),
             stringPreferencesKey("artwork_folder_tree_uri"),
 
             stringPreferencesKey("sgdb_api_key"),
@@ -8464,7 +8461,8 @@ class XMBViewModel @Inject constructor(
             stringPreferencesKey("ss_username"),
             stringPreferencesKey("ra_username"),
             stringPreferencesKey("steam_id64"),
-        )
+            stringPreferencesKey("tmdb_api_key"),
+        ) + com.psplauncher.core.data.repository.MediaRootKind.entries.map { stringPreferencesKey(it.key) }
 
         internal fun hasExistingSetupConfig(prefs: androidx.datastore.preferences.core.Preferences): Boolean =
             prefs[KEY_SETUP_COMPLETE] == true ||

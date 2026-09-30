@@ -15,7 +15,7 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class MediaRootKind(internal val key: String) {
+enum class MediaRootKind(val key: String) {
     MUSIC("music_root_tree_uris"),
     VIDEO("video_root_tree_uris"),
     PHOTO("photo_root_tree_uris"),

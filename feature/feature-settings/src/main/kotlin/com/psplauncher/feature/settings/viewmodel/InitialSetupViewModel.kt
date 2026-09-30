@@ -57,14 +57,13 @@ data class InitialSetupUiState(
     val photoRoots: List<RootFolderRow> = emptyList(),
     val bookRoots: List<RootFolderRow> = emptyList(),
 
-    val hasNotifications: Boolean = false,
-    val hasUsageAccess: Boolean = false,
     val isHomeLauncher: Boolean = false,
 
     val artworkFolderName: String? = null,
     val artworkSources: List<ArtworkSourceUi> = emptyList(),
 
     val hasSgdb: Boolean = false,
+    val hasTmdb: Boolean = false,
     val igdbClientId: String = "",
 
     val ssEnabled: Boolean = false,
@@ -96,7 +95,7 @@ data class InitialSetupUiState(
     val hasScreenScraper: Boolean get() = ssUsername.isNotBlank()
     val anyFolderSet: Boolean get() =
         romRoots.isNotEmpty() || musicRoots.isNotEmpty() || videoRoots.isNotEmpty() ||
-            photoRoots.isNotEmpty() || artworkFolderName != null
+            photoRoots.isNotEmpty() || bookRoots.isNotEmpty() || artworkFolderName != null
 }
 
 @Immutable
@@ -113,11 +112,12 @@ private data class RootLists(
 @Immutable
 private data class ServiceIdentities(
     val hasSgdb: Boolean,
+    val hasTmdb: Boolean,
     val igdbClientId: String,
     val ssUsername: String,
 )
 
-private val KEY_INITIAL_SETUP_SEEN = booleanPreferencesKey("initial_setup_seen")
+private val KEY_INITIAL_SETUP_SEEN = com.psplauncher.core.data.repository.InitialSetupFlag.KEY_SEEN
 
 private const val RETROARCH_FAMILY = "com.retroarch"
 
@@ -142,8 +142,8 @@ class InitialSetupViewModel @Inject constructor(
     private val folderHintResolver: com.psplauncher.core.data.platform.PlatformFolderHintResolver,
     private val memoryCardRepository: com.psplauncher.core.data.repository.MemoryCardRepository,
 
-    private val installedAppRepository: com.psplauncher.feature.appbar.InstalledAppRepository,
     private val launcherShortcuts: com.psplauncher.feature.appbar.LauncherShortcutRepository,
+    private val tmdbKeys: com.psplauncher.feature.artwork.api.TmdbApiKeyProvider,
 ) : ViewModel() {
     private val scratch = MutableStateFlow(InitialSetupUiState())
 
@@ -167,20 +167,12 @@ class InitialSetupViewModel @Inject constructor(
     fun refreshGrants() {
         scratch.update {
             it.copy(
-                hasNotifications = hasNotificationPermission(),
-                hasUsageAccess = installedAppRepository.hasUsageAccess(),
                 isHomeLauncher = launcherShortcuts.isDefaultLauncher(),
             )
         }
     }
 
     fun homeRoleIntent(): android.content.Intent = launcherShortcuts.homeRoleRequestIntent()
-
-    private fun hasNotificationPermission(): Boolean =
-
-        android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU ||
-            context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
 
     private val rootLists = combine(
         combine(
@@ -215,9 +207,11 @@ class InitialSetupViewModel @Inject constructor(
         sgdbKeys.apiKeyFlow,
         metadataKeys.igdbClientIdFlow,
         metadataKeys.ssUsernameFlow,
-    ) { sgdbKey, igdbId, ssUser ->
+        tmdbKeys.keyFlow,
+    ) { sgdbKey, igdbId, ssUser, tmdbKey ->
         ServiceIdentities(
             hasSgdb      = !sgdbKey.isNullOrBlank(),
+            hasTmdb      = !tmdbKey.isNullOrBlank(),
             igdbClientId = igdbId.orEmpty(),
             ssUsername   = ssUser.orEmpty(),
         )
@@ -235,6 +229,7 @@ class InitialSetupViewModel @Inject constructor(
             artworkFolderName = roots.artwork,
             vitaFolderName    = roots.vita,
             hasSgdb           = services.hasSgdb,
+            hasTmdb           = services.hasTmdb,
             igdbClientId      = services.igdbClientId,
             ssUsername        = services.ssUsername,
         )
@@ -517,16 +512,27 @@ class InitialSetupViewModel @Inject constructor(
     fun connectSgdb(apiKey: String) {
         if (apiKey.isBlank()) return
         viewModelScope.launch {
-            sgdbKeys.saveKey(apiKey)
-            scratch.update { it.copy(message = "SteamGridDB connected") }
+            val protection = sgdbKeys.saveKey(apiKey.trim())
+            val message = ServiceConnectors.unprotectedWarning("SteamGridDB key", protection) ?: "SteamGridDB connected"
+            scratch.update { it.copy(message = message) }
+        }
+    }
+
+    fun connectTmdb(apiKey: String) {
+        if (apiKey.isBlank()) return
+        viewModelScope.launch {
+            val protection = tmdbKeys.saveKey(apiKey.trim())
+            val message = ServiceConnectors.unprotectedWarning("TMDB key", protection) ?: "TMDB connected"
+            scratch.update { it.copy(message = message) }
         }
     }
 
     fun connectIgdb(clientId: String, clientSecret: String) {
         if (clientId.isBlank() || clientSecret.isBlank()) return
         viewModelScope.launch {
-            metadataKeys.saveIgdbCredentials(clientId, clientSecret)
-            scratch.update { it.copy(message = "IGDB connected", igdbStatus = null) }
+            val protection = metadataKeys.saveIgdbCredentials(clientId.trim(), clientSecret.trim())
+            val message = ServiceConnectors.unprotectedWarning("IGDB client secret", protection) ?: "IGDB connected"
+            scratch.update { it.copy(message = message, igdbStatus = null) }
         }
     }
 
@@ -571,8 +577,9 @@ class InitialSetupViewModel @Inject constructor(
     fun connectScreenScraper(username: String, password: String) {
         if (username.isBlank() || password.isBlank()) return
         viewModelScope.launch {
-            metadataKeys.saveSsCredentials(username, password)
-            scratch.update { it.copy(message = "ScreenScraper connected", ssStatus = null) }
+            val protection = metadataKeys.saveSsCredentials(username.trim(), password.trim())
+            val message = ServiceConnectors.unprotectedWarning("ScreenScraper password", protection) ?: "ScreenScraper connected"
+            scratch.update { it.copy(message = message, ssStatus = null) }
         }
     }
 

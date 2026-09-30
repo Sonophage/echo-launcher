@@ -375,14 +375,8 @@ class ArtworkSettingsViewModel @Inject constructor(
     }
 
     private fun warnIfUnprotected(what: String, protection: SecretProtection) {
-        if (protection == SecretProtection.PROTECTED) return
-        _extra.update {
-            it.copy(
-                unprotectedSecretWarning =
-                    "$what was saved, but this device's secure keystore was unavailable, so it is " +
-                        "stored unencrypted. Clearing and re-entering it later will try again.",
-            )
-        }
+        val warning = ServiceConnectors.unprotectedWarning(what, protection) ?: return
+        _extra.update { it.copy(unprotectedSecretWarning = warning) }
     }
 
     fun loadDebugCredentials(uri: android.net.Uri) {

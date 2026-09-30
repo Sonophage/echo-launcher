@@ -19,6 +19,7 @@ class InitialSetupGateTest {
             "music_root_tree_uris",
             "video_root_tree_uris",
             "photo_root_tree_uris",
+            "book_root_tree_uris",
             "artwork_folder_tree_uri",
         ).forEach { key ->
             assertTrue(
@@ -42,11 +43,23 @@ class InitialSetupGateTest {
             "ss_username",
             "ra_username",
             "steam_id64",
+            "tmdb_api_key",
         ).forEach { key ->
             assertTrue(
                 key,
                 XMBViewModel.hasExistingSetupConfig(
                     preferencesOf(stringPreferencesKey(key) to "some-value")
+                ),
+            )
+        }
+    }
+
+    @Test fun `every media root kind counts, so a new kind cannot be forgotten`() {
+        com.psplauncher.core.data.repository.MediaRootKind.entries.forEach { kind ->
+            assertTrue(
+                "${kind.name} roots do not stop the first-run wizard",
+                XMBViewModel.hasExistingSetupConfig(
+                    preferencesOf(stringPreferencesKey(kind.key) to "content://tree/primary%3AStuff")
                 ),
             )
         }
