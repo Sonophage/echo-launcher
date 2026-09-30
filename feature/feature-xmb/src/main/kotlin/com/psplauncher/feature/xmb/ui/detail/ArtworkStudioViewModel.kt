@@ -939,7 +939,23 @@ class ArtworkStudioViewModel @Inject constructor(
         loadResults()
     }
 
-    fun cycleTab(delta: Int) = selectTab((_uiState.value.tabIndex + delta).mod(STUDIO_TABS.size))
+    fun cycleTab(delta: Int) {
+        val s = _uiState.value
+        // Stepping forward off the last slot used to wrap to the first, walking back
+        // over slots already answered. The pass is finished there, so offer the
+        // review. This is the only route that works from a multi-select slot such as
+        // SCREENSHOT, where picking toggles and never advances — and on SteamGridDB
+        // SCREENSHOT is the last visible slot.
+        if (delta > 0) {
+            val visible = s.visibleSlots
+            val here = visible.indexOfFirst { it.kind == STUDIO_TABS[s.tabIndex].kind }
+            if (here >= 0 && here == visible.lastIndex && s.reviewSummary.hasChanges) {
+                applyChanges()
+                return
+            }
+        }
+        selectTab((s.tabIndex + delta).mod(STUDIO_TABS.size))
+    }
 
     override fun selectSource(index: Int) {
         val sources = sourcesForTab()
@@ -1394,7 +1410,16 @@ class ArtworkStudioViewModel @Inject constructor(
         val visible = s.visibleSlots
         if (visible.size < 2) return
         val here = visible.indexOfFirst { it.kind == STUDIO_TABS[s.tabIndex].kind }
-        val next = visible[(here + 1).mod(visible.size)]
+        if (here < 0) return
+
+        // Picking on the last slot used to wrap round to the first, which walks you
+        // back over slots you have already answered. The pass is finished, so offer
+        // the review instead; applyChanges is a no-op when nothing was picked.
+        if (here == visible.lastIndex) {
+            applyChanges()
+            return
+        }
+        val next = visible[here + 1]
         selectTab(STUDIO_TABS.indexOfFirst { it.kind == next.kind })
     }
 
