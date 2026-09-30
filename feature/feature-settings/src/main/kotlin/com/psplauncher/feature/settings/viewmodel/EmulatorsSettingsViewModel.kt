@@ -12,12 +12,10 @@ import kotlinx.coroutines.flow.first
 import android.net.Uri
 import com.psplauncher.feature.launcher.AppLaunchInspector
 import com.psplauncher.feature.launcher.DetectableApp
-import com.psplauncher.feature.launcher.EmulatorAutoConfigService
 import com.psplauncher.feature.launcher.EmulatorIntentResolver
 import com.psplauncher.feature.launcher.EmulatorProfileRepository
 import com.psplauncher.feature.launcher.RetroArchCoreScanner
 import com.psplauncher.core.data.repository.CoreInventory
-import com.psplauncher.core.data.repository.RetroArchLink
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.psplauncher.core.domain.model.PcRuntimes
@@ -135,8 +133,7 @@ class EmulatorsSettingsViewModel @Inject constructor(
     private val appLaunchInspector: AppLaunchInspector,
     private val gameRepository: GameRepository,
     private val intentResolver: EmulatorIntentResolver,
-    private val retroArchLink: RetroArchLink,
-    private val autoConfig: EmulatorAutoConfigService,
+    private val retroArchSetup: RetroArchSetup,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(EmulatorsSettingsUiState())
@@ -157,7 +154,7 @@ class EmulatorsSettingsViewModel @Inject constructor(
     }
 
     private suspend fun readRetroArchState() {
-        val inventory = retroArchLink.inventory()
+        val inventory = retroArchSetup.inventory()
 
         val cores = RetroArchCoreScanner.coresFor("com.retroarch", inventory.coreFiles).map { it.name }
         _uiState.update {
@@ -174,8 +171,7 @@ class EmulatorsSettingsViewModel @Inject constructor(
     fun linkRetroArch(treeUri: Uri) {
         _uiState.update { it.copy(isDetectingCores = true) }
         viewModelScope.launch {
-            retroArchLink.save(treeUri)
-            autoConfig.runOnStartup()
+            retroArchSetup.link(treeUri)
             readRetroArchState()
         }
     }
@@ -184,15 +180,14 @@ class EmulatorsSettingsViewModel @Inject constructor(
         if (!_uiState.value.retroArchLinked) return
         _uiState.update { it.copy(isDetectingCores = true) }
         viewModelScope.launch {
-            autoConfig.runOnStartup()
+            retroArchSetup.redetect()
             readRetroArchState()
         }
     }
 
     fun unlinkRetroArch() {
         viewModelScope.launch {
-            retroArchLink.clear()
-            autoConfig.runOnStartup()
+            retroArchSetup.unlink()
             _uiState.update {
                 it.copy(
                     retroArchLinked = false,

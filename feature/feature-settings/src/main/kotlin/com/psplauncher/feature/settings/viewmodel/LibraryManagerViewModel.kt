@@ -129,6 +129,7 @@ class LibraryManagerViewModel @Inject constructor(
     private val libraryScanner: LibraryScanner,
     private val romRootScanRunner: RomRootScanRunner,
     private val pcGameExporter: com.psplauncher.feature.settings.pc.PcGameExporter,
+    private val standardRomFolders: StandardRomFolders,
 ) : ViewModel() {
     private val _scratch = MutableStateFlow(LibraryManagerUiState())
 
@@ -471,6 +472,10 @@ class LibraryManagerViewModel @Inject constructor(
         }
     }
 
+    fun releaseVita3KFolder() {
+        viewModelScope.launch { vita3KLibrary.clear() }
+    }
+
     fun scrapeArtwork(platformId: String) {
         MetadataScrapeWorker.enqueue(
             context,
@@ -736,12 +741,7 @@ class LibraryManagerViewModel @Inject constructor(
             romRootRepository.persist(uri, writable = true)
             romRootRepository.add(uri.toString())
 
-            val names = memoryCardRepository.availablePlatformCatalog()
-                .map { folderHintResolver.esDeFolderName(it.id) }
-                .filter { it.isNotBlank() && it != "android" }
-                .distinct()
-
-            val result = romScanner.createSubfolders(uri.toString(), names)
+            val result = standardRomFolders.createUnder(uri.toString())
             Timber.i("ES-DE setup — root=$uri created=${result.created} existing=${result.existing}")
             _scratch.update {
                 it.copy(

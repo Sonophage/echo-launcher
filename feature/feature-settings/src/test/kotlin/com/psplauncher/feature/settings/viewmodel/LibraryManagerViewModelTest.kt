@@ -83,6 +83,7 @@ class LibraryManagerViewModelTest {
             libraryScanner,
             romRootScanRunner,
             pcGameExporter,
+            StandardRomFolders(memoryCardRepository, folderHintResolver, romScanner),
         )
     }
 
