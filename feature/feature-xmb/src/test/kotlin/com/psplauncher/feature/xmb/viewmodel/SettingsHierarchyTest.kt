@@ -96,17 +96,15 @@ class SettingsHierarchyTest {
         )
 
         assertEquals(
-            listOf("settings_themes", "settings_appearance", "settings_layout", "settings_boot"),
-            settingsEntriesIn(SettingsSectionId.APPEARANCE).map { it.id },
-        )
-        assertEquals(
-            listOf("settings_audio", "settings_categories", "settings_controller", "settings_touch", "settings_performance"),
-            settingsEntriesIn(SettingsSectionId.INTERFACE).map { it.id },
+            listOf(
+                "settings_themes", "settings_appearance", "settings_layout", "settings_boot",
+                "settings_audio", "settings_categories", "settings_controller", "settings_touch", "settings_performance",
+            ),
+            settingsEntriesIn(SettingsSectionId.LOOK_AND_FEEL).map { it.id },
         )
         assertEquals(
 
             listOf(
-                "settings_initial_setup",
                 "settings_permissions",
                 "settings_about",
                 "settings_logs",
@@ -114,6 +112,11 @@ class SettingsHierarchyTest {
                 "settings_credits",
             ),
             settingsEntriesIn(SettingsSectionId.SYSTEM).map { it.id },
+        )
+        assertEquals(
+            "the wizard is its own section, apart from Permissions",
+            listOf("settings_initial_setup"),
+            settingsEntriesIn(SettingsSectionId.SETUP).map { it.id },
         )
     }
 
@@ -167,19 +170,19 @@ class SettingsHierarchyTest {
         assertTrue("settings_app_visibility route missing", SETTINGS_SCREEN_ROUTES.contains("settings_app_visibility"))
     }
 
-    @Test fun `Hidden Games is not reachable from Interface settings`() {
-        val interfaceIds = settingsEntriesIn(SettingsSectionId.INTERFACE).map { it.id }
+    @Test fun `Hidden Games is not reachable from Look and Feel`() {
+        val interfaceIds = settingsEntriesIn(SettingsSectionId.LOOK_AND_FEEL).map { it.id }
         assertFalse(interfaceIds.contains("settings_app_visibility"))
     }
 
-    @Test fun `Sound is present under Interface via its own route`() {
-        val interfaceIds = settingsEntriesIn(SettingsSectionId.INTERFACE).map { it.id }
-        assertTrue("Sound missing from Interface", interfaceIds.contains("settings_audio"))
+    @Test fun `Sound is present under Look and Feel via its own route`() {
+        val ids = settingsEntriesIn(SettingsSectionId.LOOK_AND_FEEL).map { it.id }
+        assertTrue("Sound missing from Look & Feel", ids.contains("settings_audio"))
         assertTrue("settings_audio route missing", SETTINGS_SCREEN_ROUTES.contains("settings_audio"))
     }
 
-    @Test fun `the Interface audio row is titled Sound and names music as well as sounds`() {
-        val row = settingsEntriesIn(SettingsSectionId.INTERFACE).first { it.id == "settings_audio" }
+    @Test fun `the audio row is titled Sound and names music as well as sounds`() {
+        val row = settingsEntriesIn(SettingsSectionId.LOOK_AND_FEEL).first { it.id == "settings_audio" }
         assertEquals("Sound", row.title)
         assertEquals("Menu sounds, menu music & boot audio", row.subtitle)
     }
