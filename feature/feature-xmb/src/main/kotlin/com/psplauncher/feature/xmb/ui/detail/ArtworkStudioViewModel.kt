@@ -486,8 +486,15 @@ private val BACKGROUND_SOURCES = listOf(
 
 private val SHOW_ALL_ART_KINDS = setOf(ArtworkKind.SCREENSHOT)
 
+// SteamGridDB's grids endpoint holds portrait AND landscape art. Unfiltered it
+// returns both, which is why the tile slot offered horizontal options.
+internal val SGDB_PORTRAIT_GRIDS = listOf("600x900", "342x482", "660x930")
+
+internal fun sgdbGridDimensions(kind: ArtworkKind, type: SgdbArtType): List<String> =
+    if (type == SgdbArtType.GRID && kind == ArtworkKind.ICON) SGDB_PORTRAIT_GRIDS else emptyList()
+
 val STUDIO_TABS = listOf(
-    StudioTab(ArtworkKind.ICON,           "TILE",         "Crossbar tile · 144×80 · crop",                 StudioTileClass.LANDSCAPE),
+    StudioTab(ArtworkKind.ICON,           "TILE",         "Crossbar tile · vertical box art · crop",       StudioTileClass.PORTRAIT),
     StudioTab(ArtworkKind.ICON1,          "TILE VIDEO",   "Plays on the tile after you rest on it",        StudioTileClass.LANDSCAPE),
     StudioTab(ArtworkKind.BACKGROUND,     "BACKGROUND",   "XMB hover background · full screen",            StudioTileClass.LANDSCAPE),
     StudioTab(ArtworkKind.LOGO,           "LOGO",         "PIC0 overlay · transparent PNG · fit",          StudioTileClass.WIDE),
@@ -853,7 +860,7 @@ class ArtworkStudioViewModel @Inject constructor(
             steamGridDb.getArt(
                 gameId = sgdbId,
                 type = type,
-                dimensions = emptyList(),
+                dimensions = sgdbGridDimensions(kind, type),
                 includeNsfw = _uiState.value.includeNsfw,
             ).getOrElse {
                 Timber.w(it, "SGDB browse failed")
@@ -1416,6 +1423,10 @@ class ArtworkStudioViewModel @Inject constructor(
 
     private fun backOutOfStudio() {
         val s = _uiState.value
+        if (!s.providerPickerOpen) {
+            _uiState.update { it.copy(providerPickerOpen = true) }
+            return
+        }
         if (s.selection.isNotEmpty() || s.removals.isNotEmpty()) {
             _uiState.update { it.copy(leavePromptOpen = true, leavePromptIndex = 0, providerPickerOpen = false) }
         } else {

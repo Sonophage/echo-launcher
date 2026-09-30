@@ -87,7 +87,7 @@ class StudioGridCapacityTest {
     @Test
     fun `every tab carries the tile class from the plan table`() {
         val expected = mapOf(
-            ArtworkKind.ICON to StudioTileClass.LANDSCAPE,
+            ArtworkKind.ICON to StudioTileClass.PORTRAIT,
             ArtworkKind.ICON1 to StudioTileClass.LANDSCAPE,
             ArtworkKind.BACKGROUND to StudioTileClass.LANDSCAPE,
             ArtworkKind.LOGO to StudioTileClass.WIDE,

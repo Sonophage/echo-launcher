@@ -731,7 +731,8 @@ class ArtworkStudioViewModelTest {
     fun `B from the categories with picks asks first, and Stay or Discard do what they say`() = runTest(testDispatcher) {
         val vm = screenshotGridOnSgdb(perType = 2)
         vm.toggleSelection(0)
-        vm.handleGamepadAction(GamepadAction.BACK)
+        vm.handleGamepadAction(GamepadAction.BACK)   // out to the provider picker
+        vm.handleGamepadAction(GamepadAction.BACK)   // and only then out of the studio
 
         assertTrue(vm.uiState.value.leavePromptOpen)
         assertFalse(vm.uiState.value.closed)
@@ -750,10 +751,26 @@ class ArtworkStudioViewModelTest {
     }
 
     @Test
+    fun `B from the studio returns to the provider picker, not out to the crossbar`() = runTest(testDispatcher) {
+        val vm = screenshotGridOnSgdb(perType = 2)
+        assertFalse("the studio proper is open, not the picker", vm.uiState.value.providerPickerOpen)
+
+        vm.handleGamepadAction(GamepadAction.BACK)
+
+        assertTrue("B steps back a level", vm.uiState.value.providerPickerOpen)
+        assertFalse("and does not leave", vm.uiState.value.closed)
+
+        vm.handleGamepadAction(GamepadAction.BACK)
+        advanceUntilIdle()
+        assertTrue("a second B, with nothing picked, leaves", vm.uiState.value.closed)
+    }
+
+    @Test
     fun `Apply and Close queues the picks and closes`() = runTest(testDispatcher) {
         val vm = screenshotGridOnSgdb(perType = 2)
         vm.toggleSelection(0)
-        vm.handleGamepadAction(GamepadAction.BACK)
+        vm.handleGamepadAction(GamepadAction.BACK)   // out to the provider picker
+        vm.handleGamepadAction(GamepadAction.BACK)   // and only then out of the studio
 
         vm.handleGamepadAction(GamepadAction.SELECT)
         advanceUntilIdle()
@@ -786,7 +803,8 @@ class ArtworkStudioViewModelTest {
         coEvery { steamGridDb.getArt(any(), any(), any(), any(), any()) } returns
             Result.success((1..30).map { SgdbArtItem(id = it.toLong(), url = "art$it") })
         val vm = loadedOn(StudioSource.STEAMGRIDDB)
-        vm.onGridMeasured(246f, 300f)
+        // tall enough for two rows of portrait tiles; one row leaves DOWN nothing to do
+        vm.onGridMeasured(246f, 360f)
         val tabBefore = vm.uiState.value.tabIndex
         val pageBefore = vm.uiState.value.page
 
