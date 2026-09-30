@@ -63,6 +63,11 @@ class BackupKeyCoverageTest {
     }
 
     @Test
+    fun `the photo viewer choice is backed up`() {
+        assertCovered("photo_default_viewer")
+    }
+
+    @Test
     fun `the Library section's reader choice is backed up`() {
         assertCovered(
             "books_default_reader",

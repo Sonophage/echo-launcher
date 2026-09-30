@@ -95,11 +95,8 @@ class MediaRootMenuTest {
     }
 
     @Test
-    fun `photo has no default-app row because there is no photo player setting`() {
-        assertTrue(
-            mediaFoldersContextMenuItems(MediaRootKind.PHOTO).none { it.action == "media_default_app" },
-        )
-        MediaRootKind.entries.filter { it != MediaRootKind.PHOTO }.forEach { kind ->
+    fun `every media kind offers a default app, photos included`() {
+        MediaRootKind.entries.forEach { kind ->
             assertTrue(
                 "${kind.name} lost its default app row",
                 mediaFoldersContextMenuItems(kind).any { it.action == "media_default_app" },
