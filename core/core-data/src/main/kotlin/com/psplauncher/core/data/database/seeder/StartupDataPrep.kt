@@ -40,6 +40,7 @@ class StartupDataPrep @Inject constructor(
             }
 
             healWallpaperSurvey()
+            context.pfpDataStore.edit(::wipeRetiredKeys)
         }.onFailure { Timber.e(it, "Startup data prep failed") }
 
         if (alreadyPrepped) return
@@ -125,8 +126,24 @@ class StartupDataPrep @Inject constructor(
     private companion object {
         val KEY_DATA_PREP_VERSION = intPreferencesKey("data_prep_version")
 
+
         val KEY_ART_COLUMN_REPAIR = booleanPreferencesKey("art_column_repair_done")
         val KEY_CUSTOM_WALLPAPER  = stringPreferencesKey("display_custom_wallpaper")
         const val FILES_MARKER = "/files/"
     }
+}
+
+internal val RETIRED_ACHIEVEMENT_KEYS = setOf(
+    "achievements_enabled",
+    "achievements_sync_last",
+    "goldberg_installer_enabled",
+    "local_steam_tracking_enabled",
+    "ra_api_key",
+    "ra_username",
+    "steam_api_key",
+    "steam_id64",
+)
+
+internal fun wipeRetiredKeys(prefs: androidx.datastore.preferences.core.MutablePreferences) {
+    prefs.asMap().keys.filter { it.name in RETIRED_ACHIEVEMENT_KEYS }.forEach { prefs.remove(it) }
 }

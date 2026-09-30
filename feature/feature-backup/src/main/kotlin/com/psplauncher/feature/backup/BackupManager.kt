@@ -468,8 +468,6 @@ open class BackupManager @Inject constructor(
         stringPreferencesKey("display_xmb_layout_adjust"),
         stringPreferencesKey("pref_video_snap_placement"),
 
-        stringPreferencesKey("ra_username"),
-        stringPreferencesKey("steam_id64"),
         stringPreferencesKey("theme_applied_name"),
         stringPreferencesKey("theme_layout_spec"),
 

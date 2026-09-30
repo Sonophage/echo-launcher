@@ -8459,8 +8459,6 @@ class XMBViewModel @Inject constructor(
             stringPreferencesKey("sgdb_api_key"),
             stringPreferencesKey("igdb_client_id"),
             stringPreferencesKey("ss_username"),
-            stringPreferencesKey("ra_username"),
-            stringPreferencesKey("steam_id64"),
             stringPreferencesKey("tmdb_api_key"),
         ) + com.psplauncher.core.data.repository.MediaRootKind.entries.map { stringPreferencesKey(it.key) }
 
