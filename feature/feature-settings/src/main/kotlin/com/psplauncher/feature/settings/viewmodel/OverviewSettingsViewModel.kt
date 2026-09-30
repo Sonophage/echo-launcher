@@ -25,10 +25,14 @@ data class OverviewUiState(
     val artwork: ArtworkStatus = ArtworkStatus(),
 
     val artworkCacheBytes: Long? = null,
-    val libraryArt: String? = null,
-    val artworkArt: String? = null,
+    val artChoices: List<String> = emptyList(),
     val loading: Boolean = true,
 )
+
+internal fun pickOverviewArt(choices: List<String>, random: kotlin.random.Random): Pair<String?, String?> {
+    val two = choices.shuffled(random).take(2)
+    return two.getOrNull(0) to two.getOrNull(1)
+}
 
 @HiltViewModel
 class OverviewSettingsViewModel @Inject constructor(
@@ -49,18 +53,16 @@ class OverviewSettingsViewModel @Inject constructor(
                 bookRepository.observeAllBooks(),
                 videoRepository.observeAllVideos(),
             ) { games, tracks, books, videos ->
-                val recent = games.maxByOrNull { it.lastPlayedAt ?: 0L }
                 OverviewUiState(
                     games = games.size, tracks = tracks.size, books = books.size, videos = videos.size,
-                    libraryArt = recent?.let { it.artworkUri ?: it.iconUri },
-                    artworkArt = games.firstOrNull { it !== recent && it.iconUri != null }?.iconUri,
+                    artChoices = games.mapNotNull { it.artworkUri }.distinct(),
                     loading = false,
                 )
             }.collect { counts ->
                 _state.update {
                     it.copy(
                         games = counts.games, tracks = counts.tracks, books = counts.books, videos = counts.videos,
-                        libraryArt = counts.libraryArt, artworkArt = counts.artworkArt, loading = false,
+                        artChoices = counts.artChoices, loading = false,
                     )
                 }
             }

@@ -27,6 +27,7 @@ import com.psplauncher.core.ui.components.PfpArtCard
 import com.psplauncher.core.ui.components.PfpArtCardComplete
 import com.psplauncher.core.ui.components.PfpArtCardPartial
 import com.psplauncher.feature.settings.viewmodel.OverviewSettingsViewModel
+import com.psplauncher.feature.settings.viewmodel.pickOverviewArt
 
 @Composable
 fun OverviewSettingsScreen(
@@ -39,6 +40,11 @@ fun OverviewSettingsScreen(
     val context = LocalContext.current
     val packageInfo = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
+    }
+
+    val hasArt = state.artChoices.isNotEmpty()
+    val (libraryArt, artworkArt) = remember(hasArt) {
+        pickOverviewArt(state.artChoices, kotlin.random.Random.Default)
     }
 
     SettingsPageScaffold(
@@ -54,7 +60,7 @@ fun OverviewSettingsScreen(
 
             PfpArtCard(
                 title = "Library",
-                artUri = state.libraryArt,
+                artUri = libraryArt,
                 focused = false,
                 lit = true,
                 accent = SettingsAccent,
@@ -70,7 +76,7 @@ fun OverviewSettingsScreen(
             val art = state.artwork
             PfpArtCard(
                 title = "Artwork",
-                artUri = state.artworkArt,
+                artUri = artworkArt,
                 focused = false,
                 lit = true,
                 accent = SettingsAccent,
