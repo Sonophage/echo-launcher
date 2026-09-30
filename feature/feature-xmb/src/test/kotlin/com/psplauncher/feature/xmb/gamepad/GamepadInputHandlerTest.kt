@@ -317,6 +317,7 @@ class GamepadInputHandlerTest {
             handler.onMotionEvent(motionEvent(rTrigger = 1f))
             assertEquals(GamepadAction.NEXT_PAGE, awaitItem())
             handler.onMotionEvent(motionEvent(rTrigger = 0f))
+            now += 1_000L
 
             // R2 is bound to NEXT_PAGE, so the key emits in its own right; consume it.
             // An earlier build marked the pad here and ignored its axes from then on,
@@ -332,6 +333,22 @@ class GamepadInputHandlerTest {
                 GamepadAction.NEXT_PAGE,
                 awaitItem(),
             )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a pad that sends a trigger as key AND axis turns one page, not two`() = runTest {
+        var now = 0L
+        handler.clock = { now }
+        handler.actions.test {
+            // L2 on this pad reports both ways. Gating only the axis let it fire twice
+            // per pull, so it went back two pages at a time and hit the first page fast.
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.ACTION_DOWN))
+            handler.onMotionEvent(motionEvent(lTrigger = 1f))
+
+            assertEquals(GamepadAction.PREV_PAGE, awaitItem())
+            expectNoEvents()
             cancelAndIgnoreRemainingEvents()
         }
     }
