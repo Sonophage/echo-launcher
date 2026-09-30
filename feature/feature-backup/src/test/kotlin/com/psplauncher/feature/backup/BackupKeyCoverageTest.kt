@@ -63,6 +63,20 @@ class BackupKeyCoverageTest {
     }
 
     @Test
+    fun `the interface choices added with the settings pass are backed up`() {
+        assertCovered(
+            "interface_show_device_notifications",
+            "interface_island_shows_recent",
+            "interface_last_played_size",
+            "library_rescan_on_return",
+            "video_seek_step_seconds",
+            "video_controls_hide_ms",
+            "controller_trigger_sensitivity",
+            "controller_shoulder_hold",
+        )
+    }
+
+    @Test
     fun `the photo viewer choice is backed up`() {
         assertCovered("photo_default_viewer")
     }

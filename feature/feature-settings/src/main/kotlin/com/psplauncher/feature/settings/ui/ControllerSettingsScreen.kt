@@ -118,6 +118,26 @@ fun ControllerSettingsScreen(
                 onPick   = { viewModel.setStickSensitivity(StickSensitivity.entries[it]) },
             )
 
+            SettingsGroup("Triggers & Shoulders")
+            SettingsPickerRow(
+                label    = "Trigger Sensitivity",
+                sublabel = "How far L2 and R2 must be pulled to turn a page. High suits short or worn triggers",
+                options  = com.psplauncher.core.domain.model.TriggerSensitivity.entries.map { SettingsPickerOption(it.label) },
+                selectedIndex = com.psplauncher.core.domain.model.TriggerSensitivity.entries
+                    .indexOf(state.layoutPrefs.triggerSensitivity),
+                onPick   = { viewModel.setTriggerSensitivity(com.psplauncher.core.domain.model.TriggerSensitivity.entries[it]) },
+            )
+            SettingsPickerRow(
+                label    = "Shoulder Hold Time",
+                sublabel = "How long L1 or R1 must be held before it counts as a hold rather than a press",
+                options  = com.psplauncher.core.domain.model.ShoulderHoldTime.entries.map {
+                    SettingsPickerOption("${it.label} (${it.millis} ms)")
+                },
+                selectedIndex = com.psplauncher.core.domain.model.ShoulderHoldTime.entries
+                    .indexOf(state.layoutPrefs.shoulderHoldTime),
+                onPick   = { viewModel.setShoulderHoldTime(com.psplauncher.core.domain.model.ShoulderHoldTime.entries[it]) },
+            )
+
             SettingsGroup("Scroll Speed")
             Text(
                 text     = "How fast lists scroll while a direction is held. Holding longer " +

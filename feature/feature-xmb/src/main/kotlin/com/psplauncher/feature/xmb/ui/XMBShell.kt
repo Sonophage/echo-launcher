@@ -1028,7 +1028,7 @@ fun XMBShell(
                 ?: busyActivity
                 ?: musicActivity
 
-            val recentActivity = uiState.recentTop?.let { top ->
+            val recentActivity = uiState.recentTop?.takeIf { uiState.interfaceChoices.islandShowsRecent }?.let { top ->
                 StripLiveActivity(art = top.shelfCoverArt, title = top.title, detail = top.subtitle)
             }
 

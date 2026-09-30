@@ -649,6 +649,8 @@ data class XMBUiState(
     val cardArtGrid: Boolean = true,
 
     val recentsIncludeApps: Boolean = false,
+    val interfaceChoices: com.psplauncher.core.data.repository.InterfaceChoices =
+        com.psplauncher.core.data.repository.InterfaceChoices(),
 
     val textShadow: Boolean = true,
 
@@ -1767,7 +1769,7 @@ class XMBViewModel @Inject constructor(
 
                         recentFilterAndApps(),
                     ) { games, tracks, books, videos, filterAndApps ->
-                        val (filter, appRows) = filterAndApps
+                        val (filter, appRows, limit) = filterAndApps
 
                         currentMusicTracks = tracks
                         val visibleGames = games.notHiddenAt(HideLocationType.ALL_GAMES)
@@ -1779,7 +1781,7 @@ class XMBViewModel @Inject constructor(
                             videos = videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
                             apps   = appRows,
                             filter = filter,
-                            limit  = RECENTLY_PLAYED_LIMIT,
+                            limit  = limit,
                         )
                     }.collect { items ->
 
@@ -4255,11 +4257,12 @@ class XMBViewModel @Inject constructor(
         cycleSort()
     }
 
-    private fun recentFilterAndApps(): Flow<Pair<RecentFilter, List<Pair<Long, XMBItem>>>> =
+    private fun recentFilterAndApps(): Flow<Triple<RecentFilter, List<Pair<Long, XMBItem>>, Int>> =
         combine(
             _uiState.map { it.recentFilter }.distinctUntilChanged(),
             recentAppRows(),
-        ) { filter, rows -> filter to rows }
+            _uiState.map { it.interfaceChoices.lastPlayedSize }.distinctUntilChanged(),
+        ) { filter, rows, limit -> Triple(filter, rows, limit) }
 
     private fun recentAppRows(): Flow<List<Pair<Long, XMBItem>>> =
         combine(
@@ -4703,6 +4706,8 @@ class XMBViewModel @Inject constructor(
 
                 gamepadInputHandler.scrollSpeed = prefs.scrollSpeed
                 gamepadInputHandler.stickSensitivity = prefs.stickSensitivity
+                gamepadInputHandler.triggerSensitivity = prefs.triggerSensitivity
+                gamepadInputHandler.shoulderHoldMs = prefs.shoulderHoldTime.millis
                 _uiState.update { it.copy(leftBacksOut = prefs.leftBacksOut) }
             }
         }
@@ -6066,9 +6071,13 @@ class XMBViewModel @Inject constructor(
 
     private fun observeAndroidNotices() {
         viewModelScope.launch {
-            AndroidNotifications.active.collect { notices ->
-                _uiState.update { it.copy(androidNotices = notices) }
-            }
+            combine(
+                AndroidNotifications.active,
+                _uiState.map { it.interfaceChoices.showDeviceNotifications }.distinctUntilChanged(),
+            ) { notices, show -> if (show) notices else emptyList() }
+                .collect { notices ->
+                    _uiState.update { it.copy(androidNotices = notices) }
+                }
         }
     }
 
@@ -8347,6 +8356,7 @@ class XMBViewModel @Inject constructor(
                 val fadeByDistance = prefs[KEY_FADE_BY_DISTANCE] ?: true
                 val cardArtGrid = prefs[KEY_CARD_ART_GRID] ?: true
                 val recentsIncludeApps = prefs[KEY_RECENTS_INCLUDE_APPS] ?: false
+                val interfaceChoices = com.psplauncher.core.data.repository.InterfacePreferences.read(prefs)
                 val textShadow = prefs[KEY_TEXT_SHADOW] ?: true
                 _uiState.update {
                     it.copy(
@@ -8358,6 +8368,7 @@ class XMBViewModel @Inject constructor(
                         fadeByDistance = fadeByDistance,
                         cardArtGrid = cardArtGrid,
                         recentsIncludeApps = recentsIncludeApps,
+                        interfaceChoices = interfaceChoices,
                         textShadow = textShadow,
                     )
                 }
@@ -8556,7 +8567,7 @@ class XMBViewModel @Inject constructor(
         private const val ADD_BOOK_FOLDER_ITEM_ID = "add_book_folder"
         private const val ADD_LIBRARY_APPS_ITEM_ID = "add_library_apps"
 
-        private const val RECENTLY_PLAYED_LIMIT = 15
+        private val RECENTLY_PLAYED_LIMIT = com.psplauncher.core.data.repository.InterfacePreferences.LAST_PLAYED_SIZES.max()
 
         private val KEY_RECENT_APP_DISMISSALS = stringSetPreferencesKey("recent_app_dismissals")
         internal const val ADD_MENU_ITEM_ID = "add_menu"

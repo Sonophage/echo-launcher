@@ -53,6 +53,10 @@ import com.psplauncher.core.ui.theme.menuCursor
 import com.psplauncher.core.ui.theme.menuCursorEdge
 import kotlinx.coroutines.delay
 import timber.log.Timber
+import androidx.compose.runtime.collectAsState
+import com.psplauncher.core.data.datastore.pfpDataStore
+import com.psplauncher.core.data.repository.InterfacePreferences
+import kotlinx.coroutines.flow.map
 
 private val SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
 
@@ -62,8 +66,6 @@ private val SCREEN_MODES = listOf(
     AspectRatioFrameLayout.RESIZE_MODE_ZOOM to "Zoom",
     AspectRatioFrameLayout.RESIZE_MODE_FILL to "Fill",
 )
-private const val SEEK_STEP_MS = 10_000L
-private const val CONTROLS_TIMEOUT_MS = 3_500L
 
 @UnstableApi
 @Composable
@@ -79,6 +81,10 @@ fun VideoPlayerScreen(
 ) {
     if (videos.isEmpty()) { onExit(); return }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val choices by androidx.compose.runtime.remember(context) {
+        context.pfpDataStore.data.map(InterfacePreferences::read)
+    }.collectAsState(initial = com.psplauncher.core.data.repository.InterfaceChoices())
+    val seekStepMs = choices.videoSeekStepSeconds * 1_000L
 
     var index by remember { mutableIntStateOf(startIndex.coerceIn(0, videos.lastIndex)) }
     val current = videos[index]
@@ -139,7 +145,7 @@ fun VideoPlayerScreen(
     LaunchedEffect(controlsPoke, optionsOpen) {
         if (optionsOpen) { controlsVisible = true; return@LaunchedEffect }
         controlsVisible = true
-        delay(CONTROLS_TIMEOUT_MS)
+        delay(choices.videoControlsHideMs.toLong())
         controlsVisible = false
     }
 
@@ -185,8 +191,8 @@ fun VideoPlayerScreen(
                 else { if (player.isPlaying) player.pause() else player.play(); poke() }
             }
             GamepadAction.BACK -> onExit()
-            GamepadAction.NAVIGATE_LEFT -> { player.seekTo((player.currentPosition - SEEK_STEP_MS).coerceAtLeast(0L)); poke() }
-            GamepadAction.NAVIGATE_RIGHT -> { player.seekTo(player.currentPosition + SEEK_STEP_MS); poke() }
+            GamepadAction.NAVIGATE_LEFT -> { player.seekTo((player.currentPosition - seekStepMs).coerceAtLeast(0L)); poke() }
+            GamepadAction.NAVIGATE_RIGHT -> { player.seekTo(player.currentPosition + seekStepMs); poke() }
             GamepadAction.NAVIGATE_UP, GamepadAction.NAVIGATE_DOWN -> poke()
             GamepadAction.PREV_CATEGORY -> switchTo(index - 1)
             GamepadAction.NEXT_CATEGORY -> switchTo(index + 1)

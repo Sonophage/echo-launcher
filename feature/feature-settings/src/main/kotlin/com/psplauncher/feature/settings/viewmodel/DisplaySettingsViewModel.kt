@@ -123,6 +123,9 @@ data class DisplaySettingsUiState(
 
     val textShadow: Boolean = true,
 
+    val interfaceChoices: com.psplauncher.core.data.repository.InterfaceChoices =
+        com.psplauncher.core.data.repository.InterfaceChoices(),
+
     val contextMenuHintDelaySeconds: Float = ControllerHintPolicy.DEFAULT_DELAY_SECONDS,
     val touchSensitivity: TouchSensitivity = TouchSensitivity.NORMAL,
 
@@ -208,6 +211,7 @@ class DisplaySettingsViewModel @Inject constructor(
             cardArtGrid          = prefs[KEY_CARD_ART_GRID] ?: true,
             recentsIncludeApps   = prefs[KEY_RECENTS_INCLUDE_APPS] ?: false,
             textShadow           = prefs[KEY_TEXT_SHADOW] ?: true,
+            interfaceChoices     = com.psplauncher.core.data.repository.InterfacePreferences.read(prefs),
             contextMenuHintEnabled = prefs[KEY_CONTEXT_MENU_HINT] ?: ControllerHintPolicy.DEFAULT_ENABLED,
             contextMenuHintDelaySeconds = ControllerHintPolicy.clampDelay(
                 prefs[KEY_CONTEXT_MENU_HINT_DELAY_SECONDS] ?: ControllerHintPolicy.DEFAULT_DELAY_SECONDS
@@ -293,6 +297,13 @@ class DisplaySettingsViewModel @Inject constructor(
     fun setRecentsIncludeApps(v: Boolean) = save { it[KEY_RECENTS_INCLUDE_APPS] = v }
 
     fun setTextShadow(v: Boolean) = save { it[KEY_TEXT_SHADOW] = v }
+
+    fun setShowDeviceNotifications(v: Boolean) = save { it[com.psplauncher.core.data.repository.InterfacePreferences.KEY_SHOW_DEVICE_NOTIFICATIONS] = v }
+    fun setIslandShowsRecent(v: Boolean) = save { it[com.psplauncher.core.data.repository.InterfacePreferences.KEY_ISLAND_SHOWS_RECENT] = v }
+    fun setLastPlayedSize(v: Int) = save { it[com.psplauncher.core.data.repository.InterfacePreferences.KEY_LAST_PLAYED_SIZE] = v }
+    fun setRescanOnReturn(v: Boolean) = save { it[com.psplauncher.core.data.repository.InterfacePreferences.KEY_RESCAN_ON_RETURN] = v }
+    fun setVideoSeekStepSeconds(v: Int) = save { it[com.psplauncher.core.data.repository.InterfacePreferences.KEY_VIDEO_SEEK_STEP_SECONDS] = v }
+    fun setVideoControlsHideMs(v: Int) = save { it[com.psplauncher.core.data.repository.InterfacePreferences.KEY_VIDEO_CONTROLS_HIDE_MS] = v }
 
     fun applyPspLayout() = save { PspXmbLayout.write(it, PspXmbLayout.forWindow(context)) }
 

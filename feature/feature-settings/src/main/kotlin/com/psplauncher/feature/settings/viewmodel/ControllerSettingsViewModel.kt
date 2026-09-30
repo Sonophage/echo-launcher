@@ -45,6 +45,14 @@ class ControllerSettingsViewModel @Inject constructor(
         viewModelScope.launch { layoutRepository.setStickSensitivity(value) }
     }
 
+    fun setTriggerSensitivity(value: com.psplauncher.core.domain.model.TriggerSensitivity) {
+        viewModelScope.launch { layoutRepository.setTriggerSensitivity(value) }
+    }
+
+    fun setShoulderHoldTime(value: com.psplauncher.core.domain.model.ShoulderHoldTime) {
+        viewModelScope.launch { layoutRepository.setShoulderHoldTime(value) }
+    }
+
     fun setScrollSpeed(speed: ScrollSpeed) {
         viewModelScope.launch { layoutRepository.setScrollSpeed(speed) }
     }
