@@ -461,7 +461,21 @@ val CROPPABLE_KINDS = setOf(
 
 typealias StudioArtworkInfo = com.psplauncher.feature.artwork.store.StudioArtworkInfo
 
-internal const val STUDIO_PAGE_TILES = 4
+internal const val STUDIO_PAGE_TILES = 8
+
+/**
+ * How many results the studio puts across its column, by tile shape. A landscape
+ * tile at a portrait tile's width is barely half as tall, so four across left the
+ * horizontal slots looking small beside the box art. Two across gives them roughly
+ * the same height. This is the studio's own preference: StudioTileClass.minTileWidthDp
+ * is the general rule and is pinned by StudioGridCapacityTest across every reference
+ * canvas, so it is not the place to express it.
+ */
+internal fun studioMaxColumns(tileClass: StudioTileClass): Int = when (tileClass) {
+    StudioTileClass.PORTRAIT -> 4
+    StudioTileClass.SQUARE -> 3
+    StudioTileClass.LANDSCAPE, StudioTileClass.WIDE -> 2
+}
 
 private const val CROP_PAN_STEP = 0.03f
 
@@ -809,7 +823,15 @@ class ArtworkStudioViewModel @Inject constructor(
 
     private fun capacityFor(tabIndex: Int): StudioGridCapacity? =
         gridSlotDp?.let { (width, height) ->
-            StudioGridCapacity.of(width, height, STUDIO_TABS[tabIndex].tileClass, STUDIO_PAGE_TILES)
+            StudioGridCapacity
+                .of(width, height, STUDIO_TABS[tabIndex].tileClass, Int.MAX_VALUE)
+                .let {
+                    StudioGridCapacity(
+                        it.columns.coerceAtMost(studioMaxColumns(STUDIO_TABS[tabIndex].tileClass)),
+                        it.rows,
+                    )
+                }
+                .cappedTo(STUDIO_PAGE_TILES)
         }
 
     private fun applyCapacity(capacity: StudioGridCapacity) {
