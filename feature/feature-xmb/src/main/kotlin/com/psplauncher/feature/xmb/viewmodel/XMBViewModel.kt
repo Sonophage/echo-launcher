@@ -1275,6 +1275,7 @@ class XMBViewModel @Inject constructor(
     private val bookScanner: com.psplauncher.feature.library.scanner.BookScanner,
     private val musicIntentResolver: com.psplauncher.core.data.music.MusicIntentResolver,
     private val videoIntentResolver: com.psplauncher.core.data.video.VideoIntentResolver,
+    private val photoIntentResolver: com.psplauncher.core.data.photo.PhotoIntentResolver,
     private val autoCoreMemory: com.psplauncher.feature.launcher.AutoCoreMemory,
     private val romRootRepository: com.psplauncher.core.data.repository.RomRootRepository,
 ) : ViewModel() {
@@ -2960,7 +2961,7 @@ class XMBViewModel @Inject constructor(
         }
         item.type == XMBItemType.PHOTO_FILE && item.id.startsWith("pho_") -> {
             menuSound.play(MenuSound.SELECT)
-            openPhotoViewer(item.id.removePrefix("pho_"))
+            openPhoto(item.id.removePrefix("pho_"))
             true
         }
         else -> false
@@ -2977,6 +2978,21 @@ class XMBViewModel @Inject constructor(
     private fun openPhotoView(nav: PhotoNav) = navigateRememberingCursor { it.copy(photoNav = nav) }
 
     private fun closePhotoView() = openPhotoView(PhotoNav.Root)
+
+    private fun openPhoto(photoId: String) {
+        viewModelScope.launch {
+            val open = photoOpenFor(photoRepository.observeDefaultViewer().first())
+            val photo = if (open == PhotoOpen.BuiltIn) null else photoRepository.getPhoto(photoId)
+            if (photo == null) {
+                openPhotoViewer(photoId)
+                return@launch
+            }
+            val error = photoIntentResolver.launch(photo, (open as? PhotoOpen.App)?.packageName)
+            if (error != null) {
+                _uiState.update { it.copy(infoDialog = InfoDialogState(title = photo.displayName, message = error)) }
+            }
+        }
+    }
 
     private fun openPhotoViewer(photoId: String, wallpaperPreview: Boolean = false) {
         val libraryId = (_uiState.value.photoNav as? PhotoNav.Library)?.id
@@ -3040,7 +3056,7 @@ class XMBViewModel @Inject constructor(
 
     private fun handlePhotoFileAction(photoId: String, itemId: String) {
         when (itemId) {
-            "photo_open"          -> openPhotoViewer(photoId)
+            "photo_open"          -> openPhoto(photoId)
 
             "photo_set_wallpaper" -> openPhotoViewer(photoId, wallpaperPreview = true)
             "photo_remove"        -> appAction { photoRepository.removePhoto(photoId) }
@@ -3411,7 +3427,7 @@ class XMBViewModel @Inject constructor(
         val libraryId = searchPhotos.firstOrNull { it.id == photoId }?.libraryId ?: return
         val name = _uiState.value.photoLibraries.firstOrNull { it.id == libraryId }?.displayName.orEmpty()
         _uiState.update { it.copy(photoNav = PhotoNav.Library(libraryId, name)) }
-        openPhotoViewer(photoId)
+        openPhoto(photoId)
     }
 
     private fun openSearchedTrack(row: XMBItem) {
@@ -4040,7 +4056,7 @@ class XMBViewModel @Inject constructor(
                 MediaRootKind.MUSIC -> musicRepository.observeDefaultPlayerPackage().first()
                 MediaRootKind.VIDEO -> videoRepository.observeDefaultVideoPlayer().first()
                 MediaRootKind.BOOK  -> bookRepository.observeDefaultReader().first()
-                MediaRootKind.PHOTO -> return@launch
+                MediaRootKind.PHOTO -> photoRepository.observeDefaultViewer().first()
             }
 
             val choices: List<Pair<String?, String>> = when (kind) {
@@ -4058,7 +4074,10 @@ class XMBViewModel @Inject constructor(
                     null to "Ask Every Time",
                 ) + bookIntentResolver.availableReaders().map { it.packageName to it.label }
 
-                MediaRootKind.PHOTO -> return@launch
+                MediaRootKind.PHOTO -> listOf(
+                    null to "PSPLauncher",
+                    PHOTO_VIEWER_ASK to "Ask Every Time",
+                ) + photoIntentResolver.availableViewers().map { it.packageName to it.label }
             }
 
             val rows = choices.map { (pkg, label) ->
@@ -4085,7 +4104,7 @@ class XMBViewModel @Inject constructor(
                 MediaRootKind.MUSIC -> musicRepository.setDefaultPlayerPackage(packageName)
                 MediaRootKind.VIDEO -> videoRepository.setDefaultVideoPlayer(packageName)
                 MediaRootKind.BOOK  -> bookRepository.setDefaultReader(packageName)
-                MediaRootKind.PHOTO -> Unit
+                MediaRootKind.PHOTO -> photoRepository.setDefaultViewer(packageName)
             }
         }
     }

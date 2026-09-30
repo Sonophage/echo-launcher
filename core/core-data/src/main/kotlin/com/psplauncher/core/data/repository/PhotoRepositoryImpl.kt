@@ -1,5 +1,10 @@
 package com.psplauncher.core.data.repository
 
+import android.content.Context
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.psplauncher.core.data.datastore.pfpDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.psplauncher.core.data.database.dao.PhotoDao
 import com.psplauncher.core.data.database.dao.PhotoLibraryDao
 import com.psplauncher.core.data.database.entity.toDomain
@@ -14,8 +19,11 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private val KEY_PHOTO_DEFAULT_VIEWER = stringPreferencesKey("photo_default_viewer")
+
 @Singleton
 class PhotoRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val libraryDao: PhotoLibraryDao,
     private val photoDao: PhotoDao,
 ) : PhotoRepository {
@@ -98,4 +106,14 @@ class PhotoRepositoryImpl @Inject constructor(
 
     override fun observeNewestArtUris(limit: Int): Flow<List<String>> =
         photoDao.observeNewestArtUris(limit)
+
+    override fun observeDefaultViewer(): Flow<String?> =
+        context.pfpDataStore.data.map { it[KEY_PHOTO_DEFAULT_VIEWER] }
+
+    override suspend fun setDefaultViewer(value: String?) {
+        context.pfpDataStore.edit { prefs ->
+            if (value.isNullOrBlank()) prefs.remove(KEY_PHOTO_DEFAULT_VIEWER)
+            else prefs[KEY_PHOTO_DEFAULT_VIEWER] = value
+        }
+    }
 }

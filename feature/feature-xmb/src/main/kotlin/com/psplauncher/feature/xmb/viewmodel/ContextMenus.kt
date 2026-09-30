@@ -303,7 +303,7 @@ internal fun mediaFoldersContextMenuItems(kind: MediaRootKind): List<XMBContextM
         MediaRootKind.MUSIC -> add(XMBContextMenuItem("media_default_app", "Default Music Player", group = MenuGroup.SETTINGS))
         MediaRootKind.VIDEO -> add(XMBContextMenuItem("media_default_app", "Default Video Player", group = MenuGroup.SETTINGS))
         MediaRootKind.BOOK  -> add(XMBContextMenuItem("media_default_app", "Default Reader", group = MenuGroup.SETTINGS))
-        MediaRootKind.PHOTO -> Unit
+        MediaRootKind.PHOTO -> add(XMBContextMenuItem("media_default_app", "Default Photo Viewer", group = MenuGroup.SETTINGS))
     }
     when (kind) {
         MediaRootKind.PHOTO -> add(XMBContextMenuItem("media_clear_cache", "Clear Thumbnail Cache", group = MenuGroup.SETTINGS))

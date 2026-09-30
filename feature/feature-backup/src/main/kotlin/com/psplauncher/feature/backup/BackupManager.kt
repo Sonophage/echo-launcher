@@ -487,6 +487,7 @@ open class BackupManager @Inject constructor(
             stringPreferencesKey("music_default_player_package"),
             stringPreferencesKey("video_default_player"),
             stringPreferencesKey("books_default_reader"),
+            stringPreferencesKey("photo_default_viewer"),
 
             stringPreferencesKey("library_rom_root_tree_uris"),
             stringPreferencesKey("library_rom_root_tree_uri"),

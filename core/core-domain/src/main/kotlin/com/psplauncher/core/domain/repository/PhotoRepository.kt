@@ -28,4 +28,7 @@ interface PhotoRepository {
     suspend fun removePhoto(id: String)
 
     fun observeNewestArtUris(limit: Int): Flow<List<String>>
+
+    fun observeDefaultViewer(): Flow<String?>
+    suspend fun setDefaultViewer(value: String?)
 }
