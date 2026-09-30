@@ -8,8 +8,7 @@ enum class SettingsSectionId(
     val subtitle: String,
 ) {
     OVERVIEW("settings_section_overview", "Overview", "Library, artwork & build"),
-    LIBRARY("settings_section_library", "Library", "Library Manager, artwork, scraping & hidden games"),
-    EMULATORS("settings_section_emulators", "Emulators", "Launch profiles & RetroArch cores"),
+    EMULATORS("settings_section_emulators", "Emulators", "Library Manager, emulator profiles, RetroArch, artwork & hidden games"),
     LOOK_AND_FEEL("settings_section_look_and_feel", "Look & Feel", "Theme, wallpaper, layout, sound, controls & touch"),
     SYSTEM("settings_section_system", "System", "Permissions, about, logs, backup & credits"),
     SETUP("settings_section_setup", "Setup", "The guided setup wizard"),
@@ -26,10 +25,10 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
 
     SettingsEntry("settings_overview", "Overview", "Library, artwork & build", SettingsSectionId.OVERVIEW),
 
-    SettingsEntry("settings_library", "Library Manager", "ROM sources & scanning", SettingsSectionId.LIBRARY),
-    SettingsEntry("settings_artwork", "Artwork", "Your art, scraping & cache", SettingsSectionId.LIBRARY),
-    SettingsEntry("settings_artwork_sources", "Scraping Sources", "Source priority & service accounts", SettingsSectionId.LIBRARY),
-    SettingsEntry("settings_app_visibility", "Hidden Items", "Review apps & games you've hidden", SettingsSectionId.LIBRARY),
+    SettingsEntry("settings_library", "Library Manager", "ROM sources & scanning", SettingsSectionId.EMULATORS),
+    SettingsEntry("settings_artwork", "Artwork", "Your art, scraping & cache", SettingsSectionId.EMULATORS),
+    SettingsEntry("settings_artwork_sources", "Scraping Sources", "Source priority & service accounts", SettingsSectionId.EMULATORS),
+    SettingsEntry("settings_app_visibility", "Hidden Items", "Review apps & games you've hidden", SettingsSectionId.EMULATORS),
 
     SettingsEntry("settings_emulators_installed", "Installed", "Detected emulator profiles", SettingsSectionId.EMULATORS),
     SettingsEntry("settings_emulators_custom", "Custom Emulators", "Custom profiles & Add Custom Emulator", SettingsSectionId.EMULATORS),

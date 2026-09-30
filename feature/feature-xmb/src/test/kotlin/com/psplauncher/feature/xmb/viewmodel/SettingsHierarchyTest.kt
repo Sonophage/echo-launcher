@@ -82,12 +82,9 @@ class SettingsHierarchyTest {
 
     @Test fun `each section exposes its screens in the planned order`() {
         assertEquals(
-
-            listOf("settings_library", "settings_artwork", "settings_artwork_sources", "settings_app_visibility"),
-            settingsEntriesIn(SettingsSectionId.LIBRARY).map { it.id },
-        )
-        assertEquals(
+            "Library and Emulators are one section, named Emulators",
             listOf(
+                "settings_library", "settings_artwork", "settings_artwork_sources", "settings_app_visibility",
                 "settings_emulators_installed",
                 "settings_emulators_custom",
                 "settings_emulators_retroarch",
@@ -164,9 +161,9 @@ class SettingsHierarchyTest {
         }
     }
 
-    @Test fun `Hidden Games is present under Library via its dedicated route`() {
-        val libraryIds = settingsEntriesIn(SettingsSectionId.LIBRARY).map { it.id }
-        assertTrue("Hidden Games missing from Library", libraryIds.contains("settings_app_visibility"))
+    @Test fun `Hidden Games is present under Emulators via its dedicated route`() {
+        val libraryIds = settingsEntriesIn(SettingsSectionId.EMULATORS).map { it.id }
+        assertTrue("Hidden Games missing from Emulators", libraryIds.contains("settings_app_visibility"))
         assertTrue("settings_app_visibility route missing", SETTINGS_SCREEN_ROUTES.contains("settings_app_visibility"))
     }
 
