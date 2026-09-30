@@ -132,6 +132,7 @@ class NavigationContext(
     }
 
     fun moveHorizontal(delta: Int): String? {
+        val before = focusedKey
         val owner = ownerOf(focusedKey ?: "")
         val children = (owner ?: findNode(focusedKey ?: ""))?.children
             ?.filter { it.focusable && it.enabled }
@@ -148,7 +149,7 @@ class NavigationContext(
         } else {
             focusedKey = if (delta > 0) children.first().key else focusedKey
         }
-        return focusedKey
+        return focusedKey.takeIf { it != before }
     }
 
     fun focusFirst(): String? {

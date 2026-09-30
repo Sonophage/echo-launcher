@@ -162,10 +162,15 @@ class NavigationEngineListBehaviorTest {
         assertEquals("row", engine.focusedKey)
         assertEquals("row:a", engine.dispatch(NavigationCommand.Direction(NavigationDirection.RIGHT)))
         assertEquals("row:b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.RIGHT)))
-        assertEquals("row:b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.RIGHT)))
+        assertNull(engine.dispatch(NavigationCommand.Direction(NavigationDirection.RIGHT)))
+        assertEquals("row:b", engine.focusedKey)
         assertEquals("row:a", engine.dispatch(NavigationCommand.Direction(NavigationDirection.LEFT)))
         assertEquals("row", engine.dispatch(NavigationCommand.Direction(NavigationDirection.LEFT)))
-        assertEquals("row", engine.dispatch(NavigationCommand.Direction(NavigationDirection.LEFT)))
+        assertNull(
+            "LEFT from the row moves nothing and must report null, so a caller can fall through to what is left of it",
+            engine.dispatch(NavigationCommand.Direction(NavigationDirection.LEFT)),
+        )
+        assertEquals("row", engine.focusedKey)
     }
 
     @Test

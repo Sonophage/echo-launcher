@@ -276,7 +276,7 @@ class SettingsScaffoldNavigationTest {
     }
 
     @Test
-    fun `rows inserted mid-list keep visual navigation order`() {
+    fun `rows that load in above the cursor take the top before anyone presses, and order stays visual`() {
         val roots = mutableStateOf(emptyList<String>())
         val consoles = mutableStateOf(emptyList<String>())
         val load = Channel<Unit>(Channel.UNLIMITED)
@@ -331,6 +331,9 @@ class SettingsScaffoldNavigationTest {
         load.trySend(Unit)
         composeRule.waitForIdle()
 
+        assertFocusedRow("Phone Storage")
+        press(GamepadAction.NAVIGATE_DOWN)
+        assertFocusedRow("Add ROM Root")
         press(GamepadAction.NAVIGATE_DOWN)
         assertFocusedRow("PSP Memory Card")
         press(GamepadAction.NAVIGATE_DOWN)

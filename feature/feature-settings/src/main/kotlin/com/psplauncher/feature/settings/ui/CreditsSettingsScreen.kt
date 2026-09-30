@@ -1,6 +1,5 @@
 package com.psplauncher.feature.settings.ui
 
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,12 +9,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.psplauncher.core.domain.model.GamepadAction
 import kotlinx.coroutines.launch
 
 @Composable
@@ -24,20 +20,13 @@ fun CreditsSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
-    val scope = rememberCoroutineScope()
-    val stepPx = with(LocalDensity.current) { 120.dp.toPx() }
+    val pageScroll = rememberReadOnlyPageScroll(scrollState)
 
     SettingsPageScaffold(
         subtitle = "Credits",
         onBack = onBack,
         modifier = modifier,
-        onInterceptAction = { action ->
-            when (action) {
-                GamepadAction.NAVIGATE_UP   -> { scope.launch { scrollState.animateScrollBy(-stepPx) }; true }
-                GamepadAction.NAVIGATE_DOWN -> { scope.launch { scrollState.animateScrollBy(stepPx) }; true }
-                else -> false
-            }
-        },
+        onInterceptAction = pageScroll,
     ) {
         LocalSettingsScrollStateRegistrar.current(scrollState)
         Column(

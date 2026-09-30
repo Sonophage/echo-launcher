@@ -23,12 +23,13 @@ fun AboutSettingsScreen(
     val versionName = packageInfo?.versionName ?: "unknown"
     val versionCode = packageInfo?.longVersionCode?.toString() ?: "unknown"
 
+    val scrollState = rememberScrollState()
     SettingsPageScaffold(
         subtitle = "About",
         onBack   = onBack,
         modifier = modifier,
+        onInterceptAction = rememberReadOnlyPageScroll(scrollState),
     ) {
-        val scrollState = rememberScrollState()
         LocalSettingsScrollStateRegistrar.current(scrollState)
         Column(
             modifier = Modifier
