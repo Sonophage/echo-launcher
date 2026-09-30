@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
@@ -26,7 +28,11 @@ import kotlin.math.sin
 
 private const val STATIC_TIME = 2.0f
 
-internal const val WAVE_FRAME_MS = 33L
+const val AMBIENT_FRAME_MS = 33L
+
+internal const val WAVE_FRAME_MS = AMBIENT_FRAME_MS
+
+fun steppedFrameMs(nowMs: Long, frameMs: Long = AMBIENT_FRAME_MS): Long = nowMs - nowMs % frameMs
 
 internal const val WAVE_IDLE_FRAME_MS = 50L
 
@@ -59,8 +65,9 @@ fun WaveLayers(
         var startMs = -1L
         while (true) {
             withInfiniteAnimationFrameMillis { nowMs ->
-                if (startMs < 0L) startMs = nowMs
-                value = waveClockSeconds(nowMs - startMs, speed, frameMs)
+                val stepped = steppedFrameMs(nowMs, frameMs)
+                if (startMs < 0L) startMs = stepped
+                value = waveClockSeconds(stepped - startMs, speed, frameMs)
             }
         }
     }
@@ -353,7 +360,11 @@ private fun rememberWaveShader(): RuntimeShader? = remember {
 private fun ShaderWave(time: Float, alphaScale: Float, ampScale: Float, tint: Color) {
     val shader = rememberWaveShader() ?: return FallbackWave(time, alphaScale, ampScale, tint)
     val brush = remember(shader) { ShaderBrush(shader) }
-    Canvas(modifier = Modifier.fillMaxSize()) {
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen),
+    ) {
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("ampScale", ampScale)

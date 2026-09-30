@@ -24,4 +24,11 @@ class WaveClockTest {
         val oneMinute = 60_000L
         assertEquals(60f * 0.5f, waveClockSeconds(oneMinute - oneMinute % WAVE_FRAME_MS, 0.5f, WAVE_FRAME_MS), 0.05f)
     }
+
+    @Test
+    fun `clocks started at different moments still step on the same vsyncs`() {
+        val boundaries = (0L..1000L).filter { steppedFrameMs(it) != steppedFrameMs(it - 1) }
+        assertEquals("every step lands on a multiple of the ambient frame", boundaries.map { it % AMBIENT_FRAME_MS }.toSet(), setOf(0L))
+        assertEquals(steppedFrameMs(1_000_007L), steppedFrameMs(1_000_020L))
+    }
 }

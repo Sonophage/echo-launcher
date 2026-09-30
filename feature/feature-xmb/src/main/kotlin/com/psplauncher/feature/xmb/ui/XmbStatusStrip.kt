@@ -1,10 +1,5 @@
 package com.psplauncher.feature.xmb.ui
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
@@ -340,12 +335,14 @@ fun XmbPspStatusStrip(
 @Composable
 private fun BatteryLine(level: Int, charging: Boolean, modifier: Modifier = Modifier) {
     val fill = (level / 100f).coerceIn(0f, 1f)
-    val travel by rememberInfiniteTransition(label = "charge").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2400, easing = LinearEasing)),
-        label = "travel",
-    )
+    val travel by androidx.compose.runtime.produceState(0f, charging) {
+        if (!charging) return@produceState
+        while (true) {
+            androidx.compose.animation.core.withInfiniteAnimationFrameMillis { nowMs ->
+                value = (com.psplauncher.core.ui.wave.steppedFrameMs(nowMs) % GLINT_PERIOD_MS) / GLINT_PERIOD_MS.toFloat()
+            }
+        }
+    }
     val low = level <= 20 && !charging
     Box(
         modifier
@@ -387,6 +384,8 @@ private val LiveTextMax = 220.dp
 private val LiveDetailSize = 8.5.sp
 
 private val BatteryLineHeight = 2.dp
+
+private const val GLINT_PERIOD_MS = 2400L
 
 private val MeterActive   = StripPrimary
 private val MeterInactive = Color(0x40EEEEEE)
