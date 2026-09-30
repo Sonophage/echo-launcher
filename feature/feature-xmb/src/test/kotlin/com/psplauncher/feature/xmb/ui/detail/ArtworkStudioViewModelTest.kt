@@ -751,6 +751,33 @@ class ArtworkStudioViewModelTest {
     }
 
     @Test
+    fun `stepping past the last slot offers the review instead of wrapping to the first`() =
+        runTest(testDispatcher) {
+            coEvery { steamGridDb.getArt(any(), any(), any(), any(), any()) } returns
+                Result.success((1..4).map { SgdbArtItem(id = it.toLong(), url = "art$it") })
+            val vm = loadedOn(StudioSource.STEAMGRIDDB)
+
+            val visible = vm.uiState.value.visibleSlots
+            val last = visible.last().kind
+            vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == last })
+            advanceUntilIdle()
+
+            vm.pickFocused()          // SCREENSHOT is multi-select, so this toggles
+            advanceUntilIdle()
+            assertEquals("a pick on a multi-select slot stays put", 1, vm.uiState.value.selection.size)
+
+            vm.handleGamepadAction(GamepadAction.NEXT_CATEGORY)
+            advanceUntilIdle()
+
+            assertTrue("stepping past the last slot offers the review", vm.uiState.value.reviewOpen)
+            assertEquals(
+                "and it does not walk back to a slot already answered",
+                last,
+                STUDIO_TABS[vm.uiState.value.tabIndex].kind,
+            )
+        }
+
+    @Test
     fun `B from the studio returns to the provider picker, not out to the crossbar`() = runTest(testDispatcher) {
         val vm = screenshotGridOnSgdb(perType = 2)
         assertFalse("the studio proper is open, not the picker", vm.uiState.value.providerPickerOpen)

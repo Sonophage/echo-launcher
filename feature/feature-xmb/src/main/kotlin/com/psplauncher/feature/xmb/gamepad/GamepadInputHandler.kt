@@ -81,7 +81,7 @@ class GamepadInputHandler @Inject constructor(
 
     private var leftTriggerDown = false
     private var rightTriggerDown = false
-    private val triggersAreButtons = HashMap<Int, Boolean>()
+    private val padsThatSendTriggerKeys = HashSet<Int>()
     private var lastStickAction: GamepadAction? = null
 
     @Volatile private var stickMagnitude: Float = 0f
@@ -100,6 +100,10 @@ class GamepadInputHandler @Inject constructor(
                 capture(event.keyCode)
             }
             return true
+        }
+
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_L2 || event.keyCode == KeyEvent.KEYCODE_BUTTON_R2) {
+            padsThatSendTriggerKeys += event.deviceId
         }
 
         val action = currentMappings.actionFor(event.keyCode) ?: return false
@@ -186,17 +190,12 @@ class GamepadInputHandler @Inject constructor(
         return fired
     }
 
-    // A pad that already sends L2/R2 as keys must not also page from the axes, or one
-    // pull turns two. A pad we cannot ask falls through to the axes, which is the case
-    // that needed fixing; InputDevice is not available off-device.
-    private fun sendsTriggerKeys(deviceId: Int): Boolean = triggersAreButtons.getOrPut(deviceId) {
-        runCatching {
-            InputDevice.getDevice(deviceId)
-                ?.hasKeys(KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2)
-                ?.any { it }
-                ?: false
-        }.getOrDefault(false)
-    }
+    // A pad that sends L2/R2 as keys must not also page from its axes, or one pull
+    // turns two pages. Asking InputDevice.hasKeys does NOT answer that: Generic.kl
+    // declares `key 312 BUTTON_L2` AND `axis 0x0a LTRIGGER` for every generic pad,
+    // so hasKeys is true even on pads that only ever send the axes. The only honest
+    // signal is having actually seen a key event, so that is what this records.
+    private fun sendsTriggerKeys(deviceId: Int): Boolean = deviceId in padsThatSendTriggerKeys
 
     fun emitAction(action: GamepadAction) = emit(action)
 
