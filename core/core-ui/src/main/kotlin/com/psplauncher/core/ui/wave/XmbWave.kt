@@ -25,6 +25,15 @@ import timber.log.Timber
 import kotlin.math.sin
 
 private const val STATIC_TIME = 2.0f
+
+internal const val WAVE_FRAME_MS = 33L
+
+internal const val WAVE_IDLE_FRAME_MS = 50L
+
+internal fun waveFrameMs(speedScale: Float): Long = if (speedScale < 1f) WAVE_IDLE_FRAME_MS else WAVE_FRAME_MS
+
+internal fun waveClockSeconds(elapsedMs: Long, speed: Float, frameMs: Long): Float =
+    (elapsedMs - elapsedMs % frameMs) / 1000f * speed
 private const val TAU = 6.2831853f
 
 @Composable
@@ -41,16 +50,17 @@ fun WaveLayers(
 
     val animated = waveStyle.animated
     val speed = (if (waveStyle.reduced) 0.5f else 1f) * speedScale
-    val time by produceState(STATIC_TIME, animated, speed) {
+    val frameMs = waveFrameMs(speedScale)
+    val time by produceState(STATIC_TIME, animated, speed, frameMs) {
         if (!animated) {
             value = STATIC_TIME
             return@produceState
         }
         var startMs = -1L
         while (true) {
-            withInfiniteAnimationFrameMillis { frameMs ->
-                if (startMs < 0L) startMs = frameMs
-                value = (frameMs - startMs) / 1000f * speed
+            withInfiniteAnimationFrameMillis { nowMs ->
+                if (startMs < 0L) startMs = nowMs
+                value = waveClockSeconds(nowMs - startMs, speed, frameMs)
             }
         }
     }
