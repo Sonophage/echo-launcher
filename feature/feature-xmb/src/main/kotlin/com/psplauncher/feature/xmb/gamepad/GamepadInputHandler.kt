@@ -78,6 +78,10 @@ class GamepadInputHandler @Inject constructor(
     var bypassToComposeFocus: Boolean = false
 
     private var repeatJob: Job? = null
+
+    private var leftTriggerDown = false
+    private var rightTriggerDown = false
+    private val triggersAreButtons = HashMap<Int, Boolean>()
     private var lastStickAction: GamepadAction? = null
 
     @Volatile private var stickMagnitude: Float = 0f
@@ -141,6 +145,8 @@ class GamepadInputHandler @Inject constructor(
         val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
         val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
 
+        val triggersFired = handleTriggers(event)
+
         val stickAction = stickDirection(x, y, stickFlatFor(event.deviceId))
         val hatAction = hatDirection(hatX, hatY)
 
@@ -159,7 +165,37 @@ class GamepadInputHandler @Inject constructor(
 
         prevHatX = hatX
         prevHatY = hatY
-        return motionAction != null
+        return motionAction != null || triggersFired
+    }
+
+    private fun handleTriggers(event: MotionEvent): Boolean {
+        if (sendsTriggerKeys(event.deviceId)) return false
+
+        val left = maxOf(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE))
+        val right = maxOf(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS))
+
+        val leftNow = triggerDown(leftTriggerDown, left)
+        val rightNow = triggerDown(rightTriggerDown, right)
+
+        var fired = false
+        if (leftNow && !leftTriggerDown) { emit(GamepadAction.PREV_PAGE, physical = true); fired = true }
+        if (rightNow && !rightTriggerDown) { emit(GamepadAction.NEXT_PAGE, physical = true); fired = true }
+
+        leftTriggerDown = leftNow
+        rightTriggerDown = rightNow
+        return fired
+    }
+
+    // A pad that already sends L2/R2 as keys must not also page from the axes, or one
+    // pull turns two. A pad we cannot ask falls through to the axes, which is the case
+    // that needed fixing; InputDevice is not available off-device.
+    private fun sendsTriggerKeys(deviceId: Int): Boolean = triggersAreButtons.getOrPut(deviceId) {
+        runCatching {
+            InputDevice.getDevice(deviceId)
+                ?.hasKeys(KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2)
+                ?.any { it }
+                ?: false
+        }.getOrDefault(false)
     }
 
     fun emitAction(action: GamepadAction) = emit(action)
@@ -300,3 +336,10 @@ internal fun rampStepFor(repeats: Int, stickMagnitude: Float, fullTilt: Float): 
 
 internal fun rampedInterval(step: Int, base: Long, fast: Long, rampSteps: Int): Long =
     if (step >= rampSteps) fast else base - (base - fast) * step / rampSteps
+
+internal const val TRIGGER_PRESS = 0.6f
+
+internal const val TRIGGER_RELEASE = 0.3f
+
+internal fun triggerDown(wasDown: Boolean, value: Float): Boolean =
+    if (wasDown) value > TRIGGER_RELEASE else value >= TRIGGER_PRESS
