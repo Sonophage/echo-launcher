@@ -37,6 +37,7 @@ val SETTINGS_SCREEN_ROUTES: Set<String> = setOf(
     "settings_controller",
     "settings_backup",
     "settings_logs",
+    "settings_permissions",
     "settings_about",
     "settings_credits",
 
@@ -160,6 +161,7 @@ fun SettingsNavHost(
             "settings_backup"     -> BackupSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_logs"       -> LogsSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_overview"   -> OverviewSettingsScreen(onBack = onBack, modifier = modifier)
+            "settings_permissions" -> PermissionsSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_about"      -> AboutSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_credits"    -> CreditsSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_app_visibility" -> AppVisibilitySettingsScreen(onBack = onBack, modifier = modifier)

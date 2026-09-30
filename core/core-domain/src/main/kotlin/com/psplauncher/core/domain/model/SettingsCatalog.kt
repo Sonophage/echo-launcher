@@ -12,7 +12,7 @@ enum class SettingsSectionId(
     EMULATORS("settings_section_emulators", "Emulators", "Launch profiles & RetroArch cores"),
     APPEARANCE("settings_section_appearance", "Appearance", "Theme, wallpaper, layout & boot"),
     INTERFACE("settings_section_interface", "Interface", "Sound, categories, controls & touch"),
-    SYSTEM("settings_section_system", "System", "About, logs, backup, setup & credits"),
+    SYSTEM("settings_section_system", "System", "Permissions, about, logs, backup, setup & credits"),
 }
 
 data class SettingsEntry(
@@ -48,6 +48,7 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
 
 
     SettingsEntry("settings_initial_setup", "Setup Wizard", "Guided folder & account setup", SettingsSectionId.SYSTEM),
+    SettingsEntry("settings_permissions", "Permissions", "What PSPLauncher can reach, and how to grant it", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_about", "About", "PSPLauncher", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_logs", "Logs", "Debug & error log viewer", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_backup", "Backup & Restore", "Export & import", SettingsSectionId.SYSTEM),
