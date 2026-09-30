@@ -105,7 +105,14 @@ class SettingsHierarchyTest {
         )
         assertEquals(
 
-            listOf("settings_initial_setup", "settings_about", "settings_logs", "settings_backup", "settings_credits"),
+            listOf(
+                "settings_initial_setup",
+                "settings_permissions",
+                "settings_about",
+                "settings_logs",
+                "settings_backup",
+                "settings_credits",
+            ),
             settingsEntriesIn(SettingsSectionId.SYSTEM).map { it.id },
         )
     }

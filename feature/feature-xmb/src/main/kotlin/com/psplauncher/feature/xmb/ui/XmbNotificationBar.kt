@@ -9,6 +9,14 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import com.psplauncher.core.ui.theme.menuCursorEdge
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -335,13 +343,18 @@ private fun MediaRow(
                 }
             }
             if (media.hasTransport) {
-                TransportKey("\u23ee", onPrev)
-                Spacer(Modifier.width(4.dp))
-            }
-            TransportKey(media.primaryLabel, onPrimary, wide = true)
-            if (media.hasTransport) {
-                Spacer(Modifier.width(4.dp))
-                TransportKey("\u23ed", onNext)
+                TransportButton(Icons.Filled.SkipPrevious, "Previous", onPrev)
+                Spacer(Modifier.width(6.dp))
+                TransportButton(
+                    if (media.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    if (media.isPlaying) "Pause" else "Play",
+                    onPrimary,
+                    primary = true,
+                )
+                Spacer(Modifier.width(6.dp))
+                TransportButton(Icons.Filled.SkipNext, "Next", onNext)
+            } else {
+                TransportLabel(media.primaryLabel, onPrimary)
             }
         }
         media.progress?.let { fraction ->
@@ -364,20 +377,65 @@ private fun MediaRow(
     }
 }
 
+/**
+ * Round transport keys, the primary one carrying the cursor accent the rest of the UI
+ * uses for the thing under your hand. These were unicode characters in text pills —
+ * U+23EE, U+23F8, U+25B6 — which come from whatever font happens to have them, so
+ * they sat at different weights and baselines from each other and from the app's own
+ * icons, and the resume case was a word in the same component as two glyphs.
+ */
 @Composable
-private fun TransportKey(label: String, onClick: () -> Unit, wide: Boolean = false) {
-    Text(
-        label,
-        color = Color.White,
-        fontSize = DetailSize,
-        lineHeight = DetailSize * 1.3f,
-        fontWeight = FontWeight.Bold,
+private fun TransportButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    primary: Boolean = false,
+) {
+    val diameter = if (primary) 32.dp else 26.dp
+    Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(Color.White.copy(alpha = 0.14f))
+            .size(diameter)
+            .clip(CircleShape)
+            .background(if (primary) menuCursorEdge() else Color.White.copy(alpha = 0.13f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = if (primary) Color(0xFF0B0B12) else Color.White,
+            modifier = Modifier.size(if (primary) 18.dp else 14.dp),
+        )
+    }
+}
+
+/** The resume case has no transport, so it stays a labelled pill rather than a glyph. */
+@Composable
+private fun TransportLabel(label: String, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(NotificationChipCorner))
+            .background(menuCursorEdge())
             .clickable(onClick = onClick)
-            .padding(horizontal = if (wide) 12.dp else 8.dp, vertical = 4.dp),
-    )
+            .padding(start = 8.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
+    ) {
+        Icon(
+            Icons.Filled.PlayArrow,
+            contentDescription = null,
+            tint = Color(0xFF0B0B12),
+            modifier = Modifier.size(15.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            label,
+            color = Color(0xFF0B0B12),
+            fontSize = DetailSize,
+            lineHeight = DetailSize * 1.3f,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
+    }
 }
 
 private val Muted = Color(0x99FFFFFF)

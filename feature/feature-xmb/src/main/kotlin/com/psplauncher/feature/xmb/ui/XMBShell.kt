@@ -1003,7 +1003,7 @@ fun XMBShell(
                         formatDuration(uiState.musicPlayback.durationMs.toLong()),
                     isPlaying = uiState.musicPlayback.isPlaying,
                     hasTransport = true,
-                    primaryLabel = if (uiState.musicPlayback.isPlaying) "\u23f8" else "\u25b6",
+                    primaryLabel = "",
                 )
             } ?: uiState.resumeGame?.let { game ->
                 NoticeMedia(
