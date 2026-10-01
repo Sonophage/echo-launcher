@@ -1,11 +1,13 @@
 package com.psplauncher.feature.reader
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
@@ -221,6 +223,7 @@ class ReaderActivity : FragmentActivity() {
         listOf(ChapterEntry(l.title ?: l.url().toString(), l.url().toString(), depth)) + flatten(l.children, depth + 1)
     }
 
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val action = mappings.actionFor(event.keyCode) ?: return super.dispatchKeyEvent(event)
         if (event.action == KeyEvent.ACTION_DOWN) {
@@ -346,6 +349,6 @@ class ReaderUiState {
     var bookmarks by mutableStateOf<List<StoredBookmark>>(emptyList())
     var optionsOpen by mutableStateOf(false)
     var tab by mutableStateOf(OptionsTab.CONTENTS)
-    var cursor by mutableStateOf(0)
+    var cursor by mutableIntStateOf(0)
     var isFixedLayout by mutableStateOf(false)
 }

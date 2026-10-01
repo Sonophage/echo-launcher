@@ -57,6 +57,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import coil3.compose.AsyncImage
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.domain.model.primaryArtist
@@ -226,7 +227,7 @@ private fun Record(artUri: String?, u: DesignUnits) {
     }
     Box(
         Modifier
-            .offset(x = u.dp(92 * slide.value), y = u.dp(14))
+            .offset { IntOffset(u.dp(92 * slide.value).roundToPx(), u.dp(14).roundToPx()) }
             .size(u.dp(372))
             .shadow(u.dp(20), CircleShape)
             .clip(CircleShape)
