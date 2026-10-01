@@ -28,7 +28,6 @@ class ArtworkAccent @Inject constructor(
         for (uri in candidates) {
             if (uri.isNullOrBlank()) continue
             cache[uri]?.let { cached ->
-                if (cached == UNREADABLE) continue
                 return@withContext Resolved(uri, cached.takeIf { it != NO_HUE })
             }
             val bitmap = runCatching { decode(uri) }.getOrElse {
@@ -37,7 +36,6 @@ class ArtworkAccent @Inject constructor(
             }
             if (bitmap == null) {
                 Timber.d("ArtworkAccent: nothing decoded from $uri")
-                cache[uri] = UNREADABLE
                 continue
             }
             val accent = accentOf(bitmap, uri)
@@ -50,6 +48,12 @@ class ArtworkAccent @Inject constructor(
     data class Resolved(val uri: String, val accent: Long?)
 
     suspend fun isReadable(uri: String): Boolean = resolve(uri) != null
+
+    fun forget(uris: Collection<String>) {
+        uris.forEach { cache.remove(it) }
+    }
+
+    fun forgetAll() = cache.clear()
 
     private fun accentOf(bitmap: Bitmap, uri: String): Long? {
         return try {
@@ -97,6 +101,5 @@ class ArtworkAccent @Inject constructor(
         const val MAX_EDGE = 512
 
         const val NO_HUE = 0L
-        const val UNREADABLE = 1L
     }
 }

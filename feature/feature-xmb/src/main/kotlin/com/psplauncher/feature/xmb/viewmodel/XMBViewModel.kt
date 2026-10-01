@@ -8261,7 +8261,7 @@ class XMBViewModel @Inject constructor(
             _uiState
                 .map { s -> s.currentItems.getOrNull(s.selectedItemIndex)?.takeIf { it.backdropArt.isNotEmpty() } }
 
-                .distinctUntilChanged { a, b -> a?.id == b?.id }
+                .distinctUntilChanged { a, b -> a?.backdropIdentity() == b?.backdropIdentity() }
                 .collectLatest { item ->
                     if (item == null) {
                         _uiState.update {
@@ -8281,6 +8281,9 @@ class XMBViewModel @Inject constructor(
                 }
         }
     }
+
+    private fun XMBItem.backdropIdentity() =
+        Triple(id, backdropArt, backdropArt.map { com.psplauncher.core.ui.image.ArtworkRevisions.of(it) })
 
     private fun observeFocusedGameVideo() {
         viewModelScope.launch {

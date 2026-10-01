@@ -9,15 +9,22 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.imageLoader
 import coil3.memory.MemoryCache
+import com.psplauncher.core.data.repository.ArtworkAccent
 import com.psplauncher.core.ui.image.ArtworkRevisions
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.io.File
 import javax.inject.Provider
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -25,17 +32,21 @@ import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ArtworkImageCacheTest {
+    @get:Rule val tmp = TemporaryFolder()
+
     private val context: Context = ApplicationProvider.getApplicationContext()
     private lateinit var configuredLoader: ImageLoader
     private lateinit var cache: ArtworkImageCache
+    private val accent = ArtworkAccent(context)
 
     @Before
     fun setUp() {
         SingletonImageLoader.reset()
 
         configuredLoader = ArtworkModule.provideCoilImageLoader(context)
-        cache = ArtworkImageCache(Provider { configuredLoader })
+        cache = ArtworkImageCache(Provider { configuredLoader }, accent)
         cache.installAsSingleton()
     }
 
@@ -106,6 +117,17 @@ class ArtworkImageCacheTest {
     }
 
     @Test
+    fun `evict makes the backdrop accent re-read a replaced file`() = runTest {
+        val file = File(tmp.root, "fanart.png").apply { writePng(0xFFD02020.toInt()) }
+        val before = accent.resolve(file.path)?.accent
+        file.writePng(0xFF2040D0.toInt())
+
+        cache.evict(file.path)
+
+        assertNotEquals(before, accent.resolve(file.path)?.accent)
+    }
+
+    @Test
     fun `clear empties the memory cache AsyncImage reads through`() {
         context.imageLoader.memoryCache!![MemoryCache.Key(URI)] = MemoryCache.Value(onePixel())
         context.imageLoader.memoryCache!![MemoryCache.Key(OTHER_URI)] = MemoryCache.Value(onePixel())
@@ -119,6 +141,11 @@ class ArtworkImageCacheTest {
     fun `installAsSingleton is safe to call twice`() {
         cache.installAsSingleton()
         assertSame(configuredLoader, context.imageLoader)
+    }
+
+    private fun File.writePng(color: Int) {
+        val bitmap = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }
+        outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
     private fun onePixel(): BitmapImage =
