@@ -32,14 +32,15 @@ private const val DUPLICATE_WINDOW_MS = 80L
 
 private const val STICK_FULL_TILT_RAMP_FACTOR = 2
 
-private data class RepeatTuning(
+internal data class RepeatTuning(
     val initialDelayMs: Long,
     val baseIntervalMs: Long,
     val fastIntervalMs: Long,
     val rampSteps: Int,
 )
 
-private fun ScrollSpeed.tuning(): RepeatTuning = when (this) {
+internal fun ScrollSpeed.tuning(): RepeatTuning = when (this) {
+    ScrollSpeed.SLOW     -> RepeatTuning(initialDelayMs = 450, baseIntervalMs = 170, fastIntervalMs = 120, rampSteps = 8)
     ScrollSpeed.RELAXED  -> RepeatTuning(initialDelayMs = 350, baseIntervalMs = 130, fastIntervalMs = 80, rampSteps = 6)
     ScrollSpeed.STANDARD -> RepeatTuning(initialDelayMs = 250, baseIntervalMs = 110, fastIntervalMs = 50, rampSteps = 5)
     ScrollSpeed.FAST     -> RepeatTuning(initialDelayMs = 180, baseIntervalMs = 90,  fastIntervalMs = 35, rampSteps = 4)

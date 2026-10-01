@@ -78,4 +78,23 @@ class XmbNavGesturesTest {
         assertFalse(commitsSwipeBack(72f, backCommitPx))
         assertFalse(commitsSwipeBack(9999f, backCommitPx))
     }
+
+    @Test fun `a lower touch sensitivity needs a faster flick before it skips rows`() {
+        val flick = 500f
+        assertTrue("precondition: this flick skips rows at Normal",
+            flingBonusSteps(flick, flingThresholdPx(1f, com.psplauncher.core.domain.model.TouchSensitivity.NORMAL.stepScale)) != 0)
+        assertEquals("Very Low still skips rows on a flick that Normal barely skips", 0,
+            flingBonusSteps(flick, flingThresholdPx(1f, com.psplauncher.core.domain.model.TouchSensitivity.VERY_LOW.stepScale)))
+    }
+
+    @Test fun `touch sensitivities run from least to most sensitive`() {
+        val scales = com.psplauncher.core.domain.model.TouchSensitivity.entries.map { it.stepScale }
+        assertEquals("the picker lists them in this order", scales.sortedDescending(), scales)
+    }
+
+    @Test fun `a glide never lags more than its lead behind the cursor`() {
+        assertEquals(7f, glideStart(2f, 10, maxLead = 3), 0f)
+        assertEquals(13f, glideStart(20f, 10, maxLead = 3), 0f)
+        assertEquals("a short move keeps where the column already was", 9.4f, glideStart(9.4f, 10, maxLead = 3), 0f)
+    }
 }
