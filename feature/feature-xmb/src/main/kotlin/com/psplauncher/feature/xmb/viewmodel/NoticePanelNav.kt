@@ -43,7 +43,7 @@ fun movePanel(
             PanelMove.LEFT ->
                 if (quick == QuickSetting.LIBRARIES && cursor.chip > 0) cursor.copy(chip = cursor.chip - 1) else cursor
             PanelMove.RIGHT -> when {
-                quick == QuickSetting.LIBRARIES && cursor.chip < chips - 1 -> cursor.copy(chip = cursor.chip + 1)
+                quick == QuickSetting.LIBRARIES -> if (cursor.chip < chips - 1) cursor.copy(chip = cursor.chip + 1) else cursor
                 noticeRows > 0 -> cursor.copy(quick = null, notice = firstNotice + i.coerceAtMost(noticeRows - 1))
                 else -> cursor
             }
@@ -56,7 +56,7 @@ fun movePanel(
         PanelMove.DOWN -> when {
             onMedia -> cursor.copy(quick = QuickSetting.WAVE)
             cursor.notice < rightRows - 1 -> cursor.copy(notice = cursor.notice + 1)
-            else -> cursor
+            else -> cursor.copy(quick = QuickSetting.LIBRARIES, chip = 0)
         }
         PanelMove.LEFT -> if (onMedia) cursor
             else cursor.copy(quick = QuickSetting.entries[(cursor.notice - firstNotice).coerceIn(0, QuickSetting.entries.lastIndex)])

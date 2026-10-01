@@ -687,7 +687,6 @@ data class XMBUiState(
 
     val androidNotices: List<AndroidNotice> = emptyList(),
 
-    val resumeGame: Game? = null,
     val recentTop: XMBItem? = null,
     val panelPage: DetailPanelPage = DetailPanelPage.LOGO,
     val panelPageGameId: Long? = null,
@@ -785,7 +784,7 @@ data class XMBUiState(
 
     val noticeFocusables: List<NoticeFocus>
         get() = buildList {
-            if (musicPlayback.track != null || resumeGame != null) add(NoticeFocus.Media)
+            if (musicPlayback.track != null || recentTop != null) add(NoticeFocus.Media)
             androidNotices.take(NOTICE_ROWS).forEach { add(NoticeFocus.Notice(it.key)) }
         }
 
@@ -1352,7 +1351,6 @@ class XMBViewModel @Inject constructor(
         observeContinueBook()
         observeHiddenPlacements()
         observeAndroidNotices()
-        observeResumeGame()
         observeRecentTop()
         observeShelfCounts()
         collectGamepadActions()
@@ -6215,14 +6213,6 @@ class XMBViewModel @Inject constructor(
         }
     }
 
-    private fun observeResumeGame() {
-        viewModelScope.launch {
-            gameRepository.observeRecentlyPlayed(1).collect { games ->
-                _uiState.update { it.copy(resumeGame = games.firstOrNull()) }
-            }
-        }
-    }
-
     fun toggleNotifications() {
         menuSound.play(if (_uiState.value.notificationsOpen) MenuSound.BACK else MenuSound.SYSTEM_BROWSE)
         _uiState.update {
@@ -6309,11 +6299,9 @@ class XMBViewModel @Inject constructor(
 
             NoticeFocus.Media -> if (_uiState.value.musicPlayback.track != null) {
                 musicPlayer.playPause()
-            } else {
-                _uiState.value.resumeGame?.let { game ->
-                    closeNotifications()
-                    launchGameDirectly(game.id)
-                }
+            } else if (_uiState.value.recentTop != null) {
+                closeNotifications()
+                launchRecentTop()
             }
             is NoticeFocus.Notice -> {
                 menuSound.play(MenuSound.SELECT)

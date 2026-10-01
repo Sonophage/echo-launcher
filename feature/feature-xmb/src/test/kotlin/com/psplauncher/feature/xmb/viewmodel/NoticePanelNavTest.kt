@@ -26,7 +26,11 @@ class NoticePanelNavTest {
         assertEquals(1, move(start, PanelMove.RIGHT).chip)
         assertEquals("left on the first chip stays put", start, move(start, PanelMove.LEFT))
         val last = start.copy(chip = 5)
-        assertEquals("right past the last chip moves to the notifications", null, move(last, PanelMove.RIGHT).quick)
+        assertEquals("the library bar spans the panel; right past the last chip stays put", last, move(last, PanelMove.RIGHT))
+    }
+
+    @Test fun `down from the last notification reaches the library bar`() {
+        assertEquals(PanelCursor(quick = QuickSetting.LIBRARIES, chip = 0, notice = 3), move(PanelCursor(notice = 3), PanelMove.DOWN))
     }
 
     @Test fun `left from a notification returns to quick settings`() {

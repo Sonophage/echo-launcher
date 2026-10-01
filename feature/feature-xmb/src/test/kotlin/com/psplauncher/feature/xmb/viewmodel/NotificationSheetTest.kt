@@ -33,7 +33,7 @@ class NotificationSheetTest {
     private fun state(
         notices: List<AndroidNotice> = emptyList(),
         playing: Boolean = false,
-        resume: Game? = null,
+        recent: XMBItem? = null,
         cursor: Int = 0,
     ) = XMBUiState(
 
@@ -41,7 +41,7 @@ class NotificationSheetTest {
         notificationsOpen = true,
         androidNotices = notices,
         noticeCursor = cursor,
-        resumeGame = resume,
+        recentTop = recent,
         musicPlayback = if (playing) {
             MusicPlaybackState(track = track(), isPlaying = true, positionMs = 1_000, durationMs = 4_000)
         } else {
@@ -49,7 +49,7 @@ class NotificationSheetTest {
         },
     )
 
-    private val game = Game(id = 7, title = "Crisis Core", platformId = "psp", romPath = "/roms/cc.iso")
+    private val game = XMBItem(id = "7", title = "Crisis Core", gameId = 7)
 
     @Test
     fun `the media row is there when something is playing`() {
@@ -58,8 +58,8 @@ class NotificationSheetTest {
     }
 
     @Test
-    fun `the media row is there for a game to resume when nothing is playing`() {
-        assertEquals(listOf(NoticeFocus.Media), state(resume = game).noticeFocusables)
+    fun `the media row is the island's last played thing when nothing is playing`() {
+        assertEquals(listOf(NoticeFocus.Media), state(recent = game).noticeFocusables)
     }
 
     @Test
@@ -123,21 +123,16 @@ class NotificationSheetTest {
     }
 
     @Test
-    fun `the resume row uses the display title, not the filename`() {
-        val scraped = game.copy(title = "The Elder Scrolls V_ Skyrim", scrapedTitle = "The Elder Scrolls V: Skyrim")
-        assertEquals(
-            "The Elder Scrolls V: Skyrim",
-            promptsFor(state(resume = scraped)).primary?.target,
-        )
-
-        val renamed = scraped.copy(userTitleOverride = "Skyrim")
-        assertEquals("Skyrim", promptsFor(state(resume = renamed)).primary?.target)
+    fun `the media row names the same item the island shows`() {
+        assertEquals("Crisis Core", promptsFor(state(recent = game)).primary?.target)
     }
 
     @Test
     fun `the media row's verb follows what the row is`() {
         assertEquals("Pause", promptsFor(state(playing = true)).primary?.verb)
-        assertEquals("Resume", promptsFor(state(resume = game)).primary?.verb)
+        assertEquals("Resume", promptsFor(state(recent = game)).primary?.verb)
+        assertEquals("an app or album is opened, not resumed", "Open",
+            promptsFor(state(recent = XMBItem(id = "app_x", title = "Spotify", packageName = "com.spotify"))).primary?.verb)
     }
 
     @Test

@@ -150,14 +150,16 @@ fun XmbNotificationBar(
 
                     val top = StripHeight + u.dp(if (media != null) 114 else 24)
                     quick?.let {
-                        QuickColumn(it, quickFocus, chipFocus, accent, u, onQuickTapped,
+                        QuickColumn(it, quickFocus, accent, u, onQuickTapped,
                             Modifier.offset(u.dp(32), top).width(u.dp(330)))
+                        LibrariesBar(it.chips, quickFocus == QuickSetting.LIBRARIES, chipFocus, accent, u, onQuickTapped,
+                            Modifier.align(Alignment.BottomStart).padding(start = u.dp(32), end = u.dp(32), bottom = u.dp(76)))
                     }
-                    Box(Modifier.offset(u.dp(392), top).width(u.dp(1)).fillMaxHeight().padding(bottom = u.dp(70))
+                    Box(Modifier.offset(u.dp(392), top).width(u.dp(1)).fillMaxHeight().padding(bottom = u.dp(170))
                         .background(Color.White.copy(alpha = 0.08f)))
 
                     Row(
-                        Modifier.offset(u.dp(424), top).fillMaxWidth().padding(end = u.dp(456)).padding(bottom = u.dp(70)),
+                        Modifier.offset(u.dp(424), top).fillMaxWidth().padding(end = u.dp(456)).padding(bottom = u.dp(170)),
                         horizontalArrangement = Arrangement.spacedBy(u.dp(36)),
                     ) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(14))) {
@@ -282,12 +284,10 @@ private fun BandButton(icon: ImageVector, label: String, box: androidx.compose.u
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuickColumn(
     quick: QuickSettingsState,
     focus: QuickSetting?,
-    chipFocus: Int,
     accent: Color,
     u: DesignUnits,
     onTapped: (QuickSetting, Int) -> Unit,
@@ -295,55 +295,69 @@ private fun QuickColumn(
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
         Text("QUICK SETTINGS", style = u.eyebrow(), modifier = Modifier.padding(start = u.dp(14), bottom = u.dp(8)))
-        QuickSetting.entries.forEach { setting ->
+        QuickSetting.entries.filter { it != QuickSetting.LIBRARIES }.forEach { setting ->
             val focused = setting == focus
             val (label, value, on) = when (setting) {
                 QuickSetting.WAVE -> Triple("Wave", if (quick.waveOn) "On" else "Off", quick.waveOn)
                 QuickSetting.BACKDROP -> Triple("Crossbar shows", if (quick.backdropOn) "Art" else "Wallpaper", quick.backdropOn)
                 QuickSetting.RECENT_APPS -> Triple("Apps in Recent", if (quick.recentAppsOn) "On" else "Off", quick.recentAppsOn)
-                QuickSetting.LIBRARIES -> Triple("Libraries", "${quick.chips.count { it.visible }} of ${quick.chips.size}", true)
+                QuickSetting.LIBRARIES -> Triple("", "", false)
             }
-            Column(
+            Row(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(u.dp(12)))
                     .then(if (focused) Modifier.background(Color.White.copy(alpha = 0.08f)).border(u.dp(2), accent, RoundedCornerShape(u.dp(12))) else Modifier)
-                    .clickable { onTapped(setting, if (setting == QuickSetting.LIBRARIES) chipFocus else 0) }
+                    .clickable { onTapped(setting, 0) }
                     .padding(horizontal = u.dp(14), vertical = u.dp(12)),
-                verticalArrangement = Arrangement.spacedBy(u.dp(10)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(14))) {
-                    Icon(quickIcon(setting), null, tint = Color.White.copy(alpha = 0.75f), modifier = Modifier.size(u.dp(20)))
-                    Text(label, color = Color.White, fontSize = u.sp(17), fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
-                    Text(value, color = when {
-                        setting == QuickSetting.LIBRARIES -> Color.White.copy(alpha = 0.7f)
-                        on -> accent
-                        else -> Color.White.copy(alpha = 0.45f)
-                    }, fontSize = u.sp(14), fontWeight = FontWeight.SemiBold)
-                }
-                if (setting == QuickSetting.LIBRARIES) {
-                    FlowRow(Modifier.padding(start = u.dp(34)), horizontalArrangement = Arrangement.spacedBy(u.dp(6)), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-                        quick.chips.forEachIndexed { i, chip ->
-                            val chipFocused = focused && i == chipFocus
-                            Text(
-                                chip.name,
-                                color = if (chip.visible) Color.White else Color.White.copy(alpha = 0.45f),
-                                fontSize = u.sp(12),
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(u.dp(999)))
-                                    .then(when {
-                                        chipFocused -> Modifier.border(u.dp(2), accent, RoundedCornerShape(u.dp(999)))
-                                        chip.visible -> Modifier
-                                        else -> Modifier.border(u.dp(1), Color.White.copy(alpha = 0.25f), RoundedCornerShape(u.dp(999)))
-                                    })
-                                    .background(if (chip.visible) Color.White.copy(alpha = 0.14f) else Color.Transparent)
-                                    .clickable { onTapped(QuickSetting.LIBRARIES, i) }
-                                    .padding(horizontal = u.dp(10), vertical = u.dp(4)),
-                            )
-                        }
-                    }
-                }
+                Icon(quickIcon(setting), null, tint = Color.White.copy(alpha = 0.75f), modifier = Modifier.size(u.dp(20)))
+                Text(label, color = Color.White, fontSize = u.sp(17), fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
+                Text(value, color = if (on) accent else Color.White.copy(alpha = 0.45f), fontSize = u.sp(14), fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LibrariesBar(
+    chips: List<LibraryChip>,
+    focused: Boolean,
+    chipFocus: Int,
+    accent: Color,
+    u: DesignUnits,
+    onTapped: (QuickSetting, Int) -> Unit,
+    modifier: Modifier,
+) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .drawBehind { drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, 0f), Offset(size.width, 0f), 1f) }
+            .padding(top = u.dp(16)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(12)),
+    ) {
+        Text("LIBRARIES  ·  ${chips.count { it.visible }} of ${chips.size} on the crossbar", style = u.eyebrow(), modifier = Modifier.padding(start = u.dp(14)))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+            chips.forEachIndexed { i, chip ->
+                val chipFocused = focused && i == chipFocus
+                Text(
+                    chip.name,
+                    color = if (chip.visible) Color.White else Color.White.copy(alpha = 0.45f),
+                    fontSize = u.sp(15),
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(u.dp(999)))
+                        .then(when {
+                            chipFocused -> Modifier.border(u.dp(2), accent, RoundedCornerShape(u.dp(999)))
+                            chip.visible -> Modifier
+                            else -> Modifier.border(u.dp(1), Color.White.copy(alpha = 0.25f), RoundedCornerShape(u.dp(999)))
+                        })
+                        .background(if (chip.visible) Color.White.copy(alpha = 0.14f) else Color.Transparent)
+                        .clickable { onTapped(QuickSetting.LIBRARIES, i) }
+                        .padding(horizontal = u.dp(18), vertical = u.dp(8)),
+                )
             }
         }
     }

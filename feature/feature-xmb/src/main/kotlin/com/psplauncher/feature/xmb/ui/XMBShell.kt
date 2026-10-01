@@ -1011,18 +1011,16 @@ fun XMBShell(
                     hasTransport = true,
                     primaryLabel = "",
                 )
-            } ?: uiState.resumeGame?.let { game ->
+            } ?: uiState.recentTop?.let { top ->
                 NoticeMedia(
-
-                    title = game.displayTitle,
-                    detail = "Continue",
-                    artUri = game.artworkUri ?: game.iconUri,
-
+                    title = top.title,
+                    detail = top.subtitle,
+                    artUri = top.shelfCoverArt,
                     progress = null,
                     elapsed = null,
                     isPlaying = false,
                     hasTransport = false,
-                    primaryLabel = "Resume",
+                    primaryLabel = if (top.gameId != null) "Resume" else "Open",
                 )
             }
 
@@ -1048,7 +1046,7 @@ fun XMBShell(
                 sortLabel = uiState.sortLabel.takeIf { xmbContext },
                 showSortButton = uiState.resolvedShowTouchButton && xmbContext,
                 onSortTapped = onXmbSortTapped,
-                live = liveActivity,
+                live = liveActivity.takeIf { !notificationsOpen },
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
 
