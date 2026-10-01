@@ -183,6 +183,17 @@ internal fun playlistRowContextMenuItems(): List<XMBContextMenuItem> = listOf(
     XMBContextMenuItem("delete_playlist", "Delete Playlist", isDestructive = true, group = MenuGroup.REMOVE),
 )
 
+internal fun musicPlayerMenuItems(playback: com.psplauncher.feature.xmb.music.MusicPlaybackState): List<XMBContextMenuItem> = listOf(
+    XMBContextMenuItem("music_shuffle", if (playback.shuffle) "Shuffle: On" else "Shuffle: Off"),
+    XMBContextMenuItem("music_repeat", when (playback.repeat) {
+        com.psplauncher.feature.xmb.music.RepeatMode.OFF -> "Repeat: Off"
+        com.psplauncher.feature.xmb.music.RepeatMode.ALL -> "Repeat: All"
+        com.psplauncher.feature.xmb.music.RepeatMode.ONE -> "Repeat: One"
+    }),
+    XMBContextMenuItem("music_background", "Play in Background"),
+    XMBContextMenuItem("music_close", "Stop & Close"),
+)
+
 internal fun nowPlayingContextMenuItems(isPlaying: Boolean): List<XMBContextMenuItem> = listOf(
     XMBContextMenuItem("music_playpause", if (isPlaying) "Pause" else "Resume"),
     XMBContextMenuItem("music_close", "Stop and Close"),

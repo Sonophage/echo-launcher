@@ -341,6 +341,7 @@ sealed interface PhotoNav {
     data object Folders : PhotoNav
     data object AllPhotos : PhotoNav
     data object Albums : PhotoNav
+    data object Favorites : PhotoNav
     data class Library(val id: String, val name: String) : PhotoNav
 }
 
@@ -348,6 +349,7 @@ data class PhotoViewerRequest(
     val photoId: String,
     val libraryId: String?,
     val openWallpaperPreview: Boolean = false,
+    val favoritesOnly: Boolean = false,
 )
 
 sealed interface RootTarget {
@@ -494,6 +496,7 @@ data class XMBUiState(
     val musicPlayerVisible: Boolean = false,
     val musicPlayback: com.psplauncher.feature.xmb.music.MusicPlaybackState =
         com.psplauncher.feature.xmb.music.MusicPlaybackState(),
+    val musicAccentArgb: Long? = null,
 
     val currentItems: List<XMBItem> = emptyList(),
     val selectedItemIndex: Int = 0,
@@ -605,6 +608,7 @@ data class XMBUiState(
     val defaultReader: String? = null,
     val defaultReaderLabel: String? = null,
     val photoLibraries: List<com.psplauncher.core.domain.model.PhotoLibrary> = emptyList(),
+    val photoFavoriteCount: Int = 0,
     val activePhotoViewer: PhotoViewerRequest? = null,
     val pendingPhotoViewerAction: GamepadAction? = null,
 
@@ -676,10 +680,13 @@ data class XMBUiState(
     val notificationsOpen: Boolean = false,
 
     val noticeCursor: Int = 0,
+    val panelQuick: QuickSetting? = null,
+    val panelChip: Int = 0,
+    val libraryChips: List<LibraryChip> = emptyList(),
+    val launcherNoticeCount: Int = 0,
 
     val androidNotices: List<AndroidNotice> = emptyList(),
 
-    val resumeGame: Game? = null,
     val recentTop: XMBItem? = null,
     val panelPage: DetailPanelPage = DetailPanelPage.LOGO,
     val panelPageGameId: Long? = null,
@@ -777,12 +784,12 @@ data class XMBUiState(
 
     val noticeFocusables: List<NoticeFocus>
         get() = buildList {
-            if (musicPlayback.track != null || resumeGame != null) add(NoticeFocus.Media)
+            if (musicPlayback.track != null || recentTop != null) add(NoticeFocus.Media)
             androidNotices.take(NOTICE_ROWS).forEach { add(NoticeFocus.Notice(it.key)) }
         }
 
     val focusedNotice: NoticeFocus?
-        get() = noticeFocusables.let { rows ->
+        get() = if (panelQuick != null) null else noticeFocusables.let { rows ->
             if (rows.isEmpty()) null else rows[noticeCursor.coerceIn(0, rows.lastIndex)]
         }
 
@@ -881,6 +888,7 @@ enum class XMBItemType {
     VIDEO_FAVORITES,
     VIDEO_COLLECTIONS,
     PHOTO_ALBUMS,
+    PHOTO_FAVORITES,
     PHOTO_FOLDER,
 
     LIBRARY_SHELVES,
@@ -1327,6 +1335,7 @@ class XMBViewModel @Inject constructor(
         logStartupSequence()
         observeColorScheme()
         observeCategoryBar()
+        observeLibraryChips()
         observeCategories()
         observeMissingGames()
         observeAppChanges()
@@ -1342,7 +1351,6 @@ class XMBViewModel @Inject constructor(
         observeContinueBook()
         observeHiddenPlacements()
         observeAndroidNotices()
-        observeResumeGame()
         observeRecentTop()
         observeShelfCounts()
         collectGamepadActions()
@@ -1455,6 +1463,15 @@ class XMBViewModel @Inject constructor(
         }
         viewModelScope.launch {
             musicRepository.observeDefaultPlayerPackage().collect { defaultMusicPlayer = it }
+        }
+        viewModelScope.launch {
+            musicPlayer.state
+                .map { it.track?.artUri }
+                .distinctUntilChanged()
+                .collectLatest { art ->
+                    val accent = art?.let { artworkAccent.of(it) }
+                    _uiState.update { it.copy(musicAccentArgb = accent) }
+                }
         }
         viewModelScope.launch {
             musicPlayer.state.collect { playback ->
@@ -1916,6 +1933,9 @@ class XMBViewModel @Inject constructor(
                     PhotoNav.Root -> _uiState.update { it.copy(currentItems = photoRootItems()) }
                     PhotoNav.AllPhotos -> photoRepository.observeAllPhotos().collect { photos ->
                         setPhotoItems(photos, emptyAllPhotosItem())
+                    }
+                    PhotoNav.Favorites -> photoRepository.observeFavorites().collect { photos ->
+                        setPhotoItems(photos, emptyFavoritePhotosItem())
                     }
                     PhotoNav.Albums -> photoRepository.observeLibraries().collect { libs ->
                         _uiState.update { it.copy(currentItems = photoAlbumItems(libs)) }
@@ -2819,6 +2839,14 @@ class XMBViewModel @Inject constructor(
 
     private fun observePhoto() {
         viewModelScope.launch {
+            photoRepository.observeFavorites().collect { favorites ->
+                _uiState.update { it.copy(photoFavoriteCount = favorites.size) }
+                if (currentCategory()?.id == BuiltInCategory.PHOTO && _uiState.value.photoNav == PhotoNav.Root) {
+                    _uiState.update { it.copy(currentItems = photoRootItems()) }
+                }
+            }
+        }
+        viewModelScope.launch {
             photoRepository.observeLibraries().collect { libraries ->
                 _uiState.update { it.copy(photoLibraries = libraries) }
                 if (currentCategory()?.id == BuiltInCategory.PHOTO &&
@@ -2920,6 +2948,13 @@ class XMBViewModel @Inject constructor(
         _uiState.update { it.copy(currentItems = items) }
     }
 
+    private fun emptyFavoritePhotosItem(): XMBItem = XMBItem(
+        id       = EMPTY_CATEGORY_ITEM_ID,
+        title    = "No favourites yet",
+        subtitle = "Add one from a photo's info panel",
+        type     = XMBItemType.EMPTY,
+    )
+
     private fun emptyAllPhotosItem(): XMBItem = XMBItem(
         id       = EMPTY_CATEGORY_ITEM_ID,
         title    = "No photos found",
@@ -2939,6 +2974,7 @@ class XMBViewModel @Inject constructor(
         item.id == ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openAddMenu(); true }
         item.id == ALL_PHOTOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.AllPhotos); true }
         item.id == PHOTO_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Albums); true }
+        item.id == PHOTO_FAVORITES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Favorites); true }
         item.id == CAMERA_ITEM_ID -> { menuSound.play(MenuSound.LAUNCH); launchCamera(); true }
         item.id == ADD_PHOTO_LIBRARY_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
@@ -2974,6 +3010,7 @@ class XMBViewModel @Inject constructor(
         PhotoNav.Root       -> "root"
         PhotoNav.AllPhotos  -> "all"
         PhotoNav.Albums     -> "albums"
+        PhotoNav.Favorites  -> "favorites"
         is PhotoNav.Library -> "library_${nav.id}"
     }
 
@@ -2997,9 +3034,11 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun openPhotoViewer(photoId: String, wallpaperPreview: Boolean = false) {
-        val libraryId = (_uiState.value.photoNav as? PhotoNav.Library)?.id
+        val nav = _uiState.value.photoNav
+        val libraryId = (nav as? PhotoNav.Library)?.id
         _uiState.update {
-            it.copy(activePhotoViewer = PhotoViewerRequest(photoId, libraryId, openWallpaperPreview = wallpaperPreview))
+            it.copy(activePhotoViewer = PhotoViewerRequest(photoId, libraryId, openWallpaperPreview = wallpaperPreview,
+                favoritesOnly = nav == PhotoNav.Favorites))
         }
     }
 
@@ -3653,6 +3692,8 @@ class XMBViewModel @Inject constructor(
     fun musicNext() = musicPlayer.next()
     fun musicPrev() = musicPlayer.prev()
     fun musicSeekTo(ms: Int) = musicPlayer.seekTo(ms)
+    fun musicToggleShuffle() = musicPlayer.toggleShuffle()
+    fun musicCycleRepeat() = musicPlayer.cycleRepeat()
     private fun musicSeekBy(deltaMs: Int) = musicPlayer.seekBy(deltaMs)
 
     fun closeMusicPlayer() {
@@ -3668,10 +3709,7 @@ class XMBViewModel @Inject constructor(
         val title = musicPlayer.currentTrack()?.displayTitle ?: "Now Playing"
         _uiState.update {
             it.copy(
-                activeContextMenu = XMBContextMenu(state = MenuState(title = title, rows = listOf(
-                        XMBContextMenuItem("music_background", "Play in Background"),
-                        XMBContextMenuItem("music_close", "Stop & Close"),
-                    )), musicTrackId = MUSIC_PLAYER_MENU_MARKER)
+                activeContextMenu = XMBContextMenu(state = MenuState(title = title, rows = musicPlayerMenuItems(it.musicPlayback)), musicTrackId = MUSIC_PLAYER_MENU_MARKER)
             )
         }
     }
@@ -4073,7 +4111,8 @@ class XMBViewModel @Inject constructor(
                 ) + videoIntentResolver.availablePlayers().map { it.packageName to it.label }
 
                 MediaRootKind.BOOK -> listOf(
-                    null to "Ask Every Time",
+                    null to "PSPLauncher",
+                    com.psplauncher.core.data.book.BuiltInReader.ASK_EVERY_TIME to "Ask Every Time",
                 ) + bookIntentResolver.availableReaders().map { it.packageName to it.label }
 
                 MediaRootKind.PHOTO -> listOf(
@@ -4369,6 +4408,7 @@ class XMBViewModel @Inject constructor(
         val photoTitle = when (val nav = s.photoNav) {
             PhotoNav.AllPhotos  -> "All Photos"
             PhotoNav.Albums     -> "Albums"
+            PhotoNav.Favorites  -> "Favourites"
             is PhotoNav.Library -> nav.name
             PhotoNav.Folders    -> "Folders"
             PhotoNav.Root       -> null
@@ -4468,11 +4508,12 @@ class XMBViewModel @Inject constructor(
                 if (albums.isNotEmpty()) return albums to albums.indexOfFirst { it.id == "plib_${nav.id}" }.coerceAtLeast(0)
             }
             val sibs = _uiState.value.photoRootSections(cameraAvailable).filter {
-                it.type == XMBItemType.MEMORY_CARD || it.type == XMBItemType.PHOTO_ALBUMS
+                it.type == XMBItemType.MEMORY_CARD || it.type == XMBItemType.PHOTO_ALBUMS || it.type == XMBItemType.PHOTO_FAVORITES
             }
             val idx = sibs.indexOfFirst { sib ->
                 when (s.photoNav) {
                     PhotoNav.AllPhotos -> sib.type == XMBItemType.MEMORY_CARD
+                    PhotoNav.Favorites -> sib.type == XMBItemType.PHOTO_FAVORITES
                     else               -> sib.type == XMBItemType.PHOTO_ALBUMS
                 }
             }.coerceAtLeast(0)
@@ -4894,16 +4935,18 @@ class XMBViewModel @Inject constructor(
         }
 
         if (state.notificationsOpen) {
+            val onMedia = state.focusedNotice == NoticeFocus.Media
             when (action) {
-                GamepadAction.NAVIGATE_UP   -> moveNoticeCursor(-1)
-                GamepadAction.NAVIGATE_DOWN -> moveNoticeCursor(+1)
-
+                GamepadAction.NAVIGATE_UP   -> movePanelCursor(PanelMove.UP)
+                GamepadAction.NAVIGATE_DOWN -> movePanelCursor(PanelMove.DOWN)
                 GamepadAction.NAVIGATE_LEFT  ->
-                    if (state.focusedNotice == NoticeFocus.Media) musicPlayer.prev()
+                    if (onMedia) musicPlayer.prev() else movePanelCursor(PanelMove.LEFT)
                 GamepadAction.NAVIGATE_RIGHT ->
-                    if (state.focusedNotice == NoticeFocus.Media) musicPlayer.next()
-                GamepadAction.SELECT             -> activateFocusedNotice()
-                GamepadAction.OPEN_CONTEXT_MENU  -> dismissFocusedNotice()
+                    if (onMedia) musicPlayer.next() else movePanelCursor(PanelMove.RIGHT)
+                GamepadAction.SELECT             ->
+                    state.panelQuick?.let { toggleQuickSetting(it) } ?: activateFocusedNotice()
+                GamepadAction.CHANGE_SORT        -> dismissFocusedNotice()
+                GamepadAction.OPEN_CONTEXT_MENU  -> clearLauncherNotices()
                 GamepadAction.BACK,
                 GamepadAction.HOME               -> {
                     menuSound.play(MenuSound.BACK)
@@ -5655,6 +5698,8 @@ class XMBViewModel @Inject constructor(
                 "music_background" -> musicPlayInBackground()
                 "music_playpause"  -> musicPlayPause()
                 "music_close"      -> stopAndCloseMusicPlayer()
+                "music_shuffle"    -> musicToggleShuffle()
+                "music_repeat"     -> musicCycleRepeat()
             }
             menu.musicTrackId != null -> handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId)
             menu.mediaRootKind != null && menu.mediaRootUri != null ->
@@ -6169,33 +6214,84 @@ class XMBViewModel @Inject constructor(
         }
     }
 
-    private fun observeResumeGame() {
-        viewModelScope.launch {
-            gameRepository.observeRecentlyPlayed(1).collect { games ->
-                _uiState.update { it.copy(resumeGame = games.firstOrNull()) }
-            }
+    fun toggleNotifications() {
+        menuSound.play(if (_uiState.value.notificationsOpen) MenuSound.BACK else MenuSound.SYSTEM_BROWSE)
+        _uiState.update {
+            val opening = !it.notificationsOpen
+            val hasMedia = it.noticeFocusables.firstOrNull() == NoticeFocus.Media
+            it.copy(
+                notificationsOpen = opening,
+                noticeCursor = 0,
+                panelQuick = if (opening && !hasMedia) QuickSetting.WAVE else null,
+                panelChip = 0,
+            )
         }
     }
 
-    fun toggleNotifications() {
-        menuSound.play(if (_uiState.value.notificationsOpen) MenuSound.BACK else MenuSound.SYSTEM_BROWSE)
-        _uiState.update { it.copy(notificationsOpen = !it.notificationsOpen, noticeCursor = 0) }
-    }
-
-    fun closeNotifications() {
-        _uiState.update { it.copy(notificationsOpen = false) }
-    }
-
-    private fun moveNoticeCursor(delta: Int) {
-        val rows = _uiState.value.noticeFocusables
-        if (rows.isEmpty()) return
-        val next = (_uiState.value.noticeCursor + delta).coerceIn(0, rows.lastIndex)
-        if (next == _uiState.value.noticeCursor) {
+    private fun movePanelCursor(move: PanelMove) {
+        val s = _uiState.value
+        val rows = s.noticeFocusables
+        val before = PanelCursor(s.panelQuick, s.panelChip, s.noticeCursor)
+        val after = movePanel(
+            before, move,
+            hasMedia = rows.firstOrNull() == NoticeFocus.Media,
+            rightRows = rows.size,
+            chips = s.libraryChips.size,
+        )
+        if (after == before) {
             gamepadInputHandler.cancelRepeat()
             return
         }
         menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(noticeCursor = next) }
+        _uiState.update { it.copy(panelQuick = after.quick, panelChip = after.chip, noticeCursor = after.notice) }
+    }
+
+    fun toggleQuickSetting(setting: QuickSetting, chip: Int = _uiState.value.panelChip) {
+        menuSound.play(MenuSound.SELECT)
+        val s = _uiState.value
+        viewModelScope.launch {
+            when (setting) {
+                QuickSetting.WAVE -> context.pfpDataStore.edit { prefs ->
+                    prefs[KEY_WAVE_STYLE] = (if (s.waveStyle == WaveStyle.OFF) waveStyleBeforeOff else WaveStyle.OFF).name
+                    if (s.waveStyle != WaveStyle.OFF) waveStyleBeforeOff = s.waveStyle
+                }
+                QuickSetting.BACKDROP -> iconDisplayPreferences.setItemBackdrop(!s.itemBackdropEnabled)
+                QuickSetting.RECENT_APPS -> context.pfpDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
+                QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
+            }
+        }
+    }
+
+    fun onQuickSettingTapped(setting: QuickSetting, chip: Int = 0) {
+        _uiState.update { it.copy(panelQuick = setting, panelChip = chip) }
+        toggleQuickSetting(setting, chip)
+    }
+
+    private var waveStyleBeforeOff = WaveStyle.ANIMATED
+
+    private fun observeLibraryChips() {
+        viewModelScope.launch {
+            com.psplauncher.core.ui.notification.SystemToasts.recent.collect { recent ->
+                _uiState.update { it.copy(launcherNoticeCount = recent.size) }
+            }
+        }
+        viewModelScope.launch {
+            categoryRepository.observeAll().collect { all ->
+                val chips = LIBRARY_CHIP_IDS.mapNotNull { id ->
+                    all.firstOrNull { it.id == id }?.let { LibraryChip(it.id, it.name, it.isVisible) }
+                }
+                _uiState.update { it.copy(libraryChips = chips, panelChip = it.panelChip.coerceIn(0, (chips.size - 1).coerceAtLeast(0))) }
+            }
+        }
+    }
+
+    fun clearLauncherNotices() {
+        menuSound.play(MenuSound.BACK)
+        com.psplauncher.core.ui.notification.SystemToasts.clear()
+    }
+
+    fun closeNotifications() {
+        _uiState.update { it.copy(notificationsOpen = false) }
     }
 
     fun activateFocusedNotice() {
@@ -6204,11 +6300,9 @@ class XMBViewModel @Inject constructor(
 
             NoticeFocus.Media -> if (_uiState.value.musicPlayback.track != null) {
                 musicPlayer.playPause()
-            } else {
-                _uiState.value.resumeGame?.let { game ->
-                    closeNotifications()
-                    launchGameDirectly(game.id)
-                }
+            } else if (_uiState.value.recentTop != null) {
+                closeNotifications()
+                launchRecentTop()
             }
             is NoticeFocus.Notice -> {
                 menuSound.play(MenuSound.SELECT)
@@ -8559,6 +8653,7 @@ class XMBViewModel @Inject constructor(
         internal const val CAMERA_ITEM_ID = "photo_camera"
         private const val ADD_PHOTO_LIBRARY_ITEM_ID = "add_photo_library"
         internal const val PHOTO_ALBUMS_ITEM_ID = "photo_albums"
+        internal const val PHOTO_FAVORITES_ITEM_ID = "photo_favorites"
         internal const val OPEN_READER_ITEM_ID = "library_open_reader"
         internal const val BOOK_SHELVES_ITEM_ID = "library_shelves"
         internal const val BOOK_SERIES_ITEM_ID = "library_series"

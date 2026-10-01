@@ -323,6 +323,7 @@ private fun SiblingIcon(item: XMBItem, selected: Boolean) {
         XMBItemType.VIDEO_COLLECTIONS -> Icons.Filled.Bookmarks
         XMBItemType.PHOTO_FOLDER    -> Icons.Filled.Folder
         XMBItemType.PHOTO_ALBUMS    -> Icons.Filled.PhotoLibrary
+        XMBItemType.PHOTO_FAVORITES -> Icons.Filled.Star
         XMBItemType.SEARCH          -> Icons.Filled.Search
         XMBItemType.MUSIC_ARTISTS   -> Icons.Filled.Person
         XMBItemType.MUSIC_ALBUMS    -> Icons.Filled.Album
@@ -892,7 +893,7 @@ private fun XmbItemLeadingIcon(
                 ThemedGlyph(itemSlotKeyFor(item.type) ?: "", Icons.Filled.History, null, iconTint, Modifier.size(48.dp))
             }
         }
-        item.type == XMBItemType.VIDEO_FAVORITES -> {
+        item.type == XMBItemType.VIDEO_FAVORITES || item.type == XMBItemType.PHOTO_FAVORITES -> {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.width(LEADING_ICON_SLOT)) {
                 ThemedGlyph(itemSlotKeyFor(item.type) ?: "", Icons.Filled.Star, null, iconTint, Modifier.size(48.dp))
             }

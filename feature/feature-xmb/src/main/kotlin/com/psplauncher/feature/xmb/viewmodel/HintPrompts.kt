@@ -38,15 +38,17 @@ fun promptsFor(state: XMBUiState): XmbPrompts {
                     GamepadAction.SELECT,
                     if (state.musicPlayback.track != null) {
                         if (state.musicPlayback.isPlaying) "Pause" else "Play"
-                    } else "Resume",
-                    state.musicPlayback.track?.let { it.title ?: it.displayName } ?: state.resumeGame?.displayTitle,
+                    } else if (state.recentTop?.gameId != null) "Resume" else "Open",
+                    state.musicPlayback.track?.let { it.title ?: it.displayName } ?: state.recentTop?.title,
                 )
                 notice?.canOpen == true -> XmbPrompt(GamepadAction.SELECT, "Open", notice.appLabel)
+                state.panelQuick != null -> XmbPrompt(GamepadAction.SELECT, "Toggle")
                 else -> null
             },
             back = XmbPrompt(GamepadAction.BACK, "Close"),
             right = buildList {
-                if (notice?.canDismiss == true) add(XmbPrompt(GamepadAction.OPEN_CONTEXT_MENU, "Clear"))
+                if (notice?.canDismiss == true) add(XmbPrompt(GamepadAction.CHANGE_SORT, "Dismiss"))
+                if (state.launcherNoticeCount > 0) add(XmbPrompt(GamepadAction.OPEN_CONTEXT_MENU, "Clear"))
             },
         )
     }

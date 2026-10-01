@@ -6,6 +6,7 @@ import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.mediaFolders
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.ALL_BOOKS_ITEM_ID
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.ALL_MUSIC_ITEM_ID
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.ALL_PHOTOS_ITEM_ID
+import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.PHOTO_FAVORITES_ITEM_ID
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.ALL_VIDEOS_ITEM_ID
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.BOOK_SERIES_ITEM_ID
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel.Companion.BOOK_SHELVES_ITEM_ID
@@ -188,6 +189,14 @@ internal fun XMBUiState.photoRootSections(cameraAvailable: Boolean): List<XMBIte
                 type     = XMBItemType.MEMORY_CARD,
             )
         )
+        if (photoFavoriteCount > 0) add(
+            XMBItem(
+                id       = PHOTO_FAVORITES_ITEM_ID,
+                title    = "Favourites",
+                subtitle = countLabel(photoFavoriteCount, "photo", "photos"),
+                type     = XMBItemType.PHOTO_FAVORITES,
+            )
+        )
         add(
             XMBItem(
                 id       = PHOTO_ALBUMS_ITEM_ID,
@@ -228,7 +237,7 @@ internal fun XMBUiState.booksRootSections(): List<XMBItem> {
             )
         }
 
-        if (reader != null) {
+        if (reader != null && reader != com.psplauncher.core.data.book.BuiltInReader.ASK_EVERY_TIME) {
             add(
                 XMBItem(
                     id       = OPEN_READER_ITEM_ID,

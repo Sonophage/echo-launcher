@@ -56,6 +56,9 @@ data class PhotoEntity(
 
     @ColumnInfo(name = "date_added")
     val dateAdded: Long? = null,
+
+    @ColumnInfo(name = "is_favorite", defaultValue = "0")
+    val isFavorite: Boolean = false,
 )
 
 fun PhotoEntity.toDomain() = Photo(
@@ -72,6 +75,7 @@ fun PhotoEntity.toDomain() = Photo(
     relativePath = relativePath,
     thumbnailUri = thumbnailUri,
     dateAdded    = dateAdded,
+    isFavorite   = isFavorite,
 )
 
 fun Photo.toEntity() = PhotoEntity(
@@ -88,4 +92,5 @@ fun Photo.toEntity() = PhotoEntity(
     relativePath = relativePath,
     thumbnailUri = thumbnailUri,
     dateAdded    = dateAdded,
+    isFavorite   = isFavorite,
 )

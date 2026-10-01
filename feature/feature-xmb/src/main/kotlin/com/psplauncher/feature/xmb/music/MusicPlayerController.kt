@@ -26,6 +26,9 @@ data class MusicPlaybackState(
     val index: Int = 0,
     val queueSize: Int = 0,
     val isPrepared: Boolean = false,
+    val shuffle: Boolean = false,
+    val repeat: RepeatMode = RepeatMode.OFF,
+    val upNext: List<IndexedValue<MusicTrack>> = emptyList(),
 )
 
 @Singleton
@@ -35,7 +38,10 @@ class MusicPlayerController @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var player: MediaPlayer? = null
     private var queue: List<MusicTrack> = emptyList()
-    private var index = 0
+    private var order = PlayOrder(0, 0)
+    private var repeat = RepeatMode.OFF
+    private var failedInARow = 0
+    private val index: Int get() = order.current
     private var tickJob: Job? = null
 
     private val _state = MutableStateFlow(MusicPlaybackState())
@@ -45,7 +51,7 @@ class MusicPlayerController @Inject constructor(
 
     fun setQueue(tracks: List<MusicTrack>, startIndex: Int) {
         queue = tracks
-        index = startIndex.coerceIn(0, (tracks.size - 1).coerceAtLeast(0))
+        order = PlayOrder(tracks.size, startIndex, shuffle = order.shuffled)
         playCurrent()
     }
 
@@ -57,13 +63,29 @@ class MusicPlayerController @Inject constructor(
         emit()
     }
 
-    fun next() {
-        if (index < queue.lastIndex) { index++; playCurrent() } else seekTo(0)
+    fun next() = advance(auto = false)
+
+    private fun advance(auto: Boolean) {
+        if (order.advance(auto, repeat) != null) playCurrent() else seekTo(0)
+    }
+
+    private fun skipFailed() {
+        if (++failedInARow >= queue.size) stop() else next()
     }
 
     fun prev() {
-        if ((player?.currentPosition ?: 0) > 3000 || index == 0) seekTo(0)
-        else { index--; playCurrent() }
+        if ((player?.currentPosition ?: 0) > 3000 || order.back() == null) seekTo(0)
+        else playCurrent()
+    }
+
+    fun toggleShuffle() {
+        order.setShuffle(!order.shuffled)
+        emit()
+    }
+
+    fun cycleRepeat() {
+        repeat = repeat.next()
+        emit()
     }
 
     fun seekTo(ms: Int) {
@@ -80,7 +102,7 @@ class MusicPlayerController @Inject constructor(
     fun stop() {
         tickJob?.cancel(); tickJob = null
         releasePlayer()
-        queue = emptyList(); index = 0
+        queue = emptyList(); order = PlayOrder(0, 0, shuffle = order.shuffled)
         _state.value = MusicPlaybackState()
     }
 
@@ -96,12 +118,13 @@ class MusicPlayerController @Inject constructor(
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .build()
             )
-            setOnCompletionListener { next() }
+            setOnCompletionListener { advance(auto = true) }
             setOnErrorListener { _, what, extra ->
                 Timber.w("MediaPlayer error what=$what extra=$extra for ${track.displayTitle}")
-                next(); true
+                skipFailed(); true
             }
             setOnPreparedListener { mp ->
+                failedInARow = 0
                 runCatching { mp.start() }
                 startTicker()
                 emit()
@@ -112,13 +135,14 @@ class MusicPlayerController @Inject constructor(
                 prepareAsync()
             }.onFailure {
                 Timber.w(it, "Failed to load ${track.displayTitle}; skipping")
-                next()
+                skipFailed()
             }
         }
 
         _state.value = MusicPlaybackState(
             track = track, isPlaying = false, positionMs = 0, durationMs = 0,
             index = index, queueSize = queue.size, isPrepared = false,
+            shuffle = order.shuffled, repeat = repeat, upNext = upNext(),
         )
     }
 
@@ -143,7 +167,17 @@ class MusicPlayerController @Inject constructor(
             index = index,
             queueSize = queue.size,
             isPrepared = p != null,
+            shuffle = order.shuffled,
+            repeat = repeat,
+            upNext = upNext(),
         )
+    }
+
+    private fun upNext(): List<IndexedValue<MusicTrack>> =
+        order.upcoming(UP_NEXT_COUNT, repeat).mapNotNull { i -> queue.getOrNull(i)?.let { IndexedValue(i, it) } }
+
+    private companion object {
+        const val UP_NEXT_COUNT = 2
     }
 
     private fun releasePlayer() {

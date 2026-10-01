@@ -1,5 +1,9 @@
 package com.psplauncher.feature.xmb.ui
 
+import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.MediaDefaultAccent
+import com.psplauncher.core.ui.design.MediaDesignFrame
+import com.psplauncher.core.ui.design.mediaGlow
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -37,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -49,6 +54,21 @@ import com.psplauncher.core.ui.notification.AndroidNotice
 import com.psplauncher.feature.xmb.viewmodel.NoticeFocus
 import com.psplauncher.core.ui.notification.SystemToast
 import com.psplauncher.core.ui.notification.ToastKind
+import com.psplauncher.feature.xmb.viewmodel.LibraryChip
+import com.psplauncher.feature.xmb.viewmodel.QuickSetting
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.Waves
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 
 data class NoticeMedia(
     val title: String,
@@ -64,6 +84,13 @@ data class NoticeMedia(
     val primaryLabel: String,
 )
 
+data class QuickSettingsState(
+    val waveOn: Boolean,
+    val backdropOn: Boolean,
+    val recentAppsOn: Boolean,
+    val chips: List<LibraryChip>,
+)
+
 @Composable
 fun XmbNotificationBar(
     open: Boolean,
@@ -76,6 +103,11 @@ fun XmbNotificationBar(
     media: NoticeMedia? = null,
 
     focus: NoticeFocus? = null,
+    quick: QuickSettingsState? = null,
+    quickFocus: QuickSetting? = null,
+    chipFocus: Int = 0,
+    accent: Color = MediaDefaultAccent,
+    onQuickTapped: (QuickSetting, Int) -> Unit = { _, _ -> },
     onGrantAndroidAccess: () -> Unit = {},
     onNoticeTapped: (String) -> Unit = {},
     onNoticeDismissTapped: (String) -> Unit = {},
@@ -96,93 +128,96 @@ fun XmbNotificationBar(
             exit = slideOutVertically(tween(180)) { -it } + fadeOut(tween(180)),
             modifier = Modifier.align(Alignment.TopCenter),
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(RowGap),
-                modifier = Modifier
+            Box(
+                Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            0f to SheetScrim,
-                            ScrimHold to SheetScrim,
-                            1f to SheetScrim.copy(alpha = ScrimTail),
-                        ),
-                    )
-
-                    .padding(top = StripHeight + 10.dp),
+                    .background(Color(0xFF080605))
+                    .clickable(interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {},
             ) {
-                media?.let {
-                    MediaRow(
-                        media = it,
-                        focused = focus == NoticeFocus.Media,
-                        onPrimary = onMediaPrimary,
-                        onPrev = onMediaPrev,
-                        onNext = onMediaNext,
-                        modifier = Modifier.padding(horizontal = EdgeGap),
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(ColumnGap),
-                    modifier = Modifier.weight(1f).padding(horizontal = EdgeGap),
-                ) {
-                    NoticeColumn(label = "System", modifier = Modifier.weight(1f)) {
-                        when {
-                            !androidAccessGranted -> EmptyNote(
-                                "Turn on Notification access to see these here",
-                                onClick = onGrantAndroidAccess,
-                            )
-                            android.isEmpty() -> EmptyNote("Nothing from other apps")
-                            else -> {
-                                val focusedKey = (focus as? NoticeFocus.Notice)?.key
-                                val listState = rememberLazyListState()
-                                LaunchedEffect(focusedKey, android) {
-                                    val at = android.indexOfFirst { it.key == focusedKey }
-                                    if (at >= 0) listState.animateScrollToItem(at)
-                                }
-                                LazyColumn(
-                                    state = listState,
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    items(android, key = { it.key }) { notice ->
-                                        NoticeCard(
-                                            lead = notice.appLabel,
-                                            title = notice.title ?: notice.appLabel,
-                                            detail = notice.text,
-                                            accent = null,
-                                            focused = focusedKey == notice.key,
+                MediaDesignFrame { u ->
+                    Box(Modifier.fillMaxSize().background(Brush.radialGradient(
+                        listOf(mediaGlow(accent, 0.14f), Color.Transparent),
+                        center = Offset(constraints.maxWidth * 0.75f, constraints.maxHeight * 0.2f),
+                        radius = constraints.maxWidth * 0.8f,
+                    )))
 
-                                            onClick = if (notice.canOpen) ({ onNoticeTapped(notice.key) }) else null,
-                                            onDismiss = if (notice.canDismiss) ({ onNoticeDismissTapped(notice.key) }) else null,
-                                        )
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(StripHeight + u.dp(92))
+                            .background(Brush.horizontalGradient(listOf(mediaGlow(accent, 0.30f), Color(0xFF0B0807)))),
+                    )
+                    media?.let {
+                        MediaBand(it, focus == NoticeFocus.Media, accent, u, onMediaPrimary, onMediaPrev, onMediaNext,
+                            Modifier.padding(top = StripHeight).padding(horizontal = u.dp(32)).height(u.dp(92)))
+                    }
+
+                    val top = StripHeight + u.dp(if (media != null) 114 else 24)
+                    quick?.let {
+                        QuickColumn(it, quickFocus, accent, u, onQuickTapped,
+                            Modifier.offset(u.dp(32), top).width(u.dp(330)))
+                        LibrariesBar(it.chips, quickFocus == QuickSetting.LIBRARIES, chipFocus, accent, u, onQuickTapped,
+                            Modifier.align(Alignment.BottomStart).padding(start = u.dp(32), end = u.dp(32), bottom = u.dp(76)))
+                    }
+                    Box(Modifier.offset(u.dp(392), top).width(u.dp(1)).fillMaxHeight().padding(bottom = u.dp(170))
+                        .background(Color.White.copy(alpha = 0.08f)))
+
+                    Row(
+                        Modifier.offset(u.dp(424), top).fillMaxWidth().padding(end = u.dp(456)).padding(bottom = u.dp(170)),
+                        horizontalArrangement = Arrangement.spacedBy(u.dp(36)),
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(14))) {
+                            Text("ANDROID  ·  ${android.size}", style = u.eyebrow())
+                            when {
+                                !androidAccessGranted -> EmptyNote("Turn on Notification access to see these here", u, onGrantAndroidAccess)
+                                android.isEmpty() -> EmptyNote("Nothing from other apps", u)
+                                else -> {
+                                    val focusedKey = (focus as? NoticeFocus.Notice)?.key
+                                    val listState = rememberLazyListState()
+                                    LaunchedEffect(focusedKey, android) {
+                                        val at = android.indexOfFirst { it.key == focusedKey }
+                                        if (at >= 0) listState.animateScrollToItem(at)
+                                    }
+                                    LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                                        items(android, key = { it.key }) { notice ->
+                                            NoticeRow(
+                                                glyph = notice.appLabel.trim().firstOrNull()?.uppercase() ?: "?",
+                                                glyphTint = Color.White,
+                                                title = notice.title ?: notice.appLabel,
+                                                detail = listOfNotNull(notice.appLabel.takeIf { notice.title != null }, notice.text).joinToString("  ·  "),
+                                                focused = focusedKey == notice.key,
+                                                accent = accent,
+                                                u = u,
+                                                onClick = if (notice.canOpen) ({ onNoticeTapped(notice.key) }) else null,
+                                                onDismiss = if (notice.canDismiss) ({ onNoticeDismissTapped(notice.key) }) else null,
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-
-                    NoticeColumn(label = "Launcher", modifier = Modifier.weight(1f)) {
-                        if (items.isEmpty()) {
-                            EmptyNote("Nothing has happened yet")
-                        } else {
-                            items.take(ColumnRows).forEach { toast ->
-                                NoticeCard(
-                                    lead = if (toast.kind == ToastKind.ERROR) "!" else "\u2713",
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(14))) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("LAUNCHER  ·  ${items.size}", style = u.eyebrow())
+                                if (items.isNotEmpty()) {
+                                    Text("Clear", color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12),
+                                        modifier = Modifier.clip(RoundedCornerShape(u.dp(6))).clickable(onClick = onClear).padding(horizontal = u.dp(6)))
+                                }
+                            }
+                            if (items.isEmpty()) EmptyNote("Nothing has happened yet", u)
+                            items.take(ColumnRows).forEachIndexed { i, toast ->
+                                val error = toast.kind == ToastKind.ERROR
+                                NoticeRow(
+                                    glyph = if (error) "!" else "\u2713",
+                                    glyphTint = if (error) ErrorTint else SuccessTint,
                                     title = toast.title,
                                     detail = toast.message,
-                                    accent = if (toast.kind == ToastKind.ERROR) ErrorTint else SuccessTint,
+                                    focused = false,
+                                    accent = accent,
+                                    u = u,
+                                    modifier = Modifier.graphicsLayer(alpha = (1f - i * 0.15f).coerceAtLeast(0.5f)),
                                 )
                             }
-                            Text(
-                                "Clear",
-                                color = Muted,
-                                fontSize = DetailSize,
-                                lineHeight = DetailSize * 1.3f,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier
-                                    .padding(top = 2.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .clickable(onClick = onClear)
-                                    .padding(horizontal = 8.dp, vertical = 3.dp),
-                            )
                         }
                     }
                 }
@@ -192,271 +227,209 @@ fun XmbNotificationBar(
 }
 
 @Composable
-private fun NoticeColumn(label: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = modifier) {
-        Text(
-            label,
-            color = Muted,
-            fontSize = DetailSize,
-            lineHeight = DetailSize * 1.3f,
-            fontWeight = FontWeight.Bold,
-        )
-        content()
+private fun MediaBand(
+    media: NoticeMedia,
+    focused: Boolean,
+    accent: Color,
+    u: DesignUnits,
+    onPrimary: () -> Unit,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier,
+) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(u.dp(12)))
+            .then(if (focused) Modifier.border(u.dp(2), accent, RoundedCornerShape(u.dp(12))) else Modifier)
+            .padding(horizontal = u.dp(10)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(20)),
+    ) {
+        Box(Modifier.size(u.dp(70)).clip(RoundedCornerShape(u.dp(9))).background(Color(0xFF2A201E))) {
+            media.artUri?.let { AsyncImage(it, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        }
+        Column(Modifier.width(u.dp(320)), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+            Text(media.title, color = Color.White, fontSize = u.sp(24), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val sub = listOfNotNull(media.detail, media.elapsed).joinToString("  ·  ")
+            if (sub.isNotBlank()) Text(sub, color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(14), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Row(Modifier.weight(1f).height(u.dp(40)), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(6))) {
+            val played = media.progress ?: 0f
+            BAR_HEIGHTS.forEachIndexed { i, h ->
+                val lit = media.progress != null && i < (played * BAR_HEIGHTS.size)
+                Box(Modifier.width(u.dp(4)).height(u.dp(h)).clip(RoundedCornerShape(u.dp(2)))
+                    .background(if (lit) accent else Color.White.copy(alpha = 0.2f)))
+            }
+        }
+        if (media.hasTransport) {
+            BandButton(Icons.Filled.SkipPrevious, "Previous track", u.dp(44), u.dp(22), Color.Transparent, Color.White, onPrev)
+            BandButton(if (media.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, if (media.isPlaying) "Pause" else "Play",
+                u.dp(54), u.dp(20), Color.White, Color(0xFF111111), onPrimary)
+            BandButton(Icons.Filled.SkipNext, "Next track", u.dp(44), u.dp(22), Color.Transparent, Color.White, onNext)
+        } else {
+            Row(
+                Modifier.clip(RoundedCornerShape(u.dp(999))).background(Color.White).clickable(onClick = onPrimary)
+                    .padding(horizontal = u.dp(16), vertical = u.dp(10)),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.PlayArrow, null, tint = Color(0xFF111111), modifier = Modifier.size(u.dp(20)))
+                Spacer(Modifier.width(u.dp(6)))
+                Text(media.primaryLabel, color = Color(0xFF111111), fontSize = u.sp(15), fontWeight = FontWeight.SemiBold)
+            }
+        }
     }
 }
 
 @Composable
-private fun EmptyNote(text: String, onClick: (() -> Unit)? = null) {
+private fun BandButton(icon: ImageVector, label: String, box: androidx.compose.ui.unit.Dp, glyph: androidx.compose.ui.unit.Dp, bg: Color, tint: Color, onClick: () -> Unit) {
+    Box(Modifier.size(box).clip(CircleShape).background(bg).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(icon, label, tint = tint, modifier = Modifier.size(glyph))
+    }
+}
+
+@Composable
+private fun QuickColumn(
+    quick: QuickSettingsState,
+    focus: QuickSetting?,
+    accent: Color,
+    u: DesignUnits,
+    onTapped: (QuickSetting, Int) -> Unit,
+    modifier: Modifier,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+        Text("QUICK SETTINGS", style = u.eyebrow(), modifier = Modifier.padding(start = u.dp(14), bottom = u.dp(8)))
+        QuickSetting.entries.filter { it != QuickSetting.LIBRARIES }.forEach { setting ->
+            val focused = setting == focus
+            val (label, value, on) = when (setting) {
+                QuickSetting.WAVE -> Triple("Wave", if (quick.waveOn) "On" else "Off", quick.waveOn)
+                QuickSetting.BACKDROP -> Triple("Crossbar shows", if (quick.backdropOn) "Art" else "Wallpaper", quick.backdropOn)
+                QuickSetting.RECENT_APPS -> Triple("Apps in Recent", if (quick.recentAppsOn) "On" else "Off", quick.recentAppsOn)
+                QuickSetting.LIBRARIES -> Triple("", "", false)
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(u.dp(12)))
+                    .then(if (focused) Modifier.background(Color.White.copy(alpha = 0.08f)).border(u.dp(2), accent, RoundedCornerShape(u.dp(12))) else Modifier)
+                    .clickable { onTapped(setting, 0) }
+                    .padding(horizontal = u.dp(14), vertical = u.dp(12)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+            ) {
+                Icon(quickIcon(setting), null, tint = Color.White.copy(alpha = 0.75f), modifier = Modifier.size(u.dp(20)))
+                Text(label, color = Color.White, fontSize = u.sp(17), fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
+                Text(value, color = if (on) accent else Color.White.copy(alpha = 0.45f), fontSize = u.sp(14), fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LibrariesBar(
+    chips: List<LibraryChip>,
+    focused: Boolean,
+    chipFocus: Int,
+    accent: Color,
+    u: DesignUnits,
+    onTapped: (QuickSetting, Int) -> Unit,
+    modifier: Modifier,
+) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .drawBehind { drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, 0f), Offset(size.width, 0f), 1f) }
+            .padding(top = u.dp(16)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(12)),
+    ) {
+        Text("LIBRARIES  ·  ${chips.count { it.visible }} of ${chips.size} on the crossbar", style = u.eyebrow(), modifier = Modifier.padding(start = u.dp(14)))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+            chips.forEachIndexed { i, chip ->
+                val chipFocused = focused && i == chipFocus
+                Text(
+                    chip.name,
+                    color = if (chip.visible) Color.White else Color.White.copy(alpha = 0.45f),
+                    fontSize = u.sp(15),
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(u.dp(999)))
+                        .then(when {
+                            chipFocused -> Modifier.border(u.dp(2), accent, RoundedCornerShape(u.dp(999)))
+                            chip.visible -> Modifier
+                            else -> Modifier.border(u.dp(1), Color.White.copy(alpha = 0.25f), RoundedCornerShape(u.dp(999)))
+                        })
+                        .background(if (chip.visible) Color.White.copy(alpha = 0.14f) else Color.Transparent)
+                        .clickable { onTapped(QuickSetting.LIBRARIES, i) }
+                        .padding(horizontal = u.dp(18), vertical = u.dp(8)),
+                )
+            }
+        }
+    }
+}
+
+private fun quickIcon(setting: QuickSetting): ImageVector = when (setting) {
+    QuickSetting.WAVE -> Icons.Outlined.Waves
+    QuickSetting.BACKDROP -> Icons.Outlined.Image
+    QuickSetting.RECENT_APPS -> Icons.Outlined.History
+    QuickSetting.LIBRARIES -> Icons.AutoMirrored.Outlined.List
+}
+
+@Composable
+private fun EmptyNote(text: String, u: DesignUnits, onClick: (() -> Unit)? = null) {
     Text(
         text,
         color = Muted,
-        fontSize = DetailSize,
-        lineHeight = DetailSize * 1.3f,
+        fontSize = u.sp(15),
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(u.dp(6)))
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 2.dp),
+            .padding(vertical = u.dp(2)),
     )
 }
 
 @Composable
-private fun NoticeCard(
-    lead: String,
+private fun NoticeRow(
+    glyph: String,
+    glyphTint: Color,
     title: String,
     detail: String?,
-    accent: Color?,
-    focused: Boolean = false,
+    focused: Boolean,
+    accent: Color,
+    u: DesignUnits,
+    modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onDismiss: (() -> Unit)? = null,
 ) {
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(NotificationChipCorner))
-
-            .background(
-                if (focused) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.07f),
-            )
+            .clip(RoundedCornerShape(u.dp(12)))
+            .then(if (focused) Modifier.background(Color.White.copy(alpha = 0.08f)).border(u.dp(2), accent, RoundedCornerShape(u.dp(12))) else Modifier)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = u.dp(8), vertical = u.dp(8)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(16)),
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(GlyphSlot)
-                .clip(RoundedCornerShape(5.dp))
-                .background((accent ?: Color.White).copy(alpha = if (accent != null) 0.18f else 0.12f)),
-        ) {
-            Text(
-                text = lead.trim().firstOrNull()?.uppercase() ?: "?",
-                color = accent ?: Color.White,
-                fontSize = DetailSize,
-                lineHeight = DetailSize * 1.3f,
-                fontWeight = FontWeight.Bold,
-            )
+        Box(Modifier.width(u.dp(44)), contentAlignment = Alignment.Center) {
+            Text(glyph, color = glyphTint, fontSize = u.sp(22), fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.width(9.dp))
-        Column {
-            Text(
-                title,
-                color = Color.White,
-                fontSize = TitleSize,
-                lineHeight = TitleSize * 1.3f,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            detail?.let {
-                Text(
-                    it,
-                    color = Muted,
-                    fontSize = DetailSize,
-                    lineHeight = DetailSize * 1.3f,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+            Text(title, color = Color.White, fontSize = u.sp(19), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            detail?.takeIf { it.isNotBlank() }?.let {
+                Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(14), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         onDismiss?.let {
-            Spacer(Modifier.weight(1f))
-            Text(
-                "\u00d7",
-                color = if (focused) Color.White else Muted,
-                fontSize = TitleSize,
-                lineHeight = TitleSize * 1.3f,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .clickable(onClick = it)
-                    .padding(horizontal = 7.dp, vertical = 1.dp),
-            )
+            Text("\u00d7", color = if (focused) Color.White else Muted, fontSize = u.sp(22), fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(u.dp(6))).clickable(onClick = it).padding(horizontal = u.dp(8)))
         }
     }
 }
 
-@Composable
-private fun MediaRow(
-    media: NoticeMedia,
-    focused: Boolean,
-    onPrimary: () -> Unit,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(NotificationChipCorner))
-            .background(if (focused) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.07f))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            media.artUri?.let { uri ->
-                AsyncImage(
-                    model = uri,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(MediaArt).clip(RoundedCornerShape(5.dp)),
-                )
-                Spacer(Modifier.width(10.dp))
-            }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    media.title,
-                    color = Color.White,
-                    fontSize = TitleSize,
-                    lineHeight = TitleSize * 1.3f,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                (media.elapsed ?: media.detail)?.let {
-                    Text(
-                        it,
-                        color = Muted,
-                        fontSize = DetailSize,
-                        lineHeight = DetailSize * 1.3f,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            if (media.hasTransport) {
-                TransportButton(Icons.Filled.SkipPrevious, "Previous", onPrev)
-                Spacer(Modifier.width(6.dp))
-                TransportButton(
-                    if (media.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    if (media.isPlaying) "Pause" else "Play",
-                    onPrimary,
-                    primary = true,
-                )
-                Spacer(Modifier.width(6.dp))
-                TransportButton(Icons.Filled.SkipNext, "Next", onNext)
-            } else {
-                TransportLabel(media.primaryLabel, onPrimary)
-            }
-        }
-        media.progress?.let { fraction ->
-            Spacer(Modifier.padding(top = 7.dp))
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .clip(RoundedCornerShape(1.dp))
-                    .background(Color.White.copy(alpha = 0.16f)),
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth(fraction.coerceIn(0f, 1f))
-                        .height(2.dp)
-                        .background(Color.White.copy(alpha = 0.85f)),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TransportButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    primary: Boolean = false,
-) {
-    val diameter = if (primary) 32.dp else 26.dp
-    Box(
-        modifier = Modifier
-            .size(diameter)
-            .clip(CircleShape)
-            .background(if (primary) menuCursorEdge() else Color.White.copy(alpha = 0.13f))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = if (primary) Color(0xFF0B0B12) else Color.White,
-            modifier = Modifier.size(if (primary) 18.dp else 14.dp),
-        )
-    }
-}
-
-@Composable
-private fun TransportLabel(label: String, onClick: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .clip(RoundedCornerShape(NotificationChipCorner))
-            .background(menuCursorEdge())
-            .clickable(onClick = onClick)
-            .padding(start = 8.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
-    ) {
-        Icon(
-            Icons.Filled.PlayArrow,
-            contentDescription = null,
-            tint = Color(0xFF0B0B12),
-            modifier = Modifier.size(15.dp),
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(
-            label,
-            color = Color(0xFF0B0B12),
-            fontSize = DetailSize,
-            lineHeight = DetailSize * 1.3f,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-        )
-    }
-}
+private val BAR_HEIGHTS = listOf(14, 26, 18, 34, 22, 30, 12, 24, 32, 16, 26, 20, 30, 14, 24, 34, 18, 28, 12, 22)
 
 private val Muted = Color(0x99FFFFFF)
 private val SuccessTint = Color(0xFF6FD08C)
-private val ErrorTint = Color(0xFFE2606A)
-private val GlyphSlot = 22.dp
-private val MediaArt = 34.dp
-private val RowGap = 8.dp
-private val ColumnGap = 22.dp
-private val EdgeGap = 20.dp
+private val ErrorTint = Color(0xFFF07C85)
 
 private const val ColumnRows = 5
-
-private val SheetScrim = Color(0xFA050200)
-
-private const val ScrimHold = 0.78f
-
-private const val ScrimTail = 0.55f
-
-private val TitleSize = NotificationBarStyle.TitleSp.sp
-private val DetailSize = NotificationBarStyle.DetailSp.sp
-
-object NotificationBarStyle {
-    const val LegibilityFloorPx = 28f
-
-    const val PanelDensity = 2.3375f
-
-    const val TitleSp = 13f
-    const val DetailSp = 12f
-}
-
-private val NotificationChipCorner = 7.dp

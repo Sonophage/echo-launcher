@@ -205,7 +205,8 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 - **Media folders managed in place**, from a Folders row on each media column. Music gains Artists
   and Albums (artists are split out of credit strings). Video titles are read from scene-release
   file names, with TMDB posters. Photos get a choice of default viewer.
-- **A Library column for books** (EPUB scanning, series, covers, a choice of reader app) and a
+- **A Library column for books** (EPUB, PDF and CBZ, series, covers, a built-in reader or an app of
+  your choice) and a
   **Shelves** column (Favorites, Playing, Completed, Backlog).
 - **Artwork is one image per slot.** The Artwork Studio is down to seven tabs, Steam's store is a
   new source, and linked art is copied into app storage so the linked folder can be let go.
@@ -408,7 +409,9 @@ Each media column scans one or more folders. Add, rescan, relink or remove them 
 - **Video**: libraries with thumbnails, Recently Watched, and the built-in player or an external
   app. Resume picks up where you stopped.
 - **Photo**: albums, the viewer, and **Set as Wallpaper**. Location data is never read.
-- **Library**: EPUB books by series, opened in the reader app you choose.
+- **Library**: EPUB, PDF and CBZ books by series. They open in the built-in reader (two-page or
+  single-page, contents, bookmarks, text size and page colour, and it remembers your place), or in
+  a reader app chosen from the Folders row.
 
 Each column also lists its apps. Add more with its **Add** row.
 
@@ -590,7 +593,12 @@ The strand model and motion are theirs; the shader, colour cascade and wallpaper
 project's. MIT, Copyright (c) 2025 Mart: [LICENSES/PlayStation-3-XMB-MIT.txt](LICENSES/PlayStation-3-XMB-MIT.txt).
 
 **Typeface.** [Instrument Sans](https://github.com/Instrument/instrument-sans), SIL Open Font
-License 1.1: [LICENSES/InstrumentSans-OFL.txt](LICENSES/InstrumentSans-OFL.txt).
+License 1.1: [LICENSES/InstrumentSans-OFL.txt](LICENSES/InstrumentSans-OFL.txt). The reader sets
+books in [Literata](https://github.com/googlefonts/literata), also SIL OFL 1.1:
+[LICENSES/Literata-OFL.txt](LICENSES/Literata-OFL.txt).
+
+**The book reader** is built on the [Readium Kotlin toolkit](https://github.com/readium/kotlin-toolkit)
+(BSD 3-Clause), with PDF pages drawn by PdfiumAndroid.
 
 **App icon and logo** by **johakovi** ([u/silverloc96](https://www.reddit.com/user/silverloc96)),
 who volunteered them.

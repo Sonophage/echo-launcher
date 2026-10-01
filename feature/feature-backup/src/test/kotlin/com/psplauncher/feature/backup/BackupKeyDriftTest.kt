@@ -37,6 +37,13 @@ class BackupKeyDriftTest {
             "device-local and self-clearing: each stamp only means anything compared against " +
             "THIS device's UsageStats history, which no restore carries. Restoring them onto a " +
             "device with a different history would withhold apps the owner never dismissed there.",
+
+        // A known gap, not a choice: these live in the reader's own DataStore ("reader"), which
+        // BackupManager does not read. Its per-book positions and bookmarks are lost the same way.
+        "display_layout" to "reader DataStore, not yet carried by the backup",
+        "display_page" to "reader DataStore, not yet carried by the backup",
+        "display_text_scale" to "reader DataStore, not yet carried by the backup",
+        "display_typeface" to "reader DataStore, not yet carried by the backup",
     )
 
     private val repoRoot: File by lazy {

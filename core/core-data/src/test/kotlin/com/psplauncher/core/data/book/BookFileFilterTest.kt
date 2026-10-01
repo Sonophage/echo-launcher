@@ -36,4 +36,19 @@ class BookFileFilterTest {
     @Test
     fun `a dotfile is not read as an extension`() =
         assertFalse(BookFileFilter.isBook(".epub", null))
+
+    @Test
+    fun `pdf and cbz are books, by type or by extension`() {
+        assertTrue(BookFileFilter.isBook("Manual.pdf", "application/pdf"))
+        assertTrue(BookFileFilter.isBook("Akira 01.cbz", "application/vnd.comicbook+zip"))
+        assertTrue(BookFileFilter.isBook("Akira 01.cbz", "application/octet-stream"))
+        assertTrue(BookFileFilter.isBook("Manual.PDF", null))
+    }
+
+    @Test
+    fun `a generic file's type is read from its extension`() {
+        kotlin.test.assertEquals(BookFileFilter.PDF_MIME, BookFileFilter.mimeForName("Manual.pdf"))
+        kotlin.test.assertEquals(BookFileFilter.CBZ_MIME, BookFileFilter.mimeForName("Akira.cbz"))
+        kotlin.test.assertEquals(BookFileFilter.EPUB_MIME, BookFileFilter.mimeForName("Dune.epub"))
+    }
 }

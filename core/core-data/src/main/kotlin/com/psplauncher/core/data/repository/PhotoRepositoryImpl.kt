@@ -96,6 +96,12 @@ class PhotoRepositoryImpl @Inject constructor(
         Timber.i("Replaced ${photos.size} photos for library $libraryId")
     }
 
+    override fun observeFavorites(): Flow<List<Photo>> =
+        photoDao.observeFavorites().map { list -> list.map { it.toDomain() } }
+
+    override suspend fun setFavorite(id: String, favorite: Boolean) =
+        photoDao.setFavorite(id, favorite)
+
     override suspend fun removePhoto(id: String) {
         val thumb = photoDao.getById(id)?.thumbnailUri
         photoDao.deleteById(id)

@@ -2,6 +2,33 @@ package com.psplauncher.feature.xmb.video
 
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextOverflow
+import com.psplauncher.core.ui.components.PfpHintBar
+import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.MediaDesignFrame
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,6 +105,8 @@ fun VideoPlayerScreen(
     pendingGamepadAction: GamepadAction?,
     onGamepadActionConsumed: () -> Unit,
     modifier: Modifier = Modifier,
+    libraryName: String? = null,
+    accentOf: suspend (String?) -> Long? = { null },
 ) {
     if (videos.isEmpty()) { onExit(); return }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -99,6 +128,10 @@ fun VideoPlayerScreen(
     var optionsOpen by remember { mutableStateOf(false) }
     var optionsRow by remember { mutableIntStateOf(0) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var focus by remember { mutableStateOf(VideoControl.PLAY_PAUSE) }
+    var bufferedMs by remember { mutableLongStateOf(0L) }
+    var accentArgb by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(current.id) { accentArgb = accentOf(current.customThumbnailUri ?: current.thumbnailUri) }
 
     val initialSeek = remember { startPositionMs }
 
@@ -134,16 +167,17 @@ fun VideoPlayerScreen(
         player.playWhenReady = true
     }
 
-    LaunchedEffect(isPlaying) {
-        while (isPlaying) {
+    LaunchedEffect(isPlaying, controlsVisible) {
+        while (isPlaying || controlsVisible) {
             positionMs = player.currentPosition.coerceAtLeast(0L)
             durationMs = player.duration.coerceAtLeast(0L)
+            bufferedMs = player.bufferedPosition.coerceAtLeast(0L)
             delay(500)
         }
     }
 
-    LaunchedEffect(controlsPoke, optionsOpen) {
-        if (optionsOpen) { controlsVisible = true; return@LaunchedEffect }
+    LaunchedEffect(controlsPoke, optionsOpen, isPlaying) {
+        if (optionsOpen || !isPlaying) { controlsVisible = true; return@LaunchedEffect }
         controlsVisible = true
         delay(choices.videoControlsHideMs.toLong())
         controlsVisible = false
@@ -160,12 +194,31 @@ fun VideoPlayerScreen(
     }
 
     fun poke() { controlsPoke++ }
+    fun seekBy(deltaMs: Long) { player.seekTo((player.currentPosition + deltaMs).coerceAtLeast(0L)); poke() }
+    fun togglePlay() { if (player.isPlaying) player.pause() else player.play(); poke() }
     fun switchTo(newIndex: Int) {
         if (newIndex !in videos.indices) return
 
         onSaveResume(current.id, player.currentPosition.coerceAtLeast(0L), player.duration.coerceAtLeast(0L))
         index = newIndex
         poke()
+    }
+    fun activate(control: VideoControl) {
+        when (control) {
+            VideoControl.RESTART -> { player.seekTo(0L); poke() }
+            VideoControl.PREVIOUS -> switchTo(index - 1)
+            VideoControl.BACK -> seekBy(-seekStepMs)
+            VideoControl.PLAY_PAUSE -> togglePlay()
+            VideoControl.FORWARD -> seekBy(seekStepMs)
+            VideoControl.NEXT -> switchTo(index + 1)
+            VideoControl.SUBTITLES -> { cycleTrack(player, C.TRACK_TYPE_TEXT, allowOff = true); poke() }
+            VideoControl.SPEED -> {
+                speedIndex = (speedIndex + 1) % SPEEDS.size
+                player.playbackParameters = PlaybackParameters(SPEEDS[speedIndex])
+                poke()
+            }
+            VideoControl.SCREEN_MODE -> { screenModeIndex = (screenModeIndex + 1) % SCREEN_MODES.size; poke() }
+        }
     }
 
     LaunchedEffect(pendingGamepadAction) {
@@ -185,15 +238,18 @@ fun VideoPlayerScreen(
             }
             onGamepadActionConsumed(); return@LaunchedEffect
         }
+        if (errorMessage != null) {
+            if (action == GamepadAction.SELECT || action == GamepadAction.BACK) onExit()
+            onGamepadActionConsumed(); return@LaunchedEffect
+        }
         when (action) {
-            GamepadAction.SELECT -> {
-                if (errorMessage != null) { onExit() }
-                else { if (player.isPlaying) player.pause() else player.play(); poke() }
-            }
-            GamepadAction.BACK -> onExit()
-            GamepadAction.NAVIGATE_LEFT -> { player.seekTo((player.currentPosition - seekStepMs).coerceAtLeast(0L)); poke() }
-            GamepadAction.NAVIGATE_RIGHT -> { player.seekTo(player.currentPosition + seekStepMs); poke() }
+            GamepadAction.SELECT -> if (!controlsVisible) togglePlay() else activate(focus)
+            GamepadAction.BACK -> if (videoBackHides(controlsVisible, isPlaying)) controlsVisible = false else onExit()
+            GamepadAction.NAVIGATE_LEFT -> { if (controlsVisible) focus = focus.step(-1); poke() }
+            GamepadAction.NAVIGATE_RIGHT -> { if (controlsVisible) focus = focus.step(1); poke() }
             GamepadAction.NAVIGATE_UP, GamepadAction.NAVIGATE_DOWN -> poke()
+            GamepadAction.PREV_PAGE -> seekBy(-seekStepMs)
+            GamepadAction.NEXT_PAGE -> seekBy(seekStepMs)
             GamepadAction.PREV_CATEGORY -> switchTo(index - 1)
             GamepadAction.NEXT_CATEGORY -> switchTo(index + 1)
             GamepadAction.OPEN_CONTEXT_MENU -> { optionsOpen = true; optionsRow = 0 }
@@ -239,13 +295,19 @@ fun VideoPlayerScreen(
         if (controlsVisible && errorMessage == null) {
             ControlsOverlay(
                 title = current.displayTitle,
+                eyebrow = listOfNotNull(libraryName, if (videos.size > 1) "${index + 1} of ${videos.size}" else null)
+                    .joinToString("  ·  "),
                 positionMs = positionMs,
                 durationMs = durationMs,
+                bufferedMs = bufferedMs,
                 isPlaying = isPlaying,
                 speed = SPEEDS[speedIndex],
                 screenMode = SCREEN_MODES[screenModeIndex].second,
-                hasPrev = index > 0,
-                hasNext = index < videos.lastIndex,
+                seekSeconds = (seekStepMs / 1000).toInt(),
+                focus = focus,
+                accent = com.psplauncher.core.ui.design.mediaAccent(accentArgb),
+                onControl = { control -> focus = control; activate(control) },
+                onSeekTo = { ms -> player.seekTo(ms); poke() },
             )
         }
 
@@ -263,80 +325,171 @@ fun VideoPlayerScreen(
 
 private const val OPTION_COUNT = 4
 
+enum class VideoControl {
+    RESTART, PREVIOUS, BACK, PLAY_PAUSE, FORWARD, NEXT, SUBTITLES, SPEED, SCREEN_MODE;
+
+    fun step(delta: Int): VideoControl = entries[(ordinal + delta).coerceIn(0, entries.lastIndex)]
+}
+
+fun videoBackHides(controlsVisible: Boolean, isPlaying: Boolean): Boolean = controlsVisible && isPlaying
+
 @Composable
 private fun ControlsOverlay(
     title: String,
+    eyebrow: String,
     positionMs: Long,
     durationMs: Long,
+    bufferedMs: Long,
     isPlaying: Boolean,
     speed: Float,
     screenMode: String,
-    hasPrev: Boolean,
-    hasNext: Boolean,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
+    seekSeconds: Int,
+    focus: VideoControl,
+    accent: Color,
+    onControl: (VideoControl) -> Unit,
+    onSeekTo: (Long) -> Unit,
+) = MediaDesignFrame { u ->
+    Box(
+        Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .height(u.dp(380))
+            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f)))),
+    )
+
+    Column(Modifier.align(Alignment.BottomStart).padding(start = u.dp(64), bottom = u.dp(236)).fillMaxWidth(0.62f)) {
+        if (eyebrow.isNotBlank()) Text(eyebrow.uppercase(), style = u.eyebrow(Color.White.copy(alpha = 0.6f)), maxLines = 1)
+        Spacer(Modifier.height(u.dp(8)))
+        Text(title, style = TextStyle(color = Color.White, fontSize = u.sp(46), fontWeight = FontWeight.Medium, shadow = TitleShadow),
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+    Row(Modifier.align(Alignment.BottomEnd).padding(end = u.dp(64), bottom = u.dp(240)), verticalAlignment = Alignment.Bottom) {
+        Text(fmt(positionMs), color = Color.White, fontSize = u.sp(46), fontWeight = FontWeight.Medium,
+            style = TextStyle(fontFeatureSettings = "tnum"))
+        Spacer(Modifier.width(u.dp(10)))
+        Text("/ ${fmt(durationMs)}", color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(20),
+            modifier = Modifier.padding(bottom = u.dp(8)))
+    }
+
+    Box(
+        Modifier
+            .align(Alignment.BottomCenter)
+            .padding(start = u.dp(64), end = u.dp(64), bottom = u.dp(196))
+            .fillMaxWidth()
+            .height(u.dp(20))
+            .pointerInput(durationMs) {
+                detectTapGestures { p -> if (durationMs > 0) onSeekTo((p.x / size.width * durationMs).toLong()) }
+            }
+            .drawBehind {
+                fun frac(ms: Long) = if (durationMs > 0) (ms.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+                val y = size.height / 2
+                val h = u.dp(4).toPx()
+                drawLine(Color.White.copy(alpha = 0.18f), Offset(0f, y), Offset(size.width, y), h, StrokeCap.Round)
+                drawLine(Color.White.copy(alpha = 0.25f), Offset(0f, y), Offset(size.width * frac(bufferedMs), y), h, StrokeCap.Round)
+                drawLine(accent, Offset(0f, y), Offset(size.width * frac(positionMs), y), h, StrokeCap.Round)
+                val x = size.width * frac(positionMs)
+                drawLine(Color.White, Offset(x, 0f), Offset(x, size.height), u.dp(2).toPx())
+            },
+    )
+
+    Row(
+        Modifier.align(Alignment.BottomCenter).padding(bottom = u.dp(70)),
+        horizontalArrangement = Arrangement.spacedBy(u.dp(40)),
+        verticalAlignment = Alignment.Top,
     ) {
-        Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-
-        Column {
-            val frac = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .background(Color(0x55FFFFFF), RoundedCornerShape(2.dp)),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(frac)
-                        .height(4.dp)
-                        .background(Color(0xFF4A90D9), RoundedCornerShape(2.dp)),
-                )
+        VideoControl.entries.forEach { control ->
+            if (control == VideoControl.SUBTITLES) {
+                Box(Modifier.padding(top = u.dp(0)).width(u.dp(1)).height(u.dp(34)).background(Color.White.copy(alpha = 0.2f)))
             }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("${fmt(positionMs)} / ${fmt(durationMs)}", color = Color.White, fontSize = 13.sp)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    PfpControllerHints(
-                        items = listOfNotNull(
-                            ControllerPromptItem(
-                                GamepadAction.SELECT,
-                                if (isPlaying) "Pause" else "Play",
-                            ),
-                            ControllerPromptItem(
-                                listOf(GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT),
-                                "Seek",
-                            ),
-                            if (hasPrev || hasNext) {
-                                ControllerPromptItem(
-                                    listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY),
-                                    "Prev / Next",
-                                )
-                            } else {
-                                null
-                            },
-                            ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
-                        ),
-                        style = ControllerHintStyle.OVERLAY,
-                    )
+            ControlSlot(control, control == focus, isPlaying, speed, screenMode, seekSeconds, accent, u) { onControl(control) }
+        }
+    }
 
-                    Text("${speed}× · $screenMode", color = Color(0xFFCCCCCC), fontSize = 12.sp)
+    PfpHintBar(
+        items = listOf(
+            ControllerPromptItem(GamepadAction.SELECT, "Select"),
+            ControllerPromptItem(listOf(GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT), "Move"),
+            ControllerPromptItem(listOf(GamepadAction.PREV_PAGE, GamepadAction.NEXT_PAGE), "Seek"),
+            ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
+            ControllerPromptItem(GamepadAction.BACK, if (isPlaying) "Hide" else "Close"),
+        ),
+        modifier = Modifier.align(Alignment.BottomCenter),
+    )
+}
+
+@Composable
+private fun ControlSlot(
+    control: VideoControl,
+    focused: Boolean,
+    isPlaying: Boolean,
+    speed: Float,
+    screenMode: String,
+    seekSeconds: Int,
+    accent: Color,
+    u: DesignUnits,
+    onClick: () -> Unit,
+) {
+    val label = when (control) {
+        VideoControl.RESTART -> "Restart"
+        VideoControl.PREVIOUS -> "Previous"
+        VideoControl.BACK -> "Back $seekSeconds s"
+        VideoControl.PLAY_PAUSE -> if (isPlaying) "Pause" else "Play"
+        VideoControl.FORWARD -> "Forward $seekSeconds s"
+        VideoControl.NEXT -> "Next"
+        VideoControl.SUBTITLES -> "Subtitles"
+        VideoControl.SPEED -> "Speed"
+        VideoControl.SCREEN_MODE -> screenMode
+    }
+    val tint = if (focused) Color.White else Color.White.copy(alpha = 0.45f)
+    val glyph = if (focused) u.dp(56) else u.dp(34)
+    Column(
+        Modifier
+            .width(if (focused) u.dp(96) else u.dp(64))
+            .offset(y = if (focused) -u.dp(14) else 0.dp)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(u.dp(10)),
+    ) {
+        Box(
+            Modifier
+                .height(glyph)
+                .then(if (focused) Modifier.drawBehind {
+                    drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = 0.55f), Color.Transparent)), radius = size.maxDimension)
+                } else Modifier),
+            contentAlignment = Alignment.Center,
+        ) {
+            when (control) {
+                VideoControl.SPEED -> Text(speedLabel(speed), color = tint, fontSize = if (focused) u.sp(30) else u.sp(20), fontWeight = FontWeight.Bold)
+                VideoControl.BACK, VideoControl.FORWARD -> Box(contentAlignment = Alignment.Center) {
+                    Icon(if (control == VideoControl.BACK) Icons.Filled.Replay else Icons.Filled.Refresh, label,
+                        tint = tint, modifier = Modifier.size(glyph))
+                    Text("$seekSeconds", color = tint, fontSize = u.sp(if (focused) 13 else 8), fontWeight = FontWeight.Bold)
                 }
+                else -> Icon(controlIcon(control, isPlaying), label, tint = tint, modifier = Modifier.size(glyph))
             }
+        }
+        if (focused) {
+            Text(label, style = TextStyle(color = Color.White, fontSize = u.sp(16), fontWeight = FontWeight.SemiBold, shadow = TitleShadow), maxLines = 1)
         }
     }
 }
+
+private fun controlIcon(control: VideoControl, isPlaying: Boolean): ImageVector = when (control) {
+    VideoControl.RESTART -> Icons.Filled.RestartAlt
+    VideoControl.PREVIOUS -> Icons.Filled.SkipPrevious
+    VideoControl.PLAY_PAUSE -> if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow
+    VideoControl.NEXT -> Icons.Filled.SkipNext
+    VideoControl.SUBTITLES -> Icons.Filled.Subtitles
+    VideoControl.SCREEN_MODE -> Icons.Filled.AspectRatio
+    VideoControl.BACK -> Icons.Filled.Replay
+    VideoControl.FORWARD -> Icons.Filled.Refresh
+    VideoControl.SPEED -> Icons.Filled.Speed
+}
+
+private fun speedLabel(speed: Float): String =
+    (if (speed == speed.toInt().toFloat()) speed.toInt().toString() else speed.toString()) + "×"
+
+private val TitleShadow = Shadow(Color(0xBF000000), Offset(0f, 2f), 4f)
 
 @Composable
 private fun OptionsOverlay(

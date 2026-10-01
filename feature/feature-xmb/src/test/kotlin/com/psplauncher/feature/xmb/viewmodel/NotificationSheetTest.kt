@@ -33,7 +33,7 @@ class NotificationSheetTest {
     private fun state(
         notices: List<AndroidNotice> = emptyList(),
         playing: Boolean = false,
-        resume: Game? = null,
+        recent: XMBItem? = null,
         cursor: Int = 0,
     ) = XMBUiState(
 
@@ -41,7 +41,7 @@ class NotificationSheetTest {
         notificationsOpen = true,
         androidNotices = notices,
         noticeCursor = cursor,
-        resumeGame = resume,
+        recentTop = recent,
         musicPlayback = if (playing) {
             MusicPlaybackState(track = track(), isPlaying = true, positionMs = 1_000, durationMs = 4_000)
         } else {
@@ -49,7 +49,7 @@ class NotificationSheetTest {
         },
     )
 
-    private val game = Game(id = 7, title = "Crisis Core", platformId = "psp", romPath = "/roms/cc.iso")
+    private val game = XMBItem(id = "7", title = "Crisis Core", gameId = 7)
 
     @Test
     fun `the media row is there when something is playing`() {
@@ -58,8 +58,8 @@ class NotificationSheetTest {
     }
 
     @Test
-    fun `the media row is there for a game to resume when nothing is playing`() {
-        assertEquals(listOf(NoticeFocus.Media), state(resume = game).noticeFocusables)
+    fun `the media row is the island's last played thing when nothing is playing`() {
+        assertEquals(listOf(NoticeFocus.Media), state(recent = game).noticeFocusables)
     }
 
     @Test
@@ -103,33 +103,36 @@ class NotificationSheetTest {
     }
 
     @Test
-    fun `the bar names Clear only where clearing works`() {
+    fun `the bar names Dismiss only where dismissing works`() {
         val clearable = promptsFor(state(notices = listOf(notice("a", canDismiss = true))))
-        assertTrue(clearable.right.any { it.verb == "Clear" })
+        assertTrue(clearable.right.any { it.verb == "Dismiss" })
 
         val ongoing = promptsFor(state(notices = listOf(notice("a", canDismiss = false))))
         assertTrue(
-            "the bar offered Clear on an ongoing notification",
-            ongoing.right.none { it.verb == "Clear" },
+            "the bar offered Dismiss on an ongoing notification",
+            ongoing.right.none { it.verb == "Dismiss" },
         )
     }
 
     @Test
-    fun `the resume row uses the display title, not the filename`() {
-        val scraped = game.copy(title = "The Elder Scrolls V_ Skyrim", scrapedTitle = "The Elder Scrolls V: Skyrim")
-        assertEquals(
-            "The Elder Scrolls V: Skyrim",
-            promptsFor(state(resume = scraped)).primary?.target,
-        )
+    fun `the bar names Clear only when the launcher has notices to clear`() {
+        val none = promptsFor(state(notices = emptyList()))
+        assertTrue("Clear offered with nothing to clear", none.right.none { it.verb == "Clear" })
+        val some = promptsFor(state(notices = emptyList()).copy(launcherNoticeCount = 2))
+        assertTrue(some.right.any { it.verb == "Clear" })
+    }
 
-        val renamed = scraped.copy(userTitleOverride = "Skyrim")
-        assertEquals("Skyrim", promptsFor(state(resume = renamed)).primary?.target)
+    @Test
+    fun `the media row names the same item the island shows`() {
+        assertEquals("Crisis Core", promptsFor(state(recent = game)).primary?.target)
     }
 
     @Test
     fun `the media row's verb follows what the row is`() {
         assertEquals("Pause", promptsFor(state(playing = true)).primary?.verb)
-        assertEquals("Resume", promptsFor(state(resume = game)).primary?.verb)
+        assertEquals("Resume", promptsFor(state(recent = game)).primary?.verb)
+        assertEquals("an app or album is opened, not resumed", "Open",
+            promptsFor(state(recent = XMBItem(id = "app_x", title = "Spotify", packageName = "com.spotify"))).primary?.verb)
     }
 
     @Test

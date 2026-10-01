@@ -51,4 +51,14 @@ class BookIntentResolverTest {
             resolver.buildViewIntent(book(null), "com.flyersoft.moonreader").`package`,
         )
     }
+
+    @Test
+    fun `no reader chosen now means the built-in reader, and the intent names it`() {
+        kotlin.test.assertTrue(BuiltInReader.isBuiltIn(null))
+        kotlin.test.assertFalse(BuiltInReader.isBuiltIn(BuiltInReader.ASK_EVERY_TIME), "Ask Every Time is a choice, not the built-in reader")
+        val intent = BuiltInReader.intent(ApplicationProvider.getApplicationContext(), book("application/pdf"))
+        assertEquals(BuiltInReader.ACTIVITY_CLASS, intent.component?.className)
+        assertEquals("b1", intent.getStringExtra(BuiltInReader.EXTRA_BOOK_ID))
+        assertEquals("content://com.example/tree/dune.epub", intent.getStringExtra(BuiltInReader.EXTRA_BOOK_URI))
+    }
 }

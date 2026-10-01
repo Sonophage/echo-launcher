@@ -305,6 +305,9 @@ fun XMBShellContainer(
         onMusicPrev = viewModel::musicPrev,
         onMusicNext = viewModel::musicNext,
         onMusicSeekTo = viewModel::musicSeekTo,
+        onMusicShuffle = viewModel::musicToggleShuffle,
+        onQuickSettingTapped = viewModel::onQuickSettingTapped,
+        onMusicRepeat = viewModel::musicCycleRepeat,
         onMusicPlayerBack = viewModel::closeMusicPlayer,
         onOpenAndroidLibraryPicker = viewModel::openAndroidLibraryPicker,
     )
@@ -412,6 +415,9 @@ fun XMBShell(
     onMusicPrev: () -> Unit = {},
     onMusicNext: () -> Unit = {},
     onMusicSeekTo: (Int) -> Unit = {},
+    onMusicShuffle: () -> Unit = {},
+    onQuickSettingTapped: (com.psplauncher.feature.xmb.viewmodel.QuickSetting, Int) -> Unit = { _, _ -> },
+    onMusicRepeat: () -> Unit = {},
     onMusicPlayerBack: () -> Unit = {},
     onOpenAndroidLibraryPicker: () -> Unit = {},
     onOpenColorSchemePicker: () -> Unit = {},
@@ -1005,18 +1011,16 @@ fun XMBShell(
                     hasTransport = true,
                     primaryLabel = "",
                 )
-            } ?: uiState.resumeGame?.let { game ->
+            } ?: uiState.recentTop?.let { top ->
                 NoticeMedia(
-
-                    title = game.displayTitle,
-                    detail = "Continue",
-                    artUri = game.artworkUri ?: game.iconUri,
-
+                    title = top.title,
+                    detail = top.subtitle,
+                    artUri = top.shelfCoverArt,
                     progress = null,
                     elapsed = null,
                     isPlaying = false,
                     hasTransport = false,
-                    primaryLabel = "Resume",
+                    primaryLabel = if (top.gameId != null) "Resume" else "Open",
                 )
             }
 
@@ -1042,7 +1046,7 @@ fun XMBShell(
                 sortLabel = uiState.sortLabel.takeIf { xmbContext },
                 showSortButton = uiState.resolvedShowTouchButton && xmbContext,
                 onSortTapped = onXmbSortTapped,
-                live = liveActivity,
+                live = liveActivity.takeIf { !notificationsOpen },
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
 
@@ -1084,6 +1088,16 @@ fun XMBShell(
                 },
                 media = sheetMedia,
                 focus = uiState.focusedNotice,
+                quick = QuickSettingsState(
+                    waveOn = uiState.waveStyle != com.psplauncher.core.ui.wave.WaveStyle.OFF,
+                    backdropOn = uiState.itemBackdropEnabled,
+                    recentAppsOn = uiState.recentsIncludeApps,
+                    chips = uiState.libraryChips,
+                ),
+                quickFocus = uiState.panelQuick,
+                chipFocus = uiState.panelChip,
+                accent = com.psplauncher.core.ui.theme.menuCursorEdge(),
+                onQuickTapped = onQuickSettingTapped,
                 onNoticeTapped = onNoticeTapped,
                 onNoticeDismissTapped = onNoticeDismissTapped,
                 onMediaPrimary = onNoticeMediaPrimary,
@@ -1222,6 +1236,9 @@ fun XMBShell(
                     onPrev = onMusicPrev,
                     onNext = onMusicNext,
                     onSeekTo = onMusicSeekTo,
+                    onShuffle = onMusicShuffle,
+                    onRepeat = onMusicRepeat,
+                    accentArgb = uiState.musicAccentArgb,
                     onBack = onMusicPlayerBack,
                     onAction = onPromptTapped,
                     modifier = Modifier.fillMaxSize(),
@@ -1471,6 +1488,7 @@ fun XMBShell(
                     photoId = request.photoId,
                     libraryId = request.libraryId,
                     openWallpaperPreview = request.openWallpaperPreview,
+                    favoritesOnly = request.favoritesOnly,
                     onBack = onClosePhotoViewer,
                     pendingGamepadAction = uiState.pendingPhotoViewerAction,
                     onGamepadActionConsumed = onPhotoViewerActionConsumed,

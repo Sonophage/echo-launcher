@@ -16,6 +16,7 @@ data class Photo(
 
     val thumbnailUri: String? = null,
     val dateAdded: Long? = null,
+    val isFavorite: Boolean = false,
 ) {
     val resolutionLabel: String? get() =
         if (width != null && height != null && width > 0 && height > 0) "${width}×${height}" else null

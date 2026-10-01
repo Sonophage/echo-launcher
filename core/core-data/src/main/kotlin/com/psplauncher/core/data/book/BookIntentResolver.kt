@@ -26,8 +26,17 @@ class BookIntentResolver @Inject constructor(
             pinnedPackage = readerPackage,
         )
 
-    fun launch(book: Book, readerPackage: String?): String? =
-        MediaOpenIntent.launch(
+    fun launch(book: Book, defaultReader: String?): String? {
+        if (BuiltInReader.isBuiltIn(defaultReader)) {
+            return try {
+                context.startActivity(BuiltInReader.intent(context, book).withoutTransition(), LaunchTransition.options(context))
+                null
+            } catch (e: Exception) {
+                "The built-in reader could not open this book."
+            }
+        }
+        val readerPackage = defaultReader?.takeIf { it != BuiltInReader.ASK_EVERY_TIME }
+        return MediaOpenIntent.launch(
             context = context,
             intent = buildViewIntent(book, readerPackage),
             chooserTitle = CHOOSER_TITLE,
@@ -35,6 +44,7 @@ class BookIntentResolver @Inject constructor(
                 "No reader could open this book. Install one, or pick it from Folders → Default Reader.",
             logLabel = "book \"${book.displayTitle}\"",
         )
+    }
 
     fun launchChooser(book: Book): String? =
         MediaOpenIntent.launchChooser(
@@ -48,7 +58,7 @@ class BookIntentResolver @Inject constructor(
     fun readerLabel(packageName: String): String? = MediaOpenIntent.label(context, packageName)
 
     fun availableReaders(): List<ReaderApp> =
-        MediaOpenIntent.handlers(context, BookFileFilter.EPUB_MIME)
+        BookFileFilter.BOOK_MIMES.flatMap { MediaOpenIntent.handlers(context, it) }.distinctBy { it.packageName }
             .map { ReaderApp(packageName = it.packageName, label = it.label) }
 
     fun launchReader(packageName: String): String? {
@@ -68,6 +78,6 @@ class BookIntentResolver @Inject constructor(
         const val CHOOSER_TITLE = "Open book with…"
 
         fun openableMimeOf(book: Book): String =
-            book.mimeType?.takeIf { it != "application/octet-stream" } ?: BookFileFilter.EPUB_MIME
+            book.mimeType?.takeIf { it != "application/octet-stream" } ?: BookFileFilter.mimeForName(book.displayName)
     }
 }
