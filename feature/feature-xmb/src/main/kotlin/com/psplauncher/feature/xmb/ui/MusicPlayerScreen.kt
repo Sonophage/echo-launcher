@@ -1,5 +1,9 @@
 package com.psplauncher.feature.xmb.ui
 
+import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.MediaDesignFrame
+import com.psplauncher.core.ui.design.mediaAccent
+import com.psplauncher.core.ui.design.mediaGlow
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween

@@ -27,8 +27,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import com.psplauncher.core.ui.components.PfpHintBar
-import com.psplauncher.feature.xmb.ui.DesignUnits
-import com.psplauncher.feature.xmb.ui.MediaDesignFrame
+import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.MediaDesignFrame
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -305,7 +305,7 @@ fun VideoPlayerScreen(
                 screenMode = SCREEN_MODES[screenModeIndex].second,
                 seekSeconds = (seekStepMs / 1000).toInt(),
                 focus = focus,
-                accent = com.psplauncher.feature.xmb.ui.mediaAccent(accentArgb),
+                accent = com.psplauncher.core.ui.design.mediaAccent(accentArgb),
                 onControl = { control -> focus = control; activate(control) },
                 onSeekTo = { ms -> player.seekTo(ms); poke() },
             )

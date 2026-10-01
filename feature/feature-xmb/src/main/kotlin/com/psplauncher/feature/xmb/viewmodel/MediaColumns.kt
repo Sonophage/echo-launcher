@@ -237,7 +237,7 @@ internal fun XMBUiState.booksRootSections(): List<XMBItem> {
             )
         }
 
-        if (reader != null) {
+        if (reader != null && reader != com.psplauncher.core.data.book.BuiltInReader.ASK_EVERY_TIME) {
             add(
                 XMBItem(
                     id       = OPEN_READER_ITEM_ID,

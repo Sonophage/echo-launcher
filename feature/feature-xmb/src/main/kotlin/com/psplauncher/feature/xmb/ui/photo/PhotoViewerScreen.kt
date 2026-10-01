@@ -22,9 +22,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import com.psplauncher.core.ui.components.PfpHintBar
-import com.psplauncher.feature.xmb.ui.DesignUnits
-import com.psplauncher.feature.xmb.ui.MediaDefaultAccent
-import com.psplauncher.feature.xmb.ui.MediaDesignFrame
+import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.MediaDefaultAccent
+import com.psplauncher.core.ui.design.MediaDesignFrame
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable

@@ -1,4 +1,4 @@
-package com.psplauncher.feature.xmb.ui
+package com.psplauncher.core.ui.design
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxWithConstraintsScope

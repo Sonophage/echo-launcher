@@ -4111,7 +4111,8 @@ class XMBViewModel @Inject constructor(
                 ) + videoIntentResolver.availablePlayers().map { it.packageName to it.label }
 
                 MediaRootKind.BOOK -> listOf(
-                    null to "Ask Every Time",
+                    null to "PSPLauncher",
+                    com.psplauncher.core.data.book.BuiltInReader.ASK_EVERY_TIME to "Ask Every Time",
                 ) + bookIntentResolver.availableReaders().map { it.packageName to it.label }
 
                 MediaRootKind.PHOTO -> listOf(

@@ -1,4 +1,4 @@
-package com.psplauncher.feature.xmb.ui
+package com.psplauncher.core.ui.design
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

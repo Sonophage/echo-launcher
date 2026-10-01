@@ -21,6 +21,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Readium's PDF adapter needs PdfiumAndroid, which only JitPack publishes. Only that group may come from it.
+        exclusiveContent {
+            forRepository { maven("https://jitpack.io") }
+            filter { includeGroup("com.github.marain87") }
+        }
     }
 }
 
@@ -50,3 +55,4 @@ include(":feature:feature-themes")
 include(":feature:feature-settings")
 include(":feature:feature-appbar")
 include(":feature:feature-backup")
+include(":feature:feature-reader")

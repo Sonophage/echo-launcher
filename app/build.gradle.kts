@@ -76,6 +76,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -121,6 +122,8 @@ dependencies {
     implementation(project(":feature:feature-settings"))
     implementation(project(":feature:feature-appbar"))
     implementation(project(":feature:feature-backup"))
+    implementation(project(":feature:feature-reader"))
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     debugImplementation(libs.compose.ui.tooling)
 }

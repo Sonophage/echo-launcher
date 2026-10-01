@@ -1,0 +1,42 @@
+plugins {
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
+}
+
+android {
+    namespace  = "com.psplauncher.feature.reader"
+    compileSdk = 37
+    defaultConfig { minSdk = 29 }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    buildFeatures { compose = true }
+}
+
+dependencies {
+    implementation(platform(libs.compose.bom))
+    implementation(libs.bundles.compose)
+    implementation(libs.bundles.lifecycle)
+    implementation(libs.hilt.android)
+    implementation(libs.timber)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.datastore.preferences)
+    ksp(libs.hilt.compiler)
+
+    implementation(libs.readium.shared)
+    implementation(libs.readium.streamer)
+    implementation(libs.readium.navigator)
+    implementation(libs.readium.adapter.pdfium)
+
+    implementation(project(":core:core-common"))
+    implementation(project(":core:core-domain"))
+    implementation(project(":core:core-data"))
+    implementation(project(":core:core-ui"))
+
+    testImplementation(libs.bundles.test.unit)
+}

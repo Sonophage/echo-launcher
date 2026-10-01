@@ -13,6 +13,8 @@ compose-bom             = "2026.08.00"
 hilt                    = "2.60.1"
 room                    = "2.8.4"
 datastore               = "1.2.1"
+readium                 = "3.4.0"
+desugar                 = "2.1.5"
 navigation              = "2.10.0"
 lifecycle               = "2.11.0"
 coil                    = "3.6.1"
@@ -49,6 +51,11 @@ compose-mp-icons        = "1.7.3"
 jcodec                  = "0.2.5"
 
 [libraries]
+desugar-jdk-libs                = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
+readium-shared                  = { group = "org.readium.kotlin-toolkit", name = "readium-shared",          version.ref = "readium" }
+readium-streamer                = { group = "org.readium.kotlin-toolkit", name = "readium-streamer",        version.ref = "readium" }
+readium-navigator               = { group = "org.readium.kotlin-toolkit", name = "readium-navigator",       version.ref = "readium" }
+readium-adapter-pdfium          = { group = "org.readium.kotlin-toolkit", name = "readium-adapter-pdfium",  version.ref = "readium" }
 # AndroidX Core
 androidx-core-ktx               = { group = "androidx.core",         name = "core-ktx",                   version.ref = "core-ktx" }
 androidx-activity-compose       = { group = "androidx.activity",      name = "activity-compose",            version.ref = "activity-compose" }
