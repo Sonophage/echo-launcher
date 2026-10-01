@@ -103,15 +103,23 @@ class NotificationSheetTest {
     }
 
     @Test
-    fun `the bar names Clear only where clearing works`() {
+    fun `the bar names Dismiss only where dismissing works`() {
         val clearable = promptsFor(state(notices = listOf(notice("a", canDismiss = true))))
-        assertTrue(clearable.right.any { it.verb == "Clear" })
+        assertTrue(clearable.right.any { it.verb == "Dismiss" })
 
         val ongoing = promptsFor(state(notices = listOf(notice("a", canDismiss = false))))
         assertTrue(
-            "the bar offered Clear on an ongoing notification",
-            ongoing.right.none { it.verb == "Clear" },
+            "the bar offered Dismiss on an ongoing notification",
+            ongoing.right.none { it.verb == "Dismiss" },
         )
+    }
+
+    @Test
+    fun `the bar names Clear only when the launcher has notices to clear`() {
+        val none = promptsFor(state(notices = emptyList()))
+        assertTrue("Clear offered with nothing to clear", none.right.none { it.verb == "Clear" })
+        val some = promptsFor(state(notices = emptyList()).copy(launcherNoticeCount = 2))
+        assertTrue(some.right.any { it.verb == "Clear" })
     }
 
     @Test

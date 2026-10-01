@@ -677,6 +677,10 @@ data class XMBUiState(
     val notificationsOpen: Boolean = false,
 
     val noticeCursor: Int = 0,
+    val panelQuick: QuickSetting? = null,
+    val panelChip: Int = 0,
+    val libraryChips: List<LibraryChip> = emptyList(),
+    val launcherNoticeCount: Int = 0,
 
     val androidNotices: List<AndroidNotice> = emptyList(),
 
@@ -783,7 +787,7 @@ data class XMBUiState(
         }
 
     val focusedNotice: NoticeFocus?
-        get() = noticeFocusables.let { rows ->
+        get() = if (panelQuick != null) null else noticeFocusables.let { rows ->
             if (rows.isEmpty()) null else rows[noticeCursor.coerceIn(0, rows.lastIndex)]
         }
 
@@ -1328,6 +1332,7 @@ class XMBViewModel @Inject constructor(
         logStartupSequence()
         observeColorScheme()
         observeCategoryBar()
+        observeLibraryChips()
         observeCategories()
         observeMissingGames()
         observeAppChanges()
@@ -4903,16 +4908,18 @@ class XMBViewModel @Inject constructor(
         }
 
         if (state.notificationsOpen) {
+            val onMedia = state.focusedNotice == NoticeFocus.Media
             when (action) {
-                GamepadAction.NAVIGATE_UP   -> moveNoticeCursor(-1)
-                GamepadAction.NAVIGATE_DOWN -> moveNoticeCursor(+1)
-
+                GamepadAction.NAVIGATE_UP   -> movePanelCursor(PanelMove.UP)
+                GamepadAction.NAVIGATE_DOWN -> movePanelCursor(PanelMove.DOWN)
                 GamepadAction.NAVIGATE_LEFT  ->
-                    if (state.focusedNotice == NoticeFocus.Media) musicPlayer.prev()
+                    if (onMedia) musicPlayer.prev() else movePanelCursor(PanelMove.LEFT)
                 GamepadAction.NAVIGATE_RIGHT ->
-                    if (state.focusedNotice == NoticeFocus.Media) musicPlayer.next()
-                GamepadAction.SELECT             -> activateFocusedNotice()
-                GamepadAction.OPEN_CONTEXT_MENU  -> dismissFocusedNotice()
+                    if (onMedia) musicPlayer.next() else movePanelCursor(PanelMove.RIGHT)
+                GamepadAction.SELECT             ->
+                    state.panelQuick?.let { toggleQuickSetting(it) } ?: activateFocusedNotice()
+                GamepadAction.CHANGE_SORT        -> dismissFocusedNotice()
+                GamepadAction.OPEN_CONTEXT_MENU  -> clearLauncherNotices()
                 GamepadAction.BACK,
                 GamepadAction.HOME               -> {
                     menuSound.play(MenuSound.BACK)
@@ -6190,23 +6197,82 @@ class XMBViewModel @Inject constructor(
 
     fun toggleNotifications() {
         menuSound.play(if (_uiState.value.notificationsOpen) MenuSound.BACK else MenuSound.SYSTEM_BROWSE)
-        _uiState.update { it.copy(notificationsOpen = !it.notificationsOpen, noticeCursor = 0) }
+        _uiState.update {
+            val opening = !it.notificationsOpen
+            val hasMedia = it.noticeFocusables.firstOrNull() == NoticeFocus.Media
+            it.copy(
+                notificationsOpen = opening,
+                noticeCursor = 0,
+                panelQuick = if (opening && !hasMedia) QuickSetting.WAVE else null,
+                panelChip = 0,
+            )
+        }
     }
 
-    fun closeNotifications() {
-        _uiState.update { it.copy(notificationsOpen = false) }
-    }
-
-    private fun moveNoticeCursor(delta: Int) {
-        val rows = _uiState.value.noticeFocusables
-        if (rows.isEmpty()) return
-        val next = (_uiState.value.noticeCursor + delta).coerceIn(0, rows.lastIndex)
-        if (next == _uiState.value.noticeCursor) {
+    private fun movePanelCursor(move: PanelMove) {
+        val s = _uiState.value
+        val rows = s.noticeFocusables
+        val before = PanelCursor(s.panelQuick, s.panelChip, s.noticeCursor)
+        val after = movePanel(
+            before, move,
+            hasMedia = rows.firstOrNull() == NoticeFocus.Media,
+            rightRows = rows.size,
+            chips = s.libraryChips.size,
+        )
+        if (after == before) {
             gamepadInputHandler.cancelRepeat()
             return
         }
         menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(noticeCursor = next) }
+        _uiState.update { it.copy(panelQuick = after.quick, panelChip = after.chip, noticeCursor = after.notice) }
+    }
+
+    fun toggleQuickSetting(setting: QuickSetting, chip: Int = _uiState.value.panelChip) {
+        menuSound.play(MenuSound.SELECT)
+        val s = _uiState.value
+        viewModelScope.launch {
+            when (setting) {
+                QuickSetting.WAVE -> context.pfpDataStore.edit { prefs ->
+                    prefs[KEY_WAVE_STYLE] = (if (s.waveStyle == WaveStyle.OFF) waveStyleBeforeOff else WaveStyle.OFF).name
+                    if (s.waveStyle != WaveStyle.OFF) waveStyleBeforeOff = s.waveStyle
+                }
+                QuickSetting.BACKDROP -> iconDisplayPreferences.setItemBackdrop(!s.itemBackdropEnabled)
+                QuickSetting.RECENT_APPS -> context.pfpDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
+                QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
+            }
+        }
+    }
+
+    fun onQuickSettingTapped(setting: QuickSetting, chip: Int = 0) {
+        _uiState.update { it.copy(panelQuick = setting, panelChip = chip) }
+        toggleQuickSetting(setting, chip)
+    }
+
+    private var waveStyleBeforeOff = WaveStyle.ANIMATED
+
+    private fun observeLibraryChips() {
+        viewModelScope.launch {
+            com.psplauncher.core.ui.notification.SystemToasts.recent.collect { recent ->
+                _uiState.update { it.copy(launcherNoticeCount = recent.size) }
+            }
+        }
+        viewModelScope.launch {
+            categoryRepository.observeAll().collect { all ->
+                val chips = LIBRARY_CHIP_IDS.mapNotNull { id ->
+                    all.firstOrNull { it.id == id }?.let { LibraryChip(it.id, it.name, it.isVisible) }
+                }
+                _uiState.update { it.copy(libraryChips = chips, panelChip = it.panelChip.coerceIn(0, (chips.size - 1).coerceAtLeast(0))) }
+            }
+        }
+    }
+
+    fun clearLauncherNotices() {
+        menuSound.play(MenuSound.BACK)
+        com.psplauncher.core.ui.notification.SystemToasts.clear()
+    }
+
+    fun closeNotifications() {
+        _uiState.update { it.copy(notificationsOpen = false) }
     }
 
     fun activateFocusedNotice() {
