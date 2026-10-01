@@ -294,6 +294,8 @@ fun VideoDetailScreen(
                 startPositionMs = state.playStartPositionMs,
                 onSaveResume = viewModel::saveResume,
                 onExit = viewModel::onPlaybackExit,
+                libraryName = state.libraryName,
+                accentOf = viewModel::accentOf,
                 pendingGamepadAction = pendingGamepadAction,
                 onGamepadActionConsumed = onGamepadActionConsumed,
                 modifier = Modifier.fillMaxSize(),

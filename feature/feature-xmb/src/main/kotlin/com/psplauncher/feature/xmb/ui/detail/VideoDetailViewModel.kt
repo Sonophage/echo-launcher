@@ -45,6 +45,7 @@ data class VideoPlaylistOption(val id: Long, val name: String, val checked: Bool
 data class VideoDetailUiState(
     val video: Video? = null,
     val siblings: List<Video> = emptyList(),
+    val libraryName: String? = null,
     val isLoading: Boolean = true,
 
     val mainFocus: Int = 0,
@@ -113,6 +114,7 @@ class VideoDetailViewModel @Inject constructor(
     private val videoRepository: VideoRepository,
     private val intentResolver: com.psplauncher.core.data.video.VideoIntentResolver,
     private val mediaLaunchGate: com.psplauncher.core.data.launch.MediaLaunchGate,
+    private val artworkAccent: com.psplauncher.core.data.repository.ArtworkAccent,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(VideoDetailUiState())
     val uiState: StateFlow<VideoDetailUiState> = _uiState.asStateFlow()
@@ -124,11 +126,14 @@ class VideoDetailViewModel @Inject constructor(
             val siblings = video?.let { videoRepository.getVideosForLibrary(it.libraryId) }
                 ?.sortedBy { it.displayTitle.lowercase() }
                 ?: emptyList()
+            val libraryName = video?.let { videoRepository.getLibrary(it.libraryId)?.displayName }
             _uiState.update {
-                it.copy(video = video, siblings = siblings, isLoading = false, mainFocus = 0)
+                it.copy(video = video, siblings = siblings, libraryName = libraryName, isLoading = false, mainFocus = 0)
             }
         }
     }
+
+    suspend fun accentOf(uri: String?): Long? = uri?.let { artworkAccent.of(it) }
 
     fun handleGamepadAction(action: GamepadAction) {
         val s = _uiState.value
