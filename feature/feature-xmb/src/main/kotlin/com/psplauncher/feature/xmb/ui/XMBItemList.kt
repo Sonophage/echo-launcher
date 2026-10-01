@@ -1,5 +1,6 @@
 package com.psplauncher.feature.xmb.ui
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -53,6 +54,8 @@ import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.key
@@ -79,6 +82,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -251,8 +255,9 @@ private fun XmbGameColumn(
 
         val rowsAbove = (belowTopY.value / ROW_HEIGHT.value).toInt() + 2
         val rowsBelow = ((maxHeight.value - belowTopY.value) / ROW_HEIGHT.value).toInt() + 2
-        val first = (sel - rowsAbove).coerceAtLeast(0)
-        val last = (sel + rowsBelow).coerceAtMost(items.lastIndex)
+        val glide = rememberGlidePosition(sel)
+        val first = (sel - rowsAbove - GLIDE_MAX_LEAD_ROWS).coerceAtLeast(0)
+        val last = (sel + rowsBelow + GLIDE_MAX_LEAD_ROWS).coerceAtMost(items.lastIndex)
 
         for (i in first..last) {
             XmbVerticalListRow(
@@ -278,7 +283,7 @@ private fun XmbGameColumn(
                     .align(Alignment.TopStart)
                     .fillMaxWidth()
                     .height(ROW_HEIGHT)
-                    .offset(y = belowTopY + ROW_HEIGHT * (i - sel)),
+                    .offset { IntOffset(0, (belowTopY + ROW_HEIGHT * (i - glide.value)).roundToPx()) },
             )
         }
     }
@@ -430,10 +435,16 @@ fun XMBItemList(
         val rowsBelow = ((maxHeight.value - belowTopY.value) / ROW_HEIGHT.value).toInt()
             .coerceAtLeast(1)
         val sel = selectedIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0))
+        val glide = rememberGlidePosition(sel)
 
         if (items.isNotEmpty()) {
-            Column(modifier = Modifier.fillMaxWidth().offset(y = belowTopY)) {
-                val last = minOf(items.size, sel + rowsBelow)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = belowTopY)
+                    .graphicsLayer { translationY = (sel - glide.value) * ROW_HEIGHT.toPx() },
+            ) {
+                val last = minOf(items.size, sel + rowsBelow + GLIDE_MAX_LEAD_ROWS)
                 for (i in sel until last) {
                     key(items[i].id) {
                         XmbVerticalListRow(
@@ -1273,4 +1284,21 @@ private fun shelfGlyphFor(cardId: String): ImageVector = when (val shelf = shelf
         PlayState.BACKLOG -> Icons.Filled.Bookmarks
     }
     null -> Icons.Filled.Star
+}
+
+const val GLIDE_MAX_LEAD_ROWS = 3
+
+const val GLIDE_STIFFNESS = 700f
+
+fun glideStart(current: Float, target: Int, maxLead: Int = GLIDE_MAX_LEAD_ROWS): Float =
+    current.coerceIn(target - maxLead.toFloat(), target + maxLead.toFloat())
+
+@Composable
+private fun rememberGlidePosition(target: Int): State<Float> {
+    val position = remember { Animatable(target.toFloat()) }
+    LaunchedEffect(target) {
+        position.snapTo(glideStart(position.value, target))
+        position.animateTo(target.toFloat(), spring(dampingRatio = 1f, stiffness = GLIDE_STIFFNESS))
+    }
+    return position.asState()
 }

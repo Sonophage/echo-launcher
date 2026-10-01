@@ -85,11 +85,12 @@ private val TOUCH_NAV_BUTTON_LABELS = mapOf(
     TouchNavButtonMode.ALWAYS_HIDE to "Always Hide",
 )
 
-private val TOUCH_SENSITIVITY_LABELS = mapOf(
-    TouchSensitivity.LOW    to "Low",
-    TouchSensitivity.NORMAL to "Normal",
-    TouchSensitivity.HIGH   to "High",
-)
+private fun TouchSensitivity.label(): String = when (this) {
+    TouchSensitivity.VERY_LOW -> "Very Low"
+    TouchSensitivity.LOW      -> "Low"
+    TouchSensitivity.NORMAL   -> "Normal"
+    TouchSensitivity.HIGH     -> "High"
+}
 
 private val WAVE_STYLE_LABELS = mapOf(
     WaveStyle.ANIMATED       to "Animated",
@@ -287,7 +288,7 @@ class DisplaySettingsViewModel @Inject constructor(
     val touchNavButtonOptions: List<Pair<TouchNavButtonMode, String>> =
         TouchNavButtonMode.entries.map { it to (TOUCH_NAV_BUTTON_LABELS[it] ?: it.name) }
     val touchSensitivityOptions: List<Pair<TouchSensitivity, String>> =
-        TouchSensitivity.entries.map { it to (TOUCH_SENSITIVITY_LABELS[it] ?: it.name) }
+        TouchSensitivity.entries.map { it to it.label() }
 
     fun setIconLegibility(style: IconLegibilityStyle) = save { it[KEY_ICON_LEGIBILITY] = style.name }
 

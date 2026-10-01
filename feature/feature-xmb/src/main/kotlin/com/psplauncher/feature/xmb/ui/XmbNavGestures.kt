@@ -40,7 +40,7 @@ fun Modifier.xmbNavGestures(
     val edgePx = EDGE_DP.toPx()
     val edgeCommitPx = EDGE_COMMIT_DP.toPx()
     val backCommitPx = SWIPE_BACK_COMMIT_DP.toPx()
-    val flingPx = FLING_DP_PER_S * density
+    val flingPx = flingThresholdPx(density, stepScale)
 
     awaitPointerEventScope {
         while (true) {
@@ -114,6 +114,8 @@ fun Modifier.xmbNavGestures(
 }
 
 private enum class Axis { NONE, HORIZONTAL, VERTICAL, CANCELLED }
+
+fun flingThresholdPx(density: Float, stepScale: Float): Float = FLING_DP_PER_S * density * stepScale
 
 fun consumeWholeSteps(accumulated: Float, stepPx: Float): Int =
     (accumulated / stepPx).toInt()

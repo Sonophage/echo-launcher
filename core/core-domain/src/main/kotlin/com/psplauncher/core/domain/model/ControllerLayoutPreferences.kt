@@ -41,6 +41,7 @@ fun ControllerDisplayType.displayLabel(): String = when (this) {
 }
 
 enum class ScrollSpeed {
+    SLOW,
     RELAXED,
     STANDARD,
     FAST,
@@ -88,6 +89,7 @@ enum class ShoulderHoldTime(val label: String, val millis: Long) {
 }
 
 fun ScrollSpeed.displayLabel(): String = when (this) {
+    ScrollSpeed.SLOW     -> "Slow"
     ScrollSpeed.RELAXED  -> "Relaxed"
     ScrollSpeed.STANDARD -> "Standard"
     ScrollSpeed.FAST     -> "Fast"
