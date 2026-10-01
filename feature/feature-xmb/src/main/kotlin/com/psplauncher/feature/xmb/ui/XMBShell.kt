@@ -610,7 +610,7 @@ fun XMBShell(
                     it.gameId == selectedItem?.gameId
             }
 
-            Crossfade(targetState = backdrop, animationSpec = tween(180), label = "xmbGameBackground") { bg ->
+            Crossfade(targetState = backdrop, animationSpec = tween(XMB_BACKDROP_FADE_MS), label = "xmbGameBackground") { bg ->
                 if (bg != null || backgroundSnap != null) {
                     Box(Modifier.fillMaxSize()) {
                         if (backgroundSnap != null) {
@@ -626,7 +626,7 @@ fun XMBShell(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxSize()
-
+                                    .kenBurns(bg.uri, enabled = backgroundSnap == null && !powerThrottled)
                                     .then(if (backgroundSnap != null) Modifier.xmbStillOverVideo() else Modifier),
                             )
 
