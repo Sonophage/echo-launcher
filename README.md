@@ -3,7 +3,7 @@
 **A controller-first Android home screen in the style of the PSP's XrossMediaBar.**
 
 <p align="center">
-  <img src="docs/screenshots/game-hover-panel.jpg" alt="PSPLauncher: a game focused on the crossbar, its art filling the screen" width="820">
+  <img src="docs/screenshots/last-played.jpg" alt="PSPLauncher: Last Played, the home shelf, with Skyrim's art filling the screen" width="820">
 </p>
 
 <p align="center">
@@ -28,6 +28,7 @@ to fetch artwork or metadata.
 ## Contents
 
 - [A tour](#a-tour)
+- [Handhelds and tablets](#handhelds-and-tablets)
 - [A fork of PlayFieldPortal](#a-fork-of-playfieldportal)
 - [Install](#install)
 - [Controls](#controls)
@@ -42,9 +43,10 @@ to fetch artwork or metadata.
 
 ## A tour
 
-*Shot on a 2400×1504 tablet running 1.20.1, on 2026-10-01. The music, video and photos are demo
-files made for these screenshots. Game artwork, wallpaper art and app icons belong to their
-owners.*
+*Shot on 2026-10-01. Home, the crossbar, games, search and the App Drawer are from an AYANEO Pocket
+FIT Elite (1920×1080) with a real library, on a development build of 1.20.1. Music, video, photos,
+Settings and the confirm prompt are from a 2400×1504 tablet running 1.20.1, with demo files made for
+these screenshots. Game artwork, wallpaper art and app icons belong to their owners.*
 
 ### Home
 
@@ -64,12 +66,14 @@ to them (YouTube under Video, Spotify under Music), then a **Folders** row for t
 
 | | |
 |:---:|:---:|
-| <img src="docs/screenshots/col-game.jpg" width="420"> | <img src="docs/screenshots/col-music-playing.jpg" width="420"> |
-| Game: All Games, then one Memory Card per console | Music, with what is playing at the top |
+| <img src="docs/screenshots/col-game.jpg" width="420"> | <img src="docs/screenshots/col-shelves.jpg" width="420"> |
+| Emulation (the Game column, renamed): All Games, then one Memory Card per console | Shelves: Playing, Backlog, Recently Added |
+| <img src="docs/screenshots/col-music-playing.jpg" width="420"> | <img src="docs/screenshots/col-network.jpg" width="420"> |
+| Music, with what is playing at the top | Network: web search, and the apps you put there |
 | <img src="docs/screenshots/col-video.jpg" width="420"> | <img src="docs/screenshots/col-photo.jpg" width="420"> |
 | Video | Photo |
-| <img src="docs/screenshots/col-network.jpg" width="420"> | <img src="docs/screenshots/app-drawer.jpg" width="420"> |
-| Network: web search, and the apps you put there | The App Drawer: Recently Used, Apps, Emulators, Games |
+| <img src="docs/screenshots/app-drawer.jpg" width="420"> | |
+| The App Drawer: Recently Used, Apps, Emulators, Games | |
 
 ### Games
 
@@ -80,9 +84,9 @@ opens the Artwork Studio.
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/game-hover-panel.jpg" width="420"> | <img src="docs/screenshots/game-context-menu.jpg" width="420"> |
-| A focused game | Its menu |
+| A focused game in All Games | Its menu |
 | <img src="docs/screenshots/context-menu-confirm.jpg" width="420"> | <img src="docs/screenshots/artwork-studio.jpg" width="420"> |
-| A destructive row asks a second time | The Artwork Studio, choosing a source |
+| A destructive row asks a second time | The Artwork Studio: background candidates from SteamGridDB |
 
 ### Music
 
@@ -141,6 +145,28 @@ Five sections: **Overview, Emulators, Look & Feel, System, Setup**.
 | Look & Feel | Colour Scheme, previewed on the live crossbar |
 | <img src="docs/screenshots/settings-system.jpg" width="420"> | <img src="docs/screenshots/setup-wizard-welcome.jpg" width="420"> |
 | System ▸ Permissions, read from Android rather than assumed | The setup wizard |
+
+---
+
+## Handhelds and tablets
+
+PSPLauncher is developed and tested on two devices: a 1080p handheld (AYANEO Pocket FIT Elite)
+and a 2400×1504 tablet. The same build runs on both. Phones and foldables work too.
+
+- **The layout sizes itself to the screen.** Screens are grouped by their smallest width: compact
+  (under 600 dp, most handhelds and phones), medium (600 to 839 dp, most tablets) and expanded
+  (840 dp and up). Each group keeps its own **Adjust XMB Layout** tuning, so tuning the handheld
+  never distorts the tablet.
+- **Touch works everywhere.** Swipe up and down to move through a column and sideways to change
+  category, tap to select and tap again to open, long-press for the options menu, and swipe in
+  from the left edge to go back. *Look & Feel ▸ Touch* sets how far a swipe travels per step and
+  whether the on-screen Back / App Drawer button shows.
+- **A controller is optional on a tablet** and works the same as on a handheld when one is paired.
+
+| | |
+|:---:|:---:|
+| <img src="docs/screenshots/game-hover-panel.jpg" width="420"> | <img src="docs/screenshots/tablet-game-hover.jpg" width="420"> |
+| A focused game on the handheld | The same screen on the tablet |
 
 ---
 
