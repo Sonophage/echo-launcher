@@ -3,6 +3,7 @@ package com.psplauncher.feature.artwork.api
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
+import com.psplauncher.core.data.repository.ArtworkAccent
 import com.psplauncher.core.ui.image.ArtworkRevisions
 import javax.inject.Inject
 import javax.inject.Provider
@@ -12,6 +13,7 @@ import javax.inject.Singleton
 class ArtworkImageCache @Inject constructor(
 
     private val imageLoader: Provider<ImageLoader>,
+    private val artworkAccent: ArtworkAccent,
 ) {
     fun installAsSingleton() {
         SingletonImageLoader.setSafe { imageLoader.get() }
@@ -24,6 +26,7 @@ class ArtworkImageCache @Inject constructor(
             loader.diskCache?.remove(uri)
             ArtworkRevisions.bump(uri)
         }
+        artworkAccent.forget(uris)
     }
 
     fun evict(uri: String) = evict(listOf(uri))
@@ -34,5 +37,6 @@ class ArtworkImageCache @Inject constructor(
         val loader = imageLoader.get()
         loader.diskCache?.clear()
         loader.memoryCache?.clear()
+        artworkAccent.forgetAll()
     }
 }
