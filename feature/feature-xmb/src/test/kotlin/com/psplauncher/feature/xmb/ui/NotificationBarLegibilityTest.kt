@@ -21,3 +21,18 @@ class NotificationBarLegibilityTest {
         )
     }
 }
+
+class MediaDesignLegibilityTest {
+    @Test
+    fun `scaled-down design text never renders under the floor`() {
+        val konkerScale = mediaDesignScale(821f, 462f)
+        val eyebrowPx = 12f * konkerScale * NotificationBarStyle.PanelDensity
+        assertTrue("precondition: the mock's 12px eyebrow lands at ${eyebrowPx}px on the Konker", eyebrowPx < LEGIBILITY_FLOOR_PX)
+        assertTrue(legibleTextPx(eyebrowPx) >= LEGIBILITY_FLOOR_PX)
+    }
+
+    @Test
+    fun `text already above the floor keeps its size`() {
+        org.junit.Assert.assertEquals(60f, legibleTextPx(60f), 0f)
+    }
+}

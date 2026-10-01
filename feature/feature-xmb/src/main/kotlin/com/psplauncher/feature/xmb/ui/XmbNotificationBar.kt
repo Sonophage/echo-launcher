@@ -451,7 +451,7 @@ private val TitleSize = NotificationBarStyle.TitleSp.sp
 private val DetailSize = NotificationBarStyle.DetailSp.sp
 
 object NotificationBarStyle {
-    const val LegibilityFloorPx = 28f
+    const val LegibilityFloorPx = LEGIBILITY_FLOOR_PX
 
     const val PanelDensity = 2.3375f
 

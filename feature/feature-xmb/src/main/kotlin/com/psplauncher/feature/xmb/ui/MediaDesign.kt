@@ -21,14 +21,18 @@ const val MEDIA_DESIGN_WIDTH = 1280f
 
 const val MEDIA_DESIGN_HEIGHT = 720f
 
+const val LEGIBILITY_FLOOR_PX = 28f
+
 val MediaDefaultAccent = Color(0xFF8DB8E8)
+
+fun legibleTextPx(px: Float): Float = maxOf(px, LEGIBILITY_FLOOR_PX)
 
 fun mediaDesignScale(widthDp: Float, heightDp: Float): Float =
     minOf(widthDp / MEDIA_DESIGN_WIDTH, heightDp / MEDIA_DESIGN_HEIGHT)
 
 class DesignUnits(val scale: Float, private val density: Density) {
     fun dp(px: Number): Dp = (px.toFloat() * scale).dp
-    fun sp(px: Number): TextUnit = with(density) { dp(px).toSp() }
+    fun sp(px: Number): TextUnit = with(density) { legibleTextPx(dp(px).toPx()).toSp() }
 
     fun eyebrow(color: Color = Color.White.copy(alpha = 0.55f)) = TextStyle(
         color = color,
