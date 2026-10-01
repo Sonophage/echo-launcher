@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -86,6 +87,7 @@ fun PhotoViewerScreen(
     libraryId: String?,
     onBack: () -> Unit,
     openWallpaperPreview: Boolean = false,
+    favoritesOnly: Boolean = false,
     pendingGamepadAction: GamepadAction? = null,
     onGamepadActionConsumed: () -> Unit = {},
 
@@ -95,8 +97,8 @@ fun PhotoViewerScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(photoId, libraryId, openWallpaperPreview) {
-        viewModel.load(photoId, libraryId, openWallpaperPreview)
+    LaunchedEffect(photoId, libraryId, openWallpaperPreview, favoritesOnly) {
+        viewModel.load(photoId, libraryId, openWallpaperPreview, favoritesOnly)
     }
 
     LaunchedEffect(state.closed) { if (state.closed) { onBack(); viewModel.onClosedHandled() } }
@@ -390,7 +392,7 @@ private fun androidx.compose.foundation.layout.BoxWithConstraintsScope.InfoPanel
                     horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
                 ) {
                     Icon(photoInfoIcon(action), null, tint = color, modifier = Modifier.size(u.dp(20)))
-                    Text(action.label, color = color, fontSize = u.sp(16), fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal)
+                    Text(action.labelFor(photo), color = color, fontSize = u.sp(16), fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal)
                 }
             }
         }
@@ -436,6 +438,7 @@ private fun photoControlIcon(control: PhotoControl): ImageVector = when (control
 
 private fun photoInfoIcon(action: PhotoInfoAction): ImageVector = when (action) {
     PhotoInfoAction.WALLPAPER -> Icons.Filled.Wallpaper
+    PhotoInfoAction.FAVORITE -> Icons.Outlined.StarBorder
     PhotoInfoAction.ROTATE -> Icons.AutoMirrored.Filled.RotateRight
     PhotoInfoAction.REMOVE -> Icons.Outlined.Delete
 }

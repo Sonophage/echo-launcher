@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -70,7 +71,10 @@ enum class PhotoControl(val label: String) {
 }
 
 enum class PhotoInfoAction(val label: String) {
-    WALLPAPER("Set as wallpaper"), ROTATE("Rotate"), REMOVE("Remove from library");
+    WALLPAPER("Set as wallpaper"), FAVORITE("Add to favourites"), ROTATE("Rotate"), REMOVE("Remove from library");
+
+    fun labelFor(photo: Photo): String =
+        if (this == FAVORITE && photo.isFavorite) "Remove from favourites" else label
 
     fun step(delta: Int): PhotoInfoAction = entries[(ordinal + delta).coerceIn(0, entries.lastIndex)]
 }
@@ -125,16 +129,18 @@ class PhotoViewerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PhotoViewerUiState())
     val uiState: StateFlow<PhotoViewerUiState> = _uiState.asStateFlow()
 
-    fun load(photoId: String, libraryId: String?, openWallpaperPreview: Boolean = false) {
+    fun load(photoId: String, libraryId: String?, openWallpaperPreview: Boolean = false, favoritesOnly: Boolean = false) {
         viewModelScope.launch {
             _uiState.update { PhotoViewerUiState(isLoading = true) }
-            val photos = if (libraryId != null) {
+            val photos = if (favoritesOnly) {
+                photoRepository.observeFavorites().first()
+            } else if (libraryId != null) {
                 photoRepository.getPhotosForLibrary(libraryId)
             } else {
                 photoRepository.getLibraries().flatMap { photoRepository.getPhotosForLibrary(it.id) }
             }.sortedBy { it.displayName.lowercase() }
             val index = photos.indexOfFirst { it.id == photoId }.coerceAtLeast(0)
-            val albumName = libraryId?.let { photoRepository.getLibrary(it)?.displayName } ?: "Photos"
+            val albumName = if (favoritesOnly) "Favourites" else libraryId?.let { photoRepository.getLibrary(it)?.displayName } ?: "Photos"
             _uiState.update {
                 it.copy(
                     photos = photos,
@@ -251,8 +257,18 @@ class PhotoViewerViewModel @Inject constructor(
         when (action) {
             PhotoInfoAction.WALLPAPER -> _uiState.update { it.copy(infoVisible = false, wallpaperPreviewVisible = true) }
             PhotoInfoAction.ROTATE -> activate(PhotoViewerAction.ROTATE_RIGHT)
+            PhotoInfoAction.FAVORITE -> toggleFavorite()
             PhotoInfoAction.REMOVE -> _uiState.update { it.copy(infoVisible = false, confirmRemove = true) }
         }
+    }
+
+    private fun toggleFavorite() {
+        val photo = _uiState.value.photo ?: return
+        val favorite = !photo.isFavorite
+        _uiState.update { s ->
+            s.copy(photos = s.photos.map { if (it.id == photo.id) it.copy(isFavorite = favorite) else it })
+        }
+        viewModelScope.launch { photoRepository.setFavorite(photo.id, favorite) }
     }
 
     private var slideshowJob: kotlinx.coroutines.Job? = null

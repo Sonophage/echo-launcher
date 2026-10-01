@@ -341,6 +341,7 @@ sealed interface PhotoNav {
     data object Folders : PhotoNav
     data object AllPhotos : PhotoNav
     data object Albums : PhotoNav
+    data object Favorites : PhotoNav
     data class Library(val id: String, val name: String) : PhotoNav
 }
 
@@ -348,6 +349,7 @@ data class PhotoViewerRequest(
     val photoId: String,
     val libraryId: String?,
     val openWallpaperPreview: Boolean = false,
+    val favoritesOnly: Boolean = false,
 )
 
 sealed interface RootTarget {
@@ -606,6 +608,7 @@ data class XMBUiState(
     val defaultReader: String? = null,
     val defaultReaderLabel: String? = null,
     val photoLibraries: List<com.psplauncher.core.domain.model.PhotoLibrary> = emptyList(),
+    val photoFavoriteCount: Int = 0,
     val activePhotoViewer: PhotoViewerRequest? = null,
     val pendingPhotoViewerAction: GamepadAction? = null,
 
@@ -886,6 +889,7 @@ enum class XMBItemType {
     VIDEO_FAVORITES,
     VIDEO_COLLECTIONS,
     PHOTO_ALBUMS,
+    PHOTO_FAVORITES,
     PHOTO_FOLDER,
 
     LIBRARY_SHELVES,
@@ -1932,6 +1936,9 @@ class XMBViewModel @Inject constructor(
                     PhotoNav.AllPhotos -> photoRepository.observeAllPhotos().collect { photos ->
                         setPhotoItems(photos, emptyAllPhotosItem())
                     }
+                    PhotoNav.Favorites -> photoRepository.observeFavorites().collect { photos ->
+                        setPhotoItems(photos, emptyFavoritePhotosItem())
+                    }
                     PhotoNav.Albums -> photoRepository.observeLibraries().collect { libs ->
                         _uiState.update { it.copy(currentItems = photoAlbumItems(libs)) }
                     }
@@ -2834,6 +2841,14 @@ class XMBViewModel @Inject constructor(
 
     private fun observePhoto() {
         viewModelScope.launch {
+            photoRepository.observeFavorites().collect { favorites ->
+                _uiState.update { it.copy(photoFavoriteCount = favorites.size) }
+                if (currentCategory()?.id == BuiltInCategory.PHOTO && _uiState.value.photoNav == PhotoNav.Root) {
+                    _uiState.update { it.copy(currentItems = photoRootItems()) }
+                }
+            }
+        }
+        viewModelScope.launch {
             photoRepository.observeLibraries().collect { libraries ->
                 _uiState.update { it.copy(photoLibraries = libraries) }
                 if (currentCategory()?.id == BuiltInCategory.PHOTO &&
@@ -2935,6 +2950,13 @@ class XMBViewModel @Inject constructor(
         _uiState.update { it.copy(currentItems = items) }
     }
 
+    private fun emptyFavoritePhotosItem(): XMBItem = XMBItem(
+        id       = EMPTY_CATEGORY_ITEM_ID,
+        title    = "No favourites yet",
+        subtitle = "Add one from a photo's info panel",
+        type     = XMBItemType.EMPTY,
+    )
+
     private fun emptyAllPhotosItem(): XMBItem = XMBItem(
         id       = EMPTY_CATEGORY_ITEM_ID,
         title    = "No photos found",
@@ -2954,6 +2976,7 @@ class XMBViewModel @Inject constructor(
         item.id == ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openAddMenu(); true }
         item.id == ALL_PHOTOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.AllPhotos); true }
         item.id == PHOTO_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Albums); true }
+        item.id == PHOTO_FAVORITES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Favorites); true }
         item.id == CAMERA_ITEM_ID -> { menuSound.play(MenuSound.LAUNCH); launchCamera(); true }
         item.id == ADD_PHOTO_LIBRARY_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
@@ -2989,6 +3012,7 @@ class XMBViewModel @Inject constructor(
         PhotoNav.Root       -> "root"
         PhotoNav.AllPhotos  -> "all"
         PhotoNav.Albums     -> "albums"
+        PhotoNav.Favorites  -> "favorites"
         is PhotoNav.Library -> "library_${nav.id}"
     }
 
@@ -3012,9 +3036,11 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun openPhotoViewer(photoId: String, wallpaperPreview: Boolean = false) {
-        val libraryId = (_uiState.value.photoNav as? PhotoNav.Library)?.id
+        val nav = _uiState.value.photoNav
+        val libraryId = (nav as? PhotoNav.Library)?.id
         _uiState.update {
-            it.copy(activePhotoViewer = PhotoViewerRequest(photoId, libraryId, openWallpaperPreview = wallpaperPreview))
+            it.copy(activePhotoViewer = PhotoViewerRequest(photoId, libraryId, openWallpaperPreview = wallpaperPreview,
+                favoritesOnly = nav == PhotoNav.Favorites))
         }
     }
 
@@ -4383,6 +4409,7 @@ class XMBViewModel @Inject constructor(
         val photoTitle = when (val nav = s.photoNav) {
             PhotoNav.AllPhotos  -> "All Photos"
             PhotoNav.Albums     -> "Albums"
+            PhotoNav.Favorites  -> "Favourites"
             is PhotoNav.Library -> nav.name
             PhotoNav.Folders    -> "Folders"
             PhotoNav.Root       -> null
@@ -4482,11 +4509,12 @@ class XMBViewModel @Inject constructor(
                 if (albums.isNotEmpty()) return albums to albums.indexOfFirst { it.id == "plib_${nav.id}" }.coerceAtLeast(0)
             }
             val sibs = _uiState.value.photoRootSections(cameraAvailable).filter {
-                it.type == XMBItemType.MEMORY_CARD || it.type == XMBItemType.PHOTO_ALBUMS
+                it.type == XMBItemType.MEMORY_CARD || it.type == XMBItemType.PHOTO_ALBUMS || it.type == XMBItemType.PHOTO_FAVORITES
             }
             val idx = sibs.indexOfFirst { sib ->
                 when (s.photoNav) {
                     PhotoNav.AllPhotos -> sib.type == XMBItemType.MEMORY_CARD
+                    PhotoNav.Favorites -> sib.type == XMBItemType.PHOTO_FAVORITES
                     else               -> sib.type == XMBItemType.PHOTO_ALBUMS
                 }
             }.coerceAtLeast(0)
@@ -8636,6 +8664,7 @@ class XMBViewModel @Inject constructor(
         internal const val CAMERA_ITEM_ID = "photo_camera"
         private const val ADD_PHOTO_LIBRARY_ITEM_ID = "add_photo_library"
         internal const val PHOTO_ALBUMS_ITEM_ID = "photo_albums"
+        internal const val PHOTO_FAVORITES_ITEM_ID = "photo_favorites"
         internal const val OPEN_READER_ITEM_ID = "library_open_reader"
         internal const val BOOK_SHELVES_ITEM_ID = "library_shelves"
         internal const val BOOK_SERIES_ITEM_ID = "library_series"

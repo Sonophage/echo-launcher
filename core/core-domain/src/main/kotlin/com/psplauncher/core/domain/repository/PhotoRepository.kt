@@ -8,6 +8,8 @@ interface PhotoRepository {
     fun observeLibraries(): Flow<List<PhotoLibrary>>
     suspend fun getLibraries(): List<PhotoLibrary>
     suspend fun getLibrary(id: String): PhotoLibrary?
+    fun observeFavorites(): kotlinx.coroutines.flow.Flow<List<com.psplauncher.core.domain.model.Photo>>
+    suspend fun setFavorite(id: String, favorite: Boolean)
 
     suspend fun addLibrary(displayName: String, treeUri: String, scanRecursively: Boolean = true): PhotoLibrary
     suspend fun renameLibrary(id: String, displayName: String)

@@ -62,7 +62,7 @@ import com.psplauncher.core.data.database.entity.VideoLibraryEntity
 import com.psplauncher.core.data.database.entity.VideoPlaylistEntity
 import com.psplauncher.core.data.database.entity.VideoPlaylistItemEntity
 
-const val PFP_DATABASE_VERSION = 54
+const val PFP_DATABASE_VERSION = 55
 
 @Database(
     entities = [
@@ -1229,6 +1229,12 @@ abstract class PFPDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_54_55 = object : Migration(54, 55) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE photos ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -1283,6 +1289,7 @@ abstract class PFPDatabase : RoomDatabase() {
             MIGRATION_51_52,
             MIGRATION_52_53,
             MIGRATION_53_54,
+            MIGRATION_54_55,
         )
     }
 }

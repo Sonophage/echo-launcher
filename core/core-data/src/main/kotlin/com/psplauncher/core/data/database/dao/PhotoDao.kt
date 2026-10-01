@@ -40,10 +40,20 @@ interface PhotoDao {
     @Query("DELETE FROM photos WHERE id = :id")
     suspend fun deleteById(id: String)
 
+    @Query("SELECT id FROM photos WHERE library_id = :libraryId AND is_favorite = 1")
+    suspend fun favoriteIdsForLibrary(libraryId: String): List<String>
+
+    @Query("UPDATE photos SET is_favorite = :favorite WHERE id = :id")
+    suspend fun setFavorite(id: String, favorite: Boolean)
+
+    @Query("SELECT * FROM photos WHERE is_favorite = 1 ORDER BY display_name COLLATE NOCASE ASC")
+    fun observeFavorites(): Flow<List<PhotoEntity>>
+
     @Transaction
     suspend fun replaceForLibrary(libraryId: String, photos: List<PhotoEntity>) {
+        val favorites = favoriteIdsForLibrary(libraryId).toSet()
         deleteForLibrary(libraryId)
-        if (photos.isNotEmpty()) insertAll(photos)
+        if (photos.isNotEmpty()) insertAll(photos.map { if (it.id in favorites) it.copy(isFavorite = true) else it })
     }
 
     @Query(
