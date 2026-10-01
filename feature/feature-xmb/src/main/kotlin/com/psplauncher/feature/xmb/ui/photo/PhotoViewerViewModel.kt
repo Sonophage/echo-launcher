@@ -63,8 +63,28 @@ enum class PhotoViewerAction(val label: String, val group: MenuGroup = MenuGroup
     REMOVE("Remove From Library", MenuGroup.REMOVE),
 }
 
+enum class PhotoControl(val label: String) {
+    ZOOM("Zoom"), ROTATE("Rotate"), SLIDESHOW("Slideshow"), INFO("Info"), WALLPAPER("Set as Wallpaper"), REMOVE("Remove");
+
+    fun step(delta: Int): PhotoControl = entries[(ordinal + delta).coerceIn(0, entries.lastIndex)]
+}
+
+enum class PhotoInfoAction(val label: String) {
+    WALLPAPER("Set as wallpaper"), ROTATE("Rotate"), REMOVE("Remove from library");
+
+    fun step(delta: Int): PhotoInfoAction = entries[(ordinal + delta).coerceIn(0, entries.lastIndex)]
+}
+
+const val SLIDESHOW_INTERVAL_MS = 5_000L
+
+fun slideshowNext(index: Int, count: Int): Int = if (count <= 0) 0 else (index + 1) % count
+
 data class PhotoViewerUiState(
     val photos: List<Photo> = emptyList(),
+    val albumName: String? = null,
+    val barFocus: PhotoControl = PhotoControl.SLIDESHOW,
+    val slideshow: Boolean = false,
+    val infoFocus: PhotoInfoAction = PhotoInfoAction.WALLPAPER,
     val index: Int = 0,
     val isLoading: Boolean = true,
 
@@ -114,9 +134,12 @@ class PhotoViewerViewModel @Inject constructor(
                 photoRepository.getLibraries().flatMap { photoRepository.getPhotosForLibrary(it.id) }
             }.sortedBy { it.displayName.lowercase() }
             val index = photos.indexOfFirst { it.id == photoId }.coerceAtLeast(0)
+            val albumName = libraryId?.let { photoRepository.getLibrary(it)?.displayName } ?: "Photos"
             _uiState.update {
                 it.copy(
                     photos = photos,
+                    albumName = albumName,
+                    controlsVisible = true,
                     index = index,
                     isLoading = false,
                     wallpaperPreviewVisible = openWallpaperPreview && photos.isNotEmpty(),
@@ -139,8 +162,22 @@ class PhotoViewerViewModel @Inject constructor(
                 GamepadAction.BACK   -> _uiState.update { it.copy(confirmRemove = false) }
                 else -> Unit
             }
-            s.infoVisible -> if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
-                _uiState.update { it.copy(infoVisible = false) }
+            s.infoVisible -> when (action) {
+                GamepadAction.NAVIGATE_UP   -> _uiState.update { it.copy(infoFocus = it.infoFocus.step(-1)) }
+                GamepadAction.NAVIGATE_DOWN -> _uiState.update { it.copy(infoFocus = it.infoFocus.step(+1)) }
+                GamepadAction.SELECT        -> activateInfo(s.infoFocus)
+                GamepadAction.PREV_CATEGORY -> step(-1)
+                GamepadAction.NEXT_CATEGORY -> step(+1)
+                GamepadAction.BACK          -> _uiState.update { it.copy(infoVisible = false) }
+                else -> Unit
+            }
+            s.slideshow -> {
+                stopSlideshow()
+                when (action) {
+                    GamepadAction.PREV_CATEGORY -> step(-1)
+                    GamepadAction.NEXT_CATEGORY -> step(+1)
+                    else -> Unit
+                }
             }
             s.showOptions -> {
                 val count = PhotoViewerAction.entries.size
@@ -153,22 +190,91 @@ class PhotoViewerViewModel @Inject constructor(
                     else -> Unit
                 }
             }
+            s.zoomed -> when (action) {
+                GamepadAction.NAVIGATE_LEFT  -> pan(+PAN_STEP_PX, 0f)
+                GamepadAction.NAVIGATE_RIGHT -> pan(-PAN_STEP_PX, 0f)
+                GamepadAction.NAVIGATE_UP    -> pan(0f, +PAN_STEP_PX)
+                GamepadAction.NAVIGATE_DOWN  -> pan(0f, -PAN_STEP_PX)
+                GamepadAction.SELECT, GamepadAction.BACK -> _uiState.update { it.copy(zoom = ZOOM_MIN, panX = 0f, panY = 0f) }
+                GamepadAction.OPEN_CONTEXT_MENU -> openOptions()
+                GamepadAction.PREV_CATEGORY -> step(-1)
+                GamepadAction.NEXT_CATEGORY -> step(+1)
+                else -> Unit
+            }
+            s.controlsVisible -> when (action) {
+                GamepadAction.NAVIGATE_LEFT  -> _uiState.update { it.copy(barFocus = it.barFocus.step(-1)) }
+                GamepadAction.NAVIGATE_RIGHT -> _uiState.update { it.copy(barFocus = it.barFocus.step(+1)) }
+                GamepadAction.SELECT        -> activateControl(s.barFocus)
+                GamepadAction.BACK          -> _uiState.update { it.copy(controlsVisible = false) }
+                GamepadAction.OPEN_CONTEXT_MENU -> openOptions()
+                GamepadAction.PREV_CATEGORY -> step(-1)
+                GamepadAction.NEXT_CATEGORY -> step(+1)
+                else -> Unit
+            }
             else -> when (action) {
-                GamepadAction.SELECT        -> _uiState.update { it.copy(controlsVisible = !it.controlsVisible) }
+                GamepadAction.SELECT        -> _uiState.update { it.copy(controlsVisible = true) }
                 GamepadAction.BACK          -> _uiState.update { it.copy(closed = true) }
                 GamepadAction.OPEN_CONTEXT_MENU    -> openOptions()
                 GamepadAction.PREV_CATEGORY -> step(-1)
                 GamepadAction.NEXT_CATEGORY -> step(+1)
-                GamepadAction.NAVIGATE_LEFT  -> if (s.zoomed) pan(+PAN_STEP_PX, 0f) else step(-1)
-                GamepadAction.NAVIGATE_RIGHT -> if (s.zoomed) pan(-PAN_STEP_PX, 0f) else step(+1)
-                GamepadAction.NAVIGATE_UP    -> if (s.zoomed) pan(0f, +PAN_STEP_PX)
-                GamepadAction.NAVIGATE_DOWN  -> if (s.zoomed) pan(0f, -PAN_STEP_PX)
+                GamepadAction.NAVIGATE_LEFT  -> step(-1)
+                GamepadAction.NAVIGATE_RIGHT -> step(+1)
                 else -> Unit
             }
         }
     }
 
-    fun toggleControls() = _uiState.update { it.copy(controlsVisible = !it.controlsVisible) }
+    fun toggleControls() {
+        if (_uiState.value.slideshow) stopSlideshow()
+        _uiState.update { it.copy(controlsVisible = !it.controlsVisible) }
+    }
+
+    fun jumpTo(index: Int) {
+        if (_uiState.value.slideshow) stopSlideshow()
+        step(index - _uiState.value.index)
+    }
+
+    fun activateControl(control: PhotoControl) {
+        _uiState.update { it.copy(barFocus = control) }
+        when (control) {
+            PhotoControl.ZOOM -> zoomBy(ZOOM_STEP * ZOOM_STEP)
+            PhotoControl.ROTATE -> activate(PhotoViewerAction.ROTATE_RIGHT)
+            PhotoControl.SLIDESHOW -> startSlideshow()
+            PhotoControl.INFO -> activate(PhotoViewerAction.INFO)
+            PhotoControl.WALLPAPER -> activate(PhotoViewerAction.SET_WALLPAPER)
+            PhotoControl.REMOVE -> activate(PhotoViewerAction.REMOVE)
+        }
+    }
+
+    fun activateInfo(action: PhotoInfoAction) {
+        _uiState.update { it.copy(infoFocus = action) }
+        when (action) {
+            PhotoInfoAction.WALLPAPER -> _uiState.update { it.copy(infoVisible = false, wallpaperPreviewVisible = true) }
+            PhotoInfoAction.ROTATE -> activate(PhotoViewerAction.ROTATE_RIGHT)
+            PhotoInfoAction.REMOVE -> _uiState.update { it.copy(infoVisible = false, confirmRemove = true) }
+        }
+    }
+
+    private var slideshowJob: kotlinx.coroutines.Job? = null
+
+    fun startSlideshow() {
+        slideshowJob?.cancel()
+        _uiState.update { it.copy(slideshow = true, controlsVisible = false, zoom = ZOOM_MIN, panX = 0f, panY = 0f) }
+        slideshowJob = viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(SLIDESHOW_INTERVAL_MS)
+                _uiState.update {
+                    it.copy(index = slideshowNext(it.index, it.photos.size), rotationDegrees = 0)
+                }
+            }
+        }
+    }
+
+    fun stopSlideshow() {
+        slideshowJob?.cancel()
+        slideshowJob = null
+        _uiState.update { it.copy(slideshow = false, controlsVisible = true) }
+    }
     fun onOptionRowActivated(index: Int) {
         val chosen = _uiState.value.optionsMenu.chose(index)
         if (chosen is MenuSelect.Run) activate(chosen.action)

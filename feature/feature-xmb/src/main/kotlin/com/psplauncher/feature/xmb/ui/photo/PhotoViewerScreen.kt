@@ -1,10 +1,29 @@
 package com.psplauncher.feature.xmb.ui.photo
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.RotateRight
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
+import com.psplauncher.core.ui.components.PfpHintBar
+import com.psplauncher.feature.xmb.ui.DesignUnits
+import com.psplauncher.feature.xmb.ui.MediaDefaultAccent
+import com.psplauncher.feature.xmb.ui.MediaDesignFrame
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -46,17 +65,11 @@ import com.psplauncher.core.common.format.formatByteSize
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.domain.model.Photo
 import com.psplauncher.core.ui.detail.PfpConfirmOverlay
-import com.psplauncher.core.ui.detail.PfpDetailLaunchButton
-import com.psplauncher.core.ui.detail.PfpOverlayCard
-import com.psplauncher.core.ui.detail.PfpOverlayTitle
 import com.psplauncher.core.ui.components.ControllerHintStyle
 import com.psplauncher.core.ui.components.PfpControllerHints
 import com.psplauncher.core.ui.components.ControllerPromptItem
 import com.psplauncher.core.ui.theme.menuCursorEdge
 import com.psplauncher.core.ui.components.PspContextMenuOverlay
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import androidx.compose.runtime.ReadOnlyComposable
 import com.psplauncher.core.ui.theme.LocalPfpTextColors
 
@@ -117,92 +130,32 @@ fun PhotoViewerScreen(
                 onClick = { onTouchInput(); viewModel.toggleControls() },
             ),
     ) {
-        AsyncImage(
-            model = photo.uri,
-            contentDescription = photo.displayName,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer(
-                    scaleX = state.zoom,
-                    scaleY = state.zoom,
-                    translationX = state.panX,
-                    translationY = state.panY,
-                    rotationZ = state.rotationDegrees.toFloat(),
-                ),
-        )
-
-        var titleFlashVisible by remember { mutableStateOf(true) }
-        LaunchedEffect(photo.id) {
-            titleFlashVisible = true
-            kotlinx.coroutines.delay(2200)
-            titleFlashVisible = false
-        }
-        AnimatedVisibility(
-            visible = titleFlashVisible && !state.wallpaperPreviewVisible && !state.showOptions,
-            enter = fadeIn(tween(200)),
-            exit = fadeOut(tween(600)),
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
-        ) {
-            Text(
-                text = photo.displayName,
-                color = TextPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                modifier = Modifier
-                    .background(Color(0x66000000), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 18.dp, vertical = 10.dp),
-            )
-        }
-
-        if (state.controlsVisible && !state.wallpaperPreviewVisible) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .background(Brush.verticalGradient(listOf(Color(0xCC000000), Color.Transparent)))
-
-                    .padding(horizontal = 70.dp, vertical = 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    listOfNotNull(
-                        "${state.index + 1} / ${state.photos.size}",
-                        photo.resolutionLabel,
-                        photo.displayDateMs?.let { fmtDate(it) },
-                    ).joinToString("  ·  "),
-                    color = TextMuted, fontSize = 12.sp,
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000))))
-                    .padding(horizontal = 24.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                PfpControllerHints(
-                    items = listOf(
-                        ControllerPromptItem(GamepadAction.PREV_CATEGORY, "Prev"),
-                        ControllerPromptItem(GamepadAction.NEXT_CATEGORY, "Next"),
-                        ControllerPromptItem(GamepadAction.SELECT, "Hide Controls"),
-                        ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
-                        ControllerPromptItem(GamepadAction.BACK, "Back"),
+        val infoOpen = state.infoVisible
+        MediaDesignFrame { u ->
+            AsyncImage(
+                model = photo.uri,
+                contentDescription = photo.displayName,
+                contentScale = ContentScale.Fit,
+                modifier = (if (infoOpen) Modifier
+                    .align(Alignment.TopStart)
+                    .offset(u.dp(64), u.dp(90))
+                    .size(u.dp(720), u.dp(540))
+                else Modifier.fillMaxSize())
+                    .graphicsLayer(
+                        scaleX = state.zoom,
+                        scaleY = state.zoom,
+                        translationX = state.panX,
+                        translationY = state.panY,
+                        rotationZ = state.rotationDegrees.toFloat(),
                     ),
-                    style = ControllerHintStyle.OVERLAY,
-                    onAction = { action ->
-                        onTouchInput()
-                        when (action) {
-                            GamepadAction.PREV_CATEGORY -> viewModel.step(-1)
-                            GamepadAction.NEXT_CATEGORY -> viewModel.step(+1)
-                            GamepadAction.OPEN_CONTEXT_MENU -> viewModel.openOptions()
-                            else -> viewModel.handleGamepadAction(action)
-                        }
-                    },
-                )
+            )
+
+            if (state.controlsVisible && !state.wallpaperPreviewVisible && !infoOpen) {
+                ViewerChrome(state, photo, u, onTouchInput, viewModel)
+            }
+
+            if (infoOpen) {
+                InfoPanel(state, photo, u, viewModel)
             }
         }
 
@@ -244,10 +197,6 @@ fun PhotoViewerScreen(
             }
         }
 
-        if (state.infoVisible) {
-            InfoDialog(photo = photo, onDismiss = { viewModel.handleGamepadAction(GamepadAction.BACK) })
-        }
-
         if (state.confirmRemove) {
             PfpConfirmOverlay(
                 title = "Remove from library?",
@@ -279,37 +228,216 @@ fun PhotoViewerScreen(
 }
 
 @Composable
-private fun InfoDialog(photo: Photo, onDismiss: () -> Unit) {
-    PfpOverlayCard(onScrimTap = onDismiss) {
-        PfpOverlayTitle(photo.displayName)
-        Spacer(Modifier.height(10.dp))
-        photo.resolutionLabel?.let { InfoRow("Resolution", it) }
-        photo.dateTaken?.let { InfoRow("Taken", fmtDate(it)) }
-        photo.lastModified?.let { InfoRow("Modified", fmtDate(it)) }
-        photo.sizeBytes?.let { InfoRow("Size", formatByteSize(it)) }
-        photo.mimeType?.let { InfoRow("Type", it) }
-        photo.relativePath?.let { InfoRow("Location", it) }
-        InfoRow("File", photo.displayName)
-        Spacer(Modifier.height(18.dp))
-        PfpDetailLaunchButton(
-            label = "OK",
-            icon = null,
-            focused = true,
-            onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth(),
-        )
+private fun androidx.compose.foundation.layout.BoxWithConstraintsScope.ViewerChrome(
+    state: PhotoViewerUiState,
+    photo: Photo,
+    u: DesignUnits,
+    onTouchInput: () -> Unit,
+    viewModel: PhotoViewerViewModel,
+) {
+    val accent = MediaDefaultAccent
+    Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(u.dp(150))
+        .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent))))
+    Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(u.dp(330))
+        .background(Brush.verticalGradient(0f to Color.Transparent, 0.55f to Color.Black.copy(alpha = 0.92f))))
+
+    Column(Modifier.align(Alignment.TopStart).padding(start = u.dp(64), top = u.dp(32)), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+        val eyebrow = listOfNotNull(state.albumName, "${state.index + 1} of ${state.photos.size}").joinToString("  ·  ")
+        Text(eyebrow.uppercase(), style = u.eyebrow(Color.White.copy(alpha = 0.6f)), maxLines = 1)
+        Text(photo.displayName, style = TextStyle(color = Color.White, fontSize = u.sp(30), fontWeight = FontWeight.Medium, shadow = PhotoShadow), maxLines = 1)
+        val facts = listOfNotNull(photo.resolutionLabel, photo.sizeBytes?.let { formatByteSize(it) }).joinToString("  ·  ")
+        if (facts.isNotBlank()) Text(facts, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(14))
     }
+
+    SideArrow(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous photo", u, Modifier.align(Alignment.CenterStart).padding(start = u.dp(24))) {
+        onTouchInput(); viewModel.step(-1)
+    }
+    SideArrow(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next photo", u, Modifier.align(Alignment.CenterEnd).padding(end = u.dp(24))) {
+        onTouchInput(); viewModel.step(+1)
+    }
+
+    Row(
+        Modifier.align(Alignment.BottomCenter).padding(bottom = u.dp(156)),
+        horizontalArrangement = Arrangement.spacedBy(u.dp(10)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        filmstripWindow(state.index, state.photos.size).forEach { i ->
+            val current = i == state.index
+            val distance = kotlin.math.abs(i - state.index)
+            AsyncImage(
+                model = state.photos[i].thumbnailUri ?: state.photos[i].uri,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(if (current) u.dp(120) else u.dp(96), if (current) u.dp(80) else u.dp(64))
+                    .then(if (current) Modifier.border(u.dp(2), accent, RoundedCornerShape(u.dp(8))).padding(u.dp(4)) else Modifier)
+                    .clip(RoundedCornerShape(u.dp(7)))
+                    .graphicsLayer(alpha = if (current) 1f else (1f - distance * 0.18f).coerceAtLeast(0.4f))
+                    .clickable { onTouchInput(); viewModel.jumpTo(i) },
+            )
+        }
+    }
+
+    Row(
+        Modifier.align(Alignment.BottomCenter).padding(bottom = u.dp(64)),
+        horizontalArrangement = Arrangement.spacedBy(u.dp(36)),
+        verticalAlignment = Alignment.Top,
+    ) {
+        PhotoControl.entries.forEach { control ->
+            val focused = control == state.barFocus
+            val tint = if (focused) Color.White else Color.White.copy(alpha = 0.45f)
+            Column(
+                Modifier
+                    .width(if (focused) u.dp(110) else u.dp(56))
+                    .offset(y = if (focused) -u.dp(10) else 0.dp)
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                        onTouchInput(); viewModel.activateControl(control)
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(u.dp(8)),
+            ) {
+                Icon(
+                    photoControlIcon(control), control.label, tint = if (control == PhotoControl.REMOVE && focused) Color(0xFFF07C85) else tint,
+                    modifier = Modifier
+                        .size(if (focused) u.dp(44) else u.dp(30))
+                        .then(if (focused) Modifier.drawBehind {
+                            drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = 0.5f), Color.Transparent)), radius = size.maxDimension)
+                        } else Modifier),
+                )
+                if (focused) Text(control.label, style = TextStyle(color = Color.White, fontSize = u.sp(15), fontWeight = FontWeight.SemiBold, shadow = PhotoShadow), maxLines = 1)
+            }
+        }
+    }
+
+    PfpHintBar(
+        items = listOf(
+            ControllerPromptItem(listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY), "Photo"),
+            ControllerPromptItem(listOf(GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT), "Action"),
+            ControllerPromptItem(GamepadAction.SELECT, "Select"),
+            ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
+            ControllerPromptItem(GamepadAction.BACK, "Hide"),
+        ),
+        onAction = { action ->
+            onTouchInput()
+            when (action) {
+                GamepadAction.OPEN_CONTEXT_MENU -> viewModel.openOptions()
+                else -> viewModel.handleGamepadAction(action)
+            }
+        },
+        modifier = Modifier.align(Alignment.BottomCenter),
+    )
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = TextMuted, fontSize = 13.sp)
-        Spacer(Modifier.width(12.dp))
-        Text(value, color = TextPrimary, fontSize = 13.sp)
+private fun androidx.compose.foundation.layout.BoxWithConstraintsScope.InfoPanel(
+    state: PhotoViewerUiState,
+    photo: Photo,
+    u: DesignUnits,
+    viewModel: PhotoViewerViewModel,
+) {
+    val accent = MediaDefaultAccent
+    Text(
+        listOfNotNull(state.albumName, "${state.index + 1} of ${state.photos.size}").joinToString("  ·  ").uppercase(),
+        style = u.eyebrow(Color.White.copy(alpha = 0.6f)),
+        modifier = Modifier.align(Alignment.TopStart).padding(start = u.dp(64), top = u.dp(36)),
+    )
+    Column(
+        Modifier
+            .align(Alignment.CenterEnd)
+            .width(u.dp(420))
+            .fillMaxHeight()
+            .background(Color(0xF50E0A09))
+            .padding(horizontal = u.dp(36), vertical = u.dp(40)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(14)),
+    ) {
+        Text(photo.displayName, color = Color.White, fontSize = u.sp(30), maxLines = 2)
+        Text("DETAILS", style = u.eyebrow(Color.White.copy(alpha = 0.5f)), modifier = Modifier.padding(top = u.dp(6)))
+        Column {
+            val rows = listOfNotNull(
+                listOfNotNull(photo.resolutionLabel, photo.sizeBytes?.let { formatByteSize(it) }).joinToString(" · ").takeIf { it.isNotBlank() }?.let { "Size" to it },
+                state.albumName?.let { "Album" to it },
+                photo.relativePath?.let { "Path" to it },
+            )
+            rows.forEachIndexed { i, (k, v) ->
+                Row(
+                    Modifier.fillMaxWidth()
+                        .then(if (i < rows.lastIndex) Modifier.drawBehind {
+                            drawLine(Color.White.copy(alpha = 0.07f), androidx.compose.ui.geometry.Offset(0f, size.height),
+                                androidx.compose.ui.geometry.Offset(size.width, size.height), 1f)
+                        } else Modifier)
+                        .padding(vertical = u.dp(9)),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(k, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(15))
+                    Spacer(Modifier.width(u.dp(12)))
+                    Text(v, color = Color.White, fontSize = u.sp(15), maxLines = 1, textAlign = TextAlign.End)
+                }
+            }
+        }
+        Text("USE THIS PHOTO", style = u.eyebrow(Color.White.copy(alpha = 0.5f)), modifier = Modifier.padding(top = u.dp(8)))
+        Column(verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
+            PhotoInfoAction.entries.forEach { action ->
+                val focused = action == state.infoFocus
+                val color = if (action == PhotoInfoAction.REMOVE) Color(0xFFF07C85) else Color.White
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(u.dp(12)))
+                        .then(if (focused) Modifier.background(Color.White.copy(alpha = 0.07f)).border(u.dp(2), accent, RoundedCornerShape(u.dp(12))) else Modifier)
+                        .clickable { viewModel.activateInfo(action) }
+                        .padding(horizontal = u.dp(16), vertical = u.dp(12)),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
+                ) {
+                    Icon(photoInfoIcon(action), null, tint = color, modifier = Modifier.size(u.dp(20)))
+                    Text(action.label, color = color, fontSize = u.sp(16), fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal)
+                }
+            }
+        }
+    }
+    PfpHintBar(
+        items = listOf(
+            ControllerPromptItem(GamepadAction.SELECT, "Select"),
+            ControllerPromptItem(listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY), "Photo"),
+            ControllerPromptItem(GamepadAction.BACK, "Back"),
+        ),
+        onAction = { viewModel.handleGamepadAction(it) },
+        modifier = Modifier.align(Alignment.BottomStart).width(u.dp(860)),
+    )
+}
+
+@Composable
+private fun SideArrow(icon: ImageVector, label: String, u: DesignUnits, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier.size(u.dp(48)).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, label, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(u.dp(26)))
     }
 }
 
-private fun fmtDate(ms: Long): String =
-    SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(ms))
+fun filmstripWindow(index: Int, count: Int, size: Int = FILMSTRIP_SIZE): List<Int> {
+    if (count <= 0) return emptyList()
+    val half = size / 2
+    val start = (index - half).coerceIn(0, (count - size).coerceAtLeast(0))
+    return (start until minOf(count, start + size)).toList()
+}
 
+private const val FILMSTRIP_SIZE = 7
+
+private fun photoControlIcon(control: PhotoControl): ImageVector = when (control) {
+    PhotoControl.ZOOM -> Icons.Filled.ZoomIn
+    PhotoControl.ROTATE -> Icons.AutoMirrored.Filled.RotateRight
+    PhotoControl.SLIDESHOW -> Icons.Filled.PlayArrow
+    PhotoControl.INFO -> Icons.Outlined.Info
+    PhotoControl.WALLPAPER -> Icons.Filled.Wallpaper
+    PhotoControl.REMOVE -> Icons.Outlined.Delete
+}
+
+private fun photoInfoIcon(action: PhotoInfoAction): ImageVector = when (action) {
+    PhotoInfoAction.WALLPAPER -> Icons.Filled.Wallpaper
+    PhotoInfoAction.ROTATE -> Icons.AutoMirrored.Filled.RotateRight
+    PhotoInfoAction.REMOVE -> Icons.Outlined.Delete
+}
+
+private val PhotoShadow = androidx.compose.ui.graphics.Shadow(Color(0xBF000000), androidx.compose.ui.geometry.Offset(0f, 2f), 4f)
