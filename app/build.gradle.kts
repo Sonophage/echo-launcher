@@ -32,8 +32,8 @@ android {
         applicationId = "com.psplauncher.launcher"
         minSdk = 29           // Android 10 — Winlator minimum
         targetSdk = 35
-        versionCode = 29
-        versionName = "1.20.1"
+        versionCode = 30
+        versionName = "1.21.0"
     }
 
     signingConfigs {
