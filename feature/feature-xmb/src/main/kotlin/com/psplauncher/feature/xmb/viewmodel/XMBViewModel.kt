@@ -494,6 +494,7 @@ data class XMBUiState(
     val musicPlayerVisible: Boolean = false,
     val musicPlayback: com.psplauncher.feature.xmb.music.MusicPlaybackState =
         com.psplauncher.feature.xmb.music.MusicPlaybackState(),
+    val musicAccentArgb: Long? = null,
 
     val currentItems: List<XMBItem> = emptyList(),
     val selectedItemIndex: Int = 0,
@@ -1455,6 +1456,15 @@ class XMBViewModel @Inject constructor(
         }
         viewModelScope.launch {
             musicRepository.observeDefaultPlayerPackage().collect { defaultMusicPlayer = it }
+        }
+        viewModelScope.launch {
+            musicPlayer.state
+                .map { it.track?.artUri }
+                .distinctUntilChanged()
+                .collectLatest { art ->
+                    val accent = art?.let { artworkAccent.of(it) }
+                    _uiState.update { it.copy(musicAccentArgb = accent) }
+                }
         }
         viewModelScope.launch {
             musicPlayer.state.collect { playback ->
@@ -3653,6 +3663,8 @@ class XMBViewModel @Inject constructor(
     fun musicNext() = musicPlayer.next()
     fun musicPrev() = musicPlayer.prev()
     fun musicSeekTo(ms: Int) = musicPlayer.seekTo(ms)
+    fun musicToggleShuffle() = musicPlayer.toggleShuffle()
+    fun musicCycleRepeat() = musicPlayer.cycleRepeat()
     private fun musicSeekBy(deltaMs: Int) = musicPlayer.seekBy(deltaMs)
 
     fun closeMusicPlayer() {
@@ -3668,10 +3680,7 @@ class XMBViewModel @Inject constructor(
         val title = musicPlayer.currentTrack()?.displayTitle ?: "Now Playing"
         _uiState.update {
             it.copy(
-                activeContextMenu = XMBContextMenu(state = MenuState(title = title, rows = listOf(
-                        XMBContextMenuItem("music_background", "Play in Background"),
-                        XMBContextMenuItem("music_close", "Stop & Close"),
-                    )), musicTrackId = MUSIC_PLAYER_MENU_MARKER)
+                activeContextMenu = XMBContextMenu(state = MenuState(title = title, rows = musicPlayerMenuItems(it.musicPlayback)), musicTrackId = MUSIC_PLAYER_MENU_MARKER)
             )
         }
     }
@@ -5655,6 +5664,8 @@ class XMBViewModel @Inject constructor(
                 "music_background" -> musicPlayInBackground()
                 "music_playpause"  -> musicPlayPause()
                 "music_close"      -> stopAndCloseMusicPlayer()
+                "music_shuffle"    -> musicToggleShuffle()
+                "music_repeat"     -> musicCycleRepeat()
             }
             menu.musicTrackId != null -> handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId)
             menu.mediaRootKind != null && menu.mediaRootUri != null ->
