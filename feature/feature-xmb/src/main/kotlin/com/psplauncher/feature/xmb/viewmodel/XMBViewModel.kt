@@ -1231,6 +1231,13 @@ data class BackgroundTaskInfo(
     val progress: Float?,
 )
 
+internal fun XMBUiState.withSettingsClosed(): XMBUiState = copy(
+    activeSettingsScreen = null,
+    settingsReturnTo = null,
+    pendingSettingsAction = null,
+    settingsFromPanel = false,
+)
+
 fun XMBUiState.withNamePromptText(text: String): XMBUiState = when {
     renameAppTarget != null      -> copy(renameAppText = text)
     collectionNameDialog != null -> copy(collectionNameDialog = collectionNameDialog.copy(text = text))
@@ -6305,16 +6312,7 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun returnToPanelSettings() {
-        _uiState.update {
-            it.copy(
-                activeSettingsScreen = null,
-                settingsReturnTo = null,
-                pendingSettingsAction = null,
-                settingsFromPanel = false,
-                notificationsOpen = true,
-                panelTab = PanelTab.SETTINGS,
-            )
-        }
+        _uiState.update { it.withSettingsClosed().copy(notificationsOpen = true, panelTab = PanelTab.SETTINGS) }
     }
 
     fun onPanelTabTapped(tab: PanelTab) {
@@ -7768,13 +7766,11 @@ class XMBViewModel @Inject constructor(
             returnToPanelSettings()
             return
         }
-        _uiState.update {
-            it.copy(activeSettingsScreen = null, settingsReturnTo = null, pendingSettingsAction = null)
-        }
+        _uiState.update { it.withSettingsClosed() }
     }
 
     fun openAndroidLibraryPicker() {
-        _uiState.update { it.copy(activeSettingsScreen = null, pendingSettingsAction = null) }
+        _uiState.update { it.withSettingsClosed() }
         openAppPicker(AppPickerTarget.AndroidGames(ANDROID_PLATFORM_ID), "Add Android Apps")
     }
 
@@ -7969,10 +7965,7 @@ class XMBViewModel @Inject constructor(
             barTopFraction = s.layoutSpec.barTopFraction,
         )
         _uiState.update {
-            it.copy(
-
-                activeSettingsScreen = null,
-                pendingSettingsAction = null,
+            it.withSettingsClosed().copy(
                 xmbLayoutAdjust = XmbLayoutAdjustSession(draft = seed, original = seed, bucketKey = bucket),
             )
         }
@@ -8025,10 +8018,7 @@ class XMBViewModel @Inject constructor(
 
     fun openCustomIcons() {
         _uiState.update {
-            it.copy(
-
-                activeSettingsScreen = null,
-                pendingSettingsAction = null,
+            it.withSettingsClosed().copy(
                 customIconSession = CustomIconSession(groups = customIconGroups),
             )
         }
@@ -8351,7 +8341,7 @@ class XMBViewModel @Inject constructor(
 
     fun goToLibrary() {
         markInitialSetupSeen()
-        _uiState.update { it.copy(activeSettingsScreen = null, pendingSettingsAction = null) }
+        _uiState.update { it.withSettingsClosed() }
         openAllGamesFolder()
         viewModelScope.launch {
             val first = runCatching { gameRepository.observeGamesOnly().first() }
