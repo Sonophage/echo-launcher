@@ -22,6 +22,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -83,6 +84,8 @@ class BackupManagerTest {
         }
         override suspend fun readSettingsSnapshot(): SettingsSnapshot = SettingsSnapshot()
         override suspend fun restoreSettingsSnapshot(snapshot: SettingsSnapshot) = Unit
+        override suspend fun readReaderSnapshot(): ReaderSnapshot = ReaderSnapshot()
+        override suspend fun restoreReaderSnapshot(snapshot: ReaderSnapshot) = Unit
     }
 
     @Test
@@ -229,6 +232,63 @@ class BackupManagerTest {
     }
 
     @Test
+    fun `createBackup carries the reader's positions and bookmarks`() = runTest {
+        coEvery { gameDao.getAll() }          returns emptyList()
+        coEvery { categoryDao.getAll() }      returns emptyList()
+        coEvery { categoryDao.getAllItems() } returns emptyList()
+        coEvery { playSessionDao.getAll() }   returns emptyList()
+
+        val reader = ReaderSnapshot(
+            strings = mapOf("position_book-1" to "{\"href\":\"ch3.xhtml\"}", "bookmarks_book-1" to "[]"),
+            floats = mapOf("display_text_scale" to 1.3f),
+        )
+        val mgr = object : ExportingBackupManager() {
+            override suspend fun readReaderSnapshot(): ReaderSnapshot = reader
+        }
+
+        val result = mgr.createBackup(appVersionCode = 1, appVersionName = "0.1", createdAt = 2_600_000L)
+        assertTrue(result is BackupResult.Success)
+
+        val entries = readZipEntries(mgr.lastExported!!)
+        assertEquals(reader, Json.decodeFromString(ReaderSnapshot.serializer(), entries.getValue(BackupEntry.READER)))
+    }
+
+    @Test
+    fun `restoreBackup applies the reader snapshot when present`() = runTest {
+        val backupFile = File(exportDir, "with_reader$BACKUP_FILE_EXTENSION")
+        val expected = ReaderSnapshot(strings = mapOf("bookmarks_book-1" to "[]"))
+        buildSettingsZip(backupFile, SettingsSnapshot(), expected)
+
+        var restored: ReaderSnapshot? = null
+        val mgr = object : ExportingBackupManager() {
+            override suspend fun restoreReaderSnapshot(snapshot: ReaderSnapshot) { restored = snapshot }
+        }
+        every { context.contentResolver.openInputStream(any()) } returns backupFile.inputStream()
+
+        val result = mgr.restoreBackup(Uri.fromFile(backupFile))
+
+        assertTrue("Expected Success, got $result", result is RestoreResult.Success)
+        assertEquals(expected, restored)
+    }
+
+    @Test
+    fun `restoring a backup made before the reader was carried keeps this device's reading places`() = runTest {
+        val backupFile = File(exportDir, "pre_reader$BACKUP_FILE_EXTENSION")
+        buildSettingsZip(backupFile, SettingsSnapshot())
+
+        var restoreCalled = false
+        val mgr = object : ExportingBackupManager() {
+            override suspend fun restoreReaderSnapshot(snapshot: ReaderSnapshot) { restoreCalled = true }
+        }
+        every { context.contentResolver.openInputStream(any()) } returns backupFile.inputStream()
+
+        val result = mgr.restoreBackup(Uri.fromFile(backupFile))
+
+        assertTrue("Expected Success, got $result", result is RestoreResult.Success)
+        assertFalse("an archive with no reader entry must not clear the reader store", restoreCalled)
+    }
+
+    @Test
     fun `restoreBackup re-homes bundled artwork onto this filesDir`() = runTest {
         val filesDir = tempFolder.newFolder("filesDir")
         every { context.filesDir } returns filesDir
@@ -295,7 +355,7 @@ class BackupManagerTest {
         }
     }
 
-    private fun buildSettingsZip(dest: File, settings: SettingsSnapshot) {
+    private fun buildSettingsZip(dest: File, settings: SettingsSnapshot, reader: ReaderSnapshot? = null) {
         val json = Json { prettyPrint = false }
         val manifest = BackupManifest(appVersionCode = 1, appVersionName = "0.1", createdAt = 0L, gameCount = 0, sessionCount = 0, categoryCount = 0)
         ZipOutputStream(dest.outputStream()).use { zip ->
@@ -305,6 +365,11 @@ class BackupManagerTest {
             zip.putNextEntry(ZipEntry(BackupEntry.SETTINGS))
             zip.write(json.encodeToString(SettingsSnapshot.serializer(), settings).toByteArray())
             zip.closeEntry()
+            if (reader != null) {
+                zip.putNextEntry(ZipEntry(BackupEntry.READER))
+                zip.write(json.encodeToString(ReaderSnapshot.serializer(), reader).toByteArray())
+                zip.closeEntry()
+            }
         }
     }
 
