@@ -3,6 +3,9 @@ package com.psplauncher.feature.xmb.viewmodel
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.psplauncher.core.domain.model.MemoryCard
+import com.psplauncher.core.domain.model.PlatformIds
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -66,5 +69,50 @@ class InitialSetupGateTest {
     @Test fun `a completed library setup counts as existing config`() {
         val prefs = preferencesOf(booleanPreferencesKey("library_setup_complete") to true)
         assertTrue(XMBViewModel.hasExistingSetupConfig(prefs))
+    }
+
+    private val seededAndroidCard = MemoryCard(platformId = PlatformIds.ANDROID, displayName = "Android Memory Card")
+
+    private val romRoot = stringPreferencesKey("library_rom_root_tree_uris") to "content://tree/primary%3AROMs"
+
+    @Test fun `a fresh install whose only card is the auto-seeded Android card still shows the wizard`() {
+        assertEquals(
+            InitialSetupDecision.OPEN_WIZARD,
+            XMBViewModel.initialSetupDecision(preferencesOf(), listOf(seededAndroidCard)),
+        )
+    }
+
+    @Test fun `a wizard that started but never finished reopens, even with the folders it already saved`() {
+        val prefs = preferencesOf(booleanPreferencesKey("initial_setup_started") to true, romRoot)
+        assertEquals(
+            InitialSetupDecision.OPEN_WIZARD,
+            XMBViewModel.initialSetupDecision(prefs, listOf(seededAndroidCard, MemoryCard("psp", "PSP"))),
+        )
+    }
+
+    @Test fun `a genuine upgrade with real setup skips the wizard`() {
+        assertEquals(
+            InitialSetupDecision.SEED_AS_SEEN,
+            XMBViewModel.initialSetupDecision(preferencesOf(romRoot), listOf(seededAndroidCard)),
+        )
+        assertEquals(
+            InitialSetupDecision.SEED_AS_SEEN,
+            XMBViewModel.initialSetupDecision(preferencesOf(), listOf(MemoryCard("psp", "PSP"))),
+        )
+    }
+
+    @Test fun `an upgrade whose library is only Android apps skips the wizard`() {
+        assertEquals(
+            InitialSetupDecision.SEED_AS_SEEN,
+            XMBViewModel.initialSetupDecision(preferencesOf(), listOf(seededAndroidCard.copy(gameCount = 3))),
+        )
+    }
+
+    @Test fun `a finished wizard never reopens`() {
+        val prefs = preferencesOf(
+            booleanPreferencesKey("initial_setup_seen") to true,
+            booleanPreferencesKey("initial_setup_started") to true,
+        )
+        assertEquals(InitialSetupDecision.ALREADY_SEEN, XMBViewModel.initialSetupDecision(prefs, emptyList()))
     }
 }
