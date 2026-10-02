@@ -19,6 +19,8 @@ class BackupKeyDriftTest {
         "last_played_placed_v1" to "one-shot position fix that a restore must be able to re-run",
 
         "network_renamed_v1" to "one-shot name fix that a restore must be able to re-run",
+        "initial_setup_started" to
+            "marks a wizard in progress on this device; the seen flag is what a restore carries",
         "data_prep_version" to "migration marker",
 
         "theme_icons_stamp" to "dangling pointer into un-bundled files",
