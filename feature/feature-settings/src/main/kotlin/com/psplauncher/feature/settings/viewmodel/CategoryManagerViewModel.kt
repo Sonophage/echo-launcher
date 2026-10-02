@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -139,24 +140,20 @@ class CategoryManagerViewModel @Inject constructor(
     }
 
     fun chooseType(isGaming: Boolean) {
-        val s = _scratch.value
-        viewModelScope.launch {
-            if (s.pickingTypeForCreate) {
-                val name = s.pendingName ?: return@launch
-                val iconKey = s.pendingIconKey ?: return@launch
-                categoryRepository.createCustomCategory(name, iconKey, isGaming)
-                _scratch.update {
-                    it.copy(
-                        step = CategoryStep.LIST,
-                        pendingName = null,
-                        pendingIconKey = null,
-                        pickingIconForCreate = false,
-                        pickingTypeForCreate = false,
-                        pendingIsGamingCategory = false,
-                    )
-                }
-            }
+        val s = _scratch.getAndUpdate {
+            if (!it.pickingTypeForCreate) it else it.copy(
+                step = CategoryStep.LIST,
+                pendingName = null,
+                pendingIconKey = null,
+                pickingIconForCreate = false,
+                pickingTypeForCreate = false,
+                pendingIsGamingCategory = false,
+            )
         }
+        if (!s.pickingTypeForCreate) return
+        val name = s.pendingName ?: return
+        val iconKey = s.pendingIconKey ?: return
+        viewModelScope.launch { categoryRepository.createCustomCategory(name, iconKey, isGaming) }
     }
 
     fun openDetail(id: String) = _scratch.update { it.copy(step = CategoryStep.DETAIL, detailId = id, returnFocusKey = id) }
