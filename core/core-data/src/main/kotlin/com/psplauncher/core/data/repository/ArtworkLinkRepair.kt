@@ -11,11 +11,18 @@ import javax.inject.Singleton
 class ArtworkLinkRepair @Inject constructor(
     private val gameDao: GameDao,
     private val artworkAccent: ArtworkAccent,
+    private val folderRepository: ArtworkFolderRepository,
 ) {
-    data class Report(val checked: Int, val repointed: Int, val cleared: Int) {
+    data class Report(
+        val checked: Int,
+        val repointed: Int,
+        val cleared: Int,
+        val folderAccessLost: Boolean = false,
+    ) {
         val broken: Int get() = repointed + cleared
 
         fun message(): String = when {
+            folderAccessLost -> "Access to your artwork folder was lost. Relink your artwork folder first."
             checked == 0 -> "No games to check."
             broken == 0 -> "All $checked background links resolve."
             cleared == 0 -> "Repaired $repointed of $checked background links."
@@ -24,6 +31,11 @@ class ArtworkLinkRepair @Inject constructor(
     }
 
     suspend fun run(): Report = withContext(Dispatchers.IO) {
+        if (folderRepository.getTreeUri() != null && !folderRepository.hasLiveGrant()) {
+            return@withContext Report(0, 0, 0, folderAccessLost = true).also {
+                Timber.w("ArtworkLinkRepair: ${it.message()}")
+            }
+        }
         val games = gameDao.getAll()
         var checked = 0
         var repointed = 0

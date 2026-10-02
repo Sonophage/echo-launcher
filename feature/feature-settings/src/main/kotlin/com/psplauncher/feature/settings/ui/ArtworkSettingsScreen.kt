@@ -39,7 +39,7 @@ fun ArtworkSettingsScreen(
 
     var showImport by remember { mutableStateOf(false) }
     if (showImport) {
-        ArtworkImportScreen(onBack = { showImport = false }, modifier = modifier)
+        ArtworkImportScreen(onBack = { showImport = false; viewModel.refreshFolderGrant() }, modifier = modifier)
         return
     }
 
@@ -113,8 +113,10 @@ fun ArtworkSettingsScreen(
                 SettingsRow(
                     label    = "Repair Background Links",
                     sublabel = if (state.isRepairingLinks) "Checking every game's background…"
+                               else if (state.artworkFolderGrantDead) "Relink your artwork folder first"
                                else "Point each game's XMB background at art that is actually there",
-                    onClick  = if (state.isRepairingLinks) null else ({ viewModel.repairArtworkLinks() }),
+                    onClick  = if (state.isRepairingLinks || state.artworkFolderGrantDead) null
+                               else ({ viewModel.repairArtworkLinks() }),
                 )
 
                 SettingsGroup("Scrape Artwork")

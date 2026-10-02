@@ -162,11 +162,7 @@ class ArtworkSettingsViewModel @Inject constructor(
             }
         }
 
-        viewModelScope.launch {
-            val configured = artworkFolderRepository.getTreeUri() != null
-            val dead = configured && !artworkFolderRepository.hasLiveGrant()
-            _extra.update { it.copy(artworkFolderGrantDead = dead) }
-        }
+        refreshFolderGrant()
 
         runCatching { androidx.work.WorkManager.getInstance(context) }.getOrNull()?.let { wm ->
             viewModelScope.launch {
@@ -272,8 +268,25 @@ class ArtworkSettingsViewModel @Inject constructor(
     fun repairArtworkLinks() {
         viewModelScope.launch {
             _extra.update { it.copy(isRepairingLinks = true, summary = null) }
-            val report = artworkLinkRepair.run()
-            _extra.update { it.copy(isRepairingLinks = false, summary = report.message()) }
+            try {
+                val report = artworkLinkRepair.run()
+                _extra.update { it.copy(summary = report.message()) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                timber.log.Timber.w(e, "Artwork link repair failed")
+                _extra.update { it.copy(summary = "Repair stopped before it finished. Nothing more was changed.") }
+            } finally {
+                _extra.update { it.copy(isRepairingLinks = false) }
+            }
+        }
+    }
+
+    fun refreshFolderGrant() {
+        viewModelScope.launch {
+            val configured = artworkFolderRepository.getTreeUri() != null
+            val dead = configured && !artworkFolderRepository.hasLiveGrant()
+            _extra.update { it.copy(artworkFolderGrantDead = dead) }
         }
     }
 
