@@ -31,6 +31,8 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.theme.PFPTheme
+import com.psplauncher.feature.settings.viewmodel.InitialSetupUiState
+import com.psplauncher.feature.settings.viewmodel.RootFolderRow
 import kotlinx.coroutines.channels.Channel
 import kotlin.math.abs
 import org.junit.Assert.assertEquals
@@ -445,6 +447,28 @@ class SettingsScaffoldNavigationTest {
         press(GamepadAction.NAVIGATE_RIGHT)
 
         assertTrue(requested.single() > 0.4f)
+    }
+
+    @Test
+    fun `Go to your library still applies the auto-fit choice`() {
+        val calls = mutableListOf<String>()
+        showScreen(onBack = {}) {
+            FinishPage(
+                state = InitialSetupUiState(romRoots = listOf(RootFolderRow("content://roms", "ROMS", linked = true))),
+                onFinishSetup = { calls += "finishSetup" },
+                onOpenLibraryManager = { calls += "libraryManager" },
+                onGoToLibrary = { calls += "library" },
+                onFinish = { calls += "done" },
+            )
+        }
+
+        assertFocusedRow("Open Library Manager")
+        press(GamepadAction.SELECT)
+        press(GamepadAction.NAVIGATE_DOWN)
+        assertFocusedRow("Go to your library")
+        press(GamepadAction.SELECT)
+
+        assertEquals(listOf("finishSetup", "libraryManager", "finishSetup", "library"), calls)
     }
 
     @Test

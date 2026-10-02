@@ -256,14 +256,14 @@ fun InitialSetupScreen(
                 onConnectSs = viewModel::connectScreenScraper,
                 onContinue = { viewModel.nextStep() },
                 nextLabel = if (state.vita3KInstalled) "Vita Data Folder"
-                            else if (state.retroArchInstalled) "RetroArch" else "Finish",
+                            else if (state.retroArchInstalled) "RetroArch" else "Make It Yours",
             )
             SetupStep.VITA -> VitaPage(
                 state = state,
                 onLink = { vitaPicker.launch(null) },
                 onForget = viewModel::forgetVitaFolder,
                 onContinue = { viewModel.nextStep() },
-                nextLabel = if (state.retroArchInstalled) "RetroArch" else "Finish",
+                nextLabel = if (state.retroArchInstalled) "RetroArch" else "Make It Yours",
             )
             SetupStep.RETROARCH -> RetroArchPage(
                 state = state,
@@ -284,12 +284,10 @@ fun InitialSetupScreen(
             )
             SetupStep.FINISH -> FinishPage(
                 state = state,
+                onFinishSetup = viewModel::finishSetup,
                 onOpenLibraryManager = onOpenLibraryManager,
                 onGoToLibrary = onGoToLibrary,
-                onFinish = {
-                    viewModel.finishSetup()
-                    onBack()
-                },
+                onFinish = onBack,
             )
         }
     }
@@ -732,12 +730,13 @@ private fun RetroArchPage(
         )
         WizardRow(label = "Link RetroArch", sublabel = RETROARCH_PICK_HINT, onClick = onLink)
     }
-    WizardContinueRow("Finish", onContinue)
+    WizardContinueRow("Make It Yours", onContinue)
 }
 
 @Composable
-private fun FinishPage(
+internal fun FinishPage(
     state: InitialSetupUiState,
+    onFinishSetup: () -> Unit,
     onOpenLibraryManager: () -> Unit,
     onGoToLibrary: () -> Unit,
     onFinish: () -> Unit,
@@ -774,21 +773,21 @@ private fun FinishPage(
         WizardRow(
             label = "Open Library Manager",
             sublabel = "Add consoles and scan the ROM roots you just set",
-            onClick = onOpenLibraryManager,
+            onClick = { onFinishSetup(); onOpenLibraryManager() },
         )
 
         WizardRow(
             label = "Go to your library",
             sublabel = "Jump straight to All Games",
             focusKey = "finish_go_library",
-            onClick = onGoToLibrary,
+            onClick = { onFinishSetup(); onGoToLibrary() },
         )
     }
     WizardRow(
         label = "Finish",
         sublabel = "Head to the launcher",
         focusKey = "finish_done",
-        onClick = onFinish,
+        onClick = { onFinishSetup(); onFinish() },
     )
 }
 
@@ -1048,6 +1047,7 @@ private fun FinishPagePreview() {
                 retroArchLinked = true,
                 retroArchCoreCount = 42,
             ),
+            onFinishSetup = {},
             onOpenLibraryManager = {},
             onGoToLibrary = {},
             onFinish = {},
