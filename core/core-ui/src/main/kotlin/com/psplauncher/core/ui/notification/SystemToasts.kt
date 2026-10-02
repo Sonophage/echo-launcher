@@ -14,6 +14,7 @@ data class SystemToast(
     val title: String,
     val message: String?,
     val kind: ToastKind,
+    val postedAt: Long = System.currentTimeMillis(),
 )
 
 object SystemToasts {
@@ -40,6 +41,8 @@ object SystemToasts {
     }
 
     fun clear() = _recent.update { emptyList() }
+
+    fun dismiss(id: Long) = _recent.update { recent -> recent.filterNot { it.id == id } }
 
     internal fun normalise(message: String?): String? = message?.takeIf { it.isNotBlank() }
 }

@@ -2,7 +2,12 @@ package com.psplauncher.feature.xmb.viewmodel
 
 import com.psplauncher.core.domain.model.GamepadAction
 
-data class XmbPrompt(val action: GamepadAction, val verb: String, val target: String? = null)
+data class XmbPrompt(
+    val action: GamepadAction,
+    val verb: String,
+    val target: String? = null,
+    val pairedWith: GamepadAction? = null,
+)
 
 data class XmbPrompts(
     val primary: XmbPrompt?,
@@ -29,27 +34,10 @@ fun promptsFor(state: XMBUiState): XmbPrompts {
     val focused = state.currentItems.getOrNull(state.selectedItemIndex)
 
     if (state.notificationsOpen) {
-        val focus = state.focusedNotice
-        val notice = (focus as? NoticeFocus.Notice)
-            ?.let { row -> state.androidNotices.firstOrNull { it.key == row.key } }
         return XmbPrompts(
-            primary = when {
-                focus == NoticeFocus.Media -> XmbPrompt(
-                    GamepadAction.SELECT,
-                    if (state.musicPlayback.track != null) {
-                        if (state.musicPlayback.isPlaying) "Pause" else "Play"
-                    } else if (state.recentTop?.gameId != null) "Resume" else "Open",
-                    state.musicPlayback.track?.let { it.title ?: it.displayName } ?: state.recentTop?.title,
-                )
-                notice?.canOpen == true -> XmbPrompt(GamepadAction.SELECT, "Open", notice.appLabel)
-                state.panelQuick != null -> XmbPrompt(GamepadAction.SELECT, "Toggle")
-                else -> null
-            },
+            primary = null,
             back = XmbPrompt(GamepadAction.BACK, "Close"),
-            right = buildList {
-                if (notice?.canDismiss == true) add(XmbPrompt(GamepadAction.CHANGE_SORT, "Dismiss"))
-                if (state.launcherNoticeCount > 0) add(XmbPrompt(GamepadAction.OPEN_CONTEXT_MENU, "Clear"))
-            },
+            right = listOf(XmbPrompt(GamepadAction.PREV_CATEGORY, "Switch tab", pairedWith = GamepadAction.NEXT_CATEGORY)),
         )
     }
 

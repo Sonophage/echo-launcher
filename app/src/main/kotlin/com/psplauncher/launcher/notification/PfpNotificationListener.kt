@@ -90,6 +90,7 @@ class PfpNotificationListener : NotificationListenerService(), AndroidNotificati
             isGroupSummary = n.flags and Notification.FLAG_GROUP_SUMMARY != 0,
             canOpen = n.contentIntent != null,
             canDismiss = isClearable,
+            packageName = packageName,
         )
     }
 

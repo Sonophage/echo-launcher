@@ -115,6 +115,7 @@ fun XmbPspStatusStrip(
 
     noticeCount: Int = 0,
     onNoticeCountTapped: (() -> Unit)? = null,
+
     modifier: Modifier = Modifier,
 
     centre: (@Composable BoxScope.() -> Unit)? = null,
@@ -266,7 +267,7 @@ fun XmbPspStatusStrip(
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            if (noticeCount > 0) {
+            run {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -288,13 +289,15 @@ fun XmbPspStatusStrip(
                         tint               = StripMuted,
                         modifier           = Modifier.size(StripIconSize * 0.85f),
                     )
-                    Text(
-                        text       = noticeCount.toString(),
-                        color      = StripPrimary,
-                        fontSize   = StripFontSize,
-                        lineHeight = StripFontSize * 1.25f,
-                        fontWeight = FontWeight.Medium,
-                    )
+                    if (noticeCount > 0) {
+                        Text(
+                            text       = noticeCount.toString(),
+                            color      = StripPrimary,
+                            fontSize   = StripFontSize,
+                            lineHeight = StripFontSize * 1.25f,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
                 }
             }
 

@@ -181,14 +181,12 @@ private fun CategoryDetailContent(
             SettingsGroup("Edit")
             SettingsRow(label = "Rename Category", onClick = { vm.beginRename(cat.id) })
             SettingsValueRow(label = "Change Icon", value = cat.iconKey, onClick = { vm.startChangeIcon() })
-            if (cat.canHide) {
-                SettingsToggleRow(
-                    label    = "Show On Bar",
-                    sublabel = "Hide or show this category in the XMB",
-                    checked  = cat.visible,
-                    onToggle = { vm.toggleVisible(cat.id, it) },
-                )
-            }
+            SettingsToggleRow(
+                label    = "Show On Bar",
+                sublabel = "Hide or show this category in the XMB",
+                checked  = cat.visible,
+                onToggle = { vm.toggleVisible(cat.id, it) },
+            )
             SettingsToggleRow(
                 label    = "Gaming Category",
                 sublabel = "Gaming: games · Non-gaming: apps",

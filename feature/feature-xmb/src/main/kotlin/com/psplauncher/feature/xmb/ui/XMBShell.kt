@@ -105,6 +105,11 @@ import com.psplauncher.feature.xmb.ui.detail.ManualViewerOverlay
 import com.psplauncher.feature.xmb.ui.detail.MetadataPreviewPanel
 import com.psplauncher.feature.xmb.ui.detail.VideoDetailScreen
 import com.psplauncher.feature.xmb.ui.photo.PhotoViewerScreen
+import com.psplauncher.feature.xmb.viewmodel.mediaStage
+import com.psplauncher.feature.xmb.viewmodel.clearableNoticeCount
+import com.psplauncher.feature.xmb.viewmodel.stageActions
+import com.psplauncher.feature.xmb.viewmodel.panelEntries
+import com.psplauncher.feature.xmb.viewmodel.panelStage
 import com.psplauncher.feature.xmb.viewmodel.focusedPillIndex
 import com.psplauncher.feature.xmb.viewmodel.pillRowVisible
 import com.psplauncher.feature.xmb.viewmodel.promptsFor
@@ -181,11 +186,13 @@ fun XMBShellContainer(
         onNotificationsToggled = viewModel::toggleNotifications,
         onLaunchRecentTop = viewModel::launchRecentTop,
         onNotificationsDismissed = viewModel::closeNotifications,
-        onNoticeTapped = viewModel::onNoticeTapped,
-        onNoticeDismissTapped = viewModel::onNoticeDismissTapped,
-        onNoticeMediaPrimary = viewModel::onNoticeMediaPrimary,
-        onNoticeMediaPrev = viewModel::onNoticeMediaPrev,
-        onNoticeMediaNext = viewModel::onNoticeMediaNext,
+        onPanelRowTapped = viewModel::onPanelRowTapped,
+        onStageActionTapped = viewModel::onStageActionTapped,
+        onPanelTabTapped = viewModel::onPanelTabTapped,
+        onNotificationsSwipedOpen = viewModel::onNotificationsSwipedOpen,
+        onNotificationsSwipedClosed = viewModel::onNotificationsSwipedClosed,
+        onPanelSettingTapped = viewModel::onPanelSettingTapped,
+        onSettingsPanelTabTapped = viewModel::onSettingsPanelTabTapped,
         onOpenAppDrawer = viewModel::onOpenAppDrawer,
         onItemTap = viewModel::onItemTap,
         onRecentCardTap = viewModel::onRecentCardTap,
@@ -341,11 +348,13 @@ fun XMBShell(
     onNotificationsToggled: () -> Unit = {},
     onLaunchRecentTop: () -> Unit = {},
     onNotificationsDismissed: () -> Unit = {},
-    onNoticeTapped: (String) -> Unit = {},
-    onNoticeDismissTapped: (String) -> Unit = {},
-    onNoticeMediaPrimary: () -> Unit = {},
-    onNoticeMediaPrev: () -> Unit = {},
-    onNoticeMediaNext: () -> Unit = {},
+    onPanelRowTapped: (com.psplauncher.feature.xmb.viewmodel.NoticeFocus) -> Unit = {},
+    onStageActionTapped: (com.psplauncher.feature.xmb.viewmodel.StageCommand) -> Unit = {},
+    onPanelTabTapped: (com.psplauncher.feature.xmb.viewmodel.PanelTab) -> Unit = {},
+    onNotificationsSwipedOpen: () -> Unit = {},
+    onNotificationsSwipedClosed: () -> Unit = {},
+    onPanelSettingTapped: (Int) -> Unit = {},
+    onSettingsPanelTabTapped: (com.psplauncher.feature.xmb.viewmodel.PanelTab) -> Unit = {},
     onOpenAppDrawer: () -> Unit = {},
 
     onItemTap: (Int) -> Unit = {},
@@ -997,33 +1006,6 @@ fun XMBShell(
                 )
             }
 
-            val sheetMedia = uiState.musicPlayback.track?.let { track ->
-                NoticeMedia(
-                    title = track.title ?: track.displayName,
-                    detail = track.artist,
-                    artUri = track.artUri,
-                    progress = uiState.musicPlayback.durationMs
-                        .takeIf { it > 0 }
-                        ?.let { uiState.musicPlayback.positionMs.toFloat() / it },
-                    elapsed = formatDuration(uiState.musicPlayback.positionMs.toLong()) + "  /  " +
-                        formatDuration(uiState.musicPlayback.durationMs.toLong()),
-                    isPlaying = uiState.musicPlayback.isPlaying,
-                    hasTransport = true,
-                    primaryLabel = "",
-                )
-            } ?: uiState.recentTop?.let { top ->
-                NoticeMedia(
-                    title = top.title,
-                    detail = top.subtitle,
-                    artUri = top.shelfCoverArt,
-                    progress = null,
-                    elapsed = null,
-                    isPlaying = false,
-                    hasTransport = false,
-                    primaryLabel = if (top.gameId != null) "Resume" else "Open",
-                )
-            }
-
             val busyActivity = uiState.artworkFetchTitle?.let {
                 StripLiveActivity(art = null, title = "Refreshing artwork", detail = it)
             }
@@ -1041,16 +1023,17 @@ fun XMBShell(
 
             val xmbContext = uiState.stripShowsXmbContext
 
+            val panelPull = rememberPanelPull(notificationsOpen)
             CompositionLocalProvider(LocalDensity provides baseDensity) {
             XmbPspStatusStrip(
                 sortLabel = uiState.sortLabel.takeIf { xmbContext },
                 showSortButton = uiState.resolvedShowTouchButton && xmbContext,
                 onSortTapped = onXmbSortTapped,
-                live = liveActivity.takeIf { !notificationsOpen },
+                live = liveActivity.takeIf { !notificationsOpen && uiState.activeSettingsScreen == null },
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
 
-                noticeCount = notifications.size + androidNotices.size,
+                noticeCount = uiState.launcherNotices.size + androidNotices.size,
                 onNoticeCountTapped = onNotificationsToggled,
 
                 hints = StripHints(
@@ -1059,7 +1042,15 @@ fun XMBShell(
                     leftRight = uiState.pillRowVisible && xmbContext,
                 ),
 
-                centre = if (uiState.onLastPlayedHome && xmbContext) {
+                centre = if (notificationsOpen) {
+                    {
+                        PanelTabsRow(uiState.panelTab, onPanelTabTapped, Modifier.align(Alignment.Center))
+                    }
+                } else if (uiState.activeSettingsScreen != null) {
+                    {
+                        PanelTabsRow(com.psplauncher.feature.xmb.viewmodel.PanelTab.SETTINGS, onSettingsPanelTabTapped, Modifier.align(Alignment.Center))
+                    }
+                } else if (uiState.onLastPlayedHome && xmbContext) {
                     {
                         RecentFilterRow(
                             filter = uiState.recentFilter,
@@ -1069,14 +1060,25 @@ fun XMBShell(
                         )
                     }
                 } else null,
-                modifier = Modifier.align(Alignment.TopCenter).zIndex(aboveContextRail),
+                modifier = Modifier.align(Alignment.TopCenter).zIndex(aboveContextRail).then(
+                    if (!notificationsOpen && uiState.activeSettingsScreen == null) {
+                        Modifier.panelPullGesture(panelPull, onNotificationsSwipedOpen, onNotificationsSwipedClosed)
+                    } else {
+                        Modifier
+                    },
+                ),
             )
             }
 
+            val panelStage = uiState.panelStage()
             XmbNotificationBar(
                 open = notificationsOpen,
-                items = notifications,
-                android = androidNotices,
+                tab = uiState.panelTab,
+                entries = panelEntries(androidNotices, uiState.launcherNotices),
+                stage = panelStage,
+                actions = stageActions(panelStage, uiState.clearableNoticeCount),
+                recent = uiState.mediaStage(),
+                focus = uiState.focusedNotice,
                 androidAccessGranted = androidAccess,
                 onGrantAndroidAccess = {
                     onNotificationsDismissed()
@@ -1086,8 +1088,6 @@ fun XMBShell(
                         )
                     }
                 },
-                media = sheetMedia,
-                focus = uiState.focusedNotice,
                 quick = QuickSettingsState(
                     waveOn = uiState.waveStyle != com.psplauncher.core.ui.wave.WaveStyle.OFF,
                     backdropOn = uiState.itemBackdropEnabled,
@@ -1097,14 +1097,14 @@ fun XMBShell(
                 quickFocus = uiState.panelQuick,
                 chipFocus = uiState.panelChip,
                 accent = com.psplauncher.core.ui.theme.menuCursorEdge(),
+                onRowTapped = onPanelRowTapped,
+                onActionTapped = onStageActionTapped,
+                settingFocus = uiState.panelSetting,
                 onQuickTapped = onQuickSettingTapped,
-                onNoticeTapped = onNoticeTapped,
-                onNoticeDismissTapped = onNoticeDismissTapped,
-                onMediaPrimary = onNoticeMediaPrimary,
-                onMediaPrev = onNoticeMediaPrev,
-                onMediaNext = onNoticeMediaNext,
-                onDismiss = onNotificationsDismissed,
-                onClear = { SystemToasts.clear(); onNotificationsDismissed() },
+                onSettingTapped = onPanelSettingTapped,
+                pull = panelPull,
+                onOpened = onNotificationsSwipedOpen,
+                onClosed = onNotificationsSwipedClosed,
                 modifier = Modifier.zIndex(NotificationBarZ),
             )
 

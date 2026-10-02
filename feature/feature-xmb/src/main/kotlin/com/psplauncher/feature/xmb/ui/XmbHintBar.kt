@@ -26,4 +26,4 @@ fun XmbHintBar(
 }
 
 private fun XmbPrompt.item() =
-    ControllerPromptItem(action, target?.takeIf { it.isNotBlank() }?.let { "$verb  $it" } ?: verb)
+    ControllerPromptItem(listOfNotNull(action, pairedWith), target?.takeIf { it.isNotBlank() }?.let { "$verb  $it" } ?: verb)

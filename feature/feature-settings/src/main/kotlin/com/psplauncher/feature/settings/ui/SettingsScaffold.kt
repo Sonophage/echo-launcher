@@ -1,5 +1,14 @@
 package com.psplauncher.feature.settings.ui
 
+import com.psplauncher.core.ui.design.PANEL_CARD_RADIUS
+import com.psplauncher.core.ui.design.PANEL_FOCUS_RING_WIDTH
+import com.psplauncher.core.ui.design.PANEL_UNFOCUSED_ALPHA
+import com.psplauncher.core.ui.design.PanelBase
+import com.psplauncher.core.ui.design.PanelCardFill
+import com.psplauncher.core.ui.design.PanelCardFocusFill
+import com.psplauncher.core.ui.design.PanelFocusRing
+import com.psplauncher.core.ui.design.panelBackdrop
+import androidx.compose.ui.unit.em
 import androidx.compose.foundation.ScrollState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -101,7 +110,6 @@ import com.psplauncher.core.ui.components.PfpHintBar
 import com.psplauncher.core.ui.components.StatusStripHeight
 import com.psplauncher.core.ui.gesture.dragToScroll
 import com.psplauncher.core.ui.theme.LocalPFPColors
-import com.psplauncher.core.ui.theme.LocalPfpTextColors
 import com.psplauncher.core.ui.theme.xmbScrimAnchors
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -187,9 +195,9 @@ val SettingsAccent: Color
     @Composable get() = LocalPFPColors.current.accentColor
 
 val SettingsText: Color
-    @Composable get() = LocalPfpTextColors.current.primary
+    @Composable get() = Color.White
 val SettingsSubtext: Color
-    @Composable get() = LocalPfpTextColors.current.secondary
+    @Composable get() = Color.White.copy(alpha = 0.65f)
 
 val SettingsTextShadow = Shadow(
     color = Color.Black.copy(alpha = 0.75f),
@@ -205,32 +213,18 @@ private val SETTINGS_RAIL_WIDTH = 216.dp
 
 val LocalSettingsHelp = compositionLocalOf { mutableStateOf<String?>(null) }
 
-private val SETTINGS_ROW_SHAPE = RoundedCornerShape(10.dp)
-
-private val SETTINGS_ROW_SELECTED_FILL = Color.White.copy(alpha = 0.035f)
-
-private val SETTINGS_ROW_SELECTED_EDGE_START = Color.White.copy(alpha = 0.16f)
-private val SETTINGS_ROW_SELECTED_EDGE_END = Color.White.copy(alpha = 0.38f)
-
-private val SettingsRowSelectedEdgeBrush: Brush
-    get() = Brush.horizontalGradient(
-        listOf(SETTINGS_ROW_SELECTED_EDGE_START, SETTINGS_ROW_SELECTED_EDGE_END),
-    )
+private val SETTINGS_ROW_SHAPE = RoundedCornerShape(PANEL_CARD_RADIUS.dp)
 
 internal fun Modifier.settingsSelectedPlate(selected: Boolean): Modifier = this
     .clip(SETTINGS_ROW_SHAPE)
-    .background(
-        color = if (selected) SETTINGS_ROW_SELECTED_FILL else Color.Transparent,
-        shape = SETTINGS_ROW_SHAPE,
-    )
+    .background(if (selected) PanelCardFocusFill else PanelCardFill, SETTINGS_ROW_SHAPE)
     .then(
-        if (selected) Modifier.border(1.dp, SettingsRowSelectedEdgeBrush, SETTINGS_ROW_SHAPE)
+        if (selected) Modifier.border(PANEL_FOCUS_RING_WIDTH.dp, PanelFocusRing, SETTINGS_ROW_SHAPE)
         else Modifier
     )
 
-private val PICKER_SHAPE = RoundedCornerShape(4.dp)
-private val PICKER_EDGE = Color.White.copy(alpha = 0.22f)
-private val PICKER_FOCUS_EDGE = Color.White.copy(alpha = 0.55f)
+private val PICKER_SHAPE = RoundedCornerShape(PANEL_CARD_RADIUS.dp)
+private val PICKER_EDGE = Color.White.copy(alpha = 0.12f)
 
 data class SettingsPickerOption(val label: String, val help: String? = null)
 
@@ -273,7 +267,7 @@ fun SettingsScaffold(
 
     showDivider: Boolean = true,
 
-    lightScrim: Boolean = false,
+    panelTint: Color? = null,
 
     backdrop: (@Composable () -> Unit)? = null,
 
@@ -695,13 +689,8 @@ fun SettingsScaffold(
                 .then(
                     if (backdrop != null) {
                         Modifier
-                    } else if (lightScrim) {
-                        Modifier.background(
-                            Brush.verticalGradient(
-                                0f to pfpColors.backgroundTop.copy(alpha = 0.45f),
-                                1f to pfpColors.backgroundBottom.copy(alpha = 0.55f),
-                            )
-                        )
+                    } else if (panelTint != null) {
+                        Modifier.panelBackdrop(panelTint)
                     } else {
                         Modifier.background(Brush.verticalGradient(0f to scrimTop, 1f to scrimBottom))
                     }
@@ -914,7 +903,7 @@ private fun SettingsPickerPanel(picker: SettingsPickerRequest, cursor: Int, onDi
                 .widthIn(min = 150.dp, max = SETTINGS_COLUMN_MAX_WIDTH)
                 .clip(PICKER_SHAPE)
 
-                .background(Color(0xF21A1A22), PICKER_SHAPE)
+                .background(PanelBase.copy(alpha = 0.96f), PICKER_SHAPE)
                 .border(1.dp, PICKER_EDGE, PICKER_SHAPE)
                 .padding(PICKER_PADDING),
         ) {
@@ -931,12 +920,12 @@ private fun SettingsPickerPanel(picker: SettingsPickerRequest, cursor: Int, onDi
                             onDismiss()
                         }
                         .background(
-                            if (focused) SETTINGS_ROW_SELECTED_FILL else Color.Transparent,
+                            if (focused) PanelCardFocusFill else Color.Transparent,
                             PICKER_SHAPE,
                         )
 
                         .then(
-                            if (focused) Modifier.border(1.dp, PICKER_FOCUS_EDGE, PICKER_SHAPE)
+                            if (focused) Modifier.border(PANEL_FOCUS_RING_WIDTH.dp, PanelFocusRing, PICKER_SHAPE)
                             else Modifier
                         )
                         .padding(horizontal = 14.dp),
@@ -944,15 +933,15 @@ private fun SettingsPickerPanel(picker: SettingsPickerRequest, cursor: Int, onDi
                 ) {
                     Text(
                         text = if (index == picker.selectedIndex) "\u2713" else " ",
-                        color = SettingsText,
+                        color = Color.White,
                         fontSize = 15.sp,
                         modifier = Modifier.padding(end = 12.dp),
                     )
                     Text(
                         text = option.label,
-                        color = if (focused) Color.White else SettingsText,
+                        color = Color.White.copy(alpha = if (focused) 1f else 0.75f),
                         fontSize = 15.sp,
-                        fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal,
+                        fontWeight = if (focused) FontWeight.Medium else FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -991,7 +980,7 @@ private fun SettingsSectionRail(
             .width(SETTINGS_RAIL_WIDTH)
             .fillMaxHeight()
             .padding(start = 40.dp, end = 12.dp, top = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         itemsIndexed(entries, key = { _, row -> row.id }) { index, row ->
             val isCurrent = row.id == currentId
@@ -999,53 +988,45 @@ private fun SettingsSectionRail(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .graphicsLayer { alpha = if (isCurrent || isCursor) 1f else PANEL_UNFOCUSED_ALPHA }
                     .clip(SETTINGS_ROW_SHAPE)
-                    .background(
-                        if (isCursor) SETTINGS_ROW_SELECTED_FILL else Color.Transparent,
-                        SETTINGS_ROW_SHAPE,
-                    )
+                    .background(if (isCurrent || isCursor) PanelCardFocusFill else PanelCardFill, SETTINGS_ROW_SHAPE)
                     .then(
                         if (isCursor) {
-                            Modifier.border(1.dp, SettingsRowSelectedEdgeBrush, SETTINGS_ROW_SHAPE)
+                            Modifier.border(PANEL_FOCUS_RING_WIDTH.dp, PanelFocusRing, SETTINGS_ROW_SHAPE)
                         } else {
                             Modifier
                         }
                     )
                     .clickable { onPick(row) }
 
-                    .padding(start = 12.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
+                    .padding(start = 14.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = row.title,
-
-                    color = if (isCurrent) SettingsText
-                            else SettingsText.copy(alpha = SETTINGS_RAIL_INACTIVE_ALPHA),
+                    color = Color.White,
                     fontSize = 15.sp,
-                    fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                    fontWeight = if (isCurrent) FontWeight.Medium else FontWeight.Normal,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    style = TextStyle(shadow = SettingsTextShadow),
                 )
             }
         }
     }
 }
 
-private const val SETTINGS_RAIL_INACTIVE_ALPHA = 0.42f
-
 @Composable
 fun SettingsGroup(title: String) {
     Text(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 48.dp, top = 28.dp, bottom = 8.dp),
+            .padding(start = 52.dp, top = 24.dp, bottom = 6.dp),
         text = title.uppercase(),
-        color = SettingsSubtext,
+        color = Color.White.copy(alpha = 0.5f),
         fontSize = 12.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 2.4.sp,
-        style = TextStyle(shadow = SettingsTextShadow),
+        fontWeight = FontWeight.Light,
+        letterSpacing = 0.14.em,
     )
 }
 
@@ -1139,11 +1120,11 @@ fun SettingsRow(
                 }
             }
 
-            .padding(horizontal = 40.dp)
+            .padding(horizontal = 40.dp, vertical = 3.dp)
             .settingsSelectedPlate(rowSelected)
             .focusable()
 
-            .padding(horizontal = 8.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1157,12 +1138,11 @@ fun SettingsRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
-                color = (if (rowSelected) Color.White else SettingsText)
+                color = Color.White
                     .let { if (enabled) it else it.copy(alpha = it.alpha * DISABLED_ROW_ALPHA) },
 
                 fontSize = XmbLayoutSpec.DEFAULT.itemTextSp.sp,
-                fontWeight = if (rowSelected) FontWeight.SemiBold else FontWeight.Normal,
-                style = TextStyle(shadow = SettingsTextShadow),
+                fontWeight = if (rowSelected) FontWeight.Medium else FontWeight.Normal,
             )
         }
         if (value != null) {
@@ -1170,13 +1150,12 @@ fun SettingsRow(
             Text(
                 text = value,
 
-                color = (if (rowSelected) Color.White else SettingsSubtext)
+                color = Color.White.copy(alpha = if (rowSelected) 0.9f else 0.6f)
                     .let { if (enabled) it else it.copy(alpha = it.alpha * DISABLED_ROW_ALPHA) },
 
                 fontSize = XmbLayoutSpec.DEFAULT.itemTextSp.sp,
-                fontWeight = if (rowSelected) FontWeight.SemiBold else FontWeight.Normal,
+                fontWeight = FontWeight.Light,
                 textAlign = TextAlign.End,
-                style = TextStyle(shadow = SettingsTextShadow),
             )
         }
         if (trailing != null) {
@@ -1210,10 +1189,10 @@ fun SettingsRow(
             Spacer(Modifier.height(6.dp))
             Text(
                 text = sublabel,
-                color = Color.White.copy(alpha = 0.86f),
+                color = Color.White.copy(alpha = 0.72f),
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
-                style = TextStyle(shadow = SettingsTextShadow),
+                fontWeight = FontWeight.Light,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -1287,10 +1266,12 @@ fun SettingsToggleRow(
                 checked = checked,
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = SettingsAccent,
-                    uncheckedThumbColor = SettingsSubtext,
-                    uncheckedTrackColor = SettingsDivider,
+                    checkedThumbColor = PanelBase,
+                    checkedTrackColor = Color.White,
+                    checkedBorderColor = Color.White,
+                    uncheckedThumbColor = Color.White.copy(alpha = 0.6f),
+                    uncheckedTrackColor = PanelCardFill,
+                    uncheckedBorderColor = Color.White.copy(alpha = 0.3f),
                 ),
             )
         },

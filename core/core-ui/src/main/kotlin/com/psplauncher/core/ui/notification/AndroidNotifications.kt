@@ -18,6 +18,8 @@ data class AndroidNotice(
     val canOpen: Boolean = false,
 
     val canDismiss: Boolean = false,
+
+    val packageName: String = "",
 )
 
 data class NoticeExtras(
@@ -38,6 +40,7 @@ fun noticeOf(
     isGroupSummary: Boolean = false,
     canOpen: Boolean = false,
     canDismiss: Boolean = false,
+    packageName: String = "",
 ): AndroidNotice? {
     if (isGroupSummary) return null
     return AndroidNotice(
@@ -48,6 +51,7 @@ fun noticeOf(
         postedAt = postedAt,
         canOpen = canOpen,
         canDismiss = canDismiss,
+        packageName = packageName,
     )
 }
 

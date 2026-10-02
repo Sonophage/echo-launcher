@@ -23,6 +23,8 @@ private val KEY_LAST_PLAYED_PLACED = booleanPreferencesKey("last_played_placed_v
 
 private val KEY_NETWORK_RENAMED = booleanPreferencesKey("network_renamed_v1")
 
+private val KEY_SETTINGS_ON_PANEL = booleanPreferencesKey("settings_on_panel_v1")
+
 private val KEY_ANDROID_CARD_SEEDED = booleanPreferencesKey("android_card_seeded_v1")
 
 internal enum class AndroidCardSeed { CREATE_AND_MARK, MARK_ONLY, NOTHING }
@@ -71,6 +73,7 @@ class DatabaseInitializer @Inject constructor(
         categoryRepository.reconcileBuiltInCategories()
         placeLastPlayed()
         renameNetworkColumn()
+        moveSettingsToPanel()
         seedAndroidCard()
         seedThemes()
 
@@ -104,6 +107,13 @@ class DatabaseInitializer @Inject constructor(
         if (prefs[KEY_NETWORK_RENAMED] == true) return
         categoryRepository.renameStaleOnlineColumn()
         context.pfpDataStore.edit { it[KEY_NETWORK_RENAMED] = true }
+    }
+
+    private suspend fun moveSettingsToPanel() {
+        val prefs = context.pfpDataStore.data.first()
+        if (prefs[KEY_SETTINGS_ON_PANEL] == true) return
+        categoryRepository.setVisible(com.psplauncher.core.domain.model.BuiltInCategory.SETTINGS, false)
+        context.pfpDataStore.edit { it[KEY_SETTINGS_ON_PANEL] = true }
     }
 
     private suspend fun seedAndroidCard() {
