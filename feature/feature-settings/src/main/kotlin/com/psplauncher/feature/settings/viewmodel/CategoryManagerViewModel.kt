@@ -9,14 +9,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class CategoryStep { LIST, PICK_ICON, PICK_TYPE, DETAIL }
-
-private val LEGACY_APP_PSEUDO_CATEGORY_IDS = setOf("music_apps", "video_apps", "photo_apps")
 
 data class CategoryRow(
     val id: String,
@@ -66,7 +65,7 @@ class CategoryManagerViewModel @Inject constructor(
     ) { categories, scratch ->
         scratch.copy(
 
-            categories = categories.filterNot { it.id in LEGACY_APP_PSEUDO_CATEGORY_IDS }.map {
+            categories = categories.filterNot { it.id in CategoryRepositoryImpl.LEGACY_APP_PSEUDO_IDS }.map {
                 CategoryRow(
                     id                 = it.id,
                     name               = it.name,
@@ -138,24 +137,20 @@ class CategoryManagerViewModel @Inject constructor(
     }
 
     fun chooseType(isGaming: Boolean) {
-        val s = _scratch.value
-        viewModelScope.launch {
-            if (s.pickingTypeForCreate) {
-                val name = s.pendingName ?: return@launch
-                val iconKey = s.pendingIconKey ?: return@launch
-                categoryRepository.createCustomCategory(name, iconKey, isGaming)
-                _scratch.update {
-                    it.copy(
-                        step = CategoryStep.LIST,
-                        pendingName = null,
-                        pendingIconKey = null,
-                        pickingIconForCreate = false,
-                        pickingTypeForCreate = false,
-                        pendingIsGamingCategory = false,
-                    )
-                }
-            }
+        val s = _scratch.getAndUpdate {
+            if (!it.pickingTypeForCreate) it else it.copy(
+                step = CategoryStep.LIST,
+                pendingName = null,
+                pendingIconKey = null,
+                pickingIconForCreate = false,
+                pickingTypeForCreate = false,
+                pendingIsGamingCategory = false,
+            )
         }
+        if (!s.pickingTypeForCreate) return
+        val name = s.pendingName ?: return
+        val iconKey = s.pendingIconKey ?: return
+        viewModelScope.launch { categoryRepository.createCustomCategory(name, iconKey, isGaming) }
     }
 
     fun openDetail(id: String) = _scratch.update { it.copy(step = CategoryStep.DETAIL, detailId = id, returnFocusKey = id) }

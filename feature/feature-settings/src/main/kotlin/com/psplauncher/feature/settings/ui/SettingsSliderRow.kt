@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.abs
 import kotlin.math.round
 
 internal class SettingsSliderNode(
@@ -60,15 +61,22 @@ fun SettingsSliderRow(
     var isFocused by remember { mutableStateOf(false) }
 
     val latestValue = remember { mutableStateOf(value) }
-    SideEffect { latestValue.value = value }
-    val stepSize = if (steps > 0) (valueRange.endInclusive - valueRange.start) / (steps + 1) else 0f
+    val pendingValue = remember { mutableStateOf<Float?>(null) }
+    val stepSize = (valueRange.endInclusive - valueRange.start) / (if (steps > 0) steps + 1 else 10)
+    SideEffect {
+        latestValue.value = value
+        val pending = pendingValue.value
+        if (pending != null && abs(value - pending) < stepSize / 2) pendingValue.value = null
+    }
 
     val enterAdjustment = {
         val node = SettingsSliderNode(
             onStep = { delta ->
-                val raw = latestValue.value + delta * stepSize
+                val raw = (pendingValue.value ?: latestValue.value) + delta * stepSize
                 val next = if (steps > 0) round(raw / stepSize) * stepSize else raw
-                onValueChange(next.coerceIn(valueRange.start, valueRange.endInclusive))
+                val clamped = next.coerceIn(valueRange.start, valueRange.endInclusive)
+                pendingValue.value = clamped
+                onValueChange(clamped)
             },
         )
         enterSliderMode(node)
@@ -142,6 +150,7 @@ fun SettingsSliderRow(
             onValueChange = { v ->
 
                 touchInput()
+                pendingValue.value = null
                 onValueChange(v)
             },
             valueRange = valueRange,
