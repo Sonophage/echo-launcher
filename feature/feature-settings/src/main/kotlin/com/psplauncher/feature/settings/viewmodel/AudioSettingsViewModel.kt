@@ -19,6 +19,7 @@ import com.psplauncher.core.ui.sound.MenuSoundPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -119,8 +120,15 @@ class AudioSettingsViewModel @Inject constructor(
         pendingSlot = null
         viewModelScope.launch {
             _importing.value = true
-            val result = store.import(slot, uri)
-            _importing.value = false
+            val result = try {
+                store.import(slot, uri)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                UiMediaStore.ImportResult(false, UI_MEDIA_IMPORT_FAILED)
+            } finally {
+                _importing.value = false
+            }
             if (result.ok) {
                 menuSound.refreshCustomSamples()
             } else {

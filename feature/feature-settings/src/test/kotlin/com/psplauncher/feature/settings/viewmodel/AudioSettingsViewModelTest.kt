@@ -257,6 +257,28 @@ class AudioSettingsViewModelTest {
         verify { menuSound.play(MenuSound.ERROR) }
     }
 
+    @Test fun `a failed import does not crash and does not leave the screen busy`() = runTest(dispatcher) {
+        val failingStore: UiMediaStore = mockk(relaxed = true) {
+            io.mockk.coEvery { import(any(), any()) } throws java.io.IOException("disk full")
+        }
+        val vm = AudioSettingsViewModel(
+            context,
+            failingStore,
+            menuSound,
+            com.psplauncher.core.data.media.MenuMusicPreferences(context),
+            bootPreviewer,
+            ControllerLayoutRepository(context, ControllerMappingRepository(context)),
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
+        vm.onPickerLaunchedFor(UiMediaSlot.SOUND_SCROLL)
+
+        vm.onSoundPicked(Uri.parse("content://test/full-disk.wav"))
+
+        eventually("the failure surfaces in the message dialog") { vm.uiState.value.message != null }
+        assertFalse(vm.uiState.value.importing, "the busy indicator must clear after a failed import")
+        verify { menuSound.play(MenuSound.ERROR) }
+    }
+
     @Test fun `a confirmed reset plays the confirm sound`() = runTest(dispatcher) {
         vm.confirmReset()
         advanceUntilIdle()

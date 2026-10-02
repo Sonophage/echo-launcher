@@ -159,6 +159,8 @@ data class DisplaySettingsUiState(
 
 const val UI_MEDIA_DEFAULT_LABEL = "PSP Default"
 
+internal const val UI_MEDIA_IMPORT_FAILED = "Couldn't save that file — try again"
+
 internal suspend fun saveThenPrune(save: suspend () -> Unit, prune: suspend () -> Unit): Boolean {
     try {
         save()
@@ -267,6 +269,10 @@ class DisplaySettingsViewModel @Inject constructor(
             _wallpaperImporting.value = true
             val result = try {
                 uiMediaStore.import(slot, uri)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                UiMediaStore.ImportResult(false, UI_MEDIA_IMPORT_FAILED)
             } finally {
                 _wallpaperImporting.value = false
             }

@@ -94,6 +94,34 @@ class DisplaySettingsViewModelGameBootTest {
         eventually("boolean false surfaces as off in the row") { !vm.uiState.first().gameBootEnabled }
     }
 
+    @Test
+    fun `a failed boot video import does not crash and does not leave the screen busy`() = runTest(dispatcher) {
+        val failingStore: UiMediaStore = io.mockk.mockk(relaxed = true) {
+            io.mockk.coEvery { import(any(), any()) } throws java.io.IOException("disk full")
+        }
+        val vm = DisplaySettingsViewModel(
+            context,
+            failingStore,
+            GameBootPreferences(context),
+            com.psplauncher.core.data.launch.LaunchDiscPreferences(context),
+            io.mockk.mockk(relaxed = true),
+            io.mockk.mockk(relaxed = true) {
+                io.mockk.every { prefs } returns kotlinx.coroutines.flow.flowOf(
+                    com.psplauncher.core.domain.model.ControllerLayoutPrefs()
+                )
+            },
+            io = dispatcher,
+        )
+        vm.onUiMediaPickerLaunchedFor(com.psplauncher.core.domain.model.UiMediaSlot.BOOT_VIDEO)
+
+        vm.onUiMediaPicked(android.net.Uri.parse("content://test/full-disk.mp4"))
+
+        eventually("the failure surfaces as the screen message") {
+            val state = vm.uiState.first()
+            state.wallpaperMessage != null && !state.wallpaperImporting
+        }
+    }
+
     private companion object {
         val KEY_GAMEBOOT_ENABLED = booleanPreferencesKey("display_gameboot_enabled")
         val KEY_GAMEBOOT_MODE = stringPreferencesKey("display_gameboot_mode")
