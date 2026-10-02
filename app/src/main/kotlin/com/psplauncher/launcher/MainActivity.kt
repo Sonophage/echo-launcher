@@ -3,6 +3,7 @@ package com.psplauncher.launcher
 import com.psplauncher.core.domain.model.GamepadAction
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -23,13 +24,16 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.psplauncher.core.ui.notification.AndroidNotifications
 import com.psplauncher.core.ui.theme.PFPTheme
 import com.psplauncher.feature.library.scanner.LibraryRescanCoordinator
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import com.psplauncher.feature.xmb.gamepad.GamepadInputHandler
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel
+import com.psplauncher.launcher.notification.PfpNotificationListener
 import com.psplauncher.launcher.receiver.InstallShortcutReceiver
 import com.psplauncher.launcher.receiver.MediaMountReceiver
 import com.psplauncher.launcher.receiver.UsbDisconnectReceiver
@@ -144,11 +148,30 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun rebindNotificationListenerIfDetached() {
+        if (!AndroidNotifications.isEnabled(this)) return
+        lifecycleScope.launch {
+            delay(LISTENER_ATTACH_GRACE_MS)
+            if (AndroidNotifications.isAttached) return@launch
+            Timber.i("Notification listener is allowed but not attached; toggling it so the system rebinds")
+            val listener = ComponentName(this@MainActivity, PfpNotificationListener::class.java)
+            runCatching {
+                packageManager.setComponentEnabledSetting(
+                    listener, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP,
+                )
+                packageManager.setComponentEnabledSetting(
+                    listener, PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, PackageManager.DONT_KILL_APP,
+                )
+            }.onFailure { Timber.w(it, "Notification listener rebind failed") }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         hideSystemBars()
 
         launchDispatcher.onHostResumed()
+        rebindNotificationListenerIfDetached()
 
         if (wasStopped) {
             wasStopped = false
@@ -261,3 +284,5 @@ class MainActivity : ComponentActivity() {
         return super.onGenericMotionEvent(event)
     }
 }
+
+private const val LISTENER_ATTACH_GRACE_MS = 3_000L

@@ -80,6 +80,8 @@ object AndroidNotifications {
         actions = null
     }
 
+    val isAttached: Boolean get() = actions != null
+
     fun open(key: String): Boolean = actions?.open(key) ?: false
 
     fun dismiss(key: String) {
