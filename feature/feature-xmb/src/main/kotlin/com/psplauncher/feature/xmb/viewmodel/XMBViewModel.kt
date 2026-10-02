@@ -448,6 +448,8 @@ enum class DrillOutStep {
     PLATFORM_FOLDER,
 }
 
+internal enum class InitialSetupDecision { ALREADY_SEEN, SEED_AS_SEEN, OPEN_WIZARD }
+
 @androidx.compose.runtime.Immutable
 
 data class MediaCovers(
@@ -8293,14 +8295,15 @@ class XMBViewModel @Inject constructor(
     private fun checkInitialSetup() {
         viewModelScope.launch {
             val prefs = context.pfpDataStore.data.first()
-            when {
-                prefs[KEY_INITIAL_SETUP_SEEN] == true ->
+            when (initialSetupDecision(prefs, existingCards())) {
+                InitialSetupDecision.ALREADY_SEEN ->
                     Timber.d("StartupSeq: initial setup already seen")
-                hasExistingSetupConfig(prefs) || hasExistingLibrary() -> {
+                InitialSetupDecision.SEED_AS_SEEN -> {
                     context.pfpDataStore.edit { it[KEY_INITIAL_SETUP_SEEN] = true }
                     Timber.i("StartupSeq: existing configuration found, wizard seeded as seen")
                 }
-                else -> {
+                InitialSetupDecision.OPEN_WIZARD -> {
+                    context.pfpDataStore.edit { it[KEY_INITIAL_SETUP_STARTED] = true }
                     Timber.i("StartupSeq: fresh install, opening first-run wizard")
                     _uiState.update { it.copy(activeSettingsScreen = INITIAL_SETUP_FIRST_RUN_SCREEN_ID) }
                 }
@@ -8310,8 +8313,8 @@ class XMBViewModel @Inject constructor(
         }
     }
 
-    private suspend fun hasExistingLibrary(): Boolean =
-        runCatching { memoryCardRepository.getAll().isNotEmpty() }.getOrDefault(false)
+    private suspend fun existingCards(): List<MemoryCard> =
+        runCatching { memoryCardRepository.getAll() }.getOrDefault(emptyList())
 
     private fun logStartupSequence() {
         viewModelScope.launch {
@@ -8623,6 +8626,8 @@ class XMBViewModel @Inject constructor(
 
         private val KEY_INITIAL_SETUP_SEEN = com.psplauncher.core.data.repository.InitialSetupFlag.KEY_SEEN
 
+        private val KEY_INITIAL_SETUP_STARTED = com.psplauncher.core.data.repository.InitialSetupFlag.KEY_STARTED
+
         internal fun returnAddressFor(screenId: String?): String? =
             screenId.takeIf { it in WIZARD_SCREEN_IDS }
 
@@ -8647,6 +8652,19 @@ class XMBViewModel @Inject constructor(
         internal fun hasExistingSetupConfig(prefs: androidx.datastore.preferences.core.Preferences): Boolean =
             prefs[KEY_SETUP_COMPLETE] == true ||
                 EXISTING_CONFIG_STRING_KEYS.any { !prefs[it].isNullOrBlank() }
+
+        internal fun initialSetupDecision(
+            prefs: androidx.datastore.preferences.core.Preferences,
+            cards: List<MemoryCard>,
+        ): InitialSetupDecision = when {
+            prefs[KEY_INITIAL_SETUP_SEEN] == true -> InitialSetupDecision.ALREADY_SEEN
+            prefs[KEY_INITIAL_SETUP_STARTED] == true -> InitialSetupDecision.OPEN_WIZARD
+            hasExistingSetupConfig(prefs) || cards.any { it.isUserLibrary() } -> InitialSetupDecision.SEED_AS_SEEN
+            else -> InitialSetupDecision.OPEN_WIZARD
+        }
+
+        private fun MemoryCard.isUserLibrary(): Boolean =
+            platformId != ANDROID_PLATFORM_ID || gameCount > 0
         private val KEY_CUSTOM_WALLPAPER  = stringPreferencesKey("display_custom_wallpaper")
 
         private val KEY_MOTION_WALLPAPER = stringPreferencesKey("display_motion_wallpaper")

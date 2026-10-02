@@ -20,6 +20,8 @@ class BackupKeyDriftTest {
 
         "network_renamed_v1" to "one-shot name fix that a restore must be able to re-run",
         "settings_on_panel_v1" to "one-shot move of Settings off the crossbar that a restore must be able to re-run",
+        "initial_setup_started" to
+            "marks a wizard in progress on this device; the seen flag is what a restore carries",
         "data_prep_version" to "migration marker",
 
         "theme_icons_stamp" to "dangling pointer into un-bundled files",
