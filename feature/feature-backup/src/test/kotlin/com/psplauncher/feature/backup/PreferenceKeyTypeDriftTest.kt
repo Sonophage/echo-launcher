@@ -17,7 +17,7 @@ class PreferenceKeyTypeDriftTest {
 
     private val declarations: Map<String, Map<String, List<String>>> by lazy {
         val found = mutableMapOf<String, MutableMap<String, MutableList<String>>>()
-        repoRoot.walkTopDown()
+        repoRoot.walkTopDown().onEnter { it == repoRoot || !it.name.startsWith(".") }
             .filter { it.isFile && it.extension == "kt" }
             .filterNot { "${File.separator}build${File.separator}" in it.path }
             .filterNot { "${File.separator}src${File.separator}test${File.separator}" in it.path }

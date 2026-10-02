@@ -56,7 +56,7 @@ class BackupKeyDriftTest {
     private val dynamicKeyPrefixes = listOf("ui_media_name_")
 
     private val appSources: List<String> by lazy {
-        repoRoot.walkTopDown()
+        repoRoot.walkTopDown().onEnter { it == repoRoot || !it.name.startsWith(".") }
             .filter { it.isFile && it.extension == "kt" }
             .filterNot { "/build/" in it.path || "${File.separator}build${File.separator}" in it.path }
             .filterNot { "feature-backup" in it.path }
@@ -69,7 +69,7 @@ class BackupKeyDriftTest {
 
     private val declared: Map<String, List<String>> by lazy {
         val found = mutableMapOf<String, MutableList<String>>()
-        repoRoot.walkTopDown()
+        repoRoot.walkTopDown().onEnter { it == repoRoot || !it.name.startsWith(".") }
             .filter { it.isFile && it.extension == "kt" }
             .filterNot { "/build/" in it.path || "${File.separator}build${File.separator}" in it.path }
             .filter { "src${File.separator}main" in it.path }
@@ -123,7 +123,7 @@ class BackupKeyDriftTest {
     @Test
     fun `every dynamic key prefix is real, so the exemption cannot hide anything`() {
         dynamicKeyPrefixes.forEach { prefix ->
-            val found = repoRoot.walkTopDown()
+            val found = repoRoot.walkTopDown().onEnter { it == repoRoot || !it.name.startsWith(".") }
                 .filter { it.isFile && it.extension == "kt" }
                 .filterNot { "/build/" in it.path || "feature-backup" in it.path }
                 .any { prefix in it.readText() }
