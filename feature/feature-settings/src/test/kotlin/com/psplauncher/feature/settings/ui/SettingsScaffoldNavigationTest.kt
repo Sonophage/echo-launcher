@@ -60,6 +60,7 @@ class SettingsScaffoldNavigationTest {
         leftBacksOut: Boolean = true,
 
         screenId: String? = null,
+        onInterceptAction: ((GamepadAction) -> Boolean)? = null,
         body: @Composable () -> Unit,
     ) {
         composeRule.setContent {
@@ -80,6 +81,7 @@ class SettingsScaffoldNavigationTest {
                         title = "Settings",
                         subtitle = "Test screen",
                         onBack = onBack,
+                        onInterceptAction = onInterceptAction,
                     ) {
                         body()
                     }
@@ -172,6 +174,29 @@ class SettingsScaffoldNavigationTest {
         press(GamepadAction.NAVIGATE_UP)
         assertFocusedRow("Theme")
         assertEquals("a closed overlay must not keep receiving presses", 2, seen.size)
+    }
+
+    @Test
+    fun `an open overlay is not bypassed by the screen's own button handling`() {
+        val seen = mutableListOf<GamepadAction>()
+        val intercepted = mutableListOf<GamepadAction>()
+        val overlayOpen = mutableStateOf(false)
+        showScreen(onInterceptAction = { intercepted += it; true }) {
+            SettingsRow(label = "Sound", onClick = {})
+            if (overlayOpen.value) SettingsOverlayInput { seen += it }
+        }
+
+        composeRule.runOnIdle { overlayOpen.value = true }
+        composeRule.waitForIdle()
+        press(GamepadAction.OPEN_CONTEXT_MENU)
+
+        assertEquals("the prompt must get the press", listOf(GamepadAction.OPEN_CONTEXT_MENU), seen)
+        assertEquals("the screen behind the prompt must not act on it", emptyList<GamepadAction>(), intercepted)
+
+        composeRule.runOnIdle { overlayOpen.value = false }
+        composeRule.waitForIdle()
+        press(GamepadAction.OPEN_CONTEXT_MENU)
+        assertEquals("with the prompt gone the screen handles its own buttons again", listOf(GamepadAction.OPEN_CONTEXT_MENU), intercepted)
     }
 
     @Test
