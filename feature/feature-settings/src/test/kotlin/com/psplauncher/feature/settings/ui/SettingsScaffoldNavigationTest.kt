@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.theme.PFPTheme
@@ -60,6 +61,7 @@ class SettingsScaffoldNavigationTest {
         leftBacksOut: Boolean = true,
 
         screenId: String? = null,
+        onInterceptAction: ((GamepadAction) -> Boolean)? = null,
         body: @Composable () -> Unit,
     ) {
         composeRule.setContent {
@@ -80,6 +82,7 @@ class SettingsScaffoldNavigationTest {
                         title = "Settings",
                         subtitle = "Test screen",
                         onBack = onBack,
+                        onInterceptAction = onInterceptAction,
                     ) {
                         body()
                     }
@@ -172,6 +175,54 @@ class SettingsScaffoldNavigationTest {
         press(GamepadAction.NAVIGATE_UP)
         assertFocusedRow("Theme")
         assertEquals("a closed overlay must not keep receiving presses", 2, seen.size)
+    }
+
+    @Test
+    fun `an open overlay is not bypassed by the screen's own button handling`() {
+        val seen = mutableListOf<GamepadAction>()
+        val intercepted = mutableListOf<GamepadAction>()
+        val overlayOpen = mutableStateOf(false)
+        showScreen(onInterceptAction = { intercepted += it; true }) {
+            SettingsRow(label = "Sound", onClick = {})
+            if (overlayOpen.value) SettingsOverlayInput { seen += it }
+        }
+
+        composeRule.runOnIdle { overlayOpen.value = true }
+        composeRule.waitForIdle()
+        press(GamepadAction.OPEN_CONTEXT_MENU)
+
+        assertEquals("the prompt must get the press", listOf(GamepadAction.OPEN_CONTEXT_MENU), seen)
+        assertEquals("the screen behind the prompt must not act on it", emptyList<GamepadAction>(), intercepted)
+
+        composeRule.runOnIdle { overlayOpen.value = false }
+        composeRule.waitForIdle()
+        press(GamepadAction.OPEN_CONTEXT_MENU)
+        assertEquals("with the prompt gone the screen handles its own buttons again", listOf(GamepadAction.OPEN_CONTEXT_MENU), intercepted)
+    }
+
+    @Test
+    fun `a picker opened by touch is driven by the controller, not the hidden rail`() {
+        var backs = 0
+        val picked = mutableListOf<Int>()
+        showScreen(onBack = { backs++ }, screenId = "settings_library") {
+            SettingsPickerRow(
+                label = "Speed",
+                options = listOf(SettingsPickerOption("Slow"), SettingsPickerOption("Fast")),
+                selectedIndex = 0,
+                onPick = { picked += it },
+            )
+        }
+
+        press(GamepadAction.NAVIGATE_LEFT)
+        composeRule.onNodeWithText("Speed").performClick()
+        composeRule.waitForIdle()
+        press(GamepadAction.BACK)
+        assertEquals("BACK must close the picker, not leave the screen through the rail", 0, backs)
+
+        composeRule.onNodeWithText("Speed").performClick()
+        composeRule.waitForIdle()
+        press(GamepadAction.SELECT)
+        assertEquals("SELECT must pick from the picker the finger opened", listOf(0), picked)
     }
 
     @Test

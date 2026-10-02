@@ -26,6 +26,26 @@ class SettingsHierarchyTest {
         assertEquals(null, XMBViewModel.returnAddressFor(null))
     }
 
+    @Test fun `Back from a screen reached by the rail still returns to the wizard`() {
+        val wizard = XMBViewModel.INITIAL_SETUP_SCREEN_ID
+        val toThemes = XMBViewModel.nextReturnAddress(wizard, "settings_themes", null)
+        assertEquals(wizard, toThemes)
+
+        val toLayout = XMBViewModel.nextReturnAddress("settings_themes", "settings_layout", toThemes)
+        assertEquals("one rail step must not lose the way back to the wizard", wizard, toLayout)
+
+        assertEquals(
+            "stepping back onto the wizard itself leaves nothing to return to",
+            null,
+            XMBViewModel.nextReturnAddress("settings_layout", wizard, toLayout),
+        )
+        assertEquals(
+            "a rail walk that never left a wizard has no return address",
+            null,
+            XMBViewModel.nextReturnAddress("settings_themes", "settings_layout", null),
+        )
+    }
+
     @Test fun `both wizard routes are real screens, and the id list covers both`() {
         XMBViewModel.WIZARD_SCREEN_IDS.forEach {
             assertTrue("$it has no route", it in SETTINGS_SCREEN_ROUTES)

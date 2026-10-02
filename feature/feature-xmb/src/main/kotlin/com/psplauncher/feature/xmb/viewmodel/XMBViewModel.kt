@@ -7721,7 +7721,7 @@ class XMBViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 activeSettingsScreen = screenId,
-                settingsReturnTo = returnAddressFor(it.activeSettingsScreen),
+                settingsReturnTo = nextReturnAddress(it.activeSettingsScreen, screenId, it.settingsReturnTo),
             )
         }
     }
@@ -8630,6 +8630,9 @@ class XMBViewModel @Inject constructor(
 
         internal fun returnAddressFor(screenId: String?): String? =
             screenId.takeIf { it in WIZARD_SCREEN_IDS }
+
+        internal fun nextReturnAddress(from: String?, to: String, held: String?): String? =
+            (returnAddressFor(from) ?: held)?.takeIf { it != to }
 
         internal val WIZARD_SCREEN_IDS: Set<String>
             get() = setOf(INITIAL_SETUP_SCREEN_ID, INITIAL_SETUP_FIRST_RUN_SCREEN_ID)

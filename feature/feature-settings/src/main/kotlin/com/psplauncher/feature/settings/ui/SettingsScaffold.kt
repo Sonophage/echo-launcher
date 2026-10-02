@@ -492,18 +492,18 @@ fun SettingsScaffold(
         }
         Timber.d("Settings focus: action=$pendingAction focusedClick=${focusedRowClick.value != null}")
 
+        overlayInput?.value?.let { handle ->
+            handle(pendingAction)
+            onConsumed()
+            return@LaunchedEffect
+        }
+
         if (onInterceptAction?.invoke(pendingAction) == true) {
             onConsumed()
             return@LaunchedEffect
         }
 
         if (revivalPress && pendingAction.isDirectional) {
-            onConsumed()
-            return@LaunchedEffect
-        }
-
-        overlayInput?.value?.let { handle ->
-            handle(pendingAction)
             onConsumed()
             return@LaunchedEffect
         }
@@ -679,6 +679,7 @@ fun SettingsScaffold(
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
                         cursorVisible.value = false
+                        railFocused.value = false
                         touchScrolled.value = true
                         navigationState.markTouchInput()
                         notifyTouchInput()
