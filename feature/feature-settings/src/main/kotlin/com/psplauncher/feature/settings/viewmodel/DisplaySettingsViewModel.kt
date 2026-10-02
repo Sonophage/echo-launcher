@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -78,6 +79,8 @@ internal val KEY_MOTION_WALLPAPER  = stringPreferencesKey("display_motion_wallpa
 private val SUPPORTED_WALLPAPER_MIME = setOf("image/png", "image/jpeg", "image/webp") + MotionLimits.SUPPORTED_MIME
 
 private val MOTION_WALLPAPER_MIME = MotionLimits.SUPPORTED_MIME
+
+private const val WALLPAPER_SAVE_FAILED = "Couldn't save the wallpaper — try again"
 
 private val TOUCH_NAV_BUTTON_LABELS = mapOf(
     TouchNavButtonMode.AUTO        to "Auto",
@@ -155,6 +158,20 @@ data class DisplaySettingsUiState(
 }
 
 const val UI_MEDIA_DEFAULT_LABEL = "PSP Default"
+
+internal const val UI_MEDIA_IMPORT_FAILED = "Couldn't save that file — try again"
+
+internal suspend fun saveThenPrune(save: suspend () -> Unit, prune: suspend () -> Unit): Boolean {
+    try {
+        save()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        return false
+    }
+    prune()
+    return true
+}
 
 @HiltViewModel
 class DisplaySettingsViewModel @Inject constructor(
@@ -252,6 +269,10 @@ class DisplaySettingsViewModel @Inject constructor(
             _wallpaperImporting.value = true
             val result = try {
                 uiMediaStore.import(slot, uri)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                UiMediaStore.ImportResult(false, UI_MEDIA_IMPORT_FAILED)
             } finally {
                 _wallpaperImporting.value = false
             }
@@ -357,13 +378,17 @@ class DisplaySettingsViewModel @Inject constructor(
                 WallpaperLuminanceProbe.survey(dest.absolutePath)
             }
 
-            save {
-                it[KEY_CUSTOM_WALLPAPER] = dest.absolutePath
-                it.remove(KEY_MOTION_WALLPAPER)
-                it.setWallpaperLuma(luma)
-            }
-            pruneWallpaperDir(keep = listOf(dest))
-            _wallpaperMessage.value = "Wallpaper applied"
+            val saved = saveThenPrune(
+                save = {
+                    context.pfpDataStore.edit {
+                        it[KEY_CUSTOM_WALLPAPER] = dest.absolutePath
+                        it.remove(KEY_MOTION_WALLPAPER)
+                        it.setWallpaperLuma(luma)
+                    }
+                },
+                prune = { pruneWallpaperDir(keep = listOf(dest)) },
+            )
+            _wallpaperMessage.value = if (saved) "Wallpaper applied" else WALLPAPER_SAVE_FAILED
         } else {
             runCatching { dest.delete() }
             _wallpaperMessage.value = "Couldn't read that file — try a different one"
@@ -431,13 +456,17 @@ class DisplaySettingsViewModel @Inject constructor(
             WallpaperLuminanceProbe.survey(posterDest.absolutePath)
         }
 
-        save {
-            it[KEY_CUSTOM_WALLPAPER] = posterDest.absolutePath
-            it[KEY_MOTION_WALLPAPER] = motionDest.absolutePath
-            it.setWallpaperLuma(luma)
-        }
-        pruneWallpaperDir(keep = listOf(motionDest, posterDest))
-        _wallpaperMessage.value = "Motion wallpaper applied"
+        val saved = saveThenPrune(
+            save = {
+                context.pfpDataStore.edit {
+                    it[KEY_CUSTOM_WALLPAPER] = posterDest.absolutePath
+                    it[KEY_MOTION_WALLPAPER] = motionDest.absolutePath
+                    it.setWallpaperLuma(luma)
+                }
+            },
+            prune = { pruneWallpaperDir(keep = listOf(motionDest, posterDest)) },
+        )
+        _wallpaperMessage.value = if (saved) "Motion wallpaper applied" else WALLPAPER_SAVE_FAILED
     }
 
     private fun probeMotionFile(file: File, mime: String): MotionLimits.Probe? = runCatching {
@@ -505,17 +534,22 @@ class DisplaySettingsViewModel @Inject constructor(
             val poster = current[KEY_CUSTOM_WALLPAPER]
             val motion = current[KEY_MOTION_WALLPAPER]
 
-            save {
-                it.remove(KEY_CUSTOM_WALLPAPER)
-                it.remove(KEY_MOTION_WALLPAPER)
-                it.clearWallpaperLuma()
-            }
-
-            withContext(io) {
-                poster?.let { runCatching { File(it).delete() } }
-                motion?.let { runCatching { File(it).delete() } }
-            }
-            _wallpaperMessage.value = "Wallpaper reset to default"
+            val saved = saveThenPrune(
+                save = {
+                    context.pfpDataStore.edit {
+                        it.remove(KEY_CUSTOM_WALLPAPER)
+                        it.remove(KEY_MOTION_WALLPAPER)
+                        it.clearWallpaperLuma()
+                    }
+                },
+                prune = {
+                    withContext(io) {
+                        poster?.let { runCatching { File(it).delete() } }
+                        motion?.let { runCatching { File(it).delete() } }
+                    }
+                },
+            )
+            _wallpaperMessage.value = if (saved) "Wallpaper reset to default" else WALLPAPER_SAVE_FAILED
         }
     }
 
