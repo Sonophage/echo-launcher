@@ -3,6 +3,8 @@ package com.psplauncher.feature.backup
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -37,6 +39,7 @@ import com.psplauncher.core.data.database.entity.VideoPlaylistEntity
 import com.psplauncher.core.data.database.entity.VideoPlaylistItemEntity
 import com.psplauncher.core.common.security.KeystoreSecretCipher
 import com.psplauncher.core.data.datastore.pfpDataStore
+import com.psplauncher.core.data.datastore.readerDataStore
 import com.psplauncher.core.data.repository.BackupFolderRepository
 import com.psplauncher.core.data.repository.UiMediaStore
 import com.psplauncher.core.domain.model.UiMediaSlot
@@ -95,6 +98,7 @@ open class BackupManager @Inject constructor(
         val items        = categoryDao.getAllItems()
         val sessions     = playSessionDao.getAll()
         val settings     = readSettingsSnapshot()
+        val reader       = readReaderSnapshot()
 
         val manifest = BackupManifest(
             appVersionCode = appVersionCode,
@@ -115,6 +119,7 @@ open class BackupManager @Inject constructor(
             zip.writeJson(BackupEntry.CATEGORY_ITEMS, json.encodeToString(listSerializer<CategoryItemEntity>(), items))
             zip.writeJson(BackupEntry.PLAY_SESSIONS,  json.encodeToString(listSerializer<PlaySessionEntity>(), sessions))
             zip.writeJson(BackupEntry.SETTINGS,       json.encodeToString(SettingsSnapshot.serializer(), settings))
+            zip.writeJson(BackupEntry.READER,         json.encodeToString(ReaderSnapshot.serializer(), reader))
 
             zip.writeJson(BackupEntry.PLATFORMS,            json.encodeToString(listSerializer<PlatformEntity>(),          backupDao.getPlatforms()))
             zip.writeJson(BackupEntry.MEMORY_CARDS,         json.encodeToString(listSerializer<MemoryCardEntity>(),        backupDao.getMemoryCards()))
@@ -215,6 +220,9 @@ open class BackupManager @Inject constructor(
         val settings = entries[BackupEntry.SETTINGS]?.let {
             json.decodeFromString(SettingsSnapshot.serializer(), it)
         }
+        val reader = entries[BackupEntry.READER]?.let {
+            json.decodeFromString(ReaderSnapshot.serializer(), it)
+        }
 
         val filesDirPath = filesDir.absolutePath
         bundle.commitFiles(filesDir)
@@ -281,6 +289,7 @@ open class BackupManager @Inject constructor(
         themes.firstOrNull { it.isActive }?.let { backupDao.setActiveTheme(it.id) }
 
         if (settings != null) restoreSettingsSnapshot(settings.remapWallpaper(filesDirPath))
+        if (reader != null) restoreReaderSnapshot(reader)
 
         bundle.refusals
     }.fold(
@@ -431,6 +440,13 @@ open class BackupManager @Inject constructor(
                 snapshot.entries[key.name]?.toIntOrNull()?.let { prefs[key] = it }
             }
         }
+    }
+
+    protected open suspend fun readReaderSnapshot(): ReaderSnapshot =
+        context.readerDataStore.data.first().toReaderSnapshot()
+
+    protected open suspend fun restoreReaderSnapshot(snapshot: ReaderSnapshot) {
+        context.readerDataStore.edit { it.replaceWith(snapshot) }
     }
 
     private inline fun <reified T> listSerializer() =
@@ -605,4 +621,23 @@ open class BackupManager @Inject constructor(
             longPreferencesKey("ui_media_stamp"),
         )
     }
+}
+
+internal fun Preferences.toReaderSnapshot(): ReaderSnapshot {
+    val strings = mutableMapOf<String, String>()
+    val floats = mutableMapOf<String, Float>()
+    asMap().forEach { (key, value) ->
+        when (value) {
+            is String -> strings[key.name] = value
+            is Float -> floats[key.name] = value
+            else -> error("reader store holds a ${value::class.simpleName} under ${key.name}; ReaderSnapshot cannot carry it")
+        }
+    }
+    return ReaderSnapshot(strings, floats)
+}
+
+internal fun MutablePreferences.replaceWith(snapshot: ReaderSnapshot) {
+    clear()
+    snapshot.strings.forEach { (name, value) -> this[stringPreferencesKey(name)] = value }
+    snapshot.floats.forEach { (name, value) -> this[floatPreferencesKey(name)] = value }
 }

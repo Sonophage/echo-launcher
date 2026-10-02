@@ -22,6 +22,7 @@ object BackupEntry {
     const val CATEGORY_ITEMS = "category_items.json"
     const val PLAY_SESSIONS  = "play_sessions.json"
     const val SETTINGS       = "settings.json"
+    const val READER         = "reader.json"
 
     const val PLATFORMS            = "platforms.json"
     const val MEMORY_CARDS         = "memory_cards.json"
@@ -58,4 +59,10 @@ data class BackupManifest(
 @Serializable
 data class SettingsSnapshot(
     val entries: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class ReaderSnapshot(
+    val strings: Map<String, String> = emptyMap(),
+    val floats: Map<String, Float> = emptyMap(),
 )

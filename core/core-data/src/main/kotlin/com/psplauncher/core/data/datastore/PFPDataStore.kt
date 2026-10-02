@@ -6,3 +6,5 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 
 val Context.pfpDataStore: DataStore<Preferences> by preferencesDataStore(name = "pfp_prefs")
+
+val Context.readerDataStore: DataStore<Preferences> by preferencesDataStore(name = "reader")
