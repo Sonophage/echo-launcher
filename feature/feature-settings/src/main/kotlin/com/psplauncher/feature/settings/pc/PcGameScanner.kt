@@ -78,6 +78,7 @@ class PcGameScanner @Inject constructor(
             .getOrDefault(0)
 
         var added = 0
+        var alreadyInLibrary = 0
         var skipped = 0
         val importFolders = if (overrideFolder != null) {
             val treeUri = overrideFolder.toString()
@@ -113,12 +114,13 @@ class PcGameScanner @Inject constructor(
                             storefrontGameId = launch.storefrontGameId,
                         ),
                     )
+                    added++
                 } else {
                     gameRepository.updateStorefrontIdentity(
                         existing.id, launch.storefront, launch.storefrontGameId,
                     )
+                    alreadyInLibrary++
                 }
-                added++
             }
         }
 
@@ -144,7 +146,7 @@ class PcGameScanner @Inject constructor(
         val message = when {
             importFolders.isEmpty() && pins == 0 ->
                 "Couldn't read that folder. Pick the folder your launcher exports games into."
-            added == 0 && skipped == 0 && pins == 0 && pfpExports.isEmpty() ->
+            added == 0 && alreadyInLibrary == 0 && skipped == 0 && pins == 0 && pfpExports.isEmpty() ->
                 "No exported PC games found in the selected folder."
             else ->
                 "Imported $added PC game(s)" +
