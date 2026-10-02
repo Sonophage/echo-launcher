@@ -406,6 +406,48 @@ class SettingsScaffoldNavigationTest {
     }
 
     @Test
+    fun `two quick slider steps move the value two steps before the stored value catches up`() {
+        val requested = mutableListOf<Float>()
+        showScreen(onBack = {}) {
+            SettingsRow(label = "Theme", onClick = {})
+            SettingsSliderRow(
+                label = "Volume",
+                value = 0.4f,
+                onValueChange = { requested += it },
+                valueRange = 0f..1f,
+                steps = 4,
+            )
+        }
+
+        press(GamepadAction.NAVIGATE_DOWN)
+        press(GamepadAction.SELECT)
+        press(GamepadAction.NAVIGATE_RIGHT)
+        press(GamepadAction.NAVIGATE_RIGHT)
+
+        assertEquals(listOf(0.6f, 0.8f), requested.map { Math.round(it * 10) / 10f })
+    }
+
+    @Test
+    fun `a continuous slider still moves with the dpad`() {
+        val requested = mutableListOf<Float>()
+        showScreen(onBack = {}) {
+            SettingsRow(label = "Theme", onClick = {})
+            SettingsSliderRow(
+                label = "Volume",
+                value = 0.4f,
+                onValueChange = { requested += it },
+                valueRange = 0f..1f,
+            )
+        }
+
+        press(GamepadAction.NAVIGATE_DOWN)
+        press(GamepadAction.SELECT)
+        press(GamepadAction.NAVIGATE_RIGHT)
+
+        assertTrue(requested.single() > 0.4f)
+    }
+
+    @Test
     fun `first dpad press after a touch drag re-anchors to the viewport centre without moving`() {
         showScreen(onBack = {}) {
             val scrollState = rememberScrollState()
