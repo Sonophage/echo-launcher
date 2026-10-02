@@ -4,46 +4,52 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class NoticePanelNavTest {
-    private fun move(c: PanelCursor, m: PanelMove, media: Boolean = true, rows: Int = 4, chips: Int = 6) =
-        movePanel(c, m, hasMedia = media, rightRows = rows, chips = chips)
+    private fun move(c: PanelCursor, m: PanelMove, rows: Int = 4, chips: Int = 6) =
+        movePanel(c, m, rows = rows, quicks = PANEL_QUICK_SETTINGS.size, chips = chips)
 
-    @Test fun `down from now playing lands on the first quick setting`() {
-        assertEquals(PanelCursor(quick = QuickSetting.WAVE), move(PanelCursor(notice = 0), PanelMove.DOWN))
+    @Test fun `the shoulder buttons walk the tabs and wrap at both ends`() {
+        assertEquals(PanelTab.QUICK, move(PanelCursor(), PanelMove.NEXT_TAB).tab)
+        assertEquals(PanelTab.NOTIFICATIONS, move(PanelCursor(tab = PanelTab.LIBRARIES), PanelMove.NEXT_TAB).tab)
+        assertEquals(PanelTab.LIBRARIES, move(PanelCursor(), PanelMove.PREV_TAB).tab)
     }
 
-    @Test fun `up from the first quick setting goes back to now playing`() {
-        assertEquals(PanelCursor(quick = null, notice = 0), move(PanelCursor(quick = QuickSetting.WAVE), PanelMove.UP))
+    @Test fun `switching tab keeps where you were in the list`() {
+        val back = move(move(PanelCursor(notice = 3), PanelMove.NEXT_TAB), PanelMove.PREV_TAB)
+        assertEquals(PanelCursor(notice = 3), back)
     }
 
-    @Test fun `right crosses from quick settings to the notification on the same row`() {
-        val c = move(PanelCursor(quick = QuickSetting.BACKDROP), PanelMove.RIGHT)
-        assertEquals(null, c.quick)
-        assertEquals("row 2 of the left lands on the second notification", 2, c.notice)
+    @Test fun `down walks the list and holds on the last row`() {
+        assertEquals(1, move(PanelCursor(notice = 0), PanelMove.DOWN).notice)
+        assertEquals(3, move(PanelCursor(notice = 3), PanelMove.DOWN).notice)
+        assertEquals(0, move(PanelCursor(notice = 0), PanelMove.UP).notice)
     }
 
-    @Test fun `left and right walk the library chips before leaving the row`() {
-        val start = PanelCursor(quick = QuickSetting.LIBRARIES, chip = 0)
-        assertEquals(1, move(start, PanelMove.RIGHT).chip)
-        assertEquals("left on the first chip stays put", start, move(start, PanelMove.LEFT))
-        val last = start.copy(chip = 5)
-        assertEquals("the library bar spans the panel; right past the last chip stays put", last, move(last, PanelMove.RIGHT))
+    @Test fun `a cursor left past a shrunk list moves from the last real row`() {
+        assertEquals("dismissing rows must not strand the cursor below the list", 1, move(PanelCursor(notice = 9), PanelMove.UP, rows = 3).notice)
     }
 
-    @Test fun `down from the last notification reaches the library bar`() {
-        assertEquals(PanelCursor(quick = QuickSetting.LIBRARIES, chip = 0, notice = 3), move(PanelCursor(notice = 3), PanelMove.DOWN))
+    @Test fun `left and right walk the quick tiles and stop at the edges`() {
+        val q = PanelCursor(tab = PanelTab.QUICK)
+        assertEquals(1, move(q, PanelMove.RIGHT).quick)
+        assertEquals(q, move(q, PanelMove.LEFT))
+        val last = q.copy(quick = PANEL_QUICK_SETTINGS.lastIndex)
+        assertEquals(last, move(last, PanelMove.RIGHT))
+        assertEquals("up and down have nothing to reach on one row of tiles", q, move(q, PanelMove.DOWN))
     }
 
-    @Test fun `left from a notification returns to quick settings`() {
-        assertEquals(QuickSetting.WAVE, move(PanelCursor(notice = 1), PanelMove.LEFT).quick)
+    @Test fun `the library grid moves by row and column and holds at its edges`() {
+        val g = PanelCursor(tab = PanelTab.LIBRARIES, chip = 2)
+        assertEquals("right off the end of a row must not wrap onto the next row", 2, move(g, PanelMove.RIGHT).chip)
+        assertEquals(5, move(g, PanelMove.DOWN).chip)
+        assertEquals(5, move(g.copy(chip = 5), PanelMove.DOWN).chip)
+        assertEquals(1, move(g.copy(chip = 4), PanelMove.UP).chip)
+        assertEquals(3, move(g.copy(chip = 3), PanelMove.LEFT).chip)
     }
 
-    @Test fun `with no notifications, right from quick settings stays put`() {
-        val c = PanelCursor(quick = QuickSetting.WAVE)
-        assertEquals(c, move(c, PanelMove.RIGHT, media = true, rows = 1))
-    }
-
-    @Test fun `without now playing, up from the first quick setting stays put`() {
-        val c = PanelCursor(quick = QuickSetting.WAVE)
-        assertEquals(c, move(c, PanelMove.UP, media = false, rows = 2))
+    @Test fun `a short last row of libraries cannot be stepped past`() {
+        val g = PanelCursor(tab = PanelTab.LIBRARIES, chip = 3)
+        assertEquals(4, move(g, PanelMove.RIGHT, chips = 5).chip)
+        assertEquals(4, move(g.copy(chip = 4), PanelMove.RIGHT, chips = 5).chip)
+        assertEquals("down from a column with no tile below stays put", 1, move(g.copy(chip = 1), PanelMove.DOWN, chips = 4).chip)
     }
 }

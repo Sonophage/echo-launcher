@@ -1,30 +1,26 @@
 package com.psplauncher.feature.xmb.ui
 
-import com.psplauncher.core.ui.design.DesignUnits
-import com.psplauncher.core.ui.design.MediaDefaultAccent
-import com.psplauncher.core.ui.design.MediaDesignFrame
-import com.psplauncher.core.ui.design.mediaGlow
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import com.psplauncher.core.ui.theme.menuCursorEdge
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,55 +30,72 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.Games
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Waves
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.em
 import coil3.compose.AsyncImage
-import com.psplauncher.core.ui.notification.AndroidNotice
-import com.psplauncher.feature.xmb.viewmodel.NoticeFocus
-import com.psplauncher.core.ui.notification.SystemToast
-import com.psplauncher.core.ui.notification.ToastKind
+import com.psplauncher.core.domain.model.GamepadAction
+import com.psplauncher.core.ui.components.ControllerPrompt
+import com.psplauncher.core.ui.components.LocalControllerConnected
+import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.icons.appIconBitmap
 import com.psplauncher.feature.xmb.viewmodel.LibraryChip
+import com.psplauncher.feature.xmb.viewmodel.NoticeFocus
+import com.psplauncher.feature.xmb.viewmodel.PANEL_QUICK_SETTINGS
+import com.psplauncher.feature.xmb.viewmodel.PanelEntry
+import com.psplauncher.feature.xmb.viewmodel.PanelStage
+import com.psplauncher.feature.xmb.viewmodel.PanelTab
 import com.psplauncher.feature.xmb.viewmodel.QuickSetting
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.automirrored.outlined.List
-import androidx.compose.material.icons.outlined.Waves
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.TextStyle
-
-data class NoticeMedia(
-    val title: String,
-    val detail: String?,
-    val artUri: String?,
-
-    val progress: Float?,
-
-    val elapsed: String?,
-    val isPlaying: Boolean,
-
-    val hasTransport: Boolean,
-    val primaryLabel: String,
-)
+import com.psplauncher.feature.xmb.viewmodel.StageAction
+import com.psplauncher.feature.xmb.viewmodel.StageCommand
+import com.psplauncher.feature.xmb.viewmodel.formatDuration
+import com.psplauncher.feature.xmb.viewmodel.relativeTime
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class QuickSettingsState(
     val waveOn: Boolean,
@@ -92,134 +105,105 @@ data class QuickSettingsState(
 )
 
 @Composable
+fun PanelTabsRow(tab: PanelTab, onTabTapped: (PanelTab) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(StripFontSize.value.dp * 2)) {
+        val pad = LocalControllerConnected.current
+        if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = StripFontSize.value.dp * 1.6f, spacing = 0.dp)
+        PanelTab.entries.forEach { t ->
+            val on = t == tab
+            Column(
+                Modifier.clip(RoundedCornerShape(4.dp)).clickable { onTabTapped(t) }.padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    t.label,
+                    color = Color.White.copy(alpha = if (on) 1f else 0.5f),
+                    fontSize = StripFontSize * 1.3f,
+                    lineHeight = StripFontSize * 1.6f,
+                    fontWeight = if (on) FontWeight.Medium else FontWeight.Light,
+                )
+                val bar by animateFloatAsState(if (on) 1f else 0f, tween(250), label = "tabBar")
+                Box(Modifier.width(16.dp * bar).height(1.5.dp).clip(RoundedCornerShape(1.dp)).background(Color.White))
+            }
+        }
+        if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = StripFontSize.value.dp * 1.6f, spacing = 0.dp)
+    }
+}
+
+@Composable
 fun XmbNotificationBar(
     open: Boolean,
-    items: List<SystemToast>,
-
-    android: List<AndroidNotice> = emptyList(),
-
-    androidAccessGranted: Boolean = true,
-
-    media: NoticeMedia? = null,
-
-    focus: NoticeFocus? = null,
-    quick: QuickSettingsState? = null,
-    quickFocus: QuickSetting? = null,
-    chipFocus: Int = 0,
-    accent: Color = MediaDefaultAccent,
-    onQuickTapped: (QuickSetting, Int) -> Unit = { _, _ -> },
-    onGrantAndroidAccess: () -> Unit = {},
-    onNoticeTapped: (String) -> Unit = {},
-    onNoticeDismissTapped: (String) -> Unit = {},
-    onMediaPrimary: () -> Unit = {},
-    onMediaPrev: () -> Unit = {},
-    onMediaNext: () -> Unit = {},
-    onDismiss: () -> Unit,
-    onClear: () -> Unit,
+    tab: PanelTab,
+    entries: List<PanelEntry>,
+    stage: PanelStage,
+    actions: List<StageAction>,
+    recent: PanelStage?,
+    focus: NoticeFocus?,
+    androidAccessGranted: Boolean,
+    quick: QuickSettingsState?,
+    quickFocus: QuickSetting,
+    chipFocus: Int,
+    accent: Color,
+    onRowTapped: (NoticeFocus) -> Unit,
+    onActionTapped: (StageCommand) -> Unit,
+    onQuickTapped: (QuickSetting, Int) -> Unit,
+    onGrantAndroidAccess: () -> Unit,
+    onSwipedClosed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.fillMaxSize()) {
-        if (open) {
-            Box(Modifier.fillMaxSize().clickable(onClick = onDismiss))
-        }
-        AnimatedVisibility(
-            visible = open,
-            enter = slideInVertically(tween(220)) { -it } + fadeIn(tween(220)),
-            exit = slideOutVertically(tween(180)) { -it } + fadeOut(tween(180)),
-            modifier = Modifier.align(Alignment.TopCenter),
-        ) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF080605))
-                    .clickable(interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {},
-            ) {
-                MediaDesignFrame { u ->
-                    Box(Modifier.fillMaxSize().background(Brush.radialGradient(
-                        listOf(mediaGlow(accent, 0.14f), Color.Transparent),
-                        center = Offset(constraints.maxWidth * 0.75f, constraints.maxHeight * 0.2f),
-                        radius = constraints.maxWidth * 0.8f,
-                    )))
-
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(StripHeight + u.dp(92))
-                            .background(Brush.horizontalGradient(listOf(mediaGlow(accent, 0.30f), Color(0xFF0B0807)))),
+    AnimatedVisibility(
+        visible = open,
+        enter = slideInVertically(tween(220)) { -it / 6 } + fadeIn(tween(220)),
+        exit = slideOutVertically(tween(180)) { -it / 6 } + fadeOut(tween(180)),
+        modifier = modifier.fillMaxSize(),
+    ) {
+        val stageIcon = rememberAppIcon(stagePackage(stage, LocalContext.current.packageName))
+        val tint by animateColorAsState(stageTint(stage, stageIcon?.color, accent), tween(500), label = "panelTint")
+        val closeAfter = with(LocalDensity.current) { 72.dp.toPx() }
+        BoxWithConstraints(
+            Modifier
+                .fillMaxSize()
+                .background(PanelBase)
+                .drawBehind {
+                    drawRect(Brush.radialGradient(
+                        listOf(tint.copy(alpha = 0.6f), Color.Transparent),
+                        center = Offset(size.width * 0.18f, size.height * 0.45f),
+                        radius = size.width * 0.55f,
+                    ))
+                    drawRect(Brush.horizontalGradient(0.45f to Color.Transparent, 1f to PanelEdgeShade))
+                }
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                .pointerInput(Unit) {
+                    var travel = 0f
+                    detectVerticalDragGestures(
+                        onDragStart = { travel = 0f },
+                        onVerticalDrag = { _, dy -> travel += dy },
+                        onDragEnd = { if (travel < -closeAfter) onSwipedClosed() },
                     )
-                    media?.let {
-                        MediaBand(it, focus == NoticeFocus.Media, accent, u, onMediaPrimary, onMediaPrev, onMediaNext,
-                            Modifier.padding(top = StripHeight).padding(horizontal = u.dp(32)).height(u.dp(92)))
-                    }
-
-                    val top = StripHeight + u.dp(if (media != null) 114 else 24)
-                    quick?.let {
-                        QuickColumn(it, quickFocus, accent, u, onQuickTapped,
-                            Modifier.offset(u.dp(32), top).width(u.dp(330)))
-                        LibrariesBar(it.chips, quickFocus == QuickSetting.LIBRARIES, chipFocus, accent, u, onQuickTapped,
-                            Modifier.align(Alignment.BottomStart).padding(start = u.dp(32), end = u.dp(32), bottom = u.dp(76)))
-                    }
-                    Box(Modifier.offset(u.dp(392), top).width(u.dp(1)).fillMaxHeight().padding(bottom = u.dp(170))
-                        .background(Color.White.copy(alpha = 0.08f)))
-
-                    Row(
-                        Modifier.offset(u.dp(424), top).fillMaxWidth().padding(end = u.dp(456)).padding(bottom = u.dp(170)),
-                        horizontalArrangement = Arrangement.spacedBy(u.dp(36)),
+                },
+        ) {
+            val u = DesignUnits(minOf(maxWidth.value / PANEL_DESIGN_WIDTH, maxHeight.value / PANEL_DESIGN_HEIGHT), LocalDensity.current)
+            when (tab) {
+                PanelTab.NOTIFICATIONS -> {
+                    Box(
+                        Modifier.align(Alignment.CenterStart).fillMaxHeight()
+                            .padding(start = u.dp(80), top = u.dp(96), bottom = u.dp(70)).width(u.dp(600)),
+                        contentAlignment = Alignment.CenterStart,
                     ) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(14))) {
-                            Text("ANDROID  ·  ${android.size}", style = u.eyebrow())
-                            when {
-                                !androidAccessGranted -> EmptyNote("Turn on Notification access to see these here", u, onGrantAndroidAccess)
-                                android.isEmpty() -> EmptyNote("Nothing from other apps", u)
-                                else -> {
-                                    val focusedKey = (focus as? NoticeFocus.Notice)?.key
-                                    val listState = rememberLazyListState()
-                                    LaunchedEffect(focusedKey, android) {
-                                        val at = android.indexOfFirst { it.key == focusedKey }
-                                        if (at >= 0) listState.animateScrollToItem(at)
-                                    }
-                                    LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-                                        items(android, key = { it.key }) { notice ->
-                                            NoticeRow(
-                                                glyph = notice.appLabel.trim().firstOrNull()?.uppercase() ?: "?",
-                                                glyphTint = Color.White,
-                                                title = notice.title ?: notice.appLabel,
-                                                detail = listOfNotNull(notice.appLabel.takeIf { notice.title != null }, notice.text).joinToString("  ·  "),
-                                                focused = focusedKey == notice.key,
-                                                accent = accent,
-                                                u = u,
-                                                onClick = if (notice.canOpen) ({ onNoticeTapped(notice.key) }) else null,
-                                                onDismiss = if (notice.canDismiss) ({ onNoticeDismissTapped(notice.key) }) else null,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(14))) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("LAUNCHER  ·  ${items.size}", style = u.eyebrow())
-                                if (items.isNotEmpty()) {
-                                    Text("Clear", color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12),
-                                        modifier = Modifier.clip(RoundedCornerShape(u.dp(6))).clickable(onClick = onClear).padding(horizontal = u.dp(6)))
-                                }
-                            }
-                            if (items.isEmpty()) EmptyNote("Nothing has happened yet", u)
-                            items.take(ColumnRows).forEachIndexed { i, toast ->
-                                val error = toast.kind == ToastKind.ERROR
-                                NoticeRow(
-                                    glyph = if (error) "!" else "\u2713",
-                                    glyphTint = if (error) ErrorTint else SuccessTint,
-                                    title = toast.title,
-                                    detail = toast.message,
-                                    focused = false,
-                                    accent = accent,
-                                    u = u,
-                                    modifier = Modifier.graphicsLayer(alpha = (1f - i * 0.15f).coerceAtLeast(0.5f)),
-                                )
-                            }
-                        }
+                        Stage(stage, actions, stageIcon?.bitmap, u, onActionTapped)
                     }
+                    NoticeList(
+                        entries, recent, focus, androidAccessGranted, tint, u, onRowTapped, onGrantAndroidAccess,
+                        Modifier.align(Alignment.TopEnd).fillMaxHeight()
+                            .padding(end = u.dp(56), top = u.dp(118), bottom = u.dp(70)).width(u.dp(430)),
+                    )
+                }
+                PanelTab.QUICK -> quick?.let {
+                    QuickTiles(it, quickFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(200)))
+                }
+                PanelTab.LIBRARIES -> quick?.let {
+                    LibraryTiles(it.chips, chipFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(180)))
                 }
             }
         }
@@ -227,209 +211,462 @@ fun XmbNotificationBar(
 }
 
 @Composable
-private fun MediaBand(
-    media: NoticeMedia,
-    focused: Boolean,
-    accent: Color,
+private fun Stage(stage: PanelStage, actions: List<StageAction>, icon: ImageBitmap?, u: DesignUnits, onAction: (StageCommand) -> Unit) {
+    val now = System.currentTimeMillis()
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(20))) {
+        when (stage) {
+            is PanelStage.Music -> {
+                Eyebrow(if (stage.loaded) "Now playing" else "From Recent · Music", u)
+                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(28)), verticalAlignment = Alignment.Bottom) {
+                    Art(stage.art, u.dp(220), u.dp(220), u.dp(18), Icons.Outlined.MusicNote, u)
+                    Column(Modifier.weight(1f).padding(bottom = u.dp(6)), verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
+                        if (stage.loaded) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(8))) {
+                                Box(Modifier.size(u.dp(7)).clip(CircleShape).background(Color.White.copy(alpha = if (stage.playing) 1f else 0.5f)))
+                                Text(if (stage.playing) "Playing" else "Paused", color = Faint, fontSize = u.sp(13), fontWeight = FontWeight.Light)
+                            }
+                        }
+                        Headline(stage.title, u.sp(52), 3)
+                        Meta(listOfNotNull(stage.artist, stage.album).joinToString("  ·  "), u.sp(17))
+                    }
+                }
+                if (stage.loaded && stage.durationMs > 0) {
+                    Progress(stage.positionMs.toFloat() / stage.durationMs, formatDuration(stage.positionMs), formatDuration(stage.durationMs), u)
+                }
+            }
+            is PanelStage.Video -> {
+                Eyebrow("From Recent · Video", u)
+                Box(Modifier.width(u.dp(440)).height(u.dp(248)).clip(RoundedCornerShape(u.dp(16)))) {
+                    Art(stage.art, u.dp(440), u.dp(248), u.dp(0), Icons.Outlined.Movie, u)
+                    stage.progress?.let { p ->
+                        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(u.dp(4)).background(Color.White.copy(alpha = 0.25f))) {
+                            Box(Modifier.fillMaxWidth(p.coerceIn(0f, 1f)).fillMaxHeight().background(Color.White))
+                        }
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                    Headline(stage.title, u.sp(48), 2)
+                    stage.detail?.let { Meta(it, u.sp(17)) }
+                    stage.progressLabel?.let { Text(it, color = Faint, fontSize = u.sp(13), fontWeight = FontWeight.Light) }
+                }
+            }
+            is PanelStage.Book -> {
+                Eyebrow("From Recent · Book", u)
+                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(30)), verticalAlignment = Alignment.Bottom) {
+                    Art(stage.cover, u.dp(170), u.dp(256), u.dp(6), Icons.AutoMirrored.Outlined.MenuBook, u)
+                    Column(Modifier.weight(1f).padding(bottom = u.dp(4)), verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
+                        Headline(stage.title, u.sp(50), 3)
+                        stage.detail?.let { Meta(it, u.sp(17)) }
+                    }
+                }
+            }
+            is PanelStage.Game -> {
+                stage.art?.let { Art(it, u.dp(580), u.dp(186), u.dp(18), Icons.Outlined.Games, u) }
+                Eyebrow("From Recent · Game", u)
+                Headline(stage.title, u.sp(if (stage.art != null) 64 else 84), 2)
+                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(28))) {
+                    stage.lastPlayedAt?.let { Stat("Last played", relativeTime(now, it), u) }
+                    if (stage.playTimeMs > 0) Stat("Play time", playTimeLabel(stage.playTimeMs), u)
+                }
+            }
+            is PanelStage.App -> {
+                Eyebrow("From Recent", u)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(22))) {
+                    AppIcon(icon, u.dp(80), u.dp(21))
+                    Headline(stage.title, u.sp(80), 1)
+                }
+                Meta(listOfNotNull("App", stage.lastUsedAt?.let { "Last used ${relativeTime(now, it)}" }).joinToString("  ·  "), u.sp(17))
+            }
+            is PanelStage.Android -> NoticeStage(icon, stage.notice.appLabel, relativeTime(now, stage.notice.postedAt),
+                stage.notice.title ?: stage.notice.appLabel, stage.notice.text, u)
+            is PanelStage.Launcher -> NoticeStage(icon, "Launcher", relativeTime(now, stage.toast.postedAt), stage.toast.title, stage.toast.message, u)
+            PanelStage.Empty -> Text("You're all caught up", color = Color.White, fontSize = u.sp(40), fontWeight = FontWeight.ExtraLight)
+        }
+        if (actions.isNotEmpty()) {
+            Row(Modifier.padding(top = u.dp(8)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
+                actions.forEach { StageButton(it, u) { onAction(it.command) } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoticeStage(icon: ImageBitmap?, app: String, `when`: String, title: String, text: String?, u: DesignUnits) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(16))) {
+        AppIcon(icon, u.dp(64), u.dp(16))
+        Column(verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
+            Text(app, color = Color.White, fontSize = u.sp(15))
+            Text(`when`, color = Faint, fontSize = u.sp(13), fontWeight = FontWeight.Light)
+        }
+    }
+    Text(title, color = Color.White, fontSize = u.sp(46), fontWeight = FontWeight.Light, lineHeight = u.sp(52),
+        maxLines = 3, overflow = TextOverflow.Ellipsis)
+    text?.takeIf { it.isNotBlank() }?.let { Meta(it, u.sp(17), maxLines = 4) }
+}
+
+@Composable
+private fun NoticeList(
+    entries: List<PanelEntry>,
+    recent: PanelStage?,
+    focus: NoticeFocus?,
+    androidAccessGranted: Boolean,
+    tint: Color,
     u: DesignUnits,
-    onPrimary: () -> Unit,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
+    onRowTapped: (NoticeFocus) -> Unit,
+    onGrantAndroidAccess: () -> Unit,
     modifier: Modifier,
 ) {
-    Row(
-        modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(u.dp(12)))
-            .then(if (focused) Modifier.border(u.dp(2), accent, RoundedCornerShape(u.dp(12))) else Modifier)
-            .padding(horizontal = u.dp(10)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(u.dp(20)),
+    val state = rememberLazyListState()
+    val lead = (if (recent != null) 1 else 0) + 1 + (if (androidAccessGranted) 0 else 1)
+    LaunchedEffect(focus, entries.size) {
+        val at = when (focus) {
+            NoticeFocus.Media -> 0
+            null -> return@LaunchedEffect
+            else -> entries.indexOfFirst { it.focus == focus }.takeIf { it >= 0 }?.plus(lead) ?: return@LaunchedEffect
+        }
+        state.animateScrollToItem((at - 1).coerceAtLeast(0))
+    }
+    LazyColumn(
+        state = state,
+        modifier = modifier
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+            .drawWithContent {
+                drawContent()
+                drawRect(Brush.verticalGradient(0f to Color.Transparent, 0.04f to Color.Black, 0.88f to Color.Black, 1f to Color.Transparent), blendMode = BlendMode.DstIn)
+            },
+        verticalArrangement = Arrangement.spacedBy(u.dp(6)),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = u.dp(8), vertical = u.dp(12)),
     ) {
-        Box(Modifier.size(u.dp(70)).clip(RoundedCornerShape(u.dp(9))).background(Color(0xFF2A201E))) {
-            media.artUri?.let { AsyncImage(it, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        recent?.let { r ->
+            item(key = "recent") { RecentCard(r, focus == NoticeFocus.Media, tint, u) { onRowTapped(NoticeFocus.Media) } }
         }
-        Column(Modifier.width(u.dp(320)), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
-            Text(media.title, color = Color.White, fontSize = u.sp(24), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val sub = listOfNotNull(media.detail, media.elapsed).joinToString("  ·  ")
-            if (sub.isNotBlank()) Text(sub, color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(14), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        item(key = "header") {
+            Text("NOTIFICATIONS  ·  ${entries.size}", style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(12),
+                fontWeight = FontWeight.Light, letterSpacing = 0.14.em), modifier = Modifier.padding(start = u.dp(12), top = u.dp(14), bottom = u.dp(4)))
         }
-        Row(Modifier.weight(1f).height(u.dp(40)), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(6))) {
-            val played = media.progress ?: 0f
-            BAR_HEIGHTS.forEachIndexed { i, h ->
-                val lit = media.progress != null && i < (played * BAR_HEIGHTS.size)
-                Box(Modifier.width(u.dp(4)).height(u.dp(h)).clip(RoundedCornerShape(u.dp(2)))
-                    .background(if (lit) accent else Color.White.copy(alpha = 0.2f)))
+        if (!androidAccessGranted) {
+            item(key = "grant") {
+                Text("Turn on Notification access to see other apps here", color = Faint, fontSize = u.sp(14),
+                    modifier = Modifier.clip(RoundedCornerShape(u.dp(14))).clickable(onClick = onGrantAndroidAccess).padding(u.dp(12)))
             }
         }
-        if (media.hasTransport) {
-            BandButton(Icons.Filled.SkipPrevious, "Previous track", u.dp(44), u.dp(22), Color.Transparent, Color.White, onPrev)
-            BandButton(if (media.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, if (media.isPlaying) "Pause" else "Play",
-                u.dp(54), u.dp(20), Color.White, Color(0xFF111111), onPrimary)
-            BandButton(Icons.Filled.SkipNext, "Next track", u.dp(44), u.dp(22), Color.Transparent, Color.White, onNext)
-        } else {
-            Row(
-                Modifier.clip(RoundedCornerShape(u.dp(999))).background(Color.White).clickable(onClick = onPrimary)
-                    .padding(horizontal = u.dp(16), vertical = u.dp(10)),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Filled.PlayArrow, null, tint = Color(0xFF111111), modifier = Modifier.size(u.dp(20)))
-                Spacer(Modifier.width(u.dp(6)))
-                Text(media.primaryLabel, color = Color(0xFF111111), fontSize = u.sp(15), fontWeight = FontWeight.SemiBold)
+        items(entries, key = { it.focus.toString() }) { entry ->
+            NoticeRow(entry, entry.focus == focus, u) { onRowTapped(entry.focus) }
+        }
+    }
+}
+
+@Composable
+private fun RecentCard(stage: PanelStage, focused: Boolean, tint: Color, u: DesignUnits, onClick: () -> Unit) {
+    val now = System.currentTimeMillis()
+    val (title, detail) = when (stage) {
+        is PanelStage.Music -> stage.title to listOfNotNull(if (stage.loaded) "Now playing" else "From Recent", stage.artist).joinToString("  ·  ")
+        is PanelStage.Video -> stage.title to listOfNotNull("From Recent", stage.progressLabel ?: stage.detail).joinToString("  ·  ")
+        is PanelStage.Book -> stage.title to listOfNotNull("From Recent", stage.detail).joinToString("  ·  ")
+        is PanelStage.Game -> stage.title to listOfNotNull("From Recent", stage.lastPlayedAt?.let { "Last played ${relativeTime(now, it)}" }).joinToString("  ·  ")
+        is PanelStage.App -> stage.title to "From Recent"
+        else -> return
+    }
+    val shape = RoundedCornerShape(u.dp(16))
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(tint.copy(alpha = 0.6f), tint.copy(alpha = 0.2f))))
+            .border(if (focused) u.dp(2.5f) else u.dp(1), Color.White.copy(alpha = if (focused) 1f else 0.1f), shape)
+            .clickable(onClick = onClick)
+            .padding(start = u.dp(14), end = u.dp(16), top = u.dp(14), bottom = u.dp(14)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+    ) {
+        val icon = rememberAppIcon((stage as? PanelStage.App)?.packageName)
+        when {
+            stage is PanelStage.App -> AppIcon(icon?.bitmap, u.dp(44), u.dp(12))
+            else -> Art(stageArt(stage), u.dp(44), u.dp(44), u.dp(12), stageGlyph(stage), u)
+        }
+        Column(Modifier.weight(1f)) {
+            Text(title, color = Color.White, fontSize = u.sp(15), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(detail, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Icon(Icons.Filled.PlayArrow, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(u.dp(14)))
+    }
+}
+
+@Composable
+private fun NoticeRow(entry: PanelEntry, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val (pkg, title, app, postedAt) = when (entry) {
+        is PanelEntry.Android -> RowText(entry.notice.packageName, entry.notice.title ?: entry.notice.appLabel, entry.notice.appLabel, entry.notice.postedAt)
+        is PanelEntry.Launcher -> RowText(context.packageName, entry.toast.title, "Launcher", entry.toast.postedAt)
+    }
+    val icon = rememberAppIcon(pkg)
+    val shape = RoundedCornerShape(u.dp(14))
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .graphicsLayer(alpha = if (focused) 1f else 0.55f)
+            .clip(shape)
+            .background(Color.White.copy(alpha = if (focused) 0.17f else 0.06f))
+            .then(if (focused) Modifier.border(u.dp(2), Color.White.copy(alpha = 0.9f), shape) else Modifier)
+            .clickable(onClick = onClick)
+            .padding(start = u.dp(12), end = u.dp(16), top = u.dp(12), bottom = u.dp(12)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+    ) {
+        AppIcon(icon?.bitmap, u.dp(38), u.dp(10))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = Color.White, fontSize = u.sp(14.5f), lineHeight = u.sp(19), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(app, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1)
+        }
+        Text(relativeTime(System.currentTimeMillis(), postedAt), color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12),
+            fontWeight = FontWeight.Light, maxLines = 1)
+    }
+}
+
+private data class RowText(val pkg: String, val title: String, val app: String, val postedAt: Long)
+
+@Composable
+private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: DesignUnits, onTapped: (QuickSetting, Int) -> Unit, modifier: Modifier) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(22))) {
+        PANEL_QUICK_SETTINGS.forEach { setting ->
+            val (label, value) = when (setting) {
+                QuickSetting.WAVE -> "Wave" to if (quick.waveOn) "On" else "Off"
+                QuickSetting.BACKDROP -> "Crossbar shows" to if (quick.backdropOn) "Art" else "Wallpaper"
+                QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
+                QuickSetting.LIBRARIES -> "" to ""
+            }
+            Tile(setting == focus, u.dp(300), u.dp(22), u.dp(28), u, Modifier.weight(1f), { onTapped(setting, 0) }) {
+                Icon(quickIcon(setting), null, tint = Color.White, modifier = Modifier.size(u.dp(34)))
+                Column {
+                    Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(17), fontWeight = FontWeight.Light)
+                    Text(value, color = Color.White, fontSize = u.sp(48), fontWeight = FontWeight.ExtraLight)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun BandButton(icon: ImageVector, label: String, box: androidx.compose.ui.unit.Dp, glyph: androidx.compose.ui.unit.Dp, bg: Color, tint: Color, onClick: () -> Unit) {
-    Box(Modifier.size(box).clip(CircleShape).background(bg).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(icon, label, tint = tint, modifier = Modifier.size(glyph))
-    }
-}
-
-@Composable
-private fun QuickColumn(
-    quick: QuickSettingsState,
-    focus: QuickSetting?,
-    accent: Color,
-    u: DesignUnits,
-    onTapped: (QuickSetting, Int) -> Unit,
-    modifier: Modifier,
-) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
-        Text("QUICK SETTINGS", style = u.eyebrow(), modifier = Modifier.padding(start = u.dp(14), bottom = u.dp(8)))
-        QuickSetting.entries.filter { it != QuickSetting.LIBRARIES }.forEach { setting ->
-            val focused = setting == focus
-            val (label, value, on) = when (setting) {
-                QuickSetting.WAVE -> Triple("Wave", if (quick.waveOn) "On" else "Off", quick.waveOn)
-                QuickSetting.BACKDROP -> Triple("Crossbar shows", if (quick.backdropOn) "Art" else "Wallpaper", quick.backdropOn)
-                QuickSetting.RECENT_APPS -> Triple("Apps in Recent", if (quick.recentAppsOn) "On" else "Off", quick.recentAppsOn)
-                QuickSetting.LIBRARIES -> Triple("", "", false)
-            }
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(u.dp(12)))
-                    .then(if (focused) Modifier.background(Color.White.copy(alpha = 0.08f)).border(u.dp(2), accent, RoundedCornerShape(u.dp(12))) else Modifier)
-                    .clickable { onTapped(setting, 0) }
-                    .padding(horizontal = u.dp(14), vertical = u.dp(12)),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
-            ) {
-                Icon(quickIcon(setting), null, tint = Color.White.copy(alpha = 0.75f), modifier = Modifier.size(u.dp(20)))
-                Text(label, color = Color.White, fontSize = u.sp(17), fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
-                Text(value, color = if (on) accent else Color.White.copy(alpha = 0.45f), fontSize = u.sp(14), fontWeight = FontWeight.SemiBold)
+private fun LibraryTiles(chips: List<LibraryChip>, focus: Int, u: DesignUnits, onTapped: (QuickSetting, Int) -> Unit, modifier: Modifier) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(16))) {
+        Text("${chips.count { it.visible }} of ${chips.size} on the crossbar", color = Color.White.copy(alpha = 0.6f),
+            fontSize = u.sp(14), fontWeight = FontWeight.Light)
+        chips.withIndex().chunked(3).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(16))) {
+                row.forEach { (i, chip) ->
+                    Tile(i == focus, u.dp(170), u.dp(20), u.dp(22), u,
+                        Modifier.weight(1f).graphicsLayer(alpha = if (chip.visible) 1f else 0.45f), { onTapped(QuickSetting.LIBRARIES, i) }) {
+                        Icon(libraryIcon(chip.id), null, tint = Color.White, modifier = Modifier.size(u.dp(30)))
+                        Column {
+                            Text(chip.name, color = Color.White, fontSize = u.sp(22), fontWeight = FontWeight.Light)
+                            Text(if (chip.visible) "On crossbar" else "Hidden from crossbar", color = Color.White.copy(alpha = 0.6f),
+                                fontSize = u.sp(13), fontWeight = FontWeight.Light)
+                        }
+                    }
+                }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
 }
 
 @Composable
-private fun LibrariesBar(
-    chips: List<LibraryChip>,
+private fun Tile(
     focused: Boolean,
-    chipFocus: Int,
-    accent: Color,
+    height: Dp,
+    radius: Dp,
+    pad: Dp,
     u: DesignUnits,
-    onTapped: (QuickSetting, Int) -> Unit,
     modifier: Modifier,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
 ) {
+    val grow by animateFloatAsState(if (focused) 1.04f else 1f, tween(250), label = "tile")
+    val shape = RoundedCornerShape(radius)
     Column(
         modifier
-            .fillMaxWidth()
-            .drawBehind { drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, 0f), Offset(size.width, 0f), 1f) }
-            .padding(top = u.dp(16)),
-        verticalArrangement = Arrangement.spacedBy(u.dp(12)),
+            .scale(grow)
+            .height(height)
+            .clip(shape)
+            .background(Color.White.copy(alpha = if (focused) 0.14f else 0.07f))
+            .then(if (focused) Modifier.border(u.dp(2.5f), Color.White, shape) else Modifier)
+            .clickable(onClick = onClick)
+            .padding(pad),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) { content() }
+}
+
+@Composable
+private fun StageButton(action: StageAction, u: DesignUnits, onClick: () -> Unit) {
+    val primary = action.button == GamepadAction.SELECT
+    val ink = if (primary) Color(0xFF0A0A0A) else Color.White
+    Box(
+        Modifier
+            .height(u.dp(52))
+            .clip(RoundedCornerShape(u.dp(26)))
+            .background(if (primary) Color.White else Color.White.copy(alpha = 0.12f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = u.dp(if (primary) 26 else 22)),
+        contentAlignment = Alignment.Center,
     ) {
-        Text("LIBRARIES  ·  ${chips.count { it.visible }} of ${chips.size} on the crossbar", style = u.eyebrow(), modifier = Modifier.padding(start = u.dp(14)))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-            chips.forEachIndexed { i, chip ->
-                val chipFocused = focused && i == chipFocus
-                Text(
-                    chip.name,
-                    color = if (chip.visible) Color.White else Color.White.copy(alpha = 0.45f),
-                    fontSize = u.sp(15),
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(u.dp(999)))
-                        .then(when {
-                            chipFocused -> Modifier.border(u.dp(2), accent, RoundedCornerShape(u.dp(999)))
-                            chip.visible -> Modifier
-                            else -> Modifier.border(u.dp(1), Color.White.copy(alpha = 0.25f), RoundedCornerShape(u.dp(999)))
-                        })
-                        .background(if (chip.visible) Color.White.copy(alpha = 0.14f) else Color.Transparent)
-                        .clickable { onTapped(QuickSetting.LIBRARIES, i) }
-                        .padding(horizontal = u.dp(18), vertical = u.dp(8)),
-                )
+        val labelStyle = TextStyle(fontSize = u.sp(15), fontWeight = if (primary) FontWeight.Medium else FontWeight.Normal)
+        if (LocalControllerConnected.current) {
+            ControllerPrompt(action.button, action.label, labelColor = ink, labelStyle = labelStyle, glyphSize = u.dp(20), spacing = u.dp(10))
+        } else {
+            Text(action.label, color = ink, style = labelStyle)
+        }
+    }
+}
+
+@Composable
+private fun Eyebrow(text: String, u: DesignUnits) {
+    Text(text.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13), letterSpacing = 0.18.em))
+}
+
+@Composable
+private fun Headline(text: String, size: androidx.compose.ui.unit.TextUnit, lines: Int) {
+    Text(text, color = Color.White, fontSize = size, lineHeight = size * 1.05f, fontWeight = FontWeight.ExtraLight,
+        letterSpacing = (-0.025).em, maxLines = lines, overflow = TextOverflow.Ellipsis)
+}
+
+@Composable
+private fun Meta(text: String, size: androidx.compose.ui.unit.TextUnit, maxLines: Int = 1) {
+    if (text.isBlank()) return
+    Text(text, color = Color.White.copy(alpha = 0.72f), fontSize = size, fontWeight = FontWeight.Light, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+}
+
+@Composable
+private fun Stat(label: String, value: String, u: DesignUnits) {
+    Row(horizontalArrangement = Arrangement.spacedBy(u.dp(6))) {
+        Text(label, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(14), fontWeight = FontWeight.Light)
+        Text(value, color = Color.White, fontSize = u.sp(14), fontWeight = FontWeight.Light)
+    }
+}
+
+@Composable
+private fun Progress(fraction: Float, left: String, right: String, u: DesignUnits) {
+    Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
+        Box(Modifier.fillMaxWidth().height(u.dp(4)).clip(RoundedCornerShape(u.dp(2))).background(Color.White.copy(alpha = 0.18f))) {
+            Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().clip(RoundedCornerShape(u.dp(2))).background(Color.White))
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(left, color = Faint, fontSize = u.sp(12), fontWeight = FontWeight.Light)
+            Text(right, color = Faint, fontSize = u.sp(12), fontWeight = FontWeight.Light)
+        }
+    }
+}
+
+@Composable
+private fun Art(uri: String?, width: Dp, height: Dp, radius: Dp, fallback: ImageVector, u: DesignUnits) {
+    Box(
+        Modifier.width(width).height(height).clip(RoundedCornerShape(radius)).background(Color.White.copy(alpha = 0.08f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(fallback, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(minOf(width, height) * 0.4f))
+        if (!uri.isNullOrBlank()) AsyncImage(uri, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+    }
+}
+
+@Composable
+private fun AppIcon(bitmap: ImageBitmap?, size: Dp, radius: Dp) {
+    Box(Modifier.size(size).clip(RoundedCornerShape(radius)).background(Color.White.copy(alpha = 0.08f))) {
+        bitmap?.let { Image(it, null, modifier = Modifier.fillMaxSize()) }
+    }
+}
+
+private class AppIconArt(val bitmap: ImageBitmap, val color: Color?)
+
+@Composable
+private fun rememberAppIcon(packageName: String?): AppIconArt? {
+    val context = LocalContext.current
+    val art by produceState<AppIconArt?>(null, packageName) {
+        value = packageName?.takeIf { it.isNotBlank() }?.let { pkg ->
+            withContext(Dispatchers.IO) {
+                context.appIconBitmap(pkg, sizePx = ICON_PX, foregroundOnly = false)?.let { AppIconArt(it, dominantColor(it)) }
             }
         }
     }
+    return art
+}
+
+private fun dominantColor(bitmap: ImageBitmap): Color? {
+    val pixels = bitmap.toPixelMap()
+    var r = 0f; var g = 0f; var b = 0f; var n = 0
+    val hsv = FloatArray(3)
+    for (x in 0 until pixels.width step 4) for (y in 0 until pixels.height step 4) {
+        val c = pixels[x, y]
+        if (c.alpha < 0.8f) continue
+        android.graphics.Color.RGBToHSV((c.red * 255).toInt(), (c.green * 255).toInt(), (c.blue * 255).toInt(), hsv)
+        if (hsv[1] < 0.25f || hsv[2] < 0.2f) continue
+        r += c.red; g += c.green; b += c.blue; n++
+    }
+    return if (n == 0) null else Color(r / n, g / n, b / n)
+}
+
+private fun stagePackage(stage: PanelStage, launcher: String): String? = when (stage) {
+    is PanelStage.Android -> stage.notice.packageName
+    is PanelStage.Launcher -> launcher
+    is PanelStage.App -> stage.packageName
+    else -> null
+}
+
+private fun stageTint(stage: PanelStage, iconColor: Color?, accent: Color): Color = when (stage) {
+    is PanelStage.Music -> MusicTint
+    is PanelStage.Video -> VideoTint
+    is PanelStage.Book -> BookTint
+    is PanelStage.Game -> GameTint
+    is PanelStage.App, is PanelStage.Android -> iconColor ?: accent
+    is PanelStage.Launcher -> accent
+    PanelStage.Empty -> EmptyTint
+}
+
+private fun stageArt(stage: PanelStage): String? = when (stage) {
+    is PanelStage.Music -> stage.art
+    is PanelStage.Video -> stage.art
+    is PanelStage.Book -> stage.cover
+    is PanelStage.Game -> stage.art
+    else -> null
+}
+
+private fun stageGlyph(stage: PanelStage): ImageVector = when (stage) {
+    is PanelStage.Music -> Icons.Outlined.MusicNote
+    is PanelStage.Video -> Icons.Outlined.Movie
+    is PanelStage.Book -> Icons.AutoMirrored.Outlined.MenuBook
+    is PanelStage.Game -> Icons.Outlined.Games
+    else -> Icons.Outlined.Apps
 }
 
 private fun quickIcon(setting: QuickSetting): ImageVector = when (setting) {
     QuickSetting.WAVE -> Icons.Outlined.Waves
     QuickSetting.BACKDROP -> Icons.Outlined.Image
     QuickSetting.RECENT_APPS -> Icons.Outlined.History
-    QuickSetting.LIBRARIES -> Icons.AutoMirrored.Outlined.List
+    QuickSetting.LIBRARIES -> Icons.Outlined.GridView
 }
 
-@Composable
-private fun EmptyNote(text: String, u: DesignUnits, onClick: (() -> Unit)? = null) {
-    Text(
-        text,
-        color = Muted,
-        fontSize = u.sp(15),
-        modifier = Modifier
-            .clip(RoundedCornerShape(u.dp(6)))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = u.dp(2)),
-    )
+private fun libraryIcon(id: String): ImageVector = when (id) {
+    com.psplauncher.core.domain.model.BuiltInCategory.GAMES -> Icons.Outlined.Games
+    com.psplauncher.core.domain.model.BuiltInCategory.MUSIC -> Icons.Outlined.MusicNote
+    com.psplauncher.core.domain.model.BuiltInCategory.VIDEO -> Icons.Outlined.Movie
+    com.psplauncher.core.domain.model.BuiltInCategory.LIBRARY -> Icons.AutoMirrored.Outlined.MenuBook
+    com.psplauncher.core.domain.model.BuiltInCategory.PHOTO -> Icons.Outlined.PhotoLibrary
+    else -> Icons.Outlined.Language
 }
 
-@Composable
-private fun NoticeRow(
-    glyph: String,
-    glyphTint: Color,
-    title: String,
-    detail: String?,
-    focused: Boolean,
-    accent: Color,
-    u: DesignUnits,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
-    onDismiss: (() -> Unit)? = null,
-) {
-    Row(
-        modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(u.dp(12)))
-            .then(if (focused) Modifier.background(Color.White.copy(alpha = 0.08f)).border(u.dp(2), accent, RoundedCornerShape(u.dp(12))) else Modifier)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = u.dp(8), vertical = u.dp(8)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(u.dp(16)),
-    ) {
-        Box(Modifier.width(u.dp(44)), contentAlignment = Alignment.Center) {
-            Text(glyph, color = glyphTint, fontSize = u.sp(22), fontWeight = FontWeight.Bold)
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
-            Text(title, color = Color.White, fontSize = u.sp(19), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            detail?.takeIf { it.isNotBlank() }?.let {
-                Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(14), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        }
-        onDismiss?.let {
-            Text("\u00d7", color = if (focused) Color.White else Muted, fontSize = u.sp(22), fontWeight = FontWeight.Bold,
-                modifier = Modifier.clip(RoundedCornerShape(u.dp(6))).clickable(onClick = it).padding(horizontal = u.dp(8)))
-        }
-    }
+private fun playTimeLabel(ms: Long): String {
+    val minutes = ms / 60_000L
+    return if (minutes < 60) "$minutes min" else "${minutes / 60} hr"
 }
 
-private val BAR_HEIGHTS = listOf(14, 26, 18, 34, 22, 30, 12, 24, 32, 16, 26, 20, 30, 14, 24, 34, 18, 28, 12, 22)
+private const val PANEL_DESIGN_WIDTH = 1200f
+private const val PANEL_DESIGN_HEIGHT = 752f
+private const val ICON_PX = 96
 
-private val Muted = Color(0x99FFFFFF)
-private val SuccessTint = Color(0xFF6FD08C)
-private val ErrorTint = Color(0xFFF07C85)
+private val PanelBase = Color(0xFF04060C)
+private val PanelEdgeShade = Color(0xB3020308)
+private val Faint = Color.White.copy(alpha = 0.65f)
 
-private const val ColumnRows = 5
+private val MusicTint = Color(0xFFC0632A)
+private val VideoTint = Color(0xFFB5303C)
+private val BookTint = Color(0xFF8D6A3A)
+private val GameTint = Color(0xFF2C7A55)
+private val EmptyTint = Color(0xFF222222)

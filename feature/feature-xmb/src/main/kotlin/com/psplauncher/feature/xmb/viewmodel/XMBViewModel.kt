@@ -679,15 +679,17 @@ data class XMBUiState(
 
     val notificationsOpen: Boolean = false,
 
+    val panelTab: PanelTab = PanelTab.NOTIFICATIONS,
     val noticeCursor: Int = 0,
-    val panelQuick: QuickSetting? = null,
+    val panelQuick: QuickSetting = QuickSetting.WAVE,
     val panelChip: Int = 0,
     val libraryChips: List<LibraryChip> = emptyList(),
-    val launcherNoticeCount: Int = 0,
+    val launcherNotices: List<com.psplauncher.core.ui.notification.SystemToast> = emptyList(),
 
     val androidNotices: List<AndroidNotice> = emptyList(),
 
     val recentTop: XMBItem? = null,
+    val recentTopAt: Long? = null,
     val panelPage: DetailPanelPage = DetailPanelPage.LOGO,
     val panelPageGameId: Long? = null,
     val librarySetupComplete: Boolean = false,
@@ -785,11 +787,11 @@ data class XMBUiState(
     val noticeFocusables: List<NoticeFocus>
         get() = buildList {
             if (musicPlayback.track != null || recentTop != null) add(NoticeFocus.Media)
-            androidNotices.take(NOTICE_ROWS).forEach { add(NoticeFocus.Notice(it.key)) }
+            panelEntries(androidNotices, launcherNotices).forEach { add(it.focus) }
         }
 
     val focusedNotice: NoticeFocus?
-        get() = if (panelQuick != null) null else noticeFocusables.let { rows ->
+        get() = if (panelTab != PanelTab.NOTIFICATIONS) null else noticeFocusables.let { rows ->
             if (rows.isEmpty()) null else rows[noticeCursor.coerceIn(0, rows.lastIndex)]
         }
 
@@ -4935,18 +4937,23 @@ class XMBViewModel @Inject constructor(
         }
 
         if (state.notificationsOpen) {
-            val onMedia = state.focusedNotice == NoticeFocus.Media
+            val onMusic = state.focusedNotice == NoticeFocus.Media && state.musicPlayback.track != null
             when (action) {
                 GamepadAction.NAVIGATE_UP   -> movePanelCursor(PanelMove.UP)
                 GamepadAction.NAVIGATE_DOWN -> movePanelCursor(PanelMove.DOWN)
                 GamepadAction.NAVIGATE_LEFT  ->
-                    if (onMedia) musicPlayer.prev() else movePanelCursor(PanelMove.LEFT)
+                    if (onMusic) musicPlayer.prev() else movePanelCursor(PanelMove.LEFT)
                 GamepadAction.NAVIGATE_RIGHT ->
-                    if (onMedia) musicPlayer.next() else movePanelCursor(PanelMove.RIGHT)
-                GamepadAction.SELECT             ->
-                    state.panelQuick?.let { toggleQuickSetting(it) } ?: activateFocusedNotice()
-                GamepadAction.CHANGE_SORT        -> dismissFocusedNotice()
-                GamepadAction.OPEN_CONTEXT_MENU  -> clearLauncherNotices()
+                    if (onMusic) musicPlayer.next() else movePanelCursor(PanelMove.RIGHT)
+                GamepadAction.PREV_CATEGORY -> movePanelCursor(PanelMove.PREV_TAB)
+                GamepadAction.NEXT_CATEGORY -> movePanelCursor(PanelMove.NEXT_TAB)
+                GamepadAction.SELECT,
+                GamepadAction.CHANGE_SORT,
+                GamepadAction.OPEN_CONTEXT_MENU -> when (state.panelTab) {
+                    PanelTab.NOTIFICATIONS -> runStageButton(action)
+                    PanelTab.QUICK -> if (action == GamepadAction.SELECT) toggleQuickSetting(state.panelQuick)
+                    PanelTab.LIBRARIES -> if (action == GamepadAction.SELECT) toggleQuickSetting(QuickSetting.LIBRARIES)
+                }
                 GamepadAction.BACK,
                 GamepadAction.HOME               -> {
                     menuSound.play(MenuSound.BACK)
@@ -6166,17 +6173,25 @@ class XMBViewModel @Inject constructor(
                 recentAppRows(),
             ) { games, tracks, books, videos, appRows ->
                 val visibleGames = games.notHiddenAt(HideLocationType.ALL_GAMES)
-                mergeRecents(
-                    games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(visibleGames.toXmbItems()),
-                    music  = tracks.recentMusicRows(),
-                    books  = books.map { it.lastOpenedAt ?: 0L }.zip(bookItems(books)),
-                    videos = videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
-                    apps   = appRows,
+                val rows = listOf(
+                    visibleGames.map { it.lastPlayedAt ?: 0L }.zip(visibleGames.toXmbItems()),
+                    tracks.recentMusicRows(),
+                    books.map { it.lastOpenedAt ?: 0L }.zip(bookItems(books)),
+                    videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
+                    appRows,
+                )
+                val top = mergeRecents(
+                    games  = rows[0],
+                    music  = rows[1],
+                    books  = rows[2],
+                    videos = rows[3],
+                    apps   = rows[4],
                     filter = RecentFilter.ALL,
                     limit  = RECENTLY_PLAYED_LIMIT,
                 ).firstOrNull { recentLaunchFor(it) != null }
-            }.collect { top ->
-                _uiState.update { it.copy(recentTop = top) }
+                top to top?.let { t -> rows.flatten().firstOrNull { it.second.id == t.id }?.first?.takeIf { it > 0L } }
+            }.collect { (top, at) ->
+                _uiState.update { it.copy(recentTop = top, recentTopAt = at) }
             }
         }
     }
@@ -6217,25 +6232,31 @@ class XMBViewModel @Inject constructor(
     fun toggleNotifications() {
         menuSound.play(if (_uiState.value.notificationsOpen) MenuSound.BACK else MenuSound.SYSTEM_BROWSE)
         _uiState.update {
-            val opening = !it.notificationsOpen
-            val hasMedia = it.noticeFocusables.firstOrNull() == NoticeFocus.Media
             it.copy(
-                notificationsOpen = opening,
+                notificationsOpen = !it.notificationsOpen,
+                panelTab = PanelTab.NOTIFICATIONS,
                 noticeCursor = 0,
-                panelQuick = if (opening && !hasMedia) QuickSetting.WAVE else null,
+                panelQuick = QuickSetting.WAVE,
                 panelChip = 0,
             )
         }
     }
 
+    fun onNotificationsSwipedOpen() {
+        if (!_uiState.value.notificationsOpen) toggleNotifications()
+    }
+
+    fun onNotificationsSwipedClosed() {
+        if (_uiState.value.notificationsOpen) toggleNotifications()
+    }
+
     private fun movePanelCursor(move: PanelMove) {
         val s = _uiState.value
-        val rows = s.noticeFocusables
-        val before = PanelCursor(s.panelQuick, s.panelChip, s.noticeCursor)
+        val before = PanelCursor(s.panelTab, s.noticeCursor, PANEL_QUICK_SETTINGS.indexOf(s.panelQuick).coerceAtLeast(0), s.panelChip)
         val after = movePanel(
             before, move,
-            hasMedia = rows.firstOrNull() == NoticeFocus.Media,
-            rightRows = rows.size,
+            rows = s.noticeFocusables.size,
+            quicks = PANEL_QUICK_SETTINGS.size,
             chips = s.libraryChips.size,
         )
         if (after == before) {
@@ -6243,7 +6264,20 @@ class XMBViewModel @Inject constructor(
             return
         }
         menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(panelQuick = after.quick, panelChip = after.chip, noticeCursor = after.notice) }
+        _uiState.update {
+            it.copy(
+                panelTab = after.tab,
+                noticeCursor = after.notice,
+                panelQuick = PANEL_QUICK_SETTINGS[after.quick],
+                panelChip = after.chip,
+            )
+        }
+    }
+
+    fun onPanelTabTapped(tab: PanelTab) {
+        if (_uiState.value.panelTab == tab) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(panelTab = tab) }
     }
 
     fun toggleQuickSetting(setting: QuickSetting, chip: Int = _uiState.value.panelChip) {
@@ -6263,7 +6297,13 @@ class XMBViewModel @Inject constructor(
     }
 
     fun onQuickSettingTapped(setting: QuickSetting, chip: Int = 0) {
-        _uiState.update { it.copy(panelQuick = setting, panelChip = chip) }
+        _uiState.update {
+            it.copy(
+                panelTab = if (setting == QuickSetting.LIBRARIES) PanelTab.LIBRARIES else PanelTab.QUICK,
+                panelQuick = if (setting == QuickSetting.LIBRARIES) it.panelQuick else setting,
+                panelChip = chip,
+            )
+        }
         toggleQuickSetting(setting, chip)
     }
 
@@ -6272,7 +6312,7 @@ class XMBViewModel @Inject constructor(
     private fun observeLibraryChips() {
         viewModelScope.launch {
             com.psplauncher.core.ui.notification.SystemToasts.recent.collect { recent ->
-                _uiState.update { it.copy(launcherNoticeCount = recent.size) }
+                _uiState.update { it.copy(launcherNotices = recent) }
             }
         }
         viewModelScope.launch {
@@ -6285,72 +6325,67 @@ class XMBViewModel @Inject constructor(
         }
     }
 
-    fun clearLauncherNotices() {
-        menuSound.play(MenuSound.BACK)
-        com.psplauncher.core.ui.notification.SystemToasts.clear()
-    }
-
     fun closeNotifications() {
         _uiState.update { it.copy(notificationsOpen = false) }
     }
 
-    fun activateFocusedNotice() {
-        when (val focus = _uiState.value.focusedNotice) {
-            null -> Unit
+    private fun runStageButton(button: GamepadAction) {
+        val s = _uiState.value
+        stageActions(s.panelStage(), s.clearableNoticeCount)
+            .firstOrNull { it.button == button }
+            ?.let { runStageCommand(it.command) }
+    }
 
-            NoticeFocus.Media -> if (_uiState.value.musicPlayback.track != null) {
-                musicPlayer.playPause()
-            } else if (_uiState.value.recentTop != null) {
+    fun onStageActionTapped(command: StageCommand) = runStageCommand(command)
+
+    fun onPanelRowTapped(focus: NoticeFocus) {
+        val s = _uiState.value
+        val index = s.noticeFocusables.indexOf(focus)
+        if (index < 0) return
+        if (s.panelTab == PanelTab.NOTIFICATIONS && s.focusedNotice == focus) {
+            runStageButton(GamepadAction.SELECT)
+            return
+        }
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(panelTab = PanelTab.NOTIFICATIONS, noticeCursor = index) }
+    }
+
+    private fun runStageCommand(command: StageCommand) {
+        val s = _uiState.value
+        val focus = s.focusedNotice
+        when (command) {
+            StageCommand.PLAY_PAUSE -> musicPlayer.playPause()
+            StageCommand.NEXT_TRACK -> musicPlayer.next()
+            StageCommand.OPEN_MUSIC -> {
+                menuSound.play(MenuSound.SELECT)
+                closeNotifications()
+                if (s.musicPlayback.track != null) _uiState.update { it.copy(musicPlayerVisible = true) }
+            }
+            StageCommand.LAUNCH_RECENT -> {
                 closeNotifications()
                 launchRecentTop()
             }
-            is NoticeFocus.Notice -> {
+            StageCommand.OPEN_NOTICE -> {
+                val key = (focus as? NoticeFocus.Notice)?.key ?: return
                 menuSound.play(MenuSound.SELECT)
-
-                if (!AndroidNotifications.open(focus.key)) {
-                    Timber.i("Notification ${focus.key} had nothing to open")
-                }
+                if (!AndroidNotifications.open(key)) Timber.i("Notification $key had nothing to open")
                 closeNotifications()
+            }
+            StageCommand.DISMISS -> {
+                menuSound.play(MenuSound.BACK)
+                when (focus) {
+                    is NoticeFocus.Notice -> AndroidNotifications.dismiss(focus.key)
+                    is NoticeFocus.Launcher -> com.psplauncher.core.ui.notification.SystemToasts.dismiss(focus.id)
+                    else -> Unit
+                }
+            }
+            StageCommand.CLEAR_ALL -> {
+                menuSound.play(MenuSound.BACK)
+                s.androidNotices.filter { it.canDismiss }.forEach { AndroidNotifications.dismiss(it.key) }
+                com.psplauncher.core.ui.notification.SystemToasts.clear()
             }
         }
     }
-
-    fun dismissFocusedNotice() {
-        val focus = _uiState.value.focusedNotice as? NoticeFocus.Notice ?: return
-        val notice = _uiState.value.androidNotices.firstOrNull { it.key == focus.key } ?: return
-
-        if (!notice.canDismiss) return
-        menuSound.play(MenuSound.BACK)
-        AndroidNotifications.dismiss(focus.key)
-    }
-
-    fun onNoticeTapped(key: String) {
-        val rows = _uiState.value.noticeFocusables
-        val index = rows.indexOfFirst { it is NoticeFocus.Notice && it.key == key }
-        if (index < 0) return
-        _uiState.update { it.copy(noticeCursor = index) }
-        activateFocusedNotice()
-    }
-
-    fun onNoticeDismissTapped(key: String) {
-        val rows = _uiState.value.noticeFocusables
-        val index = rows.indexOfFirst { it is NoticeFocus.Notice && it.key == key }
-        if (index < 0) return
-        _uiState.update { it.copy(noticeCursor = index) }
-        dismissFocusedNotice()
-    }
-
-    fun onNoticeMediaPrimary() {
-        val rows = _uiState.value.noticeFocusables
-        val index = rows.indexOfFirst { it == NoticeFocus.Media }
-        if (index < 0) return
-        _uiState.update { it.copy(noticeCursor = index) }
-        activateFocusedNotice()
-    }
-
-    fun onNoticeMediaPlayPause() = musicPlayer.playPause()
-    fun onNoticeMediaNext() = musicPlayer.next()
-    fun onNoticeMediaPrev() = musicPlayer.prev()
 
     private val MENU_RAISE_TIMEOUT_MS = 500L
 

@@ -44,6 +44,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -115,6 +118,8 @@ fun XmbPspStatusStrip(
 
     noticeCount: Int = 0,
     onNoticeCountTapped: (() -> Unit)? = null,
+
+    onSwipedDown: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 
     centre: (@Composable BoxScope.() -> Unit)? = null,
@@ -149,11 +154,26 @@ fun XmbPspStatusStrip(
         }
     }
 
+    val openAfter = with(LocalDensity.current) { 24.dp.toPx() }
     Box(
         modifier
             .fillMaxWidth()
             .height(StripHeight)
-            .background(Brush.verticalGradient(0f to StripScrim, 1f to Color.Transparent)),
+            .background(Brush.verticalGradient(0f to StripScrim, 1f to Color.Transparent))
+            .then(
+                if (onSwipedDown != null) {
+                    Modifier.pointerInput(onSwipedDown) {
+                        var travel = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { travel = 0f },
+                            onVerticalDrag = { _, dy -> travel += dy },
+                            onDragEnd = { if (travel > openAfter) onSwipedDown() },
+                        )
+                    }
+                } else {
+                    Modifier
+                },
+            ),
     ) {
         BatteryLine(
             level = batteryLevel,
@@ -266,7 +286,7 @@ fun XmbPspStatusStrip(
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            if (noticeCount > 0) {
+            run {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -288,13 +308,15 @@ fun XmbPspStatusStrip(
                         tint               = StripMuted,
                         modifier           = Modifier.size(StripIconSize * 0.85f),
                     )
-                    Text(
-                        text       = noticeCount.toString(),
-                        color      = StripPrimary,
-                        fontSize   = StripFontSize,
-                        lineHeight = StripFontSize * 1.25f,
-                        fontWeight = FontWeight.Medium,
-                    )
+                    if (noticeCount > 0) {
+                        Text(
+                            text       = noticeCount.toString(),
+                            color      = StripPrimary,
+                            fontSize   = StripFontSize,
+                            lineHeight = StripFontSize * 1.25f,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
                 }
             }
 
