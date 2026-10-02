@@ -67,16 +67,18 @@ class CanonicalCategoryBarTest {
     fun `a hidden built-in is dropped from the bar`() {
         val stored = listOf(cat(BuiltInCategory.GAMES, "Game", 0, gaming = true))
         val bar = canonicalXmbCategories(stored, fallbacks).map { it.id }
-        assertEquals(listOf(BuiltInCategory.SETTINGS, BuiltInCategory.GAMES), bar)
+        assertEquals(listOf(BuiltInCategory.GAMES), bar)
         assertTrue("a hidden built-in must not reach the bar", "photos" !in bar && "music" !in bar)
     }
 
     @Test
-    fun `Settings survives even when hidden, or there is no way back into the manager`() {
-        val bar = canonicalXmbCategories(emptyList(), fallbacks)
-        assertEquals(listOf(BuiltInCategory.SETTINGS), bar.map { it.id })
-
-        assertEquals(0, bar.single().position)
+    fun `a hidden Settings leaves the bar, because the panel's Settings tab is the way back`() {
+        val bar = canonicalXmbCategories(listOf(cat(BuiltInCategory.GAMES, "Game", 0, gaming = true)), fallbacks)
+        assertTrue(BuiltInCategory.SETTINGS !in bar.map { it.id })
+        assertTrue(
+            "with Settings hidden, the panel must still reach the category manager or nothing hidden can come back",
+            PANEL_SETTINGS.any { it.id == "settings_categories" },
+        )
     }
 
     @Test

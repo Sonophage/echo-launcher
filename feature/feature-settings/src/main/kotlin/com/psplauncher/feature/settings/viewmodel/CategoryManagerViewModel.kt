@@ -3,7 +3,6 @@ package com.psplauncher.feature.settings.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.psplauncher.core.data.repository.CategoryRepositoryImpl
-import com.psplauncher.core.domain.model.BuiltInCategory
 import com.psplauncher.core.ui.icons.CATEGORY_ICON_CATALOG
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +26,6 @@ data class CategoryRow(
     val protected: Boolean,
     val isGamingCategory: Boolean = false,
 
-    val canHide: Boolean = true,
 )
 
 data class IconOption(val key: String, val label: String)
@@ -76,7 +74,6 @@ class CategoryManagerViewModel @Inject constructor(
                     visible            = it.isVisible,
                     protected          = categoryRepository.isProtected(it.id),
                     isGamingCategory   = it.isGamingCategory,
-                    canHide            = it.id != BuiltInCategory.SETTINGS,
                 )
             },
         )

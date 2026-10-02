@@ -1,13 +1,26 @@
 package com.psplauncher.feature.xmb.ui
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.Velocity
+import com.psplauncher.feature.xmb.viewmodel.PANEL_SETTINGS
+import com.psplauncher.feature.xmb.viewmodel.SETTINGS_GRID_COLUMNS
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -147,23 +160,23 @@ fun XmbNotificationBar(
     accent: Color,
     onRowTapped: (NoticeFocus) -> Unit,
     onActionTapped: (StageCommand) -> Unit,
+    settingFocus: Int,
     onQuickTapped: (QuickSetting, Int) -> Unit,
+    onSettingTapped: (Int) -> Unit,
     onGrantAndroidAccess: () -> Unit,
-    onSwipedClosed: () -> Unit,
+    pull: PanelPull,
+    onOpened: () -> Unit,
+    onClosed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AnimatedVisibility(
-        visible = open,
-        enter = slideInVertically(tween(220)) { -it / 6 } + fadeIn(tween(220)),
-        exit = slideOutVertically(tween(180)) { -it / 6 } + fadeOut(tween(180)),
-        modifier = modifier.fillMaxSize(),
-    ) {
+    if (pull.progress.value <= 0f && !open) return
+    Box(modifier.fillMaxSize().graphicsLayer { translationY = -(1f - pull.progress.value) * size.height }) {
         val stageIcon = rememberAppIcon(stagePackage(stage, LocalContext.current.packageName))
         val tint by animateColorAsState(stageTint(stage, stageIcon?.color, accent), tween(500), label = "panelTint")
-        val closeAfter = with(LocalDensity.current) { 72.dp.toPx() }
         BoxWithConstraints(
             Modifier
                 .fillMaxSize()
+                .nestedScroll(remember(pull) { pull.listOverscroll(onOpened, onClosed) })
                 .background(PanelBase)
                 .drawBehind {
                     drawRect(Brush.radialGradient(
@@ -174,14 +187,7 @@ fun XmbNotificationBar(
                     drawRect(Brush.horizontalGradient(0.45f to Color.Transparent, 1f to PanelEdgeShade))
                 }
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
-                .pointerInput(Unit) {
-                    var travel = 0f
-                    detectVerticalDragGestures(
-                        onDragStart = { travel = 0f },
-                        onVerticalDrag = { _, dy -> travel += dy },
-                        onDragEnd = { if (travel < -closeAfter) onSwipedClosed() },
-                    )
-                },
+                .panelPullGesture(pull, onOpened, onClosed),
         ) {
             val u = DesignUnits(minOf(maxWidth.value / PANEL_DESIGN_WIDTH, maxHeight.value / PANEL_DESIGN_HEIGHT), LocalDensity.current)
             when (tab) {
@@ -205,6 +211,8 @@ fun XmbNotificationBar(
                 PanelTab.LIBRARIES -> quick?.let {
                     LibraryTiles(it.chips, chipFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(180)))
                 }
+                PanelTab.SETTINGS -> SettingsTiles(settingFocus, u, onSettingTapped,
+                    Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(80), top = u.dp(110), bottom = u.dp(70)))
             }
         }
     }
@@ -433,6 +441,7 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
                 QuickSetting.WAVE -> "Wave" to if (quick.waveOn) "On" else "Off"
                 QuickSetting.BACKDROP -> "Crossbar shows" to if (quick.backdropOn) "Art" else "Wallpaper"
                 QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
+                QuickSetting.ANDROID_SETTINGS -> "Android settings" to "Open"
                 QuickSetting.LIBRARIES -> "" to ""
             }
             Tile(setting == focus, u.dp(300), u.dp(22), u.dp(28), u, Modifier.weight(1f), { onTapped(setting, 0) }) {
@@ -465,6 +474,31 @@ private fun LibraryTiles(chips: List<LibraryChip>, focus: Int, u: DesignUnits, o
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsTiles(focus: Int, u: DesignUnits, onTapped: (Int) -> Unit, modifier: Modifier) {
+    val state = rememberLazyGridState()
+    LaunchedEffect(focus) { state.animateScrollToItem((focus - SETTINGS_GRID_COLUMNS).coerceAtLeast(0)) }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(SETTINGS_GRID_COLUMNS),
+        state = state,
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(14)),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(u.dp(6)),
+    ) {
+        itemsIndexed(PANEL_SETTINGS, key = { _, e -> e.id }) { i, entry ->
+            Tile(i == focus, u.dp(150), u.dp(18), u.dp(20), u, Modifier, { onTapped(i) }) {
+                Text(entry.section.title.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(11), letterSpacing = 0.14.em))
+                Column(verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
+                    Text(entry.title, color = Color.White, fontSize = u.sp(19), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(entry.subtitle, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12), fontWeight = FontWeight.Light,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
             }
         }
     }
@@ -640,6 +674,7 @@ private fun quickIcon(setting: QuickSetting): ImageVector = when (setting) {
     QuickSetting.WAVE -> Icons.Outlined.Waves
     QuickSetting.BACKDROP -> Icons.Outlined.Image
     QuickSetting.RECENT_APPS -> Icons.Outlined.History
+    QuickSetting.ANDROID_SETTINGS -> Icons.Outlined.Settings
     QuickSetting.LIBRARIES -> Icons.Outlined.GridView
 }
 
@@ -656,6 +691,85 @@ private fun playTimeLabel(ms: Long): String {
     val minutes = ms / 60_000L
     return if (minutes < 60) "$minutes min" else "${minutes / 60} hr"
 }
+
+@Stable
+class PanelPull internal constructor(private val scope: CoroutineScope) {
+    val progress = Animatable(0f)
+    var heightPx = 1f
+    var isOpen = false
+    private var dragging = false
+    private var raw = 0f
+
+    fun drag(dy: Float) {
+        if (!dragging) { dragging = true; raw = progress.value }
+        raw = (raw + dy / heightPx).coerceIn(0f, 1f)
+        scope.launch { progress.snapTo(raw) }
+    }
+
+    fun release(velocityY: Float, onOpened: () -> Unit, onClosed: () -> Unit) {
+        if (!dragging) return
+        dragging = false
+        val wantOpen = pullSettlesOpen(isOpen, raw, velocityY)
+        if (wantOpen != isOpen) { if (wantOpen) onOpened() else onClosed() }
+        scope.launch { progress.animateTo(if (wantOpen) 1f else 0f, tween(PULL_SETTLE_MS)) }
+    }
+
+    internal fun settle(open: Boolean) {
+        isOpen = open
+        if (!dragging) scope.launch { progress.animateTo(if (open) 1f else 0f, tween(PULL_SETTLE_MS)) }
+    }
+
+    internal fun listOverscroll(onOpened: () -> Unit, onClosed: () -> Unit) = object : NestedScrollConnection {
+        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+            if (dragging && available.y > 0f && raw < 1f) { drag(available.y); return Offset(0f, available.y) }
+            return Offset.Zero
+        }
+
+        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+            if (source == NestedScrollSource.UserInput && available.y < 0f) { drag(available.y); return Offset(0f, available.y) }
+            return Offset.Zero
+        }
+
+        override suspend fun onPreFling(available: Velocity): Velocity {
+            if (!dragging) return Velocity.Zero
+            release(available.y, onOpened, onClosed)
+            return available
+        }
+    }
+}
+
+@Composable
+fun rememberPanelPull(open: Boolean): PanelPull {
+    val scope = rememberCoroutineScope()
+    val pull = remember { PanelPull(scope) }
+    pull.heightPx = LocalWindowInfo.current.containerSize.height.toFloat().coerceAtLeast(1f)
+    LaunchedEffect(open) { pull.settle(open) }
+    return pull
+}
+
+fun Modifier.panelPullGesture(pull: PanelPull, onOpened: () -> Unit, onClosed: () -> Unit): Modifier = pointerInput(pull) {
+    val tracker = VelocityTracker()
+    detectVerticalDragGestures(
+        onDragStart = { tracker.resetTracking() },
+        onVerticalDrag = { change, dy ->
+            tracker.addPosition(change.uptimeMillis, change.position)
+            pull.drag(dy)
+        },
+        onDragEnd = { pull.release(tracker.calculateVelocity().y, onOpened, onClosed) },
+        onDragCancel = { pull.release(0f, onOpened, onClosed) },
+    )
+}
+
+internal fun pullSettlesOpen(wasOpen: Boolean, progress: Float, velocityY: Float): Boolean = when {
+    velocityY > PULL_FLING_PX_PER_S -> true
+    velocityY < -PULL_FLING_PX_PER_S -> false
+    wasOpen -> progress > 1f - PULL_COMMIT
+    else -> progress > PULL_COMMIT
+}
+
+private const val PULL_COMMIT = 0.33f
+private const val PULL_FLING_PX_PER_S = 1200f
+private const val PULL_SETTLE_MS = 220
 
 private const val PANEL_DESIGN_WIDTH = 1200f
 private const val PANEL_DESIGN_HEIGHT = 752f

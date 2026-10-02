@@ -19,6 +19,7 @@ class BackupKeyDriftTest {
         "last_played_placed_v1" to "one-shot position fix that a restore must be able to re-run",
 
         "network_renamed_v1" to "one-shot name fix that a restore must be able to re-run",
+        "settings_on_panel_v1" to "one-shot move of Settings off the crossbar that a restore must be able to re-run",
         "data_prep_version" to "migration marker",
 
         "theme_icons_stamp" to "dangling pointer into un-bundled files",

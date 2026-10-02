@@ -44,9 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -119,7 +116,6 @@ fun XmbPspStatusStrip(
     noticeCount: Int = 0,
     onNoticeCountTapped: (() -> Unit)? = null,
 
-    onSwipedDown: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 
     centre: (@Composable BoxScope.() -> Unit)? = null,
@@ -154,26 +150,11 @@ fun XmbPspStatusStrip(
         }
     }
 
-    val openAfter = with(LocalDensity.current) { 24.dp.toPx() }
     Box(
         modifier
             .fillMaxWidth()
             .height(StripHeight)
-            .background(Brush.verticalGradient(0f to StripScrim, 1f to Color.Transparent))
-            .then(
-                if (onSwipedDown != null) {
-                    Modifier.pointerInput(onSwipedDown) {
-                        var travel = 0f
-                        detectVerticalDragGestures(
-                            onDragStart = { travel = 0f },
-                            onVerticalDrag = { _, dy -> travel += dy },
-                            onDragEnd = { if (travel > openAfter) onSwipedDown() },
-                        )
-                    }
-                } else {
-                    Modifier
-                },
-            ),
+            .background(Brush.verticalGradient(0f to StripScrim, 1f to Color.Transparent)),
     ) {
         BatteryLine(
             level = batteryLevel,

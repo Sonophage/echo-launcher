@@ -683,6 +683,8 @@ data class XMBUiState(
     val noticeCursor: Int = 0,
     val panelQuick: QuickSetting = QuickSetting.WAVE,
     val panelChip: Int = 0,
+    val panelSetting: Int = 0,
+    val settingsFromPanel: Boolean = false,
     val libraryChips: List<LibraryChip> = emptyList(),
     val launcherNotices: List<com.psplauncher.core.ui.notification.SystemToast> = emptyList(),
 
@@ -1074,7 +1076,7 @@ internal fun canonicalXmbCategories(
     val builtIns = fallbacks.mapNotNull { fallback ->
         val stored = byId[fallback.id]
 
-        if (stored == null && fallback.id != BuiltInCategory.SETTINGS) return@mapNotNull null
+        if (stored == null) return@mapNotNull null
         fallback.copy(
             name             = stored?.name?.takeIf { it.isNotBlank() } ?: fallback.name,
             position         = stored?.position ?: fallback.position,
@@ -4953,6 +4955,7 @@ class XMBViewModel @Inject constructor(
                     PanelTab.NOTIFICATIONS -> runStageButton(action)
                     PanelTab.QUICK -> if (action == GamepadAction.SELECT) toggleQuickSetting(state.panelQuick)
                     PanelTab.LIBRARIES -> if (action == GamepadAction.SELECT) toggleQuickSetting(QuickSetting.LIBRARIES)
+                    PanelTab.SETTINGS -> if (action == GamepadAction.SELECT) openPanelSetting(state.panelSetting)
                 }
                 GamepadAction.BACK,
                 GamepadAction.HOME               -> {
@@ -6238,6 +6241,7 @@ class XMBViewModel @Inject constructor(
                 noticeCursor = 0,
                 panelQuick = QuickSetting.WAVE,
                 panelChip = 0,
+                panelSetting = 0,
             )
         }
     }
@@ -6252,7 +6256,7 @@ class XMBViewModel @Inject constructor(
 
     private fun movePanelCursor(move: PanelMove) {
         val s = _uiState.value
-        val before = PanelCursor(s.panelTab, s.noticeCursor, PANEL_QUICK_SETTINGS.indexOf(s.panelQuick).coerceAtLeast(0), s.panelChip)
+        val before = PanelCursor(s.panelTab, s.noticeCursor, PANEL_QUICK_SETTINGS.indexOf(s.panelQuick).coerceAtLeast(0), s.panelChip, s.panelSetting)
         val after = movePanel(
             before, move,
             rows = s.noticeFocusables.size,
@@ -6270,6 +6274,38 @@ class XMBViewModel @Inject constructor(
                 noticeCursor = after.notice,
                 panelQuick = PANEL_QUICK_SETTINGS[after.quick],
                 panelChip = after.chip,
+                panelSetting = after.setting,
+            )
+        }
+    }
+
+    fun onPanelSettingTapped(index: Int) {
+        _uiState.update { it.copy(panelTab = PanelTab.SETTINGS, panelSetting = index) }
+        openPanelSetting(index)
+    }
+
+    private fun openPanelSetting(index: Int) {
+        val entry = PANEL_SETTINGS.getOrNull(index) ?: return
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update {
+            it.copy(
+                notificationsOpen = false,
+                activeSettingsScreen = entry.id,
+                settingsReturnTo = null,
+                settingsFromPanel = true,
+            )
+        }
+    }
+
+    private fun returnToPanelSettings() {
+        _uiState.update {
+            it.copy(
+                activeSettingsScreen = null,
+                settingsReturnTo = null,
+                pendingSettingsAction = null,
+                settingsFromPanel = false,
+                notificationsOpen = true,
+                panelTab = PanelTab.SETTINGS,
             )
         }
     }
@@ -6292,6 +6328,15 @@ class XMBViewModel @Inject constructor(
                 QuickSetting.BACKDROP -> iconDisplayPreferences.setItemBackdrop(!s.itemBackdropEnabled)
                 QuickSetting.RECENT_APPS -> context.pfpDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
                 QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
+                QuickSetting.ANDROID_SETTINGS -> {
+                    closeNotifications()
+                    runCatching {
+                        context.startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }.onFailure { Timber.w(it, "Could not open device settings") }
+                }
             }
         }
     }
@@ -7675,6 +7720,10 @@ class XMBViewModel @Inject constructor(
     }
 
     fun onSettingsBack() {
+        if (_uiState.value.settingsFromPanel && _uiState.value.settingsReturnTo == null) {
+            returnToPanelSettings()
+            return
+        }
         _uiState.value.settingsReturnTo?.let { returnTo ->
             _uiState.update {
                 it.copy(
@@ -7707,6 +7756,10 @@ class XMBViewModel @Inject constructor(
         val closing = _uiState.value.activeSettingsScreen
         if (closing in WIZARD_SCREEN_IDS) {
             markInitialSetupSeen()
+        }
+        if (_uiState.value.settingsFromPanel) {
+            returnToPanelSettings()
+            return
         }
         _uiState.update {
             it.copy(activeSettingsScreen = null, settingsReturnTo = null, pendingSettingsAction = null)

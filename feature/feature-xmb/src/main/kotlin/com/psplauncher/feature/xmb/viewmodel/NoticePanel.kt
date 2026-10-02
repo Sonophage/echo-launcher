@@ -15,16 +15,21 @@ val LIBRARY_CHIP_IDS = listOf(
     "network",
 )
 
-enum class QuickSetting { WAVE, BACKDROP, RECENT_APPS, LIBRARIES }
+enum class QuickSetting { WAVE, BACKDROP, RECENT_APPS, ANDROID_SETTINGS, LIBRARIES }
 
-val PANEL_QUICK_SETTINGS = listOf(QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.RECENT_APPS)
+val PANEL_QUICK_SETTINGS = listOf(QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.RECENT_APPS, QuickSetting.ANDROID_SETTINGS)
 
 const val LIBRARY_GRID_COLUMNS = 3
+
+const val SETTINGS_GRID_COLUMNS = 4
+
+val PANEL_SETTINGS: List<com.psplauncher.core.domain.model.SettingsEntry> = com.psplauncher.core.domain.model.SETTINGS_CATALOG
 
 enum class PanelTab(val label: String) {
     NOTIFICATIONS("Notifications"),
     QUICK("Quick settings"),
     LIBRARIES("Libraries"),
+    SETTINGS("Settings"),
 }
 
 enum class PanelMove { UP, DOWN, LEFT, RIGHT, PREV_TAB, NEXT_TAB }
@@ -34,9 +39,10 @@ data class PanelCursor(
     val notice: Int = 0,
     val quick: Int = 0,
     val chip: Int = 0,
+    val setting: Int = 0,
 )
 
-fun movePanel(cursor: PanelCursor, move: PanelMove, rows: Int, quicks: Int, chips: Int): PanelCursor {
+fun movePanel(cursor: PanelCursor, move: PanelMove, rows: Int, quicks: Int, chips: Int, settings: Int = PANEL_SETTINGS.size): PanelCursor {
     val tabs = PanelTab.entries
     when (move) {
         PanelMove.PREV_TAB -> return cursor.copy(tab = tabs[(cursor.tab.ordinal - 1 + tabs.size) % tabs.size])
@@ -57,19 +63,19 @@ fun movePanel(cursor: PanelCursor, move: PanelMove, rows: Int, quicks: Int, chip
             PanelMove.RIGHT -> cursor.copy(quick = (cursor.quick + 1).coerceAtMost((quicks - 1).coerceAtLeast(0)))
             else -> cursor
         }
-        PanelTab.LIBRARIES -> {
-            val chip = cursor.chip
-            val column = chip % LIBRARY_GRID_COLUMNS
-            cursor.copy(
-                chip = when (move) {
-                    PanelMove.LEFT -> if (column > 0) chip - 1 else chip
-                    PanelMove.RIGHT -> if (column < LIBRARY_GRID_COLUMNS - 1 && chip + 1 < chips) chip + 1 else chip
-                    PanelMove.UP -> if (chip - LIBRARY_GRID_COLUMNS >= 0) chip - LIBRARY_GRID_COLUMNS else chip
-                    PanelMove.DOWN -> if (chip + LIBRARY_GRID_COLUMNS < chips) chip + LIBRARY_GRID_COLUMNS else chip
-                    else -> chip
-                },
-            )
-        }
+        PanelTab.LIBRARIES -> cursor.copy(chip = gridMove(cursor.chip, move, LIBRARY_GRID_COLUMNS, chips))
+        PanelTab.SETTINGS -> cursor.copy(setting = gridMove(cursor.setting, move, SETTINGS_GRID_COLUMNS, settings))
+    }
+}
+
+private fun gridMove(at: Int, move: PanelMove, columns: Int, count: Int): Int {
+    val column = at % columns
+    return when (move) {
+        PanelMove.LEFT -> if (column > 0) at - 1 else at
+        PanelMove.RIGHT -> if (column < columns - 1 && at + 1 < count) at + 1 else at
+        PanelMove.UP -> if (at - columns >= 0) at - columns else at
+        PanelMove.DOWN -> if (at + columns < count) at + columns else at
+        else -> at
     }
 }
 

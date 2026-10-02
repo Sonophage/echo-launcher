@@ -9,8 +9,8 @@ class NoticePanelNavTest {
 
     @Test fun `the shoulder buttons walk the tabs and wrap at both ends`() {
         assertEquals(PanelTab.QUICK, move(PanelCursor(), PanelMove.NEXT_TAB).tab)
-        assertEquals(PanelTab.NOTIFICATIONS, move(PanelCursor(tab = PanelTab.LIBRARIES), PanelMove.NEXT_TAB).tab)
-        assertEquals(PanelTab.LIBRARIES, move(PanelCursor(), PanelMove.PREV_TAB).tab)
+        assertEquals(PanelTab.NOTIFICATIONS, move(PanelCursor(tab = PanelTab.SETTINGS), PanelMove.NEXT_TAB).tab)
+        assertEquals(PanelTab.SETTINGS, move(PanelCursor(), PanelMove.PREV_TAB).tab)
     }
 
     @Test fun `switching tab keeps where you were in the list`() {
@@ -51,5 +51,14 @@ class NoticePanelNavTest {
         assertEquals(4, move(g, PanelMove.RIGHT, chips = 5).chip)
         assertEquals(4, move(g.copy(chip = 4), PanelMove.RIGHT, chips = 5).chip)
         assertEquals("down from a column with no tile below stays put", 1, move(g.copy(chip = 1), PanelMove.DOWN, chips = 4).chip)
+    }
+
+    @Test fun `the settings grid is four wide and reaches every settings screen`() {
+        val g = PanelCursor(tab = PanelTab.SETTINGS, setting = 3)
+        assertEquals("right off the end of a row must not wrap", 3, move(g, PanelMove.RIGHT).setting)
+        assertEquals(7, move(g, PanelMove.DOWN).setting)
+        var c = PanelCursor(tab = PanelTab.SETTINGS, setting = PANEL_SETTINGS.lastIndex % SETTINGS_GRID_COLUMNS)
+        repeat(PANEL_SETTINGS.size) { c = move(c, PanelMove.DOWN) }
+        assertEquals("the last screen in the catalogue must be reachable", PANEL_SETTINGS.lastIndex, c.setting)
     }
 }

@@ -191,6 +191,7 @@ fun XMBShellContainer(
         onPanelTabTapped = viewModel::onPanelTabTapped,
         onNotificationsSwipedOpen = viewModel::onNotificationsSwipedOpen,
         onNotificationsSwipedClosed = viewModel::onNotificationsSwipedClosed,
+        onPanelSettingTapped = viewModel::onPanelSettingTapped,
         onOpenAppDrawer = viewModel::onOpenAppDrawer,
         onItemTap = viewModel::onItemTap,
         onRecentCardTap = viewModel::onRecentCardTap,
@@ -351,6 +352,7 @@ fun XMBShell(
     onPanelTabTapped: (com.psplauncher.feature.xmb.viewmodel.PanelTab) -> Unit = {},
     onNotificationsSwipedOpen: () -> Unit = {},
     onNotificationsSwipedClosed: () -> Unit = {},
+    onPanelSettingTapped: (Int) -> Unit = {},
     onOpenAppDrawer: () -> Unit = {},
 
     onItemTap: (Int) -> Unit = {},
@@ -1019,6 +1021,7 @@ fun XMBShell(
 
             val xmbContext = uiState.stripShowsXmbContext
 
+            val panelPull = rememberPanelPull(notificationsOpen)
             CompositionLocalProvider(LocalDensity provides baseDensity) {
             XmbPspStatusStrip(
                 sortLabel = uiState.sortLabel.takeIf { xmbContext },
@@ -1030,7 +1033,6 @@ fun XMBShell(
 
                 noticeCount = uiState.launcherNotices.size + androidNotices.size,
                 onNoticeCountTapped = onNotificationsToggled,
-                onSwipedDown = onNotificationsSwipedOpen.takeIf { !notificationsOpen },
 
                 hints = StripHints(
                     shoulder = uiState.panelStripOpen && xmbContext,
@@ -1052,7 +1054,13 @@ fun XMBShell(
                         )
                     }
                 } else null,
-                modifier = Modifier.align(Alignment.TopCenter).zIndex(aboveContextRail),
+                modifier = Modifier.align(Alignment.TopCenter).zIndex(aboveContextRail).then(
+                    if (!notificationsOpen) {
+                        Modifier.panelPullGesture(panelPull, onNotificationsSwipedOpen, onNotificationsSwipedClosed)
+                    } else {
+                        Modifier
+                    },
+                ),
             )
             }
 
@@ -1085,8 +1093,12 @@ fun XMBShell(
                 accent = com.psplauncher.core.ui.theme.menuCursorEdge(),
                 onRowTapped = onPanelRowTapped,
                 onActionTapped = onStageActionTapped,
+                settingFocus = uiState.panelSetting,
                 onQuickTapped = onQuickSettingTapped,
-                onSwipedClosed = onNotificationsSwipedClosed,
+                onSettingTapped = onPanelSettingTapped,
+                pull = panelPull,
+                onOpened = onNotificationsSwipedOpen,
+                onClosed = onNotificationsSwipedClosed,
                 modifier = Modifier.zIndex(NotificationBarZ),
             )
 
