@@ -24,6 +24,8 @@ import com.psplauncher.feature.launcher.PcShortcutImporter
 import com.psplauncher.feature.library.scanner.PcExportFile
 import com.psplauncher.feature.library.scanner.RomScanner
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,7 +63,11 @@ class PcGameScanner @Inject constructor(
     private val artworkImportManager: ArtworkImportManager,
     private val artworkRecordDao: ArtworkRecordDao,
 ) {
-    suspend fun scan(overrideFolder: Uri? = null): PcScanReport {
+    private val scanMutex = Mutex()
+
+    suspend fun scan(overrideFolder: Uri? = null): PcScanReport = scanMutex.withLock { scanLocked(overrideFolder) }
+
+    private suspend fun scanLocked(overrideFolder: Uri?): PcScanReport {
         val setup = runCatching { windowsLibrarySetup.ensure() }.getOrNull()
         if (overrideFolder == null && setup is WindowsSetupState.NoRomRoot) {
             return PcScanReport(
