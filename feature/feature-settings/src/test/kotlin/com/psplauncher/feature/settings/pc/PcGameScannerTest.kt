@@ -1,6 +1,7 @@
 package com.psplauncher.feature.settings.pc
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import com.psplauncher.core.data.database.dao.ArtworkRecordDao
 import com.psplauncher.core.data.repository.WindowsLibrarySetup
@@ -15,12 +16,17 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.util.Collections
 
 class PcGameScannerTest {
     private val context = mockk<Context>(relaxed = true)
+    private val packageManager = mockk<PackageManager>(relaxed = true)
     private val windowsLibrarySetup = mockk<WindowsLibrarySetup>(relaxed = true)
     private val pcShortcutImporter = mockk<PcShortcutImporter>(relaxed = true)
     private val romScanner = mockk<RomScanner>(relaxed = true)
@@ -40,7 +46,7 @@ class PcGameScannerTest {
 
     @Before
     fun setUp() {
-        every { context.packageManager } returns mockk<PackageManager>(relaxed = true)
+        every { context.packageManager } returns packageManager
         coEvery { windowsLibrarySetup.ensure() } returns WindowsSetupState.Ready(null)
         coEvery { windowsLibrarySetup.importFolders() } returns listOf("tree" to "importDocId")
         coEvery { pcShortcutImporter.reconcilePinnedShortcuts() } returns 0
@@ -118,5 +124,56 @@ class PcGameScannerTest {
         coVerify(exactly = 0) { gameRepository.updateUserTitleOverride(any(), any()) }
         coVerify(exactly = 0) { gameRepository.updateStorefrontIdentity(any(), any(), any()) }
         coVerify(exactly = 0) { gameRepository.updateProviderMatch(any(), any(), any()) }
+    }
+
+    private fun winlatorShortcut(title: String, intentUri: String): PcExportFile {
+        val intent = mockk<Intent>(relaxed = true)
+        every { intent.toUri(Intent.URI_INTENT_SCHEME) } returns intentUri
+        every { packageManager.getLaunchIntentForPackage("com.winlator") } returns intent
+        return PcExportFile(
+            title = title,
+            extension = "desktop",
+            idContent = null,
+            rawPath = "/storage/emulated/0/winlator/$title.desktop",
+            uri = "content://x/$title.desktop",
+        )
+    }
+
+    @Test
+    fun `re-scanning games already in the library imports nothing`() = runTest {
+        val shortcut = winlatorShortcut("Portal", "intent:winlator#Portal")
+        val existing = Game(id = 5L, title = "Portal", platformId = "windows", packageName = "com.winlator")
+        coEvery { romScanner.scanPcFolder("tree", "importDocId") } returns listOf(shortcut)
+        coEvery { gameRepository.getByIntentUri("intent:winlator#Portal") } returns existing
+
+        val report = scanner.scan()
+
+        coVerify(exactly = 0) { gameRepository.upsert(any()) }
+        assertEquals(0, report.exportsAdded)
+        assertEquals(0, report.newGames)
+        assertEquals("Imported 0 PC game(s).", report.message)
+    }
+
+    @Test
+    fun `two overlapping PC scans create each game once`() = runTest {
+        val shortcut = winlatorShortcut("Portal", "intent:winlator#Portal")
+        val library = Collections.synchronizedList(mutableListOf<Game>())
+        coEvery { romScanner.scanPcFolder("tree", "importDocId") } returns listOf(shortcut)
+        coEvery { gameRepository.getByIntentUri(any()) } coAnswers {
+            library.firstOrNull { it.launchIntentUri == firstArg<String>() }
+        }
+        coEvery { gameRepository.getByPlatform("windows") } coAnswers { library.toList() }
+        coEvery { gameRepository.upsert(any()) } coAnswers {
+            delay(10)
+            library += firstArg<Game>().copy(id = library.size + 1L)
+            library.size.toLong()
+        }
+
+        val first = launch { scanner.scan() }
+        val second = launch { scanner.scan() }
+        first.join()
+        second.join()
+
+        assertEquals(1, library.count { it.launchIntentUri == "intent:winlator#Portal" })
     }
 }

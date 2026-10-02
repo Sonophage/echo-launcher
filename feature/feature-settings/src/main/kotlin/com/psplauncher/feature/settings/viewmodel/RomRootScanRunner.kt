@@ -8,8 +8,8 @@ import com.psplauncher.feature.library.scanner.ScanStatus
 import com.psplauncher.feature.settings.pc.PcGameScanner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -34,14 +34,19 @@ class RomRootScanRunner @Inject constructor(
     private val pcGameScanner: PcGameScanner,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var inFlight: Job? = null
+    private val requests = Channel<Unit>(Channel.CONFLATED)
+
+    init {
+        scope.launch {
+            for (request in requests) {
+                runCatching { scan() }
+                    .onFailure { Timber.w(it, "Wizard ROM root scan failed") }
+            }
+        }
+    }
 
     fun kickoff() {
-        if (inFlight?.isActive == true) return
-        inFlight = scope.launch {
-            runCatching { scan() }
-                .onFailure { Timber.w(it, "Wizard ROM root scan failed") }
-        }
+        requests.trySend(Unit)
     }
 
     suspend fun scan(): RomRootScanReport {

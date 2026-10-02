@@ -312,7 +312,7 @@ class InitialSetupViewModel @Inject constructor(
 
     fun relinkRomRoot(oldTreeUri: String, newUri: Uri) {
         viewModelScope.launch {
-            romRootRepository.persist(newUri)
+            romRootRepository.persist(newUri, writable = true)
             romRootRepository.replace(oldTreeUri, newUri.toString())
             romRootScanRunner.kickoff()
         }

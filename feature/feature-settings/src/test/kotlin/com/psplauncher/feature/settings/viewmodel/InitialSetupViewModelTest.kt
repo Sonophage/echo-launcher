@@ -283,6 +283,18 @@ class InitialSetupViewModelTest {
         io.mockk.verify { romRootScanRunner.kickoff() }
     }
 
+    @Test fun `a relinked ROM root keeps write access so standard folders can be created`() =
+        runTest(dispatcher) {
+            val old = "content://tree/primary%3ARoms"
+            val newUri = mockk<Uri> { every { this@mockk.toString() } returns "content://tree/1A2B-3C4D%3ARoms" }
+
+            vm.relinkRomRoot(old, newUri)
+            advanceUntilIdle()
+
+            coVerify { romRoots.persist(newUri, writable = true) }
+            coVerify { romRoots.replace(old, "content://tree/1A2B-3C4D%3ARoms") }
+        }
+
     @Test fun `addMediaRoot persists, adds, and starts the per-kind scan`() = runTest(dispatcher) {
         val uri = mockk<Uri> { every { this@mockk.toString() } returns "content://tree/primary%3AMusic" }
 
