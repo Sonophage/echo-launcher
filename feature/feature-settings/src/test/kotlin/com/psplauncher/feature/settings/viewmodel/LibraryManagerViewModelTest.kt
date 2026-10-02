@@ -152,6 +152,19 @@ class LibraryManagerViewModelTest {
     }
 
     @Test
+    fun `a relinked ROM root keeps write access so standard folders can be created`() = runTest(dispatcher) {
+        val old = "content://tree/primary%3ARoms"
+        val newUri = mockk<android.net.Uri> { every { this@mockk.toString() } returns "content://tree/1A2B-3C4D%3ARoms" }
+
+        vm.beginRelinkRomRoot(old)
+        vm.onRomRootRelinkPicked(newUri)
+        advanceUntilIdle()
+
+        coVerify { romRootRepository.persist(newUri, writable = true) }
+        coVerify { romRootRepository.replace(old, "content://tree/1A2B-3C4D%3ARoms") }
+    }
+
+    @Test
     fun `SKIPPED_NO_SOURCE without an error uses the configured-folder message`() {
         val outcome = PlatformScanOutcome("psx", "PlayStation Memory Card", ScanStatus.SKIPPED_NO_SOURCE)
         assertEquals(

@@ -555,7 +555,7 @@ class LibraryManagerViewModel @Inject constructor(
         pendingRelinkRomRoot = null
         if (uri == null) return
         viewModelScope.launch {
-            romRootRepository.persist(uri)
+            romRootRepository.persist(uri, writable = true)
             romRootRepository.replace(old, uri.toString())
             refreshRomRoots()
             scanRomRoot()
