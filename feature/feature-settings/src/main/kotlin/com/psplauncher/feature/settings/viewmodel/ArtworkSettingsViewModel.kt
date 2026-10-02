@@ -271,6 +271,11 @@ class ArtworkSettingsViewModel @Inject constructor(
             try {
                 val report = artworkLinkRepair.run()
                 _extra.update { it.copy(summary = report.message()) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                timber.log.Timber.w(e, "Artwork link repair failed")
+                _extra.update { it.copy(summary = "Repair stopped before it finished. Nothing more was changed.") }
             } finally {
                 _extra.update { it.copy(isRepairingLinks = false) }
             }
