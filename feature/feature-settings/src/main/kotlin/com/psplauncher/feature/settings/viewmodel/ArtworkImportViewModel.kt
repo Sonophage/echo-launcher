@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.text.SimpleDateFormat
@@ -31,6 +32,9 @@ import java.util.Locale
 import javax.inject.Inject
 
 private val KEY_MOVE_FILES = booleanPreferencesKey("artwork_import_move_files")
+
+internal fun ArtworkImportUiState.withAssignment(basedOn: ImportPlan, updated: ImportPlan): ArtworkImportUiState =
+    if (plan !== basedOn) this else copy(plan = updated, expandedAmbiguousIndex = null)
 
 data class ArtworkImportUiState(
 
@@ -225,8 +229,12 @@ class ArtworkImportViewModel @Inject constructor(
     fun assignAmbiguous(index: Int, gameId: Long) {
         val plan = _uiState.value.plan ?: return
         viewModelScope.launch {
-            val updated = importManager.assignAmbiguous(plan, index, gameId)
-            _uiState.value = _uiState.value.copy(plan = updated, expandedAmbiguousIndex = null)
+            runCatching { importManager.assignAmbiguous(plan, index, gameId) }
+                .onSuccess { updated -> _uiState.update { it.withAssignment(basedOn = plan, updated = updated) } }
+                .onFailure {
+                    Timber.e(it, "Ambiguous assignment failed")
+                    _uiState.update { state -> state.copy(error = "Could not assign that match.") }
+                }
         }
     }
 
