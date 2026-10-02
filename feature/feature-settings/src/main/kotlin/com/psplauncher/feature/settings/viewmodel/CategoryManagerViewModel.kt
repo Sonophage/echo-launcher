@@ -17,8 +17,6 @@ import javax.inject.Inject
 
 enum class CategoryStep { LIST, PICK_ICON, PICK_TYPE, DETAIL }
 
-private val LEGACY_APP_PSEUDO_CATEGORY_IDS = setOf("music_apps", "video_apps", "photo_apps")
-
 data class CategoryRow(
     val id: String,
     val name: String,
@@ -68,7 +66,7 @@ class CategoryManagerViewModel @Inject constructor(
     ) { categories, scratch ->
         scratch.copy(
 
-            categories = categories.filterNot { it.id in LEGACY_APP_PSEUDO_CATEGORY_IDS }.map {
+            categories = categories.filterNot { it.id in CategoryRepositoryImpl.LEGACY_APP_PSEUDO_IDS }.map {
                 CategoryRow(
                     id                 = it.id,
                     name               = it.name,

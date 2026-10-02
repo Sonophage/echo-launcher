@@ -11,6 +11,8 @@ import com.psplauncher.core.domain.model.Category
 import com.psplauncher.core.domain.model.CategoryType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -81,17 +83,19 @@ class CategoryRepositoryImpl @Inject constructor(
         return id
     }
 
-    suspend fun move(id: String, up: Boolean): Boolean {
-        val ordered = categoryDao.getAll().sortedBy { it.position }
+    suspend fun move(id: String, up: Boolean): Boolean = moveLock.withLock {
+        val ordered = categoryDao.getAll()
+            .filterNot { it.id in LEGACY_APP_PSEUDO_IDS }
+            .sortedBy { it.position }
         val index = ordered.indexOfFirst { it.id == id }
-        if (index < 0) return false
+        if (index < 0) return@withLock false
         val targetIndex = if (up) index - 1 else index + 1
-        if (targetIndex !in ordered.indices) return false
+        if (targetIndex !in ordered.indices) return@withLock false
         val current = ordered[index]
         val target  = ordered[targetIndex]
         categoryDao.updatePosition(current.id, target.position)
         categoryDao.updatePosition(target.id, current.position)
-        return true
+        true
     }
 
     suspend fun addItemToCategory(categoryId: String, itemId: String, itemType: String, order: Int = 0) =
@@ -164,6 +168,10 @@ class CategoryRepositoryImpl @Inject constructor(
     companion object {
         const val NETWORK_CATEGORY_ID = "network"
         const val STALE_NETWORK_NAME = "Online"
+
+        val LEGACY_APP_PSEUDO_IDS = setOf("music_apps", "video_apps", "photo_apps")
+
+        private val moveLock = Mutex()
 
         val PROTECTED_BUILTINS = setOf(
             BuiltInCategory.FAVORITES,
