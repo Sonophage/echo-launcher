@@ -95,6 +95,14 @@ import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.ControllerPrompt
 import com.psplauncher.core.ui.components.LocalControllerConnected
 import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.PANEL_CARD_RADIUS
+import com.psplauncher.core.ui.design.PANEL_FOCUS_RING_WIDTH
+import com.psplauncher.core.ui.design.PANEL_UNFOCUSED_ALPHA
+import com.psplauncher.core.ui.design.PanelCardFill
+import com.psplauncher.core.ui.design.PanelCardFocusFill
+import com.psplauncher.core.ui.design.PanelFocusRing
+import com.psplauncher.core.ui.design.panelBackdrop
+import com.psplauncher.core.ui.design.panelSectionTint
 import com.psplauncher.core.ui.icons.appIconBitmap
 import com.psplauncher.feature.xmb.viewmodel.LibraryChip
 import com.psplauncher.feature.xmb.viewmodel.NoticeFocus
@@ -172,20 +180,13 @@ fun XmbNotificationBar(
     if (pull.progress.value <= 0f && !open) return
     Box(modifier.fillMaxSize().graphicsLayer { translationY = -(1f - pull.progress.value) * size.height }) {
         val stageIcon = rememberAppIcon(stagePackage(stage, LocalContext.current.packageName))
-        val tint by animateColorAsState(stageTint(stage, stageIcon?.color, accent), tween(500), label = "panelTint")
+        val tabTint = if (tab == PanelTab.SETTINGS) panelSectionTint(PANEL_SETTINGS.getOrNull(settingFocus)?.section) else stageTint(stage, stageIcon?.color, accent)
+        val tint by animateColorAsState(tabTint, tween(500), label = "panelTint")
         BoxWithConstraints(
             Modifier
                 .fillMaxSize()
                 .nestedScroll(remember(pull) { pull.listOverscroll(onOpened, onClosed) })
-                .background(PanelBase)
-                .drawBehind {
-                    drawRect(Brush.radialGradient(
-                        listOf(tint.copy(alpha = 0.6f), Color.Transparent),
-                        center = Offset(size.width * 0.18f, size.height * 0.45f),
-                        radius = size.width * 0.55f,
-                    ))
-                    drawRect(Brush.horizontalGradient(0.45f to Color.Transparent, 1f to PanelEdgeShade))
-                }
+                .panelBackdrop(tint)
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                 .panelPullGesture(pull, onOpened, onClosed),
         ) {
@@ -408,14 +409,14 @@ private fun NoticeRow(entry: PanelEntry, focused: Boolean, u: DesignUnits, onCli
         is PanelEntry.Launcher -> RowText(context.packageName, entry.toast.title, "Launcher", entry.toast.postedAt)
     }
     val icon = rememberAppIcon(pkg)
-    val shape = RoundedCornerShape(u.dp(14))
+    val shape = RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))
     Row(
         Modifier
             .fillMaxWidth()
-            .graphicsLayer(alpha = if (focused) 1f else 0.55f)
+            .graphicsLayer(alpha = if (focused) 1f else PANEL_UNFOCUSED_ALPHA)
             .clip(shape)
-            .background(Color.White.copy(alpha = if (focused) 0.17f else 0.06f))
-            .then(if (focused) Modifier.border(u.dp(2), Color.White.copy(alpha = 0.9f), shape) else Modifier)
+            .background(if (focused) PanelCardFocusFill else PanelCardFill)
+            .then(if (focused) Modifier.border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape) else Modifier)
             .clickable(onClick = onClick)
             .padding(start = u.dp(12), end = u.dp(16), top = u.dp(12), bottom = u.dp(12)),
         verticalAlignment = Alignment.CenterVertically,
@@ -775,8 +776,6 @@ private const val PANEL_DESIGN_WIDTH = 1200f
 private const val PANEL_DESIGN_HEIGHT = 752f
 private const val ICON_PX = 96
 
-private val PanelBase = Color(0xFF04060C)
-private val PanelEdgeShade = Color(0xB3020308)
 private val Faint = Color.White.copy(alpha = 0.65f)
 
 private val MusicTint = Color(0xFFC0632A)

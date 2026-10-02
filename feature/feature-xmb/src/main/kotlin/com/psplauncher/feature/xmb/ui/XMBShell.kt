@@ -192,6 +192,7 @@ fun XMBShellContainer(
         onNotificationsSwipedOpen = viewModel::onNotificationsSwipedOpen,
         onNotificationsSwipedClosed = viewModel::onNotificationsSwipedClosed,
         onPanelSettingTapped = viewModel::onPanelSettingTapped,
+        onSettingsPanelTabTapped = viewModel::onSettingsPanelTabTapped,
         onOpenAppDrawer = viewModel::onOpenAppDrawer,
         onItemTap = viewModel::onItemTap,
         onRecentCardTap = viewModel::onRecentCardTap,
@@ -353,6 +354,7 @@ fun XMBShell(
     onNotificationsSwipedOpen: () -> Unit = {},
     onNotificationsSwipedClosed: () -> Unit = {},
     onPanelSettingTapped: (Int) -> Unit = {},
+    onSettingsPanelTabTapped: (com.psplauncher.feature.xmb.viewmodel.PanelTab) -> Unit = {},
     onOpenAppDrawer: () -> Unit = {},
 
     onItemTap: (Int) -> Unit = {},
@@ -1027,7 +1029,7 @@ fun XMBShell(
                 sortLabel = uiState.sortLabel.takeIf { xmbContext },
                 showSortButton = uiState.resolvedShowTouchButton && xmbContext,
                 onSortTapped = onXmbSortTapped,
-                live = liveActivity.takeIf { !notificationsOpen },
+                live = liveActivity.takeIf { !notificationsOpen && uiState.activeSettingsScreen == null },
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
 
@@ -1044,6 +1046,10 @@ fun XMBShell(
                     {
                         PanelTabsRow(uiState.panelTab, onPanelTabTapped, Modifier.align(Alignment.Center))
                     }
+                } else if (uiState.activeSettingsScreen != null) {
+                    {
+                        PanelTabsRow(com.psplauncher.feature.xmb.viewmodel.PanelTab.SETTINGS, onSettingsPanelTabTapped, Modifier.align(Alignment.Center))
+                    }
                 } else if (uiState.onLastPlayedHome && xmbContext) {
                     {
                         RecentFilterRow(
@@ -1055,7 +1061,7 @@ fun XMBShell(
                     }
                 } else null,
                 modifier = Modifier.align(Alignment.TopCenter).zIndex(aboveContextRail).then(
-                    if (!notificationsOpen) {
+                    if (!notificationsOpen && uiState.activeSettingsScreen == null) {
                         Modifier.panelPullGesture(panelPull, onNotificationsSwipedOpen, onNotificationsSwipedClosed)
                     } else {
                         Modifier

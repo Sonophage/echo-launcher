@@ -1,5 +1,10 @@
 package com.psplauncher.feature.settings.ui
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.unit.em
+import com.psplauncher.core.domain.model.settingsEntryFor
+import com.psplauncher.core.ui.design.panelSectionTint
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Column
 import kotlinx.coroutines.launch
@@ -42,14 +47,15 @@ fun SettingsPageScaffold(
         onInterceptAction = onInterceptAction,
         helperFooterItems = helperFooterItems,
 
-        lightScrim = true,
+        panelTint = panelSectionTint(LocalSettingsScreenId.current?.let { settingsSectionFor(it) }),
 
         header = {
             val screenId = LocalSettingsScreenId.current
             val section = remember(screenId) {
                 screenId?.let { settingsSectionFor(it) }
             }
-            SettingsPageTitle(heading ?: section?.title ?: subtitle)
+            val entry = remember(screenId) { screenId?.let { settingsEntryFor(it) } }
+            SettingsPageTitle(section?.title, heading ?: entry?.title ?: subtitle)
         },
 
         showDivider = false,
@@ -62,18 +68,30 @@ fun SettingsPageScaffold(
 }
 
 @Composable
-private fun SettingsPageTitle(title: String) {
-    Text(
-        text = title,
-        color = Color.White,
-        fontSize = 30.sp,
-        fontWeight = FontWeight.Normal,
-
+private fun SettingsPageTitle(eyebrow: String?, title: String) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .focusProperties { canFocus = false }
-            .padding(start = 40.dp, end = 40.dp, top = 10.dp, bottom = 0.dp),
-    )
+            .padding(start = 52.dp, end = 40.dp, top = 14.dp, bottom = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        eyebrow?.let {
+            Text(
+                text = it.uppercase(),
+                color = Color.White.copy(alpha = 0.65f),
+                fontSize = 12.sp,
+                letterSpacing = 0.18.em,
+            )
+        }
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 34.sp,
+            fontWeight = FontWeight.ExtraLight,
+            letterSpacing = (-0.02).em,
+        )
+    }
 }
 
 @Composable

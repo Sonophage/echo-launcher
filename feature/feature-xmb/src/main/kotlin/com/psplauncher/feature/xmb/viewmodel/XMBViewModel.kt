@@ -6297,6 +6297,13 @@ class XMBViewModel @Inject constructor(
         }
     }
 
+    fun onSettingsPanelTabTapped(tab: PanelTab) {
+        if (_uiState.value.activeSettingsScreen in WIZARD_SCREEN_IDS) markInitialSetupSeen()
+        menuSound.play(MenuSound.SCROLL)
+        returnToPanelSettings()
+        _uiState.update { it.copy(panelTab = tab) }
+    }
+
     private fun returnToPanelSettings() {
         _uiState.update {
             it.copy(
