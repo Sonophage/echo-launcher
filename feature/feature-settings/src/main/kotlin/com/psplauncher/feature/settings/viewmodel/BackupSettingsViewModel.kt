@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.Constraints
+import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -35,6 +36,12 @@ data class BackupSettingsUiState(
     val errorMessage: String? = null,
 ) {
     val backupFolderSet: Boolean get() = backupFolder != null
+}
+
+internal fun restoreRefusalMessage(output: Data): String? {
+    val refusals = output.getStringArray(RestoreWorker.KEY_REFUSALS)?.takeIf { it.isNotEmpty() } ?: return null
+    val count = if (refusals.size == 1) "1 item was" else "${refusals.size} items were"
+    return "$count not restored: ${refusals.joinToString("; ")}"
 }
 
 @HiltViewModel
@@ -111,7 +118,8 @@ class BackupSettingsViewModel @Inject constructor(
                 when (info?.state) {
                     WorkInfo.State.SUCCEEDED -> {
                         Timber.i("Restore succeeded")
-                        _uiState.update { it.copy(isWorking = false, workingMessage = "") }
+                        val refused = restoreRefusalMessage(info.outputData)
+                        _uiState.update { it.copy(isWorking = false, workingMessage = "", errorMessage = refused) }
                         return@collect
                     }
                     WorkInfo.State.FAILED -> {
