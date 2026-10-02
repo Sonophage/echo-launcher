@@ -18,12 +18,11 @@ import com.psplauncher.feature.library.scanner.VideoScanner
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,14 +39,19 @@ class WizardMediaScanRunner @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val notifier = BackgroundTaskNotifier(context)
-    private val inFlight = ConcurrentHashMap<MediaRootKind, Job>()
+    private val requests = MediaRootKind.entries.associateWith { kind ->
+        Channel<Unit>(Channel.CONFLATED).also { channel ->
+            scope.launch {
+                for (request in channel) {
+                    runCatching { scan(kind) }
+                        .onFailure { Timber.w(it, "Wizard %s scan failed", kind.name) }
+                }
+            }
+        }
+    }
 
     fun kickoff(kind: MediaRootKind) {
-        if (inFlight[kind]?.isActive == true) return
-        inFlight[kind] = scope.launch {
-            runCatching { scan(kind) }
-                .onFailure { Timber.w(it, "Wizard %s scan failed", kind.name) }
-        }
+        requests.getValue(kind).trySend(Unit)
     }
 
     private suspend fun scan(kind: MediaRootKind) {
