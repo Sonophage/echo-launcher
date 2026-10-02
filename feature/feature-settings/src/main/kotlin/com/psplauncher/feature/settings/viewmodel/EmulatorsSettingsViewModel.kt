@@ -412,8 +412,19 @@ class EmulatorsSettingsViewModel @Inject constructor(
         val platforms = parseCsv(supportedPlatformIds)
         val (extras, boolExtras) = parseExtras(intentExtrasText)
         val core = coreText.trim()
-        return EmulatorProfile(
-            id                   = originalId ?: "draft_test",
+        val existing = originalId?.let { id -> allProfiles.firstOrNull { it.id == id } }
+        val keepCores = existing != null &&
+            platforms == existing.supportedPlatformIds &&
+            core == existing.coreMap.values.firstOrNull().orEmpty().trim()
+        val base = existing ?: EmulatorProfile(
+            id                   = "draft_test",
+            name                 = "",
+            packageName          = "",
+            intentType           = intentType,
+            supportedPlatformIds = emptyList(),
+            isCustom             = true,
+        )
+        return base.copy(
             name                 = name.trim().ifEmpty { packageName },
             packageName          = packageName.trim(),
             activityClass        = activityClass.trimToNull(),
@@ -428,10 +439,10 @@ class EmulatorsSettingsViewModel @Inject constructor(
             intentAction         = intentActionText.trimToNull(),
             intentFlags          = parseCsv(intentFlagsText),
             intentCategory       = intentCategoryText.trimToNull(),
-            coreMap              = if (core.isEmpty() || platforms.isEmpty()) emptyMap()
+            coreMap              = if (keepCores) base.coreMap
+                                   else if (core.isEmpty() || platforms.isEmpty()) emptyMap()
                                    else platforms.associateWith { core },
             supportedExtensions  = parseCsv(extensionsText),
-            isCustom             = true,
         )
     }
 
