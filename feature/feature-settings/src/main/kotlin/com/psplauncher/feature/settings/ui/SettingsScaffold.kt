@@ -685,6 +685,7 @@ fun SettingsScaffold(
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
                         cursorVisible.value = false
+                        railFocused.value = false
                         touchScrolled.value = true
                         navigationState.markTouchInput()
                         notifyTouchInput()

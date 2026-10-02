@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.theme.PFPTheme
@@ -197,6 +198,31 @@ class SettingsScaffoldNavigationTest {
         composeRule.waitForIdle()
         press(GamepadAction.OPEN_CONTEXT_MENU)
         assertEquals("with the prompt gone the screen handles its own buttons again", listOf(GamepadAction.OPEN_CONTEXT_MENU), intercepted)
+    }
+
+    @Test
+    fun `a picker opened by touch is driven by the controller, not the hidden rail`() {
+        var backs = 0
+        val picked = mutableListOf<Int>()
+        showScreen(onBack = { backs++ }, screenId = "settings_library") {
+            SettingsPickerRow(
+                label = "Speed",
+                options = listOf(SettingsPickerOption("Slow"), SettingsPickerOption("Fast")),
+                selectedIndex = 0,
+                onPick = { picked += it },
+            )
+        }
+
+        press(GamepadAction.NAVIGATE_LEFT)
+        composeRule.onNodeWithText("Speed").performClick()
+        composeRule.waitForIdle()
+        press(GamepadAction.BACK)
+        assertEquals("BACK must close the picker, not leave the screen through the rail", 0, backs)
+
+        composeRule.onNodeWithText("Speed").performClick()
+        composeRule.waitForIdle()
+        press(GamepadAction.SELECT)
+        assertEquals("SELECT must pick from the picker the finger opened", listOf(0), picked)
     }
 
     @Test
