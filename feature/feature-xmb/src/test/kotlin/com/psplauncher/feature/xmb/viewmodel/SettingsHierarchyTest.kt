@@ -123,6 +123,7 @@ class SettingsHierarchyTest {
 
             listOf(
                 "settings_permissions",
+                "settings_accounts",
                 "settings_about",
                 "settings_logs",
                 "settings_backup",

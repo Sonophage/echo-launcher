@@ -75,6 +75,8 @@ dependencies {
     implementation(project(":feature:feature-themes"))
     // InstalledAppRepository, AppCategoryRepository — powers the Hidden Apps manager
     implementation(project(":feature:feature-appbar"))
+    // RetroAchievements and Steam accounts, sync and the Steam import worker
+    implementation(project(":feature:feature-achievements"))
 
     testImplementation(libs.bundles.test.unit)
     testImplementation(libs.hilt.android.testing)
