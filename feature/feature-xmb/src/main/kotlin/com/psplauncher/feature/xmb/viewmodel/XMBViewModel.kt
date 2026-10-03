@@ -5528,11 +5528,8 @@ class XMBViewModel @Inject constructor(
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun profileData(): Flow<ProfileData> {
-        val achievements = achievementController.observeSets().flatMapLatest { sets ->
-            val badges = if (sets.isEmpty()) flowOf(emptyMap()) else combine(
-                sets.map { set -> achievementController.observeAchievements(set.provider, set.providerGameId).map { setKey(set) to it } },
-            ) { it.toMap() }
-            badges.map { sets to it }
+        val achievements = combine(achievementController.observeSets(), achievementController.observeAllAchievements()) { sets, all ->
+            sets to sets.associate { set -> setKey(set) to all[set.provider to set.providerGameId].orEmpty() }
         }
         val accounts = combine(
             achievementCredentials.raUsernameFlow,
@@ -5549,22 +5546,26 @@ class XMBViewModel @Inject constructor(
                 friends = friends,
             )
         }
+        val library = combine(
+            gameRepository.observeGamesOnlyStats(),
+            gameRepository.observeRecentGamesOnly(RECENTLY_PLAYED_COUNT * 8),
+        ) { stats, recent -> stats to recentlyPlayed(recent) }
         return combine(
-            gameRepository.observeGamesOnly(),
+            library,
             achievements,
             achievementController.observeTotals(),
             accounts,
             platformDao.observeAll(),
-        ) { games, (sets, badges), totals, acc, platforms ->
+        ) { (stats, recent), (sets, badges), totals, acc, platforms ->
             val platformOf = platforms.associate { it.id to it.shortName }
             acc.copy(
-                games = games.distinctBy { it.discSetKey ?: it.id.toString() }.size,
-                playTimeMs = games.sumOf { it.totalPlayTimeMillis },
-                recent = recentlyPlayed(games),
+                games = stats.games,
+                playTimeMs = stats.playTimeMs,
+                recent = recent,
                 totals = totals,
                 sets = sets,
                 badges = badges,
-                platforms = games.mapNotNull { g -> platformOf[g.platformId]?.let { g.id to it } }.toMap(),
+                platforms = sets.mapNotNull { set -> set.gameId?.let { id -> platformOf[set.platformId]?.let { id to it } } }.toMap(),
             )
         }
     }

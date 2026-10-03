@@ -39,6 +39,9 @@ interface AccountAchievementDao {
     )
     fun observeForSet(provider: String, providerGameId: String): Flow<List<AccountAchievementEntity>>
 
+    @Query("SELECT * FROM account_achievements ORDER BY is_earned DESC, earned_at DESC, title ASC")
+    fun observeAll(): Flow<List<AccountAchievementEntity>>
+
     @Query(
         "SELECT COALESCE(SUM(is_earned), 0) AS unlocked, COUNT(*) AS total, " +
             "COALESCE(SUM(CASE WHEN is_earned = 1 AND provider = :pointsProvider THEN points ELSE 0 END), 0) AS ra_points " +

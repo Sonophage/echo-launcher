@@ -15,6 +15,8 @@ interface AchievementController {
 
     fun observeAchievements(provider: AchievementProvider, providerGameId: String): Flow<List<Achievement>>
 
+    fun observeAllAchievements(): Flow<Map<Pair<AchievementProvider, String>, List<Achievement>>>
+
     fun observeTotals(): Flow<AchievementTotals>
 
     suspend fun syncAccountEntry(provider: AchievementProvider, providerGameId: String, title: String): ProviderSyncResult

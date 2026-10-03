@@ -208,6 +208,20 @@ class GameDaoProjectionTest {
     }
 
     @Test
+    fun `profile stats count a disc set once and sum every disc's play time`() = runTest {
+        dao.upsert(game("Final Fantasy VII (Disc 1)", "psx", "/roms/psx/ff7-1.cue", psxSetKey, 1, true).copy(totalPlayTimeMillis = 100))
+        dao.upsert(game("Final Fantasy VII (Disc 2)", "psx", "/roms/psx/ff7-2.cue", psxSetKey, 2, false).copy(totalPlayTimeMillis = 20))
+        dao.upsert(game("Chrono Trigger", "psx", "/roms/psx/ct.cue").copy(totalPlayTimeMillis = 3))
+        dao.upsert(game("Gone", "psx", "/roms/psx/gone.cue", isMissing = true).copy(totalPlayTimeMillis = 1000))
+        dao.upsert(game("Some App", "android", "/apps/some", contentType = "APP").copy(totalPlayTimeMillis = 1000))
+
+        val stats = dao.observeGamesOnlyStats().first()
+
+        assertEquals(2, stats.games)
+        assertEquals(123L, stats.playTimeMs)
+    }
+
+    @Test
     fun `unprojected queries still return every row for baselines and per-disc matching`() = runTest {
         dao.upsert(game("Final Fantasy VII (Disc 1)", "psx", "/roms/psx/ff7-1.cue", psxSetKey, 1, true))
         dao.upsert(game("Final Fantasy VII (Disc 2)", "psx", "/roms/psx/ff7-2.cue", psxSetKey, 2, false))

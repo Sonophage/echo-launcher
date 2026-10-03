@@ -46,6 +46,12 @@ class AchievementRepository @Inject constructor(
     override fun observeAchievements(provider: AchievementProvider, providerGameId: String): Flow<List<Achievement>> =
         coinDao.observeForSet(provider.name, providerGameId).map { rows -> rows.map { it.toAchievement() } }
 
+    override fun observeAllAchievements(): Flow<Map<Pair<AchievementProvider, String>, List<Achievement>>> =
+        coinDao.observeAll().map { rows ->
+            rows.mapNotNull { row -> AchievementProvider.fromName(row.provider)?.let { (it to row.providerGameId) to row } }
+                .groupBy({ it.first }, { it.second.toAchievement() })
+        }
+
     override fun observeTotals(): Flow<AchievementTotals> =
         coinDao.observeTotals(AchievementProvider.RETRO_ACHIEVEMENTS.name)
             .map { AchievementTotals(unlocked = it.unlocked, total = it.total, raPoints = it.raPoints) }
@@ -189,6 +195,7 @@ private fun AchievementSetRow.toAchievementSet(): AchievementSet? {
         mastered = mastered,
         lastSyncedAt = lastSyncedAt,
         lastPlayedAt = lastPlayedAt,
+        platformId = platformId,
     )
 }
 
