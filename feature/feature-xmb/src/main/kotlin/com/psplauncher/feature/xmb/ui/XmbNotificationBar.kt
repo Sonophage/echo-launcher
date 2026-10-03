@@ -471,8 +471,8 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
             Tile(setting == focus, u.dp(300), u.dp(22), u.dp(28), u, Modifier.weight(1f), { onTapped(setting, 0) }) {
                 Icon(quickIcon(setting), null, tint = Color.White, modifier = Modifier.size(u.dp(34)))
                 Column {
-                    Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(17), fontWeight = FontWeight.Light)
-                    Text(value, color = Color.White, fontSize = u.sp(48), fontWeight = FontWeight.ExtraLight, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(17), lineHeight = u.sp(17) * 1.2f, fontWeight = FontWeight.Light)
+                    Text(value, color = Color.White, fontSize = u.sp(30), lineHeight = u.sp(30) * 1.1f, fontWeight = FontWeight.ExtraLight, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
