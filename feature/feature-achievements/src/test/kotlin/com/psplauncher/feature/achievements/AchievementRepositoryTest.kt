@@ -93,6 +93,23 @@ class AchievementRepositoryTest {
     }
 
     @Test
+    fun `one query feeds every set its own achievements, even sets sharing a game id across providers`() = runTest {
+        fun row(provider: String, gameId: String, id: String) = AccountAchievementEntity(
+            provider = provider, providerGameId = gameId, providerAchievementId = id,
+            title = id, description = "", tier = "BRONZE", globalRarity = 0.0,
+        )
+        every { coinDao.observeAll() } returns flowOf(
+            listOf(row("STEAM", "440", "s1"), row("RETRO_ACHIEVEMENTS", "440", "r1"), row("STEAM", "440", "s2"), row("STEAM", "620", "p1")),
+        )
+
+        val all = repo.observeAllAchievements().first()
+
+        assertEquals(listOf("s1", "s2"), all[AchievementProvider.STEAM to "440"]?.map { it.id })
+        assertEquals(listOf("r1"), all[AchievementProvider.RETRO_ACHIEVEMENTS to "440"]?.map { it.id })
+        assertEquals(listOf("p1"), all[AchievementProvider.STEAM to "620"]?.map { it.id })
+    }
+
+    @Test
     fun `an achievement with no reported rarity has no global percent rather than a negative one`() = runTest {
         every { coinDao.observeForSet("STEAM", "440") } returns flowOf(
             listOf(

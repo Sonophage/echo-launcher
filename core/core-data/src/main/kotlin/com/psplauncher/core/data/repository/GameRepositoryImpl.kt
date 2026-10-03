@@ -6,6 +6,7 @@ import com.psplauncher.core.data.database.dao.PlatformDao
 import com.psplauncher.core.data.database.entity.toDomain
 import com.psplauncher.core.data.database.entity.toEntity
 import com.psplauncher.core.domain.model.Game
+import com.psplauncher.core.domain.model.GameStats
 import com.psplauncher.core.domain.model.PlaySession
 import com.psplauncher.core.domain.model.RecentPlatform
 import com.psplauncher.core.domain.repository.GameRepository
@@ -29,6 +30,11 @@ class GameRepositoryImpl @Inject constructor(
 
     override fun observeGamesOnly(): Flow<List<Game>> =
         gameDao.observeGamesOnly().map { entities -> entities.map { it.toDomain() } }.flowOn(Dispatchers.Default)
+
+    override fun observeGamesOnlyStats(): Flow<GameStats> = gameDao.observeGamesOnlyStats()
+
+    override fun observeRecentGamesOnly(limit: Int): Flow<List<Game>> =
+        gameDao.observeRecentGamesOnly(limit).map { entities -> entities.map { it.toDomain() } }.flowOn(Dispatchers.Default)
 
     override fun observeAllGames(): Flow<List<Game>> =
         gameDao.observeAllGames().map { entities -> entities.map { it.toDomain() } }.flowOn(Dispatchers.Default)

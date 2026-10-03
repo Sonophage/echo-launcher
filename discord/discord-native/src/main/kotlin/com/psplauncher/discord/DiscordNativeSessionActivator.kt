@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,7 +17,9 @@ import javax.inject.Singleton
 class DiscordNativeSessionActivator @Inject constructor() : DiscordSessionActivator {
 
     override suspend fun activate(accessToken: String): Boolean = withContext(Dispatchers.IO) {
-        DiscordNativeBridge.updateToken(accessToken)
+        runCatching { DiscordNativeBridge.updateToken(accessToken) }
+            .onFailure { Timber.w(it, "Discord SDK could not start") }
+            .getOrDefault(false)
     }
 
     override suspend fun deactivate() {

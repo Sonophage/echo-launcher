@@ -2,6 +2,7 @@ package com.psplauncher.core.domain.repository
 
 import com.psplauncher.core.domain.model.PlayState
 import com.psplauncher.core.domain.model.Game
+import com.psplauncher.core.domain.model.GameStats
 import com.psplauncher.core.domain.model.PlaySession
 import com.psplauncher.core.domain.model.RecentPlatform
 import kotlinx.coroutines.flow.Flow
@@ -10,6 +11,10 @@ interface GameRepository {
     fun observeAll(): Flow<List<Game>>
 
     fun observeGamesOnly(): Flow<List<Game>>
+
+    fun observeGamesOnlyStats(): Flow<GameStats>
+
+    fun observeRecentGamesOnly(limit: Int): Flow<List<Game>>
 
     fun observeAllGames(): Flow<List<Game>>
     fun observeFavorites(): Flow<List<Game>>

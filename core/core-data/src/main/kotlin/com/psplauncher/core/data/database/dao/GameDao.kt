@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.psplauncher.core.data.database.entity.GameEntity
+import com.psplauncher.core.domain.model.GameStats
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -27,6 +28,24 @@ interface GameDao {
 
     @Query("SELECT * FROM games WHERE content_type = 'GAME'  AND is_missing = 0 ORDER BY title COLLATE NOCASE ASC")
     fun observeGamesOnly(): Flow<List<GameEntity>>
+
+    @Query(
+        """
+        SELECT COUNT(DISTINCT COALESCE(disc_set_key, CAST(id AS TEXT))) AS games,
+               COALESCE(SUM(total_play_time_millis), 0) AS playTimeMs
+        FROM games WHERE content_type = 'GAME' AND is_missing = 0
+        """
+    )
+    fun observeGamesOnlyStats(): Flow<GameStats>
+
+    @Query(
+        """
+        SELECT * FROM games
+        WHERE content_type = 'GAME' AND is_missing = 0 AND last_played_at IS NOT NULL
+        ORDER BY last_played_at DESC LIMIT :limit
+        """
+    )
+    fun observeRecentGamesOnly(limit: Int): Flow<List<GameEntity>>
 
     @Query(
         """

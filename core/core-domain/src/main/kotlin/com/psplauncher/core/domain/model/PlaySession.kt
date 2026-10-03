@@ -13,3 +13,8 @@ data class RecentPlatform(
     val lastPlayedAt: Long,
     val recentGames: List<Game>,
 )
+
+data class GameStats(
+    val games: Int,
+    val playTimeMs: Long,
+)

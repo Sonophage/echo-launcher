@@ -503,8 +503,8 @@ class AppDrawerViewModel @Inject constructor(
         val chips = if (state.activeFilter == AppFilter.GAMES) systemChips(tabApps) else emptyList()
         val system = state.systemFilter?.takeIf { id -> chips.any { it.id == id } }
 
-        val inTab = tabApps
-            .ofSystem(system)
+        val (section, rest) = state.allApps.wallSections(state.activeFilter, system)
+        val inTab = section
             .let { apps ->
                 if (state.activeFilter == AppFilter.RECENT) {
                     apps.sortedByDescending { it.lastUsedAt }
@@ -518,9 +518,6 @@ class AppDrawerViewModel @Inject constructor(
                 filter.matches(app)
             }
         }
-
-        val rest = if (system != null) emptyList() else state.allApps
-            .filter { app -> !state.activeFilter.matches(app) }
 
         val letters = letterMenuFor((inTab + rest).map { it.label })
         val pick = state.letterFilter?.takeIf { it in letters }

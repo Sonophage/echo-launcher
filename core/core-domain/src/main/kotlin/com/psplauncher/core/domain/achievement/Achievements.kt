@@ -13,6 +13,7 @@ data class AchievementSet(
     val mastered: Boolean,
     val lastSyncedAt: Long?,
     val lastPlayedAt: Long?,
+    val platformId: String? = null,
 )
 
 data class Achievement(

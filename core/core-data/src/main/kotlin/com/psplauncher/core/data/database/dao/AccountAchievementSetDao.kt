@@ -21,13 +21,14 @@ data class AchievementSetRow(
     val mastered: Boolean,
     @ColumnInfo(name = "last_synced_at") val lastSyncedAt: Long?,
     @ColumnInfo(name = "last_played_at") val lastPlayedAt: Long?,
+    @ColumnInfo(name = "platform_id") val platformId: String? = null,
 )
 
 private const val SET_ROW_COLUMNS =
     "s.provider AS provider, s.provider_game_id AS provider_game_id, " +
         "COALESCE(g.user_title_override, g.scraped_title, g.title, s.title) AS title, " +
         "s.icon_url AS icon_url, s.mastered AS mastered, s.last_synced_at AS last_synced_at, " +
-        "g.last_played_at AS last_played_at, " +
+        "g.last_played_at AS last_played_at, g.platform_id AS platform_id, " +
         "(SELECT COUNT(*) FROM account_achievements a " +
         "WHERE a.provider = s.provider AND a.provider_game_id = s.provider_game_id) AS total, " +
         "(SELECT COUNT(*) FROM account_achievements a " +
