@@ -93,7 +93,7 @@ import androidx.compose.ui.unit.em
 import coil3.compose.AsyncImage
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.ControllerPrompt
-import com.psplauncher.core.ui.components.LocalControllerConnected
+import com.psplauncher.core.ui.components.LocalPadPrompts
 import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.PANEL_CARD_RADIUS
 import com.psplauncher.core.ui.design.PANEL_FOCUS_RING_WIDTH
@@ -128,7 +128,7 @@ data class QuickSettingsState(
 @Composable
 fun PanelTabsRow(tab: PanelTab, onTabTapped: (PanelTab) -> Unit, modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(StripFontSize.value.dp * 2)) {
-        val pad = LocalControllerConnected.current
+        val pad = LocalPadPrompts.current
         if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = StripFontSize.value.dp * 1.6f, spacing = 0.dp)
         PanelTab.entries.forEach { t ->
             val on = t == tab
@@ -545,7 +545,7 @@ private fun StageButton(action: StageAction, u: DesignUnits, onClick: () -> Unit
         contentAlignment = Alignment.Center,
     ) {
         val labelStyle = TextStyle(fontSize = u.sp(15), fontWeight = if (primary) FontWeight.Medium else FontWeight.Normal)
-        if (LocalControllerConnected.current) {
+        if (LocalPadPrompts.current) {
             ControllerPrompt(action.button, action.label, labelColor = ink, labelStyle = labelStyle, glyphSize = u.dp(20), spacing = u.dp(10))
         } else {
             Text(action.label, color = ink, style = labelStyle)

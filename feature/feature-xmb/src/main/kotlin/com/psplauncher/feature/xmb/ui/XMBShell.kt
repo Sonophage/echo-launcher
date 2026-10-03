@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -80,7 +81,8 @@ import com.psplauncher.core.ui.motion.MotionWallpaperPolicy
 import com.psplauncher.core.ui.motion.rememberAppVisible
 import com.psplauncher.core.ui.theme.LocalPfpTextColors
 import androidx.compose.foundation.lazy.rememberLazyListState
-import com.psplauncher.core.ui.components.LocalControllerConnected
+import com.psplauncher.core.ui.components.LocalPadPrompts
+import com.psplauncher.core.ui.components.padPromptsShown
 import com.psplauncher.core.ui.components.PspContextMenuOverlay
 import com.psplauncher.core.ui.components.HintBarHeight
 import com.psplauncher.core.ui.components.StatusStripHeight
@@ -551,12 +553,12 @@ fun XMBShell(
                 )
 
             CompositionLocalProvider(
-                LocalControllerConnected provides rememberSystemStatus().controllerConnected,
+                LocalPadPrompts provides padPromptsShown(rememberSystemStatus().controllerConnected, uiState.lastInputWasTouch),
             ) {
             CompositionLocalProvider(
                 LocalDensity provides Density(baseDensity.density * uiScale * layoutAdjust.scale, baseDensity.fontScale),
             ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().markTouches(onTouchInput)) {
             val waveCovered = uiState.showBootSequence ||
                 uiState.activeVideoId != null ||
                 uiState.activePhotoViewer != null ||
@@ -1658,3 +1660,11 @@ private const val XmbChromeZ = 0.6f
 
 private const val ChromeFadeMs = 160
 
+private fun Modifier.markTouches(onTouch: () -> Unit): Modifier = pointerInput(onTouch) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press) onTouch()
+        }
+    }
+}

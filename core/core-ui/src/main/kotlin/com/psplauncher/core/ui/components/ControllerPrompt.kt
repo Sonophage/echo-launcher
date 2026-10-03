@@ -32,7 +32,10 @@ data class ControllerPromptStyle(
 
 val LocalControllerPromptStyle = compositionLocalOf { ControllerPromptStyle() }
 
-val LocalControllerConnected = compositionLocalOf { true }
+val LocalPadPrompts = compositionLocalOf { true }
+
+fun padPromptsShown(controllerConnected: Boolean, lastInputWasTouch: Boolean): Boolean =
+    controllerConnected && !lastInputWasTouch
 
 @Composable
 fun ControllerPrompt(
@@ -162,7 +165,7 @@ internal fun ControllerPromptBar(
                 glyphSize = glyphSize,
                 modifier = if (tapAction == null) Modifier else Modifier
 
-                    .then(if (LocalControllerConnected.current) Modifier else Modifier.heightIn(min = 48.dp))
+                    .then(if (LocalPadPrompts.current) Modifier else Modifier.heightIn(min = 48.dp))
                     .clip(RoundedCornerShape(6.dp))
                     .clickable(
                         role = Role.Button,

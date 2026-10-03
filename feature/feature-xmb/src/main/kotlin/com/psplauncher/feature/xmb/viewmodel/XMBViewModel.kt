@@ -4781,12 +4781,14 @@ class XMBViewModel @Inject constructor(
     private fun collectGamepadActions() {
         viewModelScope.launch {
             gamepadInputHandler.actions.collect { action ->
+                markControllerInput()
                 onUserInteraction()
                 dispatchGamepadAction(action)
             }
         }
         viewModelScope.launch {
             gamepadInputHandler.shoulderHolds.collect { hold ->
+                markControllerInput()
                 onUserInteraction()
                 if (_uiState.value.activeAppDrawerFilter != null) {
                     _uiState.update { it.copy(drawerLetterRailHeld = hold is ShoulderHold.Start) }
@@ -4877,7 +4879,6 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun dispatchGamepadAction(action: GamepadAction) {
-        markControllerInput()
         val state = _uiState.value
 
         if (state.letterJump != null) {
