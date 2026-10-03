@@ -47,9 +47,6 @@ interface AccountAchievementSetDao {
     )
     suspend fun getSet(provider: String, providerGameId: String): AccountAchievementSetEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(entity: AccountAchievementSetEntity)
-
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIfAbsent(entity: AccountAchievementSetEntity)
 

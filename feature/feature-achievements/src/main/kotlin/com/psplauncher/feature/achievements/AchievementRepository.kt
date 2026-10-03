@@ -82,13 +82,12 @@ class AchievementRepository @Inject constructor(
         val now = System.currentTimeMillis()
         val resolvedId = result.providerGameId
         val storedSet = setDao.getSet(provider.name, resolvedId)
-        coinDao.deleteForSet(provider.name, resolvedId)
-        coinDao.upsertAll(result.coins.map { it.toEntity(provider, resolvedId) })
-        setDao.upsert(
+        coinDao.replaceSet(
             summaryOf(provider, resolvedId, result.coins, now).copy(
                 title = title.ifBlank { storedSet?.title.orEmpty() },
                 iconUrl = storedSet?.iconUrl,
             ),
+            result.coins.map { it.toEntity(provider, resolvedId) },
         )
         credentials.setLastSyncedAt(now)
         return result
