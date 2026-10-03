@@ -42,7 +42,6 @@ import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.PspContextMenuOverlay
 import com.psplauncher.core.ui.components.StatusStripHeight
 import com.psplauncher.core.ui.components.XmbLetterRail
-import com.psplauncher.core.ui.components.rowsShown
 import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.PanelBase
 import com.psplauncher.core.ui.icons.rememberAppIcon
@@ -111,6 +110,12 @@ fun AppDrawerScreen(
         viewModel.onRomLaunchHandled()
     }
 
+    LaunchedEffect(state.pendingCrossBarAdd) {
+        val packageName = state.pendingCrossBarAdd ?: return@LaunchedEffect
+        onAddToCrossBar(packageName)
+        viewModel.onCrossBarAddHandled()
+    }
+
     LaunchedEffect(letterRailHeld) {
         if (letterRailHeld) viewModel.openLetterJump() else viewModel.closeLetterJump()
     }
@@ -169,13 +174,7 @@ fun AppDrawerScreen(
             onTouchInteraction()
             viewModel.onTouchBrowse(index)
         },
-        onMenuRowActivated = { index ->
-            val picked = state.appMenu?.rowsShown()?.getOrNull(index)?.action
-            if (picked == AppMenuAction.ADD_TO_CROSS_BAR) {
-                state.menuApp?.let { onAddToCrossBar(it.packageName) }
-            }
-            viewModel.onMenuRowActivated(index)
-        },
+        onMenuRowActivated = viewModel::onMenuRowActivated,
         onMenuAction = { action ->
 
             if (action == AppMenuAction.ADD_TO_CROSS_BAR) {

@@ -252,6 +252,23 @@ class AppDrawerViewModelTest {
     }
 
     @Test
+    fun `Add to Cross Bar from the controller hands the app to the cross bar, as a tap does`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.setFilter(AppFilter.EMULATORS)
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.handleGamepadAction(GamepadAction.CHANGE_SORT)
+        testDispatcher.scheduler.advanceUntilIdle()
+        val app = viewModel.uiState.value.menuApp!!.packageName
+        assertEquals(AppMenuAction.ADD_TO_CROSS_BAR, viewModel.uiState.value.appMenu!!.rows[0].action)
+
+        viewModel.handleGamepadAction(GamepadAction.SELECT)
+
+        assertEquals(app, viewModel.uiState.value.pendingCrossBarAdd)
+        viewModel.onCrossBarAddHandled()
+        assertEquals(null, viewModel.uiState.value.pendingCrossBarAdd)
+    }
+
+    @Test
     fun `back after opening uninstall guard rail closes the dialog not the drawer`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
 

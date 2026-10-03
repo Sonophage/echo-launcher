@@ -88,6 +88,8 @@ data class AppDrawerUiState(
 
     val pendingRomLaunch: Long? = null,
 
+    val pendingCrossBarAdd: String? = null,
+
     val systemChips: List<SystemChip> = emptyList(),
 
     val systemFilter: String? = null,
@@ -246,6 +248,8 @@ class AppDrawerViewModel @Inject constructor(
 
     fun onRomLaunchHandled() = _uiState.update { it.copy(pendingRomLaunch = null) }
 
+    fun onCrossBarAddHandled() = _uiState.update { it.copy(pendingCrossBarAdd = null) }
+
     fun refresh() {
         loadApps()
     }
@@ -302,7 +306,7 @@ class AppDrawerViewModel @Inject constructor(
 
             AppMenuAction.UNINSTALL -> _uiState.update { it.copy(menuApp = null, confirmUninstall = app, uninstallConfirmFocused = false) }
 
-            AppMenuAction.ADD_TO_CROSS_BAR -> _uiState.update { it.copy(menuApp = null) }
+            AppMenuAction.ADD_TO_CROSS_BAR -> _uiState.update { it.copy(menuApp = null, pendingCrossBarAdd = app.packageName) }
         }
     }
 
