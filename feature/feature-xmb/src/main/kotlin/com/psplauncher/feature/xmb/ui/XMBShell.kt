@@ -1190,9 +1190,7 @@ fun XMBShell(
                     onTypedCharConsumed = onDrawerTypedCharConsumed,
                     onGamepadActionConsumed = onDrawerActionConsumed,
 
-                    showControllerHint = uiState.showAppDrawerHint,
                     letterRailHeld = uiState.drawerLetterRailHeld,
-                    onPromptTapped = onPromptTapped,
 
                     onTouchInteraction = onTouchInput,
                     onAddToCrossBar = onAddAppToOpenCategory,

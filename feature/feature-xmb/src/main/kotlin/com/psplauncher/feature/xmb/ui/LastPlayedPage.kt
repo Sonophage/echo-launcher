@@ -73,7 +73,8 @@ import com.psplauncher.feature.xmb.viewmodel.XMBItem
 import com.psplauncher.feature.xmb.viewmodel.groupRecentsByDay
 import com.psplauncher.feature.xmb.viewmodel.isInstalledApp
 import com.psplauncher.feature.xmb.viewmodel.recentKind
-import com.psplauncher.feature.xmb.viewmodel.relativeTime
+import com.psplauncher.core.common.format.relativeTime
+import com.psplauncher.core.ui.design.PanelButton
 import com.psplauncher.feature.xmb.viewmodel.removableFromRecent
 
 private const val DESIGN_WIDTH = 1200f
@@ -170,8 +171,8 @@ private fun Letterbox(
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                    ActionPill(GamepadAction.SELECT, primaryLabel(item), true, u) { onAction(GamepadAction.SELECT) }
-                    infoLabel(item)?.let { ActionPill(GamepadAction.CHANGE_SORT, it, false, u) { onAction(GamepadAction.CHANGE_SORT) } }
+                    PanelButton(GamepadAction.SELECT, primaryLabel(item), u) { onAction(GamepadAction.SELECT) }
+                    infoLabel(item)?.let { PanelButton(GamepadAction.CHANGE_SORT, it, u) { onAction(GamepadAction.CHANGE_SORT) } }
                 }
             }
         }
@@ -273,9 +274,9 @@ private fun RecentList(
                     }
                 }
                 Row(Modifier.padding(top = u.dp(8)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                    ActionPill(GamepadAction.SELECT, primaryLabel(focused), true, u) { onAction(GamepadAction.SELECT) }
+                    PanelButton(GamepadAction.SELECT, primaryLabel(focused), u) { onAction(GamepadAction.SELECT) }
                     if (focused.removableFromRecent) {
-                        ActionPill(GamepadAction.CHANGE_SORT, "Remove", false, u) { onAction(GamepadAction.CHANGE_SORT) }
+                        PanelButton(GamepadAction.CHANGE_SORT, "Remove", u) { onAction(GamepadAction.CHANGE_SORT) }
                     }
                 }
             }
@@ -366,27 +367,6 @@ private fun ItemArt(item: XMBItem?, iconSize: Dp, alignment: Alignment) {
 private fun ProgressBar(fraction: Float, height: Dp, modifier: Modifier) {
     Box(modifier.height(height).clip(RoundedCornerShape(height / 2)).background(Color.White.copy(alpha = 0.18f))) {
         Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().background(Color.White))
-    }
-}
-
-@Composable
-private fun ActionPill(button: GamepadAction, label: String, primary: Boolean, u: DesignUnits, onClick: () -> Unit) {
-    val ink = if (primary) Color(0xFF0A0A0A) else Color.White
-    Box(
-        Modifier
-            .height(u.dp(56))
-            .clip(RoundedCornerShape(u.dp(28)))
-            .background(if (primary) Color.White else Color.White.copy(alpha = 0.12f))
-            .clickable(onClick = onClick)
-            .padding(horizontal = u.dp(if (primary) 32 else 22)),
-        contentAlignment = Alignment.Center,
-    ) {
-        val labelStyle = TextStyle(fontSize = u.sp(16), fontWeight = if (primary) FontWeight.Medium else FontWeight.Normal)
-        if (LocalPadPrompts.current) {
-            ControllerPrompt(button, label, labelColor = ink, labelStyle = labelStyle, glyphSize = u.dp(20), spacing = u.dp(10))
-        } else {
-            Text(label, color = ink, style = labelStyle)
-        }
     }
 }
 

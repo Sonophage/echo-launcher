@@ -74,7 +74,9 @@ import com.psplauncher.feature.xmb.viewmodel.SearchState
 import com.psplauncher.feature.xmb.viewmodel.XMBItem
 import com.psplauncher.feature.xmb.viewmodel.XMBItemType
 import com.psplauncher.feature.xmb.viewmodel.isInstalledApp
-import com.psplauncher.feature.xmb.viewmodel.relativeTime
+import com.psplauncher.core.common.format.relativeTime
+import com.psplauncher.core.ui.design.PanelButton
+import com.psplauncher.core.ui.icons.rememberAppIcon
 
 @Composable
 fun SearchScreen(
@@ -264,7 +266,7 @@ private fun ColumnScope.Preview(row: XMBItem, icon: ImageBitmap?, u: DesignUnits
         }
     }
     Row(Modifier.padding(top = u.dp(4))) {
-        StageButton(GamepadAction.SELECT, if (game) "Play" else "Open", u, onActivate)
+        PanelButton(GamepadAction.SELECT, if (game) "Play" else "Open", u, onActivate)
     }
 }
 

@@ -1,16 +1,15 @@
 package com.psplauncher.feature.appbar
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,48 +20,40 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toDrawable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.psplauncher.core.domain.model.GamepadAction
-import com.psplauncher.core.domain.model.lightBackgroundAnchors
 import com.psplauncher.core.ui.components.PspContextMenuOverlay
 import com.psplauncher.core.ui.components.StatusStripHeight
-import com.psplauncher.core.ui.components.HintBarHeight
+import com.psplauncher.core.ui.components.XmbLetterRail
+import com.psplauncher.core.ui.components.rowsShown
+import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.PanelBase
+import com.psplauncher.core.ui.icons.rememberAppIcon
 import com.psplauncher.core.ui.preview.CombinedPreviews
 import com.psplauncher.core.ui.preview.PfpPreview
-import com.psplauncher.core.ui.theme.PFPColors
-import com.psplauncher.core.ui.theme.StorefrontColors
-import com.psplauncher.core.ui.theme.deriveStorefrontColors
-import com.psplauncher.core.ui.theme.menuCursorEdge
 import com.psplauncher.feature.appbar.appdrawer.AppDrawerCategoryTabs
-import com.psplauncher.feature.appbar.appdrawer.AppDrawerSection
-import com.psplauncher.feature.appbar.appdrawer.AppDrawerHeader
-import com.psplauncher.feature.appbar.appdrawer.AppDrawerHintBar
+import com.psplauncher.feature.appbar.appdrawer.AppWall
 import com.psplauncher.feature.appbar.appdrawer.UninstallConfirmDialog
-import com.psplauncher.core.ui.components.rowsShown
-import com.psplauncher.core.ui.components.XmbLetterRail
-import com.psplauncher.feature.appbar.appdrawer.HEADER_HEIGHT
+import com.psplauncher.feature.appbar.appdrawer.WallBackdrop
+import com.psplauncher.feature.appbar.appdrawer.WallBand
+import com.psplauncher.feature.appbar.appdrawer.WallHeading
+import com.psplauncher.feature.appbar.appdrawer.WallHints
 
 @OptIn(ExperimentalComposeUiApi::class)
-
-
 @Composable
 fun AppDrawerScreen(
     onBack: () -> Unit,
@@ -74,8 +65,6 @@ fun AppDrawerScreen(
     onTypedCharConsumed: () -> Unit = {},
     onGamepadActionConsumed: () -> Unit = {},
 
-    showControllerHint: Boolean = false,
-
     letterRailHeld: Boolean = false,
 
     onTouchInteraction: () -> Unit = {},
@@ -86,7 +75,6 @@ fun AppDrawerScreen(
 
     onOpenAppSearch: (String) -> Unit = {},
 
-    onPromptTapped: ((GamepadAction) -> Unit)? = null,
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -103,7 +91,7 @@ fun AppDrawerScreen(
 
                 pendingGamepadAction == GamepadAction.BACK ->
                     if (state.letterFilter != null) viewModel.clearLetterFilter() else closeDrawer()
-                pendingGamepadAction == GamepadAction.CHANGE_SORT -> onOpenAppSearch("")
+                pendingGamepadAction == GamepadAction.OPEN_CONTEXT_MENU -> onOpenAppSearch("")
                 else -> viewModel.handleGamepadAction(pendingGamepadAction)
             }
             onGamepadActionConsumed()
@@ -142,11 +130,7 @@ fun AppDrawerScreen(
     }
 
     AppDrawerContent(
-        onPromptTapped = onPromptTapped,
-
-        onListRowsMeasured = viewModel::setSectionListRows,
         state = state,
-        showControllerHint = showControllerHint,
 
         onBack = {
             onTouchInteraction()
@@ -166,6 +150,14 @@ fun AppDrawerScreen(
         },
         onAppLaunched = { viewModel.launchApp(it) },
         onAppMenu = { viewModel.openAppMenu(it) },
+        onBandLaunch = { app ->
+            onTouchInteraction()
+            viewModel.launchApp(app.packageName)
+        },
+        onBandOptions = { app ->
+            onTouchInteraction()
+            viewModel.openAppMenu(app)
+        },
         onTouchBrowse = { index ->
             onTouchInteraction()
             viewModel.onTouchBrowse(index)
@@ -184,7 +176,7 @@ fun AppDrawerScreen(
             }
             viewModel.onMenuAction(action)
         },
-            onLetterRailTouch = viewModel::onLetterRailTouch,
+        onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
         onCloseMenu = { viewModel.closeAppMenu() },
         onConfirmUninstall = { viewModel.confirmUninstall() },
@@ -198,7 +190,6 @@ fun AppDrawerScreen(
 @Composable
 internal fun AppDrawerContent(
     state: AppDrawerUiState,
-    showControllerHint: Boolean,
     onBack: () -> Unit,
     onOpenSearch: () -> Unit,
     onFilterSelected: (AppFilter) -> Unit,
@@ -212,84 +203,81 @@ internal fun AppDrawerContent(
     onCancelUninstall: () -> Unit,
     onGrantUsageAccess: () -> Unit,
     modifier: Modifier = Modifier,
+    onBandLaunch: (InstalledApp) -> Unit = { onAppLaunched(it.packageName) },
+    onBandOptions: (InstalledApp) -> Unit = onAppMenu,
     onMenuRowActivated: (Int) -> Unit = {},
 
     onLetterRailTouch: (Int) -> Unit = {},
     onLetterRailReleased: () -> Unit = {},
-
-    onPromptTapped: ((GamepadAction) -> Unit)? = null,
-
-    onListRowsMeasured: (Int) -> Unit = {},
 ) {
-    val sf = deriveStorefrontColors()
+    BoxWithConstraints(modifier = modifier.fillMaxSize().background(PanelBase)) {
+        val u = DesignUnits(minOf(maxWidth.value / WALL_DESIGN_WIDTH, maxHeight.value / WALL_DESIGN_HEIGHT), LocalDensity.current)
+        val focused = state.visibleApps.getOrNull(state.selectedIndex)
+        val focusedIcon = rememberAppIcon(focused?.packageName?.takeIf { focused.gameId == null })
+        WallBackdrop(focused, focusedIcon, u)
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-
-            .background(
-                Brush.verticalGradient(
-                    listOf(sf.backgroundDeep, sf.backgroundMid),
-                )
-            ),
-    ) {
         Column(modifier = Modifier.fillMaxSize().padding(top = StatusStripHeight)) {
             AppDrawerCategoryTabs(
                 activeFilter = state.activeFilter,
                 filterCounts = state.filterCounts,
                 onFilterSelected = onFilterSelected,
-                colors = sf,
+                u = u,
             )
 
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = u.dp(80))) {
+                val tabMessage = @Composable {
+                    EmptyDrawerMessage(
+                        filter = state.activeFilter,
+                        hasUsageAccess = state.hasUsageAccess,
+                        onGrantUsageAccess = onGrantUsageAccess,
+                        u = u,
+                    )
+                }
                 when {
                     state.isLoading -> {
                         CircularProgressIndicator(
-                            color = menuCursorEdge(),
+                            color = Color.White,
                             modifier = Modifier.align(Alignment.Center),
                         )
                     }
 
-                    state.visibleApps.isEmpty() -> {
-                        EmptyDrawerMessage(
-                            filter = state.activeFilter,
-                            hasUsageAccess = state.hasUsageAccess,
-                            onGrantUsageAccess = onGrantUsageAccess,
-                            colors = sf,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
+                    state.visibleApps.isEmpty() -> Box(Modifier.align(Alignment.Center)) { tabMessage() }
 
                     else -> {
-                        AppDrawerSection(
-                            matched = state.sectionApps,
-                            rest = state.otherApps,
+                        AppWall(
+                            apps = state.visibleApps,
+                            sectionCount = state.sectionApps.size,
+                            filter = state.activeFilter,
                             selectedIndex = state.selectedIndex,
                             usingTouch = state.usingTouch,
-                            filter = state.activeFilter,
+                            u = u,
                             onAppTapped = onAppTapped,
                             onAppLaunched = onAppLaunched,
                             onAppMenu = onAppMenu,
-                            colors = sf,
-                            onListRowsMeasured = onListRowsMeasured,
+                            restHeading = {
+                                if (state.sectionApps.isEmpty()) tabMessage() else WallHeading(EVERYTHING_ELSE, u)
+                            },
+                            modifier = Modifier.fillMaxSize(),
                         )
                     }
                 }
             }
 
-            AppDrawerHeader(onOpenSearch = onOpenSearch, colors = sf)
-
-            val hintAlpha by animateFloatAsState(
-                targetValue = if (showControllerHint && state.confirmUninstall == null) 1f else 0f,
-                animationSpec = tween(200),
-                label = "appDrawerHint",
-            )
-
-            AppDrawerHintBar(
-                modifier = Modifier.alpha(hintAlpha),
-                menuOpen = state.menuApp != null,
-                onAction = onPromptTapped?.takeIf { hintAlpha > 0f },
-            )
+            Column(Modifier.fillMaxWidth().padding(start = u.dp(80), end = u.dp(80), bottom = u.dp(22))) {
+                focused?.let { app ->
+                    WallBand(app, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) })
+                }
+                Spacer(Modifier.height(u.dp(18)))
+                WallHints(
+                    u = u,
+                    onNextTab = {
+                        val filters = AppFilter.entries
+                        onFilterSelected(filters[(filters.indexOf(state.activeFilter) + 1) % filters.size])
+                    },
+                    onSearch = onOpenSearch,
+                    onBack = onBack,
+                )
+            }
         }
 
         XmbLetterRail(
@@ -297,7 +285,7 @@ internal fun AppDrawerContent(
             cursor = state.letterCursor,
             onTouch = onLetterRailTouch,
             onReleased = onLetterRailReleased,
-            bottom = HEADER_HEIGHT + HintBarHeight,
+            bottom = u.dp(220),
         )
 
         state.appMenu?.let { menu ->
@@ -324,10 +312,12 @@ private fun EmptyDrawerMessage(
     filter: AppFilter,
     hasUsageAccess: Boolean,
     onGrantUsageAccess: () -> Unit,
-    colors: StorefrontColors,
-    modifier: Modifier = Modifier,
+    u: DesignUnits,
 ) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = u.dp(8)),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = when {
                 filter == AppFilter.GAMES -> "No games found"
@@ -336,10 +326,11 @@ private fun EmptyDrawerMessage(
                 filter == AppFilter.RECENT -> "No recently used apps yet"
                 else -> "No apps installed"
             },
-            color = colors.textSecondary,
-            fontSize = 16.sp,
+            color = Color.White,
+            fontSize = u.sp(20),
+            fontWeight = FontWeight.Light,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(u.dp(6)))
         Text(
             text = when {
                 filter == AppFilter.GAMES -> "Apps marked as games in the Play Store appear here"
@@ -347,28 +338,31 @@ private fun EmptyDrawerMessage(
                 filter == AppFilter.RECENT && !hasUsageAccess -> "Grant access so PSP can sort apps by last used time"
                 else -> ""
             },
-            color = colors.textSecondary.copy(alpha = 0.6f),
-            fontSize = 13.sp,
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = u.sp(14),
+            fontWeight = FontWeight.Light,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 48.dp),
         )
         if (filter == AppFilter.RECENT && !hasUsageAccess) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(u.dp(14)))
             Text(
                 text = "Open Usage Access",
-                color = colors.textPrimary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                fontSize = u.sp(15),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(colors.searchField)
-                    .border(1.dp, colors.searchBorder, RoundedCornerShape(2.dp))
+                    .heightIn(min = 44.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color.White.copy(alpha = 0.14f))
                     .clickable { onGrantUsageAccess() }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = u.dp(22), vertical = u.dp(12)),
             )
         }
     }
 }
+
+private const val EVERYTHING_ELSE = "Everything else"
+private const val WALL_DESIGN_WIDTH = 1200f
+private const val WALL_DESIGN_HEIGHT = 752f
 
 @CombinedPreviews
 @Composable
@@ -376,42 +370,6 @@ fun AppDrawerScreenPreview() {
     PfpPreview {
         AppDrawerPreviewContent()
     }
-}
-
-@Preview(name = "Classic Blue", group = "App Drawer Accents")
-@Composable
-fun AppDrawerScreenPreviewClassicBlue() {
-    PfpPreview(colors = accentPreviewColors(0xFF0055AAL)) { AppDrawerPreviewContent() }
-}
-
-@Preview(name = "Sunset Orange", group = "App Drawer Accents")
-@Composable
-fun AppDrawerScreenPreviewSunsetOrange() {
-    PfpPreview(colors = accentPreviewColors(0xFFFF8A3DL)) { AppDrawerPreviewContent() }
-}
-
-@Preview(name = "Fresh Green", group = "App Drawer Accents")
-@Composable
-fun AppDrawerScreenPreviewFreshGreen() {
-    PfpPreview(colors = accentPreviewColors(0xFF36C26BL)) { AppDrawerPreviewContent() }
-}
-
-@Preview(name = "Sakura Pink", group = "App Drawer Accents")
-@Composable
-fun AppDrawerScreenPreviewSakuraPink() {
-    PfpPreview(colors = accentPreviewColors(0xFFE87FB0L)) { AppDrawerPreviewContent() }
-}
-
-@Preview(name = "Silver Mono", group = "App Drawer Accents")
-@Composable
-fun AppDrawerScreenPreviewSilverMono() {
-    PfpPreview(colors = accentPreviewColors(0xFFB8C4D0L)) { AppDrawerPreviewContent() }
-}
-
-@Preview(name = "Golden Amber", group = "App Drawer Accents")
-@Composable
-fun AppDrawerScreenPreviewGoldenAmber() {
-    PfpPreview(colors = accentPreviewColors(0xFFE0A32EL)) { AppDrawerPreviewContent() }
 }
 
 @Composable
@@ -447,7 +405,6 @@ private fun AppDrawerPreviewContent() {
     )
     AppDrawerContent(
         state = mockState,
-        showControllerHint = true,
         onBack = {},
         onOpenSearch = {},
         onFilterSelected = {},
@@ -460,20 +417,5 @@ private fun AppDrawerPreviewContent() {
         onConfirmUninstall = {},
         onCancelUninstall = {},
         onGrantUsageAccess = {},
-    )
-}
-
-private fun accentPreviewColors(waveArgb: Long): PFPColors {
-    val (top, bottom) = lightBackgroundAnchors(waveArgb)
-    return PFPColors(
-        waveColor = Color(waveArgb),
-        accentColor = Color.White,
-        textPrimary = Color.White,
-        textSecondary = Color.White.copy(alpha = 0.7f),
-        backgroundOverlay = Color(0x88000000),
-        selectedItem = Color.White,
-        categoryBar = Color(0x00000000),
-        backgroundTop = Color(top),
-        backgroundBottom = Color(bottom),
     )
 }

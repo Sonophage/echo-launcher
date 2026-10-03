@@ -1,5 +1,6 @@
 package com.psplauncher.feature.xmb.viewmodel
 
+import com.psplauncher.core.common.format.relativeTime
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.domain.model.MusicTrack
 import com.psplauncher.core.ui.notification.AndroidNotice

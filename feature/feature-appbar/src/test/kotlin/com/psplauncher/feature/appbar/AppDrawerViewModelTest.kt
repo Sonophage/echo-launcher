@@ -178,7 +178,7 @@ class AppDrawerViewModelTest {
         viewModel.setFilter(AppFilter.EMULATORS)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.handleGamepadAction(GamepadAction.OPEN_CONTEXT_MENU)
+        viewModel.handleGamepadAction(GamepadAction.CHANGE_SORT)
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
             val state = awaitItem()
@@ -275,7 +275,7 @@ class AppDrawerViewModelTest {
     }
 
     private fun openUninstallPrompt() {
-        viewModel.handleGamepadAction(GamepadAction.OPEN_CONTEXT_MENU)
+        viewModel.handleGamepadAction(GamepadAction.CHANGE_SORT)
         testDispatcher.scheduler.advanceUntilIdle()
         val actions = viewModel.uiState.value.menuActions
         val target = actions.indexOf(AppMenuAction.UNINSTALL)
