@@ -1,5 +1,6 @@
 package com.psplauncher.core.ui.icons
 
+import androidx.collection.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -12,17 +13,49 @@ import kotlinx.coroutines.withContext
 
 class AppIconArt(val bitmap: ImageBitmap, val color: Color?)
 
+data class AppIconKey(
+    val packageName: String,
+    val sizePx: Int,
+    val foregroundOnly: Boolean,
+    val colorOf: ((ImageBitmap) -> Color?)?,
+)
+
+class AppIconCache(maxBytes: Int) {
+    private val lru = object : LruCache<AppIconKey, AppIconArt>(maxBytes) {
+        override fun sizeOf(key: AppIconKey, value: AppIconArt): Int = value.bitmap.width * value.bitmap.height * 4
+    }
+
+    fun peek(key: AppIconKey): AppIconArt? = lru[key]
+
+    fun getOrLoad(key: AppIconKey, load: () -> AppIconArt?): AppIconArt? =
+        lru[key] ?: load()?.also { lru.put(key, it) }
+
+    companion object {
+        val Shared = AppIconCache(maxBytes = 24 * 1024 * 1024)
+    }
+}
+
 @Composable
-fun rememberAppIcon(packageName: String?): AppIconArt? {
+fun rememberAppIcon(
+    packageName: String?,
+    sizePx: Int = ICON_PX,
+    foregroundOnly: Boolean = false,
+    colorOf: ((ImageBitmap) -> Color?)? = ::dominantColor,
+): AppIconArt? {
     val context = LocalContext.current
-    val art by produceState<AppIconArt?>(null, packageName) {
-        value = packageName?.takeIf { it.isNotBlank() }?.let { pkg ->
-            withContext(Dispatchers.IO) {
-                context.appIconBitmap(pkg, sizePx = ICON_PX, foregroundOnly = false)?.let { AppIconArt(it, dominantColor(it)) }
-            }
+    val key = packageName?.takeIf { it.isNotBlank() }?.let { AppIconKey(it, sizePx, foregroundOnly, colorOf) }
+    val loaded by produceState<Pair<AppIconKey, AppIconArt?>?>(null, key) {
+        value = key?.let {
+            it to (AppIconCache.Shared.peek(it) ?: withContext(Dispatchers.IO) {
+                AppIconCache.Shared.getOrLoad(it) {
+                    context.appIconBitmap(it.packageName, sizePx = it.sizePx, foregroundOnly = it.foregroundOnly)
+                        ?.let { bmp -> AppIconArt(bmp, it.colorOf?.invoke(bmp)) }
+                }
+            })
         }
     }
-    return art
+    if (key == null) return null
+    return AppIconCache.Shared.peek(key) ?: loaded?.takeIf { it.first == key }?.second
 }
 
 private fun dominantColor(bitmap: ImageBitmap): Color? {

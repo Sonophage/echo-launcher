@@ -66,6 +66,7 @@ import com.psplauncher.core.ui.design.PanelButton
 import com.psplauncher.core.ui.design.panelBackdrop
 import com.psplauncher.core.ui.icons.AppIconArt
 import com.psplauncher.core.ui.icons.rememberAppIcon
+import com.psplauncher.core.ui.image.rememberBlurSourceModel
 import com.psplauncher.feature.appbar.AppFilter
 import com.psplauncher.feature.appbar.InstalledApp
 import com.psplauncher.feature.appbar.SystemChip
@@ -76,7 +77,7 @@ import com.psplauncher.feature.appbar.wallLayout
 internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits) {
     val tint by animateColorAsState(icon?.color ?: NeutralTint, tween(500), label = "wallTint")
     Box(Modifier.fillMaxSize().panelBackdrop(tint)) {
-        app?.art?.let { AsyncImage(it, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(u.dp(26))) }
+        app?.art?.let { AsyncImage(rememberBlurSourceModel(it), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(u.dp(26))) }
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 0.55f else 0.75f)))
     }
 }

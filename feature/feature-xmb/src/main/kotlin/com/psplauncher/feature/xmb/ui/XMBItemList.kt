@@ -86,7 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.psplauncher.core.ui.icons.AppIconContainerShape
-import com.psplauncher.core.ui.icons.appIconBitmap
+import com.psplauncher.core.ui.icons.rememberAppIcon
 import com.psplauncher.core.ui.icons.GameIconStyle
 import com.psplauncher.core.ui.icons.LocalXmbIconOverrides
 import com.psplauncher.core.ui.icons.PortalIcon
@@ -1166,8 +1166,7 @@ private fun AppListIcon(
     packageName: String,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val bitmap = remember(packageName) { context.appIconBitmap(packageName) } ?: return
+    val bitmap = rememberAppIcon(packageName, sizePx = 192, foregroundOnly = true, colorOf = null)?.bitmap ?: return
     Image(
         bitmap = bitmap,
         contentDescription = null,

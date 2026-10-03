@@ -79,6 +79,7 @@ import com.psplauncher.core.ui.design.PanelCardFocusFill
 import com.psplauncher.core.ui.design.PanelFocusRing
 import com.psplauncher.core.ui.design.panelBackdrop
 import com.psplauncher.core.ui.image.rememberArtworkModel
+import com.psplauncher.core.ui.image.rememberBlurSourceModel
 import com.psplauncher.feature.xmb.viewmodel.BADGE_COLUMNS
 import com.psplauncher.feature.xmb.viewmodel.BadgeFilter
 import com.psplauncher.feature.xmb.viewmodel.ProfileState
@@ -117,7 +118,7 @@ fun ProfileScreen(
         val u = DesignUnits(minOf(maxWidth.value / PANEL_DESIGN_WIDTH, maxHeight.value / PANEL_DESIGN_HEIGHT), LocalDensity.current)
         if (backdrop != null) {
             AsyncImage(
-                model = rememberArtworkModel(backdrop),
+                model = rememberBlurSourceModel(backdrop),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().blur(u.dp(28)).graphicsLayer(alpha = 0.45f),

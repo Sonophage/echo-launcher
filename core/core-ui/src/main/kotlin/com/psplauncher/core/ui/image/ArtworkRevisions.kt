@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
+import coil3.size.Scale
 
 object ArtworkRevisions {
     private val revisions = mutableStateMapOf<String, Int>()
@@ -30,3 +31,22 @@ fun rememberArtworkModel(uri: String?): Any? {
             .build()
     }
 }
+
+fun blurSourceCacheKey(uri: String): String = "${ArtworkRevisions.cacheKey(uri) ?: uri}#blur$BLUR_SOURCE_PX"
+
+@Composable
+fun rememberBlurSourceModel(uri: String?): Any? {
+    if (uri == null) return null
+    val key = blurSourceCacheKey(uri)
+    val context = LocalPlatformContext.current
+    return remember(key, context) {
+        ImageRequest.Builder(context)
+            .data(uri)
+            .size(BLUR_SOURCE_PX)
+            .scale(Scale.FILL)
+            .memoryCacheKey(key)
+            .build()
+    }
+}
+
+private const val BLUR_SOURCE_PX = 128
