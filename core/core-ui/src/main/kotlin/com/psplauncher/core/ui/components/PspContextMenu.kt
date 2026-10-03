@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.TextStyle
@@ -38,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.psplauncher.core.ui.design.menuBackdrop
 import com.psplauncher.core.ui.preview.CombinedPreviews
 import com.psplauncher.core.ui.preview.PfpPreview
 
@@ -55,8 +55,6 @@ fun <T> PspContextMenuOverlay(
     onRowActivated: (index: Int) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-
-    scrim: Color = XmbScrim,
 ) {
     val title = state.title
     val subtitle = state.subtitle
@@ -73,13 +71,7 @@ fun <T> PspContextMenuOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.horizontalGradient(
-                    0f to Color.Transparent,
-                    0.5f to scrim.copy(alpha = scrim.alpha * 0.45f),
-                    1f to scrim,
-                ),
-            ),
+            .menuBackdrop(),
     ) {
         Box(Modifier.fillMaxSize().clickable(onClick = onDismiss))
 
@@ -224,8 +216,6 @@ private fun XmbRailBadge(
         )
     }
 }
-
-val XmbScrim = Color(0xF7050201)
 
 internal val RailIcon = 29.dp
 internal val RailCorner = 7.dp

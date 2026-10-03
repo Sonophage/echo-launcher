@@ -180,10 +180,10 @@ internal fun ArtworkStudioContent(
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
-                        0f to com.psplauncher.core.ui.components.XmbScrim,
-                        0.45f to com.psplauncher.core.ui.components.XmbScrim.copy(alpha = 0.88f),
-                        0.72f to com.psplauncher.core.ui.components.XmbScrim.copy(alpha = 0.55f),
-                        1f to com.psplauncher.core.ui.components.XmbScrim.copy(alpha = 0.20f),
+                        0f to com.psplauncher.core.ui.design.MenuScrim,
+                        0.45f to com.psplauncher.core.ui.design.MenuScrim.copy(alpha = 0.88f),
+                        0.72f to com.psplauncher.core.ui.design.MenuScrim.copy(alpha = 0.55f),
+                        1f to com.psplauncher.core.ui.design.MenuScrim.copy(alpha = 0.20f),
                     )
                 ),
         )

@@ -50,7 +50,7 @@ import com.psplauncher.core.ui.components.MenuSelect
 import com.psplauncher.core.ui.components.PfpCheckMark
 import com.psplauncher.core.ui.components.PspContextMenuOverlay
 import com.psplauncher.core.ui.components.chose
-import com.psplauncher.core.ui.components.XmbScrim
+import com.psplauncher.core.ui.design.MenuScrim
 import com.psplauncher.feature.artwork.store.ArtworkKind
 
 private val STUDIO_RESULT_GAP = 8.dp
@@ -320,7 +320,7 @@ internal fun StudioProviderPicker(
         Modifier
             .fillMaxSize()
             .background(background)
-            .background(Brush.verticalGradient(0f to XmbScrim, 1f to XmbScrim.copy(alpha = 0.97f)))
+            .background(Brush.verticalGradient(0f to MenuScrim, 1f to MenuScrim.copy(alpha = 0.97f)))
             .clickable(enabled = false) {},
     ) {
         Column(Modifier.fillMaxSize().padding(start = 26.dp, end = 26.dp, top = 16.dp)) {
@@ -461,7 +461,7 @@ internal fun StudioReviewPanel(
         Modifier
             .fillMaxSize()
             .background(background)
-            .background(Brush.verticalGradient(0f to XmbScrim, 1f to XmbScrim.copy(alpha = 0.97f)))
+            .background(Brush.verticalGradient(0f to MenuScrim, 1f to MenuScrim.copy(alpha = 0.97f)))
             .clickable(enabled = false) {},
     ) {
         Column(Modifier.fillMaxSize().padding(start = 26.dp, end = 26.dp, top = 16.dp)) {
@@ -647,6 +647,5 @@ internal fun <T : Any> StudioMenu(
             (state.chose(index) as? MenuSelect.Run)?.let { onActivate(it.action) }
         },
         onDismiss = onDismiss,
-        scrim = Color(0xA6000000),
     )
 }
