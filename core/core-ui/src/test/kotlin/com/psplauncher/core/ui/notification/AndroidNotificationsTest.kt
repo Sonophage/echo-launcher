@@ -71,4 +71,13 @@ class AndroidNotificationsTest {
         assertEquals("App", notice!!.title)
         assertEquals("real", notice.text)
     }
+
+    @Test
+    fun `a media session or a transport notice is now playing, so it leaves the list it could never be cleared from`() {
+        assertTrue(isMediaPlayback(hasMediaSession = true, category = null))
+        assertTrue("Stremio posts category=transport", isMediaPlayback(hasMediaSession = false, category = "transport"))
+        assertTrue(!isMediaPlayback(hasMediaSession = false, category = "msg"))
+        assertTrue(!isMediaPlayback(hasMediaSession = false, category = null))
+        assertNull(noticeOf("k", "Stremio", 5L, NoticeExtras(title = "Hotel Del Luna"), mediaPlayback = true))
+    }
 }

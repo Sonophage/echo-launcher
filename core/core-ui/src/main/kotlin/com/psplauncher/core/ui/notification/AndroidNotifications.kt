@@ -1,5 +1,6 @@
 package com.psplauncher.core.ui.notification
 
+import android.app.Notification
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -32,6 +33,20 @@ data class NoticeExtras(
     val infoText: String? = null,
 )
 
+data class ExternalPlayback(
+    val packageName: String,
+    val appLabel: String,
+    val title: String,
+    val artist: String?,
+    val art: Any?,
+    val playing: Boolean,
+    val positionMs: Long = 0,
+    val durationMs: Long = 0,
+)
+
+fun isMediaPlayback(hasMediaSession: Boolean, category: String?): Boolean =
+    hasMediaSession || category == Notification.CATEGORY_TRANSPORT
+
 fun noticeOf(
     key: String,
     appLabel: String,
@@ -41,8 +56,9 @@ fun noticeOf(
     canOpen: Boolean = false,
     canDismiss: Boolean = false,
     packageName: String = "",
+    mediaPlayback: Boolean = false,
 ): AndroidNotice? {
-    if (isGroupSummary) return null
+    if (isGroupSummary || mediaPlayback) return null
     return AndroidNotice(
         key = key,
         appLabel = appLabel,
@@ -67,6 +83,26 @@ object AndroidNotifications {
         fun open(key: String): Boolean
 
         fun dismiss(key: String)
+
+        fun playPause()
+
+        fun skipNext()
+    }
+
+    private val _playback = MutableStateFlow<ExternalPlayback?>(null)
+
+    val playback: StateFlow<ExternalPlayback?> = _playback
+
+    fun publishPlayback(playback: ExternalPlayback?) {
+        _playback.value = playback
+    }
+
+    fun playPause() {
+        actions?.playPause()
+    }
+
+    fun skipNext() {
+        actions?.skipNext()
     }
 
     private var actions: NoticeActions? = null
@@ -81,6 +117,7 @@ object AndroidNotifications {
 
     fun disconnected() {
         _active.value = emptyList()
+        _playback.value = null
         actions = null
     }
 
