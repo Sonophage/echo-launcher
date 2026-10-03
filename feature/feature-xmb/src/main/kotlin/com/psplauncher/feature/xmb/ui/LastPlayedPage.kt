@@ -282,21 +282,6 @@ private fun RecentList(
             }
         }
 
-        Box(
-            Modifier.align(Alignment.BottomStart).padding(start = u.dp(68), bottom = u.dp(14))
-                .heightIn(min = 40.dp)
-                .clip(RoundedCornerShape(u.dp(20)))
-                .clickable { onAction(GamepadAction.BACK) }
-                .padding(horizontal = u.dp(12)),
-            contentAlignment = Alignment.Center,
-        ) {
-            val style = TextStyle(fontSize = u.sp(13), fontWeight = FontWeight.Light)
-            if (LocalPadPrompts.current) {
-                ControllerPrompt(GamepadAction.BACK, "Back", labelStyle = style, glyphSize = u.dp(22), spacing = u.dp(8))
-            } else {
-                Text("Back", color = Color.White.copy(alpha = 0.75f), style = style)
-            }
-        }
     }
 }
 
@@ -319,10 +304,10 @@ private fun RecentRow(item: XMBItem, focused: Boolean, now: Long, u: DesignUnits
     ) {
         Thumb(item, u.dp(44), u.dp(11))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
-            Text(item.title, color = Color.White, fontSize = u.sp(15), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(item.title, color = Color.White, fontSize = u.sp(15), lineHeight = u.sp(15) * 1.2f, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 listOfNotNull(kindLabel(item), item.lastOpenedAt?.let { relativeTime(now, it) }).joinToString(" · "),
-                color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1,
+                color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12), lineHeight = u.sp(12) * 1.2f, fontWeight = FontWeight.Light, maxLines = 1,
             )
             item.progressFraction?.let { ProgressBar(it, u.dp(3), Modifier.fillMaxWidth().padding(top = u.dp(2))) }
         }
