@@ -208,7 +208,6 @@ fun XMBShellContainer(
         onNotificationsSwipedOpen = viewModel::onNotificationsSwipedOpen,
         onNotificationsSwipedClosed = viewModel::onNotificationsSwipedClosed,
         onPanelSettingTapped = viewModel::onPanelSettingTapped,
-        onSettingsPanelTabTapped = viewModel::onSettingsPanelTabTapped,
         onOpenAppDrawer = viewModel::onOpenAppDrawer,
         onItemTap = viewModel::onItemTap,
         onRecentCardTap = viewModel::onRecentCardTap,
@@ -379,7 +378,6 @@ fun XMBShell(
     onNotificationsSwipedOpen: () -> Unit = {},
     onNotificationsSwipedClosed: () -> Unit = {},
     onPanelSettingTapped: (Int) -> Unit = {},
-    onSettingsPanelTabTapped: (com.psplauncher.feature.xmb.viewmodel.PanelTab) -> Unit = {},
     onOpenAppDrawer: () -> Unit = {},
 
     onItemTap: (Int) -> Unit = {},
@@ -1077,10 +1075,6 @@ fun XMBShell(
                 centre = if (notificationsOpen) {
                     {
                         PanelTabsRow(uiState.panelTab, onPanelTabTapped, Modifier.align(Alignment.Center))
-                    }
-                } else if (uiState.activeSettingsScreen != null) {
-                    {
-                        PanelTabsRow(com.psplauncher.feature.xmb.viewmodel.PanelTab.SETTINGS, onSettingsPanelTabTapped, Modifier.align(Alignment.Center))
                     }
                 } else if (uiState.onLastPlayedHome && xmbContext) {
                     {
