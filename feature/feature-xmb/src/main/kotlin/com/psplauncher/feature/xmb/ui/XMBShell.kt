@@ -166,6 +166,20 @@ fun XMBShellContainer(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
     ) { uri -> viewModel.onMediaRootPicked(uri) }
 
+    val avatarPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri -> viewModel.onProfileAvatarPicked(uri) }
+
+    androidx.compose.runtime.LaunchedEffect(uiState.profileAvatarPick) {
+        if (uiState.profileAvatarPick) {
+            avatarPicker.launch(
+                androidx.activity.result.PickVisualMediaRequest(
+                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly,
+                ),
+            )
+        }
+    }
+
     androidx.compose.runtime.LaunchedEffect(uiState.rootPick) {
         val pick = uiState.rootPick ?: return@LaunchedEffect
         mediaRootPicker.launch(
@@ -254,6 +268,13 @@ fun XMBShellContainer(
         onCloseAppDetail = viewModel::onCloseAppDetail,
         onGameInfoCardFocused = viewModel::onGameInfoCursor,
         onGameInfoNoticeTapped = viewModel::onGameInfoNoticeTapped,
+        onProfileTab = viewModel::onProfileTabTapped,
+        onProfileSet = viewModel::onProfileSetTapped,
+        onProfileBadge = viewModel::onProfileBadgeTapped,
+        onProfileFilter = viewModel::onProfileFilterTapped,
+        onProfileFriend = viewModel::onProfileFriendTapped,
+        onProfileEditName = viewModel::editProfileName,
+        onProfilePickAvatar = viewModel::pickProfileAvatar,
         onAppDetailActionConsumed = viewModel::consumeAppDetailAction,
         onContextMenuItemActivated = viewModel::onContextMenuItemActivatedAt,
         onContextMenuDismiss = viewModel::closeContextMenu,
@@ -423,6 +444,13 @@ fun XMBShell(
     onCloseAppDetail: () -> Unit = {},
     onGameInfoCardFocused: (Int) -> Unit = {},
     onGameInfoNoticeTapped: (String) -> Unit = {},
+    onProfileTab: (com.psplauncher.feature.xmb.viewmodel.ProfileTab) -> Unit = {},
+    onProfileSet: (Int) -> Unit = {},
+    onProfileBadge: (Int) -> Unit = {},
+    onProfileFilter: (com.psplauncher.feature.xmb.viewmodel.BadgeFilter) -> Unit = {},
+    onProfileFriend: (Int) -> Unit = {},
+    onProfileEditName: () -> Unit = {},
+    onProfilePickAvatar: () -> Unit = {},
     onAppDetailActionConsumed: () -> Unit = {},
     onContextMenuItemActivated: (Int) -> Unit = {},
     onContextMenuDismiss: () -> Unit = {},
@@ -568,6 +596,7 @@ fun XMBShell(
                 uiState.activePhotoViewer != null ||
                 uiState.activeAppId != null || uiState.activeAppDrawerFilter != null ||
                 uiState.gameInfo != null ||
+                uiState.profile != null ||
                 uiState.musicPlayerVisible ||
 
                 false
@@ -1096,6 +1125,7 @@ fun XMBShell(
                     backdropOn = uiState.itemBackdropEnabled,
                     recentAppsOn = uiState.recentsIncludeApps,
                     chips = uiState.libraryChips,
+                    profileName = uiState.profileName,
                 ),
                 quickFocus = uiState.panelQuick,
                 chipFocus = uiState.panelChip,
@@ -1253,6 +1283,23 @@ fun XMBShell(
                     onAction = onPromptTapped,
                     onCardFocused = onGameInfoCardFocused,
                     onNoticeTapped = onGameInfoNoticeTapped,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            uiState.profile?.let { profile ->
+                ProfileScreen(
+                    profile = profile,
+                    name = uiState.profileName,
+                    avatar = uiState.profileAvatar,
+                    onAction = onPromptTapped,
+                    onTab = onProfileTab,
+                    onSet = onProfileSet,
+                    onBadge = onProfileBadge,
+                    onFilter = onProfileFilter,
+                    onFriend = onProfileFriend,
+                    onEditName = onProfileEditName,
+                    onPickAvatar = onProfilePickAvatar,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

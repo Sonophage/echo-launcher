@@ -131,7 +131,13 @@ fun GameInfoScreen(
                 }
             }
             Row(Modifier.weight(1f).padding(bottom = u.dp(8)), horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
-                stats.forEach { BandStat(it, u) }
+                stats.forEach { stat ->
+                    if (stat.label == "Achievements") {
+                        Box(Modifier.clip(RoundedCornerShape(u.dp(8))).clickable { onAction(GamepadAction.CHANGE_SORT) }) { BandStat(stat, u, GamepadAction.CHANGE_SORT) }
+                    } else {
+                        BandStat(stat, u)
+                    }
+                }
             }
             Row(Modifier.padding(bottom = u.dp(4)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
                 val primary = when {
@@ -189,10 +195,15 @@ fun GameInfoScreen(
 }
 
 @Composable
-private fun BandStat(stat: GameInfoStat, u: DesignUnits) {
+private fun BandStat(stat: GameInfoStat, u: DesignUnits, button: GamepadAction? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
         Text(stat.value, color = Color.White, fontSize = u.sp(26), fontWeight = FontWeight.ExtraLight, maxLines = 1)
-        Text(stat.label, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1)
+        val labelStyle = TextStyle(fontSize = u.sp(12), fontWeight = FontWeight.Light)
+        if (button != null && LocalPadPrompts.current) {
+            ControllerPrompt(button, stat.label, labelColor = Color.White.copy(alpha = 0.55f), labelStyle = labelStyle, glyphSize = u.dp(18), spacing = u.dp(6))
+        } else {
+            Text(stat.label, color = Color.White.copy(alpha = 0.55f), style = labelStyle, maxLines = 1)
+        }
     }
 }
 

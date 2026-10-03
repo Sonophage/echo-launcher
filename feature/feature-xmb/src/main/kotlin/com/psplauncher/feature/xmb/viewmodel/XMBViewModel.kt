@@ -121,6 +121,8 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.update
@@ -215,6 +217,8 @@ data class CollectionNameDialogState(
     val quickSearch: Boolean = false,
 
     val renameCardPlatformId: String? = null,
+
+    val renameProfile: Boolean = false,
 
     val placeholder: String = "e.g. RPGs, Currently Playing",
     val confirmLabel: String = "Save",
@@ -582,6 +586,11 @@ data class XMBUiState(
 
     val gameInfo: GameInfoState? = null,
 
+    val profile: ProfileState? = null,
+    val profileName: String = DEFAULT_PROFILE_NAME,
+    val profileAvatar: String? = null,
+    val profileAvatarPick: Boolean = false,
+
 
 
 
@@ -683,7 +692,7 @@ data class XMBUiState(
 
     val panelTab: PanelTab = PanelTab.NOTIFICATIONS,
     val noticeCursor: Int = 0,
-    val panelQuick: QuickSetting = QuickSetting.WAVE,
+    val panelQuick: QuickSetting = QuickSetting.PROFILE,
     val panelChip: Int = 0,
     val panelSetting: Int = 0,
     val settingsFromPanel: Boolean = false,
@@ -831,6 +840,7 @@ data class XMBUiState(
             activeAppDrawerFilter != null ||
             activeAppId != null ||
             gameInfo != null ||
+            profile != null ||
             search != null
 
     private val fullscreenOverlay: Boolean
@@ -1299,6 +1309,9 @@ class XMBViewModel @Inject constructor(
     private val photoIntentResolver: com.psplauncher.core.data.photo.PhotoIntentResolver,
     private val autoCoreMemory: com.psplauncher.feature.launcher.AutoCoreMemory,
     private val romRootRepository: com.psplauncher.core.data.repository.RomRootRepository,
+    private val achievementController: com.psplauncher.feature.achievements.AchievementController,
+    private val achievementCredentials: com.psplauncher.core.data.achievement.AchievementCredentialsProvider,
+    private val discordSocial: com.psplauncher.core.data.discord.DiscordSocialRepository,
 ) : ViewModel() {
     private var currentMusicTracks: List<MusicTrack> = emptyList()
     private var currentMusicTracksRaw: List<MusicTrack> = emptyList()
@@ -1347,6 +1360,7 @@ class XMBViewModel @Inject constructor(
         observeColorScheme()
         observeCategoryBar()
         observeLibraryChips()
+        observeProfilePrefs()
         observeCategories()
         observeMissingGames()
         observeAppChanges()
@@ -5222,6 +5236,10 @@ class XMBViewModel @Inject constructor(
                 }
                 return
             }
+            state.profile != null -> {
+                handleProfileInput(state.profile, action)
+                return
+            }
             state.gameInfo != null -> {
                 handleGameInfoInput(state.gameInfo, state.androidNotices, action)
                 return
@@ -5350,7 +5368,11 @@ class XMBViewModel @Inject constructor(
         val media = (artworkStore.findAll(gid, ArtworkKind.SCREENSHOT) + listOfNotNull(artworkStore.find(gid, ArtworkKind.TITLESCREEN)))
             .map { com.psplauncher.feature.xmb.ui.detail.DetailMedia(it, isVideo = false) }
         val video = if (videoSnapsAllowed()) artworkStore.find(gid, ArtworkKind.ICON1) ?: artworkStore.find(gid, ArtworkKind.VIDEO) else null
-        return info.copy(content = detailPanelContentFor(game, platform, media, video))
+        val set = runCatching { achievementController.observeSetForGame(gid).first() }.getOrNull()
+        return info.copy(
+            content = detailPanelContentFor(game, platform, media, video),
+            achievementsStat = set?.takeIf { it.total > 0 }?.let { "${it.unlocked}/${it.total}" },
+        )
     }
 
     private fun loadAppInfo(info: GameInfoState): GameInfoState {
@@ -5373,6 +5395,7 @@ class XMBViewModel @Inject constructor(
                 if (notice != null) openAndroidNotice(notice.key) else playFromGameInfo(info.item)
             }
             GamepadAction.OPEN_CONTEXT_MENU -> openGameInfoOptions(info)
+            GamepadAction.CHANGE_SORT -> if (info.achievementsStat != null) openProfile(ProfileTab.ACHIEVEMENTS, info.item.gameId)
             GamepadAction.NAVIGATE_UP,
             GamepadAction.NAVIGATE_DOWN,
             GamepadAction.NAVIGATE_LEFT,
@@ -5394,6 +5417,173 @@ class XMBViewModel @Inject constructor(
         if (_uiState.value.gameInfo == null) return
         menuSound.play(MenuSound.BACK)
         _uiState.update { it.copy(gameInfo = null) }
+    }
+
+    private var profileJob: Job? = null
+
+    fun openProfile(tab: ProfileTab = ProfileTab.OVERVIEW, gameId: Long? = null) {
+        menuSound.play(MenuSound.SELECT)
+        showProfile(tab, gameId)
+    }
+
+    private fun showProfile(tab: ProfileTab, gameId: Long?) {
+        _uiState.update { it.copy(profile = ProfileState(tab = tab, openOnGameId = gameId)) }
+        profileJob?.cancel()
+        profileJob = viewModelScope.launch {
+            profileData().collect { data -> _uiState.update { s -> s.profile?.let { s.copy(profile = it.withData(data)) } ?: s } }
+        }
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun profileData(): Flow<ProfileData> {
+        val achievements = achievementController.observeSets().flatMapLatest { sets ->
+            val badges = if (sets.isEmpty()) flowOf(emptyMap()) else combine(
+                sets.map { set -> achievementController.observeAchievements(set.provider, set.providerGameId).map { setKey(set) to it } },
+            ) { it.toMap() }
+            badges.map { sets to it }
+        }
+        val accounts = combine(
+            achievementCredentials.raUsernameFlow,
+            achievementCredentials.steamId64Flow,
+            discordSocial.signedIn,
+            discordSocial.user,
+            discordSocial.friends,
+        ) { ra, steam, signedIn, user, friends ->
+            ProfileData(
+                raLinked = !ra.isNullOrBlank(),
+                steamLinked = !steam.isNullOrBlank(),
+                discordSignedIn = signedIn,
+                discordUser = user,
+                friends = friends,
+            )
+        }
+        return combine(
+            gameRepository.observeGamesOnly(),
+            achievements,
+            achievementController.observeTotals(),
+            accounts,
+            platformDao.observeAll(),
+        ) { games, (sets, badges), totals, acc, platforms ->
+            val platformOf = platforms.associate { it.id to it.shortName }
+            acc.copy(
+                games = games.distinctBy { it.discSetKey ?: it.id.toString() }.size,
+                playTimeMs = games.sumOf { it.totalPlayTimeMillis },
+                recent = games.filter { it.lastPlayedAt != null }.sortedByDescending { it.lastPlayedAt }
+                    .distinctBy { it.discSetKey ?: it.id.toString() }.take(3),
+                totals = totals,
+                sets = sets,
+                badges = badges,
+                platforms = games.mapNotNull { g -> platformOf[g.platformId]?.let { g.id to it } }.toMap(),
+            )
+        }
+    }
+
+    private fun handleProfileInput(p: ProfileState, action: GamepadAction) {
+        when {
+            action == GamepadAction.BACK -> closeProfile()
+            p.tab == ProfileTab.OVERVIEW && action == GamepadAction.CHANGE_SORT -> editProfileName()
+            p.tab == ProfileTab.OVERVIEW && action == GamepadAction.OPEN_CONTEXT_MENU -> pickProfileAvatar()
+            p.tab == ProfileTab.ACHIEVEMENTS && p.data.sets.isEmpty() && action == GamepadAction.SELECT ->
+                openSettingsFromProfile("settings_accounts")
+            p.tab == ProfileTab.FRIENDS && !p.data.discordSignedIn && action == GamepadAction.SELECT ->
+                openSettingsFromProfile("settings_discord")
+            else -> setProfile(stepProfile(p, action))
+        }
+    }
+
+    private fun setProfile(next: ProfileState) {
+        val current = _uiState.value.profile ?: return
+        if (next == current) {
+            gamepadInputHandler.cancelRepeat()
+            return
+        }
+        menuSound.play(if (next.tab != current.tab) MenuSound.SYSTEM_BROWSE else MenuSound.SCROLL)
+        _uiState.update { s -> s.copy(profile = s.profile?.let { next.copy(data = it.data) }) }
+    }
+
+    fun onProfileTabTapped(tab: ProfileTab) {
+        _uiState.value.profile?.let { setProfile(it.copy(tab = tab)) }
+    }
+
+    fun onProfileSetTapped(index: Int) {
+        _uiState.value.profile?.let { setProfile(it.copy(set = index, inGrid = false, badge = 0)) }
+    }
+
+    fun onProfileBadgeTapped(index: Int) {
+        _uiState.value.profile?.let { setProfile(it.copy(inGrid = true, badge = index)) }
+    }
+
+    fun onProfileFilterTapped(filter: BadgeFilter) {
+        _uiState.value.profile?.let { setProfile(it.copy(filter = filter, inGrid = false, badge = 0)) }
+    }
+
+    fun onProfileFriendTapped(index: Int) {
+        _uiState.value.profile?.let { setProfile(it.copy(friend = index)) }
+    }
+
+    fun closeProfile() {
+        if (_uiState.value.profile == null) return
+        menuSound.play(MenuSound.BACK)
+        profileJob?.cancel()
+        _uiState.update { it.copy(profile = null) }
+    }
+
+    private fun openSettingsFromProfile(screenId: String) {
+        menuSound.play(MenuSound.SELECT)
+        profileJob?.cancel()
+        _uiState.update {
+            it.copy(profile = null, gameInfo = null, activeSettingsScreen = screenId, settingsReturnTo = null, settingsFromPanel = false)
+        }
+    }
+
+    fun editProfileName() {
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update {
+            it.copy(collectionNameDialog = CollectionNameDialogState(
+                title = "Profile name",
+                subtitle = "The name your profile shows. It stays on this device.",
+                initialText = it.profileName,
+                renameProfile = true,
+                placeholder = DEFAULT_PROFILE_NAME,
+            ))
+        }
+    }
+
+    fun pickProfileAvatar() {
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update { it.copy(profileAvatarPick = true) }
+    }
+
+    fun onProfileAvatarPicked(uri: android.net.Uri?) {
+        _uiState.update { it.copy(profileAvatarPick = false) }
+        if (uri == null) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val dir = java.io.File(context.filesDir, "profile").apply { mkdirs() }
+            val dest = java.io.File(dir, "avatar_${System.currentTimeMillis()}.jpg")
+            val ok = runCatching {
+                context.contentResolver.openInputStream(uri)?.use { input -> dest.outputStream().use { input.copyTo(it) } } != null &&
+                    android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        .also { android.graphics.BitmapFactory.decodeFile(dest.absolutePath, it) }.outWidth > 0
+            }.getOrDefault(false)
+            if (!ok) {
+                dest.delete()
+                Timber.w("Profile picture %s could not be read", uri)
+                return@launch
+            }
+            context.pfpDataStore.edit { it[KEY_PROFILE_AVATAR] = dest.absolutePath }
+            dir.listFiles()?.filter { it != dest }?.forEach { it.delete() }
+        }
+    }
+
+    private fun observeProfilePrefs() {
+        viewModelScope.launch {
+            context.pfpDataStore.data.collect { prefs ->
+                val avatar = prefs[KEY_PROFILE_AVATAR]?.takeIf { java.io.File(it).exists() }
+                _uiState.update {
+                    it.copy(profileName = prefs[KEY_PROFILE_NAME]?.ifBlank { null } ?: DEFAULT_PROFILE_NAME, profileAvatar = avatar)
+                }
+            }
+        }
     }
 
     private fun openGameInfoOptions(info: GameInfoState) {
@@ -6132,6 +6322,10 @@ class XMBViewModel @Inject constructor(
             }
             return
         }
+        if (dialog.renameProfile) {
+            viewModelScope.launch { context.pfpDataStore.edit { it[KEY_PROFILE_NAME] = name.trim().ifBlank { DEFAULT_PROFILE_NAME } } }
+            return
+        }
         if (dialog.renameCardPlatformId != null) {
             val trimmed = name.trim()
             if (trimmed.isEmpty()) return
@@ -6350,7 +6544,7 @@ class XMBViewModel @Inject constructor(
                 notificationsOpen = !it.notificationsOpen,
                 panelTab = PanelTab.NOTIFICATIONS,
                 noticeCursor = 0,
-                panelQuick = QuickSetting.WAVE,
+                panelQuick = QuickSetting.PROFILE,
                 panelChip = 0,
                 panelSetting = 0,
             )
@@ -6437,6 +6631,10 @@ class XMBViewModel @Inject constructor(
                 QuickSetting.BACKDROP -> iconDisplayPreferences.setItemBackdrop(!s.itemBackdropEnabled)
                 QuickSetting.RECENT_APPS -> context.pfpDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
                 QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
+                QuickSetting.PROFILE -> {
+                    closeNotifications()
+                    showProfile(ProfileTab.OVERVIEW, null)
+                }
                 QuickSetting.ANDROID_SETTINGS -> {
                     closeNotifications()
                     runCatching {
@@ -8793,6 +8991,10 @@ class XMBViewModel @Inject constructor(
         private val KEY_RECENTS_INCLUDE_APPS = booleanPreferencesKey("display_recents_include_apps")
 
         private val KEY_TEXT_SHADOW = booleanPreferencesKey("display_text_shadow")
+
+        private val KEY_PROFILE_NAME = stringPreferencesKey("profile_name")
+
+        private val KEY_PROFILE_AVATAR = stringPreferencesKey("profile_avatar_uri")
 
         private const val ICON1_LINGER_MS = 1_500L
         private const val SETUP_ITEM_ID = "library_setup"
