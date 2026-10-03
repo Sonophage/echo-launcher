@@ -58,6 +58,8 @@ class SettingsScaffoldNavigationTest {
 
     private var consumedPlain = false
 
+    private val opened = mutableListOf<String>()
+
     private fun showScreen(
         onBack: () -> Unit = {},
         leftBacksOut: Boolean = true,
@@ -79,6 +81,7 @@ class SettingsScaffoldNavigationTest {
                     LocalSettingsActionConsumed provides { consumedPlain = true },
                     LocalSettingsLeftBacksOut provides leftBacksOut,
                     LocalSettingsScreenId provides screenId,
+                    LocalSettingsOpenScreen provides { opened += it },
                 ) {
                     SettingsScaffold(
                         title = "Settings",
@@ -114,22 +117,41 @@ class SettingsScaffoldNavigationTest {
     }
 
     @Test
-    fun `stepping into the rail stands the content cursor down`() {
+    fun `a catalog screen has no rail for LEFT to enter, so LEFT backs out with the cursor kept`() {
         var contentCursor: Boolean? = null
-        showScreen(screenId = "settings_library") {
+        var backs = 0
+        showScreen(onBack = { backs++ }, screenId = "settings_library") {
             SettingsRow(label = "Add ROM Root", onClick = {})
             ContentCursorProbe { contentCursor = it }
         }
 
-        assertEquals("the content owns the cursor when the screen opens", true, contentCursor)
         assertFocusedRow("Add ROM Root")
+        press(GamepadAction.NAVIGATE_LEFT)
+        assertEquals("LEFT at the first column backs out of a tabbed screen", 1, backs)
+        assertEquals("and never stands the content cursor down", true, contentCursor)
+    }
+
+    @Test
+    fun `on a catalog screen with the preference off LEFT does nothing`() {
+        var backs = 0
+        showScreen(onBack = { backs++ }, leftBacksOut = false, screenId = "settings_library") {
+            SettingsRow(label = "Add ROM Root", onClick = {})
+        }
 
         press(GamepadAction.NAVIGATE_LEFT)
-        assertEquals("LEFT into the rail must stand the content cursor down", false, contentCursor)
-
-        press(GamepadAction.NAVIGATE_RIGHT)
-        assertEquals("RIGHT must give the cursor back to the content", true, contentCursor)
+        assertEquals(0, backs)
         assertFocusedRow("Add ROM Root")
+    }
+
+    @Test
+    fun `the shoulders open the neighbouring tab of the same section`() {
+        showScreen(screenId = "settings_library") {
+            SettingsRow(label = "Add ROM Root", onClick = {})
+        }
+
+        press(GamepadAction.NEXT_CATEGORY)
+        press(GamepadAction.PREV_CATEGORY)
+        assertEquals(listOf("settings_artwork", "settings_emulators_retroarch"), opened)
     }
 
     @Test
@@ -203,7 +225,7 @@ class SettingsScaffoldNavigationTest {
     }
 
     @Test
-    fun `a picker opened by touch is driven by the controller, not the hidden rail`() {
+    fun `a picker opened by touch is driven by the controller`() {
         var backs = 0
         val picked = mutableListOf<Int>()
         showScreen(onBack = { backs++ }, screenId = "settings_library") {
@@ -215,11 +237,10 @@ class SettingsScaffoldNavigationTest {
             )
         }
 
-        press(GamepadAction.NAVIGATE_LEFT)
         composeRule.onNodeWithText("Speed").performClick()
         composeRule.waitForIdle()
         press(GamepadAction.BACK)
-        assertEquals("BACK must close the picker, not leave the screen through the rail", 0, backs)
+        assertEquals("BACK must close the picker, not leave the screen", 0, backs)
 
         composeRule.onNodeWithText("Speed").performClick()
         composeRule.waitForIdle()

@@ -77,3 +77,10 @@ fun settingsSectionStepTarget(screenId: String?, delta: Int): String? {
     val section = screenId?.let(::settingsSectionFor) ?: return null
     return settingsEntriesIn(settingsSectionStep(section, delta)).firstOrNull()?.id
 }
+
+fun settingsTabStepTarget(screenId: String?, delta: Int): String? {
+    val tabs = settingsRailRows(screenId)
+    val at = tabs.indexOfFirst { it.id == screenId }
+    if (at < 0) return null
+    return tabs[((at + delta) % tabs.size + tabs.size) % tabs.size].id
+}

@@ -59,6 +59,7 @@ fun SettingsPageScaffold(
         },
 
         showDivider = false,
+        showRail = heading == null,
     ) {
         Column(Modifier.fillMaxWidth()) {
             content()

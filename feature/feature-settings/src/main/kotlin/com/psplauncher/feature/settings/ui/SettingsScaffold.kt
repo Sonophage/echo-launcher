@@ -2,7 +2,6 @@ package com.psplauncher.feature.settings.ui
 
 import com.psplauncher.core.ui.design.PANEL_CARD_RADIUS
 import com.psplauncher.core.ui.design.PANEL_FOCUS_RING_WIDTH
-import com.psplauncher.core.ui.design.PANEL_UNFOCUSED_ALPHA
 import com.psplauncher.core.ui.design.PanelBase
 import com.psplauncher.core.ui.design.PanelCardFill
 import com.psplauncher.core.ui.design.PanelCardFocusFill
@@ -25,7 +24,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.size
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import com.psplauncher.core.ui.components.ControllerPrompt
+import com.psplauncher.core.ui.components.LocalPadPrompts
+import com.psplauncher.core.ui.design.DesignUnits
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -209,9 +214,13 @@ val SettingsDivider = com.psplauncher.core.ui.theme.PfpPalette.Divider
 
 val SETTINGS_COLUMN_MAX_WIDTH = 560.dp
 
-private val SETTINGS_RAIL_WIDTH = 216.dp
+private val SETTINGS_HELP_PANE_MIN_WIDTH = 220.dp
 
 val LocalSettingsHelp = compositionLocalOf { mutableStateOf<String?>(null) }
+
+data class SettingsFocusInfo(val label: String, val value: String?, val sublabel: String?)
+
+internal val LocalSettingsFocusInfo = compositionLocalOf<MutableState<SettingsFocusInfo?>?> { null }
 
 private val SETTINGS_ROW_SHAPE = RoundedCornerShape(PANEL_CARD_RADIUS.dp)
 
@@ -316,15 +325,18 @@ fun SettingsScaffold(
 
     val screenId = LocalSettingsScreenId.current
     val openScreen = LocalSettingsOpenScreen.current
-    val railEntries = remember(screenId, showRail) {
+    val tabEntries = remember(screenId, showRail) {
         if (showRail) com.psplauncher.core.domain.model.settingsRailRows(screenId) else emptyList()
     }
-    val railFocused = remember { mutableStateOf(false) }
+    val focusInfo = remember { mutableStateOf<SettingsFocusInfo?>(null) }
+    val openTab = { id: String ->
+        if (id != screenId) {
+            menuSounds(MenuSound.SYSTEM_BROWSE)
+            openScreen(id)
+        }
+    }
 
     val overlayInput = LocalSettingsOverlayInput.current
-    val railCursor = remember(screenId) {
-        mutableIntStateOf(railEntries.indexOfFirst { it.id == screenId }.coerceAtLeast(0))
-    }
 
     val pickerState = remember { mutableStateOf<SettingsPickerRequest?>(null) }
     val pickerCursor = remember { mutableIntStateOf(0) }
@@ -510,28 +522,7 @@ fun SettingsScaffold(
 
         if (pendingAction == GamepadAction.PREV_CATEGORY || pendingAction == GamepadAction.NEXT_CATEGORY) {
             val delta = if (pendingAction == GamepadAction.NEXT_CATEGORY) 1 else -1
-            com.psplauncher.core.domain.model.settingsSectionStepTarget(screenId, delta)
-                ?.let(openScreen)
-            onConsumed()
-            return@LaunchedEffect
-        }
-
-        if (railFocused.value) {
-            when (pendingAction) {
-                GamepadAction.NAVIGATE_UP ->
-                    railCursor.intValue = (railCursor.intValue - 1).coerceAtLeast(0)
-                GamepadAction.NAVIGATE_DOWN ->
-                    railCursor.intValue = (railCursor.intValue + 1).coerceAtMost(railEntries.lastIndex)
-                GamepadAction.NAVIGATE_RIGHT -> railFocused.value = false
-                GamepadAction.SELECT -> {
-                    val target = railEntries.getOrNull(railCursor.intValue)
-
-                    if (target != null && target.id != screenId) openScreen(target.id)
-                    else railFocused.value = false
-                }
-                GamepadAction.BACK -> onBack()
-                else -> Unit
-            }
+            com.psplauncher.core.domain.model.settingsTabStepTarget(screenId, delta)?.let(openTab)
             onConsumed()
             return@LaunchedEffect
         }
@@ -600,8 +591,6 @@ fun SettingsScaffold(
                 val target = navigationState.moveHorizontal(-1)
                 when {
                     target != null -> { menuSounds(MenuSound.SCROLL); requestFocusFor(target) }
-
-                    railEntries.isNotEmpty() -> { menuSounds(MenuSound.SYSTEM_BROWSE); railFocused.value = true }
                     leftBacksOut -> { menuSounds(MenuSound.BACK); onBack() }
                 }
             }
@@ -628,7 +617,7 @@ fun SettingsScaffold(
 
     CompositionLocalProvider(
 
-        LocalSettingsCursorVisible provides (cursorVisible.value && !railFocused.value),
+        LocalSettingsCursorVisible provides cursorVisible.value,
 
         LocalSettingsFocusTracker provides { click ->
             focusedRowClick.value = click; focusRedirected = true
@@ -672,14 +661,13 @@ fun SettingsScaffold(
         LocalSettingsRowActions provides rowActionFrs,
         LocalSettingsScrollStateRegistrar provides { state -> contentScrollState.value = state },
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = modifier
 
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
                         cursorVisible.value = false
-                        railFocused.value = false
                         touchScrolled.value = true
                         navigationState.markTouchInput()
                         notifyTouchInput()
@@ -697,6 +685,9 @@ fun SettingsScaffold(
                     }
                 ),
         ) {
+            val u = DesignUnits(minOf(maxWidth.value / SETTINGS_DESIGN_WIDTH, maxHeight.value / SETTINGS_DESIGN_HEIGHT), density)
+            val tabs = tabEntries.isNotEmpty()
+            val paneShown = tabs && maxWidth - SETTINGS_COLUMN_MAX_WIDTH >= SETTINGS_HELP_PANE_MIN_WIDTH
             backdrop?.invoke()
             Column(
                 modifier = Modifier
@@ -711,7 +702,9 @@ fun SettingsScaffold(
                         .fillMaxWidth()
                         .dragToScroll(contentScrollState.value),
                 ) {
-                if (header != null) {
+                if (tabs) {
+                    SettingsTabRow(tabEntries, screenId, u, onBack = onBack, onPick = { id -> notifyTouchInput(); openTab(id) })
+                } else if (header != null) {
                     header()
                 } else {
                 Row(
@@ -758,7 +751,7 @@ fun SettingsScaffold(
                 }
                 }
 
-                if (showDivider) HorizontalDivider(color = SettingsDivider)
+                if (showDivider && !tabs) HorizontalDivider(color = SettingsDivider)
                 }
 
                 Box(
@@ -804,21 +797,19 @@ fun SettingsScaffold(
                         },
                 ) {
                     Row(Modifier.fillMaxSize()) {
-                        if (railEntries.isNotEmpty()) {
-                            SettingsSectionRail(
-                                entries = railEntries,
-                                currentId = screenId,
-                                cursorIndex = railCursor.intValue.takeIf {
-                                    railFocused.value && cursorVisible.value
-                                },
-                                onPick = { row ->
-                                    notifyTouchInput()
-                                    if (row.id != screenId) openScreen(row.id)
-                                },
-                            )
-                        }
                         Box(modifier = Modifier.widthIn(max = SETTINGS_COLUMN_MAX_WIDTH)) {
-                            content()
+                            CompositionLocalProvider(LocalSettingsFocusInfo provides focusInfo.takeIf { paneShown }) {
+                                content()
+                            }
+                        }
+                        if (paneShown) {
+                            SettingsHelpPane(
+                                info = focusInfo.value?.takeIf { cursorVisible.value },
+                                screenId = screenId,
+                                tabEntries = tabEntries,
+                                u = u,
+                                modifier = Modifier.weight(1f),
+                            )
                         }
                     }
                 }
@@ -829,7 +820,7 @@ fun SettingsScaffold(
                         .dragToScroll(contentScrollState.value),
                 ) {
                     if (footer == null) {
-                        val help = helpText.value?.takeIf { cursorVisible.value && it.isNotBlank() }
+                        val help = helpText.value?.takeIf { cursorVisible.value && it.isNotBlank() && !paneShown }
                         PfpHintBar(
 
                             items = if (LocalSettingsShowControllerHint.current) {
@@ -957,65 +948,119 @@ private val PICKER_PADDING = 8.dp
 private val PICKER_EDGE_MARGIN = 24.dp
 
 @Composable
-private fun SettingsSectionRail(
+private fun SettingsTabRow(
     entries: List<com.psplauncher.core.domain.model.SettingsEntry>,
     currentId: String?,
-    cursorIndex: Int?,
-    onPick: (com.psplauncher.core.domain.model.SettingsEntry) -> Unit,
+    u: DesignUnits,
+    onBack: () -> Unit,
+    onPick: (String) -> Unit,
 ) {
+    val current = entries.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
     val listState = rememberLazyListState()
-    LaunchedEffect(cursorIndex, currentId, entries.size) {
-        if (entries.isEmpty()) return@LaunchedEffect
-        val target = cursorIndex ?: entries.indexOfFirst { it.id == currentId }.takeIf { it >= 0 }
-        target ?: return@LaunchedEffect
+    LaunchedEffect(current) {
         val info = listState.layoutInfo
-        val viewport = info.viewportSize.height
-        val rowHeight = info.visibleItemsInfo.firstOrNull()?.size ?: 0
-
-        val centreOffset = if (viewport > 0 && rowHeight in 1 until viewport) -((viewport - rowHeight) / 2) else 0
-        listState.animateScrollToItem(target.coerceIn(0, entries.lastIndex), centreOffset)
+        val viewport = info.viewportEndOffset - info.viewportStartOffset
+        val width = info.visibleItemsInfo.firstOrNull { it.index == current }?.size ?: 0
+        listState.animateScrollToItem(current, if (viewport > width) -((viewport - width) / 2) else 0)
     }
-    LazyColumn(
-        state = listState,
+    val pad = LocalPadPrompts.current
+    Row(
         modifier = Modifier
-            .width(SETTINGS_RAIL_WIDTH)
-            .fillMaxHeight()
-            .padding(start = 40.dp, end = 12.dp, top = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .fillMaxWidth()
+            .focusProperties { canFocus = false }
+            .padding(start = u.dp(32), end = u.dp(80), top = u.dp(12), bottom = u.dp(14)),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        itemsIndexed(entries, key = { _, row -> row.id }) { index, row ->
-            val isCurrent = row.id == currentId
-            val isCursor = index == cursorIndex
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer { alpha = if (isCurrent || isCursor) 1f else PANEL_UNFOCUSED_ALPHA }
-                    .clip(SETTINGS_ROW_SHAPE)
-                    .background(if (isCurrent || isCursor) PanelCardFocusFill else PanelCardFill, SETTINGS_ROW_SHAPE)
-                    .then(
-                        if (isCursor) {
-                            Modifier.border(PANEL_FOCUS_RING_WIDTH.dp, PanelFocusRing, SETTINGS_ROW_SHAPE)
-                        } else {
-                            Modifier
-                        }
+        Box(
+            modifier = Modifier
+                .size(u.dp(64))
+                .clip(RoundedCornerShape(u.dp(32)))
+                .clickable(onClick = onBack),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("◀", color = SettingsSubtext, fontSize = u.sp(18))
+        }
+        Spacer(Modifier.width(u.dp(16)))
+        if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = u.dp(30), spacing = 0.dp)
+        LazyRow(
+            state = listState,
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(u.dp(10), Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            itemsIndexed(entries, key = { _, row -> row.id }) { index, row ->
+                val on = index == current
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(u.dp(8)))
+                        .clickable { onPick(row.id) }
+                        .padding(horizontal = u.dp(8), vertical = u.dp(10)),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(u.dp(8)),
+                ) {
+                    Text(
+                        text = row.title,
+                        color = Color.White.copy(alpha = if (on) 1f else 0.5f),
+                        fontSize = u.sp(15),
+                        fontWeight = if (on) FontWeight.Medium else FontWeight.Light,
+                        maxLines = 1,
                     )
-                    .clickable { onPick(row) }
-
-                    .padding(start = 14.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = row.title,
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = if (isCurrent) FontWeight.Medium else FontWeight.Normal,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                    val bar by animateFloatAsState(if (on) 1f else 0f, tween(250), label = "settingsTabBar")
+                    Box(Modifier.width(u.dp(22) * bar).height(u.dp(2)).clip(RoundedCornerShape(1.dp)).background(Color.White))
+                }
             }
+        }
+        if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(30), spacing = 0.dp)
+    }
+}
+
+@Composable
+private fun SettingsHelpPane(
+    info: SettingsFocusInfo?,
+    screenId: String?,
+    tabEntries: List<com.psplauncher.core.domain.model.SettingsEntry>,
+    u: DesignUnits,
+    modifier: Modifier,
+) {
+    val entry = tabEntries.firstOrNull { it.id == screenId }
+    val position = tabEntries.indexOfFirst { it.id == screenId } + 1
+    Column(
+        modifier = modifier
+            .focusProperties { canFocus = false }
+            .padding(start = u.dp(48), end = u.dp(64), top = u.dp(32)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(16)),
+    ) {
+        Text(
+            text = "${entry?.section?.title.orEmpty()} · $position of ${tabEntries.size}".uppercase(),
+            color = Color.White.copy(alpha = 0.55f),
+            fontSize = u.sp(13),
+            letterSpacing = 0.18.em,
+        )
+        Text(
+            text = info?.label ?: entry?.title.orEmpty(),
+            color = Color.White,
+            fontSize = u.sp(40),
+            lineHeight = u.sp(44),
+            fontWeight = FontWeight.ExtraLight,
+            letterSpacing = (-0.02).em,
+        )
+        info?.value?.takeIf { it.isNotBlank() }?.let {
+            Text(text = it, color = Color.White, fontSize = u.sp(22), fontWeight = FontWeight.Light)
+        }
+        (if (info != null) info.sublabel else entry?.subtitle)?.takeIf { it.isNotBlank() }?.let {
+            Text(
+                text = it,
+                color = Color.White.copy(alpha = 0.65f),
+                fontSize = u.sp(15),
+                lineHeight = u.sp(23),
+                fontWeight = FontWeight.Light,
+            )
         }
     }
 }
+
+private const val SETTINGS_DESIGN_WIDTH = 1200f
+private const val SETTINGS_DESIGN_HEIGHT = 752f
 
 @Composable
 fun SettingsGroup(title: String) {
@@ -1070,7 +1115,11 @@ fun SettingsRow(
     val touchInput = LocalSettingsTouchInput.current
     val cursorVisible = LocalSettingsCursorVisible.current
     val reportFocused = LocalSettingsReportFocused.current
+    val focusInfo = LocalSettingsFocusInfo.current
     var isFocused by remember { mutableStateOf(false) }
+    if (isFocused && focusInfo != null) {
+        LaunchedEffect(label, value, sublabel) { focusInfo.value = SettingsFocusInfo(label, value, sublabel) }
+    }
 
     val row = rememberControllerRowRegistration(
         prefix = "row",
@@ -1186,7 +1235,7 @@ fun SettingsRow(
         }
       }
 
-        if (rowSelected && !sublabel.isNullOrBlank()) {
+        if (rowSelected && focusInfo == null && !sublabel.isNullOrBlank()) {
             Spacer(Modifier.height(6.dp))
             Text(
                 text = sublabel,
@@ -1211,7 +1260,11 @@ fun SettingsFocusable(
     val touchInput = LocalSettingsTouchInput.current
     val reportFocused = LocalSettingsReportFocused.current
     val help = LocalSettingsHelp.current
+    val focusInfo = LocalSettingsFocusInfo.current
     var isFocused by remember { mutableStateOf(false) }
+    if (isFocused && focusInfo != null) {
+        LaunchedEffect(Unit) { focusInfo.value = null }
+    }
 
     val row = rememberControllerRowRegistration(
         prefix = "custom",
@@ -1352,7 +1405,14 @@ fun SettingsTextFieldRow(
     val keyboard = LocalSoftwareKeyboardController.current
     val reportFocused = LocalSettingsReportFocused.current
     val help = LocalSettingsHelp.current
+    val focusInfo = LocalSettingsFocusInfo.current
     var editing by remember { mutableStateOf(false) }
+    var fieldFocused by remember { mutableStateOf(false) }
+    if (fieldFocused && focusInfo != null) {
+        LaunchedEffect(label, value, helper) {
+            focusInfo.value = SettingsFocusInfo(label, value.takeUnless { isPassword }, helper)
+        }
+    }
 
     val row = rememberControllerRowRegistration(
         prefix = "field",
@@ -1415,6 +1475,7 @@ fun SettingsTextFieldRow(
                     .fillMaxWidth()
                     .focusRequester(fr)
                     .onFocusChanged { state ->
+                        fieldFocused = state.isFocused
                         if (state.isFocused) {
                             focusTracker { editing = true }
                             reportFocused(fr)

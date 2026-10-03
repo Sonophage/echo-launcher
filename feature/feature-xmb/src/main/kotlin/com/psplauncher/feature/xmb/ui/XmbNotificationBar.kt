@@ -6,6 +6,27 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
+import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.CloudDownload
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.outlined.SportsEsports
+import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Wallpaper
+import androidx.compose.material.icons.outlined.PowerSettingsNew
+import androidx.compose.material.icons.outlined.Category
+import androidx.compose.material.icons.outlined.Gamepad
+import androidx.compose.material.icons.outlined.TouchApp
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -488,17 +509,17 @@ private fun SettingsTiles(focus: Int, u: DesignUnits, onTapped: (Int) -> Unit, m
         columns = GridCells.Fixed(SETTINGS_GRID_COLUMNS),
         state = state,
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
-        verticalArrangement = Arrangement.spacedBy(u.dp(14)),
+        horizontalArrangement = Arrangement.spacedBy(u.dp(18)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(18)),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(u.dp(6)),
     ) {
         itemsIndexed(PANEL_SETTINGS, key = { _, e -> e.id }) { i, entry ->
-            Tile(i == focus, u.dp(150), u.dp(18), u.dp(20), u, Modifier, { onTapped(i) }) {
-                Text(entry.section.title.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(11), letterSpacing = 0.14.em))
-                Column(verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
-                    Text(entry.title, color = Color.White, fontSize = u.sp(19), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(entry.subtitle, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12), fontWeight = FontWeight.Light,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Tile(i == focus, u.dp(200), u.dp(22), u.dp(24), u, Modifier, { onTapped(i) }) {
+                Icon(settingsEntryIcon(entry.id), null, tint = Color.White, modifier = Modifier.size(u.dp(32)))
+                Column(verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                    Text(entry.title, color = Color.White, fontSize = u.sp(20), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(entry.subtitle, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(13), fontWeight = FontWeight.Light,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -686,6 +707,33 @@ private fun libraryIcon(id: String): ImageVector = when (id) {
     com.psplauncher.core.domain.model.BuiltInCategory.LIBRARY -> Icons.AutoMirrored.Outlined.MenuBook
     com.psplauncher.core.domain.model.BuiltInCategory.PHOTO -> Icons.Outlined.PhotoLibrary
     else -> Icons.Outlined.Language
+}
+
+private fun settingsEntryIcon(id: String): ImageVector = when (id) {
+    "settings_overview" -> Icons.Outlined.Dashboard
+    "settings_library" -> Icons.Outlined.FolderOpen
+    "settings_artwork" -> Icons.Outlined.Image
+    "settings_artwork_sources" -> Icons.Outlined.CloudDownload
+    "settings_app_visibility" -> Icons.Outlined.VisibilityOff
+    "settings_emulators_installed" -> Icons.Outlined.SportsEsports
+    "settings_emulators_custom" -> Icons.Outlined.Extension
+    "settings_emulators_retroarch" -> Icons.Outlined.Memory
+    "settings_themes" -> Icons.Outlined.Palette
+    "settings_appearance" -> Icons.Outlined.Wallpaper
+    "settings_layout" -> Icons.Outlined.GridView
+    "settings_boot" -> Icons.Outlined.PowerSettingsNew
+    "settings_audio" -> Icons.AutoMirrored.Outlined.VolumeUp
+    "settings_categories" -> Icons.Outlined.Category
+    "settings_controller" -> Icons.Outlined.Gamepad
+    "settings_touch" -> Icons.Outlined.TouchApp
+    "settings_performance" -> Icons.Outlined.Speed
+    "settings_permissions" -> Icons.Outlined.Shield
+    "settings_about" -> Icons.Outlined.Info
+    "settings_logs" -> Icons.Outlined.BugReport
+    "settings_backup" -> Icons.Outlined.Backup
+    "settings_credits" -> Icons.Outlined.FavoriteBorder
+    "settings_initial_setup" -> Icons.Outlined.AutoFixHigh
+    else -> Icons.Outlined.Settings
 }
 
 internal fun playTimeLabel(ms: Long): String {
