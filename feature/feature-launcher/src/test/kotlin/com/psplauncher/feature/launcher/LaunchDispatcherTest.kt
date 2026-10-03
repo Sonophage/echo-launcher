@@ -61,6 +61,10 @@ class LaunchDispatcherTest {
         val menuSound: com.psplauncher.core.ui.sound.MenuSoundPlayer = mockk(relaxed = true)
         val autoCoreMemory: AutoCoreMemory = mockk(relaxed = true)
         val gameRepository: com.psplauncher.core.domain.repository.GameRepository = mockk(relaxed = true)
+        val ledger: PlaySessionLedger = mockk(relaxed = true) {
+            every { foregroundMillis(any(), any(), any()) } returns null
+            coEvery { take() } returns null
+        }
 
         val dispatcher = LaunchDispatcher(
             context = context,
@@ -72,6 +76,7 @@ class LaunchDispatcherTest {
             menuSound = menuSound,
             autoCoreMemory = autoCoreMemory,
             gameRepository = gameRepository,
+            ledger = ledger,
         )
     }
 
@@ -417,5 +422,50 @@ class LaunchDispatcherTest {
         advanceUntilIdle()
 
         coVerify(exactly = 1) { h.recorder.record(any()) }
+    }
+
+    @Test
+    fun `play time is the emulator's foreground time when usage access can say`() = runTest {
+        val h = Harness(this)
+        coEvery { h.recorder.record(any()) } returns Unit
+        every { h.ledger.foregroundMillis("com.github.stenzek.duckstation", any(), any()) } returns 600_000L
+        assertIs<LaunchDispatchResult.Accepted>(h.dispatcher.launch(game, resolved, h.intent))
+
+        h.dispatcher.onHostStopped()
+        h.now = 3_600_000L
+        h.dispatcher.onHostResumed()
+        advanceUntilIdle()
+
+        val session = slot<PlaySession>()
+        coVerify(exactly = 1) { h.gameRepository.recordPlaySession(capture(session)) }
+        assertEquals(600_000L, session.captured.durationMillis)
+    }
+
+    @Test
+    fun `a session the launcher was killed during is recorded on the next start`() = runTest {
+        val h = Harness(this)
+        coEvery { h.ledger.take() } returns OpenSession(7L, "psx", "com.github.stenzek.duckstation", 1_790_000_000_000L)
+        every { h.ledger.foregroundMillis("com.github.stenzek.duckstation", 1_790_000_000_000L, any()) } returns 5_400_000L
+
+        h.dispatcher.onHostResumed()
+        advanceUntilIdle()
+
+        val session = slot<PlaySession>()
+        coVerify(exactly = 1) { h.gameRepository.recordPlaySession(capture(session)) }
+        assertEquals(7L, session.captured.gameId)
+        assertEquals(5_400_000L, session.captured.durationMillis)
+        assertEquals(1_790_000_000_000L, session.captured.launchedAt)
+    }
+
+    @Test
+    fun `a killed session with no usage access is dropped, not guessed`() = runTest {
+        val h = Harness(this)
+        coEvery { h.ledger.take() } returns OpenSession(7L, "psx", "com.github.stenzek.duckstation", 1_790_000_000_000L)
+
+        h.dispatcher.onHostResumed()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { h.gameRepository.recordPlaySession(any()) }
+        coVerify(exactly = 1) { h.ledger.take() }
     }
 }

@@ -29,6 +29,8 @@ data class PendingLaunch(
     val dispatchedAtMs: Long,
 
     val dispatchedAtWallMs: Long,
+
+    val packageName: String? = null,
 )
 
 sealed interface LaunchDispatchResult {
@@ -49,6 +51,7 @@ class LaunchDispatcher @Inject constructor(
     private val menuSound: com.psplauncher.core.ui.sound.MenuSoundPlayer,
     private val autoCoreMemory: AutoCoreMemory,
     private val gameRepository: com.psplauncher.core.domain.repository.GameRepository,
+    private val ledger: PlaySessionLedger,
 ) {
     private val _recoveryRequests = MutableStateFlow<LaunchRecoveryRequest?>(null)
 
@@ -72,9 +75,13 @@ class LaunchDispatcher @Inject constructor(
             val dispatchedAt = clock.now()
             val dispatchedAtWall = wallClock.now()
 
+            val packageName = listOfNotNull(intent.component?.packageName, intent.`package`, resolved?.profile?.packageName)
+                .firstOrNull { it.isNotBlank() }
             scope.launch {
                 runCatching { gameRepository.markOpened(game.id, dispatchedAtWall) }
                     .onFailure { Timber.w(it, "Could not stamp gameId=${game.id} on the Last Played shelf") }
+                runCatching { ledger.open(OpenSession(game.id, game.platformId, packageName, dispatchedAtWall)) }
+                    .onFailure { Timber.w(it, "Could not note the open session for gameId=${game.id}") }
             }
             acceptPending(
                 PendingLaunch(
@@ -83,6 +90,7 @@ class LaunchDispatcher @Inject constructor(
                     intentSummary = intent.toUri(Intent.URI_INTENT_SCHEME),
                     dispatchedAtMs = dispatchedAt,
                     dispatchedAtWallMs = dispatchedAtWall,
+                    packageName  = packageName,
                 )
             )
             LaunchDispatchResult.Accepted
@@ -134,7 +142,7 @@ class LaunchDispatcher @Inject constructor(
     }
 
     fun onHostResumed() {
-        val p = pending ?: return
+        val p = pending ?: return settleOrphanedSession()
         pending = null
         val emulatorTookForeground = hostStopped
         hostStopped = false
@@ -142,9 +150,13 @@ class LaunchDispatcher @Inject constructor(
         watchdog = null
 
         if (emulatorTookForeground) {
-            val playedMs = clock.now() - p.dispatchedAtMs
-            Timber.i("Launch session ${playedMs}ms — emulator covered the launcher — recording success")
+            val elapsedMs = clock.now() - p.dispatchedAtMs
+            Timber.i("Launch session ${elapsedMs}ms — emulator covered the launcher — recording success")
             scope.launch {
+                runCatching { ledger.take() }
+                val playedMs = p.packageName
+                    ?.let { runCatching { ledger.foregroundMillis(it, p.dispatchedAtWallMs, wallClock.now()) }.getOrNull() }
+                    ?.takeIf { it > 0 } ?: elapsedMs
                 outcomeRecorder.record(
                     outcomeFor(
                         p.game, p.resolved, LaunchOutcomeStatus.SUCCEEDED, reason = null,
@@ -166,6 +178,7 @@ class LaunchDispatcher @Inject constructor(
         } else {
             Timber.w("Launch returned without the emulator covering the launcher (${clock.now() - p.dispatchedAtMs}ms)")
             scope.launch {
+                runCatching { ledger.take() }
                 outcomeRecorder.record(
                     outcomeFor(
                         p.game, p.resolved, LaunchOutcomeStatus.NEVER_FOREGROUNDED,
@@ -181,6 +194,26 @@ class LaunchDispatcher @Inject constructor(
         }
     }
 
+    private fun settleOrphanedSession() {
+        scope.launch {
+            val open = runCatching { ledger.take() }.getOrNull() ?: return@launch
+            val packageName = open.packageName ?: return@launch
+            val playedMs = runCatching { ledger.foregroundMillis(packageName, open.launchedAt, wallClock.now()) }.getOrNull()
+                ?.takeIf { it > 0 } ?: return@launch
+            Timber.i("Settling a session the launcher did not see end: gameId=${open.gameId}, ${playedMs}ms")
+            runCatching {
+                gameRepository.recordPlaySession(
+                    com.psplauncher.core.domain.model.PlaySession(
+                        gameId = open.gameId,
+                        platformId = open.platformId,
+                        launchedAt = open.launchedAt,
+                        durationMillis = playedMs,
+                    )
+                )
+            }.onFailure { Timber.w(it, "Could not record the orphaned session for gameId=${open.gameId}") }
+        }
+    }
+
     private fun acceptPending(p: PendingLaunch) {
         pending = p
         hostStopped = false
@@ -190,6 +223,7 @@ class LaunchDispatcher @Inject constructor(
             val stillPending = pending?.game?.id == p.game.id
             if (stillPending && !hostStopped) {
                 pending = null
+                runCatching { ledger.take() }
                 Timber.w("No activity covered the launcher within ${STOP_WINDOW_MS}ms of dispatch")
                 outcomeRecorder.record(
                     outcomeFor(
