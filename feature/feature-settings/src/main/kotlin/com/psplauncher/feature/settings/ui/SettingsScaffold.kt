@@ -112,6 +112,7 @@ import com.psplauncher.core.ui.components.ControllerHintStyle
 import com.psplauncher.core.ui.components.PfpControllerHints
 import com.psplauncher.core.ui.components.ControllerPromptItem
 import com.psplauncher.core.ui.components.PfpHintBar
+import com.psplauncher.core.ui.components.primaryHint
 import com.psplauncher.core.ui.components.StatusStripHeight
 import com.psplauncher.core.ui.gesture.dragToScroll
 import com.psplauncher.core.ui.theme.LocalPFPColors
@@ -821,12 +822,14 @@ fun SettingsScaffold(
                 ) {
                     if (footer == null) {
                         val help = helpText.value?.takeIf { cursorVisible.value && it.isNotBlank() && !paneShown }
+                        val hints = if (LocalSettingsShowControllerHint.current) {
+                            helperFooterItems.ifEmpty { SettingsDefaultHelperItems }
+                        } else emptyList()
                         PfpHintBar(
 
-                            items = if (LocalSettingsShowControllerHint.current) {
-                                helperFooterItems.ifEmpty { SettingsDefaultHelperItems }
-                            } else emptyList(),
+                            items = hints,
                             onAction = LocalSettingsPromptAction.current,
+                            primary = primaryHint(hints, focusInfo.value?.takeIf { cursorVisible.value }?.label),
                             centre = help?.let {
                                 {
                                     Text(

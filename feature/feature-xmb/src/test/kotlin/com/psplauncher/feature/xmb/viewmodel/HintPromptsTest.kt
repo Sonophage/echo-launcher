@@ -43,6 +43,20 @@ class HintPromptsTest {
     }
 
     @Test
+    fun `the position counts from one over the shown column, and an empty column has none`() {
+        val games = (1..6).map { XMBItem(id = "$it", title = "Game $it", gameId = it.toLong(), subtitle = "PSP") }
+        assertEquals("1 of 6", promptsFor(state(items = games)).position)
+        assertEquals("6 of 6", promptsFor(state(items = games, selected = 5)).position)
+        assertNull(promptsFor(state(items = listOf(XMBItem(id = "e", title = "Nothing here", type = XMBItemType.EMPTY)))).position)
+    }
+
+    @Test
+    fun `the tab's detail is the focused item's own subtitle`() {
+        val game = listOf(XMBItem(id = "1", title = "Crisis Core", gameId = 1L, subtitle = "PSP"))
+        assertEquals("PSP", promptsFor(state(items = game)).primary?.detail)
+    }
+
+    @Test
     fun `a game's verb follows direct launch, because that setting IS the question`() {
         val game = listOf(XMBItem(id = "1", title = "Crisis Core", gameId = 1L))
         assertEquals("Play", promptsFor(state(items = game)).primary?.verb)
