@@ -210,60 +210,9 @@ class ContextMenuHintStateTest {
         assertTrue(shouldShowContextMenuHint(fiveSeconds, 5_000))
     }
 
-    private fun drawerEligibleState() = XMBUiState(
-        activeAppDrawerFilter = "ALL",
-        lastInputWasTouch = false,
-        showBootSequence = false,
-    ).let { it.copy(showAppDrawerHint = false) }
-
     @Test
-    fun `drawer hint shows when idle long enough with a controller while the drawer is open`() {
-        assertTrue(shouldShowAppDrawerHint(drawerEligibleState(), IDLE_MS))
-    }
-
-    @Test
-    fun `a configured delay still holds the drawer hint back`() {
-        val s = drawerEligibleState().copy(contextMenuHintDelaySeconds = 2.5f)
-        assertFalse(shouldShowAppDrawerHint(s, 2_499L))
-        assertTrue(shouldShowAppDrawerHint(s, 2_500L))
-    }
-
-    @Test
-    fun `drawer hint never shows while the drawer is closed`() {
-        val s = eligibleState()
-        assertFalse(shouldShowAppDrawerHint(s, IDLE_MS))
-        assertTrue(shouldShowContextMenuHint(s, IDLE_MS))
-    }
-
-    @Test
-    fun `drawer hint still shows after touch input`() {
-        val s = drawerEligibleState().copy(lastInputWasTouch = true)
-        assertTrue(shouldShowAppDrawerHint(s, IDLE_MS))
-    }
-
-    @Test
-    fun `drawer hint does not show when a context menu is open`() {
-        val s = drawerEligibleState().copy(activeContextMenu = XMBContextMenu(state = MenuState(title = "X", rows = emptyList())))
-        assertFalse(shouldShowAppDrawerHint(s, IDLE_MS))
-    }
-
-    @Test
-    fun `drawer hint stops when the context-menu hint setting is disabled`() {
-        val s = drawerEligibleState().copy(contextMenuHintEnabled = false)
-        assertFalse(shouldShowAppDrawerHint(s, IDLE_MS))
-    }
-
-    @Test
-    fun `drawer hint uses the configured delay instead of the default delay`() {
-        val s = drawerEligibleState().copy(contextMenuHintDelaySeconds = 4.5f)
-        assertFalse(shouldShowAppDrawerHint(s, 4_499))
-        assertTrue(shouldShowAppDrawerHint(s, 4_500))
-    }
-
-    @Test
-    fun `drawer open is a blocking overlay so the drawer hint and XMB pill are mutually exclusive`() {
-        val open = drawerEligibleState()
-        assertTrue(shouldShowAppDrawerHint(open, IDLE_MS))
+    fun `the XMB pill stays hidden while the app drawer is open`() {
+        val open = XMBUiState(activeAppDrawerFilter = "ALL", lastInputWasTouch = false, showBootSequence = false)
         assertFalse(shouldShowContextMenuHint(open, IDLE_MS))
     }
 

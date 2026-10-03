@@ -195,7 +195,7 @@ fun XmbNotificationBar(
                             .padding(end = u.dp(56), top = u.dp(118), bottom = u.dp(70)).width(u.dp(430)),
                     )
                 }
-                PanelTab.PROFILE -> ProfilePanel(profile, profileName, profileAvatar, profileFocus, u, onProfileTapped, onClosed)
+                PanelTab.PROFILE -> ProfilePanel(profile, profileName, profileAvatar, profileFocus, u, onProfileTapped)
                 PanelTab.QUICK -> quick?.let {
                     QuickTiles(it, quickFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(200)))
                 }

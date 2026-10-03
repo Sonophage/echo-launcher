@@ -120,7 +120,6 @@ import com.psplauncher.feature.xmb.viewmodel.promptsFor
 import com.psplauncher.feature.xmb.viewmodel.menuWithPills
 import com.psplauncher.feature.xmb.viewmodel.RecentFilter
 import com.psplauncher.feature.xmb.viewmodel.fanCoversToDraw
-import com.psplauncher.feature.xmb.viewmodel.formatDuration
 import com.psplauncher.feature.xmb.viewmodel.XMBUiState
 import com.psplauncher.feature.xmb.viewmodel.XMBViewModel
 

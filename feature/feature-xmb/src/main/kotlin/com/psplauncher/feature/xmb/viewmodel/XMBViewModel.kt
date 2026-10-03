@@ -122,7 +122,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.update
@@ -521,8 +520,6 @@ data class XMBUiState(
     val showContextMenuHint: Boolean = false,
 
     val idle: Boolean = false,
-
-    val showAppDrawerHint: Boolean = false,
 
     val showSettingsHint: Boolean = false,
 
@@ -1097,13 +1094,13 @@ internal fun canonicalXmbCategories(
 
         if (stored == null) return@mapNotNull null
         fallback.copy(
-            name             = stored?.name?.takeIf { it.isNotBlank() } ?: fallback.name,
-            position         = stored?.position ?: fallback.position,
-            accentColor      = stored?.accentColor,
-            customIconUri    = stored?.customIconUri,
-            filterRules      = stored?.filterRules,
+            name             = stored.name.takeIf { it.isNotBlank() } ?: fallback.name,
+            position         = stored.position,
+            accentColor      = stored.accentColor,
+            customIconUri    = stored.customIconUri,
+            filterRules      = stored.filterRules,
 
-            isGamingCategory = stored?.isGamingCategory ?: fallback.isGamingCategory,
+            isGamingCategory = stored.isGamingCategory,
         )
     }
 
@@ -1131,7 +1128,6 @@ val XMBUiState.hintsAutoHide: Boolean
 
 internal fun XMBUiState.withHintsShownNow(): XMBUiState = copy(
     showContextMenuHint = shouldShowContextMenuHint(this, 0L),
-    showAppDrawerHint = shouldShowAppDrawerHint(this, 0L),
     showSettingsHint = shouldShowSettingsHint(this, 0L),
 )
 
@@ -1141,14 +1137,6 @@ fun shouldShowContextMenuHint(state: XMBUiState, idleMs: Long): Boolean =
         state.stripShowsXmbContext &&
 
         (state.focusedItemHasContextMenu || state.canSortCurrentList || state.canFilterRecents) &&
-        idleMs >= (state.contextMenuHintDelaySeconds * 1_000f).toLong()
-
-fun shouldShowAppDrawerHint(state: XMBUiState, idleMs: Long): Boolean =
-    state.contextMenuHintEnabled &&
-        state.activeAppDrawerFilter != null &&
-        state.activeContextMenu == null &&
-
-        !state.notificationsOpen &&
         idleMs >= (state.contextMenuHintDelaySeconds * 1_000f).toLong()
 
 fun shouldShowSettingsHint(state: XMBUiState, idleMs: Long): Boolean =
@@ -4888,22 +4876,16 @@ class XMBViewModel @Inject constructor(
                     idleMs = idleMs,
                 )
 
-                val shouldShowDrawer = com.psplauncher.feature.xmb.viewmodel.shouldShowAppDrawerHint(
-                    state = s,
-                    idleMs = idleMs,
-                )
                 val shouldShowSettings = com.psplauncher.feature.xmb.viewmodel.shouldShowSettingsHint(
                     state = s,
                     idleMs = idleMs,
                 )
                 if (shouldShow != s.showContextMenuHint ||
-                    shouldShowDrawer != s.showAppDrawerHint ||
                     shouldShowSettings != s.showSettingsHint
                 ) {
                     _uiState.update {
                         it.copy(
                             showContextMenuHint = shouldShow,
-                            showAppDrawerHint = shouldShowDrawer,
                             showSettingsHint = shouldShowSettings,
                         )
                     }
@@ -5023,10 +5005,10 @@ class XMBViewModel @Inject constructor(
 
                 GamepadAction.SELECT        -> {
                     val menu = state.activeContextMenu
-                    val picked = menu?.selectedIndex?.let { state.menuRows().getOrNull(it) }
+                    val picked = menu.selectedIndex?.let { state.menuRows().getOrNull(it) }
                     when {
                         picked != null -> onContextMenuItemActivatedAt(menu.selectedIndex!!)
-                        menu?.primaryId != null -> activateContextMenuItem(menu.primaryId)
+                        menu.primaryId != null -> activateContextMenuItem(menu.primaryId)
                         else -> Unit
                     }
                 }
@@ -7429,13 +7411,11 @@ class XMBViewModel @Inject constructor(
                 it.copy(lastInputWasTouch = true).withHintsShownNow()
             } else if (it.lastInputWasTouch &&
                 !it.showContextMenuHint &&
-                !it.showAppDrawerHint &&
                 !it.showSettingsHint
             ) it
             else it.copy(
                 lastInputWasTouch = true,
                 showContextMenuHint = false,
-                showAppDrawerHint = false,
                 showSettingsHint = false,
             )
         }
@@ -7489,13 +7469,11 @@ class XMBViewModel @Inject constructor(
                 it.copy(lastInputWasTouch = false).withHintsShownNow()
             } else if (!it.lastInputWasTouch &&
                 !it.showContextMenuHint &&
-                !it.showAppDrawerHint &&
                 !it.showSettingsHint
             ) it
             else it.copy(
                 lastInputWasTouch = false,
                 showContextMenuHint = false,
-                showAppDrawerHint = false,
                 showSettingsHint = false,
             )
         }
@@ -8829,13 +8807,11 @@ class XMBViewModel @Inject constructor(
         if (!_uiState.value.hintsAutoHide) {
             _uiState.update { it.withHintsShownNow() }
         } else if (_uiState.value.showContextMenuHint ||
-            _uiState.value.showAppDrawerHint ||
             _uiState.value.showSettingsHint
         ) {
             _uiState.update {
                 it.copy(
                     showContextMenuHint = false,
-                    showAppDrawerHint = false,
                     showSettingsHint = false,
                 )
             }

@@ -16,8 +16,6 @@ enum class RecentFilter(val label: String) {
             entries.filter { it != APPS || includeApps }
     }
 
-    fun next(includeApps: Boolean): RecentFilter = step(+1, includeApps)
-
     fun step(delta: Int, includeApps: Boolean): RecentFilter {
         val cycle = visible(includeApps)
         val here = cycle.indexOf(this)

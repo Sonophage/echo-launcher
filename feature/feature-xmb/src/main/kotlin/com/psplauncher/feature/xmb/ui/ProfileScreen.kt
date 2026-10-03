@@ -225,7 +225,6 @@ internal fun ProfilePanel(
     focus: ProfileFocus,
     u: DesignUnits,
     onTapped: (ProfileSpot, Int) -> Unit,
-    onBack: () -> Unit,
 ) {
     val banner = profileBanner(data.recent)
     Box(Modifier.fillMaxSize()) {

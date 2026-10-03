@@ -97,7 +97,7 @@ class RecentsShelfTest {
 
     @Test
     fun `the cycle visits every filter once and returns to All`() {
-        val seen = generateSequence(RecentFilter.ALL) { it.next(includeApps = false) }
+        val seen = generateSequence(RecentFilter.ALL) { it.step(+1, includeApps = false) }
             .drop(1)
             .take(4)
             .toList()
@@ -113,14 +113,14 @@ class RecentsShelfTest {
 
     @Test
     fun `Apps is not in the cycle while it is switched off`() {
-        assertEquals(RecentFilter.ALL, RecentFilter.VIDEO.next(includeApps = false))
-        assertEquals(RecentFilter.APPS, RecentFilter.VIDEO.next(includeApps = true))
-        assertEquals(RecentFilter.ALL, RecentFilter.APPS.next(includeApps = true))
+        assertEquals(RecentFilter.ALL, RecentFilter.VIDEO.step(+1, includeApps = false))
+        assertEquals(RecentFilter.APPS, RecentFilter.VIDEO.step(+1, includeApps = true))
+        assertEquals(RecentFilter.ALL, RecentFilter.APPS.step(+1, includeApps = true))
     }
 
     @Test
     fun `a filter that has just been switched off falls back to All`() {
-        assertEquals(RecentFilter.ALL, RecentFilter.APPS.next(includeApps = false))
+        assertEquals(RecentFilter.ALL, RecentFilter.APPS.step(+1, includeApps = false))
     }
 
     @Test
