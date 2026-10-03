@@ -402,8 +402,6 @@ data class SearchState(
     val scrollToTopToken: Int = 0,
 
     val loaded: Boolean = false,
-
-    val columns: Int = SEARCH_GRID_COLUMNS,
 )
 
 data class PlaylistNameDialogState(
@@ -865,11 +863,6 @@ data class XMBUiState(
 
 data class DiscCeremonyState(val art: Any?)
 
-const val SEARCH_GRID_COLUMNS = 7
-
-const val SEARCH_GRID_MIN_COLUMNS = 3
-const val SEARCH_GRID_MAX_COLUMNS = 12
-
 enum class XMBItemType {
     STANDARD,
     ALL_GAMES,
@@ -1172,6 +1165,8 @@ data class XMBItem(
     val romPath: String? = null,
 
     val totalPlayTimeMillis: Long = 0L,
+
+    val lastPlayedAt: Long? = null,
 
     val insideCovers: List<String> = emptyList(),
     val gameId: Long? = null,
@@ -3423,14 +3418,9 @@ class XMBViewModel @Inject constructor(
     private fun searchNoticeItem(title: String, subtitle: String): XMBItem =
         XMBItem(id = EMPTY_CATEGORY_ITEM_ID, title = title, subtitle = subtitle, type = XMBItemType.EMPTY)
 
-    private fun searchColumns(): Int =
-        (_uiState.value.search?.columns ?: SEARCH_GRID_COLUMNS).coerceAtLeast(1)
-
-    fun onSearchColumnsMeasured(columns: Int) {
-        if (columns <= 0) return
-        val current = _uiState.value.search ?: return
-        if (current.columns == columns) return
-        _uiState.update { it.copy(search = it.search?.copy(columns = columns)) }
+    fun onSearchFocusedAt(index: Int) {
+        markTouchInput()
+        moveSearch(index - (_uiState.value.search?.selectedIndex ?: return))
     }
 
     private fun moveSearch(delta: Int) {
@@ -3500,6 +3490,9 @@ class XMBViewModel @Inject constructor(
         subtitle = listOfNotNull("Game", platformCache[platformId]?.name).joinToString("  ·  "),
 
         coverUri = artworkUri,
+        metadataLine = gameMetadataLine(releaseYear, genre, developer, players),
+        totalPlayTimeMillis = totalPlayTimeMillis,
+        lastPlayedAt = lastPlayedAt,
         gameId = id,
         platformId = platformId,
         type = XMBItemType.STANDARD,
@@ -5113,10 +5106,10 @@ class XMBViewModel @Inject constructor(
 
         if (state.search != null) {
             when (action) {
-                GamepadAction.NAVIGATE_UP    -> moveSearch(-searchColumns())
-                GamepadAction.NAVIGATE_DOWN  -> moveSearch(+searchColumns())
-                GamepadAction.NAVIGATE_LEFT  -> moveSearch(-1)
-                GamepadAction.NAVIGATE_RIGHT -> moveSearch(+1)
+                GamepadAction.NAVIGATE_UP,
+                GamepadAction.NAVIGATE_DOWN,
+                GamepadAction.NAVIGATE_LEFT,
+                GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action))
                 GamepadAction.SELECT        -> onSearchActivatedAt(state.search.selectedIndex)
                 GamepadAction.BACK          -> closeSearch()
                 else -> Unit

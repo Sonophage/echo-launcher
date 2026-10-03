@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.psplauncher.core.domain.model.GamepadAction
 
 class LibrarySearchTest {
     @Test
@@ -101,5 +102,13 @@ class LibrarySearchTest {
             assertTrue("blank emptyHint for $scope", scope.emptyHint.isNotBlank())
             assertTrue("$scope does not say where to go", scope.emptyHint.length > 10)
         }
+    }
+
+    @Test
+    fun `the results are one column, so up and down move one row and left and right move nothing`() {
+        assertEquals(1, searchStep(GamepadAction.NAVIGATE_DOWN))
+        assertEquals(-1, searchStep(GamepadAction.NAVIGATE_UP))
+        assertEquals(0, searchStep(GamepadAction.NAVIGATE_LEFT))
+        assertEquals(0, searchStep(GamepadAction.NAVIGATE_RIGHT))
     }
 }

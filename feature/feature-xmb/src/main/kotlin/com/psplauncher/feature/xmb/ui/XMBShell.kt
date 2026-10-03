@@ -284,7 +284,7 @@ fun XMBShellContainer(
         onSearchQueryChange = viewModel::onSearchQueryChange,
         onSearchActivatedAt = viewModel::onSearchActivatedAt,
         onSearchBack = viewModel::closeSearch,
-        onSearchColumnsMeasured = viewModel::onSearchColumnsMeasured,
+        onSearchFocusedAt = viewModel::onSearchFocusedAt,
         onOpenSearch = { viewModel.openSearch(com.psplauncher.feature.xmb.viewmodel.SearchScope.ALL) },
         onMusicBrowserQueryChange = viewModel::onMusicBrowserQueryChange,
         onMusicBrowserActivatedAt = viewModel::onMusicBrowserActivatedAt,
@@ -458,7 +458,7 @@ fun XMBShell(
     onSearchActivatedAt: (Int) -> Unit = {},
     onSearchBack: () -> Unit = {},
 
-    onSearchColumnsMeasured: (Int) -> Unit = {},
+    onSearchFocusedAt: (Int) -> Unit = {},
     onOpenSearch: () -> Unit = {},
     onMusicBrowserQueryChange: (String) -> Unit = {},
     onMusicBrowserActivatedAt: (Int) -> Unit = {},
@@ -1213,7 +1213,7 @@ fun XMBShell(
                     onActivateAt = onSearchActivatedAt,
                     onBack = onSearchBack,
 
-                    onColumnsMeasured = onSearchColumnsMeasured,
+                    onFocusAt = onSearchFocusedAt,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

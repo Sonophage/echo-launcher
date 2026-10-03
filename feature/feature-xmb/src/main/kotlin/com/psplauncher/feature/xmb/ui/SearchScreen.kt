@@ -1,74 +1,80 @@
 package com.psplauncher.feature.xmb.ui
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.Games
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.em
 import coil3.compose.AsyncImage
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.ControllerPromptItem
 import com.psplauncher.core.ui.components.HintBarHeight
 import com.psplauncher.core.ui.components.PfpHintBar
 import com.psplauncher.core.ui.components.PfpSearchField
-import com.psplauncher.core.ui.theme.deriveStorefrontColors
 import com.psplauncher.core.ui.components.StatusStripHeight
-import com.psplauncher.core.ui.components.XmbScrim
+import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.PANEL_CARD_RADIUS
+import com.psplauncher.core.ui.design.PANEL_FOCUS_RING_WIDTH
+import com.psplauncher.core.ui.design.PANEL_UNFOCUSED_ALPHA
+import com.psplauncher.core.ui.design.PanelCardFill
+import com.psplauncher.core.ui.design.PanelCardFocusFill
+import com.psplauncher.core.ui.design.PanelFocusRing
+import com.psplauncher.core.ui.design.panelBackdrop
 import com.psplauncher.core.ui.image.rememberArtworkModel
-import com.psplauncher.core.ui.theme.menuCursor
+import com.psplauncher.core.ui.theme.deriveStorefrontColors
 import com.psplauncher.feature.xmb.viewmodel.SearchState
-import com.psplauncher.feature.xmb.viewmodel.isInstalledApp
-import com.psplauncher.core.ui.components.PfpMediaCard
-import com.psplauncher.feature.xmb.viewmodel.SEARCH_GRID_COLUMNS
-import com.psplauncher.feature.xmb.viewmodel.SEARCH_GRID_MAX_COLUMNS
-import com.psplauncher.feature.xmb.viewmodel.SEARCH_GRID_MIN_COLUMNS
 import com.psplauncher.feature.xmb.viewmodel.XMBItem
 import com.psplauncher.feature.xmb.viewmodel.XMBItemType
-import androidx.compose.runtime.ReadOnlyComposable
-import com.psplauncher.core.ui.theme.LocalPfpTextColors
-
-private val PrimaryText: Color @Composable @ReadOnlyComposable get() = LocalPfpTextColors.current.primary
-
-private val SecondaryText: Color @Composable @ReadOnlyComposable get() = LocalPfpTextColors.current.secondary
-private val CoverPlaceholder = Color(0xFF1B1B27)
+import com.psplauncher.feature.xmb.viewmodel.isInstalledApp
+import com.psplauncher.feature.xmb.viewmodel.relativeTime
 
 @Composable
 fun SearchScreen(
@@ -77,64 +83,48 @@ fun SearchScreen(
     onActivateAt: (Int) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-
-    onColumnsMeasured: (Int) -> Unit = {},
+    onFocusAt: (Int) -> Unit = {},
 ) {
-    val gridState = rememberLazyGridState()
-
-    var columns by remember { mutableIntStateOf(SEARCH_GRID_COLUMNS) }
-    LaunchedEffect(state.selectedIndex, state.scrollToTopToken, columns) {
-        if (state.rows.isNotEmpty()) {
-            val target = (state.selectedIndex - columns).coerceIn(0, state.rows.lastIndex)
-            gridState.animateScrollToItem(target)
-        }
+    val listState = rememberLazyListState()
+    LaunchedEffect(state.selectedIndex, state.scrollToTopToken) {
+        if (state.rows.isNotEmpty()) listState.animateScrollToItem((state.selectedIndex - 1).coerceAtLeast(0))
     }
 
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
-    Box(
-        modifier = modifier
+    val empty = state.rows.singleOrNull()?.takeIf { it.type == XMBItemType.EMPTY }
+    val focused = state.rows.getOrNull(state.selectedIndex)?.takeIf { empty == null }
+    val icon = rememberAppIcon(focused?.packageName?.takeIf { focused.isInstalledApp })
+    val art = focused?.takeUnless { it.isInstalledApp }?.let { it.backdropArt.firstOrNull() ?: it.shelfCoverArt }
+
+    BoxWithConstraints(
+        modifier
             .fillMaxSize()
-
-            .background(
-                Brush.verticalGradient(
-                    0f to XmbScrim.copy(alpha = 0.86f),
-                    0.40f to XmbScrim,
-                    1f to XmbScrim,
-                )
-            ),
+            .panelBackdrop(icon?.color ?: SearchTint)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
     ) {
+        val u = DesignUnits(minOf(maxWidth.value / PANEL_DESIGN_WIDTH, maxHeight.value / PANEL_DESIGN_HEIGHT), LocalDensity.current)
         val imeUp = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+
+        if (art != null) {
+            AsyncImage(
+                model = rememberArtworkModel(art),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().blur(u.dp(24)).graphicsLayer(alpha = 0.45f),
+            )
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+        }
+
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 40.dp)
-
-                .padding(
-                    top = StatusStripHeight + if (imeUp) 10.dp else 24.dp,
-                    bottom = if (imeUp) 10.dp else 24.dp + HintBarHeight,
-                ),
+            Modifier
+                .fillMaxHeight()
+                .padding(start = u.dp(64), top = StatusStripHeight + u.dp(12), bottom = if (imeUp) 10.dp else HintBarHeight)
+                .width(u.dp(400))
+                .imePadding(),
+            verticalArrangement = Arrangement.spacedBy(u.dp(16)),
         ) {
-            if (!imeUp) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onBack,
-                    ),
-                ) {
-                    Text("◀", color = SecondaryText, fontSize = 18.sp, modifier = Modifier.padding(end = 16.dp))
-                    Column {
-                        Text(state.scope.label, color = PrimaryText, fontSize = 22.sp)
-                        Text(state.scope.hint, color = SecondaryText, fontSize = 12.sp)
-                    }
-                }
-
-                Spacer(Modifier.height(14.dp))
-            }
-
             PfpSearchField(
                 query = state.query,
                 active = true,
@@ -146,63 +136,41 @@ fun SearchScreen(
                 colors = deriveStorefrontColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
-
-            Spacer(Modifier.height(12.dp))
-
-            Column(modifier = Modifier.weight(1f).fillMaxWidth().imePadding()) {
-                val empty = state.rows.singleOrNull()?.takeIf { it.type == XMBItemType.EMPTY }
-                if (empty != null) {
-                    SearchResultRow(row = empty, selected = false, onClick = {})
-                    Spacer(Modifier.weight(1f))
-                } else {
-                    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                        val target = if (imeUp) SEARCH_TILE_TARGET_WIDTH_IME else SEARCH_TILE_TARGET_WIDTH
-                        val measured = ((maxWidth + SEARCH_TILE_GAP) / (target + SEARCH_TILE_GAP))
-                            .toInt()
-                            .coerceIn(SEARCH_GRID_MIN_COLUMNS, SEARCH_GRID_MAX_COLUMNS)
-                        columns = measured
-
-                        LaunchedEffect(measured) { onColumnsMeasured(measured) }
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(measured),
-                            state = gridState,
-                            horizontalArrangement = Arrangement.spacedBy(SEARCH_TILE_GAP),
-                            verticalArrangement = Arrangement.spacedBy(SEARCH_TILE_GAP),
-                            contentPadding = PaddingValues(vertical = 6.dp),
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            itemsIndexed(state.rows, key = { _, row -> row.id }) { index, row ->
-                                PfpMediaCard(
-                                    title = row.title,
-                                    art = row.shelfCoverArt,
-                                    subtitle = row.subtitle,
-
-                                    initialOnly = row.isInstalledApp,
-                                    focused = index == state.selectedIndex,
-                                    onClick = { onActivateAt(index) },
-                                    width = Dp.Unspecified,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-                        }
+            if (empty != null && imeUp) {
+                EmptyNotice(empty, u)
+            } else if (empty == null) {
+                LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(u.dp(4)), modifier = Modifier.fillMaxSize()) {
+                    itemsIndexed(state.rows, key = { _, row -> row.id }) { index, row ->
+                        val selected = index == state.selectedIndex
+                        ResultRow(row, selected, u) { if (selected) onActivateAt(index) else onFocusAt(index) }
                     }
                 }
             }
         }
 
         if (!imeUp) {
+            Column(
+                Modifier
+                    .fillMaxHeight()
+                    .padding(start = u.dp(520), end = u.dp(80), top = u.dp(96), bottom = HintBarHeight),
+                verticalArrangement = Arrangement.spacedBy(u.dp(20)),
+            ) {
+                when {
+                    empty != null -> Box(Modifier.padding(top = u.dp(200))) { EmptyNotice(empty, u) }
+                    focused != null -> Preview(focused, icon?.bitmap, u) { onActivateAt(state.selectedIndex) }
+                }
+            }
+
             PfpHintBar(
                 items = listOf(
-                    ControllerPromptItem(GamepadAction.BACK, "Back"),
+                    ControllerPromptItem(GamepadAction.BACK, "Close"),
                     ControllerPromptItem(GamepadAction.SELECT, "Open"),
                 ),
                 modifier = Modifier.align(Alignment.BottomCenter),
-
                 onAction = { action ->
                     when (action) {
                         GamepadAction.BACK -> onBack()
-                        GamepadAction.SELECT ->
-                            state.selectedIndex.takeIf { it in state.rows.indices }?.let(onActivateAt)
+                        GamepadAction.SELECT -> state.selectedIndex.takeIf { focused != null }?.let(onActivateAt)
                         else -> Unit
                     }
                 },
@@ -212,56 +180,105 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SearchResultRow(row: XMBItem, selected: Boolean, onClick: () -> Unit) {
-    val clickable = row.type != XMBItemType.EMPTY
+private fun EmptyNotice(row: XMBItem, u: DesignUnits) {
+    Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
+        Headline(row.title, u.sp(30), 2)
+        row.subtitle?.let { Meta(it, u.sp(15), 2) }
+    }
+}
 
-    val cursored = selected && clickable
+@Composable
+private fun ResultRow(row: XMBItem, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
+    val (kind, detail) = kindAndDetail(row)
+    val shape = RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp)
-
-            .menuCursor(cursored)
-            .then(if (clickable) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 12.dp, vertical = 9.dp),
+            .graphicsLayer(alpha = if (focused) 1f else PANEL_UNFOCUSED_ALPHA)
+            .clip(shape)
+            .background(if (focused) PanelCardFocusFill else PanelCardFill)
+            .then(if (focused) Modifier.border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape) else Modifier)
+            .clickable(onClick = onClick)
+            .padding(start = u.dp(8), end = u.dp(14), top = u.dp(8), bottom = u.dp(8)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
     ) {
-        if (clickable) {
-            Box(
-                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(6.dp)).background(CoverPlaceholder),
-            ) {
-                row.coverUri?.let {
-                    AsyncImage(
-                        model = rememberArtworkModel(it),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            }
-            Spacer(Modifier.padding(end = 12.dp))
+        if (row.isInstalledApp) {
+            AppIcon(rememberAppIcon(row.packageName)?.bitmap, u.dp(46), u.dp(11))
+        } else {
+            Art(row.shelfCoverArt, u.dp(46), u.dp(46), u.dp(11), kindGlyph(row), u)
         }
-        Column {
-            Text(
-                text = row.title,
-                color = PrimaryText,
-                fontSize = 15.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            row.subtitle?.takeIf { it.isNotBlank() }?.let {
-                Text(text = it, color = SecondaryText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(3))) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(8))) {
+                Text(row.title, color = Color.White, fontSize = u.sp(14), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(
+                    kind.uppercase(),
+                    style = TextStyle(color = Color.White, fontSize = u.sp(9), fontWeight = FontWeight.SemiBold, letterSpacing = 0.08.em),
+                    modifier = Modifier.clip(RoundedCornerShape(u.dp(5))).background(Color.White.copy(alpha = 0.12f))
+                        .padding(horizontal = u.dp(7), vertical = u.dp(3)),
+                )
+            }
+            if (detail.isNotBlank()) {
+                Text(detail, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(11), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            row.lastPlayedAt?.let {
+                Text("Played ${relativeTime(System.currentTimeMillis(), it)}", color = Color.White.copy(alpha = 0.45f), fontSize = u.sp(11),
+                    fontWeight = FontWeight.Light, maxLines = 1)
             }
         }
     }
 }
 
-internal val SEARCH_TILE_TARGET_WIDTH = 93.dp
+@Composable
+private fun ColumnScope.Preview(row: XMBItem, icon: ImageBitmap?, u: DesignUnits, onActivate: () -> Unit) {
+    val (kind, detail) = kindAndDetail(row)
+    val game = row.gameId != null
+    Box(
+        Modifier
+            .weight(1f, fill = false)
+            .widthIn(max = u.dp(480))
+            .aspectRatio(16f / 9f, matchHeightConstraintsFirst = true)
+            .clip(RoundedCornerShape(u.dp(22)))
+            .background(Color.White.copy(alpha = 0.07f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (row.isInstalledApp) {
+            AppIcon(icon, u.dp(120), u.dp(30))
+        } else {
+            Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(u.dp(96)))
+            (row.backdropArt.firstOrNull() ?: row.shelfCoverArt)?.let {
+                AsyncImage(rememberArtworkModel(it), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
+        Eyebrow(kind, u)
+        Headline(row.title, u.sp(46), 2)
+        Meta(row.metadataLine?.takeIf { it.isNotBlank() } ?: detail, u.sp(15))
+    }
+    if (game && (row.lastPlayedAt != null || row.totalPlayTimeMillis > 0 || detail.isNotBlank())) {
+        Row(horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
+            row.lastPlayedAt?.let { Stat("Last played", relativeTime(System.currentTimeMillis(), it), u) }
+            if (row.totalPlayTimeMillis > 0) Stat("Play time", playTimeLabel(row.totalPlayTimeMillis), u)
+            if (detail.isNotBlank()) Stat("Platform", detail, u)
+        }
+    }
+    Row(Modifier.padding(top = u.dp(4))) {
+        StageButton(GamepadAction.SELECT, if (game) "Play" else "Open", u, onActivate)
+    }
+}
 
-internal val SEARCH_TILE_TARGET_WIDTH_IME = 62.dp
+private fun kindAndDetail(row: XMBItem): Pair<String, String> {
+    val parts = row.subtitle.orEmpty().split("  ·  ", limit = 2)
+    return parts[0] to parts.getOrElse(1) { "" }
+}
 
-internal val SEARCH_GRID_BAND_WITH_IME = 150.dp
+private fun kindGlyph(row: XMBItem): ImageVector = when (row.type) {
+    XMBItemType.VIDEO_FILE -> Icons.Outlined.Movie
+    XMBItemType.PHOTO_FILE -> Icons.Outlined.Image
+    XMBItemType.LIBRARY_BOOK -> Icons.AutoMirrored.Outlined.MenuBook
+    XMBItemType.MUSIC_TRACK -> Icons.Outlined.MusicNote
+    else -> if (row.isInstalledApp) Icons.Outlined.Apps else Icons.Outlined.Games
+}
 
-internal val SEARCH_CARD_TEXT_HEIGHT = 55.dp
-
-private val SEARCH_TILE_GAP = 14.dp
+private val SearchTint = Color(0xFF2B3654)

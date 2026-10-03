@@ -293,7 +293,7 @@ private fun Stage(stage: PanelStage, actions: List<StageAction>, icon: ImageBitm
         }
         if (actions.isNotEmpty()) {
             Row(Modifier.padding(top = u.dp(8)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                actions.forEach { StageButton(it, u) { onAction(it.command) } }
+                actions.forEach { StageButton(it.button, it.label, u) { onAction(it.command) } }
             }
         }
     }
@@ -532,8 +532,8 @@ private fun Tile(
 }
 
 @Composable
-private fun StageButton(action: StageAction, u: DesignUnits, onClick: () -> Unit) {
-    val primary = action.button == GamepadAction.SELECT
+internal fun StageButton(button: GamepadAction, label: String, u: DesignUnits, onClick: () -> Unit) {
+    val primary = button == GamepadAction.SELECT
     val ink = if (primary) Color(0xFF0A0A0A) else Color.White
     Box(
         Modifier
@@ -546,32 +546,32 @@ private fun StageButton(action: StageAction, u: DesignUnits, onClick: () -> Unit
     ) {
         val labelStyle = TextStyle(fontSize = u.sp(15), fontWeight = if (primary) FontWeight.Medium else FontWeight.Normal)
         if (LocalPadPrompts.current) {
-            ControllerPrompt(action.button, action.label, labelColor = ink, labelStyle = labelStyle, glyphSize = u.dp(20), spacing = u.dp(10))
+            ControllerPrompt(button, label, labelColor = ink, labelStyle = labelStyle, glyphSize = u.dp(20), spacing = u.dp(10))
         } else {
-            Text(action.label, color = ink, style = labelStyle)
+            Text(label, color = ink, style = labelStyle)
         }
     }
 }
 
 @Composable
-private fun Eyebrow(text: String, u: DesignUnits) {
+internal fun Eyebrow(text: String, u: DesignUnits) {
     Text(text.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13), letterSpacing = 0.18.em))
 }
 
 @Composable
-private fun Headline(text: String, size: androidx.compose.ui.unit.TextUnit, lines: Int) {
+internal fun Headline(text: String, size: androidx.compose.ui.unit.TextUnit, lines: Int) {
     Text(text, color = Color.White, fontSize = size, lineHeight = size * 1.05f, fontWeight = FontWeight.ExtraLight,
         letterSpacing = (-0.025).em, maxLines = lines, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
-private fun Meta(text: String, size: androidx.compose.ui.unit.TextUnit, maxLines: Int = 1) {
+internal fun Meta(text: String, size: androidx.compose.ui.unit.TextUnit, maxLines: Int = 1) {
     if (text.isBlank()) return
     Text(text, color = Color.White.copy(alpha = 0.72f), fontSize = size, fontWeight = FontWeight.Light, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
-private fun Stat(label: String, value: String, u: DesignUnits) {
+internal fun Stat(label: String, value: String, u: DesignUnits) {
     Row(horizontalArrangement = Arrangement.spacedBy(u.dp(6))) {
         Text(label, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(14), fontWeight = FontWeight.Light)
         Text(value, color = Color.White, fontSize = u.sp(14), fontWeight = FontWeight.Light)
@@ -592,7 +592,7 @@ private fun Progress(fraction: Float, left: String, right: String, u: DesignUnit
 }
 
 @Composable
-private fun Art(uri: String?, width: Dp, height: Dp, radius: Dp, fallback: ImageVector, u: DesignUnits) {
+internal fun Art(uri: String?, width: Dp, height: Dp, radius: Dp, fallback: ImageVector, u: DesignUnits) {
     Box(
         Modifier.width(width).height(height).clip(RoundedCornerShape(radius)).background(Color.White.copy(alpha = 0.08f)),
         contentAlignment = Alignment.Center,
@@ -603,16 +603,16 @@ private fun Art(uri: String?, width: Dp, height: Dp, radius: Dp, fallback: Image
 }
 
 @Composable
-private fun AppIcon(bitmap: ImageBitmap?, size: Dp, radius: Dp) {
+internal fun AppIcon(bitmap: ImageBitmap?, size: Dp, radius: Dp) {
     Box(Modifier.size(size).clip(RoundedCornerShape(radius)).background(Color.White.copy(alpha = 0.08f))) {
         bitmap?.let { Image(it, null, modifier = Modifier.fillMaxSize()) }
     }
 }
 
-private class AppIconArt(val bitmap: ImageBitmap, val color: Color?)
+internal class AppIconArt(val bitmap: ImageBitmap, val color: Color?)
 
 @Composable
-private fun rememberAppIcon(packageName: String?): AppIconArt? {
+internal fun rememberAppIcon(packageName: String?): AppIconArt? {
     val context = LocalContext.current
     val art by produceState<AppIconArt?>(null, packageName) {
         value = packageName?.takeIf { it.isNotBlank() }?.let { pkg ->
@@ -688,7 +688,7 @@ private fun libraryIcon(id: String): ImageVector = when (id) {
     else -> Icons.Outlined.Language
 }
 
-private fun playTimeLabel(ms: Long): String {
+internal fun playTimeLabel(ms: Long): String {
     val minutes = ms / 60_000L
     return if (minutes < 60) "$minutes min" else "${minutes / 60} hr"
 }
@@ -772,8 +772,8 @@ private const val PULL_COMMIT = 0.33f
 private const val PULL_FLING_PX_PER_S = 1200f
 private const val PULL_SETTLE_MS = 220
 
-private const val PANEL_DESIGN_WIDTH = 1200f
-private const val PANEL_DESIGN_HEIGHT = 752f
+internal const val PANEL_DESIGN_WIDTH = 1200f
+internal const val PANEL_DESIGN_HEIGHT = 752f
 private const val ICON_PX = 96
 
 private val Faint = Color.White.copy(alpha = 0.65f)
