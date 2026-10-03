@@ -93,6 +93,8 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.psplauncher.core.ui.design.panelDesignUnits
+import com.psplauncher.core.ui.components.ChromeScrim
 
 private val StripPrimary = Color(0xFFEEEEEE)
 private val StripMuted   = Color(0xAAEEEEEE)
@@ -212,7 +214,7 @@ fun XmbPspStatusStrip(
                 .fillMaxWidth()
                 .wrapContentHeight(Alignment.Top, unbounded = true)
                 .height(if (compact) StripHeight else u.dp(110))
-                .background(Brush.verticalGradient(0f to StripScrim, 1f to Color.Transparent)),
+                .background(Brush.verticalGradient(0f to ChromeScrim, 1f to Color.Transparent)),
         )
 
         live?.let { activity ->
@@ -668,7 +670,6 @@ private fun StatusIcon(
 
 internal val StripHeight   = StatusStripHeight
 
-private val StripScrim = Color(0xCC04060C)
 private val BadgeInk = Color(0xFF1A0D05)
 
 private val LowBatteryTint = Color(0xFFFF6B6B)
@@ -686,7 +687,7 @@ internal fun rememberStripUnits(): DesignUnits {
     val config = LocalConfiguration.current
     val density = LocalDensity.current
     return remember(config.screenWidthDp, config.screenHeightDp, density) {
-        DesignUnits(minOf(config.screenWidthDp / PANEL_DESIGN_WIDTH, config.screenHeightDp / PANEL_DESIGN_HEIGHT), density)
+        panelDesignUnits(config.screenWidthDp.toFloat(), config.screenHeightDp.toFloat(), density)
     }
 }
 

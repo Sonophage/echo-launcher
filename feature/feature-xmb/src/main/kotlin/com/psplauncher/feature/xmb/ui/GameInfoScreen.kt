@@ -37,7 +37,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.media3.common.C
 import coil3.compose.AsyncImage
 import com.psplauncher.core.common.format.relativeTime
@@ -60,9 +59,8 @@ import com.psplauncher.feature.xmb.viewmodel.GameInfoStat
 import com.psplauncher.feature.xmb.viewmodel.gameInfoActions
 import com.psplauncher.feature.xmb.viewmodel.gameInfoStats
 import com.psplauncher.feature.xmb.viewmodel.notices
+import com.psplauncher.core.ui.design.panelDesignUnits
 
-private const val DESIGN_WIDTH = 1200f
-private const val DESIGN_HEIGHT = 752f
 
 @Composable
 fun GameInfoScreen(
@@ -88,7 +86,7 @@ fun GameInfoScreen(
             .background(PanelBase)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
     ) {
-        val u = DesignUnits(minOf(maxWidth.value / DESIGN_WIDTH, maxHeight.value / DESIGN_HEIGHT), LocalDensity.current)
+        val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Box(Modifier.fillMaxWidth().height(u.dp(430))) {
             val art = item.backdropArt.firstOrNull()
             when {
@@ -319,12 +317,6 @@ private fun BandStat(stat: GameInfoStat, u: DesignUnits, button: GamepadAction? 
             Text(stat.label, color = Color.White.copy(alpha = 0.55f), style = labelStyle, maxLines = 1)
         }
     }
-}
-
-@Composable
-private fun SectionLabel(text: String, u: DesignUnits) {
-    Text(text.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(12), letterSpacing = 0.16.em),
-        maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable

@@ -119,6 +119,7 @@ import com.psplauncher.core.ui.theme.LocalPFPColors
 import com.psplauncher.core.ui.theme.xmbScrimAnchors
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import com.psplauncher.core.ui.design.panelDesignUnits
 
 val LocalSettingsScreenId = compositionLocalOf<String?> { null }
 
@@ -686,7 +687,7 @@ fun SettingsScaffold(
                     }
                 ),
         ) {
-            val u = DesignUnits(minOf(maxWidth.value / SETTINGS_DESIGN_WIDTH, maxHeight.value / SETTINGS_DESIGN_HEIGHT), density)
+            val u = panelDesignUnits(maxWidth.value, maxHeight.value, density)
             val tabs = tabEntries.isNotEmpty()
             val paneShown = tabs && maxWidth - SETTINGS_COLUMN_MAX_WIDTH >= SETTINGS_HELP_PANE_MIN_WIDTH
             backdrop?.invoke()
@@ -1062,8 +1063,6 @@ private fun SettingsHelpPane(
     }
 }
 
-private const val SETTINGS_DESIGN_WIDTH = 1200f
-private const val SETTINGS_DESIGN_HEIGHT = 752f
 
 @Composable
 fun SettingsGroup(title: String) {

@@ -81,6 +81,7 @@ import com.psplauncher.feature.xmb.viewmodel.primaryVerbFor
 import com.psplauncher.core.common.format.relativeTime
 import com.psplauncher.core.ui.design.PanelButton
 import com.psplauncher.core.ui.icons.rememberAppIcon
+import com.psplauncher.core.ui.design.panelDesignUnits
 
 @Composable
 fun SearchScreen(
@@ -110,7 +111,7 @@ fun SearchScreen(
             .panelBackdrop(icon?.color ?: SearchTint)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
     ) {
-        val u = DesignUnits(minOf(maxWidth.value / PANEL_DESIGN_WIDTH, maxHeight.value / PANEL_DESIGN_HEIGHT), LocalDensity.current)
+        val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         val imeUp = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
         if (art != null) {

@@ -6,6 +6,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Density
 import com.psplauncher.core.domain.model.SettingsSectionId
 
 val PanelBase = Color(0xFF04060C)
@@ -18,6 +19,12 @@ val PanelFocusRing = Color.White.copy(alpha = 0.9f)
 const val PANEL_CARD_RADIUS = 14
 const val PANEL_FOCUS_RING_WIDTH = 2
 const val PANEL_UNFOCUSED_ALPHA = 0.55f
+
+private const val PANEL_DESIGN_WIDTH = 1200f
+private const val PANEL_DESIGN_HEIGHT = 752f
+
+fun panelDesignUnits(widthDp: Float, heightDp: Float, density: Density): DesignUnits =
+    DesignUnits(minOf(widthDp / PANEL_DESIGN_WIDTH, heightDp / PANEL_DESIGN_HEIGHT), density)
 
 fun Modifier.panelBackdrop(tint: Color): Modifier = this
     .background(PanelBase)

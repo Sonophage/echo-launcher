@@ -112,6 +112,7 @@ import com.psplauncher.feature.xmb.viewmodel.StageAction
 import com.psplauncher.feature.xmb.viewmodel.StageCommand
 import com.psplauncher.feature.xmb.viewmodel.formatDuration
 import com.psplauncher.core.common.format.relativeTime
+import com.psplauncher.core.ui.design.panelDesignUnits
 
 data class QuickSettingsState(
     val waveOn: Boolean,
@@ -179,7 +180,7 @@ fun XmbNotificationBar(
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                 .panelPullGesture(pull, onOpened, onClosed),
         ) {
-            val u = DesignUnits(minOf(maxWidth.value / PANEL_DESIGN_WIDTH, maxHeight.value / PANEL_DESIGN_HEIGHT), LocalDensity.current)
+            val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
             when (tab) {
                 PanelTab.NOTIFICATIONS -> {
                     Box(
@@ -710,8 +711,6 @@ private const val PULL_COMMIT = 0.33f
 private const val PULL_FLING_PX_PER_S = 1200f
 private const val PULL_SETTLE_MS = 220
 
-internal const val PANEL_DESIGN_WIDTH = 1200f
-internal const val PANEL_DESIGN_HEIGHT = 752f
 
 private val Faint = Color.White.copy(alpha = 0.65f)
 

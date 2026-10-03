@@ -82,9 +82,8 @@ import com.psplauncher.core.common.format.playTimeLabel
 import com.psplauncher.core.common.format.relativeTime
 import com.psplauncher.core.ui.design.PanelButton
 import com.psplauncher.feature.xmb.viewmodel.removableFromRecent
+import com.psplauncher.core.ui.design.panelDesignUnits
 
-private const val DESIGN_WIDTH = 1200f
-private const val DESIGN_HEIGHT = 752f
 private const val LETTERBOX_RATIO = 2.39f
 
 @Composable
@@ -105,7 +104,7 @@ fun LastPlayedPage(
     val empty = if (filter == RecentFilter.ALL) "Nothing played yet." else "No recent ${filter.label.lowercase()}."
 
     BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
-        val u = DesignUnits(minOf(maxWidth.value / DESIGN_WIDTH, maxHeight.value / DESIGN_HEIGHT), LocalDensity.current)
+        val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Crossfade(railVisible, animationSpec = tween(220), label = "recentRail") { rail ->
             if (rail) {
                 RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, onAction)

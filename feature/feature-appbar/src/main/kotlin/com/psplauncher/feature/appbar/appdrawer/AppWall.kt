@@ -72,6 +72,7 @@ import com.psplauncher.feature.appbar.InstalledApp
 import com.psplauncher.feature.appbar.SystemChip
 import com.psplauncher.feature.appbar.WALL_COLUMNS
 import com.psplauncher.feature.appbar.wallLayout
+import com.psplauncher.core.ui.design.PanelBase
 
 @Composable
 internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits) {
@@ -107,8 +108,8 @@ internal fun WallHero(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits, mod
 
 @Composable
 internal fun WallShade() {
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to WallBase.copy(alpha = 0.5f), 0.2f to Color.Transparent)))
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.52f to Color.Transparent, 1f to WallBase.copy(alpha = 0.92f))))
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.5f), 0.2f to Color.Transparent)))
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.52f to Color.Transparent, 1f to PanelBase.copy(alpha = 0.92f))))
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -357,7 +358,7 @@ internal fun SystemChipRow(
                 horizontalArrangement = Arrangement.spacedBy(u.dp(6)),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val ink = if (on) WallBase else Color.White
+                val ink = if (on) PanelBase else Color.White
                 Text(chip.label, color = ink, fontSize = u.sp(14), fontWeight = if (on) FontWeight.Medium else FontWeight.Light, maxLines = 1)
                 Text(chip.count.toString(), color = ink.copy(alpha = 0.6f), fontSize = u.sp(11), fontWeight = FontWeight.Light)
             }
@@ -373,7 +374,6 @@ internal fun WallHeading(text: String, u: DesignUnits) {
 
 private val NeutralTint = Color(0xFF222838)
 
-internal val WallBase = Color(0xFF04060C)
 
 private val HeroFade = Brush.horizontalGradient(
     0f to Color.Transparent,

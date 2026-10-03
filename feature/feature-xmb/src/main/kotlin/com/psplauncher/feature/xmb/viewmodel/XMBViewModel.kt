@@ -5617,9 +5617,6 @@ class XMBViewModel @Inject constructor(
         }
     }
 
-    private fun showcaseSet(data: ProfileData): Int =
-        showcase(data.sets, data.badges, 1).firstOrNull()?.let { data.sets.indexOf(it.set) }?.coerceAtLeast(0) ?: 0
-
     fun onPanelProfileTapped(spot: ProfileSpot, index: Int) {
         val s = _uiState.value
         when (spot) {
