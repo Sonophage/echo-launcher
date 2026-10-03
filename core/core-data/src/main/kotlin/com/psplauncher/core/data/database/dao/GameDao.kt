@@ -118,7 +118,7 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE package_name = :packageName LIMIT 1")
     suspend fun getByPackageName(packageName: String): GameEntity?
 
-    @Query("SELECT * FROM games WHERE package_name = :packageName AND launch_shortcut_id IS NULL LIMIT 1")
+    @Query("SELECT * FROM games WHERE package_name = :packageName AND launch_shortcut_id IS NULL AND launch_intent_uri IS NULL LIMIT 1")
     suspend fun getAppEntry(packageName: String): GameEntity?
 
     @Query("SELECT * FROM games WHERE package_name = :packageName AND launch_shortcut_id = :shortcutId LIMIT 1")
