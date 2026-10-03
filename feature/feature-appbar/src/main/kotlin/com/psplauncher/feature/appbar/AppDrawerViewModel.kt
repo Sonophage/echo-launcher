@@ -88,7 +88,15 @@ data class AppDrawerUiState(
 
     val pendingRomLaunch: Long? = null,
 
+    val systemChips: List<SystemChip> = emptyList(),
+
+    val systemFilter: String? = null,
+
+    val chipFocus: Boolean = false,
+
 ) {
+    val showSystemChips: Boolean get() = activeFilter == AppFilter.GAMES && systemChips.size > 2
+
     val visibleApps: List<InstalledApp> get() = sectionApps + otherApps
 
     val sectionRowCount: Int get() = sectionApps.size
@@ -126,6 +134,7 @@ class AppDrawerViewModel @Inject constructor(
     private val gameRepository: com.psplauncher.core.domain.repository.GameRepository,
     private val memoryCardRepository: com.psplauncher.core.data.repository.MemoryCardRepository,
     private val mediaLaunchGate: com.psplauncher.core.data.launch.MediaLaunchGate,
+    private val platformDao: com.psplauncher.core.data.database.dao.PlatformDao,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AppDrawerUiState())
     val uiState: StateFlow<AppDrawerUiState> = _uiState.asStateFlow()
@@ -150,10 +159,12 @@ class AppDrawerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun romsInLibrary(): List<InstalledApp> =
-        gameRepository.observeAllGames().first()
-            .filter { it.packageName == null }
-            .map { game ->
+    private suspend fun romsInLibrary(): List<InstalledApp> {
+        val roms = gameRepository.observeAllGames().first().filter { it.packageName == null }
+        val names = roms.map { it.platformId }.distinct().associateWith { id ->
+            runCatching { platformDao.getById(id)?.shortName }.getOrNull() ?: id.uppercase()
+        }
+        return roms.map { game ->
                 InstalledApp(
                     packageName = "$ROM_KEY_PREFIX${game.id}",
                     label = game.title,
@@ -164,13 +175,44 @@ class AppDrawerViewModel @Inject constructor(
                     gameId = game.id,
                     art = game.artworkUri ?: game.iconUri,
                     playTimeMillis = game.totalPlayTimeMillis,
+                    platformId = game.platformId,
+                    platformName = names[game.platformId],
                 )
             }
+    }
 
     fun setFilter(filter: AppFilter) {
         if (filter != _uiState.value.activeFilter) menuSound.play(MenuSound.SYSTEM_BROWSE)
-        _uiState.update { it.copy(activeFilter = filter, selectedIndex = 0, letterFilter = null) }
+        _uiState.update { it.copy(activeFilter = filter, selectedIndex = 0, letterFilter = null, systemFilter = null, chipFocus = false) }
         applyFilter()
+    }
+
+    fun selectSystem(id: String?) {
+        if (id != _uiState.value.systemFilter) menuSound.play(MenuSound.SYSTEM_BROWSE)
+        _uiState.update { it.copy(systemFilter = id, selectedIndex = 0) }
+        applyFilter()
+    }
+
+    fun onSystemChipTapped(id: String?) {
+        _uiState.update { it.copy(usingTouch = true) }
+        selectSystem(id)
+    }
+
+    private fun handleChipRow(action: GamepadAction) {
+        val state = _uiState.value
+        val chips = state.systemChips
+        val at = chips.indexOfFirst { it.id == state.systemFilter }.coerceAtLeast(0)
+        when (action) {
+            GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT -> {
+                val next = (at + if (action == GamepadAction.NAVIGATE_LEFT) -1 else 1).coerceIn(0, chips.lastIndex)
+                if (next != at) selectSystem(chips[next].id)
+            }
+            GamepadAction.NAVIGATE_DOWN, GamepadAction.SELECT -> {
+                menuSound.play(MenuSound.SCROLL)
+                _uiState.update { it.copy(chipFocus = false) }
+            }
+            else -> Unit
+        }
     }
 
     fun onAppSelected(index: Int) {
@@ -179,7 +221,7 @@ class AppDrawerViewModel @Inject constructor(
 
     fun onAppTapped(index: Int) {
         if (index != _uiState.value.selectedIndex) menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(selectedIndex = index, usingTouch = true) }
+        _uiState.update { it.copy(selectedIndex = index, usingTouch = true, chipFocus = false) }
     }
 
     fun onTouchBrowse(index: Int) {
@@ -419,6 +461,12 @@ class AppDrawerViewModel @Inject constructor(
             return
         }
 
+        if (state.chipFocus) {
+            if (state.usingTouch) _uiState.update { it.copy(usingTouch = false) }
+            handleChipRow(action)
+            return
+        }
+
         val size  = state.visibleApps.size
         if (size == 0) return
 
@@ -428,9 +476,13 @@ class AppDrawerViewModel @Inject constructor(
             GamepadAction.CHANGE_SORT -> openAppMenuForSelected()
             GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT,
             GamepadAction.NAVIGATE_UP, GamepadAction.NAVIGATE_DOWN -> {
-                val next = wallMove(action, cur, wallLayout(state.sectionRowCount, size))
+                val cells = wallLayout(state.sectionRowCount, size)
+                val next = wallMove(action, cur, cells)
 
-                if (next != cur) {
+                if (next == cur && action == GamepadAction.NAVIGATE_UP && state.showSystemChips && cells[cur].row == 0) {
+                    menuSound.play(MenuSound.SCROLL)
+                    _uiState.update { it.copy(chipFocus = true) }
+                } else if (next != cur) {
                     _uiState.update { it.copy(selectedIndex = next) }
                     menuSound.play(MenuSound.SCROLL)
                 }
@@ -447,10 +499,12 @@ class AppDrawerViewModel @Inject constructor(
     private fun applyFilter() {
         val state = _uiState.value
 
-        val inTab = state.allApps
-            .filter { app ->
-                state.activeFilter.matches(app)
-            }
+        val tabApps = state.allApps.filter { app -> state.activeFilter.matches(app) }
+        val chips = if (state.activeFilter == AppFilter.GAMES) systemChips(tabApps) else emptyList()
+        val system = state.systemFilter?.takeIf { id -> chips.any { it.id == id } }
+
+        val inTab = tabApps
+            .ofSystem(system)
             .let { apps ->
                 if (state.activeFilter == AppFilter.RECENT) {
                     apps.sortedByDescending { it.lastUsedAt }
@@ -465,7 +519,7 @@ class AppDrawerViewModel @Inject constructor(
             }
         }
 
-        val rest = state.allApps
+        val rest = if (system != null) emptyList() else state.allApps
             .filter { app -> !state.activeFilter.matches(app) }
 
         val letters = letterMenuFor((inTab + rest).map { it.label })
@@ -479,6 +533,8 @@ class AppDrawerViewModel @Inject constructor(
                 filterCounts = counts,
                 letterMenu = letters,
                 letterFilter = pick,
+                systemChips = chips,
+                systemFilter = system,
             )
         }
     }

@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -66,6 +68,7 @@ import com.psplauncher.core.ui.icons.AppIconArt
 import com.psplauncher.core.ui.icons.rememberAppIcon
 import com.psplauncher.feature.appbar.AppFilter
 import com.psplauncher.feature.appbar.InstalledApp
+import com.psplauncher.feature.appbar.SystemChip
 import com.psplauncher.feature.appbar.WALL_COLUMNS
 import com.psplauncher.feature.appbar.wallLayout
 
@@ -322,6 +325,42 @@ private fun Hint(actions: List<GamepadAction>, label: String, u: DesignUnits, on
                 .padding(horizontal = u.dp(22)),
             contentAlignment = Alignment.Center,
         ) { Text(label, style = style.copy(color = Color.White)) }
+    }
+}
+
+@Composable
+internal fun SystemChipRow(
+    chips: List<SystemChip>,
+    selected: String?,
+    focused: Boolean,
+    u: DesignUnits,
+    onChip: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+    val at = chips.indexOfFirst { it.id == selected }.coerceAtLeast(0)
+    LaunchedEffect(at) { listState.animateScrollToItem((at - 1).coerceAtLeast(0)) }
+    LazyRow(state = listState, modifier = modifier, horizontalArrangement = Arrangement.spacedBy(u.dp(8)),
+        verticalAlignment = Alignment.CenterVertically) {
+        itemsIndexed(chips, key = { _, chip -> chip.id ?: "" }) { index, chip ->
+            val on = index == at
+            val shape = RoundedCornerShape(22.dp)
+            Row(
+                Modifier
+                    .heightIn(min = 44.dp)
+                    .clip(shape)
+                    .background(if (on) Color.White else Color.White.copy(alpha = 0.1f))
+                    .then(if (on && focused) Modifier.border(u.dp(2.5f), Color.White.copy(alpha = 0.5f), shape) else Modifier)
+                    .clickable { onChip(chip.id) }
+                    .padding(horizontal = u.dp(18)),
+                horizontalArrangement = Arrangement.spacedBy(u.dp(6)),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val ink = if (on) WallBase else Color.White
+                Text(chip.label, color = ink, fontSize = u.sp(14), fontWeight = if (on) FontWeight.Medium else FontWeight.Light, maxLines = 1)
+                Text(chip.count.toString(), color = ink.copy(alpha = 0.6f), fontSize = u.sp(11), fontWeight = FontWeight.Light)
+            }
+        }
     }
 }
 

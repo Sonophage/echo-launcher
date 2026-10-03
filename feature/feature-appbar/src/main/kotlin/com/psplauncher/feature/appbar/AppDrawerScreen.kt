@@ -57,6 +57,7 @@ import com.psplauncher.feature.appbar.appdrawer.WallHeading
 import com.psplauncher.feature.appbar.appdrawer.WallHints
 import com.psplauncher.feature.appbar.appdrawer.WallInfo
 import com.psplauncher.feature.appbar.appdrawer.WallShade
+import com.psplauncher.feature.appbar.appdrawer.SystemChipRow
 import com.psplauncher.feature.appbar.appdrawer.actionLabel
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -184,6 +185,10 @@ fun AppDrawerScreen(
         },
         onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
+        onSystemChip = { id ->
+            onTouchInteraction()
+            viewModel.onSystemChipTapped(id)
+        },
         onCloseMenu = { viewModel.closeAppMenu() },
         onConfirmUninstall = { viewModel.confirmUninstall() },
         onCancelUninstall = { viewModel.cancelUninstall() },
@@ -215,6 +220,7 @@ internal fun AppDrawerContent(
 
     onLetterRailTouch: (Int) -> Unit = {},
     onLetterRailReleased: () -> Unit = {},
+    onSystemChip: (String?) -> Unit = {},
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize().background(PanelBase)) {
         val u = DesignUnits(minOf(maxWidth.value / WALL_DESIGN_WIDTH, maxHeight.value / WALL_DESIGN_HEIGHT), LocalDensity.current)
@@ -234,41 +240,53 @@ internal fun AppDrawerContent(
             )
 
             Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                Box(modifier = Modifier.padding(start = u.dp(80), top = u.dp(14)).width(u.dp(560)).fillMaxHeight()) {
-                    val tabMessage = @Composable {
-                        EmptyDrawerMessage(
-                            filter = state.activeFilter,
-                            hasUsageAccess = state.hasUsageAccess,
-                            onGrantUsageAccess = onGrantUsageAccess,
+                Column(modifier = Modifier.padding(start = u.dp(80), top = u.dp(14)).width(u.dp(560)).fillMaxHeight()) {
+                    if (state.showSystemChips) {
+                        SystemChipRow(
+                            chips = state.systemChips,
+                            selected = state.systemFilter,
+                            focused = state.chipFocus,
                             u = u,
+                            onChip = onSystemChip,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = u.dp(10)),
                         )
                     }
-                    when {
-                        state.isLoading -> {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.align(Alignment.Center),
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        val tabMessage = @Composable {
+                            EmptyDrawerMessage(
+                                filter = state.activeFilter,
+                                hasUsageAccess = state.hasUsageAccess,
+                                onGrantUsageAccess = onGrantUsageAccess,
+                                u = u,
                             )
                         }
+                        when {
+                            state.isLoading -> {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.align(Alignment.Center),
+                                )
+                            }
 
-                        state.visibleApps.isEmpty() -> Box(Modifier.align(Alignment.Center)) { tabMessage() }
+                            state.visibleApps.isEmpty() -> Box(Modifier.align(Alignment.Center)) { tabMessage() }
 
-                        else -> {
-                            AppWall(
-                                apps = state.visibleApps,
-                                sectionCount = state.sectionApps.size,
-                                filter = state.activeFilter,
-                                selectedIndex = state.selectedIndex,
-                                usingTouch = state.usingTouch,
-                                u = u,
-                                onAppTapped = onAppTapped,
-                                onAppLaunched = onAppLaunched,
-                                onAppMenu = onAppMenu,
-                                restHeading = {
-                                    if (state.sectionApps.isEmpty()) tabMessage() else WallHeading(EVERYTHING_ELSE, u)
-                                },
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                            else -> {
+                                AppWall(
+                                    apps = state.visibleApps,
+                                    sectionCount = state.sectionApps.size,
+                                    filter = state.activeFilter,
+                                    selectedIndex = if (state.chipFocus) -1 else state.selectedIndex,
+                                    usingTouch = state.usingTouch,
+                                    u = u,
+                                    onAppTapped = onAppTapped,
+                                    onAppLaunched = onAppLaunched,
+                                    onAppMenu = onAppMenu,
+                                    restHeading = {
+                                        if (state.sectionApps.isEmpty()) tabMessage() else WallHeading(EVERYTHING_ELSE, u)
+                                    },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
                         }
                     }
                 }

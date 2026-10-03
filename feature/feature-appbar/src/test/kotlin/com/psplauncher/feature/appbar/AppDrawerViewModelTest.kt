@@ -42,6 +42,7 @@ class AppDrawerViewModelTest {
             mockk(relaxed = true),
 
             mockk(relaxed = true),
+            mockk(relaxed = true),
         )
     }
 
@@ -207,6 +208,7 @@ class AppDrawerViewModelTest {
             games,
             mockk(relaxed = true),
 
+            mockk(relaxed = true),
             mockk(relaxed = true),
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -378,7 +380,7 @@ class AppDrawerViewModelTest {
 
     private fun drawerOver(apps: List<InstalledApp>): AppDrawerViewModel {
         coEvery { repository.getInstalledApps() } returns apps
-        return AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true))
+        return AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
     }
 
     private fun pick(vm: AppDrawerViewModel, letter: Char) {
