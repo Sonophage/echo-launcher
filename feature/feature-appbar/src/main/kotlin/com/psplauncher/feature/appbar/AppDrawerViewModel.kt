@@ -80,8 +80,6 @@ data class AppDrawerUiState(
 
     val filterCounts: Map<AppFilter, Int> = emptyMap(),
 
-    val sectionListRows: Int = SECTION_LIST_ROWS,
-
     val letterMenu: List<Char> = emptyList(),
 
     val letterCursor: Int? = null,
@@ -162,7 +160,9 @@ class AppDrawerViewModel @Inject constructor(
                     icon = null,
                     isGame = true,
                     isEmulator = false,
+                    lastUsedAt = game.lastPlayedAt ?: 0L,
                     gameId = game.id,
+                    art = game.artworkUri ?: game.iconUri,
                 )
             }
 
@@ -174,12 +174,6 @@ class AppDrawerViewModel @Inject constructor(
 
     fun onAppSelected(index: Int) {
         _uiState.update { it.copy(selectedIndex = index) }
-    }
-
-    fun setSectionListRows(rows: Int) {
-        if (rows > 0 && rows != _uiState.value.sectionListRows) {
-            _uiState.update { it.copy(sectionListRows = rows) }
-        }
     }
 
     fun onAppTapped(index: Int) {
@@ -429,10 +423,10 @@ class AppDrawerViewModel @Inject constructor(
         if (state.usingTouch) _uiState.update { it.copy(usingTouch = false) }
         val cur = state.selectedIndex
         when (action) {
-            GamepadAction.OPEN_CONTEXT_MENU -> openAppMenuForSelected()
+            GamepadAction.CHANGE_SORT -> openAppMenuForSelected()
             GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT,
             GamepadAction.NAVIGATE_UP, GamepadAction.NAVIGATE_DOWN -> {
-                val next = sectionMove(action, cur, state.sectionRowCount, size, state.sectionListRows)
+                val next = wallMove(action, cur, wallLayout(state.sectionRowCount, size))
 
                 if (next != cur) {
                     _uiState.update { it.copy(selectedIndex = next) }
