@@ -50,6 +50,10 @@ class MusicPlaybackService : Service() {
         controller.state.onEach { state ->
             if (state.track == null) stopPlayback() else if (started) update(state)
         }.launchIn(scope)
+        controller.positionMs.onEach {
+            val state = controller.state.value
+            if (started && state.track != null) update(state)
+        }.launchIn(scope)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -93,7 +97,7 @@ class MusicPlaybackService : Service() {
                 )
                 .setState(
                     if (state.isPlaying) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
-                    state.positionMs.toLong(), 1f,
+                    controller.positionMs.value.toLong(), 1f,
                 )
                 .build()
         )

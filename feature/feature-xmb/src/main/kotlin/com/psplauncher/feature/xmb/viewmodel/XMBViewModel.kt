@@ -1344,6 +1344,10 @@ class XMBViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(XMBUiState())
     val uiState: StateFlow<XMBUiState> = _uiState.asStateFlow()
 
+    val musicPositionMs: StateFlow<Int> get() = musicPlayer.positionMs
+
+    val externalPositionMs: StateFlow<Long> get() = AndroidNotifications.playbackPositionMs
+
     private var currentItemsJob: Job? = null
 
     private var musicBrowserJob: Job? = null

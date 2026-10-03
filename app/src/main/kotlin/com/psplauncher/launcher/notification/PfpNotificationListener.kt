@@ -72,8 +72,9 @@ class PfpNotificationListener : NotificationListenerService(), AndroidNotificati
     }
 
     override fun playPause() {
-        val controls = nowPlaying()?.controller ?: return
-        if (controls.playbackState?.state == PlaybackState.STATE_PLAYING) {
+        val (session, state) = nowPlaying() ?: return
+        val controls = session.controller ?: return
+        if (state.isPlaying()) {
             controls.transportControls.pause()
         } else {
             controls.transportControls.play()
@@ -81,7 +82,7 @@ class PfpNotificationListener : NotificationListenerService(), AndroidNotificati
     }
 
     override fun skipNext() {
-        nowPlaying()?.controller?.transportControls?.skipToNext()
+        nowPlaying()?.first?.controller?.transportControls?.skipToNext()
     }
 
     override fun open(key: String): Boolean {
@@ -181,28 +182,37 @@ class PfpNotificationListener : NotificationListenerService(), AndroidNotificati
                 .firstOrNull { it.packageName == sbn.packageName }
     }.onFailure { Timber.i(it, "No media session for ${sbn.packageName}") }.getOrNull()
 
-    private fun MediaSessionNotice.isPlaying(): Boolean =
-        controller?.playbackState?.state == PlaybackState.STATE_PLAYING
+    private fun PlaybackState?.isPlaying(): Boolean = this?.state == PlaybackState.STATE_PLAYING
 
-    private fun nowPlaying(): MediaSessionNotice? =
-        sessions.values.sortedWith(compareByDescending<MediaSessionNotice> { it.isPlaying() }.thenByDescending { it.sbn.postTime })
-            .firstOrNull()
+    private fun nowPlaying(): Pair<MediaSessionNotice, PlaybackState?>? =
+        sessions.values.map { it to it.controller?.playbackState }
+            .maxWithOrNull(compareBy<Pair<MediaSessionNotice, PlaybackState?>> { it.second.isPlaying() }.thenBy { it.first.sbn.postTime })
 
     private fun publishPlayback() {
         main.removeCallbacks(tick)
         val now = nowPlaying()
-        AndroidNotifications.publishPlayback(now?.toPlayback())
-        if (now != null && now.isPlaying()) main.postDelayed(tick, 1_000)
+        if (now == null) {
+            AndroidNotifications.publishPlayback(null)
+            return
+        }
+        val (session, state) = now
+        AndroidNotifications.publishPlayback(session.toPlayback(state), session.positionMs(state))
+        if (state.isPlaying()) main.postDelayed(tick, 1_000)
     }
 
-    private fun MediaSessionNotice.toPlayback(): ExternalPlayback {
-        val extras = sbn.notification.extras
-        val state = controller?.playbackState
+    private fun MediaSessionNotice.durationMs(): Long = meta?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0) ?: 0
+
+    private fun MediaSessionNotice.positionMs(state: PlaybackState?): Long {
         val position = state?.let {
             val elapsed = if (it.state == PlaybackState.STATE_PLAYING) SystemClock.elapsedRealtime() - it.lastPositionUpdateTime else 0
             it.position + (elapsed * it.playbackSpeed).toLong()
         } ?: 0
-        val duration = meta?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0) ?: 0
+        val duration = durationMs()
+        return if (duration > 0) position.coerceIn(0, duration) else position.coerceAtLeast(0)
+    }
+
+    private fun MediaSessionNotice.toPlayback(state: PlaybackState?): ExternalPlayback {
+        val extras = sbn.notification.extras
         return ExternalPlayback(
             packageName = sbn.packageName,
             appLabel = appLabelFor(sbn.packageName),
@@ -212,9 +222,8 @@ class PfpNotificationListener : NotificationListenerService(), AndroidNotificati
             artist = meta?.getString(MediaMetadata.METADATA_KEY_ARTIST)?.takeIf { it.isNotBlank() }
                 ?: extras?.string(Notification.EXTRA_TEXT)?.takeIf { it.isNotBlank() },
             art = art,
-            playing = isPlaying(),
-            positionMs = if (duration > 0) position.coerceIn(0, duration) else position.coerceAtLeast(0),
-            durationMs = duration,
+            playing = state.isPlaying(),
+            durationMs = durationMs(),
         )
     }
 

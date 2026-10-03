@@ -190,6 +190,8 @@ fun XMBShellContainer(
     }
 
     Box(Modifier.fillMaxSize()) {
+    val playbackPositions = remember(viewModel) { PlaybackPositions(viewModel.musicPositionMs, viewModel.externalPositionMs) }
+    CompositionLocalProvider(LocalPlaybackPositions provides playbackPositions) {
     XMBShell(
         uiState = uiState,
         onCategorySelected = viewModel::onCategoryTapped,
@@ -346,6 +348,7 @@ fun XMBShellContainer(
         onMusicPlayerBack = viewModel::closeMusicPlayer,
         onOpenAndroidLibraryPicker = viewModel::openAndroidLibraryPicker,
     )
+    }
 
     uiState.discCeremony?.let { ceremony ->
         DiscLaunchCeremony(
@@ -550,14 +553,8 @@ fun XMBShell(
           com.psplauncher.core.ui.icons.LocalXmbIconOverrides provides uiState.iconOverrides,
 
           LocalLiveRowProgress provides uiState.musicPlayback.let { pb ->
-              val total = pb.durationMs
-              if (pb.track != null && total > 0) {
-                  LiveRowProgress(
-                      itemId = XMBViewModel.NOW_PLAYING_ITEM_ID,
-                      fraction = (pb.positionMs.toFloat() / total).coerceIn(0f, 1f),
-                      label = formatDuration(pb.positionMs.toLong()) + "  /  " +
-                          formatDuration(total.toLong()),
-                  )
+              if (pb.track != null && pb.durationMs > 0) {
+                  LiveRowProgress(XMBViewModel.NOW_PLAYING_ITEM_ID, pb.durationMs.toLong())
               } else null
           },
 
@@ -729,8 +726,8 @@ fun XMBShell(
                     waveStyle = effectiveWaveStyle,
                     accentArgb = uiState.focusedItemAccentArgb ?: uiState.wallpaperAccent,
                     modifier = Modifier.fillMaxSize(),
-                    speedScale = waveSpeed,
-                    glowScale = waveGlow,
+                    speedScale = { waveSpeed },
+                    glowScale = { waveGlow },
                 )
             }
 
@@ -1025,12 +1022,7 @@ fun XMBShell(
                 StripLiveActivity(
                     art = music.art,
                     title = music.title,
-                    detail = listOfNotNull(
-                        music.artist,
-                        music.app,
-                        (formatDuration(music.positionMs) + " / " + formatDuration(music.durationMs))
-                            .takeIf { music.packageName == null || music.durationMs > 0 },
-                    ).joinToString("  ·  "),
+                    detail = listOfNotNull(music.artist, music.app).joinToString("  ·  "),
                     stage = music,
                 )
             }

@@ -41,21 +41,12 @@ internal fun XMBUiState.musicRootSections(): List<XMBItem> {
     val totalTracks = folders.sumOf { it.trackCount }
     return buildList {
         musicPlayback.track?.let { track ->
-
-            val total = musicPlayback.durationMs
             add(
                 XMBItem(
                     id       = NOW_PLAYING_ITEM_ID,
                     title    = track.displayTitle,
                     subtitle = listOfNotNull("Now Playing", track.artist).joinToString("  ·  "),
                     coverUri = track.artUri,
-                    progressFraction = if (total > 0) {
-                        (musicPlayback.positionMs.toFloat() / total).coerceIn(0f, 1f)
-                    } else null,
-                    progressLabel = if (total > 0) {
-                        formatDuration(musicPlayback.positionMs.toLong()) +
-                            "  /  " + formatDuration(total.toLong())
-                    } else null,
                     type     = XMBItemType.MUSIC_TRACK,
                 )
             )

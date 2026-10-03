@@ -9,9 +9,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -38,8 +40,8 @@ internal const val WAVE_IDLE_FRAME_MS = 50L
 
 internal fun waveFrameMs(speedScale: Float): Long = if (speedScale < 1f) WAVE_IDLE_FRAME_MS else WAVE_FRAME_MS
 
-internal fun waveClockSeconds(elapsedMs: Long, speed: Float, frameMs: Long): Float =
-    (elapsedMs - elapsedMs % frameMs) / 1000f * speed
+internal fun advanceWaveClock(t: Float, lastSteppedMs: Long, steppedMs: Long, speed: Float): Float =
+    if (lastSteppedMs < 0L) t else t + (steppedMs - lastSteppedMs) / 1000f * speed
 private const val TAU = 6.2831853f
 
 @Composable
@@ -47,35 +49,38 @@ fun WaveLayers(
     waveStyle: WaveStyle,
     tint: Color = Color.White,
 
-    speedScale: Float = 1f,
+    speedScale: () -> Float = { 1f },
 
-    glowScale: Float = 1f,
+    glowScale: () -> Float = { 1f },
 ) {
-    val alphaScale = (if (waveStyle.reduced) 0.5f else 1f) * glowScale
-    val ampScale   = if (waveStyle.reduced) 0.65f else 1f
+    val reduced = waveStyle.reduced
+    val ampScale = if (reduced) 0.65f else 1f
+    val alphaScale = { ((if (reduced) 0.5f else 1f) * glowScale()).coerceAtMost(1f) }
 
     val animated = waveStyle.animated
-    val speed = (if (waveStyle.reduced) 0.5f else 1f) * speedScale
-    val frameMs = waveFrameMs(speedScale)
-    val time by produceState(STATIC_TIME, animated, speed, frameMs) {
+    val currentSpeedScale by rememberUpdatedState(speedScale)
+    val currentReduced by rememberUpdatedState(reduced)
+    val frameMs by remember { derivedStateOf { waveFrameMs(currentSpeedScale()) } }
+    val time = produceState(STATIC_TIME, animated, frameMs) {
         if (!animated) {
             value = STATIC_TIME
             return@produceState
         }
-        var startMs = -1L
+        var lastMs = -1L
         while (true) {
             withInfiniteAnimationFrameMillis { nowMs ->
                 val stepped = steppedFrameMs(nowMs, frameMs)
-                if (startMs < 0L) startMs = stepped
-                value = waveClockSeconds(stepped - startMs, speed, frameMs)
+                val speed = (if (currentReduced) 0.5f else 1f) * currentSpeedScale()
+                value = advanceWaveClock(value, lastMs, stepped, speed)
+                lastMs = stepped
             }
         }
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        ShaderWave(time, alphaScale.coerceAtMost(1f), ampScale, tint)
+        ShaderWave({ time.value }, alphaScale, ampScale, tint)
     } else {
-        FallbackWave(time, alphaScale.coerceAtMost(1f), ampScale, tint)
+        FallbackWave({ time.value }, alphaScale, ampScale, tint)
     }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -357,7 +362,7 @@ private fun rememberWaveShader(): RuntimeShader? = remember {
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
-private fun ShaderWave(time: Float, alphaScale: Float, ampScale: Float, tint: Color) {
+private fun ShaderWave(time: () -> Float, alphaScale: () -> Float, ampScale: Float, tint: Color) {
     val shader = rememberWaveShader() ?: return FallbackWave(time, alphaScale, ampScale, tint)
     val brush = remember(shader) { ShaderBrush(shader) }
     Canvas(
@@ -366,18 +371,20 @@ private fun ShaderWave(time: Float, alphaScale: Float, ampScale: Float, tint: Co
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen),
     ) {
         shader.setFloatUniform("iResolution", size.width, size.height)
-        shader.setFloatUniform("iTime", time)
+        shader.setFloatUniform("iTime", time())
         shader.setFloatUniform("ampScale", ampScale)
-        shader.setFloatUniform("alphaScale", alphaScale)
+        shader.setFloatUniform("alphaScale", alphaScale())
         shader.setFloatUniform("waveTint", tint.red, tint.green, tint.blue)
         drawRect(brush = brush)
     }
 }
 
 @Composable
-private fun FallbackWave(time: Float, alphaScale: Float, ampScale: Float, tint: Color) {
+private fun FallbackWave(time: () -> Float, alphaScale: () -> Float, ampScale: Float, tint: Color) {
     val amp = 0.05f * ampScale
     Canvas(modifier = Modifier.fillMaxSize()) {
+        val time = time()
+        val alphaScale = alphaScale()
         drawFold(time, base01 = 0.63f, amp01 = amp * 0.9f, freq = 0.80f, phase = 1.7f, drift = -0.38f, sheet = 0.090f * alphaScale, edge = 0.125f * alphaScale, tint = tint)
         drawFold(time, base01 = 0.75f, amp01 = amp * 1.2f, freq = 0.42f, phase = 3.1f, drift = 0.30f,  sheet = 0.105f * alphaScale, edge = 0.145f * alphaScale, tint = tint)
     }

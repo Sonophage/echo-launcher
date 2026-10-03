@@ -40,7 +40,6 @@ data class ExternalPlayback(
     val artist: String?,
     val art: Any?,
     val playing: Boolean,
-    val positionMs: Long = 0,
     val durationMs: Long = 0,
 )
 
@@ -93,7 +92,12 @@ object AndroidNotifications {
 
     val playback: StateFlow<ExternalPlayback?> = _playback
 
-    fun publishPlayback(playback: ExternalPlayback?) {
+    private val _playbackPositionMs = MutableStateFlow(0L)
+
+    val playbackPositionMs: StateFlow<Long> = _playbackPositionMs
+
+    fun publishPlayback(playback: ExternalPlayback?, positionMs: Long = 0) {
+        _playbackPositionMs.value = positionMs
         _playback.value = playback
     }
 
@@ -118,6 +122,7 @@ object AndroidNotifications {
     fun disconnected() {
         _active.value = emptyList()
         _playback.value = null
+        _playbackPositionMs.value = 0
         actions = null
     }
 

@@ -21,7 +21,7 @@ class IslandStageTest {
         val s = XMBUiState(
             showBootSequence = false,
             recentTop = game,
-            musicPlayback = MusicPlaybackState(track = track, isPlaying = false, positionMs = 1_000, durationMs = 4_000),
+            musicPlayback = MusicPlaybackState(track = track, isPlaying = false, durationMs = 4_000),
         )
         assertTrue("the panel's media row still prefers the loaded track", s.mediaStage() is PanelStage.Music)
         assertTrue("the island shows the recent game, so its stage and tint must be the game's", s.recentStage() is PanelStage.Game)
@@ -29,14 +29,31 @@ class IslandStageTest {
 
     @Test
     fun `the island draws a progress line only when there is a real position to show`() {
-        assertEquals(0.25f, PanelStage.Music("a", null, null, null, true, true, 1_000, 4_000).islandProgress!!, 0.001f)
-        assertNull("a recent track has no duration, so no line", PanelStage.Music("a", null, null, null, false, false, 0, 0).islandProgress)
-        assertEquals(0.6f, PanelStage.Video("v", null, null, 0.6f, null).islandProgress!!, 0.001f)
-        assertNull(PanelStage.Game("g", null, null, 0).islandProgress)
+        assertEquals(0.25f, PanelStage.Music("a", null, null, null, true, true, 4_000).islandProgress(1_000)!!, 0.001f)
+        assertNull("a recent track has no duration, so no line", PanelStage.Music("a", null, null, null, false, false, 0).islandProgress(0))
+        assertEquals(0.6f, PanelStage.Video("v", null, null, 0.6f, null).islandProgress(0)!!, 0.001f)
+        assertNull(PanelStage.Game("g", null, null, 0).islandProgress(0))
+    }
+
+    @Test
+    fun `the island shows a time only for a loaded track, and an app session only once it reports a length`() {
+        assertEquals("0:01 / 0:04", PanelStage.Music("a", null, null, null, true, true, 4_000).timeLabel(1_000))
+        assertNull("a recent track has no position", PanelStage.Music("a", null, null, null, false, false, 0).timeLabel(0))
+        assertNull("an app that reports no length gets no time", PanelStage.Music("a", null, null, null, true, true, 0, "Stremio", "com.stremio.one").timeLabel(5_000))
+    }
+
+    @Test
+    fun `the moving position lives outside the ui state, so a playback tick cannot recompose the shell`() {
+        listOf(MusicPlaybackState::class.java, ExternalPlayback::class.java, PanelStage.Music::class.java).forEach { type ->
+            assertTrue(
+                "${type.simpleName} carries a position; it belongs in the position flows",
+                type.declaredFields.none { it.name.contains("position", ignoreCase = true) },
+            )
+        }
     }
 
     private fun stremio(playing: Boolean) =
-        ExternalPlayback("com.stremio.one", "Stremio", "Hotel Del Luna", null, null, playing, 60_000, 3_600_000)
+        ExternalPlayback("com.stremio.one", "Stremio", "Hotel Del Luna", null, null, playing, 3_600_000)
 
     private fun nowPlaying(ownPlaying: Boolean?, external: ExternalPlayback?) = XMBUiState(
         showBootSequence = false,
