@@ -30,6 +30,7 @@ internal fun gameContextMenuItems(
 
     return buildList {
         add(XMBContextMenuItem("play", "Play", hidden = true))
+        if (state.gameInfo == null) add(XMBContextMenuItem("game_info", "Game Info"))
 
         if (discCount > 1) add(XMBContextMenuItem("choose_disc", "Choose Disc"))
         if (item.platformId == PlatformIds.WINDOWS) {

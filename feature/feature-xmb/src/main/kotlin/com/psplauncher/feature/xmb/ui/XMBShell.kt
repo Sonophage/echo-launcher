@@ -252,6 +252,8 @@ fun XMBShellContainer(
         onClosePhotoViewer = viewModel::onClosePhotoViewer,
         onPhotoViewerActionConsumed = viewModel::consumePhotoViewerAction,
         onCloseAppDetail = viewModel::onCloseAppDetail,
+        onGameInfoCardFocused = viewModel::onGameInfoCursor,
+        onGameInfoNoticeTapped = viewModel::onGameInfoNoticeTapped,
         onAppDetailActionConsumed = viewModel::consumeAppDetailAction,
         onContextMenuItemActivated = viewModel::onContextMenuItemActivatedAt,
         onContextMenuDismiss = viewModel::closeContextMenu,
@@ -419,6 +421,8 @@ fun XMBShell(
     onClosePhotoViewer: () -> Unit = {},
     onPhotoViewerActionConsumed: () -> Unit = {},
     onCloseAppDetail: () -> Unit = {},
+    onGameInfoCardFocused: (Int) -> Unit = {},
+    onGameInfoNoticeTapped: (String) -> Unit = {},
     onAppDetailActionConsumed: () -> Unit = {},
     onContextMenuItemActivated: (Int) -> Unit = {},
     onContextMenuDismiss: () -> Unit = {},
@@ -563,6 +567,7 @@ fun XMBShell(
                 uiState.activeVideoId != null ||
                 uiState.activePhotoViewer != null ||
                 uiState.activeAppId != null || uiState.activeAppDrawerFilter != null ||
+                uiState.gameInfo != null ||
                 uiState.musicPlayerVisible ||
 
                 false
@@ -1237,6 +1242,17 @@ fun XMBShell(
                     accentArgb = uiState.musicAccentArgb,
                     onBack = onMusicPlayerBack,
                     onAction = onPromptTapped,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            uiState.gameInfo?.let { info ->
+                GameInfoScreen(
+                    info = info,
+                    androidNotices = uiState.androidNotices,
+                    onAction = onPromptTapped,
+                    onCardFocused = onGameInfoCardFocused,
+                    onNoticeTapped = onGameInfoNoticeTapped,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
