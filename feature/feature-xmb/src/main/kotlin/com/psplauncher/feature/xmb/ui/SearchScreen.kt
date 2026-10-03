@@ -150,19 +150,25 @@ fun SearchScreen(
             }
         }
 
-        if (!imeUp) {
-            Column(
-                Modifier
-                    .fillMaxHeight()
-                    .padding(start = u.dp(520), end = u.dp(80), top = u.dp(96), bottom = HintBarHeight),
-                verticalArrangement = Arrangement.spacedBy(u.dp(20)),
-            ) {
-                when {
-                    empty != null -> Box(Modifier.padding(top = u.dp(200))) { EmptyNotice(empty, u) }
-                    focused != null -> Preview(focused, icon?.bitmap, u) { onActivateAt(state.selectedIndex) }
-                }
+        Column(
+            Modifier
+                .fillMaxHeight()
+                .padding(
+                    start = u.dp(520),
+                    end = u.dp(80),
+                    top = if (imeUp) StatusStripHeight + u.dp(12) else u.dp(96),
+                    bottom = if (imeUp) 10.dp else HintBarHeight,
+                )
+                .imePadding(),
+            verticalArrangement = Arrangement.spacedBy(u.dp(if (imeUp) 12 else 20)),
+        ) {
+            when {
+                empty != null && !imeUp -> Box(Modifier.padding(top = u.dp(200))) { EmptyNotice(empty, u) }
+                focused != null -> Preview(focused, icon?.bitmap, u, compact = imeUp) { onActivateAt(state.selectedIndex) }
             }
+        }
 
+        if (!imeUp) {
             PfpHintBar(
                 items = listOf(
                     ControllerPromptItem(GamepadAction.BACK, "Close"),
@@ -232,7 +238,7 @@ private fun ResultRow(row: XMBItem, focused: Boolean, u: DesignUnits, onClick: (
 }
 
 @Composable
-private fun ColumnScope.Preview(row: XMBItem, icon: ImageBitmap?, u: DesignUnits, onActivate: () -> Unit) {
+private fun ColumnScope.Preview(row: XMBItem, icon: ImageBitmap?, u: DesignUnits, compact: Boolean, onActivate: () -> Unit) {
     val (kind, detail) = kindAndDetail(row)
     val game = row.gameId != null
     Box(
@@ -255,10 +261,10 @@ private fun ColumnScope.Preview(row: XMBItem, icon: ImageBitmap?, u: DesignUnits
     }
     Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
         Eyebrow(kind, u)
-        Headline(row.title, u.sp(46), 2)
+        Headline(row.title, u.sp(if (compact) 32 else 46), if (compact) 1 else 2)
         Meta(row.metadataLine?.takeIf { it.isNotBlank() } ?: detail, u.sp(15))
     }
-    if (game && (row.lastOpenedAt != null || row.totalPlayTimeMillis > 0 || detail.isNotBlank())) {
+    if (!compact && game && (row.lastOpenedAt != null || row.totalPlayTimeMillis > 0 || detail.isNotBlank())) {
         Row(horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
             row.lastOpenedAt?.let { Stat("Last played", relativeTime(System.currentTimeMillis(), it), u) }
             if (row.totalPlayTimeMillis > 0) Stat("Play time", playTimeLabel(row.totalPlayTimeMillis), u)
