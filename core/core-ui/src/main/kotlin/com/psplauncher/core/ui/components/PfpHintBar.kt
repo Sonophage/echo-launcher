@@ -40,6 +40,7 @@ import com.psplauncher.core.domain.model.ControllerDisplayType
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.theme.LocalPFPColors
+import com.psplauncher.core.ui.design.panelDesignUnits
 
 @Immutable
 data class HintAction(
@@ -72,7 +73,7 @@ fun PfpHintBar(
             .fillMaxWidth()
             .height(BarHeight)
 
-            .background(Brush.verticalGradient(0f to Color.Transparent, 1f to BarScrim))
+            .background(Brush.verticalGradient(0f to Color.Transparent, 1f to ChromeScrim))
             .padding(start = chromeGutter(), end = if (primary == null) chromeGutter(end = true) else 0.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(28))) {
@@ -200,8 +201,8 @@ private fun hintText(u: DesignUnits) = TextStyle(fontSize = u.sp(13), fontWeight
 private fun hintBarUnits(): DesignUnits {
     val density = LocalDensity.current
     val window = LocalWindowInfo.current.containerSize
-    val scale = minOf(window.width / density.density / FRAME_WIDTH, window.height / density.density / FRAME_HEIGHT)
-    return DesignUnits(scale.takeIf { it > 0f } ?: 1f, density)
+    val units = panelDesignUnits(window.width / density.density, window.height / density.density, density)
+    return if (units.scale > 0f) units else DesignUnits(1f, density)
 }
 
 @Composable
@@ -220,9 +221,6 @@ internal fun hintBarRow(
     .sortedBy { it.tappableAction() == GamepadAction.BACK }
 
 private val BarHeight = HintBarHeight
-private val BarScrim = Color(0xCC04060C)
 private val HintLabel = Color.White.copy(alpha = 0.85f)
 private val TabInk = Color(0xFF1A0D05)
 private val TabEdge = 2.dp
-private const val FRAME_WIDTH = 1200f
-private const val FRAME_HEIGHT = 752f

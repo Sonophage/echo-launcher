@@ -93,6 +93,8 @@ import com.psplauncher.feature.xmb.viewmodel.groupFriends
 import com.psplauncher.feature.xmb.viewmodel.rarityTier
 import com.psplauncher.feature.xmb.viewmodel.setKey
 import com.psplauncher.feature.xmb.viewmodel.showcase
+import com.psplauncher.feature.xmb.viewmodel.showcaseSet
+import com.psplauncher.core.ui.design.panelDesignUnits
 
 @Composable
 fun ProfileScreen(
@@ -108,14 +110,14 @@ fun ProfileScreen(
     onPickAvatar: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val backdrop = profile.data.recent.firstOrNull()?.let { it.artworkUri ?: it.iconUri }?.takeIf { it.isNotBlank() }
+    val backdrop = profileBanner(profile.data.recent)
     BoxWithConstraints(
         modifier
             .fillMaxSize()
             .panelBackdrop(ProfileTint)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
     ) {
-        val u = DesignUnits(minOf(maxWidth.value / PANEL_DESIGN_WIDTH, maxHeight.value / PANEL_DESIGN_HEIGHT), LocalDensity.current)
+        val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         if (backdrop != null) {
             AsyncImage(
                 model = rememberBlurSourceModel(backdrop),
@@ -225,7 +227,6 @@ internal fun ProfilePanel(
     focus: ProfileFocus,
     u: DesignUnits,
     onTapped: (ProfileSpot, Int) -> Unit,
-    onBack: () -> Unit,
 ) {
     val banner = profileBanner(data.recent)
     Box(Modifier.fillMaxSize()) {
@@ -339,7 +340,7 @@ private fun ShowcaseColumn(data: ProfileData, focused: Boolean, u: DesignUnits, 
     val shown = showcase(data.sets, data.badges)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
         SectionLabel("Showcase", u)
-        FocusBox(focused, u, { onTapped(ProfileSpot.SHOWCASE, shown.firstOrNull()?.let { data.sets.indexOf(it.set) }?.coerceAtLeast(0) ?: 0) }) {
+        FocusBox(focused, u, { onTapped(ProfileSpot.SHOWCASE, showcaseSet(data)) }) {
             if (shown.isEmpty()) Meta("No rare unlocks yet", u.sp(14))
             shown.chunked(2).forEach { pair ->
                 Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
@@ -673,7 +674,7 @@ private fun FriendRow(friend: DiscordFriend, focused: Boolean, u: DesignUnits, o
 }
 
 @Composable
-private fun SectionLabel(text: String, u: DesignUnits) {
+internal fun SectionLabel(text: String, u: DesignUnits) {
     Text(text.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(12), letterSpacing = 0.16.em),
         maxLines = 1, overflow = TextOverflow.Ellipsis)
 }

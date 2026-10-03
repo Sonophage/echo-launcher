@@ -56,4 +56,12 @@ class SettingsExitTest {
             Regex("""activeSettingsScreen\s*=\s*(?![=\s$]|null\b)""").findAll(source).count(),
         )
     }
+
+    @Test fun `opening Game info closes the Profile that draws above it`() {
+        val covered = XMBUiState(showBootSequence = false, profile = ProfileState())
+        val info = GameInfoState(XMBItem(id = "g", title = "Ico", gameId = 1L))
+        val open = covered.withGameInfoOpen(info)
+        assertEquals(info, open.gameInfo)
+        assertNull("the Profile draws above Game info and takes its input, so Game info would open unseen", open.profile)
+    }
 }

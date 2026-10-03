@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -72,7 +71,6 @@ import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.PanelBase
 import com.psplauncher.core.ui.image.rememberArtworkModel
 import com.psplauncher.core.ui.image.rememberBlurSourceModel
-import com.psplauncher.feature.xmb.ui.detail.panelPlayTime
 import com.psplauncher.feature.xmb.viewmodel.RecentDay
 import com.psplauncher.feature.xmb.viewmodel.RecentFilter
 import com.psplauncher.feature.xmb.viewmodel.RecentKind
@@ -80,12 +78,12 @@ import com.psplauncher.feature.xmb.viewmodel.XMBItem
 import com.psplauncher.feature.xmb.viewmodel.groupRecentsByDay
 import com.psplauncher.feature.xmb.viewmodel.isInstalledApp
 import com.psplauncher.feature.xmb.viewmodel.recentKind
+import com.psplauncher.core.common.format.playTimeLabel
 import com.psplauncher.core.common.format.relativeTime
 import com.psplauncher.core.ui.design.PanelButton
 import com.psplauncher.feature.xmb.viewmodel.removableFromRecent
+import com.psplauncher.core.ui.design.panelDesignUnits
 
-private const val DESIGN_WIDTH = 1200f
-private const val DESIGN_HEIGHT = 752f
 private const val LETTERBOX_RATIO = 2.39f
 
 @Composable
@@ -106,7 +104,7 @@ fun LastPlayedPage(
     val empty = if (filter == RecentFilter.ALL) "Nothing played yet." else "No recent ${filter.label.lowercase()}."
 
     BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
-        val u = DesignUnits(minOf(maxWidth.value / DESIGN_WIDTH, maxHeight.value / DESIGN_HEIGHT), LocalDensity.current)
+        val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Crossfade(railVisible, animationSpec = tween(220), label = "recentRail") { rail ->
             if (rail) {
                 RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, onAction)
@@ -379,7 +377,7 @@ private fun detailLine(item: XMBItem, now: Long): String {
         RecentKind.APP -> "Used"
     }
     val opened = item.lastOpenedAt?.let { relativeTime(now, it) }?.let { "$verb ${if (it == "Now") "just now" else it}" }
-    val played = panelPlayTime(item.totalPlayTimeMillis)?.let { "$it played" }
+    val played = item.totalPlayTimeMillis.takeIf { it > 0L }?.let(::playTimeLabel)?.let { "$it played" }
     return listOfNotNull(opened, played).joinToString(" · ").ifBlank { kindLabel(item) }
 }
 

@@ -1,5 +1,6 @@
 package com.psplauncher.feature.xmb.ui.detail
 
+import com.psplauncher.core.common.format.playTimeLabel
 import com.psplauncher.core.domain.model.Game
 import com.psplauncher.feature.xmb.viewmodel.XMBItem
 import com.psplauncher.feature.xmb.viewmodel.gameMetadataLine
@@ -60,16 +61,6 @@ data class DetailPanelContent(
         get() = !description.isNullOrBlank() || metaLine != null || fileName != null
 }
 
-fun panelPlayTime(millis: Long): String? {
-    if (millis <= 0L) return null
-    val minutes = millis / 60_000
-    return when {
-        minutes < 1 -> "Under a minute"
-        minutes < 60 -> "$minutes min"
-        else -> "${minutes / 60} h ${minutes % 60} min"
-    }
-}
-
 fun panelFileName(romPath: String?): String? =
     romPath?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
 
@@ -87,7 +78,7 @@ fun detailPanelContentFor(
     description = game.description,
 
     fileName = panelFileName(game.romPath),
-    playTime = panelPlayTime(game.totalPlayTimeMillis),
+    playTime = game.totalPlayTimeMillis.takeIf { it > 0L }?.let(::playTimeLabel),
     videoUri = videoUri,
     media = media,
 )
@@ -106,6 +97,6 @@ fun detailPanelContentFor(
         metaLine = item.metadataLine,
         description = item.description,
         fileName = panelFileName(item.romPath),
-        playTime = panelPlayTime(item.totalPlayTimeMillis),
+        playTime = item.totalPlayTimeMillis.takeIf { it > 0L }?.let(::playTimeLabel),
         videoUri = videoUri,
     )

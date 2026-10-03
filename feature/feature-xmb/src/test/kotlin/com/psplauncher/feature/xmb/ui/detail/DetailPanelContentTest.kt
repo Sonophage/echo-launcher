@@ -116,11 +116,9 @@ class DetailPanelContentTest {
 
     @Test
     fun `a game never launched from here shows no play time at all`() {
-        assertNull(panelPlayTime(0L))
-        assertNull(panelPlayTime(-1L))
-        assertEquals("Under a minute", panelPlayTime(30_000L))
-        assertEquals("45 min", panelPlayTime(45 * 60_000L))
-        assertEquals("2 h 5 min", panelPlayTime((2 * 60 + 5) * 60_000L))
+        assertNull(detailPanelContentFor(item.copy(totalPlayTimeMillis = 0L), "PS").playTime)
+        assertNull(detailPanelContentFor(game.copy(totalPlayTimeMillis = 0L), "PS", emptyList()).playTime)
+        assertEquals("2 hr", detailPanelContentFor(item.copy(totalPlayTimeMillis = (2 * 60 + 5) * 60_000L), "PS").playTime)
     }
 
     @Test

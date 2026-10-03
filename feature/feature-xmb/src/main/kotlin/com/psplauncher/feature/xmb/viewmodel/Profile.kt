@@ -79,6 +79,9 @@ fun showcase(sets: List<AchievementSet>, badges: Map<String, List<Achievement>>,
         badges[setKey(set)].orEmpty().filter { it.isUnlocked && it.globalPercent != null }.map { ShowcaseBadge(it, set) }
     }.sortedBy { it.achievement.globalPercent }.take(count)
 
+fun showcaseSet(data: ProfileData): Int =
+    showcase(data.sets, data.badges, 1).firstOrNull()?.let { data.sets.indexOf(it.set) }?.coerceAtLeast(0) ?: 0
+
 fun groupFriends(friends: List<DiscordFriend>): List<Pair<FriendGroup, List<DiscordFriend>>> {
     val byGroup = friends.sortedBy { it.label.lowercase() }.groupBy {
         when {

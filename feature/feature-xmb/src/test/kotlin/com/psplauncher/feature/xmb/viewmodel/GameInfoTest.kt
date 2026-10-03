@@ -61,4 +61,13 @@ class GameInfoTest {
         val app = GameInfoState(XMBItem(id = "a", title = "Discord", packageName = "com.discord"), videoUri = "/x.mp4", manualPath = "/x.pdf")
         assertEquals(listOf(GameInfoAction.PLAY, GameInfoAction.OPTIONS), gameInfoActions(app))
     }
+
+    @Test
+    fun `the Info sheet stops at its last page, so one Up always moves it back`() {
+        val sheet = GameInfoState(XMBItem(id = "g", title = "Ico", gameId = 1L), open = GameInfoAction.INFO, infoScrollMax = 2)
+        val pastEnd = (1..5).fold(sheet) { s, _ -> s.scrolledBy(+1) }
+        assertEquals(2, pastEnd.infoScroll)
+        assertEquals(1, pastEnd.scrolledBy(-1).infoScroll)
+        assertEquals(0, sheet.scrolledBy(-1).infoScroll)
+    }
 }

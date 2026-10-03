@@ -59,6 +59,7 @@ import com.psplauncher.feature.appbar.appdrawer.WallInfo
 import com.psplauncher.feature.appbar.appdrawer.WallShade
 import com.psplauncher.feature.appbar.appdrawer.SystemChipRow
 import com.psplauncher.feature.appbar.appdrawer.actionLabel
+import com.psplauncher.core.ui.design.panelDesignUnits
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -223,7 +224,7 @@ internal fun AppDrawerContent(
     onSystemChip: (String?) -> Unit = {},
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize().background(PanelBase)) {
-        val u = DesignUnits(minOf(maxWidth.value / WALL_DESIGN_WIDTH, maxHeight.value / WALL_DESIGN_HEIGHT), LocalDensity.current)
+        val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         val focused = state.visibleApps.getOrNull(state.selectedIndex)
         val focusedIcon = rememberAppIcon(focused?.packageName?.takeIf { focused.gameId == null })
         WallBackdrop(focused, focusedIcon, u)
@@ -398,8 +399,6 @@ private fun EmptyDrawerMessage(
 }
 
 private const val EVERYTHING_ELSE = "Everything else"
-private const val WALL_DESIGN_WIDTH = 1200f
-private const val WALL_DESIGN_HEIGHT = 752f
 
 @CombinedPreviews
 @Composable
