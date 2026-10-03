@@ -15,9 +15,9 @@ val LIBRARY_CHIP_IDS = listOf(
     "network",
 )
 
-enum class QuickSetting { PROFILE, WAVE, BACKDROP, RECENT_APPS, ANDROID_SETTINGS, LIBRARIES }
+enum class QuickSetting { WAVE, BACKDROP, RECENT_APPS, ANDROID_SETTINGS, LIBRARIES }
 
-val PANEL_QUICK_SETTINGS = listOf(QuickSetting.PROFILE, QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.RECENT_APPS, QuickSetting.ANDROID_SETTINGS)
+val PANEL_QUICK_SETTINGS = listOf(QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.RECENT_APPS, QuickSetting.ANDROID_SETTINGS)
 
 const val LIBRARY_GRID_COLUMNS = 3
 
@@ -30,6 +30,7 @@ fun panelSettingScreen(index: Int): String? =
 
 enum class PanelTab(val label: String) {
     NOTIFICATIONS("Notifications"),
+    PROFILE("Profile"),
     QUICK("Quick settings"),
     LIBRARIES("Libraries"),
     SETTINGS("Settings"),
@@ -43,9 +44,10 @@ data class PanelCursor(
     val quick: Int = 0,
     val chip: Int = 0,
     val setting: Int = 0,
+    val profile: ProfileFocus = ProfileFocus(),
 )
 
-fun movePanel(cursor: PanelCursor, move: PanelMove, rows: Int, quicks: Int, chips: Int, settings: Int = PANEL_SETTINGS.size): PanelCursor {
+fun movePanel(cursor: PanelCursor, move: PanelMove, rows: Int, quicks: Int, chips: Int, settings: Int = PANEL_SETTINGS.size, recents: Int = 0): PanelCursor {
     val tabs = PanelTab.entries
     when (move) {
         PanelMove.PREV_TAB -> return cursor.copy(tab = tabs[(cursor.tab.ordinal - 1 + tabs.size) % tabs.size])
@@ -61,6 +63,7 @@ fun movePanel(cursor: PanelCursor, move: PanelMove, rows: Int, quicks: Int, chip
                 else -> cursor
             }
         }
+        PanelTab.PROFILE -> cursor.copy(profile = moveProfileFocus(cursor.profile, move, recents))
         PanelTab.QUICK -> when (move) {
             PanelMove.LEFT -> cursor.copy(quick = (cursor.quick - 1).coerceAtLeast(0))
             PanelMove.RIGHT -> cursor.copy(quick = (cursor.quick + 1).coerceAtMost((quicks - 1).coerceAtLeast(0)))

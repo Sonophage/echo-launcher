@@ -48,7 +48,6 @@ import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Games
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
@@ -107,6 +106,9 @@ import com.psplauncher.feature.xmb.viewmodel.PANEL_QUICK_SETTINGS
 import com.psplauncher.feature.xmb.viewmodel.PanelEntry
 import com.psplauncher.feature.xmb.viewmodel.PanelStage
 import com.psplauncher.feature.xmb.viewmodel.PanelTab
+import com.psplauncher.feature.xmb.viewmodel.ProfileData
+import com.psplauncher.feature.xmb.viewmodel.ProfileFocus
+import com.psplauncher.feature.xmb.viewmodel.ProfileSpot
 import com.psplauncher.feature.xmb.viewmodel.QuickSetting
 import com.psplauncher.feature.xmb.viewmodel.StageAction
 import com.psplauncher.feature.xmb.viewmodel.StageCommand
@@ -118,7 +120,6 @@ data class QuickSettingsState(
     val backdropOn: Boolean,
     val recentAppsOn: Boolean,
     val chips: List<LibraryChip>,
-    val profileName: String,
 )
 
 @Composable
@@ -168,6 +169,11 @@ fun XmbNotificationBar(
     onQuickTapped: (QuickSetting, Int) -> Unit,
     onSettingTapped: (Int) -> Unit,
     onGrantAndroidAccess: () -> Unit,
+    profile: ProfileData,
+    profileName: String,
+    profileAvatar: String?,
+    profileFocus: ProfileFocus,
+    onProfileTapped: (ProfileSpot, Int) -> Unit,
     pull: PanelPull,
     onOpened: () -> Unit,
     onClosed: () -> Unit,
@@ -176,7 +182,11 @@ fun XmbNotificationBar(
     if (pull.progress.value <= 0f && !open) return
     Box(modifier.fillMaxSize().graphicsLayer { translationY = -(1f - pull.progress.value) * size.height }) {
         val stageIcon = rememberAppIcon(stagePackage(stage, LocalContext.current.packageName))
-        val tabTint = if (tab == PanelTab.SETTINGS) panelSectionTint(PANEL_SETTINGS.getOrNull(settingFocus)) else stageTint(stage, stageIcon?.color, accent)
+        val tabTint = when (tab) {
+            PanelTab.SETTINGS -> panelSectionTint(PANEL_SETTINGS.getOrNull(settingFocus))
+            PanelTab.PROFILE -> ProfileTint
+            else -> stageTint(stage, stageIcon?.color, accent)
+        }
         val tint by animateColorAsState(tabTint, tween(500), label = "panelTint")
         BoxWithConstraints(
             Modifier
@@ -202,6 +212,7 @@ fun XmbNotificationBar(
                             .padding(end = u.dp(56), top = u.dp(118), bottom = u.dp(70)).width(u.dp(430)),
                     )
                 }
+                PanelTab.PROFILE -> ProfilePanel(profile, profileName, profileAvatar, profileFocus, u, onProfileTapped, onClosed)
                 PanelTab.QUICK -> quick?.let {
                     QuickTiles(it, quickFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(200)))
                 }
@@ -435,7 +446,6 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(22))) {
         PANEL_QUICK_SETTINGS.forEach { setting ->
             val (label, value) = when (setting) {
-                QuickSetting.PROFILE -> "Profile" to quick.profileName
                 QuickSetting.WAVE -> "Wave" to if (quick.waveOn) "On" else "Off"
                 QuickSetting.BACKDROP -> "Crossbar shows" to if (quick.backdropOn) "Art" else "Wallpaper"
                 QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
@@ -617,7 +627,6 @@ private fun stageGlyph(stage: PanelStage): ImageVector = when (stage) {
 }
 
 private fun quickIcon(setting: QuickSetting): ImageVector = when (setting) {
-    QuickSetting.PROFILE -> Icons.Outlined.AccountCircle
     QuickSetting.WAVE -> Icons.Outlined.Waves
     QuickSetting.BACKDROP -> Icons.Outlined.Image
     QuickSetting.RECENT_APPS -> Icons.Outlined.History

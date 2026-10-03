@@ -8,7 +8,8 @@ class NoticePanelNavTest {
         movePanel(c, m, rows = rows, quicks = PANEL_QUICK_SETTINGS.size, chips = chips)
 
     @Test fun `the shoulder buttons walk the tabs and wrap at both ends`() {
-        assertEquals(PanelTab.QUICK, move(PanelCursor(), PanelMove.NEXT_TAB).tab)
+        assertEquals("Profile sits right after Notifications", PanelTab.PROFILE, move(PanelCursor(), PanelMove.NEXT_TAB).tab)
+        assertEquals(PanelTab.QUICK, move(PanelCursor(tab = PanelTab.PROFILE), PanelMove.NEXT_TAB).tab)
         assertEquals(PanelTab.NOTIFICATIONS, move(PanelCursor(tab = PanelTab.SETTINGS), PanelMove.NEXT_TAB).tab)
         assertEquals(PanelTab.SETTINGS, move(PanelCursor(), PanelMove.PREV_TAB).tab)
     }

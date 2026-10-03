@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -67,6 +69,7 @@ import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.ControllerPrompt
 import com.psplauncher.core.ui.components.LocalPadPrompts
 import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.PANEL_CARD_RADIUS
 import com.psplauncher.core.ui.design.PANEL_FOCUS_RING_WIDTH
 import com.psplauncher.core.ui.design.PanelBase
 import com.psplauncher.core.ui.design.PanelButton
@@ -78,7 +81,11 @@ import com.psplauncher.core.ui.image.rememberArtworkModel
 import com.psplauncher.feature.xmb.viewmodel.BADGE_COLUMNS
 import com.psplauncher.feature.xmb.viewmodel.BadgeFilter
 import com.psplauncher.feature.xmb.viewmodel.ProfileState
+import com.psplauncher.feature.xmb.viewmodel.ProfileData
+import com.psplauncher.feature.xmb.viewmodel.ProfileFocus
+import com.psplauncher.feature.xmb.viewmodel.ProfileSpot
 import com.psplauncher.feature.xmb.viewmodel.ProfileTab
+import com.psplauncher.feature.xmb.viewmodel.profileBanner
 import com.psplauncher.feature.xmb.viewmodel.RarityTier
 import com.psplauncher.feature.xmb.viewmodel.groupFriends
 import com.psplauncher.feature.xmb.viewmodel.rarityTier
@@ -91,7 +98,6 @@ fun ProfileScreen(
     name: String,
     avatar: String?,
     onAction: (GamepadAction) -> Unit,
-    onTab: (ProfileTab) -> Unit,
     onSet: (Int) -> Unit,
     onBadge: (Int) -> Unit,
     onFilter: (BadgeFilter) -> Unit,
@@ -118,10 +124,7 @@ fun ProfileScreen(
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.35f), 0.55f to PanelBase.copy(alpha = 0.85f), 1f to PanelBase)))
         }
 
-        ProfileTabs(profile.tab, u, onTab, Modifier.align(Alignment.TopCenter).padding(top = u.dp(26)))
-
         when (profile.tab) {
-            ProfileTab.OVERVIEW -> Overview(profile, name, avatar, u, onEditName, onPickAvatar)
             ProfileTab.ACHIEVEMENTS -> AchievementsWall(profile, u, onAction, onSet, onBadge, onFilter)
             ProfileTab.FRIENDS -> FriendsTab(profile, name, avatar, u, onAction, onFriend, onEditName, onPickAvatar)
         }
@@ -154,29 +157,7 @@ private fun Hint(action: GamepadAction, label: String, u: DesignUnits, onClick: 
 }
 
 @Composable
-private fun ProfileTabs(tab: ProfileTab, u: DesignUnits, onTab: (ProfileTab) -> Unit, modifier: Modifier) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(14))) {
-        val pad = LocalPadPrompts.current
-        if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = u.dp(24), spacing = 0.dp)
-        ProfileTab.entries.forEach { t ->
-            val on = t == tab
-            Column(
-                Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(u.dp(8))).clickable { onTab(t) }.padding(horizontal = u.dp(10), vertical = u.dp(4)),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(u.dp(4)),
-            ) {
-                Text(t.label, color = Color.White.copy(alpha = if (on) 1f else 0.5f), fontSize = u.sp(17),
-                    fontWeight = if (on) FontWeight.Medium else FontWeight.Light, maxLines = 1)
-                Box(Modifier.width(if (on) u.dp(22) else 0.dp).height(u.dp(2)).clip(RoundedCornerShape(1.dp)).background(Color.White))
-            }
-        }
-        if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(24), spacing = 0.dp)
-    }
-}
-
-@Composable
-private fun Header(profile: ProfileState, name: String, avatar: String?, u: DesignUnits, onEditName: () -> Unit, onPickAvatar: () -> Unit) {
-    val data = profile.data
+private fun Header(data: ProfileData, name: String, avatar: String?, u: DesignUnits, onEditName: () -> Unit, onPickAvatar: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(24))) {
         Box(
             Modifier.size(u.dp(110)).border(u.dp(2), Color.White, RoundedCornerShape(u.dp(4))).padding(u.dp(2))
@@ -217,8 +198,7 @@ private fun Header(profile: ProfileState, name: String, avatar: String?, u: Desi
 }
 
 @Composable
-private fun Stats(profile: ProfileState, u: DesignUnits) {
-    val data = profile.data
+private fun Stats(data: ProfileData, u: DesignUnits) {
     Row(horizontalArrangement = Arrangement.spacedBy(u.dp(56))) {
         BigStat(data.games.toString(), "Games", u)
         BigStat((data.totals?.unlocked ?: 0).toString(), "Achievements", u)
@@ -236,76 +216,173 @@ private fun BigStat(value: String, label: String, u: DesignUnits) {
 }
 
 @Composable
-private fun EditButtons(u: DesignUnits, onEditName: () -> Unit, onPickAvatar: () -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
-        PanelButton(GamepadAction.CHANGE_SORT, "Edit name", u, onEditName)
-        PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Picture", u, onPickAvatar)
+internal fun ProfilePanel(
+    data: ProfileData,
+    name: String,
+    avatar: String?,
+    focus: ProfileFocus,
+    u: DesignUnits,
+    onTapped: (ProfileSpot, Int) -> Unit,
+    onBack: () -> Unit,
+) {
+    val banner = profileBanner(data.recent)
+    Box(Modifier.fillMaxSize()) {
+        if (banner != null) {
+            Box(Modifier.fillMaxWidth().height(u.dp(340))) {
+                AsyncImage(
+                    model = rememberArtworkModel(banner),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    alignment = BiasAlignment(0f, -0.4f),
+                    modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.55f),
+                )
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.55f), 0.35f to PanelBase.copy(alpha = 0.25f), 1f to PanelBase)))
+            }
+        }
+        Column(Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(80), top = u.dp(96), bottom = u.dp(64))) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) {
+                    Header(data, name, avatar, u, { onTapped(ProfileSpot.EDIT_NAME, 0) }, { onTapped(ProfileSpot.EDIT_PICTURE, 0) })
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
+                    if (focus.choosing) {
+                        Pill("Edit name", focus.spot == ProfileSpot.EDIT_NAME, GamepadAction.SELECT, u) { onTapped(ProfileSpot.EDIT_NAME, 0) }
+                        Pill("Change picture", focus.spot == ProfileSpot.EDIT_PICTURE, GamepadAction.SELECT, u) { onTapped(ProfileSpot.EDIT_PICTURE, 0) }
+                    } else {
+                        Pill("Edit profile", focus.spot == ProfileSpot.EDIT, GamepadAction.CHANGE_SORT, u) { onTapped(ProfileSpot.EDIT, 0) }
+                    }
+                }
+            }
+            Spacer(Modifier.height(u.dp(24)))
+            Stats(data, u)
+            Box(Modifier.padding(top = u.dp(18), bottom = u.dp(22)).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
+            Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(u.dp(40))) {
+                RecentColumn(data, focus, u, onTapped, Modifier.width(u.dp(380)))
+                ShowcaseColumn(data, focus.spot == ProfileSpot.SHOWCASE, u, onTapped, Modifier.width(u.dp(300)))
+                FriendsColumn(data, focus.spot == ProfileSpot.FRIENDS, u, onTapped, Modifier.weight(1f))
+            }
+        }
+        Row(
+            Modifier.align(Alignment.BottomStart).padding(start = u.dp(68), bottom = u.dp(14)),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+        ) {
+            if (LocalPadPrompts.current) {
+                ControllerPrompt(listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY), "Switch tab",
+                    labelStyle = TextStyle(fontSize = u.sp(13), fontWeight = FontWeight.Light), glyphSize = u.dp(22), spacing = u.dp(8))
+            }
+            Hint(GamepadAction.BACK, "Back", u, onBack)
+        }
     }
 }
 
 @Composable
-private fun Overview(profile: ProfileState, name: String, avatar: String?, u: DesignUnits, onEditName: () -> Unit, onPickAvatar: () -> Unit) {
-    val data = profile.data
-    val now = System.currentTimeMillis()
-    Column(Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(80), top = u.dp(110), bottom = u.dp(70))) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) { Header(profile, name, avatar, u, onEditName, onPickAvatar) }
-            EditButtons(u, onEditName, onPickAvatar)
+private fun Pill(label: String, focused: Boolean, glyph: GamepadAction, u: DesignUnits, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(u.dp(25))
+    Box(
+        Modifier.heightIn(min = 40.dp).height(u.dp(50)).clip(shape)
+            .background(if (focused) PanelCardFocusFill else Color.White.copy(alpha = 0.14f))
+            .then(if (focused) Modifier.border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape) else Modifier)
+            .clickable(onClick = onClick).padding(horizontal = u.dp(22)),
+        contentAlignment = Alignment.Center,
+    ) {
+        val style = TextStyle(fontSize = u.sp(15))
+        if (LocalPadPrompts.current && (focused || glyph != GamepadAction.SELECT)) {
+            ControllerPrompt(glyph, label, labelColor = Color.White, labelStyle = style, glyphSize = u.dp(20), spacing = u.dp(10))
+        } else {
+            Text(label, color = Color.White, style = style, maxLines = 1)
         }
-        Spacer(Modifier.height(u.dp(36)))
-        Stats(profile, u)
-        Box(Modifier.padding(vertical = u.dp(22)).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
-        Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(u.dp(40))) {
-            Column(Modifier.weight(1.25f), verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
-                SectionLabel("Recently played", u)
-                if (data.recent.isEmpty()) Meta("Nothing played yet", u.sp(14))
-                data.recent.forEach { game ->
-                    val set = data.sets.firstOrNull { it.gameId == game.id }
-                    val detail = listOfNotNull(
-                        set?.let { "${it.unlocked} of ${it.total}" },
-                        game.lastPlayedAt?.let { relativeTime(now, it) },
-                    ).joinToString(" · ")
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(u.dp(12))).background(PanelCardFill).padding(u.dp(8)),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
-                    ) {
-                        Art(listOfNotNull(game.iconUri, game.artworkUri).firstOrNull { it.isNotBlank() }, u.dp(44), u.dp(44), u.dp(8), Icons.Outlined.Image, u)
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(3))) {
-                            Text(game.displayTitle, color = Color.White, fontSize = u.sp(14), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(detail, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(11), fontWeight = FontWeight.Light, maxLines = 1)
-                            set?.takeIf { it.total > 0 }?.let { Bar(it.unlocked.toFloat() / it.total, u) }
-                        }
-                    }
+    }
+}
+
+@Composable
+private fun FocusBox(focused: Boolean, u: DesignUnits, onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val shape = RoundedCornerShape(u.dp(PANEL_CARD_RADIUS + 4))
+    Column(
+        Modifier.fillMaxWidth().clip(shape)
+            .then(if (focused) Modifier.border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape) else Modifier)
+            .clickable(onClick = onClick).padding(u.dp(6)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(8)),
+        content = content,
+    )
+}
+
+@Composable
+private fun RecentColumn(data: ProfileData, focus: ProfileFocus, u: DesignUnits, onTapped: (ProfileSpot, Int) -> Unit, modifier: Modifier) {
+    val now = System.currentTimeMillis()
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
+        SectionLabel("Recently played", u)
+        if (data.recent.isEmpty()) Meta("Nothing played yet", u.sp(14))
+        data.recent.forEachIndexed { i, game ->
+            val set = data.sets.firstOrNull { it.gameId == game.id }?.takeIf { it.total > 0 }
+            val played = game.lastPlayedAt?.let { relativeTime(now, it) }
+            val detail = if (set != null) {
+                listOfNotNull("${set.unlocked} of ${set.total}", played).joinToString(" · ")
+            } else {
+                listOfNotNull(played?.let { "Played ${it.lowercase()}" }, game.totalPlayTimeMillis.takeIf { it > 0 }?.let { playTimeLabel(it) }).joinToString(" · ")
+            }
+            val on = focus.spot == ProfileSpot.RECENT && focus.recent == i
+            val shape = RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))
+            Row(
+                Modifier.fillMaxWidth().clip(shape).background(if (on) PanelCardFocusFill else PanelCardFill)
+                    .then(if (on) Modifier.border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape) else Modifier)
+                    .clickable { onTapped(ProfileSpot.RECENT, i) }
+                    .padding(start = u.dp(8), end = u.dp(14), top = u.dp(8), bottom = u.dp(8)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+            ) {
+                Art(listOfNotNull(game.iconUri, game.artworkUri).firstOrNull { it.isNotBlank() }, u.dp(52), u.dp(52), u.dp(11), Icons.Outlined.Image, u)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
+                    Text(game.displayTitle, color = Color.White, fontSize = u.sp(15), lineHeight = u.sp(15) * 1.2f, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(detail, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(12), lineHeight = u.sp(12) * 1.2f, fontWeight = FontWeight.Light,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    set?.let { Bar(it.unlocked.toFloat() / it.total, u) }
                 }
             }
-            val shown = showcase(data.sets, data.badges)
-            if (shown.isNotEmpty()) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
-                    SectionLabel("Showcase", u)
-                    shown.chunked(2).forEach { pair ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(u.dp(8))) {
-                            pair.forEach { b ->
-                                Column(
-                                    Modifier.weight(1f).clip(RoundedCornerShape(u.dp(12))).background(PanelCardFill).padding(u.dp(12)),
-                                    verticalArrangement = Arrangement.spacedBy(u.dp(6)),
-                                ) {
-                                    BadgeIcon(b.achievement, u.dp(30), u)
-                                    Text(b.achievement.name, color = Color.White, fontSize = u.sp(13), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text("${b.game} · ${percent(b.achievement.globalPercent)}", color = Color.White.copy(alpha = 0.55f),
-                                        fontSize = u.sp(11), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
+        }
+    }
+}
+
+@Composable
+private fun ShowcaseColumn(data: ProfileData, focused: Boolean, u: DesignUnits, onTapped: (ProfileSpot, Int) -> Unit, modifier: Modifier) {
+    val shown = showcase(data.sets, data.badges)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+        SectionLabel("Showcase", u)
+        FocusBox(focused, u, { onTapped(ProfileSpot.SHOWCASE, shown.firstOrNull()?.let { data.sets.indexOf(it.set) }?.coerceAtLeast(0) ?: 0) }) {
+            if (shown.isEmpty()) Meta("No rare unlocks yet", u.sp(14))
+            shown.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
+                    pair.forEach { b ->
+                        Column(
+                            Modifier.weight(1f).height(u.dp(104)).clip(RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))).background(PanelCardFill)
+                                .clickable { onTapped(ProfileSpot.SHOWCASE, data.sets.indexOf(b.set).coerceAtLeast(0)) }.padding(u.dp(14)),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            BadgeIcon(b.achievement, u.dp(24), u)
+                            Column(verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+                                Text(b.achievement.name, color = Color.White, fontSize = u.sp(13), lineHeight = u.sp(13) * 1.2f, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("${b.game} · ${percent(b.achievement.globalPercent)}", color = Color.White.copy(alpha = 0.55f),
+                                    fontSize = u.sp(11), lineHeight = u.sp(11) * 1.2f, fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            if (pair.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            if (data.discordSignedIn) {
-                Column(Modifier.weight(0.8f), verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
-                    SectionLabel("Friends · ${data.friends.count { it.presence.isOnline }} online", u)
-                    groupFriends(data.friends).flatMap { it.second }.take(4).forEach { FriendRow(it, false, u) {} }
-                }
+        }
+    }
+}
+
+@Composable
+private fun FriendsColumn(data: ProfileData, focused: Boolean, u: DesignUnits, onTapped: (ProfileSpot, Int) -> Unit, modifier: Modifier) {
+    val open = { onTapped(ProfileSpot.FRIENDS, 0) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+        SectionLabel(if (data.discordSignedIn) "Friends · ${data.friends.count { it.presence.isOnline }} online" else "Friends", u)
+        FocusBox(focused, u, open) {
+            when {
+                !data.discordSignedIn -> Meta("Sign in to Discord to see your friends", u.sp(14))
+                data.friends.isEmpty() -> Meta("No friends to show yet", u.sp(14))
+                else -> groupFriends(data.friends).flatMap { it.second }.take(4).forEach { FriendRow(it, false, u, open) }
             }
         }
     }
@@ -525,8 +602,8 @@ private fun FriendsTab(
 ) {
     val data = profile.data
     Column(Modifier.fillMaxHeight().padding(start = u.dp(80), top = u.dp(130)).width(u.dp(620)), verticalArrangement = Arrangement.spacedBy(u.dp(36))) {
-        Header(profile, name, avatar, u, onEditName, onPickAvatar)
-        Stats(profile, u)
+        Header(profile.data, name, avatar, u, onEditName, onPickAvatar)
+        Stats(profile.data, u)
     }
     Column(
         Modifier.fillMaxSize().padding(start = u.dp(800), end = u.dp(40), top = u.dp(84), bottom = u.dp(24))
@@ -650,4 +727,4 @@ private fun presenceLabel(p: DiscordPresence): String = when (p) {
     DiscordPresence.OFFLINE, DiscordPresence.UNKNOWN -> "Offline"
 }
 
-private val ProfileTint = Color(0xFF2C5FD8)
+internal val ProfileTint = Color(0xFF2C5FD8)
