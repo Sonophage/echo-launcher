@@ -59,7 +59,6 @@ fun PfpHintBar(
     modifier: Modifier = Modifier,
     onAction: ((GamepadAction) -> Unit)? = null,
     primary: HintAction? = null,
-    position: String? = null,
 
     centre: (@Composable () -> Unit)? = null,
 ) {
@@ -78,7 +77,6 @@ fun PfpHintBar(
             .padding(horizontal = u.dp(80)),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(28))) {
-            position?.let { Text(it, color = Color.White.copy(alpha = 0.55f), style = hintText(u), maxLines = 1) }
             row.forEach { Hint(it, u, pad, onAction) }
         }
 

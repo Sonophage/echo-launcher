@@ -25,7 +25,6 @@ fun XmbHintBar(
         primary = prompts.primary?.let { p ->
             HintAction(p.action, p.verb, listOfNotNull(p.target, p.detail).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null })
         },
-        position = prompts.position,
     )
 }
 
