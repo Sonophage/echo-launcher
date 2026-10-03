@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.VideogameAsset
@@ -104,10 +105,11 @@ private val ROOT_TOP_DROP = 28.dp
 
 private const val ROOT_SLIDE_MS = 190
 
-private fun SettingsSectionId.icon(): ImageVector = when (this) {
+fun SettingsSectionId.icon(): ImageVector = when (this) {
     SettingsSectionId.OVERVIEW -> Icons.Filled.Dashboard
     SettingsSectionId.EMULATORS -> Icons.Filled.VideogameAsset
     SettingsSectionId.LOOK_AND_FEEL -> Icons.Filled.Palette
+    SettingsSectionId.ACCOUNTS -> Icons.Filled.ManageAccounts
     SettingsSectionId.SYSTEM -> Icons.Outlined.Info
     SettingsSectionId.SETUP -> Icons.Filled.AutoFixHigh
 }

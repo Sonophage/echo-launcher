@@ -53,12 +53,26 @@ class NoticePanelNavTest {
         assertEquals("down from a column with no tile below stays put", 1, move(g.copy(chip = 1), PanelMove.DOWN, chips = 4).chip)
     }
 
-    @Test fun `the settings grid is four wide and reaches every settings screen`() {
-        val g = PanelCursor(tab = PanelTab.SETTINGS, setting = 3)
-        assertEquals("right off the end of a row must not wrap", 3, move(g, PanelMove.RIGHT).setting)
-        assertEquals(7, move(g, PanelMove.DOWN).setting)
+    @Test fun `the settings grid is three wide and reaches every section`() {
+        val g = PanelCursor(tab = PanelTab.SETTINGS, setting = 2)
+        assertEquals("right off the end of a row must not wrap", 2, move(g, PanelMove.RIGHT).setting)
+        assertEquals(5, move(g, PanelMove.DOWN).setting)
         var c = PanelCursor(tab = PanelTab.SETTINGS, setting = PANEL_SETTINGS.lastIndex % SETTINGS_GRID_COLUMNS)
         repeat(PANEL_SETTINGS.size) { c = move(c, PanelMove.DOWN) }
-        assertEquals("the last screen in the catalogue must be reachable", PANEL_SETTINGS.lastIndex, c.setting)
+        assertEquals("the last section must be reachable", PANEL_SETTINGS.lastIndex, c.setting)
+    }
+
+    @Test fun `a settings tile is a section and opens that section's first screen`() {
+        assertEquals("one tile per section, in section order", com.psplauncher.core.domain.model.SettingsSectionId.entries, PANEL_SETTINGS)
+        PANEL_SETTINGS.forEachIndexed { i, section ->
+            val opens = panelSettingScreen(i)
+            assertEquals(
+                "the tab row starts on the first tab, so the tile must open it",
+                com.psplauncher.core.domain.model.settingsEntriesIn(section).first().id,
+                opens,
+            )
+            assertEquals(true, opens in com.psplauncher.feature.settings.ui.SETTINGS_SCREEN_ROUTES)
+        }
+        assertEquals(null, panelSettingScreen(PANEL_SETTINGS.size))
     }
 }

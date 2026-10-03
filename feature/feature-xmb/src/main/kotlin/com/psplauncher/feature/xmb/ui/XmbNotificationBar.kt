@@ -1,34 +1,7 @@
 package com.psplauncher.feature.xmb.ui
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.automirrored.outlined.VolumeUp
-import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.CloudDownload
-import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material.icons.outlined.SportsEsports
-import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.Wallpaper
-import androidx.compose.material.icons.outlined.PowerSettingsNew
-import androidx.compose.material.icons.outlined.Category
-import androidx.compose.material.icons.outlined.Gamepad
-import androidx.compose.material.icons.outlined.TouchApp
-import androidx.compose.material.icons.outlined.Speed
-import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Forum
-import androidx.compose.material.icons.outlined.ManageAccounts
-import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Backup
-import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -126,6 +99,7 @@ import com.psplauncher.core.ui.design.PanelCardFocusFill
 import com.psplauncher.core.ui.design.PanelFocusRing
 import com.psplauncher.core.ui.design.panelBackdrop
 import com.psplauncher.core.ui.design.panelSectionTint
+import com.psplauncher.feature.settings.ui.icon
 import com.psplauncher.core.ui.icons.rememberAppIcon
 import com.psplauncher.feature.xmb.viewmodel.LibraryChip
 import com.psplauncher.feature.xmb.viewmodel.NoticeFocus
@@ -202,7 +176,7 @@ fun XmbNotificationBar(
     if (pull.progress.value <= 0f && !open) return
     Box(modifier.fillMaxSize().graphicsLayer { translationY = -(1f - pull.progress.value) * size.height }) {
         val stageIcon = rememberAppIcon(stagePackage(stage, LocalContext.current.packageName))
-        val tabTint = if (tab == PanelTab.SETTINGS) panelSectionTint(PANEL_SETTINGS.getOrNull(settingFocus)?.section) else stageTint(stage, stageIcon?.color, accent)
+        val tabTint = if (tab == PanelTab.SETTINGS) panelSectionTint(PANEL_SETTINGS.getOrNull(settingFocus)) else stageTint(stage, stageIcon?.color, accent)
         val tint by animateColorAsState(tabTint, tween(500), label = "panelTint")
         BoxWithConstraints(
             Modifier
@@ -235,7 +209,7 @@ fun XmbNotificationBar(
                     LibraryTiles(it.chips, chipFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(180)))
                 }
                 PanelTab.SETTINGS -> SettingsTiles(settingFocus, u, onSettingTapped,
-                    Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(80), top = u.dp(110), bottom = u.dp(70)))
+                    Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(110)))
             }
         }
     }
@@ -505,23 +479,22 @@ private fun LibraryTiles(chips: List<LibraryChip>, focus: Int, u: DesignUnits, o
 
 @Composable
 private fun SettingsTiles(focus: Int, u: DesignUnits, onTapped: (Int) -> Unit, modifier: Modifier) {
-    val state = rememberLazyGridState()
-    LaunchedEffect(focus) { state.animateScrollToItem((focus - SETTINGS_GRID_COLUMNS).coerceAtLeast(0)) }
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(SETTINGS_GRID_COLUMNS),
-        state = state,
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(u.dp(18)),
-        verticalArrangement = Arrangement.spacedBy(u.dp(18)),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(u.dp(6)),
-    ) {
-        itemsIndexed(PANEL_SETTINGS, key = { _, e -> e.id }) { i, entry ->
-            Tile(i == focus, u.dp(200), u.dp(22), u.dp(24), u, Modifier, { onTapped(i) }) {
-                Icon(settingsEntryIcon(entry.id), null, tint = Color.White, modifier = Modifier.size(u.dp(32)))
-                Column(verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-                    Text(entry.title, color = Color.White, fontSize = u.sp(20), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(entry.subtitle, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(13), fontWeight = FontWeight.Light,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(30))) {
+        Headline("Settings", u.sp(48), 1)
+        Column(verticalArrangement = Arrangement.spacedBy(u.dp(18))) {
+            PANEL_SETTINGS.withIndex().chunked(SETTINGS_GRID_COLUMNS).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(18))) {
+                    row.forEach { (i, section) ->
+                        Tile(i == focus, u.dp(200), u.dp(22), u.dp(24), u, Modifier.weight(1f), { onTapped(i) }) {
+                            Icon(section.icon(), null, tint = Color.White, modifier = Modifier.size(u.dp(32)))
+                            Column(verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                                Text(section.title, color = Color.White, fontSize = u.sp(20), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(section.subtitle, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(13), fontWeight = FontWeight.Light,
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                    repeat(SETTINGS_GRID_COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
@@ -659,35 +632,6 @@ private fun libraryIcon(id: String): ImageVector = when (id) {
     com.psplauncher.core.domain.model.BuiltInCategory.LIBRARY -> Icons.AutoMirrored.Outlined.MenuBook
     com.psplauncher.core.domain.model.BuiltInCategory.PHOTO -> Icons.Outlined.PhotoLibrary
     else -> Icons.Outlined.Language
-}
-
-private fun settingsEntryIcon(id: String): ImageVector = when (id) {
-    "settings_overview" -> Icons.Outlined.Dashboard
-    "settings_library" -> Icons.Outlined.FolderOpen
-    "settings_artwork" -> Icons.Outlined.Image
-    "settings_artwork_sources" -> Icons.Outlined.CloudDownload
-    "settings_app_visibility" -> Icons.Outlined.VisibilityOff
-    "settings_emulators_installed" -> Icons.Outlined.SportsEsports
-    "settings_emulators_custom" -> Icons.Outlined.Extension
-    "settings_emulators_retroarch" -> Icons.Outlined.Memory
-    "settings_themes" -> Icons.Outlined.Palette
-    "settings_appearance" -> Icons.Outlined.Wallpaper
-    "settings_layout" -> Icons.Outlined.GridView
-    "settings_boot" -> Icons.Outlined.PowerSettingsNew
-    "settings_audio" -> Icons.AutoMirrored.Outlined.VolumeUp
-    "settings_categories" -> Icons.Outlined.Category
-    "settings_controller" -> Icons.Outlined.Gamepad
-    "settings_touch" -> Icons.Outlined.TouchApp
-    "settings_performance" -> Icons.Outlined.Speed
-    "settings_permissions" -> Icons.Outlined.Shield
-    "settings_accounts" -> Icons.Outlined.ManageAccounts
-    "settings_about" -> Icons.Outlined.Info
-    "settings_logs" -> Icons.Outlined.BugReport
-    "settings_backup" -> Icons.Outlined.Backup
-    "settings_credits" -> Icons.Outlined.FavoriteBorder
-    "settings_discord" -> Icons.Outlined.Forum
-    "settings_initial_setup" -> Icons.Outlined.AutoFixHigh
-    else -> Icons.Outlined.Settings
 }
 
 internal fun playTimeLabel(ms: Long): String {

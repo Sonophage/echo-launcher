@@ -6590,12 +6590,12 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun openPanelSetting(index: Int) {
-        val entry = PANEL_SETTINGS.getOrNull(index) ?: return
+        val screenId = panelSettingScreen(index) ?: return
         menuSound.play(MenuSound.SELECT)
         _uiState.update {
             it.copy(
                 notificationsOpen = false,
-                activeSettingsScreen = entry.id,
+                activeSettingsScreen = screenId,
                 settingsReturnTo = null,
                 settingsFromPanel = true,
             )
