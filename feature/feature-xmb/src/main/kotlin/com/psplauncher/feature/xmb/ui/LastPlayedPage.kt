@@ -225,7 +225,7 @@ private fun RecentList(
 
         Column(
             Modifier
-                .padding(start = RailEdgeGap, top = StripHeight, bottom = u.dp(70))
+                .padding(start = RailEdgeGap, top = stripBandHeight(rememberStripUnits()) + 8.dp, bottom = u.dp(70))
                 .width(u.dp(380))
                 .fillMaxHeight(),
         ) {

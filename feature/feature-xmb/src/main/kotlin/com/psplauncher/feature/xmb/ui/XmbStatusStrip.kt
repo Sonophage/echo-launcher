@@ -1,5 +1,6 @@
 package com.psplauncher.feature.xmb.ui
 
+import androidx.compose.ui.graphics.ImageBitmap
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -185,10 +186,8 @@ fun XmbPspStatusStrip(
 
     val config = LocalConfiguration.current
     val density = LocalDensity.current
-    val u = remember(config.screenWidthDp, config.screenHeightDp, density) {
-        DesignUnits(minOf(config.screenWidthDp / PANEL_DESIGN_WIDTH, config.screenHeightDp / PANEL_DESIGN_HEIGHT), density)
-    }
-    val band = if (compact) StripHeight else maxOf(StripHeight, u.dp(76))
+    val u = rememberStripUnits()
+    val band = if (compact) StripHeight else stripBandHeight(u)
 
     val fallback = menuCursorEdge()
     val stage = live?.stage
@@ -222,6 +221,7 @@ fun XmbPspStatusStrip(
                 band = band,
                 compact = compact,
                 onTapped = onLiveAreaTapped,
+                stageIcon = stageIcon?.bitmap,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(start = u.dp(80))
@@ -351,6 +351,7 @@ private fun IslandCard(
     compact: Boolean,
     onTapped: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    stageIcon: ImageBitmap? = null,
 ) {
     val stage = activity.stage
     val progress = stage?.islandProgress
@@ -414,6 +415,8 @@ private fun IslandCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
+                } else if (stageIcon != null) {
+                    androidx.compose.foundation.Image(stageIcon, null, Modifier.fillMaxSize())
                 } else {
                     Icon(stageGlyph(stage ?: PanelStage.Empty), null, Modifier.size(tile * 0.6f), tint = Color.White)
                 }
@@ -458,24 +461,24 @@ private fun EqualizerGlyph(u: DesignUnits) {
 
 @Composable
 private fun NoticeBell(count: Int, accent: Color, u: DesignUnits, onTapped: (() -> Unit)?) {
-    Box(
+    Row(
         Modifier
             .clip(RoundedCornerShape(u.dp(6)))
             .then(if (onTapped != null) Modifier.clickable(onClick = onTapped) else Modifier)
             .semantics { contentDescription = countLabel(count, "notification") }
             .padding(u.dp(6)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(4)),
     ) {
         Icon(Icons.Outlined.Notifications, null, Modifier.size(u.dp(17)), tint = Color.White)
         if (count > 0) {
             Box(
                 Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = u.dp(7), y = -u.dp(5))
                     .heightIn(min = u.dp(16))
                     .widthIn(min = u.dp(16))
                     .clip(RoundedCornerShape(50))
                     .background(accent)
-                    .padding(horizontal = u.dp(4)),
+                    .padding(horizontal = u.dp(5)),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(count.toString(), color = BadgeInk, fontSize = u.sp(10), fontWeight = FontWeight.Bold, maxLines = 1)
@@ -670,3 +673,13 @@ private fun currentDateString(): String {
     return SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEEMMMd"), locale).format(Date())
 }
 
+@Composable
+internal fun rememberStripUnits(): DesignUnits {
+    val config = LocalConfiguration.current
+    val density = LocalDensity.current
+    return remember(config.screenWidthDp, config.screenHeightDp, density) {
+        DesignUnits(minOf(config.screenWidthDp / PANEL_DESIGN_WIDTH, config.screenHeightDp / PANEL_DESIGN_HEIGHT), density)
+    }
+}
+
+internal fun stripBandHeight(u: DesignUnits): Dp = maxOf(StripHeight, u.dp(76))
