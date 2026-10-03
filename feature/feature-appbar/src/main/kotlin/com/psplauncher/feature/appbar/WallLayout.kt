@@ -2,7 +2,7 @@ package com.psplauncher.feature.appbar
 
 import com.psplauncher.core.domain.model.GamepadAction
 
-const val WALL_COLUMNS = 6
+const val WALL_COLUMNS = 3
 
 data class WallCell(val row: Int, val col: Int, val span: Int = 1) {
     fun onRow(r: Int): Boolean = r in row until row + span
