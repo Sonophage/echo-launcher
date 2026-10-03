@@ -74,6 +74,7 @@ fun GameInfoScreen(
     modifier: Modifier = Modifier,
     onBandAction: (GameInfoAction) -> Unit = {},
     onClosePanel: () -> Unit = {},
+    onScrollMax: (Int) -> Unit = {},
 ) {
     val item = info.item
     val now = System.currentTimeMillis()
@@ -211,7 +212,7 @@ fun GameInfoScreen(
         }
 
         when (info.open) {
-            GameInfoAction.INFO -> info.content?.let { InfoSheet(info, it, now, u, onClosePanel) }
+            GameInfoAction.INFO -> info.content?.let { InfoSheet(info, it, now, u, onClosePanel, onScrollMax) }
             GameInfoAction.VIDEO -> info.videoUri?.let { uri ->
                 Box(
                     Modifier.fillMaxSize().background(Color.Black)
@@ -253,9 +254,10 @@ private fun BandButton(label: String, focused: Boolean, options: Boolean, u: Des
 }
 
 @Composable
-private fun InfoSheet(info: GameInfoState, content: DetailPanelContent, now: Long, u: DesignUnits, onClose: () -> Unit) {
+private fun InfoSheet(info: GameInfoState, content: DetailPanelContent, now: Long, u: DesignUnits, onClose: () -> Unit, onScrollMax: (Int) -> Unit) {
     val scroll = rememberScrollState()
     val step = with(LocalDensity.current) { u.dp(120).roundToPx() }
+    LaunchedEffect(scroll.maxValue, step) { onScrollMax(scroll.maxValue / step + if (scroll.maxValue % step > 0) 1 else 0) }
     LaunchedEffect(info.infoScroll) { scroll.animateScrollTo(info.infoScroll * step) }
     val facts = listOfNotNull(
         GameInfoStat("Platform", content.platformName).takeIf { content.platformName.isNotBlank() },

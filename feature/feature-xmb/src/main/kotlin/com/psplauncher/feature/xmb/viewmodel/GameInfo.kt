@@ -19,8 +19,11 @@ data class GameInfoState(
     val band: GameInfoAction = GameInfoAction.PLAY,
     val open: GameInfoAction? = null,
     val infoScroll: Int = 0,
+    val infoScrollMax: Int = 0,
 ) {
     val isApp: Boolean get() = recentKind(item) == RecentKind.APP
+
+    fun scrolledBy(delta: Int): GameInfoState = copy(infoScroll = (infoScroll + delta).coerceIn(0, infoScrollMax))
 }
 
 enum class GameInfoAction { PLAY, INFO, VIDEO, MANUAL, OPTIONS }

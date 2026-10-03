@@ -72,7 +72,6 @@ import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.PanelBase
 import com.psplauncher.core.ui.image.rememberArtworkModel
 import com.psplauncher.core.ui.image.rememberBlurSourceModel
-import com.psplauncher.feature.xmb.ui.detail.panelPlayTime
 import com.psplauncher.feature.xmb.viewmodel.RecentDay
 import com.psplauncher.feature.xmb.viewmodel.RecentFilter
 import com.psplauncher.feature.xmb.viewmodel.RecentKind
@@ -80,6 +79,7 @@ import com.psplauncher.feature.xmb.viewmodel.XMBItem
 import com.psplauncher.feature.xmb.viewmodel.groupRecentsByDay
 import com.psplauncher.feature.xmb.viewmodel.isInstalledApp
 import com.psplauncher.feature.xmb.viewmodel.recentKind
+import com.psplauncher.core.common.format.playTimeLabel
 import com.psplauncher.core.common.format.relativeTime
 import com.psplauncher.core.ui.design.PanelButton
 import com.psplauncher.feature.xmb.viewmodel.removableFromRecent
@@ -379,7 +379,7 @@ private fun detailLine(item: XMBItem, now: Long): String {
         RecentKind.APP -> "Used"
     }
     val opened = item.lastOpenedAt?.let { relativeTime(now, it) }?.let { "$verb ${if (it == "Now") "just now" else it}" }
-    val played = panelPlayTime(item.totalPlayTimeMillis)?.let { "$it played" }
+    val played = item.totalPlayTimeMillis.takeIf { it > 0L }?.let(::playTimeLabel)?.let { "$it played" }
     return listOfNotNull(opened, played).joinToString(" · ").ifBlank { kindLabel(item) }
 }
 

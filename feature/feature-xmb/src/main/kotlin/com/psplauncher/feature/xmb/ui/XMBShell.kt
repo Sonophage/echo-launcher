@@ -273,6 +273,7 @@ fun XMBShellContainer(
         onGameInfoNoticeTapped = viewModel::onGameInfoNoticeTapped,
         onGameInfoAction = viewModel::onGameInfoAction,
         onGameInfoPanelClose = viewModel::closeGameInfoPanel,
+        onGameInfoScrollMax = viewModel::onGameInfoScrollMax,
         onPanelProfileTapped = viewModel::onPanelProfileTapped,
         onProfileSet = viewModel::onProfileSetTapped,
         onProfileBadge = viewModel::onProfileBadgeTapped,
@@ -451,6 +452,7 @@ fun XMBShell(
     onGameInfoNoticeTapped: (String) -> Unit = {},
     onGameInfoAction: (com.psplauncher.feature.xmb.viewmodel.GameInfoAction) -> Unit = {},
     onGameInfoPanelClose: () -> Unit = {},
+    onGameInfoScrollMax: (Int) -> Unit = {},
     onPanelProfileTapped: (com.psplauncher.feature.xmb.viewmodel.ProfileSpot, Int) -> Unit = { _, _ -> },
     onProfileSet: (Int) -> Unit = {},
     onProfileBadge: (Int) -> Unit = {},
@@ -1285,6 +1287,7 @@ fun XMBShell(
                     modifier = Modifier.fillMaxSize(),
                     onBandAction = onGameInfoAction,
                     onClosePanel = onGameInfoPanelClose,
+                    onScrollMax = onGameInfoScrollMax,
                 )
             }
 

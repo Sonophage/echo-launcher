@@ -1265,6 +1265,8 @@ internal fun XMBUiState.withSettingsOpen(screenId: String): XMBUiState = copy(
     profile = null,
 )
 
+internal fun XMBUiState.withGameInfoOpen(info: GameInfoState): XMBUiState = copy(gameInfo = info, profile = null)
+
 fun XMBUiState.withNamePromptText(text: String): XMBUiState = when {
     renameAppTarget != null      -> copy(renameAppText = text)
     collectionNameDialog != null -> copy(collectionNameDialog = collectionNameDialog.copy(text = text))
@@ -5392,7 +5394,7 @@ class XMBViewModel @Inject constructor(
     fun onOpenGameInfo(item: XMBItem) {
         menuSound.play(MenuSound.SELECT)
         val info = GameInfoState(item)
-        _uiState.update { it.copy(gameInfo = info) }
+        _uiState.update { it.withGameInfoOpen(info) }
         viewModelScope.launch {
             val loaded = withContext(Dispatchers.IO) { if (info.isApp) loadAppInfo(info) else loadGameInfo(info) }
             _uiState.update { s -> if (s.gameInfo?.item?.id == item.id) s.copy(gameInfo = loaded.copy(cursor = s.gameInfo.cursor, band = s.gameInfo.band, open = s.gameInfo.open)) else s }
@@ -5493,7 +5495,11 @@ class XMBViewModel @Inject constructor(
 
     private fun scrollGameInfo(delta: Int) = _uiState.update { s ->
         val info = s.gameInfo?.takeIf { it.open == GameInfoAction.INFO } ?: return@update s
-        s.copy(gameInfo = info.copy(infoScroll = (info.infoScroll + delta).coerceAtLeast(0)))
+        s.copy(gameInfo = info.scrolledBy(delta))
+    }
+
+    fun onGameInfoScrollMax(max: Int) = _uiState.update { s ->
+        s.gameInfo?.let { s.copy(gameInfo = it.copy(infoScrollMax = max)) } ?: s
     }
 
     fun onGameInfoCursor(cursor: Int?) {
