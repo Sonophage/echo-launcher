@@ -31,5 +31,6 @@ class DiscordBootstrap @Inject constructor(
 
     fun onResume() {
         scope.launch { presence.clearCurrentGame() }
+        scope.launch { authRepository.refreshIfExpiring() }
     }
 }

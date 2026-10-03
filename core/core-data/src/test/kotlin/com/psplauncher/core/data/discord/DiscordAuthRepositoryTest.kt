@@ -136,7 +136,7 @@ class DiscordAuthRepositoryTest {
         val store = mockk<DiscordTokenStore>(relaxed = true)
         val activator = activator()
         coEvery { store.load() } returns
-            DiscordSession("AT-live", "RT", System.currentTimeMillis() + 60_000, "openid")
+            DiscordSession("AT-live", "RT", System.currentTimeMillis() + 3_600_000, "openid")
 
         assertTrue(repo(client, store, activator).restoreSession())
         coVerify { activator.activate("AT-live") }
@@ -158,15 +158,54 @@ class DiscordAuthRepositoryTest {
     }
 
     @Test
-    fun `restoreSession leaves the session in place when the refresh fails`() = runTest {
+    fun `restoreSession leaves the session in place when the refresh fails for a non auth reason`() = runTest {
+        val client = mockk<DiscordDeviceAuthClient>()
+        val store = mockk<DiscordTokenStore>(relaxed = true)
+        coEvery { store.load() } returns DiscordSession("AT-old", "RT", 0L, "openid")
+        coEvery { client.refreshTokens(any()) } returns TokenPollResult.Error("refresh_failed (503)")
+
+        assertFalse(repo(client, store).restoreSession())
+        coVerify(exactly = 0) { store.save(any(), any()) }
+        coVerify(exactly = 0) { store.clear() }
+    }
+
+    @Test
+    fun `a revoked refresh token clears the session so the app shows signed out, not signed in with no friends`() = runTest {
         val client = mockk<DiscordDeviceAuthClient>()
         val store = mockk<DiscordTokenStore>(relaxed = true)
         coEvery { store.load() } returns DiscordSession("AT-old", "RT", 0L, "openid")
         coEvery { client.refreshTokens(any()) } returns TokenPollResult.Error("invalid_grant")
 
         assertFalse(repo(client, store).restoreSession())
-        coVerify(exactly = 0) { store.save(any(), any()) }
-        coVerify(exactly = 0) { store.clear() }
+        coVerify { store.clear() }
+    }
+
+    @Test
+    fun `a token that expires within minutes is refreshed before it lapses`() = runTest {
+        val client = mockk<DiscordDeviceAuthClient>()
+        val store = mockk<DiscordTokenStore>(relaxed = true)
+        coEvery { store.load() } returns
+            DiscordSession("AT-old", "RT-xyz", System.currentTimeMillis() + 60_000, "openid")
+        val fresh = DeviceTokens("AT-new", "RT-new", 604800, "openid")
+        coEvery { client.refreshTokens("RT-xyz") } returns TokenPollResult.Approved(fresh)
+
+        repo(client, store).refreshIfExpiring()
+
+        coVerify { store.save(fresh, any()) }
+    }
+
+    @Test
+    fun `refreshIfExpiring leaves a live session alone so a resume does not reconnect the SDK`() = runTest {
+        val client = mockk<DiscordDeviceAuthClient>()
+        val store = mockk<DiscordTokenStore>(relaxed = true)
+        val activator = activator()
+        coEvery { store.load() } returns
+            DiscordSession("AT-live", "RT", System.currentTimeMillis() + 3_600_000, "openid")
+
+        repo(client, store, activator).refreshIfExpiring()
+
+        coVerify(exactly = 0) { client.refreshTokens(any()) }
+        coVerify(exactly = 0) { activator.activate(any()) }
     }
 
     @Test
