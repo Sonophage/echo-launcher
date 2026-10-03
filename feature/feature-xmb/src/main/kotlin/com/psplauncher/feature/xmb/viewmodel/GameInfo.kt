@@ -14,8 +14,29 @@ data class GameInfoState(
     val appVersion: String? = null,
     val appStorageBytes: Long? = null,
     val cursor: Int? = null,
+    val videoUri: String? = null,
+    val manualPath: String? = null,
+    val band: GameInfoAction = GameInfoAction.PLAY,
+    val open: GameInfoAction? = null,
+    val infoScroll: Int = 0,
 ) {
     val isApp: Boolean get() = recentKind(item) == RecentKind.APP
+}
+
+enum class GameInfoAction { PLAY, INFO, VIDEO, MANUAL, OPTIONS }
+
+fun gameInfoActions(info: GameInfoState): List<GameInfoAction> = listOfNotNull(
+    GameInfoAction.PLAY,
+    GameInfoAction.INFO.takeIf { !info.isApp && info.content != null },
+    GameInfoAction.VIDEO.takeIf { !info.isApp && info.videoUri != null },
+    GameInfoAction.MANUAL.takeIf { !info.isApp && info.manualPath != null },
+    GameInfoAction.OPTIONS,
+)
+
+fun stepGameInfoBand(current: GameInfoAction, actions: List<GameInfoAction>, delta: Int): GameInfoAction {
+    val index = actions.indexOf(current)
+    if (index < 0) return actions.first()
+    return actions[(index + delta).coerceIn(0, actions.lastIndex)]
 }
 
 data class GameInfoStat(val label: String, val value: String)
