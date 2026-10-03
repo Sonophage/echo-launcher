@@ -580,6 +580,8 @@ data class XMBUiState(
 
     val metadataPreviewGameId: Long? = null,
 
+    val gameInfo: GameInfoState? = null,
+
 
 
 
@@ -828,6 +830,7 @@ data class XMBUiState(
             gamePickerCategoryId != null ||
             activeAppDrawerFilter != null ||
             activeAppId != null ||
+            gameInfo != null ||
             search != null
 
     private val fullscreenOverlay: Boolean
@@ -5219,6 +5222,10 @@ class XMBViewModel @Inject constructor(
                 }
                 return
             }
+            state.gameInfo != null -> {
+                handleGameInfoInput(state.gameInfo, state.androidNotices, action)
+                return
+            }
         }
 
         if (state.hasBlockingOverlay) {
@@ -5328,6 +5335,83 @@ class XMBViewModel @Inject constructor(
 
     fun onOpenGameInfo(item: XMBItem) {
         menuSound.play(MenuSound.SELECT)
+        val info = GameInfoState(item)
+        _uiState.update { it.copy(gameInfo = info) }
+        viewModelScope.launch {
+            val loaded = withContext(Dispatchers.IO) { if (info.isApp) loadAppInfo(info) else loadGameInfo(info) }
+            _uiState.update { s -> if (s.gameInfo?.item?.id == item.id) s.copy(gameInfo = loaded.copy(cursor = s.gameInfo.cursor)) else s }
+        }
+    }
+
+    private suspend fun loadGameInfo(info: GameInfoState): GameInfoState {
+        val gid = info.item.gameId ?: return info
+        val game = runCatching { gameRepository.getById(gid) }.getOrNull() ?: return info
+        val platform = runCatching { platformDao.getById(game.platformId)?.name }.getOrNull() ?: game.platformId.uppercase()
+        val media = (artworkStore.findAll(gid, ArtworkKind.SCREENSHOT) + listOfNotNull(artworkStore.find(gid, ArtworkKind.TITLESCREEN)))
+            .map { com.psplauncher.feature.xmb.ui.detail.DetailMedia(it, isVideo = false) }
+        val video = if (videoSnapsAllowed()) artworkStore.find(gid, ArtworkKind.ICON1) ?: artworkStore.find(gid, ArtworkKind.VIDEO) else null
+        return info.copy(content = detailPanelContentFor(game, platform, media, video))
+    }
+
+    private fun loadAppInfo(info: GameInfoState): GameInfoState {
+        val pkg = info.item.packageName ?: return info
+        val pm = context.packageManager
+        val version = runCatching { pm.getPackageInfo(pkg, 0).versionName }.getOrNull()
+        val storage = if (com.psplauncher.core.data.permission.UsageAccess.isGranted(context)) runCatching {
+            val stats = context.getSystemService(android.app.usage.StorageStatsManager::class.java)
+                .queryStatsForPackage(pm.getApplicationInfo(pkg, 0).storageUuid, pkg, android.os.Process.myUserHandle())
+            stats.appBytes + stats.dataBytes
+        }.getOrNull() else null
+        return info.copy(appVersion = version, appStorageBytes = storage)
+    }
+
+    private fun handleGameInfoInput(info: GameInfoState, notices: List<com.psplauncher.core.ui.notification.AndroidNotice>, action: GamepadAction) {
+        when (action) {
+            GamepadAction.BACK -> closeGameInfo()
+            GamepadAction.SELECT -> {
+                val notice = info.cursor?.let { info.notices(notices).getOrNull(it) }
+                if (notice != null) openAndroidNotice(notice.key) else playFromGameInfo(info.item)
+            }
+            GamepadAction.OPEN_CONTEXT_MENU -> openGameInfoOptions(info)
+            GamepadAction.NAVIGATE_UP,
+            GamepadAction.NAVIGATE_DOWN,
+            GamepadAction.NAVIGATE_LEFT,
+            GamepadAction.NAVIGATE_RIGHT -> onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
+            else -> Unit
+        }
+    }
+
+    fun onGameInfoCursor(cursor: Int?) {
+        val info = _uiState.value.gameInfo ?: return
+        if (cursor == info.cursor) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(cursor = cursor)) }
+    }
+
+    fun onGameInfoNoticeTapped(key: String) = openAndroidNotice(key)
+
+    fun closeGameInfo() {
+        if (_uiState.value.gameInfo == null) return
+        menuSound.play(MenuSound.BACK)
+        _uiState.update { it.copy(gameInfo = null) }
+    }
+
+    private fun openGameInfoOptions(info: GameInfoState) {
+        if (info.isApp) openAppContextMenu(info.item) else openGameContextMenu(info.item)
+    }
+
+    private fun playFromGameInfo(item: XMBItem) {
+        _uiState.update { it.copy(gameInfo = null) }
+        val index = _uiState.value.currentItems.indexOfFirst { it.id == item.id }
+        when {
+            index >= 0 -> onItemSelected(index)
+            item.gameId != null -> launchGameDirectly(item.gameId)
+        }
+    }
+
+    private fun openAndroidNotice(key: String) {
+        menuSound.play(MenuSound.SELECT)
+        if (!AndroidNotifications.open(key)) Timber.i("Notification $key had nothing to open")
     }
 
     private fun removeFromRecent(item: XMBItem) {
@@ -5825,6 +5909,7 @@ class XMBViewModel @Inject constructor(
             } else when (itemId) {
 
                 "play"                   -> launchGameDirectly(menu.gameId)
+                "game_info"              -> _uiState.value.currentItems.firstOrNull { it.gameId == menu.gameId }?.let(::onOpenGameInfo)
                 "choose_disc"             -> openDiscPickerMenu(menu.gameId)
                 "export_game"            -> exportGameFromMenu(menu.gameId)
                 "edit_app"               -> openAppDetail(menu.gameId, menu.packageName ?: return)
@@ -6436,8 +6521,7 @@ class XMBViewModel @Inject constructor(
             }
             StageCommand.OPEN_NOTICE -> {
                 val key = (focus as? NoticeFocus.Notice)?.key ?: return
-                menuSound.play(MenuSound.SELECT)
-                if (!AndroidNotifications.open(key)) Timber.i("Notification $key had nothing to open")
+                openAndroidNotice(key)
                 closeNotifications()
             }
             StageCommand.DISMISS -> {
