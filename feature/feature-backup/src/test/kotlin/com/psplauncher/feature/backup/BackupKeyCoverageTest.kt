@@ -119,6 +119,11 @@ class BackupKeyCoverageTest {
     }
 
     @Test
+    fun `the local profile name and picture are backed up`() {
+        assertCovered("profile_name", "profile_avatar_uri")
+    }
+
+    @Test
     fun `keys excluded on purpose stay excluded`() {
         val migrationMarkers = listOf(
             "debug_seeded_v1", "themes_seeded_v1", "library_consolidated_v22", "data_prep_version",

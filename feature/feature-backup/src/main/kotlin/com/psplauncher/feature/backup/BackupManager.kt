@@ -380,7 +380,7 @@ open class BackupManager @Inject constructor(
     private fun SettingsSnapshot.remapWallpaper(filesDirPath: String): SettingsSnapshot {
         var entries = this.entries
 
-        for (key in listOf(KEY_CUSTOM_WALLPAPER, KEY_MOTION_WALLPAPER)) {
+        for (key in listOf(KEY_CUSTOM_WALLPAPER, KEY_MOTION_WALLPAPER, KEY_PROFILE_AVATAR)) {
             val current = entries[key] ?: continue
             val remapped = rewriteFilesPath(current, filesDirPath) ?: continue
             if (remapped != current) entries = entries + (key to remapped)
@@ -463,12 +463,15 @@ open class BackupManager @Inject constructor(
 
     private const val KEY_MOTION_WALLPAPER = "display_motion_wallpaper"
 
+    private const val KEY_PROFILE_AVATAR = "profile_avatar_uri"
+
         private val BUNDLED_FILE_ROOTS = listOf(
             "artwork",
             "wallpaper",
             "emulator_profiles",
             "custom-icons",
             "ui-media",
+            "profile",
         )
 
     private val BACKED_UP_STRING_KEYS = listOf(
@@ -479,6 +482,9 @@ open class BackupManager @Inject constructor(
         stringPreferencesKey("display_color_scheme"),
         stringPreferencesKey("display_custom_wallpaper"),
         stringPreferencesKey("display_motion_wallpaper"),
+
+        stringPreferencesKey("profile_name"),
+        stringPreferencesKey("profile_avatar_uri"),
 
         stringPreferencesKey("display_icon_legibility"),
         stringPreferencesKey("display_xmb_layout_adjust"),

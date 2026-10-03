@@ -75,6 +75,7 @@ import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Games
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
@@ -143,6 +144,7 @@ data class QuickSettingsState(
     val backdropOn: Boolean,
     val recentAppsOn: Boolean,
     val chips: List<LibraryChip>,
+    val profileName: String,
 )
 
 @Composable
@@ -459,6 +461,7 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(22))) {
         PANEL_QUICK_SETTINGS.forEach { setting ->
             val (label, value) = when (setting) {
+                QuickSetting.PROFILE -> "Profile" to quick.profileName
                 QuickSetting.WAVE -> "Wave" to if (quick.waveOn) "On" else "Off"
                 QuickSetting.BACKDROP -> "Crossbar shows" to if (quick.backdropOn) "Art" else "Wallpaper"
                 QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
@@ -469,7 +472,7 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
                 Icon(quickIcon(setting), null, tint = Color.White, modifier = Modifier.size(u.dp(34)))
                 Column {
                     Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(17), fontWeight = FontWeight.Light)
-                    Text(value, color = Color.White, fontSize = u.sp(48), fontWeight = FontWeight.ExtraLight)
+                    Text(value, color = Color.White, fontSize = u.sp(48), fontWeight = FontWeight.ExtraLight, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -641,6 +644,7 @@ private fun stageGlyph(stage: PanelStage): ImageVector = when (stage) {
 }
 
 private fun quickIcon(setting: QuickSetting): ImageVector = when (setting) {
+    QuickSetting.PROFILE -> Icons.Outlined.AccountCircle
     QuickSetting.WAVE -> Icons.Outlined.Waves
     QuickSetting.BACKDROP -> Icons.Outlined.Image
     QuickSetting.RECENT_APPS -> Icons.Outlined.History

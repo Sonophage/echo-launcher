@@ -15,9 +15,9 @@ val LIBRARY_CHIP_IDS = listOf(
     "network",
 )
 
-enum class QuickSetting { WAVE, BACKDROP, RECENT_APPS, ANDROID_SETTINGS, LIBRARIES }
+enum class QuickSetting { PROFILE, WAVE, BACKDROP, RECENT_APPS, ANDROID_SETTINGS, LIBRARIES }
 
-val PANEL_QUICK_SETTINGS = listOf(QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.RECENT_APPS, QuickSetting.ANDROID_SETTINGS)
+val PANEL_QUICK_SETTINGS = listOf(QuickSetting.PROFILE, QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.RECENT_APPS, QuickSetting.ANDROID_SETTINGS)
 
 const val LIBRARY_GRID_COLUMNS = 3
 
