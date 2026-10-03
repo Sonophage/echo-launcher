@@ -20,8 +20,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -135,18 +134,13 @@ private fun ActionTab(
             .heightIn(min = u.dp(68))
             .widthIn(min = u.dp(220))
             .clip(shape)
-            .drawBehind {
-                drawRect(
-                    Brush.linearGradient(
-                        0f to accent.copy(alpha = 0.62f),
-                        1f to lerp(accent, Color.Black, 0.38f).copy(alpha = 0.5f),
-                        start = Offset.Zero,
-                        end = Offset(size.width, size.height),
-                    ),
+            .drawWithCache {
+                val fill = Brush.linearGradient(
+                    0f to accent.copy(alpha = 0.62f),
+                    1f to lerp(accent, Color.Black, 0.38f).copy(alpha = 0.5f),
+                    start = Offset.Zero,
+                    end = Offset(size.width, size.height),
                 )
-            }
-            .drawWithContent {
-                drawContent()
                 val w = TabEdge.toPx()
                 val r = radius.toPx()
                 val path = Path().apply {
@@ -155,8 +149,14 @@ private fun ActionTab(
                     arcTo(Rect(w / 2, w / 2, 2 * r - w / 2, 2 * r - w / 2), 180f, 90f, false)
                     lineTo(size.width, w / 2)
                 }
-                drawPath(path, edge.copy(alpha = 0.35f), style = Stroke(width = w * 4))
-                drawPath(path, edge, style = Stroke(width = w))
+                val glow = Stroke(width = w * 4)
+                val line = Stroke(width = w)
+                onDrawWithContent {
+                    drawRect(fill)
+                    drawContent()
+                    drawPath(path, edge.copy(alpha = 0.35f), style = glow)
+                    drawPath(path, edge, style = line)
+                }
             }
             .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
             .padding(start = u.dp(20), end = maxOf(u.dp(20), chromeGutter(end = true)), top = u.dp(6), bottom = u.dp(14)),

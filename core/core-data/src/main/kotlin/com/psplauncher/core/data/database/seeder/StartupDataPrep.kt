@@ -15,6 +15,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.io.File
+import androidx.room.withTransaction
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,6 +24,7 @@ class StartupDataPrep @Inject constructor(
     @ApplicationContext private val context: Context,
     private val gameDao: GameDao,
     private val artworkRecordDao: ArtworkRecordDao,
+    private val db: com.psplauncher.core.data.database.PFPDatabase,
 ) {
     suspend fun run(currentVersionCode: Int) {
         val prefs = context.pfpDataStore.data.first()
@@ -50,7 +52,7 @@ class StartupDataPrep @Inject constructor(
 
     private suspend fun repointColumnsAtTheirRecords() {
         var repaired = 0
-        gameDao.getAll().forEach { g ->
+        db.withTransaction { gameDao.getAll().forEach { g ->
             val icon = primaryUserAsset(g.id, "ICON")
             val artwork = primaryUserAsset(g.id, "BACKGROUND")
             val logo = primaryUserAsset(g.id, "LOGO")
@@ -58,7 +60,7 @@ class StartupDataPrep @Inject constructor(
             if (icon != null && icon != g.iconUri) { gameDao.updateIconUri(g.id, icon); repaired++ }
             if (artwork != null && artwork != g.artworkUri) { gameDao.updateArtwork(g.id, artwork); repaired++ }
             if (logo != null && logo != g.logoUri) { gameDao.updateLogo(g.id, logo); repaired++ }
-        }
+        } }
         if (repaired > 0) Timber.i("Repointed $repaired artwork column(s) at the record that owns them")
     }
 
@@ -68,7 +70,7 @@ class StartupDataPrep @Inject constructor(
     private suspend fun normalizeGameArtwork() {
         val filesDir = context.filesDir.absolutePath
         var repaired = 0
-        gameDao.getAll().forEach { g ->
+        db.withTransaction { gameDao.getAll().forEach { g ->
             val artwork = resolve(g.artworkUri, filesDir)
             val logo    = resolve(g.logoUri, filesDir)
             val icon    = resolve(g.iconUri, filesDir)
@@ -80,7 +82,7 @@ class StartupDataPrep @Inject constructor(
             if (artwork != g.artworkUri || logo != g.logoUri || icon != g.iconUri) {
                 repaired++
             }
-        }
+        } }
         if (repaired > 0) Timber.i("Re-homed artwork paths on $repaired game(s)")
     }
 

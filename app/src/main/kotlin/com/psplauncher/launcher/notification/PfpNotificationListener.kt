@@ -118,11 +118,11 @@ class PfpNotificationListener : NotificationListenerService(), AndroidNotificati
             return
         }
         trackSessions(active.orEmpty().filter { it.isMediaPlayback() })
-        val drawable = active.orEmpty().filter { it.toNotice() != null }
-        intents = drawable.mapNotNull { sbn ->
+        val drawable = active.orEmpty().mapNotNull { sbn -> sbn.toNotice()?.let { sbn to it } }
+        intents = drawable.mapNotNull { (sbn, _) ->
             sbn.notification?.contentIntent?.let { sbn.key to it }
         }.toMap()
-        val notices = drawable.mapNotNull { it.toNotice() }
+        val notices = drawable.map { it.second }
         Timber.i("Notification listener: ${active.orEmpty().size} active, ${notices.size} drawable, ${intents.size} openable")
         AndroidNotifications.publish(notices)
     }
@@ -225,8 +225,12 @@ class PfpNotificationListener : NotificationListenerService(), AndroidNotificati
         return lines?.lastOrNull { !it.toString().isBlank() }?.toString()
     }
 
-    private fun appLabelFor(pkg: String): String = runCatching {
-        val info = packageManager.getApplicationInfo(pkg, 0)
-        packageManager.getApplicationLabel(info).toString()
-    }.getOrDefault(pkg)
+    private val appLabels = HashMap<String, String>()
+
+    private fun appLabelFor(pkg: String): String = appLabels.getOrPut(pkg) {
+        runCatching {
+            val info = packageManager.getApplicationInfo(pkg, 0)
+            packageManager.getApplicationLabel(info).toString()
+        }.getOrDefault(pkg)
+    }
 }
