@@ -12,7 +12,7 @@ const val DEFAULT_PROFILE_NAME = "Player"
 
 const val BADGE_COLUMNS = 6
 
-enum class ProfileTab(val label: String) { OVERVIEW("Overview"), ACHIEVEMENTS("Achievements"), FRIENDS("Friends") }
+enum class ProfileTab { ACHIEVEMENTS, FRIENDS }
 
 enum class BadgeFilter(val label: String) { ALL("All"), UNLOCKED("Unlocked"), LOCKED("Locked") }
 
@@ -36,13 +36,14 @@ data class ProfileData(
 )
 
 data class ProfileState(
-    val tab: ProfileTab = ProfileTab.OVERVIEW,
+    val tab: ProfileTab = ProfileTab.ACHIEVEMENTS,
     val set: Int = 0,
     val inGrid: Boolean = false,
     val badge: Int = 0,
     val filter: BadgeFilter = BadgeFilter.ALL,
     val friend: Int = 0,
     val openOnGameId: Long? = null,
+    val returnToPanel: Boolean = false,
     val data: ProfileData = ProfileData(),
 ) {
     val focusedSet: AchievementSet? get() = data.sets.getOrNull(set)
@@ -69,11 +70,13 @@ fun filterBadges(all: List<Achievement>, filter: BadgeFilter): List<Achievement>
     BadgeFilter.LOCKED -> all.filterNot { it.isUnlocked }
 }
 
-data class ShowcaseBadge(val achievement: Achievement, val game: String)
+data class ShowcaseBadge(val achievement: Achievement, val set: AchievementSet) {
+    val game: String get() = set.title
+}
 
 fun showcase(sets: List<AchievementSet>, badges: Map<String, List<Achievement>>, count: Int = 4): List<ShowcaseBadge> =
     sets.flatMap { set ->
-        badges[setKey(set)].orEmpty().filter { it.isUnlocked && it.globalPercent != null }.map { ShowcaseBadge(it, set.title) }
+        badges[setKey(set)].orEmpty().filter { it.isUnlocked && it.globalPercent != null }.map { ShowcaseBadge(it, set) }
     }.sortedBy { it.achievement.globalPercent }.take(count)
 
 fun groupFriends(friends: List<DiscordFriend>): List<Pair<FriendGroup, List<DiscordFriend>>> {
@@ -87,24 +90,16 @@ fun groupFriends(friends: List<DiscordFriend>): List<Pair<FriendGroup, List<Disc
     return FriendGroup.entries.mapNotNull { g -> byGroup[g]?.let { g to it } }
 }
 
-fun stepProfile(state: ProfileState, action: GamepadAction): ProfileState {
-    val tabs = ProfileTab.entries
-    return when (action) {
-        GamepadAction.PREV_CATEGORY -> state.copy(tab = tabs[(state.tab.ordinal - 1 + tabs.size) % tabs.size])
-        GamepadAction.NEXT_CATEGORY -> state.copy(tab = tabs[(state.tab.ordinal + 1) % tabs.size])
-        else -> when (state.tab) {
-            ProfileTab.OVERVIEW -> state
-            ProfileTab.FRIENDS -> {
-                val last = (state.friendRows.size - 1).coerceAtLeast(0)
-                when (action) {
-                    GamepadAction.NAVIGATE_UP -> state.copy(friend = (state.friend - 1).coerceAtLeast(0))
-                    GamepadAction.NAVIGATE_DOWN -> state.copy(friend = (state.friend + 1).coerceAtMost(last))
-                    else -> state
-                }
-            }
-            ProfileTab.ACHIEVEMENTS -> stepAchievements(state, action)
+fun stepProfile(state: ProfileState, action: GamepadAction): ProfileState = when (state.tab) {
+    ProfileTab.FRIENDS -> {
+        val last = (state.friendRows.size - 1).coerceAtLeast(0)
+        when (action) {
+            GamepadAction.NAVIGATE_UP -> state.copy(friend = (state.friend - 1).coerceAtLeast(0))
+            GamepadAction.NAVIGATE_DOWN -> state.copy(friend = (state.friend + 1).coerceAtMost(last))
+            else -> state
         }
     }
+    ProfileTab.ACHIEVEMENTS -> stepAchievements(state, action)
 }
 
 private fun stepAchievements(state: ProfileState, action: GamepadAction): ProfileState {
@@ -140,4 +135,55 @@ fun ProfileState.withData(next: ProfileData): ProfileState {
         set = pinned ?: set.coerceIn(0, (next.sets.size - 1).coerceAtLeast(0)),
         openOnGameId = if (pinned != null) null else openOnGameId,
     )
+}
+
+fun recentlyPlayed(games: List<Game>, count: Int = RECENTLY_PLAYED_COUNT): List<Game> =
+    games.filter { it.lastPlayedAt != null }.sortedByDescending { it.lastPlayedAt }
+        .distinctBy { it.discSetKey ?: it.id.toString() }.take(count)
+
+fun profileBanner(recent: List<Game>): String? =
+    recent.firstOrNull()?.let { listOfNotNull(it.artworkUri, it.iconUri).firstOrNull { uri -> uri.isNotBlank() } }
+
+const val RECENTLY_PLAYED_COUNT = 3
+
+enum class ProfileSpot { EDIT, EDIT_NAME, EDIT_PICTURE, RECENT, SHOWCASE, FRIENDS }
+
+data class ProfileFocus(val spot: ProfileSpot = ProfileSpot.EDIT, val recent: Int = 0) {
+    val choosing: Boolean get() = spot == ProfileSpot.EDIT_NAME || spot == ProfileSpot.EDIT_PICTURE
+}
+
+fun moveProfileFocus(focus: ProfileFocus, move: PanelMove, recents: Int): ProfileFocus {
+    val last = (recents - 1).coerceAtLeast(0)
+    val at = focus.recent.coerceIn(0, last)
+    val body = if (recents > 0) ProfileFocus(ProfileSpot.RECENT, at) else focus.copy(spot = ProfileSpot.SHOWCASE)
+    return when (focus.spot) {
+        ProfileSpot.EDIT -> if (move == PanelMove.DOWN) body else focus
+        ProfileSpot.EDIT_NAME -> when (move) {
+            PanelMove.RIGHT -> focus.copy(spot = ProfileSpot.EDIT_PICTURE)
+            PanelMove.DOWN -> body
+            else -> focus
+        }
+        ProfileSpot.EDIT_PICTURE -> when (move) {
+            PanelMove.LEFT -> focus.copy(spot = ProfileSpot.EDIT_NAME)
+            PanelMove.DOWN -> body
+            else -> focus
+        }
+        ProfileSpot.RECENT -> when (move) {
+            PanelMove.UP -> if (at > 0) focus.copy(recent = at - 1) else focus.copy(spot = ProfileSpot.EDIT)
+            PanelMove.DOWN -> focus.copy(recent = (at + 1).coerceAtMost(last))
+            PanelMove.RIGHT -> focus.copy(spot = ProfileSpot.SHOWCASE)
+            else -> focus
+        }
+        ProfileSpot.SHOWCASE -> when (move) {
+            PanelMove.LEFT -> if (recents > 0) body else focus
+            PanelMove.RIGHT -> focus.copy(spot = ProfileSpot.FRIENDS)
+            PanelMove.UP -> focus.copy(spot = ProfileSpot.EDIT)
+            else -> focus
+        }
+        ProfileSpot.FRIENDS -> when (move) {
+            PanelMove.LEFT -> focus.copy(spot = ProfileSpot.SHOWCASE)
+            PanelMove.UP -> focus.copy(spot = ProfileSpot.EDIT)
+            else -> focus
+        }
+    }
 }

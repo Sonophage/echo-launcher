@@ -590,6 +590,7 @@ data class XMBUiState(
     val profileName: String = DEFAULT_PROFILE_NAME,
     val profileAvatar: String? = null,
     val profileAvatarPick: Boolean = false,
+    val profileData: ProfileData = ProfileData(),
 
 
 
@@ -692,7 +693,8 @@ data class XMBUiState(
 
     val panelTab: PanelTab = PanelTab.NOTIFICATIONS,
     val noticeCursor: Int = 0,
-    val panelQuick: QuickSetting = QuickSetting.PROFILE,
+    val panelQuick: QuickSetting = QuickSetting.WAVE,
+    val panelProfile: ProfileFocus = ProfileFocus(),
     val panelChip: Int = 0,
     val panelSetting: Int = 0,
     val settingsFromPanel: Boolean = false,
@@ -1361,6 +1363,7 @@ class XMBViewModel @Inject constructor(
         observeCategoryBar()
         observeLibraryChips()
         observeProfilePrefs()
+        observeProfileData()
         observeCategories()
         observeMissingGames()
         observeAppChanges()
@@ -4973,12 +4976,16 @@ class XMBViewModel @Inject constructor(
                 GamepadAction.CHANGE_SORT,
                 GamepadAction.OPEN_CONTEXT_MENU -> when (state.panelTab) {
                     PanelTab.NOTIFICATIONS -> runStageButton(action)
+                    PanelTab.PROFILE -> runPanelProfile(action)
                     PanelTab.QUICK -> if (action == GamepadAction.SELECT) toggleQuickSetting(state.panelQuick)
                     PanelTab.LIBRARIES -> if (action == GamepadAction.SELECT) toggleQuickSetting(QuickSetting.LIBRARIES)
                     PanelTab.SETTINGS -> if (action == GamepadAction.SELECT) openPanelSetting(state.panelSetting)
                 }
                 GamepadAction.BACK,
-                GamepadAction.HOME               -> {
+                GamepadAction.HOME               -> if (action == GamepadAction.BACK && state.panelTab == PanelTab.PROFILE && state.panelProfile.choosing) {
+                    menuSound.play(MenuSound.BACK)
+                    _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
+                } else {
                     menuSound.play(MenuSound.BACK)
                     closeNotifications()
                 }
@@ -5419,18 +5426,22 @@ class XMBViewModel @Inject constructor(
         _uiState.update { it.copy(gameInfo = null) }
     }
 
-    private var profileJob: Job? = null
-
-    fun openProfile(tab: ProfileTab = ProfileTab.OVERVIEW, gameId: Long? = null) {
+    fun openProfile(tab: ProfileTab, gameId: Long? = null, set: Int = 0, fromPanel: Boolean = false) {
         menuSound.play(MenuSound.SELECT)
-        showProfile(tab, gameId)
+        _uiState.update {
+            it.copy(
+                notificationsOpen = if (fromPanel) false else it.notificationsOpen,
+                profile = ProfileState(tab = tab, set = set, openOnGameId = gameId, returnToPanel = fromPanel).withData(it.profileData),
+            )
+        }
     }
 
-    private fun showProfile(tab: ProfileTab, gameId: Long?) {
-        _uiState.update { it.copy(profile = ProfileState(tab = tab, openOnGameId = gameId)) }
-        profileJob?.cancel()
-        profileJob = viewModelScope.launch {
-            profileData().collect { data -> _uiState.update { s -> s.profile?.let { s.copy(profile = it.withData(data)) } ?: s } }
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun observeProfileData() {
+        viewModelScope.launch {
+            _uiState.map { it.notificationsOpen || it.profile != null }.distinctUntilChanged()
+                .flatMapLatest { shown -> if (shown) profileData() else kotlinx.coroutines.flow.emptyFlow() }
+                .collect { data -> _uiState.update { s -> s.copy(profileData = data, profile = s.profile?.withData(data)) } }
         }
     }
 
@@ -5468,8 +5479,7 @@ class XMBViewModel @Inject constructor(
             acc.copy(
                 games = games.distinctBy { it.discSetKey ?: it.id.toString() }.size,
                 playTimeMs = games.sumOf { it.totalPlayTimeMillis },
-                recent = games.filter { it.lastPlayedAt != null }.sortedByDescending { it.lastPlayedAt }
-                    .distinctBy { it.discSetKey ?: it.id.toString() }.take(3),
+                recent = recentlyPlayed(games),
                 totals = totals,
                 sets = sets,
                 badges = badges,
@@ -5481,8 +5491,6 @@ class XMBViewModel @Inject constructor(
     private fun handleProfileInput(p: ProfileState, action: GamepadAction) {
         when {
             action == GamepadAction.BACK -> closeProfile()
-            p.tab == ProfileTab.OVERVIEW && action == GamepadAction.CHANGE_SORT -> editProfileName()
-            p.tab == ProfileTab.OVERVIEW && action == GamepadAction.OPEN_CONTEXT_MENU -> pickProfileAvatar()
             p.tab == ProfileTab.ACHIEVEMENTS && p.data.sets.isEmpty() && action == GamepadAction.SELECT ->
                 openSettingsFromProfile("settings_accounts")
             p.tab == ProfileTab.FRIENDS && !p.data.discordSignedIn && action == GamepadAction.SELECT ->
@@ -5497,12 +5505,8 @@ class XMBViewModel @Inject constructor(
             gamepadInputHandler.cancelRepeat()
             return
         }
-        menuSound.play(if (next.tab != current.tab) MenuSound.SYSTEM_BROWSE else MenuSound.SCROLL)
+        menuSound.play(MenuSound.SCROLL)
         _uiState.update { s -> s.copy(profile = s.profile?.let { next.copy(data = it.data) }) }
-    }
-
-    fun onProfileTabTapped(tab: ProfileTab) {
-        _uiState.value.profile?.let { setProfile(it.copy(tab = tab)) }
     }
 
     fun onProfileSetTapped(index: Int) {
@@ -5522,15 +5526,60 @@ class XMBViewModel @Inject constructor(
     }
 
     fun closeProfile() {
-        if (_uiState.value.profile == null) return
+        val profile = _uiState.value.profile ?: return
         menuSound.play(MenuSound.BACK)
-        profileJob?.cancel()
-        _uiState.update { it.copy(profile = null) }
+        _uiState.update {
+            if (profile.returnToPanel) it.copy(profile = null, notificationsOpen = true, panelTab = PanelTab.PROFILE) else it.copy(profile = null)
+        }
+    }
+
+    private fun runPanelProfile(action: GamepadAction) {
+        val s = _uiState.value
+        val focus = s.panelProfile
+        when (action) {
+            GamepadAction.CHANGE_SORT -> onPanelProfileTapped(ProfileSpot.EDIT, 0)
+            GamepadAction.SELECT -> onPanelProfileTapped(focus.spot, if (focus.spot == ProfileSpot.SHOWCASE) showcaseSet(s.profileData) else focus.recent)
+            else -> Unit
+        }
+    }
+
+    private fun showcaseSet(data: ProfileData): Int =
+        showcase(data.sets, data.badges, 1).firstOrNull()?.let { data.sets.indexOf(it.set) }?.coerceAtLeast(0) ?: 0
+
+    fun onPanelProfileTapped(spot: ProfileSpot, index: Int) {
+        val s = _uiState.value
+        when (spot) {
+            ProfileSpot.EDIT -> {
+                menuSound.play(MenuSound.SELECT)
+                _uiState.update { it.copy(panelTab = PanelTab.PROFILE, panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT_NAME)) }
+            }
+            ProfileSpot.EDIT_NAME -> {
+                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
+                closeNotifications()
+                editProfileName()
+            }
+            ProfileSpot.EDIT_PICTURE -> {
+                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
+                pickProfileAvatar()
+            }
+            ProfileSpot.RECENT -> s.profileData.recent.getOrNull(index)?.let { game ->
+                _uiState.update { it.copy(panelProfile = ProfileFocus(ProfileSpot.RECENT, index)) }
+                closeNotifications()
+                onOpenGameInfo(game.toSearchRow())
+            }
+            ProfileSpot.SHOWCASE -> {
+                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.SHOWCASE)) }
+                openProfile(ProfileTab.ACHIEVEMENTS, set = index, fromPanel = true)
+            }
+            ProfileSpot.FRIENDS -> {
+                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.FRIENDS)) }
+                openProfile(ProfileTab.FRIENDS, fromPanel = true)
+            }
+        }
     }
 
     private fun openSettingsFromProfile(screenId: String) {
         menuSound.play(MenuSound.SELECT)
-        profileJob?.cancel()
         _uiState.update {
             it.copy(profile = null, gameInfo = null, activeSettingsScreen = screenId, settingsReturnTo = null, settingsFromPanel = false)
         }
@@ -6544,7 +6593,8 @@ class XMBViewModel @Inject constructor(
                 notificationsOpen = !it.notificationsOpen,
                 panelTab = PanelTab.NOTIFICATIONS,
                 noticeCursor = 0,
-                panelQuick = QuickSetting.PROFILE,
+                panelQuick = QuickSetting.WAVE,
+                panelProfile = ProfileFocus(),
                 panelChip = 0,
                 panelSetting = 0,
             )
@@ -6561,12 +6611,13 @@ class XMBViewModel @Inject constructor(
 
     private fun movePanelCursor(move: PanelMove) {
         val s = _uiState.value
-        val before = PanelCursor(s.panelTab, s.noticeCursor, PANEL_QUICK_SETTINGS.indexOf(s.panelQuick).coerceAtLeast(0), s.panelChip, s.panelSetting)
+        val before = PanelCursor(s.panelTab, s.noticeCursor, PANEL_QUICK_SETTINGS.indexOf(s.panelQuick).coerceAtLeast(0), s.panelChip, s.panelSetting, s.panelProfile)
         val after = movePanel(
             before, move,
             rows = s.noticeFocusables.size,
             quicks = PANEL_QUICK_SETTINGS.size,
             chips = s.libraryChips.size,
+            recents = s.profileData.recent.size,
         )
         if (after == before) {
             gamepadInputHandler.cancelRepeat()
@@ -6580,6 +6631,7 @@ class XMBViewModel @Inject constructor(
                 panelQuick = PANEL_QUICK_SETTINGS[after.quick],
                 panelChip = after.chip,
                 panelSetting = after.setting,
+                panelProfile = after.profile,
             )
         }
     }
@@ -6631,10 +6683,6 @@ class XMBViewModel @Inject constructor(
                 QuickSetting.BACKDROP -> iconDisplayPreferences.setItemBackdrop(!s.itemBackdropEnabled)
                 QuickSetting.RECENT_APPS -> context.pfpDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
                 QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
-                QuickSetting.PROFILE -> {
-                    closeNotifications()
-                    showProfile(ProfileTab.OVERVIEW, null)
-                }
                 QuickSetting.ANDROID_SETTINGS -> {
                     closeNotifications()
                     runCatching {
