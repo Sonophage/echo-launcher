@@ -180,4 +180,15 @@ class AchievementAutoMatcherTest {
         coVerify { repository.linkManually(1, AchievementProvider.STEAM, "220") }
         coVerify(exactly = 0) { repository.resolveSteamLink(any(), any()) }
     }
+
+    @Test
+    fun `a failed steam store search is reported as unreachable, not as a game missing from Steam`() = runTest {
+        val g = Game(id = 1, title = "Half-Life 2", platformId = "windows")
+        stubGames(g)
+        coEvery { repository.resolveSteamLink(1, any()) } throws java.io.IOException("429")
+
+        val report = matcher.matchUnlinked()
+
+        assertTrue(report.unmatched.single().reason.startsWith("Couldn't reach the Steam store"))
+    }
 }

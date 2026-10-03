@@ -1,6 +1,7 @@
 package com.psplauncher.feature.achievements.provider.steam
 
-import kotlinx.coroutines.CancellationException
+import com.psplauncher.feature.achievements.api.RateLimiter
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -8,6 +9,8 @@ import javax.inject.Singleton
 class SteamAppListResolver @Inject constructor(
     private val storeApi: SteamStoreApi,
 ) {
+    private val rate = RateLimiter(1_500)
+
     suspend fun resolveAppId(title: String): String? {
         val key = normalize(title)
         if (key.isEmpty()) return null
@@ -16,13 +19,12 @@ class SteamAppListResolver @Inject constructor(
             ?.id?.toString()
     }
 
-    private suspend fun storeSearch(term: String): List<StoreItem> =
-        runCatching { storeApi.search(term) }
-            .getOrElse { e ->
-                if (e is CancellationException) throw e
-                return emptyList()
-            }
-            .body()?.items.orEmpty()
+    private suspend fun storeSearch(term: String): List<StoreItem> {
+        rate.await()
+        val response = storeApi.search(term)
+        if (!response.isSuccessful) throw IOException("Steam store search returned ${response.code()}")
+        return response.body()?.items.orEmpty()
+    }
 
     private fun normalize(s: String): String = s.lowercase().filter { it.isLetterOrDigit() }
 }
