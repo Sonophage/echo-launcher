@@ -169,6 +169,23 @@ class SettingsScaffoldNavigationTest {
     }
 
     @Test
+    fun `the help pane forgets a focused row that is removed, so it never describes a row that is gone`() {
+        val info = mutableStateOf<SettingsFocusInfo?>(null)
+        val shown = mutableStateOf(true)
+        showScreen {
+            CompositionLocalProvider(LocalSettingsFocusInfo provides info) {
+                if (shown.value) SettingsRow(label = "Theme", onClick = {})
+            }
+        }
+        assertEquals("Theme", info.value?.label)
+
+        composeRule.runOnIdle { shown.value = false }
+        composeRule.waitForIdle()
+
+        assertEquals(null, info.value)
+    }
+
+    @Test
     fun `an overlay takes every press while it is open`() {
         val seen = mutableListOf<GamepadAction>()
         val overlayOpen = mutableStateOf(false)

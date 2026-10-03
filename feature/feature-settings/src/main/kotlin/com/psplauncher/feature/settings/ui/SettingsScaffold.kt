@@ -1121,7 +1121,11 @@ fun SettingsRow(
     val focusInfo = LocalSettingsFocusInfo.current
     var isFocused by remember { mutableStateOf(false) }
     if (isFocused && focusInfo != null) {
-        LaunchedEffect(label, value, sublabel) { focusInfo.value = SettingsFocusInfo(label, value, sublabel) }
+        DisposableEffect(label, value, sublabel) {
+            val info = SettingsFocusInfo(label, value, sublabel)
+            focusInfo.value = info
+            onDispose { if (focusInfo.value == info) focusInfo.value = null }
+        }
     }
 
     val row = rememberControllerRowRegistration(
@@ -1412,8 +1416,10 @@ fun SettingsTextFieldRow(
     var editing by remember { mutableStateOf(false) }
     var fieldFocused by remember { mutableStateOf(false) }
     if (fieldFocused && focusInfo != null) {
-        LaunchedEffect(label, value, helper) {
-            focusInfo.value = SettingsFocusInfo(label, value.takeUnless { isPassword }, helper)
+        DisposableEffect(label, value, helper) {
+            val info = SettingsFocusInfo(label, value.takeUnless { isPassword }, helper)
+            focusInfo.value = info
+            onDispose { if (focusInfo.value == info) focusInfo.value = null }
         }
     }
 
