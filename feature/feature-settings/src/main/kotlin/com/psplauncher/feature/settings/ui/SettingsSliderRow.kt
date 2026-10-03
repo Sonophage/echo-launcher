@@ -13,6 +13,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,7 +59,12 @@ fun SettingsSliderRow(
     val bloom = com.psplauncher.core.ui.theme.LocalPFPColors.current.waveColor
     val enterSliderMode = LocalSettingsEnterSliderMode.current
     val adjusting = LocalSettingsSliderAdjusting.current
+    val focusInfo = LocalSettingsFocusInfo.current
     var isFocused by remember { mutableStateOf(false) }
+    val shownValue = valueFormatter(value)
+    if (isFocused && focusInfo != null) {
+        LaunchedEffect(label, shownValue, sublabel) { focusInfo.value = SettingsFocusInfo(label, shownValue, sublabel) }
+    }
 
     val latestValue = remember { mutableStateOf(value) }
     val pendingValue = remember { mutableStateOf<Float?>(null) }
@@ -138,7 +144,7 @@ fun SettingsSliderRow(
             }
             Spacer(Modifier.width(16.dp))
             Text(
-                text = valueFormatter(value),
+                text = shownValue,
                 color = if (adjusting) SettingsAccent else SettingsSubtext,
                 fontSize = 13.sp,
                 style = TextStyle(shadow = SettingsTextShadow),

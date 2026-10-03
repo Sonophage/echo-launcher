@@ -77,4 +77,24 @@ class SettingsRailRowsTest {
             assertTrue(settingsEntriesIn(section).isNotEmpty(), "$section has no screens")
         }
     }
+
+    @Test
+    fun `the shoulders walk every tab of the section and wrap, never leaving it`() {
+        SettingsSectionId.entries.forEach { section ->
+            val tabs = settingsEntriesIn(section).map { it.id }
+            listOf(1, -1).forEach { delta ->
+                var id: String? = tabs.first()
+                val seen = mutableListOf<String>()
+                repeat(tabs.size) {
+                    seen += id!!
+                    id = settingsTabStepTarget(id, delta)
+                }
+                assertEquals(tabs.first(), id, "$section did not wrap stepping $delta")
+                assertEquals(tabs.toSet(), seen.toSet(), "$section stepping $delta")
+            }
+        }
+        assertEquals("settings_artwork", settingsTabStepTarget("settings_library", 1))
+        assertEquals("settings_emulators_retroarch", settingsTabStepTarget("settings_library", -1))
+        assertEquals(null, settingsTabStepTarget("settings_import_pc", 1))
+    }
 }
