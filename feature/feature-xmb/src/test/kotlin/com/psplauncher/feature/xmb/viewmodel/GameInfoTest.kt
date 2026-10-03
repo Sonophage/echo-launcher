@@ -38,4 +38,27 @@ class GameInfoTest {
         assertEquals(1, stepGameInfoCursor(4, 2, GamepadAction.SELECT))
         assertEquals(null, stepGameInfoCursor(1, 3, GamepadAction.NAVIGATE_UP))
     }
+
+    @Test
+    fun `the band offers Video and Manual only when the game has them, and focus never lands on a missing one`() {
+        val bare = GameInfoState(XMBItem(id = "g", title = "Ico", gameId = 1L))
+        assertEquals(listOf(GameInfoAction.PLAY, GameInfoAction.OPTIONS), gameInfoActions(bare))
+
+        val loaded = bare.copy(content = DetailPanelContent(title = "Ico", platformName = "PlayStation 2"))
+        assertEquals(listOf(GameInfoAction.PLAY, GameInfoAction.INFO, GameInfoAction.OPTIONS), gameInfoActions(loaded))
+
+        val full = loaded.copy(videoUri = "/pfp/video/ico.mp4", manualPath = "/pfp/manual/ico.pdf")
+        val actions = gameInfoActions(full)
+        assertEquals(
+            listOf(GameInfoAction.PLAY, GameInfoAction.INFO, GameInfoAction.VIDEO, GameInfoAction.MANUAL, GameInfoAction.OPTIONS),
+            actions,
+        )
+        assertEquals(GameInfoAction.VIDEO, stepGameInfoBand(GameInfoAction.INFO, actions, +1))
+        assertEquals(GameInfoAction.OPTIONS, stepGameInfoBand(GameInfoAction.OPTIONS, actions, +1))
+        assertEquals(GameInfoAction.PLAY, stepGameInfoBand(GameInfoAction.PLAY, actions, -1))
+        assertEquals(GameInfoAction.PLAY, stepGameInfoBand(GameInfoAction.MANUAL, gameInfoActions(loaded), +1))
+
+        val app = GameInfoState(XMBItem(id = "a", title = "Discord", packageName = "com.discord"), videoUri = "/x.mp4", manualPath = "/x.pdf")
+        assertEquals(listOf(GameInfoAction.PLAY, GameInfoAction.OPTIONS), gameInfoActions(app))
+    }
 }

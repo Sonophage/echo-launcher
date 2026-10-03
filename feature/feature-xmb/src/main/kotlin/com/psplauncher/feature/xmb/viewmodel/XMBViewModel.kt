@@ -5357,7 +5357,7 @@ class XMBViewModel @Inject constructor(
         _uiState.update { it.copy(gameInfo = info) }
         viewModelScope.launch {
             val loaded = withContext(Dispatchers.IO) { if (info.isApp) loadAppInfo(info) else loadGameInfo(info) }
-            _uiState.update { s -> if (s.gameInfo?.item?.id == item.id) s.copy(gameInfo = loaded.copy(cursor = s.gameInfo.cursor)) else s }
+            _uiState.update { s -> if (s.gameInfo?.item?.id == item.id) s.copy(gameInfo = loaded.copy(cursor = s.gameInfo.cursor, band = s.gameInfo.band, open = s.gameInfo.open)) else s }
         }
     }
 
@@ -5372,6 +5372,8 @@ class XMBViewModel @Inject constructor(
         return info.copy(
             content = detailPanelContentFor(game, platform, media, video),
             achievementsStat = set?.takeIf { it.total > 0 }?.let { "${it.unlocked}/${it.total}" },
+            videoUri = artworkStore.find(gid, ArtworkKind.VIDEO) ?: artworkStore.find(gid, ArtworkKind.ICON1),
+            manualPath = artworkStore.find(gid, ArtworkKind.MANUAL),
         )
     }
 
@@ -5388,20 +5390,72 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun handleGameInfoInput(info: GameInfoState, notices: List<com.psplauncher.core.ui.notification.AndroidNotice>, action: GamepadAction) {
+        if (info.open != null) {
+            when (action) {
+                GamepadAction.BACK -> closeGameInfoPanel()
+                GamepadAction.NAVIGATE_UP -> scrollGameInfo(-1)
+                GamepadAction.NAVIGATE_DOWN -> scrollGameInfo(+1)
+                else -> Unit
+            }
+            return
+        }
         when (action) {
             GamepadAction.BACK -> closeGameInfo()
             GamepadAction.SELECT -> {
                 val notice = info.cursor?.let { info.notices(notices).getOrNull(it) }
-                if (notice != null) openAndroidNotice(notice.key) else playFromGameInfo(info.item)
+                when {
+                    notice != null -> openAndroidNotice(notice.key)
+                    info.cursor == null -> onGameInfoAction(info.band)
+                    else -> playFromGameInfo(info.item)
+                }
             }
             GamepadAction.OPEN_CONTEXT_MENU -> openGameInfoOptions(info)
             GamepadAction.CHANGE_SORT -> if (info.achievementsStat != null) openProfile(ProfileTab.ACHIEVEMENTS, info.item.gameId)
-            GamepadAction.NAVIGATE_UP,
-            GamepadAction.NAVIGATE_DOWN,
             GamepadAction.NAVIGATE_LEFT,
-            GamepadAction.NAVIGATE_RIGHT -> onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
+            GamepadAction.NAVIGATE_RIGHT -> if (info.cursor == null) {
+                onGameInfoBand(stepGameInfoBand(info.band, gameInfoActions(info), if (action == GamepadAction.NAVIGATE_LEFT) -1 else +1))
+            } else {
+                onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
+            }
+            GamepadAction.NAVIGATE_UP,
+            GamepadAction.NAVIGATE_DOWN -> onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
             else -> Unit
         }
+    }
+
+    fun onGameInfoBand(action: GameInfoAction) {
+        val info = _uiState.value.gameInfo ?: return
+        if (action == info.band && info.cursor == null) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(band = action, cursor = null)) }
+    }
+
+    fun onGameInfoAction(action: GameInfoAction) {
+        val info = _uiState.value.gameInfo ?: return
+        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(band = action, cursor = null)) }
+        when (action) {
+            GameInfoAction.PLAY -> playFromGameInfo(info.item)
+            GameInfoAction.OPTIONS -> openGameInfoOptions(info)
+            GameInfoAction.MANUAL -> info.item.gameId?.let {
+                menuSound.play(MenuSound.SELECT)
+                openManualFor(it)
+            }
+            GameInfoAction.INFO, GameInfoAction.VIDEO -> {
+                menuSound.play(MenuSound.SELECT)
+                _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(open = action, infoScroll = 0)) }
+            }
+        }
+    }
+
+    fun closeGameInfoPanel() {
+        if (_uiState.value.gameInfo?.open == null) return
+        menuSound.play(MenuSound.BACK)
+        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(open = null)) }
+    }
+
+    private fun scrollGameInfo(delta: Int) = _uiState.update { s ->
+        val info = s.gameInfo?.takeIf { it.open == GameInfoAction.INFO } ?: return@update s
+        s.copy(gameInfo = info.copy(infoScroll = (info.infoScroll + delta).coerceAtLeast(0)))
     }
 
     fun onGameInfoCursor(cursor: Int?) {
@@ -7642,7 +7696,11 @@ class XMBViewModel @Inject constructor(
         }
     }
 
-    fun closeManualViewer() = _uiState.update { it.copy(manualViewer = null) }
+    fun closeManualViewer() {
+        if (_uiState.value.manualViewer == null) return
+        menuSound.play(MenuSound.BACK)
+        _uiState.update { it.copy(manualViewer = null) }
+    }
 
     fun setManualPageCount(count: Int) = _uiState.update { s ->
         val m = s.manualViewer ?: return@update s

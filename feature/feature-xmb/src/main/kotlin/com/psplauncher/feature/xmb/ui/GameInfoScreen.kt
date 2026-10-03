@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.media3.common.C
 import coil3.compose.AsyncImage
 import com.psplauncher.core.common.format.relativeTime
 import com.psplauncher.core.domain.model.GamepadAction
@@ -44,15 +47,17 @@ import com.psplauncher.core.ui.components.LocalPadPrompts
 import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.PANEL_FOCUS_RING_WIDTH
 import com.psplauncher.core.ui.design.PanelBase
-import com.psplauncher.core.ui.design.PanelButton
 import com.psplauncher.core.ui.design.PanelCardFill
 import com.psplauncher.core.ui.design.PanelCardFocusFill
 import com.psplauncher.core.ui.design.PanelFocusRing
 import com.psplauncher.core.ui.icons.rememberAppIcon
 import com.psplauncher.core.ui.image.rememberArtworkModel
 import com.psplauncher.core.ui.notification.AndroidNotice
+import com.psplauncher.feature.xmb.ui.detail.DetailPanelContent
+import com.psplauncher.feature.xmb.viewmodel.GameInfoAction
 import com.psplauncher.feature.xmb.viewmodel.GameInfoState
 import com.psplauncher.feature.xmb.viewmodel.GameInfoStat
+import com.psplauncher.feature.xmb.viewmodel.gameInfoActions
 import com.psplauncher.feature.xmb.viewmodel.gameInfoStats
 import com.psplauncher.feature.xmb.viewmodel.notices
 
@@ -67,6 +72,8 @@ fun GameInfoScreen(
     onCardFocused: (Int) -> Unit,
     onNoticeTapped: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onBandAction: (GameInfoAction) -> Unit = {},
+    onClosePanel: () -> Unit = {},
 ) {
     val item = info.item
     val now = System.currentTimeMillis()
@@ -97,12 +104,12 @@ fun GameInfoScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            info.content?.videoUri?.let { Icon1VideoOverlay(videoUri = it, modifier = Modifier.fillMaxSize()) }
+            info.content?.videoUri?.takeIf { info.open != GameInfoAction.VIDEO }?.let { Icon1VideoOverlay(videoUri = it, modifier = Modifier.fillMaxSize()) }
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.58f to Color.Transparent, 1f to PanelBase)))
         }
 
         Row(
-            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(300)).fillMaxWidth().height(u.dp(130)),
+            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(280)).fillMaxWidth().height(u.dp(130)),
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(u.dp(48)),
         ) {
@@ -139,19 +146,30 @@ fun GameInfoScreen(
                     }
                 }
             }
-            Row(Modifier.padding(bottom = u.dp(4)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                val primary = when {
-                    info.isApp -> "Open"
-                    item.lastOpenedAt != null -> "Continue"
-                    else -> "Play"
+        }
+
+        Row(
+            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(426)),
+            horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
+        ) {
+            gameInfoActions(info).forEach { action ->
+                val label = when (action) {
+                    GameInfoAction.PLAY -> when {
+                        info.isApp -> "Open"
+                        item.lastOpenedAt != null -> "Continue"
+                        else -> "Play"
+                    }
+                    GameInfoAction.INFO -> "Info"
+                    GameInfoAction.VIDEO -> "Video"
+                    GameInfoAction.MANUAL -> "Manual"
+                    GameInfoAction.OPTIONS -> "⋯"
                 }
-                PanelButton(GamepadAction.SELECT, primary, u) { onAction(GamepadAction.SELECT) }
-                PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "⋯", u) { onAction(GamepadAction.OPEN_CONTEXT_MENU) }
+                BandButton(label, info.cursor == null && info.band == action, action == GameInfoAction.OPTIONS, u) { onBandAction(action) }
             }
         }
 
         Column(
-            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(470)).fillMaxWidth(),
+            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(498)).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
             val media = info.content?.media.orEmpty()
@@ -189,6 +207,100 @@ fun GameInfoScreen(
                 ControllerPrompt(GamepadAction.BACK, "Back", labelStyle = style, glyphSize = u.dp(22), spacing = u.dp(8))
             } else {
                 Text("Back", color = Color.White.copy(alpha = 0.75f), style = style)
+            }
+        }
+
+        when (info.open) {
+            GameInfoAction.INFO -> info.content?.let { InfoSheet(info, it, now, u, onClosePanel) }
+            GameInfoAction.VIDEO -> info.videoUri?.let { uri ->
+                Box(
+                    Modifier.fillMaxSize().background(Color.Black)
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClosePanel),
+                ) {
+                    OneShotVideoLayer(uri, C.TIME_END_OF_SOURCE, onEnded = onClosePanel, onFailed = onClosePanel, modifier = Modifier.fillMaxSize())
+                }
+            }
+            else -> Unit
+        }
+    }
+}
+
+@Composable
+private fun BandButton(label: String, focused: Boolean, options: Boolean, u: DesignUnits, onClick: () -> Unit) {
+    val ink = if (focused) Color(0xFF0A0A0A) else Color.White
+    Box(
+        Modifier
+            .height(u.dp(52))
+            .clip(RoundedCornerShape(u.dp(26)))
+            .background(if (focused) Color.White else Color.White.copy(alpha = 0.12f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = u.dp(if (focused) 26 else 22)),
+        contentAlignment = Alignment.Center,
+    ) {
+        val labelStyle = TextStyle(fontSize = u.sp(15), fontWeight = if (focused) FontWeight.Medium else FontWeight.Normal)
+        val glyph = when {
+            !LocalPadPrompts.current -> null
+            focused -> GamepadAction.SELECT
+            options -> GamepadAction.OPEN_CONTEXT_MENU
+            else -> null
+        }
+        if (glyph != null) {
+            ControllerPrompt(glyph, label, labelColor = ink, labelStyle = labelStyle, glyphSize = u.dp(20), spacing = u.dp(10))
+        } else {
+            Text(label, color = ink, style = labelStyle)
+        }
+    }
+}
+
+@Composable
+private fun InfoSheet(info: GameInfoState, content: DetailPanelContent, now: Long, u: DesignUnits, onClose: () -> Unit) {
+    val scroll = rememberScrollState()
+    val step = with(LocalDensity.current) { u.dp(120).roundToPx() }
+    LaunchedEffect(info.infoScroll) { scroll.animateScrollTo(info.infoScroll * step) }
+    val facts = listOfNotNull(
+        GameInfoStat("Platform", content.platformName).takeIf { content.platformName.isNotBlank() },
+        content.playTime?.let { GameInfoStat("Play time", it) },
+        info.item.lastOpenedAt?.let { GameInfoStat("Last played", relativeTime(now, it)) },
+        content.fileName?.let { GameInfoStat("File", it) },
+    )
+    Box(
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .padding(vertical = u.dp(48))
+                .width(u.dp(900))
+                .clip(RoundedCornerShape(u.dp(22)))
+                .background(PanelBase)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                .padding(u.dp(36)),
+            verticalArrangement = Arrangement.spacedBy(u.dp(16)),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
+                Eyebrow("About", u)
+                Headline(content.title, u.sp(36), 2)
+                content.metaLine?.let { Meta(it, u.sp(15), maxLines = 2) }
+            }
+            Text(
+                content.description?.takeIf { it.isNotBlank() } ?: "No description available.",
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = u.sp(15),
+                lineHeight = u.sp(22),
+                fontWeight = FontWeight.Light,
+                modifier = Modifier.weight(1f, fill = false).verticalScroll(scroll),
+            )
+            if (facts.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
+                    facts.forEach { fact ->
+                        Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
+                            Text(fact.value, color = Color.White, fontSize = u.sp(18), fontWeight = FontWeight.ExtraLight,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(fact.label, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1)
+                        }
+                    }
+                }
             }
         }
     }
