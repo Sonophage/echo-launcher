@@ -1032,16 +1032,17 @@ fun XMBShell(
             }
             }
 
-            val musicActivity = uiState.musicPlayback.track?.takeIf { uiState.musicPlayback.isPlaying }?.let { track ->
+            val musicActivity = (uiState.mediaStage() as? PanelStage.Music)?.takeIf { it.loaded && it.playing }?.let { music ->
                 StripLiveActivity(
-                    art = track.artUri,
-                    title = track.title ?: track.displayName,
+                    art = music.art,
+                    title = music.title,
                     detail = listOfNotNull(
-                        track.artist,
-                        formatDuration(uiState.musicPlayback.positionMs.toLong()) + " / " +
-                            formatDuration(uiState.musicPlayback.durationMs.toLong()),
+                        music.artist,
+                        music.app,
+                        (formatDuration(music.positionMs) + " / " + formatDuration(music.durationMs))
+                            .takeIf { music.packageName == null || music.durationMs > 0 },
                     ).joinToString("  ·  "),
-                    stage = uiState.mediaStage(),
+                    stage = music,
                 )
             }
 
