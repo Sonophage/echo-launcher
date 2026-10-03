@@ -729,8 +729,8 @@ fun XMBShell(
                     waveStyle = effectiveWaveStyle,
                     accentArgb = uiState.focusedItemAccentArgb ?: uiState.wallpaperAccent,
                     modifier = Modifier.fillMaxSize(),
-                    speedScale = waveSpeed,
-                    glowScale = waveGlow,
+                    speedScale = { waveSpeed },
+                    glowScale = { waveGlow },
                 )
             }
 

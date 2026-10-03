@@ -1,16 +1,28 @@
 package com.psplauncher.core.ui.wave
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WaveClockTest {
+    private fun run(vsyncs: List<Long>, speedAt: (Long) -> Float, frameMs: Long = WAVE_FRAME_MS): List<Float> {
+        var t = 0f
+        var last = -1L
+        return vsyncs.map { now ->
+            val stepped = steppedFrameMs(now, frameMs)
+            t = advanceWaveClock(t, last, stepped, speedAt(now))
+            last = stepped
+            t
+        }
+    }
+
     @Test
     fun `the clock only advances once per wave frame, so vsyncs in between redraw nothing`() {
-        val atStart = waveClockSeconds(0L, 1f, WAVE_FRAME_MS)
-        (1 until WAVE_FRAME_MS).forEach { ms ->
-            assertEquals("a vsync ${ms}ms in must not move the wave", atStart, waveClockSeconds(ms, 1f, WAVE_FRAME_MS), 0f)
+        val times = run((0L..WAVE_FRAME_MS).toList(), { 1f })
+        (1 until WAVE_FRAME_MS.toInt()).forEach { ms ->
+            assertEquals("a vsync ${ms}ms in must not move the wave", times[0], times[ms], 0f)
         }
-        assertEquals(WAVE_FRAME_MS / 1000f, waveClockSeconds(WAVE_FRAME_MS, 1f, WAVE_FRAME_MS), 1e-6f)
+        assertEquals(WAVE_FRAME_MS / 1000f, times.last(), 1e-6f)
     }
 
     @Test
@@ -21,8 +33,16 @@ class WaveClockTest {
 
     @Test
     fun `stepping does not change the wave's speed, only how often it is sampled`() {
-        val oneMinute = 60_000L
-        assertEquals(60f * 0.5f, waveClockSeconds(oneMinute - oneMinute % WAVE_FRAME_MS, 0.5f, WAVE_FRAME_MS), 0.05f)
+        val oneMinute = (0L..60_000L step 16).toList()
+        assertEquals(60f * 0.5f, run(oneMinute, { 0.5f }).last(), 0.05f)
+    }
+
+    @Test
+    fun `a speed tween bends the clock but never sends it back to the start`() {
+        val vsyncs = (0L..3_000L step 16).toList()
+        val times = run(vsyncs, { now -> if (now < 1_000L) 1f else 1f + (now - 1_000L) / 900f })
+        times.zipWithNext().forEach { (a, b) -> assertTrue("the wave time went backwards: $a to $b", b >= a) }
+        assertTrue("a faster wave must cover more time than a steady one", times.last() > 3f)
     }
 
     @Test

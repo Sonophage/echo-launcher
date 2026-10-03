@@ -74,8 +74,8 @@ fun WaveOverlay(
     waveStyle: WaveStyle,
     accentArgb: Long?,
     modifier: Modifier,
-    speedScale: Float = 1f,
-    glowScale: Float = 1f,
+    speedScale: () -> Float = { 1f },
+    glowScale: () -> Float = { 1f },
 ) {
     Box(modifier) {
         WaveLayers(waveStyle, accentArgb?.let(::waveTintFrom) ?: Color.White, speedScale, glowScale)
