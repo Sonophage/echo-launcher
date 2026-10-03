@@ -108,6 +108,8 @@ import com.psplauncher.feature.xmb.ui.detail.MetadataPreviewPanel
 import com.psplauncher.feature.xmb.ui.detail.VideoDetailScreen
 import com.psplauncher.feature.xmb.ui.photo.PhotoViewerScreen
 import com.psplauncher.feature.xmb.viewmodel.mediaStage
+import com.psplauncher.feature.xmb.viewmodel.recentStage
+import com.psplauncher.feature.xmb.viewmodel.PanelStage
 import com.psplauncher.feature.xmb.viewmodel.clearableNoticeCount
 import com.psplauncher.feature.xmb.viewmodel.stageActions
 import com.psplauncher.feature.xmb.viewmodel.panelEntries
@@ -751,6 +753,27 @@ fun XMBShell(
                 else -> XmbChromeZ
             }
 
+            val barCategories = remember(
+                uiState.categories, uiState.lastInputWasTouch, uiState.shelfCards,
+            ) {
+                uiState.categories.filter { category ->
+                    uiState.categoryReachable(category) &&
+                        (uiState.lastInputWasTouch || category.id != BuiltInCategory.RECENTLY_PLAYED)
+                }
+            }
+            val barSelected = remember(barCategories, uiState.selectedCategoryIndex) {
+                uiState.categories.getOrNull(uiState.selectedCategoryIndex)
+                    ?.let { current -> barCategories.indexOfFirst { it.id == current.id } }
+                    ?.takeIf { it >= 0 }
+                    ?: 0
+            }
+            val onBarCategory: (Int) -> Unit = { barIndex ->
+                barCategories.getOrNull(barIndex)?.let { picked ->
+                    val real = uiState.categories.indexOfFirst { it.id == picked.id }
+                    if (real >= 0) onCategorySelected(real)
+                }
+            }
+
             var flash by remember { mutableStateOf<SystemToast?>(null) }
             LaunchedEffect(Unit) {
                 SystemToasts.events.collect { toast ->
@@ -984,31 +1007,12 @@ fun XMBShell(
                         }
                     }
 
-                    val barCategories = remember(
-                        uiState.categories, uiState.lastInputWasTouch, uiState.shelfCards,
-                    ) {
-                        uiState.categories.filter { category ->
-                            uiState.categoryReachable(category) &&
-                                (uiState.lastInputWasTouch || category.id != BuiltInCategory.RECENTLY_PLAYED)
-                        }
-                    }
-                    val barSelected = remember(barCategories, uiState.selectedCategoryIndex) {
-                        uiState.categories.getOrNull(uiState.selectedCategoryIndex)
-                            ?.let { current -> barCategories.indexOfFirst { it.id == current.id } }
-                            ?.takeIf { it >= 0 }
-                            ?: 0
-                    }
                     CompositionLocalProvider(LocalXmbHorizontalShift provides hShift) {
                         XMBCategoryBar(
                             categories = barCategories,
                             selectedIndex = barSelected,
 
-                            onCategorySelected = { barIndex ->
-                                barCategories.getOrNull(barIndex)?.let { picked ->
-                                    val real = uiState.categories.indexOfFirst { it.id == picked.id }
-                                    if (real >= 0) onCategorySelected(real)
-                                }
-                            },
+                            onCategorySelected = onBarCategory,
                             onCategoryLongPress = { index ->
                                 val id = barCategories.getOrNull(index)?.id
                                 if (id == BuiltInCategory.SETTINGS) onSettingsLongPress()
@@ -1037,6 +1041,7 @@ fun XMBShell(
                         formatDuration(uiState.musicPlayback.positionMs.toLong()) + " / " +
                             formatDuration(uiState.musicPlayback.durationMs.toLong()),
                     ).joinToString("  ·  "),
+                    stage = uiState.mediaStage(),
                 )
             }
 
@@ -1044,12 +1049,14 @@ fun XMBShell(
                 StripLiveActivity(art = null, title = "Refreshing artwork", detail = it)
             }
 
-            val foregroundActivity = flash?.let { StripLiveActivity(art = null, title = it.title, detail = it.message) }
+            val foregroundActivity = flash?.let {
+                StripLiveActivity(art = null, title = it.title, detail = it.message, stage = PanelStage.Launcher(it))
+            }
                 ?: busyActivity
                 ?: musicActivity
 
             val recentActivity = uiState.recentTop?.takeIf { uiState.interfaceChoices.islandShowsRecent }?.let { top ->
-                StripLiveActivity(art = top.shelfCoverArt, title = top.title, detail = top.subtitle)
+                StripLiveActivity(art = top.shelfCoverArt, title = top.title, detail = top.subtitle, stage = uiState.recentStage())
             }
 
             val islandIsRecent = foregroundActivity == null && recentActivity != null
@@ -1076,14 +1083,21 @@ fun XMBShell(
                     leftRight = uiState.pillRowVisible && xmbContext,
                 ),
 
+                sections = if (xmbContext) barCategories else emptyList(),
+                selectedSection = barSelected,
+                onSectionTapped = onBarCategory,
+
+                compact = !xmbContext,
+
                 centre = if (notificationsOpen) {
-                    {
-                        PanelTabsRow(uiState.panelTab, onPanelTabTapped, Modifier.align(Alignment.Center))
+                    { u ->
+                        PanelTabsRow(uiState.panelTab, onPanelTabTapped, u, Modifier.align(Alignment.Center))
                     }
                 } else if (uiState.onLastPlayedHome && xmbContext) {
-                    {
+                    { u ->
                         RecentFilterRow(
                             filter = uiState.recentFilter,
+                            u = u,
                             modifier = Modifier.align(Alignment.Center),
                             onFilterTapped = onRecentFilterTapped,
                             includeApps = uiState.recentsIncludeApps,

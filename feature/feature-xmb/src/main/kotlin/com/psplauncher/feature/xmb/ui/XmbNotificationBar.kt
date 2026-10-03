@@ -86,9 +86,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import coil3.compose.AsyncImage
-import com.psplauncher.core.domain.model.GamepadAction
-import com.psplauncher.core.ui.components.ControllerPrompt
-import com.psplauncher.core.ui.components.LocalPadPrompts
 import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.PANEL_CARD_RADIUS
 import com.psplauncher.core.ui.design.PANEL_FOCUS_RING_WIDTH
@@ -124,30 +121,15 @@ data class QuickSettingsState(
 )
 
 @Composable
-fun PanelTabsRow(tab: PanelTab, onTabTapped: (PanelTab) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(StripFontSize.value.dp * 2)) {
-        val pad = LocalPadPrompts.current
-        if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = StripFontSize.value.dp * 1.6f, spacing = 0.dp)
-        PanelTab.entries.forEach { t ->
-            val on = t == tab
-            Column(
-                Modifier.clip(RoundedCornerShape(4.dp)).clickable { onTabTapped(t) }.padding(horizontal = 4.dp, vertical = 2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Text(
-                    t.label,
-                    color = Color.White.copy(alpha = if (on) 1f else 0.5f),
-                    fontSize = StripFontSize * 1.3f,
-                    lineHeight = StripFontSize * 1.6f,
-                    fontWeight = if (on) FontWeight.Medium else FontWeight.Light,
-                )
-                val bar by animateFloatAsState(if (on) 1f else 0f, tween(250), label = "tabBar")
-                Box(Modifier.width(16.dp * bar).height(1.5.dp).clip(RoundedCornerShape(1.dp)).background(Color.White))
-            }
-        }
-        if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = StripFontSize.value.dp * 1.6f, spacing = 0.dp)
-    }
+fun PanelTabsRow(tab: PanelTab, onTabTapped: (PanelTab) -> Unit, u: DesignUnits, modifier: Modifier = Modifier) {
+    StripSections(
+        labels = PanelTab.entries.map { it.label },
+        selected = tab.ordinal,
+        onTapped = { onTabTapped(PanelTab.entries[it]) },
+        u = u,
+        shoulders = true,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -594,14 +576,14 @@ internal fun AppIcon(bitmap: ImageBitmap?, size: Dp, radius: Dp) {
     }
 }
 
-private fun stagePackage(stage: PanelStage, launcher: String): String? = when (stage) {
+internal fun stagePackage(stage: PanelStage, launcher: String): String? = when (stage) {
     is PanelStage.Android -> stage.notice.packageName
     is PanelStage.Launcher -> launcher
     is PanelStage.App -> stage.packageName
     else -> null
 }
 
-private fun stageTint(stage: PanelStage, iconColor: Color?, accent: Color): Color = when (stage) {
+internal fun stageTint(stage: PanelStage, iconColor: Color?, accent: Color): Color = when (stage) {
     is PanelStage.Music -> MusicTint
     is PanelStage.Video -> VideoTint
     is PanelStage.Book -> BookTint
@@ -619,7 +601,7 @@ private fun stageArt(stage: PanelStage): String? = when (stage) {
     else -> null
 }
 
-private fun stageGlyph(stage: PanelStage): ImageVector = when (stage) {
+internal fun stageGlyph(stage: PanelStage): ImageVector = when (stage) {
     is PanelStage.Music -> Icons.Outlined.MusicNote
     is PanelStage.Video -> Icons.Outlined.Movie
     is PanelStage.Book -> Icons.AutoMirrored.Outlined.MenuBook
