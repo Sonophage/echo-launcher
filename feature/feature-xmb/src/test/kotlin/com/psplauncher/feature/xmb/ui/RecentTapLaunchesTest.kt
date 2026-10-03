@@ -6,7 +6,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.psplauncher.core.ui.preview.PfpScreenPreview
-import com.psplauncher.feature.xmb.ui.detail.DetailPanelPage
 import com.psplauncher.feature.xmb.viewmodel.RecentFilter
 import com.psplauncher.feature.xmb.viewmodel.XMBItem
 import org.junit.Assert.assertEquals
@@ -36,13 +35,11 @@ class RecentTapLaunchesTest {
                 LastPlayedPage(
                     items = items,
                     selectedIndex = selectedIndex,
-                    content = null,
-                    page = DetailPanelPage.INFO,
                     listState = rememberLazyListState(),
                     filter = RecentFilter.ALL,
                     railVisible = railVisible,
-                    onPageTapped = {},
                     onCardTapped = onCardTapped,
+                    onAction = {},
                 )
             }
         }

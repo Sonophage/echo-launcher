@@ -14,10 +14,12 @@ enum class RecentFilter(val label: String) {
             entries.filter { it != APPS || includeApps }
     }
 
-    fun next(includeApps: Boolean): RecentFilter {
+    fun next(includeApps: Boolean): RecentFilter = step(+1, includeApps)
+
+    fun step(delta: Int, includeApps: Boolean): RecentFilter {
         val cycle = visible(includeApps)
         val here = cycle.indexOf(this)
-        return if (here < 0) ALL else cycle[(here + 1) % cycle.size]
+        return if (here < 0) ALL else cycle[(here + delta).mod(cycle.size)]
     }
 }
 
@@ -58,8 +60,33 @@ internal fun mergeRecents(
     return chosen
         .sortedByDescending { it.first }
         .take(limit)
-        .map { it.second }
+        .map { (at, item) -> item.copy(lastOpenedAt = at.takeIf { it > 0L }) }
 }
+
+enum class RecentDay(val label: String) { TODAY("Today"), YESTERDAY("Yesterday"), EARLIER("Earlier") }
+
+internal fun groupRecentsByDay(
+    items: List<XMBItem>,
+    now: Long,
+    zone: java.time.ZoneId = java.time.ZoneId.systemDefault(),
+): List<Pair<RecentDay, List<IndexedValue<XMBItem>>>> {
+    val today = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    val byDay = items.withIndex().groupBy { (_, item) ->
+        when (item.lastOpenedAt?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }) {
+            today -> RecentDay.TODAY
+            today.minusDays(1) -> RecentDay.YESTERDAY
+            else -> RecentDay.EARLIER
+        }
+    }
+    return RecentDay.entries.mapNotNull { day -> byDay[day]?.let { day to it } }
+}
+
+internal val XMBItem.removableFromRecent: Boolean
+    get() = when (type) {
+        XMBItemType.VIDEO_FILE, XMBItemType.LIBRARY_BOOK, XMBItemType.MUSIC_TRACK -> true
+        XMBItemType.MUSIC_GROUP -> false
+        else -> gameId != null || packageName != null
+    }
 
 /**
  * An app's "last used" comes from Android's UsageStats and cannot be cleared, so
