@@ -18,7 +18,6 @@ namespace {
 std::shared_ptr<discordpp::Client> gClient;
 std::thread gPumpThread;
 std::atomic<bool> gRunning{false};
-std::atomic<int> gStatus{0};
 
 std::mutex gTaskMutex;
 std::queue<std::function<void()>> gTasks;
@@ -97,10 +96,6 @@ Java_com_psplauncher_discord_DiscordNativeBridge_nativeInit(
     if (gClient) return;
     gClient = std::make_shared<discordpp::Client>();
     gClient->SetApplicationId(static_cast<uint64_t>(applicationId));
-    gClient->SetStatusChangedCallback(
-        [](discordpp::Client::Status status, discordpp::Client::Error /*error*/, int32_t /*detail*/) {
-            gStatus.store(static_cast<int>(status));
-        });
     gRunning.store(true);
     gPumpThread = std::thread(pumpLoop);
 }
@@ -128,12 +123,6 @@ Java_com_psplauncher_discord_DiscordNativeBridge_nativeUpdateToken(
 
     if (future.wait_for(std::chrono::seconds(30)) != std::future_status::ready) return JNI_FALSE;
     return future.get() ? JNI_TRUE : JNI_FALSE;
-}
-
-JNIEXPORT jint JNICALL
-Java_com_psplauncher_discord_DiscordNativeBridge_nativeGetStatus(
-    JNIEnv* /*env*/, jobject /*thiz*/) {
-    return gStatus.load();
 }
 
 JNIEXPORT jstring JNICALL
@@ -234,15 +223,6 @@ Java_com_psplauncher_discord_DiscordNativeBridge_nativeDisconnect(
         done->set_value();
     });
     future.wait_for(std::chrono::seconds(5));
-}
-
-JNIEXPORT void JNICALL
-Java_com_psplauncher_discord_DiscordNativeBridge_nativeShutdown(
-    JNIEnv* /*env*/, jobject /*thiz*/) {
-    gRunning.store(false);
-    if (gPumpThread.joinable()) gPumpThread.join();
-    gClient.reset();
-    gStatus.store(0);
 }
 
 }  // extern "C"

@@ -9,8 +9,6 @@ interface DiscordSessionActivator {
 
     suspend fun friends(): List<DiscordFriend>
 
-    fun connectionStatus(): Int
-
     suspend fun setActivity(name: String, details: String?)
 
     suspend fun clearActivity()

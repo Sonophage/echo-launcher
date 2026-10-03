@@ -65,8 +65,6 @@ class DiscordNativeSessionActivator @Inject constructor() : DiscordSessionActiva
         }.getOrDefault(emptyList())
     }
 
-    override fun connectionStatus(): Int = DiscordNativeBridge.status()
-
     override suspend fun setActivity(name: String, details: String?) = withContext(Dispatchers.IO) {
         DiscordNativeBridge.setActivity(name, details.orEmpty())
     }
