@@ -18,6 +18,13 @@ class BackupTableDriftTest {
         "ScanTombstoneEntity" to "retired; nothing reads or writes it",
 
         "LibrarySourceEntity" to "SAF grants cannot be restored; the user re-links roots",
+
+        "AccountAchievementSetEntity" to "a copy of the RetroAchievements and Steam accounts; a sync rebuilds it",
+        "AccountAchievementEntity" to "a copy of the RetroAchievements and Steam accounts; a sync rebuilds it",
+        "ProviderGameLinkEntity" to "every link is made by auto-match, which rebuilds them from ROM hashes and Steam ids",
+        "AchievementMatchNoteEntity" to "the last auto-match's notes; the next run rewrites them",
+        "SteamOwnedGameEntity" to "a cache of one Steam call; the next import fetches it again",
+        "SteamNoAchievementsEntity" to "a cache of Steam probes; losing it costs calls, never data",
     )
 
     private val repoRoot: File by lazy {
