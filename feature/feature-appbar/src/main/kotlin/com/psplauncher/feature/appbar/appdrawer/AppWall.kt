@@ -1,5 +1,6 @@
 package com.psplauncher.feature.appbar.appdrawer
 
+import com.psplauncher.core.common.format.playTimeLabel
 import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -270,7 +271,7 @@ internal fun WallInfo(app: InstalledApp, u: DesignUnits, onLaunch: () -> Unit, o
             letterSpacing = (-0.03).em, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (app.playTimeMillis > 0L) {
             Row(horizontalArrangement = Arrangement.spacedBy(u.dp(32))) {
-                Stat(playedLabel(app.playTimeMillis), "Played", u)
+                Stat(playTimeLabel(app.playTimeMillis), "Played", u)
             }
         }
         Row(Modifier.padding(top = u.dp(6)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
@@ -289,11 +290,6 @@ private fun Stat(value: String, label: String, u: DesignUnits) {
 }
 
 internal fun actionLabel(app: InstalledApp): String = if (app.isGame || app.gameId != null) "Play" else "Open"
-
-private fun playedLabel(ms: Long): String {
-    val minutes = ms / 60_000L
-    return if (minutes < 60) "$minutes min" else "${minutes / 60} hr"
-}
 
 @Composable
 internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, onNextTab: () -> Unit, onSearch: () -> Unit, onBack: () -> Unit) {

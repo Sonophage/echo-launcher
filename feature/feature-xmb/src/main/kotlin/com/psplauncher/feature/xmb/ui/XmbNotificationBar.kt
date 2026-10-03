@@ -1,5 +1,6 @@
 package com.psplauncher.feature.xmb.ui
 
+import com.psplauncher.core.common.format.playTimeLabel
 import androidx.compose.animation.core.Animatable
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Stable
@@ -641,11 +642,6 @@ private fun libraryIcon(id: String): ImageVector = when (id) {
     com.psplauncher.core.domain.model.BuiltInCategory.LIBRARY -> Icons.AutoMirrored.Outlined.MenuBook
     com.psplauncher.core.domain.model.BuiltInCategory.PHOTO -> Icons.Outlined.PhotoLibrary
     else -> Icons.Outlined.Language
-}
-
-internal fun playTimeLabel(ms: Long): String {
-    val minutes = ms / 60_000L
-    return if (minutes < 60) "$minutes min" else "${minutes / 60} hr"
 }
 
 @Stable

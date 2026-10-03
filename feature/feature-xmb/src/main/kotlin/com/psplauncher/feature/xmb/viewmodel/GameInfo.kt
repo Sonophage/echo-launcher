@@ -1,11 +1,11 @@
 package com.psplauncher.feature.xmb.viewmodel
 
+import com.psplauncher.core.common.format.playTimeLabel
 import com.psplauncher.core.common.format.formatByteSize
 import com.psplauncher.core.common.format.relativeTime
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.notification.AndroidNotice
 import com.psplauncher.feature.xmb.ui.detail.DetailPanelContent
-import com.psplauncher.feature.xmb.ui.playTimeLabel
 
 data class GameInfoState(
     val item: XMBItem,
