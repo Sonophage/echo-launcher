@@ -126,6 +126,7 @@ class SettingsHierarchyTest {
                 "settings_about",
                 "settings_logs",
                 "settings_backup",
+                "settings_discord",
                 "settings_credits",
             ),
             settingsEntriesIn(SettingsSectionId.SYSTEM).map { it.id },
