@@ -53,6 +53,12 @@ import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.psplauncher.feature.xmb.viewmodel.PanelStage
+import com.psplauncher.feature.xmb.viewmodel.formatDuration
+import com.psplauncher.feature.xmb.viewmodel.playbackFraction
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -124,11 +130,71 @@ internal val LEADING_ICON_SLOT = XmbLayoutSpec.DEFAULT.itemIconSlotDp.dp
 
 internal data class LiveRowProgress(
     val itemId: String,
-    val fraction: Float,
-    val label: String?,
+    val durationMs: Long,
 )
 
 internal val LocalLiveRowProgress = androidx.compose.runtime.compositionLocalOf<LiveRowProgress?> { null }
+
+internal class PlaybackPositions(val music: StateFlow<Int>, val external: StateFlow<Long>)
+
+internal val LocalPlaybackPositions = androidx.compose.runtime.staticCompositionLocalOf {
+    PlaybackPositions(MutableStateFlow(0), MutableStateFlow(0L))
+}
+
+@Composable
+internal fun ownPositionMs(): Long =
+    LocalPlaybackPositions.current.music.collectAsStateWithLifecycle().value.toLong()
+
+@Composable
+internal fun PanelStage.Music.livePositionMs(): Long = when {
+    !loaded -> 0L
+    packageName != null -> LocalPlaybackPositions.current.external.collectAsStateWithLifecycle().value
+    else -> ownPositionMs()
+}
+
+@Composable
+private fun LiveRowScrubber(durationMs: Long, style: TextStyle) {
+    val positionMs = ownPositionMs()
+    RowScrubber(
+        playbackFraction(positionMs, durationMs) ?: 0f,
+        formatDuration(positionMs) + "  /  " + formatDuration(durationMs),
+        style,
+    )
+}
+
+@Composable
+private fun RowScrubber(fraction: Float, label: String?, style: TextStyle) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = 4.dp),
+    ) {
+        Box(
+            Modifier
+                .width(ScrubberWidth)
+                .height(ScrubberHeight)
+                .clip(RoundedCornerShape(ScrubberHeight / 2))
+                .background(Color.White.copy(alpha = 0.22f)),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                    .height(ScrubberHeight)
+                    .clip(RoundedCornerShape(ScrubberHeight / 2))
+                    .background(LocalPFPColors.current.accentColor),
+            )
+        }
+        label?.let {
+            Text(
+                text = it,
+                color = SecondaryText,
+                fontSize = 11.sp,
+                style = style,
+                maxLines = 1,
+                modifier = Modifier.padding(start = 10.dp),
+            )
+        }
+    }
+}
 
 private val ScrubberWidth = 96.dp
 private val ScrubberHeight = 3.dp
@@ -638,37 +704,10 @@ private fun XmbVerticalListRow(
 
                     if (isSelected) {
                         val live = LocalLiveRowProgress.current?.takeIf { it.itemId == item.id }
-                        (live?.fraction ?: item.progressFraction)?.let { fraction ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = 4.dp),
-                            ) {
-                                Box(
-                                    Modifier
-                                        .width(ScrubberWidth)
-                                        .height(ScrubberHeight)
-                                        .clip(RoundedCornerShape(ScrubberHeight / 2))
-                                        .background(Color.White.copy(alpha = 0.22f)),
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .fillMaxWidth(fraction.coerceIn(0f, 1f))
-                                            .height(ScrubberHeight)
-                                            .clip(RoundedCornerShape(ScrubberHeight / 2))
-                                            .background(LocalPFPColors.current.accentColor),
-                                    )
-                                }
-                                (live?.label ?: item.progressLabel)?.let { label ->
-                                    Text(
-                                        text = label,
-                                        color = SecondaryText,
-                                        fontSize = 11.sp,
-                                        style = subtitleStyle,
-                                        maxLines = 1,
-                                        modifier = Modifier.padding(start = 10.dp),
-                                    )
-                                }
-                            }
+                        if (live != null) {
+                            LiveRowScrubber(live.durationMs, subtitleStyle)
+                        } else {
+                            item.progressFraction?.let { RowScrubber(it, item.progressLabel, subtitleStyle) }
                         }
                     }
 

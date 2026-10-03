@@ -89,6 +89,7 @@ import com.psplauncher.feature.xmb.R
 import com.psplauncher.feature.xmb.viewmodel.PanelStage
 import com.psplauncher.feature.xmb.viewmodel.countLabel
 import com.psplauncher.feature.xmb.viewmodel.islandProgress
+import com.psplauncher.feature.xmb.viewmodel.timeLabel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -358,7 +359,10 @@ private fun IslandCard(
     stageIcon: ImageBitmap? = null,
 ) {
     val stage = activity.stage
-    val progress = stage?.islandProgress
+    val music = stage as? PanelStage.Music
+    val positionMs = music?.livePositionMs() ?: 0L
+    val progress = stage?.islandProgress(positionMs)
+    val detail = listOfNotNull(activity.detail?.takeIf { it.isNotBlank() }, music?.timeLabel(positionMs)).joinToString("  ·  ")
     val playing = (stage as? PanelStage.Music)?.playing == true
     val radius = u.dp(20)
     val shape = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
@@ -435,7 +439,7 @@ private fun IslandCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                activity.detail?.takeIf { it.isNotBlank() && !compact }?.let {
+                detail.takeIf { it.isNotBlank() && !compact }?.let {
                     Text(
                         it,
                         color = Color.White.copy(alpha = 0.75f),

@@ -210,6 +210,12 @@ fun XmbNotificationBar(
 }
 
 @Composable
+private fun LiveMusicProgress(stage: PanelStage.Music, u: DesignUnits) {
+    val positionMs = stage.livePositionMs()
+    Progress(positionMs.toFloat() / stage.durationMs, formatDuration(positionMs), formatDuration(stage.durationMs), u)
+}
+
+@Composable
 private fun Stage(stage: PanelStage, actions: List<StageAction>, icon: ImageBitmap?, u: DesignUnits, onAction: (StageCommand) -> Unit) {
     val now = System.currentTimeMillis()
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(20))) {
@@ -229,9 +235,7 @@ private fun Stage(stage: PanelStage, actions: List<StageAction>, icon: ImageBitm
                         Meta(listOfNotNull(stage.artist, stage.album, stage.app).joinToString("  ·  "), u.sp(17))
                     }
                 }
-                if (stage.loaded && stage.durationMs > 0) {
-                    Progress(stage.positionMs.toFloat() / stage.durationMs, formatDuration(stage.positionMs), formatDuration(stage.durationMs), u)
-                }
+                if (stage.loaded && stage.durationMs > 0) LiveMusicProgress(stage, u)
             }
             is PanelStage.Video -> {
                 Eyebrow("From Recent · Video", u)

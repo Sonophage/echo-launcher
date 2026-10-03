@@ -41,7 +41,7 @@ class NotificationSheetTest {
         noticeCursor = cursor,
         recentTop = recent,
         musicPlayback = if (playing) {
-            MusicPlaybackState(track = track(), isPlaying = true, positionMs = 1_000, durationMs = 4_000)
+            MusicPlaybackState(track = track(), isPlaying = true, durationMs = 4_000)
         } else {
             MusicPlaybackState()
         },

@@ -21,7 +21,6 @@ import javax.inject.Singleton
 data class MusicPlaybackState(
     val track: MusicTrack? = null,
     val isPlaying: Boolean = false,
-    val positionMs: Int = 0,
     val durationMs: Int = 0,
     val index: Int = 0,
     val queueSize: Int = 0,
@@ -46,6 +45,9 @@ class MusicPlayerController @Inject constructor(
 
     private val _state = MutableStateFlow(MusicPlaybackState())
     val state: StateFlow<MusicPlaybackState> = _state
+
+    private val _positionMs = MutableStateFlow(0)
+    val positionMs: StateFlow<Int> = _positionMs
 
     var onTrackStarted: ((MusicTrack) -> Unit)? = null
 
@@ -104,6 +106,7 @@ class MusicPlayerController @Inject constructor(
         releasePlayer()
         queue = emptyList(); order = PlayOrder(0, 0, shuffle = order.shuffled)
         _state.value = MusicPlaybackState()
+        _positionMs.value = 0
     }
 
     fun currentTrack(): MusicTrack? = queue.getOrNull(index)
@@ -139,8 +142,9 @@ class MusicPlayerController @Inject constructor(
             }
         }
 
+        _positionMs.value = 0
         _state.value = MusicPlaybackState(
-            track = track, isPlaying = false, positionMs = 0, durationMs = 0,
+            track = track, isPlaying = false, durationMs = 0,
             index = index, queueSize = queue.size, isPrepared = false,
             shuffle = order.shuffled, repeat = repeat, upNext = upNext(),
         )
@@ -159,10 +163,10 @@ class MusicPlayerController @Inject constructor(
     private fun emit() {
         val p = player
         val track = queue.getOrNull(index)
+        _positionMs.value = runCatching { p?.currentPosition ?: 0 }.getOrDefault(0)
         _state.value = MusicPlaybackState(
             track = track,
             isPlaying = runCatching { p?.isPlaying == true }.getOrDefault(false),
-            positionMs = runCatching { p?.currentPosition ?: 0 }.getOrDefault(0),
             durationMs = runCatching { p?.duration?.coerceAtLeast(0) ?: 0 }.getOrDefault(0),
             index = index,
             queueSize = queue.size,

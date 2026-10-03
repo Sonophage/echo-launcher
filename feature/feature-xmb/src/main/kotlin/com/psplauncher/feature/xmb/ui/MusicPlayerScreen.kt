@@ -134,13 +134,7 @@ fun MusicPlayerScreen(
             }
 
             Spacer(Modifier.height(u.dp(38)))
-            Scrubber(state.positionMs, state.durationMs, accent, u, onSeekTo)
-            Spacer(Modifier.height(u.dp(10)))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                val times = TextStyle(color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13), fontFeatureSettings = "tnum")
-                Text(formatDuration(state.positionMs.toLong()), style = times)
-                Text(formatDuration(state.durationMs.toLong()), style = times)
-            }
+            PlayerProgress(state.durationMs, accent, u, onSeekTo)
 
             Spacer(Modifier.height(u.dp(26)))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(22))) {
@@ -243,6 +237,18 @@ private fun Record(artUri: String?, u: DesignUnits) {
                 drawCircle(Color(0xFF050404), radius = u.dp(5).toPx())
             },
     )
+}
+
+@Composable
+private fun PlayerProgress(durationMs: Int, accent: Color, u: DesignUnits, onSeekTo: (Int) -> Unit) {
+    val positionMs = ownPositionMs()
+    Scrubber(positionMs.toInt(), durationMs, accent, u, onSeekTo)
+    Spacer(Modifier.height(u.dp(10)))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        val times = TextStyle(color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13), fontFeatureSettings = "tnum")
+        Text(formatDuration(positionMs), style = times)
+        Text(formatDuration(durationMs.toLong()), style = times)
+    }
 }
 
 @Composable

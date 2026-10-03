@@ -130,7 +130,6 @@ sealed interface PanelStage {
         val art: Any?,
         val loaded: Boolean,
         val playing: Boolean,
-        val positionMs: Long,
         val durationMs: Long,
         val app: String? = null,
         val packageName: String? = null,
@@ -160,12 +159,11 @@ fun XMBUiState.mediaStage(): PanelStage? {
             art = track.artUri,
             loaded = true,
             playing = musicPlayback.isPlaying,
-            positionMs = musicPlayback.positionMs.toLong(),
             durationMs = musicPlayback.durationMs.toLong(),
         )
     }
     val external = externalPlayback?.let {
-        PanelStage.Music(it.title, it.artist, null, it.art, true, it.playing, it.positionMs, it.durationMs, it.appLabel, it.packageName)
+        PanelStage.Music(it.title, it.artist, null, it.art, true, it.playing, it.durationMs, it.appLabel, it.packageName)
     }
     return when {
         own?.playing == true -> own
@@ -177,7 +175,7 @@ fun XMBUiState.mediaStage(): PanelStage? {
 fun XMBUiState.recentStage(): PanelStage? {
     val top = recentTop ?: return null
     return when (recentKind(top)) {
-        RecentKind.MUSIC -> PanelStage.Music(top.title, top.subtitle, null, top.shelfCoverArt, false, false, 0, 0)
+        RecentKind.MUSIC -> PanelStage.Music(top.title, top.subtitle, null, top.shelfCoverArt, false, false, 0)
         RecentKind.VIDEO -> PanelStage.Video(top.title, top.subtitle, top.shelfCoverArt, top.progressFraction, top.progressLabel)
         RecentKind.BOOK -> PanelStage.Book(top.title, top.subtitle, top.shelfCoverArt)
         RecentKind.GAME -> PanelStage.Game(top.title, top.backdropArt.firstOrNull(), recentTopAt, top.totalPlayTimeMillis)
@@ -185,12 +183,18 @@ fun XMBUiState.recentStage(): PanelStage? {
     }
 }
 
-val PanelStage.islandProgress: Float?
-    get() = when (this) {
-        is PanelStage.Music -> if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else null
-        is PanelStage.Video -> progress
-        else -> null
-    }
+fun playbackFraction(positionMs: Long, durationMs: Long): Float? =
+    if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else null
+
+fun PanelStage.Music.timeLabel(positionMs: Long): String? =
+    (formatDuration(positionMs) + " / " + formatDuration(durationMs))
+        .takeIf { loaded && (packageName == null || durationMs > 0) }
+
+fun PanelStage.islandProgress(positionMs: Long): Float? = when (this) {
+    is PanelStage.Music -> playbackFraction(positionMs, durationMs)
+    is PanelStage.Video -> progress
+    else -> null
+}
 
 fun XMBUiState.panelStage(): PanelStage = when (val focus = focusedNotice) {
     NoticeFocus.Media -> mediaStage()

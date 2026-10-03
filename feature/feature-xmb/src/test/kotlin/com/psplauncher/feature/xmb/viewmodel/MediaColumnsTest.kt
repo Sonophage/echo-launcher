@@ -467,22 +467,17 @@ class MediaColumnsTest {
         )
 
     @Test
-    fun `the playing track carries a scrubber, and only while a duration is known`() {
+    fun `the playing row carries no frozen position, because the live row draws the moving one`() {
         val track = MusicTrack(
             id = "t1", folderId = "f", uri = "content://t1", displayName = "Song",
             title = "Dracula's Castle", artist = "Michiru Yamane",
         )
         val playing = XMBUiState(
-            musicPlayback = MusicPlaybackState(track = track, isPlaying = true, positionMs = 72_000, durationMs = 214_000),
+            musicPlayback = MusicPlaybackState(track = track, isPlaying = true, durationMs = 214_000),
         ).musicRootSections().first()
-        assertEquals(0.336f, playing.progressFraction!!, 0.005f)
-        assertEquals("1:12  /  3:34", playing.progressLabel)
-
-        val unknownLength = XMBUiState(
-            musicPlayback = MusicPlaybackState(track = track, isPlaying = true, positionMs = 72_000, durationMs = 0),
-        ).musicRootSections().first()
-        assertNull("no duration means no scrubber", unknownLength.progressFraction)
-        assertNull(unknownLength.progressLabel)
+        assertEquals("now_playing", playing.id)
+        assertNull("a snapshot position would go stale between refreshes", playing.progressFraction)
+        assertNull(playing.progressLabel)
     }
 
     @Test
@@ -531,7 +526,7 @@ class MediaColumnsTest {
             id = "t1", folderId = "f", uri = "content://t1", displayName = "Song", artUri = "art://1",
         )
         val nowPlaying = XMBUiState(
-            musicPlayback = MusicPlaybackState(track = track, isPlaying = true, positionMs = 1, durationMs = 2),
+            musicPlayback = MusicPlaybackState(track = track, isPlaying = true, durationMs = 2),
             mediaCovers = MediaCovers(music = (1..12).map { "pool$it" }),
         ).musicRootSections().first()
         assertTrue("the playing track keeps its album art", nowPlaying.insideCovers.isEmpty())
