@@ -120,6 +120,17 @@ class DiscordAuthRepositoryTest {
     }
 
     @Test
+    fun `restoreSession without a stored session never wakes the SDK`() = runTest {
+        val client = mockk<DiscordDeviceAuthClient>()
+        val store = mockk<DiscordTokenStore>(relaxed = true)
+        val activator = activator()
+        coEvery { store.load() } returns null
+
+        assertFalse(repo(client, store, activator).restoreSession())
+        coVerify(exactly = 0) { activator.activate(any()) }
+    }
+
+    @Test
     fun `restoreSession activates a still-valid token without refreshing`() = runTest {
         val client = mockk<DiscordDeviceAuthClient>()
         val store = mockk<DiscordTokenStore>(relaxed = true)

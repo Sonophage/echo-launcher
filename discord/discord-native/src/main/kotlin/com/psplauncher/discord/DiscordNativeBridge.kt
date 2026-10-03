@@ -3,30 +3,35 @@ package com.psplauncher.discord
 import android.app.Activity
 import com.discord.socialsdk.DiscordSocialSdkInit
 import com.psplauncher.core.domain.discord.DiscordConfig
+import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicBoolean
 
 object DiscordNativeBridge {
-    private val libraryLoaded = AtomicBoolean(false)
+    private var libraryLoaded = false
+    private var engineActivity: WeakReference<Activity>? = null
     private val clientStarted = AtomicBoolean(false)
 
-    private fun ensureLibraryLoaded() {
-        if (libraryLoaded.compareAndSet(false, true)) System.loadLibrary("discord_bridge")
-    }
-
+    @Synchronized
     fun attachActivity(activity: Activity) {
-        ensureLibraryLoaded()
-        DiscordSocialSdkInit.setEngineActivity(activity)
+        engineActivity = WeakReference(activity)
+        if (libraryLoaded) DiscordSocialSdkInit.setEngineActivity(activity)
     }
 
-    fun ensureInitialized() {
-        ensureLibraryLoaded()
-        if (clientStarted.compareAndSet(false, true)) {
-            nativeInit(DiscordConfig.APPLICATION_ID.toLong())
-        }
+    @Synchronized
+    private fun ensureLibraryLoaded(): Boolean {
+        if (libraryLoaded) return true
+        val activity = engineActivity?.get() ?: return false
+        System.loadLibrary("discord_bridge")
+        DiscordSocialSdkInit.setEngineActivity(activity)
+        libraryLoaded = true
+        return true
     }
 
     fun updateToken(accessToken: String): Boolean {
-        ensureInitialized()
+        if (!ensureLibraryLoaded()) return false
+        if (clientStarted.compareAndSet(false, true)) {
+            nativeInit(DiscordConfig.APPLICATION_ID.toLong())
+        }
         return nativeUpdateToken(accessToken)
     }
 

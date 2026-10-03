@@ -9,7 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,8 +20,7 @@ class DiscordBootstrap @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     fun onCreate(activity: ComponentActivity) {
-        runCatching { DiscordNativeBridge.attachActivity(activity) }
-            .onFailure { Timber.w(it, "Discord SDK could not attach"); return }
+        DiscordNativeBridge.attachActivity(activity)
         activity.lifecycleScope.launch {
             if (authRepository.hasSession()) {
                 authRepository.restoreSession()
