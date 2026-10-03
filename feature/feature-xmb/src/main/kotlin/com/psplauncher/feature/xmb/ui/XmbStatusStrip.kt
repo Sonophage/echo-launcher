@@ -78,6 +78,7 @@ import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.ControllerPrompt
 import com.psplauncher.core.ui.components.LocalPadPrompts
 import com.psplauncher.core.ui.components.StatusStripHeight
+import com.psplauncher.core.ui.components.chromeGutter
 import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.mediaAccent
 import com.psplauncher.core.ui.icons.CategoryIconGlyph
@@ -224,7 +225,6 @@ fun XmbPspStatusStrip(
                 stageIcon = stageIcon?.bitmap,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = u.dp(80))
                     .wrapContentHeight(Alignment.Top, unbounded = true),
             )
         }
@@ -275,7 +275,7 @@ fun XmbPspStatusStrip(
         Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = u.dp(80))
+                .padding(end = chromeGutter(end = true))
                 .wrapContentHeight(Alignment.Top, unbounded = true)
                 .height(band),
             verticalAlignment     = Alignment.CenterVertically,
@@ -357,10 +357,11 @@ private fun IslandCard(
     val progress = stage?.islandProgress
     val playing = (stage as? PanelStage.Music)?.playing == true
     val radius = u.dp(20)
-    val shape = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
+    val shape = RoundedCornerShape(bottomEnd = radius)
+    val gutter = chromeGutter()
     Box(
         modifier
-            .width(u.dp(280))
+            .width(u.dp(264) + gutter)
             .heightIn(min = band)
             .clip(shape)
             .background(Brush.linearGradient(listOf(tint.copy(alpha = 0.62f), lerp(tint, Color.Black, 0.4f).copy(alpha = 0.5f))))
@@ -371,9 +372,7 @@ private fun IslandCard(
                 val bottom = size.height - inset
                 val right = size.width - inset
                 val path = Path().apply {
-                    moveTo(inset, 0f)
-                    lineTo(inset, bottom - r)
-                    arcTo(Rect(inset, bottom - 2 * r, inset + 2 * r, bottom), 180f, -90f, false)
+                    moveTo(0f, bottom)
                     lineTo(right - r, bottom)
                     arcTo(Rect(right - 2 * r, bottom - 2 * r, right, bottom), 90f, -90f, false)
                     lineTo(right, 0f)
@@ -399,7 +398,7 @@ private fun IslandCard(
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(start = u.dp(16), end = u.dp(22), top = if (compact) 2.dp else u.dp(12)),
+                .padding(start = gutter, end = u.dp(22), top = if (compact) 2.dp else u.dp(12)),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
