@@ -127,11 +127,13 @@ sealed interface PanelStage {
         val title: String,
         val artist: String?,
         val album: String?,
-        val art: String?,
+        val art: Any?,
         val loaded: Boolean,
         val playing: Boolean,
         val positionMs: Long,
         val durationMs: Long,
+        val app: String? = null,
+        val packageName: String? = null,
     ) : PanelStage
 
     data class Video(val title: String, val detail: String?, val art: String?, val progress: Float?, val progressLabel: String?) : PanelStage
@@ -150,8 +152,8 @@ sealed interface PanelStage {
 }
 
 fun XMBUiState.mediaStage(): PanelStage? {
-    musicPlayback.track?.let { track ->
-        return PanelStage.Music(
+    val own = musicPlayback.track?.let { track ->
+        PanelStage.Music(
             title = track.title ?: track.displayName,
             artist = track.artist,
             album = track.album,
@@ -162,7 +164,14 @@ fun XMBUiState.mediaStage(): PanelStage? {
             durationMs = musicPlayback.durationMs.toLong(),
         )
     }
-    return recentStage()
+    val external = externalPlayback?.let {
+        PanelStage.Music(it.title, it.artist, null, it.art, true, it.playing, it.positionMs, it.durationMs, it.appLabel, it.packageName)
+    }
+    return when {
+        own?.playing == true -> own
+        external?.playing == true -> external
+        else -> own ?: external
+    } ?: recentStage()
 }
 
 fun XMBUiState.recentStage(): PanelStage? {
@@ -193,7 +202,7 @@ fun XMBUiState.panelStage(): PanelStage = when (val focus = focusedNotice) {
 val XMBUiState.clearableNoticeCount: Int
     get() = androidNotices.count { it.canDismiss } + launcherNotices.size
 
-enum class StageCommand { PLAY_PAUSE, NEXT_TRACK, OPEN_MUSIC, LAUNCH_RECENT, OPEN_NOTICE, DISMISS, CLEAR_ALL }
+enum class StageCommand { PLAY_PAUSE, NEXT_TRACK, OPEN_MUSIC, OPEN_APP, LAUNCH_RECENT, OPEN_NOTICE, DISMISS, CLEAR_ALL }
 
 data class StageAction(val button: GamepadAction, val label: String, val command: StageCommand)
 
@@ -206,7 +215,7 @@ fun stageActions(stage: PanelStage, clearable: Int): List<StageAction> = buildLi
         is PanelStage.Music -> if (stage.loaded) {
             a(if (stage.playing) "Pause" else "Play", StageCommand.PLAY_PAUSE)
             x("Next track", StageCommand.NEXT_TRACK)
-            y("Open Music", StageCommand.OPEN_MUSIC)
+            if (stage.packageName != null) y("Open ${stage.app ?: "app"}", StageCommand.OPEN_APP) else y("Open Music", StageCommand.OPEN_MUSIC)
         } else {
             a("Play", StageCommand.LAUNCH_RECENT)
         }

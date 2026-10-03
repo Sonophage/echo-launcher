@@ -1,6 +1,8 @@
 package com.psplauncher.feature.xmb.viewmodel
 
+import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.domain.model.MusicTrack
+import com.psplauncher.core.ui.notification.ExternalPlayback
 import com.psplauncher.feature.xmb.music.MusicPlaybackState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -31,5 +33,31 @@ class IslandStageTest {
         assertNull("a recent track has no duration, so no line", PanelStage.Music("a", null, null, null, false, false, 0, 0).islandProgress)
         assertEquals(0.6f, PanelStage.Video("v", null, null, 0.6f, null).islandProgress!!, 0.001f)
         assertNull(PanelStage.Game("g", null, null, 0).islandProgress)
+    }
+
+    private fun stremio(playing: Boolean) =
+        ExternalPlayback("com.stremio.one", "Stremio", "Hotel Del Luna", null, null, playing, 60_000, 3_600_000)
+
+    private fun nowPlaying(ownPlaying: Boolean?, external: ExternalPlayback?) = XMBUiState(
+        showBootSequence = false,
+        recentTop = game,
+        externalPlayback = external,
+        musicPlayback = ownPlaying?.let { MusicPlaybackState(track = track, isPlaying = it) } ?: MusicPlaybackState(),
+    ).mediaStage() as? PanelStage.Music
+
+    @Test
+    fun `the launcher's own music wins while it plays, otherwise a playing app session takes the slot`() {
+        assertEquals("Blue Monday", nowPlaying(ownPlaying = true, external = stremio(playing = true))?.title)
+        assertEquals("Hotel Del Luna", nowPlaying(ownPlaying = false, external = stremio(playing = true))?.title)
+        assertEquals("a paused loaded track still beats a paused app", "Blue Monday", nowPlaying(ownPlaying = false, external = stremio(playing = false))?.title)
+        assertEquals("an app session beats the recent item", "Hotel Del Luna", nowPlaying(ownPlaying = null, external = stremio(playing = false))?.title)
+    }
+
+    @Test
+    fun `an app session's stage drives that app, and Y opens the app rather than the launcher's player`() {
+        val stage = nowPlaying(ownPlaying = null, external = stremio(playing = true))!!
+        val actions = stageActions(stage, clearable = 0)
+        assertEquals(listOf(StageCommand.PLAY_PAUSE, StageCommand.NEXT_TRACK, StageCommand.OPEN_APP), actions.map { it.command })
+        assertEquals("Open Stremio", actions.first { it.button == GamepadAction.OPEN_CONTEXT_MENU }.label)
     }
 }

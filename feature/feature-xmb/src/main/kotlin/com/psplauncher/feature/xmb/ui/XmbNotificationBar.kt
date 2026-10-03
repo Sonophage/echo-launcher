@@ -226,7 +226,7 @@ private fun Stage(stage: PanelStage, actions: List<StageAction>, icon: ImageBitm
                             }
                         }
                         Headline(stage.title, u.sp(52), 3)
-                        Meta(listOfNotNull(stage.artist, stage.album).joinToString("  ·  "), u.sp(17))
+                        Meta(listOfNotNull(stage.artist, stage.album, stage.app).joinToString("  ·  "), u.sp(17))
                     }
                 }
                 if (stage.loaded && stage.durationMs > 0) {
@@ -359,7 +359,7 @@ private fun NoticeList(
 private fun RecentCard(stage: PanelStage, focused: Boolean, tint: Color, u: DesignUnits, onClick: () -> Unit) {
     val now = System.currentTimeMillis()
     val (title, detail) = when (stage) {
-        is PanelStage.Music -> stage.title to listOfNotNull(if (stage.loaded) "Now playing" else "From Recent", stage.artist).joinToString("  ·  ")
+        is PanelStage.Music -> stage.title to listOfNotNull(if (stage.loaded) "Now playing" else "From Recent", stage.artist, stage.app).joinToString("  ·  ")
         is PanelStage.Video -> stage.title to listOfNotNull("From Recent", stage.progressLabel ?: stage.detail).joinToString("  ·  ")
         is PanelStage.Book -> stage.title to listOfNotNull("From Recent", stage.detail).joinToString("  ·  ")
         is PanelStage.Game -> stage.title to listOfNotNull("From Recent", stage.lastPlayedAt?.let { "Last played ${relativeTime(now, it)}" }).joinToString("  ·  ")
@@ -559,13 +559,13 @@ private fun Progress(fraction: Float, left: String, right: String, u: DesignUnit
 }
 
 @Composable
-internal fun Art(uri: String?, width: Dp, height: Dp, radius: Dp, fallback: ImageVector, u: DesignUnits) {
+internal fun Art(uri: Any?, width: Dp, height: Dp, radius: Dp, fallback: ImageVector, u: DesignUnits) {
     Box(
         Modifier.width(width).height(height).clip(RoundedCornerShape(radius)).background(Color.White.copy(alpha = 0.08f)),
         contentAlignment = Alignment.Center,
     ) {
         Icon(fallback, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(minOf(width, height) * 0.4f))
-        if (!uri.isNullOrBlank()) AsyncImage(uri, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        if (uri != null && uri.toString().isNotBlank()) AsyncImage(uri, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
     }
 }
 
@@ -580,11 +580,12 @@ internal fun stagePackage(stage: PanelStage, launcher: String): String? = when (
     is PanelStage.Android -> stage.notice.packageName
     is PanelStage.Launcher -> launcher
     is PanelStage.App -> stage.packageName
+    is PanelStage.Music -> stage.packageName
     else -> null
 }
 
 internal fun stageTint(stage: PanelStage, iconColor: Color?, accent: Color): Color = when (stage) {
-    is PanelStage.Music -> MusicTint
+    is PanelStage.Music -> if (stage.packageName != null) iconColor ?: MusicTint else MusicTint
     is PanelStage.Video -> VideoTint
     is PanelStage.Book -> BookTint
     is PanelStage.Game -> GameTint
@@ -593,7 +594,7 @@ internal fun stageTint(stage: PanelStage, iconColor: Color?, accent: Color): Col
     PanelStage.Empty -> EmptyTint
 }
 
-private fun stageArt(stage: PanelStage): String? = when (stage) {
+private fun stageArt(stage: PanelStage): Any? = when (stage) {
     is PanelStage.Music -> stage.art
     is PanelStage.Video -> stage.art
     is PanelStage.Book -> stage.cover

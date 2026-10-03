@@ -702,6 +702,7 @@ data class XMBUiState(
     val launcherNotices: List<com.psplauncher.core.ui.notification.SystemToast> = emptyList(),
 
     val androidNotices: List<AndroidNotice> = emptyList(),
+    val externalPlayback: com.psplauncher.core.ui.notification.ExternalPlayback? = null,
 
     val recentTop: XMBItem? = null,
     val recentTopAt: Long? = null,
@@ -801,7 +802,7 @@ data class XMBUiState(
 
     val noticeFocusables: List<NoticeFocus>
         get() = buildList {
-            if (musicPlayback.track != null || recentTop != null) add(NoticeFocus.Media)
+            if (musicPlayback.track != null || externalPlayback != null || recentTop != null) add(NoticeFocus.Media)
             panelEntries(androidNotices, launcherNotices).forEach { add(it.focus) }
         }
 
@@ -4968,7 +4969,8 @@ class XMBViewModel @Inject constructor(
         }
 
         if (state.notificationsOpen) {
-            val onMusic = state.focusedNotice == NoticeFocus.Media && state.musicPlayback.track != null
+            val onMusic = state.focusedNotice == NoticeFocus.Media &&
+                (state.mediaStage() as? PanelStage.Music)?.let { it.loaded && it.packageName == null } == true
             when (action) {
                 GamepadAction.NAVIGATE_UP   -> movePanelCursor(PanelMove.UP)
                 GamepadAction.NAVIGATE_DOWN -> movePanelCursor(PanelMove.DOWN)
@@ -6552,6 +6554,15 @@ class XMBViewModel @Inject constructor(
                     _uiState.update { it.copy(androidNotices = notices) }
                 }
         }
+        viewModelScope.launch {
+            combine(
+                AndroidNotifications.playback,
+                _uiState.map { it.interfaceChoices.showDeviceNotifications }.distinctUntilChanged(),
+            ) { playback, show -> playback?.takeIf { show } }
+                .collect { playback ->
+                    _uiState.update { it.copy(externalPlayback = playback) }
+                }
+        }
     }
 
     private fun observeShelfCounts() {
@@ -6809,9 +6820,16 @@ class XMBViewModel @Inject constructor(
     private fun runStageCommand(command: StageCommand) {
         val s = _uiState.value
         val focus = s.focusedNotice
+        val external = (s.panelStage() as? PanelStage.Music)?.packageName
         when (command) {
-            StageCommand.PLAY_PAUSE -> musicPlayer.playPause()
-            StageCommand.NEXT_TRACK -> musicPlayer.next()
+            StageCommand.PLAY_PAUSE -> if (external != null) AndroidNotifications.playPause() else musicPlayer.playPause()
+            StageCommand.NEXT_TRACK -> if (external != null) AndroidNotifications.skipNext() else musicPlayer.next()
+            StageCommand.OPEN_APP -> {
+                val pkg = external ?: return
+                menuSound.play(MenuSound.SELECT)
+                closeNotifications()
+                launchAppWithDisc(pkg, (s.panelStage() as? PanelStage.Music)?.art)
+            }
             StageCommand.OPEN_MUSIC -> {
                 menuSound.play(MenuSound.SELECT)
                 closeNotifications()
