@@ -21,10 +21,15 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // Readium's PDF adapter needs PdfiumAndroid, which only JitPack publishes. Only that group may come from it.
+        // Only JitPack publishes PdfiumAndroid (Readium's PDF adapter) and the RetroAchievements client with its
+        // NetworkResponseAdapter. Only those groups may come from it.
         exclusiveContent {
             forRepository { maven("https://jitpack.io") }
-            filter { includeGroup("com.github.marain87") }
+            filter {
+                includeGroup("com.github.marain87")
+                includeGroup("com.github.RetroAchievements")
+                includeGroup("com.github.haroldadmin")
+            }
         }
     }
 }
@@ -56,3 +61,4 @@ include(":feature:feature-settings")
 include(":feature:feature-appbar")
 include(":feature:feature-backup")
 include(":feature:feature-reader")
+include(":feature:feature-achievements")

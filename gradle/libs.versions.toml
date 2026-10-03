@@ -20,6 +20,7 @@ lifecycle               = "2.11.0"
 coil                    = "3.6.1"
 ktor                    = "3.5.2"
 retrofit                = "3.0.0"
+retroachievements-api   = "2.0.0"
 timber                  = "5.0.1"
 xz                      = "1.12"
 workmanager             = "2.11.2"
@@ -145,6 +146,7 @@ ktor-client-mock                = { group = "io.ktor",                name = "kt
 retrofit                        = { group = "com.squareup.retrofit2",  name = "retrofit",                    version.ref = "retrofit" }
 okhttp-logging-interceptor      = { group = "com.squareup.okhttp3",     name = "logging-interceptor",         version.ref = "okhttp" }
 retrofit-kotlinx-serialization  = { group = "com.squareup.retrofit2",  name = "converter-kotlinx-serialization", version.ref = "retrofit" }
+retroachievements-api           = { group = "com.github.RetroAchievements", name = "api-kotlin",             version.ref = "retroachievements-api" }
 
 # Kotlinx
 kotlinx-coroutines-android      = { group = "org.jetbrains.kotlinx",  name = "kotlinx-coroutines-android",  version.ref = "coroutines" }
