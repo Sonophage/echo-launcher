@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Test
@@ -28,6 +29,19 @@ class AppIconCacheTest {
         val second = cache.getOrLoad(AppIconKey("com.example", 96, false, ::red)) { loads++; art(96) }
         assertSame(first, second)
         assertEquals(1, loads)
+    }
+
+    @Test
+    fun `an updated or reinstalled app is decoded again, so its new icon shows`() {
+        val cache = AppIconCache(maxBytes = 1024 * 1024)
+        val key = AppIconKey("com.example", 96, false, null)
+        val old = cache.getOrLoad(key, version = 1L) { AppIconArt(art(96).bitmap, null, 1L) }
+        assertSame(old, cache.getOrLoad(key, version = 1L) { null })
+
+        val updated = cache.getOrLoad(key, version = 2L) { AppIconArt(art(96).bitmap, null, 2L) }
+
+        assertNotSame(old, updated)
+        assertSame(updated, cache.peek(key))
     }
 
     @Test
