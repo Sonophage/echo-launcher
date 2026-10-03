@@ -32,8 +32,8 @@ android {
         applicationId = "com.psplauncher.launcher"
         minSdk = 29           // Android 10 — Winlator minimum
         targetSdk = 35
-        versionCode = 34
-        versionName = "1.23.2"
+        versionCode = 35
+        versionName = "1.23.3"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
