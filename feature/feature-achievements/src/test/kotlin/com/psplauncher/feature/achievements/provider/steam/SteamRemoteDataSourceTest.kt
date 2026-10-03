@@ -42,6 +42,35 @@ class SteamRemoteDataSourceTest {
     }
 
     @Test
+    fun `a throttled or failed schema response is a failure, so the importer does not remember the game as achievement free`() = runTest {
+        creds()
+        coEvery { webApi.getSchemaForGame(any(), "440") } returns Response.error(429, "{}".toResponseBody())
+        assertTrue(dataSource.fetch("440") is ProviderSyncResult.Failed)
+        coEvery { webApi.getSchemaForGame(any(), "440") } returns Response.error(503, "{}".toResponseBody())
+        assertTrue(dataSource.fetch("440") is ProviderSyncResult.Failed)
+    }
+
+    @Test
+    fun `a 403 schema response means the API key was rejected`() = runTest {
+        creds()
+        coEvery { webApi.getSchemaForGame(any(), "440") } returns Response.error(403, "{}".toResponseBody())
+        assertEquals(ProviderSyncResult.MissingCredentials, dataSource.fetch("440"))
+    }
+
+    @Test
+    fun `a failed player response is a failure, not a set of locked achievements that would overwrite earned ones`() = runTest {
+        creds()
+        coEvery { webApi.getSchemaForGame(any(), "440") } returns schemaResponse("a1")
+        coEvery { webApi.getGlobalAchievementPercentages("440") } returns Response.success(SteamGlobalResponse())
+        coEvery { webApi.getPlayerAchievements(any(), any(), "440") } returns
+            Response.error(500, "{}".toResponseBody())
+        assertTrue(dataSource.fetch("440") is ProviderSyncResult.Failed)
+        coEvery { webApi.getPlayerAchievements(any(), any(), "440") } returns
+            Response.success(SteamPlayerResponse(SteamPlayerStats(success = false, error = "Requested app has no stats")))
+        assertTrue(dataSource.fetch("440") is ProviderSyncResult.Failed)
+    }
+
+    @Test
     fun `a 403 player response maps to ProfileNotPublic`() = runTest {
         creds()
         coEvery { webApi.getSchemaForGame(any(), "440") } returns schemaResponse("a1")
