@@ -225,6 +225,7 @@ fun XmbPspStatusStrip(
                 stageIcon = stageIcon?.bitmap,
                 modifier = Modifier
                     .align(Alignment.TopStart)
+                    .padding(start = 5.dp)
                     .wrapContentHeight(Alignment.Top, unbounded = true),
             )
         }
@@ -357,7 +358,7 @@ private fun IslandCard(
     val progress = stage?.islandProgress
     val playing = (stage as? PanelStage.Music)?.playing == true
     val radius = u.dp(20)
-    val shape = RoundedCornerShape(bottomEnd = radius)
+    val shape = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
     val gutter = chromeGutter()
     Box(
         modifier
@@ -372,7 +373,9 @@ private fun IslandCard(
                 val bottom = size.height - inset
                 val right = size.width - inset
                 val path = Path().apply {
-                    moveTo(0f, bottom)
+                    moveTo(inset, 0f)
+                    lineTo(inset, bottom - r)
+                    arcTo(Rect(inset, bottom - 2 * r, inset + 2 * r, bottom), 180f, -90f, false)
                     lineTo(right - r, bottom)
                     arcTo(Rect(right - 2 * r, bottom - 2 * r, right, bottom), 90f, -90f, false)
                     lineTo(right, 0f)

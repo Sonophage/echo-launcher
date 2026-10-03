@@ -595,15 +595,7 @@ fun XMBShell(
                 LocalDensity provides Density(baseDensity.density * uiScale * layoutAdjust.scale, baseDensity.fontScale),
             ) {
         Box(modifier = Modifier.fillMaxSize().markTouches(onTouchInput)) {
-            val waveCovered = uiState.showBootSequence ||
-                uiState.activeVideoId != null ||
-                uiState.activePhotoViewer != null ||
-                uiState.activeAppId != null || uiState.activeAppDrawerFilter != null ||
-                uiState.gameInfo != null ||
-                uiState.profile != null ||
-                uiState.musicPlayerVisible ||
-
-                false
+            val waveCovered = !uiState.waveShown
 
             val powerThrottled = rememberWavePowerThrottle(
                 respectBatterySaver  = uiState.respectBatterySaver,
@@ -624,9 +616,11 @@ fun XMBShell(
                 )
             )
 
-            val effectiveWaveStyle = if (waveCovered || powerThrottled) {
-                uiState.waveStyle.frozen
-            } else uiState.waveStyle
+            val effectiveWaveStyle = when {
+                waveCovered -> com.psplauncher.core.ui.wave.WaveStyle.OFF
+                powerThrottled -> uiState.waveStyle.frozen
+                else -> uiState.waveStyle
+            }
 
             val gameBootWaveStyle = if (powerThrottled) uiState.waveStyle.frozen else uiState.waveStyle
             XmbBackground(

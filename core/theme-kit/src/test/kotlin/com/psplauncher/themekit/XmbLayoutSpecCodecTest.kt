@@ -43,7 +43,6 @@ class XmbLayoutSpecCodecTest {
             categoryIconSelectedDp = 100_000f,
             itemTextSp = 0f,
             leftAnchorExtraDp = -999f,
-            previousItemRiseRows = 40f,
         )
         val safe = XmbLayoutSpecCodec.sanitize(hostile)
         assertEquals(XmbLayoutSpecCodec.BAR_TOP_MAX, safe.barTopFraction)
@@ -51,7 +50,6 @@ class XmbLayoutSpecCodecTest {
         assertEquals(160f, safe.categoryIconSelectedDp)
         assertEquals(8f, safe.itemTextSp)
         assertEquals(-60f, safe.leftAnchorExtraDp)
-        assertEquals(2f, safe.previousItemRiseRows)
     }
 
     @Test
@@ -67,5 +65,11 @@ class XmbLayoutSpecCodecTest {
     fun `decode clamps hostile json values`() {
         val decoded = XmbLayoutSpecCodec.decode("""{"barTopFraction":0.9}""")
         assertEquals(XmbLayoutSpecCodec.BAR_TOP_MAX, decoded?.barTopFraction)
+    }
+
+    @Test
+    fun `a layout saved before the previous-item peek was removed still loads`() {
+        val saved = XmbLayoutSpecCodec.encode(XmbLayoutSpec(itemTextSp = 21f)).dropLast(1) + ",\"previousItemRiseRows\":0.5}"
+        assertEquals(21f, XmbLayoutSpecCodec.decode(saved)?.itemTextSp)
     }
 }

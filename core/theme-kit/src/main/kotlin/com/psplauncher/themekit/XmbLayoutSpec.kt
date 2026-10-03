@@ -22,8 +22,6 @@ data class XmbLayoutSpec(
     val itemTextStartGapDp: Float = 14f,
 
     val leftAnchorExtraDp: Float = 6f,
-
-    val previousItemRiseRows: Float = 0.5f,
 ) {
     companion object {
         val DEFAULT = XmbLayoutSpec()

@@ -838,6 +838,12 @@ data class XMBUiState(
     private val otherBlockingOverlay: Boolean
         get() = chromeOverlay || fullscreenOverlay
 
+    val waveShown: Boolean
+        get() = !chromeOverlay && !notificationsOpen && !showBootSequence &&
+            artworkStudioGameId == null && manualViewer == null && metadataPreview == null &&
+            activeVideoId == null && activePhotoViewer == null && musicBrowser == null &&
+            musicTrackPicker == null && !musicPlayerVisible
+
     private val chromeOverlay: Boolean
         get() = activeSettingsScreen != null ||
             appPicker != null ||

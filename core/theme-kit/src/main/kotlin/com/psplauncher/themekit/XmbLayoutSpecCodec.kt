@@ -34,7 +34,6 @@ object XmbLayoutSpecCodec {
             itemTextSp = spec.itemTextSp.safe(d.itemTextSp, 8f, 40f),
             itemTextStartGapDp = spec.itemTextStartGapDp.safe(d.itemTextStartGapDp, 0f, 60f),
             leftAnchorExtraDp = spec.leftAnchorExtraDp.safe(d.leftAnchorExtraDp, -60f, 120f),
-            previousItemRiseRows = spec.previousItemRiseRows.safe(d.previousItemRiseRows, 0f, 2f),
         )
     }
 
