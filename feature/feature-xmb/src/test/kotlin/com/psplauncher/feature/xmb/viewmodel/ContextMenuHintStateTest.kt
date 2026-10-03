@@ -34,7 +34,7 @@ class ContextMenuHintStateTest {
     }
 
     @Test
-    fun `an empty home shelf still shows the pill, because X is how you leave it`() {
+    fun `an empty home shelf still shows the pill, because the filter is how you leave it`() {
         val emptyHome = XMBUiState(
             categories = listOf(
                 Category(
@@ -51,7 +51,7 @@ class ContextMenuHintStateTest {
 
         assertFalse("nothing is focused, so there is no context menu", emptyHome.focusedItemHasContextMenu)
         assertFalse("Last Played does not sort", emptyHome.canSortCurrentList)
-        assertTrue("but X still filters, so the pill has something true to say", emptyHome.canFilterRecents)
+        assertTrue("but LB and RB still filter, so the pill has something true to say", emptyHome.canFilterRecents)
         assertTrue(shouldShowContextMenuHint(emptyHome, IDLE_MS))
     }
 

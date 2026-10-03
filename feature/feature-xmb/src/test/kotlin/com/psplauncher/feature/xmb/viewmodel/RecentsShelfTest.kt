@@ -139,6 +139,39 @@ class RecentsShelfTest {
     }
 
     @Test
+    fun `Today and Yesterday are calendar days, and each row keeps its index in the shelf`() {
+        val zone = java.time.ZoneId.of("UTC")
+        fun at(text: String) = java.time.LocalDateTime.parse(text).atZone(zone).toInstant().toEpochMilli()
+        val now = at("2026-10-03T00:30")
+        val items = listOf(
+            XMBItem(id = "a", title = "Skyrim", lastOpenedAt = at("2026-10-03T00:10")),
+            XMBItem(id = "b", title = "Aja", lastOpenedAt = at("2026-10-02T23:50")),
+            XMBItem(id = "c", title = "Dune", lastOpenedAt = at("2026-10-01T23:59")),
+            XMBItem(id = "d", title = "Discord"),
+        )
+
+        val grouped = groupRecentsByDay(items, now, zone)
+            .map { (day, rows) -> day to rows.map { it.index to it.value.title } }
+
+        assertEquals(
+            "40 minutes ago but before midnight is Yesterday, not Today; an unstamped row is Earlier",
+            listOf(
+                RecentDay.TODAY to listOf(0 to "Skyrim"),
+                RecentDay.YESTERDAY to listOf(1 to "Aja"),
+                RecentDay.EARLIER to listOf(2 to "Dune", 3 to "Discord"),
+            ),
+            grouped,
+        )
+    }
+
+    @Test
+    fun `the merge stamps each row with the time it was opened`() {
+        val merged = mergeRecents(games, music, books, videos, noApps, RecentFilter.ALL, limit = 2)
+
+        assertEquals(listOf(500L, 400L), merged.map { it.lastOpenedAt })
+    }
+
+    @Test
     fun `the limit is honoured across the merge`() {
         val merged = mergeRecents(games, music, books, videos, noApps, RecentFilter.ALL, limit = 3)
 

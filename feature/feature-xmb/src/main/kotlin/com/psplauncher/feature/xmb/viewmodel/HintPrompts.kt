@@ -59,7 +59,7 @@ fun promptsFor(state: XMBUiState): XmbPrompts {
 
     val right = buildList {
         when {
-            state.canFilterRecents -> add(XmbPrompt(GamepadAction.CHANGE_SORT, "Filter"))
+            state.canFilterRecents -> add(XmbPrompt(GamepadAction.PREV_CATEGORY, "Filter", pairedWith = GamepadAction.NEXT_CATEGORY))
             state.canSortCurrentList -> add(XmbPrompt(GamepadAction.CHANGE_SORT, "Sort"))
         }
         if (state.focusedItemHasContextMenu) add(XmbPrompt(GamepadAction.OPEN_CONTEXT_MENU, "Options"))
@@ -67,11 +67,11 @@ fun promptsFor(state: XMBUiState): XmbPrompts {
     }
 
     return XmbPrompts(
-        primary = primaryVerbFor(focused)?.let {
+        primary = primaryVerbFor(focused)?.takeIf { !state.onLastPlayedHome }?.let {
             XmbPrompt(GamepadAction.SELECT, it, focused?.title)
         },
 
-        back = XmbPrompt(GamepadAction.BACK, if (state.isInSubItem) "Back" else "Apps"),
+        back = XmbPrompt(GamepadAction.BACK, if (state.isInSubItem || (state.onLastPlayedHome && state.recentRailVisible)) "Back" else "Apps"),
         right = right,
     )
 }

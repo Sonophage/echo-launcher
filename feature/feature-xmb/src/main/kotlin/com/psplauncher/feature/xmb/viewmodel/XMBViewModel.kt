@@ -1210,6 +1210,8 @@ data class XMBItem(
     val textOnly: Boolean = false,
 
     val type: XMBItemType = XMBItemType.STANDARD,
+
+    val lastOpenedAt: Long? = null,
 ) {
     val backdropArt: List<String>
         get() = listOfNotNull(artworkUri, coverUri, iconUri)
@@ -4347,11 +4349,11 @@ class XMBViewModel @Inject constructor(
                     }
             }
 
-    private fun cycleRecentFilter() =
-        setRecentFilter(_uiState.value.let { it.recentFilter.next(it.recentsIncludeApps) })
+    private fun stepRecentFilter(delta: Int) =
+        setRecentFilter(_uiState.value.let { it.recentFilter.step(delta, it.recentsIncludeApps) })
 
     fun setRecentFilter(filter: RecentFilter) {
-        menuSound.play(MenuSound.SCROLL)
+        menuSound.play(MenuSound.SYSTEM_BROWSE)
         _uiState.update { it.copy(recentFilter = filter, selectedItemIndex = 0) }
     }
 
@@ -5319,13 +5321,36 @@ class XMBViewModel @Inject constructor(
             GamepadAction.NEXT_PAGE     -> Unit
             GamepadAction.HOME          -> toggleNotifications()
 
-            GamepadAction.CHANGE_SORT ->
-                if (state.onLastPlayedHome) cycleRecentFilter() else cycleSort()
+            GamepadAction.CHANGE_SORT -> when {
+                !state.onLastPlayedHome -> cycleSort()
+                state.recentRailVisible -> state.focusedItem?.let(::removeFromRecent)
+                else -> state.focusedItem?.takeIf { recentKind(it) == RecentKind.GAME || recentKind(it) == RecentKind.APP }
+                    ?.let(::onOpenGameInfo)
+            }
 
             GamepadAction.OPEN_SEARCH -> openSearch(SearchScope.ALL)
 
-            GamepadAction.PREV_CATEGORY -> stepHoverPanelPage(-1)
-            GamepadAction.NEXT_CATEGORY -> stepHoverPanelPage(+1)
+            GamepadAction.PREV_CATEGORY -> if (state.onLastPlayedHome) stepRecentFilter(-1) else stepHoverPanelPage(-1)
+            GamepadAction.NEXT_CATEGORY -> if (state.onLastPlayedHome) stepRecentFilter(+1) else stepHoverPanelPage(+1)
+        }
+    }
+
+    fun onOpenGameInfo(item: XMBItem) {
+        menuSound.play(MenuSound.SELECT)
+    }
+
+    private fun removeFromRecent(item: XMBItem) {
+        if (!item.removableFromRecent) return
+        menuSound.play(MenuSound.SELECT)
+        when {
+            item.type == XMBItemType.VIDEO_FILE -> handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent")
+            item.type == XMBItemType.LIBRARY_BOOK -> handleBookAction(item.id.removePrefix("book_"), "book_remove_recent")
+            item.type == XMBItemType.MUSIC_TRACK -> handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null)
+            item.gameId != null -> {
+                val gid = item.gameId
+                appAction { gameRepository.clearLastPlayed(gid) }
+            }
+            item.packageName != null -> dismissAppFromRecents(item.packageName)
         }
     }
 

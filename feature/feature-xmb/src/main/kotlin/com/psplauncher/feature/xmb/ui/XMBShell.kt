@@ -746,17 +746,13 @@ fun XMBShell(
                 LastPlayedPage(
                     items = uiState.currentItems,
                     selectedIndex = uiState.selectedItemIndex,
-                    content = uiState.hoverPanelContent,
-                    page = uiState.effectivePanelPage,
                     listState = recentsListState,
                     filter = uiState.recentFilter,
                     railVisible = uiState.recentRailVisible,
-                    onPageTapped = onPanelPageTapped,
                     onCardTapped = onRecentCardTap,
+                    onAction = onPromptTapped,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = StripHeight)
-
                         .xmbNavGestures(
                             onStepCategory = onStepCategory,
                             onStepItem = onStepItem,
