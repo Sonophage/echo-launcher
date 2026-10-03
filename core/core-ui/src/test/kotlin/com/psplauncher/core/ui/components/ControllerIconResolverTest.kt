@@ -16,6 +16,7 @@ class ControllerIconResolverTest {
     )
 
     private val LABEL_FAMILIES = listOf(
+        ControllerDisplayType.GENERIC,
         ControllerDisplayType.KEYBOARD,
         ControllerDisplayType.TOUCH,
     )

@@ -27,10 +27,11 @@ class ControllerPromptStyleTest {
         mappings.iconFor(action)?.drawableForOrNull(family)
 
     @Test
-    fun `the default style is a stock Xbox pad`() {
+    fun `the default style is the generic pad, Xbox layout drawn without art`() {
         val default = ControllerPromptStyle()
-        assertEquals(ControllerDisplayType.XBOX, default.family)
-        assertEquals(R.drawable.ctl_xb_face_south, default.artFor(GamepadAction.SELECT))
+        assertEquals(ControllerDisplayType.GENERIC, default.family)
+        assertEquals(null, default.artFor(GamepadAction.SELECT))
+        assertEquals("A", default.mappings.iconFor(GamepadAction.SELECT)?.printedLabelFor(default.family))
     }
 
     @Test

@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
@@ -32,17 +34,55 @@ fun ControllerIcon.drawableForOrNull(family: ControllerDisplayType): Int? =
         ControllerDisplayType.NINTENDO -> nsTable
         ControllerDisplayType.XBOX -> xbTable
 
-        ControllerDisplayType.KEYBOARD, ControllerDisplayType.TOUCH -> emptyMap()
+        ControllerDisplayType.GENERIC, ControllerDisplayType.KEYBOARD, ControllerDisplayType.TOUCH -> emptyMap()
     }[this]
 
 fun ControllerIcon.printedLabelFor(family: ControllerDisplayType): String? =
     when (family) {
+        ControllerDisplayType.GENERIC -> genericLabels
         ControllerDisplayType.PLAYSTATION -> psLabels
         ControllerDisplayType.NINTENDO -> nsLabels
         ControllerDisplayType.XBOX -> xbLabels
         ControllerDisplayType.KEYBOARD -> kbLabels
         ControllerDisplayType.TOUCH -> touchLabels
     }[this]
+
+private fun ControllerIcon.genericLabel(): String = when (this) {
+    ControllerIcon.FACE_SOUTH -> "A"
+    ControllerIcon.FACE_EAST -> "B"
+    ControllerIcon.FACE_WEST -> "X"
+    ControllerIcon.FACE_NORTH -> "Y"
+    ControllerIcon.DPAD_UP -> "\u2191"
+    ControllerIcon.DPAD_DOWN -> "\u2193"
+    ControllerIcon.DPAD_LEFT -> "\u2190"
+    ControllerIcon.DPAD_RIGHT -> "\u2192"
+    ControllerIcon.DPAD_ALL -> "\u2190\u2192"
+    ControllerIcon.BUMPER_LEFT -> "LB"
+    ControllerIcon.BUMPER_RIGHT -> "RB"
+    ControllerIcon.TRIGGER_LEFT -> "LT"
+    ControllerIcon.TRIGGER_RIGHT -> "RT"
+    ControllerIcon.STICK_LEFT -> "L"
+    ControllerIcon.STICK_RIGHT -> "R"
+    ControllerIcon.STICK_LEFT_CLICK -> "LS"
+    ControllerIcon.STICK_RIGHT_CLICK -> "RS"
+    ControllerIcon.START -> "Menu"
+    ControllerIcon.SELECT -> "View"
+    ControllerIcon.SYSTEM -> "Home"
+    ControllerIcon.SHARE -> "Share"
+    ControllerIcon.TOUCHPAD -> "Pad"
+    ControllerIcon.TOUCHPAD_LEFT -> "Pad L"
+    ControllerIcon.TOUCHPAD_RIGHT -> "Pad R"
+    ControllerIcon.GAME_CHAT -> "Chat"
+    ControllerIcon.CAMERA -> "Camera"
+    ControllerIcon.PADDLE_LEFT -> "PL"
+    ControllerIcon.PADDLE_RIGHT -> "PR"
+    ControllerIcon.JOYCON_SL -> "SL"
+    ControllerIcon.JOYCON_SR -> "SR"
+}
+
+private val genericLabels = ControllerIcon.entries.associateWith { it.genericLabel() }
+
+private fun genericGlyphIsRound(label: String): Boolean = label.length == 1
 
 private val psTable = mapOf(
     ControllerIcon.FACE_SOUTH to R.drawable.ctl_ps_face_south,
@@ -190,7 +230,12 @@ fun ControllerIconGlyph(
     family: ControllerDisplayType,
     modifier: Modifier = Modifier,
     size: Dp = 22.dp,
+    tint: Color = GenericGlyphTint,
 ) {
+    if (family == ControllerDisplayType.GENERIC) {
+        GenericGlyph(icon.genericLabel(), size, tint, modifier)
+        return
+    }
     val drawable = icon.drawableForOrNull(family)
     if (drawable != null) {
         Image(
@@ -222,6 +267,38 @@ fun ControllerIconGlyph(
         )
     }
 }
+
+@Composable
+private fun GenericGlyph(label: String, size: Dp, tint: Color, modifier: Modifier) {
+    val text = with(LocalDensity.current) { (size * GenericTextRatio).toSp() }
+    val shape = if (genericGlyphIsRound(label)) CircleShape else RoundedCornerShape(percent = 50)
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .height(size)
+            .widthIn(min = size)
+            .border(size * GenericStrokeRatio, tint, shape)
+            .padding(horizontal = if (genericGlyphIsRound(label)) 0.dp else size * GenericPadRatio)
+            .clearAndSetSemantics { },
+    ) {
+        Text(
+            text = label,
+            color = tint,
+            fontSize = text,
+            lineHeight = text,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
+    }
+}
+
+val GenericGlyphTint = Color.White.copy(alpha = 0.75f)
+
+private const val GenericStrokeRatio = 1.5f / 22f
+
+private const val GenericTextRatio = 10f / 22f
+
+private const val GenericPadRatio = 9f / 22f
 
 private const val KeycapCornerRatio = 0.25f
 

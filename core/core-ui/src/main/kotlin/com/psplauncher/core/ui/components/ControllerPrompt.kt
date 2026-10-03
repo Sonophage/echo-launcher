@@ -25,7 +25,7 @@ import com.psplauncher.core.domain.model.GamepadMappings
 @Immutable
 data class ControllerPromptStyle(
 
-    val family: ControllerDisplayType = ControllerDisplayType.XBOX,
+    val family: ControllerDisplayType = ControllerDisplayType.GENERIC,
 
     val mappings: GamepadMappings = GamepadMappings(),
 )
@@ -109,7 +109,12 @@ fun ControllerPromptGlyphs(
             horizontalArrangement = Arrangement.spacedBy(glyphSpacing),
         ) {
             for (icon in icons) {
-                ControllerIconGlyph(icon = icon, family = family, size = glyphSize)
+                ControllerIconGlyph(
+                    icon = icon,
+                    family = family,
+                    size = glyphSize,
+                    tint = labelColor.copy(alpha = maxOf(labelColor.alpha, GenericGlyphTint.alpha)),
+                )
             }
         }
         Text(
