@@ -72,6 +72,7 @@ import com.psplauncher.core.ui.theme.LocalPFPColors
 import com.psplauncher.core.ui.theme.menuCursor
 import com.psplauncher.core.ui.theme.menuCursorEdge
 import com.psplauncher.core.ui.components.PspContextMenuOverlay
+import com.psplauncher.core.ui.design.menuBackdrop
 import com.psplauncher.feature.xmb.video.VideoPlayerScreen
 import androidx.compose.runtime.ReadOnlyComposable
 import com.psplauncher.core.ui.theme.LocalPfpTextColors
@@ -342,7 +343,7 @@ private fun PlaylistPicker(
     selectedIndex: Int,
     onRowClick: (Int) -> Unit,
 ) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
+    Box(Modifier.fillMaxSize().menuBackdrop(), contentAlignment = Alignment.CenterEnd) {
         Column(
             modifier = Modifier.padding(36.dp).width(320.dp)
                 .background(Color(0xF0101018), RoundedCornerShape(14.dp)).padding(vertical = 12.dp),

@@ -23,16 +23,23 @@ fun XYLayout.displayLabel(): String = when (this) {
 }
 
 enum class ControllerDisplayType {
+    GENERIC,
     XBOX,
     NINTENDO,
     PLAYSTATION,
 
     KEYBOARD,
 
-    TOUCH,
+    TOUCH;
+
+    companion object {
+        fun fromName(value: String?): ControllerDisplayType =
+            entries.firstOrNull { it.name == value } ?: GENERIC
+    }
 }
 
 fun ControllerDisplayType.displayLabel(): String = when (this) {
+    ControllerDisplayType.GENERIC     -> "Generic"
     ControllerDisplayType.XBOX        -> "Xbox"
     ControllerDisplayType.NINTENDO    -> "Nintendo"
     ControllerDisplayType.PLAYSTATION -> "PlayStation"
@@ -98,7 +105,7 @@ fun ScrollSpeed.displayLabel(): String = when (this) {
 data class ControllerLayoutPrefs(
     val confirmBackLayout: ConfirmBackLayout   = ConfirmBackLayout.STANDARD,
     val xyLayout: XYLayout                     = XYLayout.STANDARD,
-    val displayType: ControllerDisplayType     = ControllerDisplayType.XBOX,
+    val displayType: ControllerDisplayType     = ControllerDisplayType.GENERIC,
     val scrollSpeed: ScrollSpeed               = ScrollSpeed.STANDARD,
     val stickSensitivity: StickSensitivity     = StickSensitivity.STANDARD,
     val triggerSensitivity: TriggerSensitivity = TriggerSensitivity.STANDARD,

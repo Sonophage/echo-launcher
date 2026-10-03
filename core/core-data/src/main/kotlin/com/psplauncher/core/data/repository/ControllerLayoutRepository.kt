@@ -41,9 +41,7 @@ class ControllerLayoutRepository @Inject constructor(
             xyLayout = store[KEY_XY_LAYOUT]
                 ?.let { runCatching { XYLayout.valueOf(it) }.getOrNull() }
                 ?: XYLayout.STANDARD,
-            displayType = store[KEY_DISPLAY_TYPE]
-                ?.let { runCatching { ControllerDisplayType.valueOf(it) }.getOrNull() }
-                ?: ControllerDisplayType.XBOX,
+            displayType = ControllerDisplayType.fromName(store[KEY_DISPLAY_TYPE]),
             scrollSpeed = store[KEY_SCROLL_SPEED]
                 ?.let { runCatching { ScrollSpeed.valueOf(it) }.getOrNull() }
                 ?: ScrollSpeed.STANDARD,

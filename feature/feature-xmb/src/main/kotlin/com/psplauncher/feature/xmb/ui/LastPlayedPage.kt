@@ -3,7 +3,6 @@ package com.psplauncher.feature.xmb.ui
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +27,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Games
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material3.Icon
@@ -49,21 +47,30 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import coil3.compose.AsyncImage
+import kotlin.math.abs
 import com.psplauncher.core.domain.model.GamepadAction
+import com.psplauncher.core.ui.components.ContextMenuEyebrow
+import com.psplauncher.core.ui.components.ContextMenuHeader
+import com.psplauncher.core.ui.components.ContextMenuRowLabel
+import com.psplauncher.core.ui.components.RailCorner
+import com.psplauncher.core.ui.components.RailEdgeGap
+import com.psplauncher.core.ui.components.RailGap
+import com.psplauncher.core.ui.components.RailIcon
+import com.psplauncher.core.ui.components.RailRowGap
+import com.psplauncher.core.ui.components.RailSubtitleSize
+import com.psplauncher.core.ui.components.contextMenuDim
+import com.psplauncher.core.ui.components.contextMenuInk
+import com.psplauncher.core.ui.components.contextMenuRow
 import com.psplauncher.core.ui.components.ControllerPrompt
 import com.psplauncher.core.ui.components.LocalPadPrompts
 import com.psplauncher.core.ui.design.DesignUnits
-import com.psplauncher.core.ui.design.PANEL_CARD_RADIUS
-import com.psplauncher.core.ui.design.PANEL_FOCUS_RING_WIDTH
-import com.psplauncher.core.ui.design.PANEL_UNFOCUSED_ALPHA
 import com.psplauncher.core.ui.design.PanelBase
-import com.psplauncher.core.ui.design.PanelCardFocusFill
-import com.psplauncher.core.ui.design.PanelFocusRing
 import com.psplauncher.core.ui.image.rememberArtworkModel
 import com.psplauncher.feature.xmb.ui.detail.panelPlayTime
 import com.psplauncher.feature.xmb.viewmodel.RecentDay
@@ -102,7 +109,7 @@ fun LastPlayedPage(
         val u = DesignUnits(minOf(maxWidth.value / DESIGN_WIDTH, maxHeight.value / DESIGN_HEIGHT), LocalDensity.current)
         Crossfade(railVisible, animationSpec = tween(220), label = "recentRail") { rail ->
             if (rail) {
-                RecentList(items, selectedIndex, focused, listState, now, empty, u, onCardTapped, onAction)
+                RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, onAction)
             } else {
                 val stripTop = maxOf(u.dp(80), StripHeight + 8.dp)
                 val stripHeight = minOf(maxWidth / LETTERBOX_RATIO, maxHeight - stripTop - u.dp(180))
@@ -185,6 +192,7 @@ private fun RecentList(
     selectedIndex: Int,
     focused: XMBItem?,
     listState: LazyListState,
+    filter: RecentFilter,
     now: Long,
     empty: String,
     u: DesignUnits,
@@ -216,34 +224,26 @@ private fun RecentList(
         }
         Box(Modifier.fillMaxHeight().width(u.dp(480)).background(Color.Black.copy(alpha = 0.45f)))
 
-        Row(
-            Modifier.padding(start = u.dp(80), top = StripHeight + u.dp(12)),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
-        ) {
-            Icon(Icons.Outlined.History, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(u.dp(22)))
-            Text("Recently opened", color = Color.White, fontSize = u.sp(22), fontWeight = FontWeight.Light)
-        }
-
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .padding(start = u.dp(64), top = StripHeight + u.dp(64), bottom = u.dp(70))
+        Column(
+            Modifier
+                .padding(start = RailEdgeGap, top = StripHeight, bottom = u.dp(70))
                 .width(u.dp(380))
                 .fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(u.dp(4)),
-            contentPadding = PaddingValues(vertical = u.dp(4)),
         ) {
-            items(rows, key = { row -> (row.item?.value?.id ?: row.day.name) }) { row ->
-                val entry = row.item
-                if (entry != null) {
-                    RecentRow(entry.value, entry.index == selectedIndex, now, u) { onCardTapped(entry.index) }
-                } else {
-                    Text(
-                        row.day.label.uppercase(),
-                        style = TextStyle(color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(12), letterSpacing = 0.16.em),
-                        modifier = Modifier.padding(start = u.dp(16), top = u.dp(14), bottom = u.dp(6)),
-                    )
+            ContextMenuHeader("Recently opened", filter.label.uppercase(), textAlign = TextAlign.Start)
+            LazyColumn(
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(RailRowGap),
+                contentPadding = PaddingValues(bottom = RailRowGap),
+            ) {
+                items(rows, key = { row -> (row.item?.value?.id ?: row.day.name) }) { row ->
+                    val entry = row.item
+                    if (entry != null) {
+                        val dim = contextMenuDim(abs(entry.index - selectedIndex), items.lastIndex)
+                        RecentRow(entry.value, entry.index == selectedIndex, dim, now) { onCardTapped(entry.index) }
+                    } else {
+                        ContextMenuEyebrow(row.day.label.uppercase(), textAlign = TextAlign.Start)
+                    }
                 }
             }
         }
@@ -288,29 +288,22 @@ private fun RecentList(
 private class RailRow(val day: RecentDay, val item: IndexedValue<XMBItem>?)
 
 @Composable
-private fun RecentRow(item: XMBItem, focused: Boolean, now: Long, u: DesignUnits, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))
+private fun RecentRow(item: XMBItem, focused: Boolean, dim: Float, now: Long, onClick: () -> Unit) {
+    val ink = contextMenuInk(focused)
     Row(
-        Modifier
-            .fillMaxWidth()
-            .graphicsLayer(alpha = if (focused) 1f else PANEL_UNFOCUSED_ALPHA)
-            .clip(shape)
-            .background(if (focused) PanelCardFocusFill else Color.Transparent)
-            .then(if (focused) Modifier.border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape) else Modifier)
-            .clickable(onClick = onClick)
-            .padding(start = u.dp(10), end = u.dp(16), top = u.dp(10), bottom = u.dp(10)),
+        Modifier.fillMaxWidth().contextMenuRow(focused, dim, onClick),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+        horizontalArrangement = Arrangement.spacedBy(RailGap),
     ) {
-        Thumb(item, u.dp(44), u.dp(11))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
-            Text(item.title, color = Color.White, fontSize = u.sp(15), lineHeight = u.sp(15) * 1.2f, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.weight(1f)) {
+            ContextMenuRowLabel(item.title, focused)
             Text(
                 listOfNotNull(kindLabel(item), item.lastOpenedAt?.let { relativeTime(now, it) }).joinToString(" · "),
-                color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12), lineHeight = u.sp(12) * 1.2f, fontWeight = FontWeight.Light, maxLines = 1,
+                color = ink.copy(alpha = 0.62f), fontSize = RailSubtitleSize, lineHeight = RailSubtitleSize * 1.2f, maxLines = 1,
             )
-            item.progressFraction?.let { ProgressBar(it, u.dp(3), Modifier.fillMaxWidth().padding(top = u.dp(2))) }
+            item.progressFraction?.let { ProgressBar(it, 2.dp, Modifier.fillMaxWidth().padding(top = 2.dp), ink) }
         }
+        Thumb(item, RailIcon, RailCorner)
     }
 }
 
@@ -349,9 +342,9 @@ private fun ItemArt(item: XMBItem?, iconSize: Dp, alignment: Alignment) {
 }
 
 @Composable
-private fun ProgressBar(fraction: Float, height: Dp, modifier: Modifier) {
-    Box(modifier.height(height).clip(RoundedCornerShape(height / 2)).background(Color.White.copy(alpha = 0.18f))) {
-        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().background(Color.White))
+private fun ProgressBar(fraction: Float, height: Dp, modifier: Modifier, color: Color = Color.White) {
+    Box(modifier.height(height).clip(RoundedCornerShape(height / 2)).background(color.copy(alpha = 0.18f))) {
+        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().background(color))
     }
 }
 

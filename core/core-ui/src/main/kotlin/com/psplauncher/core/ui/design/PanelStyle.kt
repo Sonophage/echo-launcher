@@ -30,6 +30,16 @@ fun Modifier.panelBackdrop(tint: Color): Modifier = this
         drawRect(Brush.horizontalGradient(0.45f to Color.Transparent, 1f to PanelEdgeShade))
     }
 
+val MenuScrim = Color(0xF7050201)
+
+fun Modifier.menuBackdrop(): Modifier = background(
+    Brush.horizontalGradient(
+        0f to Color.Transparent,
+        0.5f to MenuScrim.copy(alpha = MenuScrim.alpha * 0.45f),
+        1f to MenuScrim,
+    ),
+)
+
 fun panelSectionTint(section: SettingsSectionId?): Color = when (section) {
     SettingsSectionId.OVERVIEW -> Color(0xFF2C5FD8)
     SettingsSectionId.EMULATORS -> Color(0xFF2C7A55)
