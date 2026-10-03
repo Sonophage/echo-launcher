@@ -1166,8 +1166,6 @@ data class XMBItem(
 
     val totalPlayTimeMillis: Long = 0L,
 
-    val lastPlayedAt: Long? = null,
-
     val insideCovers: List<String> = emptyList(),
     val gameId: Long? = null,
     val platformId: String? = null,
@@ -3494,7 +3492,7 @@ class XMBViewModel @Inject constructor(
         coverUri = artworkUri,
         metadataLine = gameMetadataLine(releaseYear, genre, developer, players),
         totalPlayTimeMillis = totalPlayTimeMillis,
-        lastPlayedAt = lastPlayedAt,
+        lastOpenedAt = lastPlayedAt,
         gameId = id,
         platformId = platformId,
         type = XMBItemType.STANDARD,

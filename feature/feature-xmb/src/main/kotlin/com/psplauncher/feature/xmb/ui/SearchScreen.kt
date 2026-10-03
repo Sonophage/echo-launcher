@@ -221,7 +221,7 @@ private fun ResultRow(row: XMBItem, focused: Boolean, u: DesignUnits, onClick: (
             if (detail.isNotBlank()) {
                 Text(detail, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(11), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            row.lastPlayedAt?.let {
+            row.lastOpenedAt?.let {
                 Text("Played ${relativeTime(System.currentTimeMillis(), it)}", color = Color.White.copy(alpha = 0.45f), fontSize = u.sp(11),
                     fontWeight = FontWeight.Light, maxLines = 1)
             }
@@ -256,9 +256,9 @@ private fun ColumnScope.Preview(row: XMBItem, icon: ImageBitmap?, u: DesignUnits
         Headline(row.title, u.sp(46), 2)
         Meta(row.metadataLine?.takeIf { it.isNotBlank() } ?: detail, u.sp(15))
     }
-    if (game && (row.lastPlayedAt != null || row.totalPlayTimeMillis > 0 || detail.isNotBlank())) {
+    if (game && (row.lastOpenedAt != null || row.totalPlayTimeMillis > 0 || detail.isNotBlank())) {
         Row(horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
-            row.lastPlayedAt?.let { Stat("Last played", relativeTime(System.currentTimeMillis(), it), u) }
+            row.lastOpenedAt?.let { Stat("Last played", relativeTime(System.currentTimeMillis(), it), u) }
             if (row.totalPlayTimeMillis > 0) Stat("Play time", playTimeLabel(row.totalPlayTimeMillis), u)
             if (detail.isNotBlank()) Stat("Platform", detail, u)
         }

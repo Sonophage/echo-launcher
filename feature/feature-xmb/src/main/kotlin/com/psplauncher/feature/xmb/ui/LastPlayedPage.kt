@@ -390,12 +390,6 @@ private fun ActionPill(button: GamepadAction, label: String, primary: Boolean, u
     }
 }
 
-@Composable
-private fun Headline(text: String, size: androidx.compose.ui.unit.TextUnit, lines: Int) {
-    Text(text, color = Color.White, fontSize = size, lineHeight = size * 1.05f, fontWeight = FontWeight.ExtraLight,
-        letterSpacing = (-0.035).em, maxLines = lines, overflow = TextOverflow.Ellipsis)
-}
-
 private fun kindLabel(item: XMBItem): String = recentKind(item).name.lowercase().replaceFirstChar { it.uppercase() }
 
 private fun kindGlyph(item: XMBItem): ImageVector = when (recentKind(item)) {
