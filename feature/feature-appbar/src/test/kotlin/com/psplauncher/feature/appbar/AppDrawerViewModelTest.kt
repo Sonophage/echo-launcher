@@ -281,6 +281,29 @@ class AppDrawerViewModelTest {
     }
 
     @Test
+    fun `a refresh that hides the system chips takes the focus off them, so left and right move the wall again`() = runTest {
+        val roms = listOf(
+            com.psplauncher.core.domain.model.Game(id = 1, title = "One", platformId = "psp"),
+            com.psplauncher.core.domain.model.Game(id = 2, title = "Two", platformId = "snes"),
+        )
+        every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf(roms)
+        val vm = drawerOver(fakeApps())
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.setFilter(AppFilter.GAMES)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("the fixture must show the chip row", vm.uiState.value.showSystemChips)
+        vm.handleGamepadAction(GamepadAction.NAVIGATE_UP)
+        assertTrue(vm.uiState.value.chipFocus)
+
+        every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf(emptyList())
+        vm.refresh()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse("the chip row is hidden", vm.uiState.value.showSystemChips)
+        assertFalse(vm.uiState.value.chipFocus)
+    }
+
+    @Test
     fun `back after opening uninstall guard rail closes the dialog not the drawer`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
 

@@ -535,6 +535,7 @@ class AppDrawerViewModel @Inject constructor(
                 letterFilter = pick,
                 systemChips = chips,
                 systemFilter = system,
+                chipFocus = it.chipFocus && it.copy(systemChips = chips).showSystemChips,
             )
         }
     }
