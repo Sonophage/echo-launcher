@@ -71,6 +71,7 @@ import com.psplauncher.core.ui.components.contextMenuRow
 import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.PanelBase
 import com.psplauncher.core.ui.image.rememberArtworkModel
+import com.psplauncher.core.ui.image.rememberBlurSourceModel
 import com.psplauncher.feature.xmb.ui.detail.panelPlayTime
 import com.psplauncher.feature.xmb.viewmodel.RecentDay
 import com.psplauncher.feature.xmb.viewmodel.RecentFilter
@@ -210,7 +211,7 @@ private fun RecentList(
     Box(Modifier.fillMaxSize().background(PanelBase)) {
         if (art != null) {
             AsyncImage(
-                model = rememberArtworkModel(art),
+                model = rememberBlurSourceModel(art),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().blur(u.dp(24)).graphicsLayer(alpha = 0.4f),

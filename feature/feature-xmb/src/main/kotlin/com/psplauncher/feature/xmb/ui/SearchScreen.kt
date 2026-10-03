@@ -71,6 +71,7 @@ import com.psplauncher.core.ui.design.PanelCardFocusFill
 import com.psplauncher.core.ui.design.PanelFocusRing
 import com.psplauncher.core.ui.design.panelBackdrop
 import com.psplauncher.core.ui.image.rememberArtworkModel
+import com.psplauncher.core.ui.image.rememberBlurSourceModel
 import com.psplauncher.core.ui.theme.deriveStorefrontColors
 import com.psplauncher.feature.xmb.viewmodel.SearchState
 import com.psplauncher.feature.xmb.viewmodel.XMBItem
@@ -114,7 +115,7 @@ fun SearchScreen(
 
         if (art != null) {
             AsyncImage(
-                model = rememberArtworkModel(art),
+                model = rememberBlurSourceModel(art),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().blur(u.dp(24)).graphicsLayer(alpha = 0.45f),
