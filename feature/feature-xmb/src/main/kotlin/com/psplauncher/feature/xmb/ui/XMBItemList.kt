@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -177,7 +176,6 @@ fun XmbDrillFlyout(
     onSiblingTap: (Int) -> Unit = {},
     iconStyle: GameIconStyle = GameIconStyle.PSP_RECTANGLE,
 
-    barTopY: Dp = 40.dp,
     belowTopY: Dp = 152.dp,
 
     iconAnimatingAllowed: Boolean = false,
@@ -199,7 +197,6 @@ fun XmbDrillFlyout(
             onItemSelected = onSiblingTap,
             onItemLongPress = {},
             iconStyle = iconStyle,
-            barTopY = barTopY,
             belowTopY = belowTopY,
             showLabels = false,
             drillCursorOnSelected = true,
@@ -253,13 +250,10 @@ private fun XmbGameColumn(
         if (items.isEmpty()) return@BoxWithConstraints
         val sel = selectedIndex.coerceIn(0, items.lastIndex)
 
-        val rowsAbove = (belowTopY.value / ROW_HEIGHT.value).toInt() + 2
         val rowsBelow = ((maxHeight.value - belowTopY.value) / ROW_HEIGHT.value).toInt() + 2
         val glide = rememberGlidePosition(sel)
-        val first = (sel - rowsAbove - GLIDE_MAX_LEAD_ROWS).coerceAtLeast(0)
-        val last = (sel + rowsBelow + GLIDE_MAX_LEAD_ROWS).coerceAtMost(items.lastIndex)
 
-        for (i in first..last) {
+        for (i in columnRows(sel, items.size, rowsBelow)) {
             XmbVerticalListRow(
                 item = items[i],
                 isSelected = i == selectedIndex,
@@ -405,7 +399,6 @@ fun XMBItemList(
     onItemLongPress: (Int) -> Unit,
     iconStyle: GameIconStyle = GameIconStyle.PSP_RECTANGLE,
 
-    barTopY: Dp = 40.dp,
 
     belowTopY: Dp = 152.dp,
 
@@ -422,8 +415,6 @@ fun XMBItemList(
     metadataAsSubtitle: Boolean = false,
 
     drillCursorOnSelected: Boolean = false,
-
-    previousRiseRows: Float = XmbLayoutSpec.DEFAULT.previousItemRiseRows,
 
     fadeByDistance: Boolean = true,
 
@@ -445,8 +436,7 @@ fun XMBItemList(
                     .offset(y = belowTopY)
                     .graphicsLayer { translationY = (sel - glide.value) * ROW_HEIGHT.toPx() },
             ) {
-                val last = minOf(items.size, sel + rowsBelow + GLIDE_MAX_LEAD_ROWS)
-                for (i in sel until last) {
+                for (i in columnRows(sel, items.size, rowsBelow)) {
                     key(items[i].id) {
                         XmbVerticalListRow(
                             labelHiddenByPanel = labelHiddenByPanel,
@@ -473,44 +463,6 @@ fun XMBItemList(
                         )
                     }
                 }
-            }
-        }
-
-        if (selectedIndex in 1..items.lastIndex) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(ROW_HEIGHT / 2)
-
-                    .offset(y = barTopY - ROW_HEIGHT * previousRiseRows)
-                    .clipToBounds(),
-
-                contentAlignment = Alignment.BottomStart,
-            ) {
-                XmbVerticalListRow(
-                    item = items[selectedIndex - 1],
-                    isSelected = false,
-
-                    showText = showLabels,
-                    cardArtGrid = cardArtGrid,
-
-                    labelHiddenByPanel = labelHiddenByPanel,
-                    onPillActivated = onPillActivated,
-                    focusedPillIndex = focusedPillIndex,
-                    pillFade = pillFade,
-                    metadataAsSubtitle = metadataAsSubtitle,
-                    iconStyle = iconStyle,
-                    onClick = { onItemSelected(selectedIndex - 1) },
-                    onLongPress = { onItemLongPress(selectedIndex - 1) },
-                    showIcon = showIcons,
-                    fadeByDistance = fadeByDistance,
-
-                    distance = 1,
-                    textShadow = textShadow,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .requiredHeight(ROW_HEIGHT),
-                )
             }
         }
     }
@@ -1290,6 +1242,9 @@ private fun shelfGlyphFor(cardId: String): ImageVector = when (val shelf = shelf
 const val GLIDE_MAX_LEAD_ROWS = 3
 
 const val GLIDE_STIFFNESS = 700f
+
+fun columnRows(selected: Int, size: Int, rowsBelow: Int): IntRange =
+    selected until minOf(size, selected + rowsBelow + GLIDE_MAX_LEAD_ROWS)
 
 fun glideStart(current: Float, target: Int, maxLead: Int = GLIDE_MAX_LEAD_ROWS): Float =
     current.coerceIn(target - maxLead.toFloat(), target + maxLead.toFloat())

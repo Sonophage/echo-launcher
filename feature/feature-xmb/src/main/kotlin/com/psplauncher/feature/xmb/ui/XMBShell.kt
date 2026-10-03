@@ -928,8 +928,6 @@ fun XMBShell(
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val catBarHeight = CAT_BAR_HEIGHT
 
-                    val layoutSpec = uiState.layoutSpec
-
                     val barTop = maxHeight * layoutAdjust.barTopFraction
 
                     val columnBaseInset = XmbLeftAnchor + (CategorySlotWidth / 2) - LEADING_ICON_CENTER
@@ -959,7 +957,6 @@ fun XMBShell(
                             cardArtGrid = uiState.cardArtGrid,
                             metadataAsSubtitle = metadataAsSubtitle,
                             iconStyle = uiState.iconStyle,
-                            barTopY = barTop,
                             belowTopY = anchorTop,
                             iconAnimatingAllowed = iconAnimatingAllowed,
                             modifier = Modifier
@@ -993,9 +990,7 @@ fun XMBShell(
                                 onItemSelected = onItemTap,
                                 onItemLongPress = onItemLongPress,
                                 iconStyle = uiState.iconStyle,
-                                barTopY = barTop,
                                 belowTopY = anchorTop,
-                                previousRiseRows = layoutSpec.previousItemRiseRows,
                                 fadeByDistance = uiState.fadeByDistance,
                                 textShadow = uiState.textShadow,
                                 iconAnimatingAllowed = iconAnimatingAllowed,
