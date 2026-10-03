@@ -25,6 +25,10 @@ class BackupKeyDriftTest {
         "data_prep_version" to "migration marker",
         "open_play_session" to "a launch in progress on this device; it is settled and cleared on the next start",
 
+        "session_blob" to
+            "the Discord sign-in, sealed with a Keystore key that never leaves this device; " +
+            "a restore could not open it, and a credential must not travel in a backup file",
+
         "theme_icons_stamp" to "dangling pointer into un-bundled files",
 
         "display_wallpaper_luma" to "recomputed by StartupDataPrep from the restored wallpaper",

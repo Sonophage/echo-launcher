@@ -550,6 +550,9 @@ open class BackupManager @Inject constructor(
             booleanPreferencesKey("theme_accent_from_wallpaper"),
             booleanPreferencesKey("interface_context_menu_hint"),
 
+            booleanPreferencesKey("discord_share_activity"),
+            booleanPreferencesKey("discord_generic_activity"),
+
 
             booleanPreferencesKey("display_fade_by_distance"),
             booleanPreferencesKey("display_card_art_grid"),

@@ -66,6 +66,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var launchDispatcher: com.psplauncher.feature.launcher.LaunchDispatcher
 
+    @Inject
+    lateinit var discordBootstrap: com.psplauncher.launcher.discord.DiscordBootstrap
+
     private val xmbViewModel: XMBViewModel by viewModels()
 
     private var wasStopped = false
@@ -116,6 +119,8 @@ class MainActivity : ComponentActivity() {
         }
 
         onBackPressedDispatcher.addCallback(this, callback)
+
+        discordBootstrap.onCreate(this)
 
         lifecycleScope.launch {
             runCatching { uiMediaStore.pruneOrphans() }
@@ -171,6 +176,7 @@ class MainActivity : ComponentActivity() {
         hideSystemBars()
 
         launchDispatcher.onHostResumed()
+        discordBootstrap.onResume()
         rebindNotificationListenerIfDetached()
 
         if (wasStopped) {
