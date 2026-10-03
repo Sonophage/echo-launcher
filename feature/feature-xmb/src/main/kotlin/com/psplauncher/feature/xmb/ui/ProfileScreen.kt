@@ -229,7 +229,7 @@ internal fun ProfilePanel(
     val banner = profileBanner(data.recent)
     Box(Modifier.fillMaxSize()) {
         if (banner != null) {
-            Box(Modifier.fillMaxWidth().height(u.dp(340))) {
+            Box(Modifier.fillMaxSize()) {
                 AsyncImage(
                     model = rememberArtworkModel(banner),
                     contentDescription = null,
@@ -237,7 +237,7 @@ internal fun ProfilePanel(
                     alignment = BiasAlignment(0f, -0.4f),
                     modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.55f),
                 )
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.55f), 0.35f to PanelBase.copy(alpha = 0.25f), 1f to PanelBase)))
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.55f), 0.3f to PanelBase.copy(alpha = 0.3f), 0.55f to PanelBase.copy(alpha = 0.8f), 1f to PanelBase.copy(alpha = 0.95f))))
             }
         }
         Column(Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(80), top = u.dp(96), bottom = u.dp(64))) {
@@ -262,17 +262,6 @@ internal fun ProfilePanel(
                 ShowcaseColumn(data, focus.spot == ProfileSpot.SHOWCASE, u, onTapped, Modifier.width(u.dp(300)))
                 FriendsColumn(data, focus.spot == ProfileSpot.FRIENDS, u, onTapped, Modifier.weight(1f))
             }
-        }
-        Row(
-            Modifier.align(Alignment.BottomStart).padding(start = u.dp(68), bottom = u.dp(14)),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
-        ) {
-            if (LocalPadPrompts.current) {
-                ControllerPrompt(listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY), "Switch tab",
-                    labelStyle = TextStyle(fontSize = u.sp(13), fontWeight = FontWeight.Light), glyphSize = u.dp(22), spacing = u.dp(8))
-            }
-            Hint(GamepadAction.BACK, "Back", u, onBack)
         }
     }
 }

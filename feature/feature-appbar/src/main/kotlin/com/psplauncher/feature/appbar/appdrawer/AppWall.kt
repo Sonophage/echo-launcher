@@ -216,7 +216,7 @@ private fun WallTile(
     ) {
         when {
             app.art != null -> AsyncImage(app.art, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            big -> TileGlyph(icon, app, 120, u, Modifier.align(Alignment.Center))
+            big -> TileGlyph(icon, app, 104, u, Modifier.align(BiasAlignment(0f, -0.45f)))
             else -> Column(
                 Modifier.align(Alignment.Center).padding(horizontal = u.dp(10)),
                 horizontalAlignment = Alignment.CenterHorizontally,
