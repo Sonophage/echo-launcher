@@ -4,14 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.platform.LocalContext
-import com.psplauncher.core.ui.icons.appIconBitmap
+import com.psplauncher.core.ui.icons.rememberAppIcon
 import com.psplauncher.themekit.AccentDeriver
 import com.psplauncher.themekit.BmpImage
 
@@ -51,12 +49,7 @@ fun XmbAppIconBackdrop(
     fallbackAccent: Color,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-
-    val icon = remember(packageName) {
-        context.appIconBitmap(packageName, sizePx = SOURCE_PX, foregroundOnly = false)
-    }
-    val accent = remember(icon) { icon?.let(::appIconAccent) } ?: fallbackAccent
+    val accent = rememberAppIcon(packageName, sizePx = SOURCE_PX, colorOf = ::appIconAccent)?.color ?: fallbackAccent
 
     Box(modifier.fillMaxSize().background(Brush.linearGradient(appBackdropStops(accent))))
 }
