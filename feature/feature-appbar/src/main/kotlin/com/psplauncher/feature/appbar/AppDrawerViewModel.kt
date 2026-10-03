@@ -163,6 +163,7 @@ class AppDrawerViewModel @Inject constructor(
                     lastUsedAt = game.lastPlayedAt ?: 0L,
                     gameId = game.id,
                     art = game.artworkUri ?: game.iconUri,
+                    playTimeMillis = game.totalPlayTimeMillis,
                 )
             }
 
@@ -177,6 +178,7 @@ class AppDrawerViewModel @Inject constructor(
     }
 
     fun onAppTapped(index: Int) {
+        if (index != _uiState.value.selectedIndex) menuSound.play(MenuSound.SCROLL)
         _uiState.update { it.copy(selectedIndex = index, usingTouch = true) }
     }
 

@@ -34,10 +34,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +75,35 @@ internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits)
         app?.art?.let { AsyncImage(it, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(u.dp(26))) }
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 0.55f else 0.75f)))
     }
+}
+
+@Composable
+internal fun WallHero(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawRect(HeroFade, blendMode = BlendMode.DstIn)
+            },
+    ) {
+        when {
+            app == null -> Unit
+            app.art != null -> AsyncImage(app.art, null, contentScale = ContentScale.Crop,
+                alignment = BiasAlignment(0.2f, -0.3f), modifier = Modifier.fillMaxSize())
+            else -> {
+                val tint = icon?.color ?: NeutralTint
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.6f), tint.copy(alpha = 0.12f)))))
+                TileGlyph(icon, app, 150, u, Modifier.align(Alignment.Center).padding(bottom = u.dp(180)))
+            }
+        }
+    }
+}
+
+@Composable
+internal fun WallShade() {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to WallBase.copy(alpha = 0.5f), 0.2f to Color.Transparent)))
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.52f to Color.Transparent, 1f to WallBase.copy(alpha = 0.92f))))
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -107,18 +141,22 @@ internal fun AppWall(
     BoxWithConstraints(modifier) {
         val gap = u.dp(14)
         val cell = (maxWidth - gap * (WALL_COLUMNS - 1)) / WALL_COLUMNS
-        val rowHeight = u.dp(132)
+        val rowHeight = u.dp(112)
         val tile: @Composable (Int, Boolean) -> Unit = { index, big ->
             val app = apps[index]
             WallTile(
                 app = app,
-                focused = !usingTouch && index == selectedIndex,
-                eyebrow = if (big && filter == AppFilter.RECENT) (if (app.isGame || app.gameId != null) "Last played" else "Recent") else null,
+                focused = index == selectedIndex,
+                eyebrow = if (big && filter == AppFilter.RECENT) "Last opened" else null,
                 width = if (big) cell * 2 + gap else cell,
                 height = if (big) rowHeight * 2 + gap else rowHeight,
                 big = big,
                 u = u,
-                onClick = { onAppTapped(index); onAppLaunched(app.packageName) },
+                onClick = {
+                    val chosen = index == selectedIndex
+                    onAppTapped(index)
+                    if (chosen) onAppLaunched(app.packageName)
+                },
                 onLongClick = { onAppTapped(index); onAppMenu(app) },
             )
         }
@@ -163,7 +201,7 @@ private fun WallTile(
     onLongClick: () -> Unit,
 ) {
     val grow by animateFloatAsState(if (focused) 1.04f else 1f, tween(200), label = "wallTile")
-    val shape = RoundedCornerShape(u.dp(if (big) 20 else 16))
+    val shape = RoundedCornerShape(u.dp(16))
     val icon = if (app.gameId == null && app.art == null) rememberAppIcon(app.packageName) else null
     Box(
         Modifier
@@ -194,11 +232,11 @@ private fun WallTile(
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE604060C))))
-                    .padding(horizontal = u.dp(20), vertical = u.dp(18)),
-                verticalArrangement = Arrangement.spacedBy(u.dp(4)),
+                    .padding(horizontal = u.dp(16), vertical = u.dp(14)),
+                verticalArrangement = Arrangement.spacedBy(u.dp(3)),
             ) {
-                eyebrow?.let { Text(it.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(11), letterSpacing = 0.16.em)) }
-                Text(app.label, color = Color.White, fontSize = u.sp(22), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                eyebrow?.let { Text(it.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(10), letterSpacing = 0.16.em)) }
+                Text(app.label, color = Color.White, fontSize = u.sp(17), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -216,41 +254,56 @@ private fun TileGlyph(icon: AppIconArt?, app: InstalledApp, px: Int, u: DesignUn
 }
 
 @Composable
-internal fun WallBand(app: InstalledApp, u: DesignUnits, onLaunch: () -> Unit, onOptions: () -> Unit) {
+internal fun WallInfo(app: InstalledApp, u: DesignUnits, onLaunch: () -> Unit, onOptions: () -> Unit, modifier: Modifier = Modifier) {
+    val game = app.isGame || app.gameId != null
     val kind = when {
         app.isEmulator -> "Emulator"
-        app.isGame || app.gameId != null -> "Game"
+        game -> "Game"
         else -> "App"
     }
-    val played = app.gameId != null
-    Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.14f)))
-        Row(
-            Modifier.fillMaxWidth().padding(top = u.dp(20)),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(u.dp(24)),
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-                Text(kind.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13), letterSpacing = 0.16.em))
-                Text(app.label, color = Color.White, fontSize = u.sp(40), lineHeight = u.sp(42), fontWeight = FontWeight.ExtraLight,
-                    letterSpacing = (-0.02).em, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (app.lastUsedAt > 0L) {
-                    Text("${if (played) "Last played" else "Last used"} ${relativeTime(System.currentTimeMillis(), app.lastUsedAt)}",
-                        color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(14), fontWeight = FontWeight.Light)
-                }
+    val eyebrow = if (app.lastUsedAt > 0L) {
+        "$kind · ${if (game) "Played" else "Used"} ${relativeTime(System.currentTimeMillis(), app.lastUsedAt).lowercase()}"
+    } else kind
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(14))) {
+        Text(eyebrow.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(12), letterSpacing = 0.16.em))
+        Text(app.label, color = Color.White, fontSize = u.sp(52), lineHeight = u.sp(54), fontWeight = FontWeight.ExtraLight,
+            letterSpacing = (-0.03).em, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        if (app.playTimeMillis > 0L) {
+            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(32))) {
+                Stat(playedLabel(app.playTimeMillis), "Played", u)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                PanelButton(GamepadAction.SELECT, if (played || app.isGame) "Play" else "Open", u, onLaunch)
-                if (app.gameId == null) PanelButton(GamepadAction.CHANGE_SORT, "Options", u, onOptions)
-            }
+        }
+        Row(Modifier.padding(top = u.dp(6)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
+            PanelButton(GamepadAction.SELECT, actionLabel(app), u, onLaunch)
+            if (app.gameId == null) PanelButton(GamepadAction.CHANGE_SORT, "Options", u, onOptions)
         }
     }
 }
 
 @Composable
-internal fun WallHints(u: DesignUnits, onNextTab: () -> Unit, onSearch: () -> Unit, onBack: () -> Unit) {
+private fun Stat(value: String, label: String, u: DesignUnits) {
+    Column(verticalArrangement = Arrangement.spacedBy(u.dp(3))) {
+        Text(value, color = Color.White, fontSize = u.sp(18), fontWeight = FontWeight.Light)
+        Text(label, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(11), fontWeight = FontWeight.Light)
+    }
+}
+
+internal fun actionLabel(app: InstalledApp): String = if (app.isGame || app.gameId != null) "Play" else "Open"
+
+private fun playedLabel(ms: Long): String {
+    val minutes = ms / 60_000L
+    return if (minutes < 60) "$minutes min" else "${minutes / 60} hr"
+}
+
+@Composable
+internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, onNextTab: () -> Unit, onSearch: () -> Unit, onBack: () -> Unit) {
     val pad = LocalPadPrompts.current
-    Row(horizontalArrangement = Arrangement.spacedBy(u.dp(if (pad) 26 else 12)), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().height(u.dp(72)),
+        horizontalArrangement = Arrangement.spacedBy(u.dp(if (pad) 28 else 12)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (pad && action != null) Hint(listOf(GamepadAction.SELECT), action, u, onAction)
         if (pad) Hint(listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY), "Tabs", u, onNextTab)
         Hint(listOf(GamepadAction.OPEN_CONTEXT_MENU), "Search", u, onSearch)
         Hint(listOf(GamepadAction.BACK), "Back", u, onBack)
@@ -283,3 +336,12 @@ internal fun WallHeading(text: String, u: DesignUnits) {
 }
 
 private val NeutralTint = Color(0xFF222838)
+
+internal val WallBase = Color(0xFF04060C)
+
+private val HeroFade = Brush.horizontalGradient(
+    0f to Color.Transparent,
+    0.14f to Color.Black.copy(alpha = 0.35f),
+    0.3f to Color.Black.copy(alpha = 0.8f),
+    0.46f to Color.Black,
+)
