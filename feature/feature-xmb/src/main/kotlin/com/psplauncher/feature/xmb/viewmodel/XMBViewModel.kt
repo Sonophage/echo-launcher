@@ -6647,6 +6647,7 @@ class XMBViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 notificationsOpen = false,
+                profile = null,
                 activeSettingsScreen = entry.id,
                 settingsReturnTo = null,
                 settingsFromPanel = true,
