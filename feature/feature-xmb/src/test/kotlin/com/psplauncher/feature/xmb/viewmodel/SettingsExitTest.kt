@@ -33,4 +33,27 @@ class SettingsExitTest {
             Regex("""activeSettingsScreen\s*=\s*null""").findAll(source).count(),
         )
     }
+
+    @Test fun `opening settings closes the overlays that draw above it`() {
+        val covered = XMBUiState(
+            showBootSequence = false,
+            gameInfo = GameInfoState(XMBItem(id = "g", title = "Ico", gameId = 1L)),
+            profile = ProfileState(),
+        )
+        val open = covered.withSettingsOpen("settings_themes")
+        assertEquals("settings_themes", open.activeSettingsScreen)
+        assertNull("Game info draws above settings, so the screen would open unseen", open.gameInfo)
+        assertNull("the Profile draws above settings, so the screen would open unseen", open.profile)
+    }
+
+    @Test fun `every way into settings goes through withSettingsOpen`() {
+        val root = generateSequence(File(".").absoluteFile) { it.parentFile }
+            .first { File(it, "settings.gradle.kts").isFile }
+        val source = File(root, "feature/feature-xmb/src/main/kotlin/com/psplauncher/feature/xmb/viewmodel/XMBViewModel.kt").readText()
+        assertEquals(
+            "a settings screen opened by hand leaves Game info or the Profile drawn over it",
+            1,
+            Regex("""activeSettingsScreen\s*=\s*(?![=\s$]|null\b)""").findAll(source).count(),
+        )
+    }
 }
