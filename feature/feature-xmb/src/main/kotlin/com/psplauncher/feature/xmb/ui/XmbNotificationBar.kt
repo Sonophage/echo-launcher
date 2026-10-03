@@ -63,7 +63,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,7 +77,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -98,12 +96,13 @@ import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.PANEL_CARD_RADIUS
 import com.psplauncher.core.ui.design.PANEL_FOCUS_RING_WIDTH
 import com.psplauncher.core.ui.design.PANEL_UNFOCUSED_ALPHA
+import com.psplauncher.core.ui.design.PanelButton
 import com.psplauncher.core.ui.design.PanelCardFill
 import com.psplauncher.core.ui.design.PanelCardFocusFill
 import com.psplauncher.core.ui.design.PanelFocusRing
 import com.psplauncher.core.ui.design.panelBackdrop
 import com.psplauncher.core.ui.design.panelSectionTint
-import com.psplauncher.core.ui.icons.appIconBitmap
+import com.psplauncher.core.ui.icons.rememberAppIcon
 import com.psplauncher.feature.xmb.viewmodel.LibraryChip
 import com.psplauncher.feature.xmb.viewmodel.NoticeFocus
 import com.psplauncher.feature.xmb.viewmodel.PANEL_QUICK_SETTINGS
@@ -114,9 +113,7 @@ import com.psplauncher.feature.xmb.viewmodel.QuickSetting
 import com.psplauncher.feature.xmb.viewmodel.StageAction
 import com.psplauncher.feature.xmb.viewmodel.StageCommand
 import com.psplauncher.feature.xmb.viewmodel.formatDuration
-import com.psplauncher.feature.xmb.viewmodel.relativeTime
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.psplauncher.core.common.format.relativeTime
 
 data class QuickSettingsState(
     val waveOn: Boolean,
@@ -293,7 +290,7 @@ private fun Stage(stage: PanelStage, actions: List<StageAction>, icon: ImageBitm
         }
         if (actions.isNotEmpty()) {
             Row(Modifier.padding(top = u.dp(8)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                actions.forEach { StageButton(it, u) { onAction(it.command) } }
+                actions.forEach { PanelButton(it.button, it.label, u) { onAction(it.command) } }
             }
         }
     }
@@ -532,28 +529,6 @@ private fun Tile(
 }
 
 @Composable
-private fun StageButton(action: StageAction, u: DesignUnits, onClick: () -> Unit) {
-    val primary = action.button == GamepadAction.SELECT
-    val ink = if (primary) Color(0xFF0A0A0A) else Color.White
-    Box(
-        Modifier
-            .height(u.dp(52))
-            .clip(RoundedCornerShape(u.dp(26)))
-            .background(if (primary) Color.White else Color.White.copy(alpha = 0.12f))
-            .clickable(onClick = onClick)
-            .padding(horizontal = u.dp(if (primary) 26 else 22)),
-        contentAlignment = Alignment.Center,
-    ) {
-        val labelStyle = TextStyle(fontSize = u.sp(15), fontWeight = if (primary) FontWeight.Medium else FontWeight.Normal)
-        if (LocalPadPrompts.current) {
-            ControllerPrompt(action.button, action.label, labelColor = ink, labelStyle = labelStyle, glyphSize = u.dp(20), spacing = u.dp(10))
-        } else {
-            Text(action.label, color = ink, style = labelStyle)
-        }
-    }
-}
-
-@Composable
 private fun Eyebrow(text: String, u: DesignUnits) {
     Text(text.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13), letterSpacing = 0.18.em))
 }
@@ -607,35 +582,6 @@ private fun AppIcon(bitmap: ImageBitmap?, size: Dp, radius: Dp) {
     Box(Modifier.size(size).clip(RoundedCornerShape(radius)).background(Color.White.copy(alpha = 0.08f))) {
         bitmap?.let { Image(it, null, modifier = Modifier.fillMaxSize()) }
     }
-}
-
-private class AppIconArt(val bitmap: ImageBitmap, val color: Color?)
-
-@Composable
-private fun rememberAppIcon(packageName: String?): AppIconArt? {
-    val context = LocalContext.current
-    val art by produceState<AppIconArt?>(null, packageName) {
-        value = packageName?.takeIf { it.isNotBlank() }?.let { pkg ->
-            withContext(Dispatchers.IO) {
-                context.appIconBitmap(pkg, sizePx = ICON_PX, foregroundOnly = false)?.let { AppIconArt(it, dominantColor(it)) }
-            }
-        }
-    }
-    return art
-}
-
-private fun dominantColor(bitmap: ImageBitmap): Color? {
-    val pixels = bitmap.toPixelMap()
-    var r = 0f; var g = 0f; var b = 0f; var n = 0
-    val hsv = FloatArray(3)
-    for (x in 0 until pixels.width step 4) for (y in 0 until pixels.height step 4) {
-        val c = pixels[x, y]
-        if (c.alpha < 0.8f) continue
-        android.graphics.Color.RGBToHSV((c.red * 255).toInt(), (c.green * 255).toInt(), (c.blue * 255).toInt(), hsv)
-        if (hsv[1] < 0.25f || hsv[2] < 0.2f) continue
-        r += c.red; g += c.green; b += c.blue; n++
-    }
-    return if (n == 0) null else Color(r / n, g / n, b / n)
 }
 
 private fun stagePackage(stage: PanelStage, launcher: String): String? = when (stage) {
@@ -774,7 +720,6 @@ private const val PULL_SETTLE_MS = 220
 
 private const val PANEL_DESIGN_WIDTH = 1200f
 private const val PANEL_DESIGN_HEIGHT = 752f
-private const val ICON_PX = 96
 
 private val Faint = Color.White.copy(alpha = 0.65f)
 
