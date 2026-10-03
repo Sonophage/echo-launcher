@@ -11,6 +11,7 @@ import com.psplauncher.feature.achievements.provider.retro.RaHashLookup
 import com.psplauncher.feature.achievements.provider.retro.RaHashResolver
 import com.psplauncher.feature.achievements.provider.steam.SteamShortcut
 import com.psplauncher.feature.artwork.api.SteamGridDbApi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import javax.inject.Inject
@@ -107,7 +108,10 @@ class AchievementAutoMatcher @Inject constructor(
     }
 
     private suspend fun matchWindows(game: Game): Outcome {
-        val steam = matchSteam(game)
+        val steam = runCatching { matchSteam(game) }.getOrElse { e ->
+            if (e is CancellationException) throw e
+            return Outcome.Unmatched("Couldn't reach the Steam store, check your connection and sync again")
+        }
         if (steam is Outcome.Unmatched) {
             return Outcome.Unmatched(
                 "Not found on Steam (a DRM-free or non-Steam copy has no achievement data)",

@@ -2,9 +2,13 @@ package com.psplauncher.feature.achievements.provider.steam
 
 import io.mockk.coEvery
 import io.mockk.mockk
+import java.io.IOException
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import retrofit2.Response
 
@@ -29,8 +33,8 @@ class SteamAppListResolverTest {
     }
 
     @Test
-    fun `a failed store call resolves to nothing`() = runTest {
-        coEvery { storeApi.search(any(), any(), any()) } throws RuntimeException("boom")
-        assertNull(resolver.resolveAppId("Portal"))
+    fun `a throttled store search is a failure, not a game that is missing from Steam`() = runTest {
+        coEvery { storeApi.search(any(), any(), any()) } returns Response.error(429, "{}".toResponseBody())
+        assertThrows(IOException::class.java) { runBlocking { resolver.resolveAppId("Portal") } }
     }
 }

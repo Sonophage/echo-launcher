@@ -80,7 +80,7 @@ class AchievementDaoTest {
     fun `a game's set counts its achievements and RA points through the provider link`() = runTest {
         val gameId = seedGame()
         seedLink(gameId, "RETRO_ACHIEVEMENTS", "319")
-        sets.upsert(set("RETRO_ACHIEVEMENTS", "319").copy(lastSyncedAt = 1L))
+        coins.upsertSet(set("RETRO_ACHIEVEMENTS", "319").copy(lastSyncedAt = 1L))
         coins.upsertAll(
             listOf(
                 coin("RETRO_ACHIEVEMENTS", "319", "1", earned = true, points = 10),
@@ -100,7 +100,7 @@ class AchievementDaoTest {
     fun `deleting a game severs the link but account rows survive`() = runTest {
         val gameId = seedGame()
         seedLink(gameId, "STEAM", "1337")
-        sets.upsert(set("STEAM", "1337").copy(lastSyncedAt = 1L))
+        coins.upsertSet(set("STEAM", "1337").copy(lastSyncedAt = 1L))
         coins.upsertAll(listOf(coin("STEAM", "1337", "ACH_WIN", earned = true)))
 
         db.openHelper.writableDatabase.execSQL("DELETE FROM games WHERE id = $gameId")
@@ -126,8 +126,21 @@ class AchievementDaoTest {
     }
 
     @Test
+    fun `replaceSet drops coins the provider no longer lists and writes the summary with them`() = runTest {
+        coins.upsertAll(listOf(coin("STEAM", "220", "OLD", earned = true)))
+
+        coins.replaceSet(
+            set("STEAM", "220", bronzeTotal = 1).copy(lastSyncedAt = 2L),
+            listOf(coin("STEAM", "220", "NEW", earned = false)),
+        )
+
+        assertEquals(listOf("NEW"), coins.getForSet("STEAM", "220").map { it.providerAchievementId })
+        assertEquals(2L, sets.getSet("STEAM", "220")!!.lastSyncedAt)
+    }
+
+    @Test
     fun `insertIfAbsent never clobbers a synced set and backfill only fills missing icons`() = runTest {
-        sets.upsert(
+        coins.upsertSet(
             set("RETRO_ACHIEVEMENTS", "319", bronzeEarned = 5, bronzeTotal = 5)
                 .copy(lastSyncedAt = 111L),
         )
@@ -153,8 +166,8 @@ class AchievementDaoTest {
         val gameId = seedGame()
         db.openHelper.writableDatabase.execSQL("UPDATE games SET last_played_at = 500 WHERE id = $gameId")
         seedLink(gameId, "RETRO_ACHIEVEMENTS", "319")
-        sets.upsert(set("STEAM", "220").copy(title = "Half-Life 2", lastSyncedAt = 1L))
-        sets.upsert(set("RETRO_ACHIEVEMENTS", "319").copy(lastSyncedAt = 1L))
+        coins.upsertSet(set("STEAM", "220").copy(title = "Half-Life 2", lastSyncedAt = 1L))
+        coins.upsertSet(set("RETRO_ACHIEVEMENTS", "319").copy(lastSyncedAt = 1L))
         sets.insertIfAbsent(set("RETRO_ACHIEVEMENTS", "999"))
 
         val rows = sets.observeSets().first()

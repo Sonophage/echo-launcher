@@ -82,6 +82,8 @@ class SteamRemoteDataSource @Inject constructor(
                 if (e is CancellationException) throw e
                 return ProviderSyncResult.Failed("schema request failed")
             }
+        if (schema.code() == 403) return ProviderSyncResult.MissingCredentials
+        if (!schema.isSuccessful) return ProviderSyncResult.Failed("Steam returned ${schema.code()}")
         val schemaCoins = schema.body()?.game?.availableGameStats?.achievements.orEmpty()
         if (schemaCoins.isEmpty()) return ProviderSyncResult.NotFound
 
@@ -106,6 +108,9 @@ class SteamRemoteDataSource @Inject constructor(
             (stats?.success == false && stats.error?.contains("not public", ignoreCase = true) == true)
         ) {
             return ProviderSyncResult.ProfileNotPublic
+        }
+        if (!player.isSuccessful || stats?.success != true) {
+            return ProviderSyncResult.Failed("Steam returned ${player.code()}")
         }
 
         val earnedByName = stats?.achievements?.associateBy { it.apiname }.orEmpty()

@@ -141,7 +141,7 @@ class AchievementRepositoryTest {
             listOf(coin("1", ShibaTier.SILVER, earned = true).copy(points = 25)),
         )
         val coinsSlot = slot<List<AccountAchievementEntity>>()
-        coEvery { coinDao.upsertAll(capture(coinsSlot)) } just Runs
+        coEvery { coinDao.replaceSet(any(), capture(coinsSlot)) } just Runs
 
         repo.syncAccountEntry(AchievementProvider.RETRO_ACHIEVEMENTS, "319", "Chrono Trigger")
 
@@ -159,13 +159,12 @@ class AchievementRepositoryTest {
             ),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
-        coEvery { setDao.upsert(capture(setSlot)) } just Runs
+        coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
 
         val result = repo.syncGame(1L, AchievementProvider.STEAM, "440")
 
         assertTrue(result is ProviderSyncResult.Success)
-        coVerify { coinDao.deleteForSet("STEAM", "440") }
-        coVerify { coinDao.upsertAll(match { it.size == 3 }) }
+        coVerify { coinDao.replaceSet(any(), match { it.size == 3 }) }
         coVerify { credentials.setLastSyncedAt(any()) }
 
         val summary = setSlot.captured
@@ -186,7 +185,7 @@ class AchievementRepositoryTest {
             listOf(coin("b1", ShibaTier.BRONZE, earned = true)),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
-        coEvery { setDao.upsert(capture(setSlot)) } just Runs
+        coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
 
         repo.syncGame(1L, AchievementProvider.STEAM, "440")
 
@@ -204,7 +203,7 @@ class AchievementRepositoryTest {
             listOf(coin("b1", ShibaTier.BRONZE, earned = true)),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
-        coEvery { setDao.upsert(capture(setSlot)) } just Runs
+        coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
 
         repo.syncAccountEntry(AchievementProvider.RETRO_ACHIEVEMENTS, "319", "Chrono Trigger")
 
@@ -220,7 +219,7 @@ class AchievementRepositoryTest {
             listOf(coin("b1", ShibaTier.BRONZE, earned = true)),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
-        coEvery { setDao.upsert(capture(setSlot)) } just Runs
+        coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
 
         repo.syncGame(1L, AchievementProvider.STEAM, "440")
 
@@ -234,7 +233,7 @@ class AchievementRepositoryTest {
             listOf(coin("g1", ShibaTier.GOLD, earned = true), coin("b1", ShibaTier.BRONZE, earned = true)),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
-        coEvery { setDao.upsert(capture(setSlot)) } just Runs
+        coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
 
         repo.syncGame(1L, AchievementProvider.STEAM, "440")
 
@@ -251,7 +250,7 @@ class AchievementRepositoryTest {
             ),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
-        coEvery { setDao.upsert(capture(setSlot)) } just Runs
+        coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
 
         repo.syncGame(1L, AchievementProvider.STEAM, "440")
 
@@ -271,7 +270,7 @@ class AchievementRepositoryTest {
             ),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
-        coEvery { setDao.upsert(capture(setSlot)) } just Runs
+        coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
 
         repo.syncGame(1L, AchievementProvider.STEAM, "440")
 
@@ -285,8 +284,7 @@ class AchievementRepositoryTest {
         val result = repo.syncGame(1L, AchievementProvider.STEAM, "440")
 
         assertEquals(ProviderSyncResult.ProfileNotPublic, result)
-        coVerify(exactly = 0) { coinDao.upsertAll(any()) }
-        coVerify(exactly = 0) { setDao.upsert(any()) }
+        coVerify(exactly = 0) { coinDao.replaceSet(any(), any()) }
     }
 
     @Test

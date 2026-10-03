@@ -217,8 +217,8 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 
 | Removed | Why | Commit |
 |---|---|---|
-| **Discord** (sign-in, friends, activity, voice) and the Social category | Removed with the rebrand. The Full/Lite split existed only to include or leave out Discord, so there is one build now. | `c7aa063a` |
-| **Achievements** (RetroAchievements, Steam, Shiba Coins, the Goldberg converter) | Owner's call: none of it, anywhere. The module, its tables and every preference key it wrote are gone; old keys are wiped on start. PS Vita game scanning was kept. | `e6136d77`, `dc302e3c`, `e0adbb31`, `762c1860` |
+| **Discord voice** and the Social category | Discord is back in the one build: sign in with a QR code, then see friends and share game activity. Voice and the Social category stay out. | `c7aa063a` |
+| **The Goldberg converter**, Local Steam and the Achievements category | RetroAchievements and Steam achievements are back. Only the Goldberg and Local Steam keys are wiped on start; the RetroAchievements and Steam accounts stay. | `e6136d77`, `dc302e3c`, `e0adbb31`, `762c1860` |
 | **TheGamesDB** as a scraper source | Owner's request | `81bfc328` |
 | **The App Store column** | It held one row, Play Store, which the drawer already lists | `b3dd8044` |
 | **The drawer's All Apps tab and grid** | Every other tab already lists every app | `a19b8e04` |

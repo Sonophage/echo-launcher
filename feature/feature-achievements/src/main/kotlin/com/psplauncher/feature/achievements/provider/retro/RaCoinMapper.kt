@@ -18,7 +18,7 @@ internal object RaCoinMapper {
         val players = game.numDistinctPlayersCasual.toDouble()
         val coins = game.achievements.values.map { a ->
             val awarded = a.numAwarded.toDouble()
-            val percent = if (players > 0) awarded / players * 100.0 else 0.0
+            val percent = if (players > 0) awarded / players * 100.0 else SyncedCoin.RARITY_UNAVAILABLE
 
             val earnedAt = a.dateEarnedHardcore?.let(::parseRaDate) ?: a.dateEarned?.let(::parseRaDate)
             SyncedCoin(

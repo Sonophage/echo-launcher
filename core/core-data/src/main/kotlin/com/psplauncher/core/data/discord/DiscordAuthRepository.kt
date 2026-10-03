@@ -8,6 +8,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +20,8 @@ class DiscordAuthRepository @Inject constructor(
     private val sessionActivator: DiscordSessionActivator,
     private val networkMonitor: NetworkMonitor,
 ) {
+    private val renewLock = Mutex()
+
     fun loginWithDeviceQr(scopes: String = DiscordConfig.DEFAULT_SCOPES): Flow<DeviceLoginState> = flow {
         emit(DeviceLoginState.Requesting)
 
@@ -71,20 +75,38 @@ class DiscordAuthRepository @Inject constructor(
 
     suspend fun hasSession(): Boolean = tokenStore.load() != null
 
-    suspend fun restoreSession(): Boolean {
+    suspend fun restoreSession(): Boolean = renew(activateLive = true)
+
+    suspend fun refreshIfExpiring() {
+        renew(activateLive = false)
+    }
+
+    private suspend fun renew(activateLive: Boolean): Boolean = renewLock.withLock {
         val session = tokenStore.load() ?: return false
-        if (session.expiresAtEpochMs > System.currentTimeMillis()) {
-            return sessionActivator.activate(session.accessToken)
+        if (session.expiresAtEpochMs - REFRESH_MARGIN_MS > System.currentTimeMillis()) {
+            return if (activateLive) sessionActivator.activate(session.accessToken) else true
         }
         if (!networkMonitor.isOnline()) return false
-        val refreshed = runCatching { deviceAuth.refreshTokens(session.refreshToken) }.getOrNull()
-        val tokens = (refreshed as? TokenPollResult.Approved)?.tokens ?: return false
-        tokenStore.save(tokens)
-        return sessionActivator.activate(tokens.accessToken)
+        when (val refreshed = runCatching { deviceAuth.refreshTokens(session.refreshToken) }.getOrNull()) {
+            is TokenPollResult.Approved -> {
+                tokenStore.save(refreshed.tokens)
+                sessionActivator.activate(refreshed.tokens.accessToken)
+            }
+            is TokenPollResult.Error -> {
+                if (refreshed.message == REVOKED_GRANT) logout()
+                false
+            }
+            else -> false
+        }
     }
 
     suspend fun logout() {
         runCatching { sessionActivator.deactivate() }
         tokenStore.clear()
+    }
+
+    private companion object {
+        const val REFRESH_MARGIN_MS = 5 * 60_000L
+        const val REVOKED_GRANT = "invalid_grant"
     }
 }

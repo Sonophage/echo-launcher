@@ -2,6 +2,7 @@ package com.psplauncher.feature.achievements.provider.retro
 
 import com.psplauncher.core.domain.achievement.ShibaTier
 import com.psplauncher.feature.achievements.api.ProviderSyncResult
+import com.psplauncher.feature.achievements.api.SyncedCoin
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -53,6 +54,15 @@ class RaCoinMapperTest {
         assertEquals(ShibaTier.SILVER, coin.tier)
         assertTrue(coin.isEarned)
         assertFalse(coin.earnedHardcore)
+    }
+
+    @Test
+    fun `a set with no recorded players has no rarity, not a 0 percent rarest coin`() {
+        val coin = achievement(id = "30", points = 5, numAwarded = 0, badgeName = "1")
+        val game = response(casualPlayers = 0, achievements = linkedMapOf("30" to coin))
+
+        val mapped = (RaCoinMapper.map(game, "1") as ProviderSyncResult.Success).coins.single()
+        assertEquals(SyncedCoin.RARITY_UNAVAILABLE, mapped.globalRarity, 0.0)
     }
 
     @Test

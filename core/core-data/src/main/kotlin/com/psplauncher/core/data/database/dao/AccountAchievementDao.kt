@@ -5,7 +5,9 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.psplauncher.core.data.database.entity.AccountAchievementEntity
+import com.psplauncher.core.data.database.entity.AccountAchievementSetEntity
 import kotlinx.coroutines.flow.Flow
 
 data class AchievementTotalsRow(
@@ -31,6 +33,16 @@ interface AccountAchievementDao {
             "WHERE provider = :provider AND provider_game_id = :providerGameId"
     )
     suspend fun deleteForSet(provider: String, providerGameId: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSet(set: AccountAchievementSetEntity)
+
+    @Transaction
+    suspend fun replaceSet(set: AccountAchievementSetEntity, coins: List<AccountAchievementEntity>) {
+        deleteForSet(set.provider, set.providerGameId)
+        upsertAll(coins)
+        upsertSet(set)
+    }
 
     @Query(
         "SELECT * FROM account_achievements " +
