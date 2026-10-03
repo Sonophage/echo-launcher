@@ -1,5 +1,7 @@
 package com.psplauncher.feature.xmb.viewmodel
 
+import com.psplauncher.core.domain.model.GamepadAction
+
 enum class SearchScope(
     val label: String,
     val hint: String,
@@ -67,4 +69,10 @@ fun searchEmptyState(loaded: Boolean, query: String, anyContent: Boolean = true)
     !anyContent -> SearchEmptyState.EMPTY_LIBRARY
     normalizeForSearch(query).isEmpty() -> SearchEmptyState.PROMPT
     else -> SearchEmptyState.NO_MATCHES
+}
+
+fun searchStep(action: GamepadAction): Int = when (action) {
+    GamepadAction.NAVIGATE_UP -> -1
+    GamepadAction.NAVIGATE_DOWN -> 1
+    else -> 0
 }
