@@ -81,32 +81,7 @@ fun <T> PspContextMenuOverlay(
                 .align(Alignment.CenterEnd)
                 .padding(top = StatusStripHeight, bottom = HintBarHeight, end = RailEdgeGap),
         ) {
-            Text(
-                text = title,
-                color = Color.White.copy(alpha = 0.92f),
-                fontSize = RailTitleSize,
-                fontWeight = FontWeight.Light,
-                style = TextStyle(shadow = TextDropShadow),
-                maxLines = 2,
-                textAlign = TextAlign.End,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = RailMaxText),
-            )
-
-            Text(
-                text = subtitle.orEmpty(),
-                color = Color.White.copy(alpha = 0.62f),
-                fontSize = RailSubtitleSize,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 1.sp,
-                style = TextStyle(shadow = TextDropShadow),
-                maxLines = 1,
-                textAlign = TextAlign.End,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = RailMaxText),
-            )
-
-            Spacer(Modifier.height(RailTitleGap))
+            ContextMenuHeader(title, subtitle)
 
             LazyColumn(
                 state = listState,
@@ -115,12 +90,7 @@ fun <T> PspContextMenuOverlay(
                 contentPadding = PaddingValues(bottom = RailRowGap),
             ) {
                 itemsIndexed(rows) { index, row ->
-                    val target = if (selectedIndex >= 0) {
-                        XmbDim.smoothed(kotlin.math.abs(index - selectedIndex), rows.lastIndex)
-                    } else {
-                        XmbDim.smoothed(1, rows.lastIndex)
-                    }
-                    val dim by animateFloatAsState(target, tween(DimFadeMs), label = "railDim")
+                    val dim = contextMenuDim(if (selectedIndex >= 0) kotlin.math.abs(index - selectedIndex) else 1, rows.lastIndex)
 
                     XmbRailRow(
                         label = row.label,
@@ -138,6 +108,83 @@ fun <T> PspContextMenuOverlay(
 }
 
 @Composable
+fun ContextMenuHeader(
+    title: String,
+    subtitle: String?,
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign = TextAlign.End,
+) {
+    Column(modifier, horizontalAlignment = if (textAlign == TextAlign.Start) Alignment.Start else Alignment.End) {
+        Text(
+            text = title,
+            color = Color.White.copy(alpha = 0.92f),
+            fontSize = RailTitleSize,
+            fontWeight = FontWeight.Light,
+            style = TextStyle(shadow = TextDropShadow),
+            maxLines = 2,
+            textAlign = textAlign,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = RailMaxText),
+        )
+        ContextMenuEyebrow(subtitle.orEmpty(), textAlign = textAlign)
+        Spacer(Modifier.height(RailTitleGap))
+    }
+}
+
+@Composable
+fun ContextMenuEyebrow(
+    text: String,
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign = TextAlign.End,
+) {
+    Text(
+        text = text,
+        color = Color.White.copy(alpha = 0.62f),
+        fontSize = RailSubtitleSize,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 1.sp,
+        style = TextStyle(shadow = TextDropShadow),
+        maxLines = 1,
+        textAlign = textAlign,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier.widthIn(max = RailMaxText),
+    )
+}
+
+@Composable
+fun contextMenuDim(distance: Int, span: Int): Float {
+    val dim by animateFloatAsState(XmbDim.smoothed(distance, span), tween(DimFadeMs), label = "railDim")
+    return dim
+}
+
+fun Modifier.contextMenuRow(focused: Boolean, dim: Float, onClick: () -> Unit): Modifier = this
+    .alpha(if (focused) 1f else dim)
+    .clip(RoundedCornerShape(RailCorner))
+    .then(if (focused) Modifier.background(Color.White) else Modifier)
+    .clickable(onClick = onClick)
+    .padding(start = RailPadStart, end = RailPadEnd, top = RailPadV, bottom = RailPadV)
+
+fun contextMenuInk(focused: Boolean): Color = if (focused) RailInk else Color.White
+
+@Composable
+fun ContextMenuRowLabel(
+    text: String,
+    focused: Boolean,
+    modifier: Modifier = Modifier,
+    color: Color = contextMenuInk(focused),
+) {
+    Text(
+        text = text,
+        color = color,
+        fontSize = RailTextSize,
+        fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+    )
+}
+
+@Composable
 private fun XmbRailRow(
     label: String,
     focused: Boolean,
@@ -150,30 +197,18 @@ private fun XmbRailRow(
     val tint = if (destructive) RailDestructive else null
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .alpha(if (focused) 1f else dim)
-            .clip(RoundedCornerShape(RailCorner))
-            .then(if (focused) Modifier.background(Color.White) else Modifier)
-            .clickable(onClick = onClick)
-            .padding(start = RailPadStart, end = RailPadEnd, top = RailPadV, bottom = RailPadV),
+        modifier = Modifier.contextMenuRow(focused, dim, onClick),
     ) {
-        Text(
+        ContextMenuRowLabel(
             text = label,
-            color = when {
-                destructive -> RailDestructive
-                focused -> RailInk
-                else -> Color.White
-            },
-            fontSize = RailTextSize,
-            fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            focused = focused,
+            color = if (destructive) RailDestructive else contextMenuInk(focused),
             modifier = Modifier.widthIn(max = RailMaxText),
         )
         if (checked) {
             Spacer(Modifier.width(RailGap))
             PfpCheckMark(
-                if (focused) RailInk else Color.White,
+                contextMenuInk(focused),
                 size = 15.dp,
                 shadow = TextDropShadow.color,
             )
@@ -217,20 +252,20 @@ private fun XmbRailBadge(
     }
 }
 
-internal val RailIcon = 29.dp
-internal val RailCorner = 7.dp
-internal val RailEdgeGap = 24.dp
-internal val RailRowGap = 13.dp
+val RailIcon = 29.dp
+val RailCorner = 7.dp
+val RailEdgeGap = 24.dp
+val RailRowGap = 13.dp
 private const val DimFadeMs = 160
 private val RailGlyphSize = 13.sp
 private val RailTextSize = 13.sp
 private val RailTitleSize = 26.sp
-private val RailSubtitleSize = 12.sp
+val RailSubtitleSize = 12.sp
 private val RailTitleGap = 22.dp
 private val RailPadStart = 14.dp
 private val RailPadEnd = 4.dp
 private val RailPadV = 4.dp
-private val RailGap = 10.dp
+val RailGap = 10.dp
 private val RailMaxText = 300.dp
 internal val RailInk = Color(0xFF1A0C03)
 private val RailDestructive = Color(0xFFE2606A)
