@@ -123,7 +123,7 @@ fun AppDrawerScreen(
     LaunchedEffect(typedChar) {
         val ch = typedChar ?: return@LaunchedEffect
 
-        onOpenAppSearch(ch.toString())
+        onOpenAppSearch(ch)
         onTypedCharConsumed()
     }
 
@@ -170,18 +170,7 @@ fun AppDrawerScreen(
             onTouchInteraction()
             viewModel.openAppMenu(app)
         },
-        onTouchBrowse = { index ->
-            onTouchInteraction()
-            viewModel.onTouchBrowse(index)
-        },
         onMenuRowActivated = viewModel::onMenuRowActivated,
-        onMenuAction = { action ->
-
-            if (action == AppMenuAction.ADD_TO_CROSS_BAR) {
-                state.menuApp?.let { onAddToCrossBar(it.packageName) }
-            }
-            viewModel.onMenuAction(action)
-        },
         onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
         onSystemChip = { id ->
@@ -206,8 +195,6 @@ internal fun AppDrawerContent(
     onAppTapped: (Int) -> Unit,
     onAppLaunched: (String) -> Unit,
     onAppMenu: (InstalledApp) -> Unit,
-    onTouchBrowse: (Int) -> Unit,
-    onMenuAction: (AppMenuAction) -> Unit,
     onCloseMenu: () -> Unit,
     onConfirmUninstall: () -> Unit,
     onCancelUninstall: () -> Unit,
@@ -444,8 +431,6 @@ private fun AppDrawerPreviewContent() {
         onAppTapped = {},
         onAppLaunched = {},
         onAppMenu = {},
-        onTouchBrowse = {},
-        onMenuAction = {},
         onCloseMenu = {},
         onConfirmUninstall = {},
         onCancelUninstall = {},

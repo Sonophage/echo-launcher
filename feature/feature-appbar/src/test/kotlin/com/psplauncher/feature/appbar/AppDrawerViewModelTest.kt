@@ -155,18 +155,6 @@ class AppDrawerViewModelTest {
     }
 
     @Test
-    fun `onAppSelected updates selectedIndex in state`() = runTest {
-        testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.onAppSelected(3)
-        testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.uiState.test {
-            val state = awaitItem()
-            assertEquals(3, state.selectedIndex)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
     fun `openUsageAccessSettings delegates to repository`() = runTest {
         viewModel.openUsageAccessSettings()
         verify { repository.openUsageAccessSettings() }

@@ -105,8 +105,6 @@ data class AppDrawerUiState(
 
     val sectionRowCount: Int get() = sectionApps.size
 
-    val gridIndex: Int get() = (selectedIndex - sectionRowCount).coerceAtLeast(0)
-
     val menuActions: List<AppMenuAction>
         get() = buildList {
             if (menuApp?.gameId != null) return@buildList
@@ -219,19 +217,9 @@ class AppDrawerViewModel @Inject constructor(
         }
     }
 
-    fun onAppSelected(index: Int) {
-        _uiState.update { it.copy(selectedIndex = index) }
-    }
-
     fun onAppTapped(index: Int) {
         if (index != _uiState.value.selectedIndex) menuSound.play(MenuSound.SCROLL)
         _uiState.update { it.copy(selectedIndex = index, usingTouch = true, chipFocus = false) }
-    }
-
-    fun onTouchBrowse(index: Int) {
-        val size = _uiState.value.visibleApps.size
-        if (size == 0) return
-        _uiState.update { it.copy(selectedIndex = index.coerceIn(0, size - 1), usingTouch = true) }
     }
 
     fun launchApp(packageName: String) {
