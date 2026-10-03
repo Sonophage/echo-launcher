@@ -42,6 +42,8 @@ enum class AppFilter(val label: String, val subtitle: String) {
         RECENT -> app.lastUsedAt > 0L
     }
 
+    fun stepped(delta: Int): AppFilter = entries[(ordinal + delta).mod(entries.size)]
+
     companion object {
         val DEFAULT = RECENT
     }
@@ -458,10 +460,7 @@ class AppDrawerViewModel @Inject constructor(
         }
 
         if (action == GamepadAction.PREV_CATEGORY || action == GamepadAction.NEXT_CATEGORY) {
-            val filters = AppFilter.values()
-            val idx = filters.indexOf(state.activeFilter)
-            val target = if (action == GamepadAction.PREV_CATEGORY) idx - 1 else idx + 1
-            if (target in filters.indices) setFilter(filters[target])
+            setFilter(state.activeFilter.stepped(if (action == GamepadAction.PREV_CATEGORY) -1 else 1))
             return
         }
 

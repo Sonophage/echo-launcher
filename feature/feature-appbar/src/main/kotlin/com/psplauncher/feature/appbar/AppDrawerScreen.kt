@@ -306,10 +306,7 @@ internal fun AppDrawerContent(
                     u = u,
                     action = focused?.let(::actionLabel),
                     onAction = { focused?.let(onBandLaunch) },
-                    onNextTab = {
-                        val filters = AppFilter.entries
-                        onFilterSelected(filters[(filters.indexOf(state.activeFilter) + 1) % filters.size])
-                    },
+                    onNextTab = { onFilterSelected(state.activeFilter.stepped(1)) },
                     onSearch = onOpenSearch,
                     onBack = onBack,
                 )

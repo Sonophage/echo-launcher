@@ -240,15 +240,27 @@ class AppDrawerViewModelTest {
         viewModel.handleGamepadAction(GamepadAction.PREV_CATEGORY)
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
-            assertEquals(AppFilter.RECENT, awaitItem().activeFilter)
+            assertEquals(AppFilter.GAMES, awaitItem().activeFilter)
             cancelAndIgnoreRemainingEvents()
         }
         viewModel.handleGamepadAction(GamepadAction.NEXT_CATEGORY)
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
-            assertEquals(AppFilter.APPS, awaitItem().activeFilter)
+            assertEquals(AppFilter.RECENT, awaitItem().activeFilter)
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `LB and RB wrap around the tabs, like the Tabs hint and the settings tabs`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.setFilter(AppFilter.entries.last())
+
+        viewModel.handleGamepadAction(GamepadAction.NEXT_CATEGORY)
+        assertEquals(AppFilter.entries.first(), viewModel.uiState.value.activeFilter)
+
+        viewModel.handleGamepadAction(GamepadAction.PREV_CATEGORY)
+        assertEquals(AppFilter.entries.last(), viewModel.uiState.value.activeFilter)
     }
 
     @Test
