@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.em
 import coil3.compose.AsyncImage
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.ControllerPromptItem
+import com.psplauncher.core.ui.components.HintAction
 import com.psplauncher.core.ui.components.HintBarHeight
 import com.psplauncher.core.ui.components.PfpHintBar
 import com.psplauncher.core.ui.components.PfpSearchField
@@ -75,6 +76,7 @@ import com.psplauncher.feature.xmb.viewmodel.SearchState
 import com.psplauncher.feature.xmb.viewmodel.XMBItem
 import com.psplauncher.feature.xmb.viewmodel.XMBItemType
 import com.psplauncher.feature.xmb.viewmodel.isInstalledApp
+import com.psplauncher.feature.xmb.viewmodel.primaryVerbFor
 import com.psplauncher.core.common.format.relativeTime
 import com.psplauncher.core.ui.design.PanelButton
 import com.psplauncher.core.ui.icons.rememberAppIcon
@@ -176,6 +178,7 @@ fun SearchScreen(
                     ControllerPromptItem(GamepadAction.SELECT, "Open"),
                 ),
                 modifier = Modifier.align(Alignment.BottomCenter),
+                primary = focused?.let { HintAction(GamepadAction.SELECT, primaryVerbFor(it) ?: "Open", listOfNotNull(it.title, it.subtitle).filter { t -> t.isNotBlank() }.joinToString(" · ")) },
                 onAction = { action ->
                     when (action) {
                         GamepadAction.BACK -> onBack()
