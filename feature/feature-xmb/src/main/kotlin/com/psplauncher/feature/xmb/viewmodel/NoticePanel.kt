@@ -162,6 +162,10 @@ fun XMBUiState.mediaStage(): PanelStage? {
             durationMs = musicPlayback.durationMs.toLong(),
         )
     }
+    return recentStage()
+}
+
+fun XMBUiState.recentStage(): PanelStage? {
     val top = recentTop ?: return null
     return when (recentKind(top)) {
         RecentKind.MUSIC -> PanelStage.Music(top.title, top.subtitle, null, top.shelfCoverArt, false, false, 0, 0)
@@ -171,6 +175,13 @@ fun XMBUiState.mediaStage(): PanelStage? {
         RecentKind.APP -> PanelStage.App(top.title, top.packageName, top.shelfCoverArt, recentTopAt)
     }
 }
+
+val PanelStage.islandProgress: Float?
+    get() = when (this) {
+        is PanelStage.Music -> if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else null
+        is PanelStage.Video -> progress
+        else -> null
+    }
 
 fun XMBUiState.panelStage(): PanelStage = when (val focus = focusedNotice) {
     NoticeFocus.Media -> mediaStage()

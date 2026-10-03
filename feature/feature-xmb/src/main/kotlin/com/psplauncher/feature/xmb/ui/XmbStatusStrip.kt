@@ -1,37 +1,37 @@
 package com.psplauncher.feature.xmb.ui
 
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
-import coil3.compose.AsyncImage
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,22 +44,49 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.psplauncher.core.domain.model.Category
+import com.psplauncher.core.domain.model.GamepadAction
+import com.psplauncher.core.ui.components.ControllerPrompt
+import com.psplauncher.core.ui.components.LocalPadPrompts
 import com.psplauncher.core.ui.components.StatusStripHeight
+import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.mediaAccent
+import com.psplauncher.core.ui.icons.CategoryIconGlyph
+import com.psplauncher.core.ui.icons.rememberAppIcon
+import com.psplauncher.core.ui.theme.LocalPFPColors
+import com.psplauncher.core.ui.theme.menuCursorEdge
 import com.psplauncher.feature.xmb.R
+import com.psplauncher.feature.xmb.viewmodel.PanelStage
 import com.psplauncher.feature.xmb.viewmodel.countLabel
+import com.psplauncher.feature.xmb.viewmodel.islandProgress
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -67,7 +94,6 @@ import java.util.Locale
 
 private val StripPrimary = Color(0xFFEEEEEE)
 private val StripMuted   = Color(0xAAEEEEEE)
-private val StripSep     = Color(0x55FFFFFF)
 
 object XmbStatusIcons {
     @DrawableRes val bluetooth: Int = R.drawable.ic_status_bluetooth
@@ -96,7 +122,8 @@ object XmbStatusIcons {
     }
 }
 
-data class StripLiveActivity(val art: Any?, val title: String, val detail: String?)
+
+data class StripLiveActivity(val art: Any?, val title: String, val detail: String?, val stage: PanelStage? = null)
 
 data class StripHints(val shoulder: Boolean = false, val leftRight: Boolean = false)
 
@@ -116,14 +143,20 @@ fun XmbPspStatusStrip(
     noticeCount: Int = 0,
     onNoticeCountTapped: (() -> Unit)? = null,
 
+    sections: List<Category> = emptyList(),
+    selectedSection: Int = 0,
+    onSectionTapped: (Int) -> Unit = {},
+
+    compact: Boolean = false,
+
     modifier: Modifier = Modifier,
 
-    centre: (@Composable BoxScope.() -> Unit)? = null,
+    centre: (@Composable BoxScope.(DesignUnits) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     var batteryLevel   by remember { mutableIntStateOf(0) }
     var isCharging     by remember { mutableStateOf(false) }
-    var dateString     by remember { mutableStateOf(currentDateString(context)) }
+    var dateString     by remember { mutableStateOf(currentDateString()) }
     var timeString     by remember { mutableStateOf(currentTimeString(context)) }
 
     DisposableEffect(Unit) {
@@ -143,197 +176,356 @@ fun XmbPspStatusStrip(
 
     LaunchedEffect(Unit) {
         while (true) {
-            dateString = currentDateString(context)
+            dateString = currentDateString()
             timeString = currentTimeString(context)
 
             delay(60_000L - (System.currentTimeMillis() % 60_000L))
         }
     }
 
+    val config = LocalConfiguration.current
+    val density = LocalDensity.current
+    val u = remember(config.screenWidthDp, config.screenHeightDp, density) {
+        DesignUnits(minOf(config.screenWidthDp / PANEL_DESIGN_WIDTH, config.screenHeightDp / PANEL_DESIGN_HEIGHT), density)
+    }
+    val band = if (compact) StripHeight else maxOf(StripHeight, u.dp(76))
+
+    val fallback = menuCursorEdge()
+    val stage = live?.stage
+    val stageIcon = rememberAppIcon(stage?.let { stagePackage(it, context.packageName) })
+    val islandTint by animateColorAsState(
+        stage?.let { stageTint(it, stageIcon?.color, fallback) } ?: fallback,
+        tween(500),
+        label = "islandTint",
+    )
+    val islandGlow = lerp(islandTint, Color.White, 0.3f)
+
     Box(
         modifier
             .fillMaxWidth()
-            .height(StripHeight)
-            .background(Brush.verticalGradient(0f to StripScrim, 1f to Color.Transparent)),
+            .height(StripHeight),
     ) {
-        BatteryLine(
-            level = batteryLevel,
-            charging = isCharging,
-            modifier = Modifier.align(Alignment.TopCenter),
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(Alignment.Top, unbounded = true)
+                .height(if (compact) StripHeight else u.dp(110))
+                .background(Brush.verticalGradient(0f to StripScrim, 1f to Color.Transparent)),
         )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = BatteryLineHeight)
-            .padding(horizontal = 20.dp),
-    ) {
-    Row(
-        modifier = Modifier.align(Alignment.CenterStart),
-        verticalAlignment    = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
         live?.let { activity ->
-            Row(
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
-                modifier = if (onLiveAreaTapped != null) {
-                    Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onLiveAreaTapped)
-                } else {
-                    Modifier
-                },
-            ) {
-                if (activity.art != null) {
-                    AsyncImage(
-                        model = activity.art,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(LiveArtSize)
-                            .clip(RoundedCornerShape(LiveArtCorner)),
-                    )
-                }
+            IslandCard(
+                activity = activity,
+                tint = islandTint,
+                glow = islandGlow,
+                u = u,
+                band = band,
+                compact = compact,
+                onTapped = onLiveAreaTapped,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = u.dp(80))
+                    .wrapContentHeight(Alignment.Top, unbounded = true),
+            )
+        }
 
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(
-                        activity.title,
-                        color = StripPrimary,
-                        fontSize = StripFontSize,
-                        lineHeight = StripFontSize * 1.25f,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = LiveTextMax),
-                    )
-                    activity.detail?.takeIf { it.isNotBlank() }?.let {
+        Box(
+            Modifier
+                .align(Alignment.TopCenter)
+                .wrapContentHeight(Alignment.Top, unbounded = true)
+                .height(band),
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                centre != null -> centre.invoke(this, u)
+                else -> Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(u.dp(18)),
+                ) {
+                    if (sections.isNotEmpty()) {
+                        StripSections(
+                            labels = sections.map { it.name },
+                            selected = selectedSection,
+                            onTapped = onSectionTapped,
+                            u = u,
+                            shoulders = false,
+                        ) { i, _, m -> CategoryIconGlyph(sections[i].iconKey, sections[i].name, m) }
+                    }
+                    sortLabel?.let { label ->
                         Text(
-                            it,
-                            color = StripMuted,
-                            fontSize = LiveDetailSize,
-                            lineHeight = LiveDetailSize * 1.25f,
+                            "⇅ $label",
+                            color = StripPrimary,
+                            fontSize = u.sp(10),
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.widthIn(max = LiveTextMax),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(u.dp(9)))
+                                .border(1.5.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(u.dp(9)))
+                                .then(if (showSortButton) Modifier.clickable(onClick = onSortTapped) else Modifier)
+                                .padding(horizontal = u.dp(9), vertical = u.dp(4)),
                         )
                     }
-                }
-            }
-        }
-        }
-
-        when {
-            centre != null -> centre.invoke(this)
-            hints.shoulder || hints.leftRight -> {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.align(Alignment.Center),
-                ) {
-                    if (hints.shoulder) StripHint("LB  RB")
-                    if (hints.leftRight) StripHint("◀  ▶")
-                }
-            }
-            sortLabel != null -> {
-                if (showSortButton) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp),
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(Color(0x24FFFFFF))
-                            .clickable(onClick = onSortTapped)
-                            .padding(horizontal = 6.dp, vertical = 1.dp),
-                    ) {
-                        Text("⇅", color = StripPrimary, fontSize = StripFontSize, fontWeight = FontWeight.Medium)
-                        Text(sortLabel, color = StripPrimary, fontSize = StripFontSize, fontWeight = FontWeight.Medium)
-                    }
-                } else {
-                    Text(
-                        sortLabel,
-                        color = StripPrimary,
-                        fontSize = StripFontSize,
-                        lineHeight = StripFontSize * 1.25f,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.align(Alignment.Center),
-                    )
+                    if (hints.shoulder) StripHint("LB  RB", u)
+                    if (hints.leftRight) StripHint("◀  ▶", u)
                 }
             }
         }
 
         val sys = rememberSystemStatus()
         Row(
-            modifier = Modifier.align(Alignment.CenterEnd),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = u.dp(80))
+                .wrapContentHeight(Alignment.Top, unbounded = true)
+                .height(band),
             verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(u.dp(22)),
         ) {
-            run {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(5.dp))
-                        .then(
-                            if (onNoticeCountTapped != null) {
-                                Modifier.clickable(onClick = onNoticeCountTapped)
-                            } else {
-                                Modifier
-                            },
-                        )
-                        .semantics { contentDescription = countLabel(noticeCount, "notification") }
-                        .padding(horizontal = 4.dp),
-                ) {
+            NoticeBell(noticeCount, islandGlow, u, onNoticeCountTapped)
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
+                modifier = Modifier.alpha(0.85f),
+            ) {
+                if (sys.controllerConnected) {
                     Icon(
-                        imageVector        = Icons.Filled.Notifications,
-                        contentDescription = null,
-                        tint               = StripMuted,
-                        modifier           = Modifier.size(StripIconSize * 0.85f),
+                        imageVector        = Icons.Filled.SportsEsports,
+                        contentDescription = "Controller connected",
+                        tint               = StripPrimary,
+                        modifier           = Modifier.size(u.dp(17)),
                     )
-                    if (noticeCount > 0) {
-                        Text(
-                            text       = noticeCount.toString(),
-                            color      = StripPrimary,
-                            fontSize   = StripFontSize,
-                            lineHeight = StripFontSize * 1.25f,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
+                }
+                if (sys.bluetoothOn) {
+                    StatusIcon(
+                        XmbStatusIcons.bluetooth, "Bluetooth",
+                        Modifier.size(width = u.dp(11), height = u.dp(15)),
+                        tint = StripPrimary,
+                        slotKey = "status_bluetooth",
+                    )
+                }
+                sys.wifiLevel?.let { level ->
+                    WifiMeter(level, Modifier.size(width = u.dp(18), height = u.dp(15)))
+                }
+                sys.cellularLevel?.let { level ->
+                    SignalBars(level, Modifier.size(width = u.dp(16), height = u.dp(15)))
                 }
             }
 
-            if (sys.controllerConnected) {
-                Icon(
-                    imageVector        = Icons.Filled.SportsEsports,
-                    contentDescription = "Controller connected",
-                    tint               = StripMuted,
-                    modifier           = Modifier.size(StripIconSize),
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+                Text(
+                    text       = timeString,
+                    color      = StripPrimary,
+                    fontSize   = u.sp(18),
+                    lineHeight = u.sp(18),
+                    fontWeight = FontWeight.Light,
+                    maxLines   = 1,
                 )
+                if (!compact) {
+                    Text(
+                        text       = dateString,
+                        color      = StripPrimary.copy(alpha = 0.6f),
+                        fontSize   = u.sp(10),
+                        fontWeight = FontWeight.Light,
+                        maxLines   = 1,
+                    )
+                }
             }
-            if (sys.bluetoothOn) {
-                StatusIcon(
-                    XmbStatusIcons.bluetooth, "Bluetooth",
-                    Modifier.size(width = StripIconSize * 0.7f, height = StripIconSize),
-                    slotKey = "status_bluetooth",
-                )
-            }
-            sys.wifiLevel?.let { level ->
-                WifiMeter(level, Modifier.size(width = StripIconSize * 1.23f, height = StripIconSize))
-            }
-            sys.cellularLevel?.let { level ->
-                SignalBars(level, Modifier.size(width = StripIconSize * 1.08f, height = StripIconSize))
-            }
-
-            Text(
-                text       = timeString,
-                color      = StripPrimary,
-                fontSize   = StripFontSize,
-                lineHeight = StripFontSize * 1.25f,
-                fontWeight = FontWeight.Medium,
-            )
         }
-    }
+
+        BatteryLine(
+            level = batteryLevel,
+            charging = isCharging,
+            modifier = Modifier.align(Alignment.TopCenter),
+        )
     }
 }
+
+@Composable
+private fun IslandCard(
+    activity: StripLiveActivity,
+    tint: Color,
+    glow: Color,
+    u: DesignUnits,
+    band: Dp,
+    compact: Boolean,
+    onTapped: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val stage = activity.stage
+    val progress = stage?.islandProgress
+    val playing = (stage as? PanelStage.Music)?.playing == true
+    val radius = u.dp(20)
+    val shape = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
+    Box(
+        modifier
+            .width(u.dp(280))
+            .heightIn(min = band)
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(tint.copy(alpha = 0.62f), lerp(tint, Color.Black, 0.4f).copy(alpha = 0.5f))))
+            .drawWithCache {
+                val stroke = u.dp(2).toPx()
+                val inset = stroke / 2f
+                val r = radius.toPx() - inset
+                val bottom = size.height - inset
+                val right = size.width - inset
+                val path = Path().apply {
+                    moveTo(inset, 0f)
+                    lineTo(inset, bottom - r)
+                    arcTo(Rect(inset, bottom - 2 * r, inset + 2 * r, bottom), 180f, -90f, false)
+                    lineTo(right - r, bottom)
+                    arcTo(Rect(right - 2 * r, bottom - 2 * r, right, bottom), 90f, -90f, false)
+                    lineTo(right, 0f)
+                }
+                val done = Path()
+                progress?.let { p ->
+                    val measure = PathMeasure()
+                    measure.setPath(path, false)
+                    measure.getSegment(0f, measure.length * p, done, true)
+                }
+                onDrawWithContent {
+                    drawContent()
+                    drawPath(path, glow.copy(alpha = 0.22f), style = Stroke(stroke))
+                    if (progress != null) {
+                        drawPath(done, glow.copy(alpha = 0.3f), style = Stroke(stroke * 3f, cap = StrokeCap.Round))
+                        drawPath(done, glow, style = Stroke(stroke, cap = StrokeCap.Round))
+                    }
+                }
+            }
+            .then(if (onTapped != null) Modifier.clickable(onClick = onTapped) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = u.dp(16), end = u.dp(22), top = if (compact) 2.dp else u.dp(12)),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
+        ) {
+            val tile = if (compact) minOf(u.dp(34), band - 10.dp) else u.dp(34)
+            Box(
+                Modifier.size(tile).clip(RoundedCornerShape(u.dp(10))).background(tint),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (activity.art != null) {
+                    AsyncImage(
+                        model = activity.art,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Icon(stageGlyph(stage ?: PanelStage.Empty), null, Modifier.size(tile * 0.6f), tint = Color.White)
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+                Text(
+                    activity.title,
+                    color = Color.White,
+                    fontSize = u.sp(13),
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                activity.detail?.takeIf { it.isNotBlank() && !compact }?.let {
+                    Text(
+                        it,
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontSize = u.sp(10),
+                        fontWeight = FontWeight.Light,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (playing) EqualizerGlyph(u)
+        }
+    }
+}
+
+@Composable
+private fun EqualizerGlyph(u: DesignUnits) {
+    Row(
+        Modifier.height(u.dp(14)),
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(2)),
+    ) {
+        listOf(8, 14, 5, 11).forEach { h ->
+            Box(Modifier.width(u.dp(3)).height(u.dp(h)).clip(RoundedCornerShape(u.dp(2))).background(Color.White))
+        }
+    }
+}
+
+@Composable
+private fun NoticeBell(count: Int, accent: Color, u: DesignUnits, onTapped: (() -> Unit)?) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(u.dp(6)))
+            .then(if (onTapped != null) Modifier.clickable(onClick = onTapped) else Modifier)
+            .semantics { contentDescription = countLabel(count, "notification") }
+            .padding(u.dp(6)),
+    ) {
+        Icon(Icons.Outlined.Notifications, null, Modifier.size(u.dp(17)), tint = Color.White)
+        if (count > 0) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = u.dp(7), y = -u.dp(5))
+                    .heightIn(min = u.dp(16))
+                    .widthIn(min = u.dp(16))
+                    .clip(RoundedCornerShape(50))
+                    .background(accent)
+                    .padding(horizontal = u.dp(4)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(count.toString(), color = BadgeInk, fontSize = u.sp(10), fontWeight = FontWeight.Bold, maxLines = 1)
+            }
+        }
+    }
+}
+
+@Composable
+internal fun StripSections(
+    labels: List<String>,
+    selected: Int,
+    onTapped: (Int) -> Unit,
+    u: DesignUnits,
+    shoulders: Boolean,
+    modifier: Modifier = Modifier,
+    icon: (@Composable (index: Int, tint: Color, modifier: Modifier) -> Unit)? = null,
+) {
+    val accent = mediaAccent(LocalPFPColors.current.accentColor.toArgb().toLong())
+    val pad = shoulders && LocalPadPrompts.current
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
+        if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = u.dp(22), spacing = 0.dp)
+        labels.forEachIndexed { i, label ->
+            val on = i == selected
+            val tint = if (on) accent else Color.White.copy(alpha = 0.5f)
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(u.dp(8)))
+                    .clickable { onTapped(i) }
+                    .padding(horizontal = u.dp(6), vertical = u.dp(8)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(u.dp(8)),
+            ) {
+                icon?.invoke(i, tint, Modifier.size(u.dp(if (on) 20 else 18)).alpha(if (on) 1f else 0.5f))
+                if (sectionLabelShown(on, icon != null)) {
+                    Text(
+                        label,
+                        color = tint,
+                        fontSize = u.sp(14),
+                        fontWeight = if (on) FontWeight.Medium else FontWeight.Light,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+        if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(22), spacing = 0.dp)
+    }
+}
+
+internal fun sectionLabelShown(active: Boolean, hasIcon: Boolean): Boolean = active || !hasIcon
 
 @Composable
 private fun BatteryLine(level: Int, charging: Boolean, modifier: Modifier = Modifier) {
@@ -377,14 +569,9 @@ private fun BatteryLine(level: Int, charging: Boolean, modifier: Modifier = Modi
 }
 
 @Composable
-private fun StripHint(text: String) {
-    Text(text, color = StripMuted, fontSize = LiveDetailSize, fontWeight = FontWeight.Medium)
+private fun StripHint(text: String, u: DesignUnits) {
+    Text(text, color = StripMuted, fontSize = u.sp(10), fontWeight = FontWeight.Medium)
 }
-
-private val LiveArtSize = 26.dp
-private val LiveArtCorner = 5.dp
-private val LiveTextMax = 220.dp
-private val LiveDetailSize = 8.5.sp
 
 private val BatteryLineHeight = 2.dp
 
@@ -468,26 +655,18 @@ private fun StatusIcon(
     )
 }
 
-@Composable
-private fun StripSeparator() {
-    Box(
-        modifier = Modifier
-            .width(1.dp)
-            .height(10.dp)
-            .background(StripSep),
-    )
-}
-
 internal val StripHeight   = StatusStripHeight
 
-private val StripScrim = Color(0xB3060200)
-internal val StripFontSize = 10.sp
+private val StripScrim = Color(0xCC04060C)
+private val BadgeInk = Color(0xFF1A0D05)
 
-private val StripIconSize  = 10.dp
 private val LowBatteryTint = Color(0xFFFF6B6B)
 
 private fun currentTimeString(context: Context): String =
     android.text.format.DateFormat.getTimeFormat(context).format(Date())
 
-private fun currentDateString(context: Context): String =
-    android.text.format.DateFormat.getDateFormat(context).format(Date())
+private fun currentDateString(): String {
+    val locale = Locale.getDefault()
+    return SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEEMMMd"), locale).format(Date())
+}
+

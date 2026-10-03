@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Games
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material3.Icon
@@ -67,8 +68,6 @@ import com.psplauncher.core.ui.components.RailSubtitleSize
 import com.psplauncher.core.ui.components.contextMenuDim
 import com.psplauncher.core.ui.components.contextMenuInk
 import com.psplauncher.core.ui.components.contextMenuRow
-import com.psplauncher.core.ui.components.ControllerPrompt
-import com.psplauncher.core.ui.components.LocalPadPrompts
 import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.PanelBase
 import com.psplauncher.core.ui.image.rememberArtworkModel
@@ -389,39 +388,29 @@ private fun subLine(item: XMBItem): String? =
 @Composable
 fun RecentFilterRow(
     filter: RecentFilter,
+    u: DesignUnits,
     modifier: Modifier = Modifier,
 
     onFilterTapped: (RecentFilter) -> Unit = {},
 
     includeApps: Boolean = false,
 ) {
-    Row(modifier.fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
-        val pad = LocalPadPrompts.current
-        if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = StripFontSize.value.dp * 1.6f, spacing = 0.dp)
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(4.dp))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
+    val filters = RecentFilter.visible(includeApps)
+    StripSections(
+        labels = filters.map { it.label },
+        selected = filters.indexOf(filter),
+        onTapped = { onFilterTapped(filters[it]) },
+        u = u,
+        shoulders = true,
+        modifier = modifier,
+    ) { i, tint, m -> Icon(filterGlyph(filters[i]), null, m, tint = tint) }
+}
 
-                    onClick = { onFilterTapped(filter.next(includeApps)) },
-                )
-                .padding(horizontal = 6.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = filter.label,
-
-                color = Color.White,
-
-                fontSize = StripFontSize,
-                lineHeight = StripFontSize * 1.25f,
-                fontWeight = FontWeight.SemiBold,
-                style = TextStyle(shadow = XmbTextShadow),
-            )
-        }
-        if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = StripFontSize.value.dp * 1.6f, spacing = 0.dp)
-    }
+private fun filterGlyph(filter: RecentFilter): ImageVector = when (filter) {
+    RecentFilter.ALL -> Icons.Outlined.History
+    RecentFilter.GAMES -> Icons.Outlined.Games
+    RecentFilter.MUSIC -> Icons.Outlined.MusicNote
+    RecentFilter.BOOKS -> Icons.AutoMirrored.Outlined.MenuBook
+    RecentFilter.VIDEO -> Icons.Outlined.Movie
+    RecentFilter.APPS -> Icons.Outlined.Apps
 }
