@@ -23,7 +23,7 @@ object KeystoreSecretCipher {
         } catch (_: IllegalArgumentException) {
             return true
         }
-        if (data.size <= KeystoreAesGcm.IV_BYTES) return true
+        if (data.size <= KeystoreAesGcm.IV_BYTES + KeystoreAesGcm.TAG_BYTES) return true
         return runCatching { aesGcm.open(stored) }.isSuccess
     }
 

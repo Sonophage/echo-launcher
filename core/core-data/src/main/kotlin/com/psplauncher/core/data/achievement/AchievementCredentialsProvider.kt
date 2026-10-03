@@ -41,12 +41,15 @@ class AchievementCredentialsProvider @Inject constructor(
     suspend fun raUsername(): String? = context.pfpDataStore.data.first()[KEY_RA_USERNAME]
 
     suspend fun raApiKey(): String? =
-        context.pfpDataStore.data.first()[KEY_RA_API_KEY]?.let { KeystoreSecretCipher.decryptOrLegacy(it) }
+        context.pfpDataStore.data.first()[KEY_RA_API_KEY]?.let(::reveal)
 
     suspend fun steamId64(): String? = context.pfpDataStore.data.first()[KEY_STEAM_ID64]
 
     suspend fun steamApiKey(): String? =
-        context.pfpDataStore.data.first()[KEY_STEAM_API_KEY]?.let { KeystoreSecretCipher.decryptOrLegacy(it) }
+        context.pfpDataStore.data.first()[KEY_STEAM_API_KEY]?.let(::reveal)
+
+    private fun reveal(stored: String): String? =
+        stored.takeIf(KeystoreSecretCipher::isUsableOnThisDevice)?.let(KeystoreSecretCipher::decryptOrLegacy)
 
     suspend fun lastSyncedAt(): Long? = context.pfpDataStore.data.first()[KEY_SYNC_LAST]
 
@@ -93,17 +96,6 @@ class AchievementCredentialsProvider @Inject constructor(
         context.pfpDataStore.edit {
             it.remove(KEY_STEAM_ID64)
             it.remove(KEY_STEAM_API_KEY)
-        }
-    }
-
-    suspend fun clear() {
-        context.pfpDataStore.edit {
-            it.remove(KEY_RA_USERNAME)
-            it.remove(KEY_RA_API_KEY)
-            it.remove(KEY_STEAM_ID64)
-            it.remove(KEY_STEAM_API_KEY)
-            it.remove(KEY_ENABLED)
-            it.remove(KEY_SYNC_LAST)
         }
     }
 }

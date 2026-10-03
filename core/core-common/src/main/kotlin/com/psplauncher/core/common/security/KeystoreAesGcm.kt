@@ -57,8 +57,9 @@ class KeystoreAesGcm(private val alias: String) {
 
     companion object {
         const val IV_BYTES = 12
+        const val TAG_BYTES = 16
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
-        private const val TAG_BITS = 128
+        private const val TAG_BITS = TAG_BYTES * 8
     }
 }
