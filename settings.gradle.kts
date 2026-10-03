@@ -26,6 +26,8 @@ dependencyResolutionManagement {
             forRepository { maven("https://jitpack.io") }
             filter { includeGroup("com.github.marain87") }
         }
+        // The Discord Social SDK aar, fetched by tools/fetch-discord-sdk.sh and never committed.
+        flatDir { dirs(rootDir.resolve("discord/discord-native/libs")) }
     }
 }
 
@@ -45,6 +47,8 @@ include(":core:core-domain")
 include(":core:core-data")
 include(":core:core-ui")
 include(":core:core-navigation")
+
+include(":discord:discord-native")
 
 // Feature modules
 include(":feature:feature-xmb")

@@ -2,8 +2,9 @@ name: Unit tests
 
 # Guards against unit-test drift: assembleDebug skips unit tests, so broken tests (a stale fake that
 # stops implementing an interface that grew, or a ViewModel refactor that outpaces its test) can land
-# unnoticed. This runs every module's JVM unit tests on each push/PR. Nothing here needs an aar, an
-# NDK or a device.
+# unnoticed. This runs every module's JVM unit tests on each push/PR, excluding only :app and
+# :discord:discord-native, the two targets that pull the Discord SDK aar (not committed, see
+# tools/fetch-discord-sdk.sh) and the NDK. Every other module needs no aar, no NDK and no device.
 on:
   push:
   pull_request:
@@ -33,7 +34,7 @@ jobs:
         uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
       - name: Run JVM unit tests
-        run: ./gradlew test --no-daemon --stacktrace
+        run: ./gradlew test -x :app:test -x :discord:discord-native:test --no-daemon --stacktrace
 
       - name: Upload test reports on failure
         if: failure()
