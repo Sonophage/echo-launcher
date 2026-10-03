@@ -88,4 +88,11 @@ class PillNavTest {
     fun `a row with no pills is stepped straight past`() {
         assertEquals(DownStep.StepItem, downStep(inPillRow = false, pillRowVisible = false))
     }
+
+    @Test
+    fun `arriving on a category shows no pills, and the first DOWN on an item with pills enters the column instead of moving`() {
+        assertEquals(DownStep.EnterColumn, downStep(inPillRow = false, pillRowVisible = false, inColumn = false, hasPills = true))
+        assertEquals(DownStep.StepItem, downStep(inPillRow = false, pillRowVisible = false, inColumn = false, hasPills = false))
+        assertEquals(DownStep.EnterRow, downStep(inPillRow = false, pillRowVisible = true, inColumn = true, hasPills = true))
+    }
 }

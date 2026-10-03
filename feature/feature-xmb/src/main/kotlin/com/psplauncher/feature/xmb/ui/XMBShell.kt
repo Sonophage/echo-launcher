@@ -984,7 +984,7 @@ fun XMBShell(
                             XMBItemList(
                                 onPillActivated = onPillActivated,
                                 focusedPillIndex = focusedPillIndex,
-                                pillFade = chromeFade,
+                                pillFade = if (uiState.inColumn) chromeFade else 0f,
                                 items = uiState.currentItems,
                                 selectedIndex = itemSelectedIndex,
                                 onItemSelected = onItemTap,

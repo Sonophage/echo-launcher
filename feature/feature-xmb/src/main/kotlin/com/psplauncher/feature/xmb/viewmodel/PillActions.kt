@@ -49,10 +49,11 @@ internal fun pillNav(action: GamepadAction, current: Int?, count: Int): PillNav 
     }
 }
 
-internal enum class DownStep { LeaveRowAndStepItem, EnterRow, StepItem }
+internal enum class DownStep { LeaveRowAndStepItem, EnterRow, EnterColumn, StepItem }
 
-internal fun downStep(inPillRow: Boolean, pillRowVisible: Boolean): DownStep = when {
+internal fun downStep(inPillRow: Boolean, pillRowVisible: Boolean, inColumn: Boolean = true, hasPills: Boolean = false): DownStep = when {
     inPillRow -> DownStep.LeaveRowAndStepItem
+    !inColumn && hasPills -> DownStep.EnterColumn
     pillRowVisible -> DownStep.EnterRow
     else -> DownStep.StepItem
 }
@@ -60,7 +61,7 @@ internal fun downStep(inPillRow: Boolean, pillRowVisible: Boolean): DownStep = w
 data class PillCursor(val itemId: String, val index: Int)
 
 val XMBUiState.pillRowVisible: Boolean
-    get() = !onLastPlayedHome && focusedPills().isNotEmpty()
+    get() = !onLastPlayedHome && inColumn && focusedPills().isNotEmpty()
 
 val XMBItem.isInstalledApp: Boolean get() = gameId == null && packageName != null
 

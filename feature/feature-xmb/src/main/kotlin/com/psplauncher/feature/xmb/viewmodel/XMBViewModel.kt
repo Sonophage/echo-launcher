@@ -516,6 +516,8 @@ data class XMBUiState(
 
     val lastInputWasTouch: Boolean = false,
 
+    val inColumn: Boolean = false,
+
     val showContextMenuHint: Boolean = false,
 
     val idle: Boolean = false,
@@ -5279,8 +5281,15 @@ class XMBViewModel @Inject constructor(
                 downStep(
                     inPillRow = state.activePillIndex() != null,
                     pillRowVisible = state.pillRowVisible,
+                    inColumn = state.inColumn,
+                    hasPills = state.focusedPills().isNotEmpty(),
                 )
             ) {
+                DownStep.EnterColumn -> {
+                    menuSound.play(MenuSound.SCROLL)
+                    _uiState.update { it.copy(inColumn = true) }
+                }
+
                 DownStep.LeaveRowAndStepItem ->
                     if (moveItemCursor(+1)) _uiState.update { it.copy(pillCursor = null) }
                     else gamepadInputHandler.cancelRepeat()
@@ -7315,7 +7324,7 @@ class XMBViewModel @Inject constructor(
         if (index != _uiState.value.selectedCategoryIndex) menuSound.play(MenuSound.SYSTEM_BROWSE)
         val category = _uiState.value.categories.getOrNull(index)
 
-        _uiState.update { it.copy(selectedCategoryIndex = index, selectedItemIndex = 0, recentRailVisible = false, selectedPlatformId = null, musicNav = MusicNav.Root, videoNav = VideoNav.Root, photoNav = PhotoNav.Root, romFoldersOpen = false, activeAppDrawerFilter = null) }
+        _uiState.update { it.copy(selectedCategoryIndex = index, selectedItemIndex = 0, inColumn = false, pillCursor = null, recentRailVisible = false, selectedPlatformId = null, musicNav = MusicNav.Root, videoNav = VideoNav.Root, photoNav = PhotoNav.Root, romFoldersOpen = false, activeAppDrawerFilter = null) }
         tintWaveForCategory(category)
         loadItemsForCategory(category)
     }
@@ -7356,6 +7365,7 @@ class XMBViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 selectedItemIndex = next,
+                inColumn = true,
                 recentRailVisible = it.recentRailVisible || it.onLastPlayedHome,
             )
         }
@@ -7384,7 +7394,7 @@ class XMBViewModel @Inject constructor(
         } else {
             val clamped = index.coerceIn(0, (s.currentItems.size - 1).coerceAtLeast(0))
             if (clamped != s.selectedItemIndex) {
-                _uiState.update { it.copy(selectedItemIndex = clamped) }
+                _uiState.update { it.copy(selectedItemIndex = clamped, inColumn = true) }
                 menuSound.play(MenuSound.SCROLL)
             }
         }
