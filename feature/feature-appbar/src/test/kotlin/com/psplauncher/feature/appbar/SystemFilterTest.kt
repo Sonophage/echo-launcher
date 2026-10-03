@@ -31,4 +31,14 @@ class SystemFilterTest {
         assertEquals(listOf("com.a", "com.b", "com.c"), games.ofSystem(systemChips(games)[1].id).map { it.packageName })
         assertEquals(games, games.ofSystem(null))
     }
+
+    @Test
+    fun `a system chip narrows only the Games tab, and Everything else stays below`() {
+        val apps = games + InstalledApp("com.notes", "Notes", null, isGame = false, isEmulator = false)
+
+        val (section, rest) = apps.wallSections(AppFilter.GAMES, "snes")
+
+        assertEquals(listOf("rom:2", "rom:3"), section.map { it.packageName })
+        assertEquals(listOf("com.notes"), rest.map { it.packageName })
+    }
 }
