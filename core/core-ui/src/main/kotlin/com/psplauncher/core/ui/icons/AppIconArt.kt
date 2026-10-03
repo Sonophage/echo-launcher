@@ -11,7 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class AppIconArt(val bitmap: ImageBitmap, val color: Color?)
+class AppIconArt(val bitmap: ImageBitmap, val color: Color?, val version: Long = 0)
 
 data class AppIconKey(
     val packageName: String,
@@ -27,8 +27,8 @@ class AppIconCache(maxBytes: Int) {
 
     fun peek(key: AppIconKey): AppIconArt? = lru[key]
 
-    fun getOrLoad(key: AppIconKey, load: () -> AppIconArt?): AppIconArt? =
-        lru[key] ?: load()?.also { lru.put(key, it) }
+    fun getOrLoad(key: AppIconKey, version: Long = 0, load: () -> AppIconArt?): AppIconArt? =
+        lru[key]?.takeIf { it.version == version } ?: load()?.also { lru.put(key, it) }
 
     companion object {
         val Shared = AppIconCache(maxBytes = 24 * 1024 * 1024)
@@ -46,12 +46,13 @@ fun rememberAppIcon(
     val key = packageName?.takeIf { it.isNotBlank() }?.let { AppIconKey(it, sizePx, foregroundOnly, colorOf) }
     val loaded by produceState<Pair<AppIconKey, AppIconArt?>?>(null, key) {
         value = key?.let {
-            it to (AppIconCache.Shared.peek(it) ?: withContext(Dispatchers.IO) {
-                AppIconCache.Shared.getOrLoad(it) {
+            it to withContext(Dispatchers.IO) {
+                val version = runCatching { context.packageManager.getPackageInfo(it.packageName, 0).lastUpdateTime }.getOrDefault(0L)
+                AppIconCache.Shared.getOrLoad(it, version) {
                     context.appIconBitmap(it.packageName, sizePx = it.sizePx, foregroundOnly = it.foregroundOnly)
-                        ?.let { bmp -> AppIconArt(bmp, it.colorOf?.invoke(bmp)) }
+                        ?.let { bmp -> AppIconArt(bmp, it.colorOf?.invoke(bmp), version) }
                 }
-            })
+            }
         }
     }
     if (key == null) return null

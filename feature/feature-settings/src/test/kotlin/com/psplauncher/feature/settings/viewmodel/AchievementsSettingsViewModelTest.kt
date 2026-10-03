@@ -49,6 +49,18 @@ class AchievementsSettingsViewModelTest {
     }
 
     @Test
+    fun `connectSteam never stores an unresolved vanity name as the SteamID64`() = runTest(dispatcher) {
+        coEvery { credentials.steamId64() } returns null
+        coEvery { steamApi.resolveVanity("gaben") } returns null
+
+        vm.connectSteam("gaben", "key")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { credentials.saveSteam("gaben", any()) }
+        coVerify { credentials.saveSteam("", "key") }
+    }
+
+    @Test
     fun `connectSteam keeps a 17-digit id as-is without resolving`() = runTest(dispatcher) {
         vm.connectSteam("76561197960287930", "key")
         advanceUntilIdle()

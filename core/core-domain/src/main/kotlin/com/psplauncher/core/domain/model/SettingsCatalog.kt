@@ -71,17 +71,6 @@ fun settingsSectionFor(screenId: String): SettingsSectionId? = settingsEntryFor(
 fun settingsRailRows(screenId: String?): List<SettingsEntry> =
     screenId?.let(::settingsSectionFor)?.let(::settingsEntriesIn) ?: emptyList()
 
-fun settingsSectionStep(section: SettingsSectionId, delta: Int): SettingsSectionId {
-    val all = SettingsSectionId.entries
-    val next = ((section.ordinal + delta) % all.size + all.size) % all.size
-    return all[next]
-}
-
-fun settingsSectionStepTarget(screenId: String?, delta: Int): String? {
-    val section = screenId?.let(::settingsSectionFor) ?: return null
-    return settingsEntriesIn(settingsSectionStep(section, delta)).firstOrNull()?.id
-}
-
 fun settingsTabStepTarget(screenId: String?, delta: Int): String? {
     val tabs = settingsRailRows(screenId)
     val at = tabs.indexOfFirst { it.id == screenId }

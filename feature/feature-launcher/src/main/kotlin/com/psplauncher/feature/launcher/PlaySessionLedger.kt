@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.psplauncher.core.data.datastore.pfpDataStore
 import com.psplauncher.core.data.permission.UsageAccess
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,7 +34,11 @@ open class PlaySessionLedger @Inject constructor(
         return taken?.let(::decodeSession)
     }
 
-    open fun foregroundMillis(packageName: String, from: Long, to: Long): Long? {
+    open suspend fun foregroundMillis(packageName: String, from: Long, to: Long): Long? = withContext(Dispatchers.IO) {
+        foregroundMillisNow(packageName, from, to)
+    }
+
+    private fun foregroundMillisNow(packageName: String, from: Long, to: Long): Long? {
         if (!UsageAccess.isGranted(context)) return null
         val manager = context.getSystemService(UsageStatsManager::class.java) ?: return null
         val events = manager.queryEvents(from, to)

@@ -82,8 +82,6 @@ class LaunchDispatcher @Inject constructor(
             scope.launch {
                 runCatching { gameRepository.markOpened(game.id, dispatchedAtWall) }
                     .onFailure { Timber.w(it, "Could not stamp gameId=${game.id} on the Last Played shelf") }
-                runCatching { ledger.open(OpenSession(game.id, game.platformId, packageName, dispatchedAtWall)) }
-                    .onFailure { Timber.w(it, "Could not note the open session for gameId=${game.id}") }
                 launchListeners.forEach { listener ->
                     runCatching { listener.onGameLaunched(game) }
                         .onFailure { Timber.w(it, "A launch listener failed for gameId=${game.id}") }
@@ -99,6 +97,8 @@ class LaunchDispatcher @Inject constructor(
                     packageName  = packageName,
                 )
             )
+            runCatching { ledger.open(OpenSession(game.id, game.platformId, packageName, dispatchedAtWall)) }
+                .onFailure { Timber.w(it, "Could not note the open session for gameId=${game.id}") }
             LaunchDispatchResult.Accepted
         } catch (e: android.content.ActivityNotFoundException) {
             Timber.w(e, "Launch startActivity failed: emulator activity not found (gameId=${game.id})")

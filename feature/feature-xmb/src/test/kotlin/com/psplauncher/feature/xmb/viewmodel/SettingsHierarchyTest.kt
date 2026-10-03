@@ -144,16 +144,6 @@ class SettingsHierarchyTest {
         }
     }
 
-    @Test fun `every section the shoulders can reach resolves to a route`() {
-        SettingsSectionId.entries.forEach { section ->
-            val from = settingsEntriesIn(section).first().id
-            listOf(-1, +1).forEach { delta ->
-                val target = com.psplauncher.core.domain.model.settingsSectionStepTarget(from, delta)
-                assertTrue("No route stepping $delta from $from (got $target)", target in SETTINGS_SCREEN_ROUTES)
-            }
-        }
-    }
-
     @Test fun `section ids never collide with screen routes`() {
         SettingsSectionId.entries.forEach { section ->
             assertFalse("Section id must not be a screen route: ${section.id}", section.id in SETTINGS_SCREEN_ROUTES)

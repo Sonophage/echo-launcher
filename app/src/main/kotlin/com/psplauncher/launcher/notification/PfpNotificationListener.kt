@@ -66,6 +66,10 @@ class PfpNotificationListener : NotificationListenerService(), AndroidNotificati
 
     override fun onListenerDisconnected() {
         Timber.i("Notification listener disconnected")
+        forgetAll()
+    }
+
+    private fun forgetAll() {
         intents = emptyMap()
         dropSessions(sessions.keys)
         AndroidNotifications.disconnected()
@@ -115,7 +119,7 @@ class PfpNotificationListener : NotificationListenerService(), AndroidNotificati
 
     private fun republish() {
         val active = runCatching { activeNotifications }.getOrNull() ?: run {
-            AndroidNotifications.disconnected()
+            forgetAll()
             return
         }
         trackSessions(active.orEmpty().filter { it.isMediaPlayback() })

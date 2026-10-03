@@ -42,7 +42,6 @@ import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.PspContextMenuOverlay
 import com.psplauncher.core.ui.components.StatusStripHeight
 import com.psplauncher.core.ui.components.XmbLetterRail
-import com.psplauncher.core.ui.components.rowsShown
 import com.psplauncher.core.ui.design.DesignUnits
 import com.psplauncher.core.ui.design.PanelBase
 import com.psplauncher.core.ui.icons.rememberAppIcon
@@ -112,6 +111,12 @@ fun AppDrawerScreen(
         viewModel.onRomLaunchHandled()
     }
 
+    LaunchedEffect(state.pendingCrossBarAdd) {
+        val packageName = state.pendingCrossBarAdd ?: return@LaunchedEffect
+        onAddToCrossBar(packageName)
+        viewModel.onCrossBarAddHandled()
+    }
+
     LaunchedEffect(letterRailHeld) {
         if (letterRailHeld) viewModel.openLetterJump() else viewModel.closeLetterJump()
     }
@@ -119,7 +124,7 @@ fun AppDrawerScreen(
     LaunchedEffect(typedChar) {
         val ch = typedChar ?: return@LaunchedEffect
 
-        onOpenAppSearch(ch.toString())
+        onOpenAppSearch(ch)
         onTypedCharConsumed()
     }
 
@@ -166,24 +171,7 @@ fun AppDrawerScreen(
             onTouchInteraction()
             viewModel.openAppMenu(app)
         },
-        onTouchBrowse = { index ->
-            onTouchInteraction()
-            viewModel.onTouchBrowse(index)
-        },
-        onMenuRowActivated = { index ->
-            val picked = state.appMenu?.rowsShown()?.getOrNull(index)?.action
-            if (picked == AppMenuAction.ADD_TO_CROSS_BAR) {
-                state.menuApp?.let { onAddToCrossBar(it.packageName) }
-            }
-            viewModel.onMenuRowActivated(index)
-        },
-        onMenuAction = { action ->
-
-            if (action == AppMenuAction.ADD_TO_CROSS_BAR) {
-                state.menuApp?.let { onAddToCrossBar(it.packageName) }
-            }
-            viewModel.onMenuAction(action)
-        },
+        onMenuRowActivated = viewModel::onMenuRowActivated,
         onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
         onSystemChip = { id ->
@@ -208,8 +196,6 @@ internal fun AppDrawerContent(
     onAppTapped: (Int) -> Unit,
     onAppLaunched: (String) -> Unit,
     onAppMenu: (InstalledApp) -> Unit,
-    onTouchBrowse: (Int) -> Unit,
-    onMenuAction: (AppMenuAction) -> Unit,
     onCloseMenu: () -> Unit,
     onConfirmUninstall: () -> Unit,
     onCancelUninstall: () -> Unit,
@@ -308,10 +294,7 @@ internal fun AppDrawerContent(
                     u = u,
                     action = focused?.let(::actionLabel),
                     onAction = { focused?.let(onBandLaunch) },
-                    onNextTab = {
-                        val filters = AppFilter.entries
-                        onFilterSelected(filters[(filters.indexOf(state.activeFilter) + 1) % filters.size])
-                    },
+                    onNextTab = { onFilterSelected(state.activeFilter.stepped(1)) },
                     onSearch = onOpenSearch,
                     onBack = onBack,
                 )
@@ -447,8 +430,6 @@ private fun AppDrawerPreviewContent() {
         onAppTapped = {},
         onAppLaunched = {},
         onAppMenu = {},
-        onTouchBrowse = {},
-        onMenuAction = {},
         onCloseMenu = {},
         onConfirmUninstall = {},
         onCancelUninstall = {},

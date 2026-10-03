@@ -17,8 +17,11 @@ internal object ServiceConnectors {
     ): String {
         val input = idOrVanity.trim()
         val key = apiKey.trim()
-        val saved = credentials.saveSteam(input, key)
-        if (input.matches(STEAM_ID64)) return unprotectedWarning("Steam API key", saved) ?: "Steam connected"
+        if (input.matches(STEAM_ID64)) {
+            return unprotectedWarning("Steam API key", credentials.saveSteam(input, key)) ?: "Steam connected"
+        }
+        val previous = credentials.steamId64()?.takeIf { it.matches(STEAM_ID64) }.orEmpty()
+        credentials.saveSteam(previous, key)
         val resolved = steamApi.resolveVanity(input)
         return if (resolved != null) {
             val protection = credentials.saveSteam(resolved, key)

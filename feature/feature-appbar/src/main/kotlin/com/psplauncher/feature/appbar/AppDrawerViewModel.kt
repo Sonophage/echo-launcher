@@ -42,6 +42,8 @@ enum class AppFilter(val label: String, val subtitle: String) {
         RECENT -> app.lastUsedAt > 0L
     }
 
+    fun stepped(delta: Int): AppFilter = entries[(ordinal + delta).mod(entries.size)]
+
     companion object {
         val DEFAULT = RECENT
     }
@@ -88,6 +90,8 @@ data class AppDrawerUiState(
 
     val pendingRomLaunch: Long? = null,
 
+    val pendingCrossBarAdd: String? = null,
+
     val systemChips: List<SystemChip> = emptyList(),
 
     val systemFilter: String? = null,
@@ -100,8 +104,6 @@ data class AppDrawerUiState(
     val visibleApps: List<InstalledApp> get() = sectionApps + otherApps
 
     val sectionRowCount: Int get() = sectionApps.size
-
-    val gridIndex: Int get() = (selectedIndex - sectionRowCount).coerceAtLeast(0)
 
     val menuActions: List<AppMenuAction>
         get() = buildList {
@@ -215,19 +217,9 @@ class AppDrawerViewModel @Inject constructor(
         }
     }
 
-    fun onAppSelected(index: Int) {
-        _uiState.update { it.copy(selectedIndex = index) }
-    }
-
     fun onAppTapped(index: Int) {
         if (index != _uiState.value.selectedIndex) menuSound.play(MenuSound.SCROLL)
         _uiState.update { it.copy(selectedIndex = index, usingTouch = true, chipFocus = false) }
-    }
-
-    fun onTouchBrowse(index: Int) {
-        val size = _uiState.value.visibleApps.size
-        if (size == 0) return
-        _uiState.update { it.copy(selectedIndex = index.coerceIn(0, size - 1), usingTouch = true) }
     }
 
     fun launchApp(packageName: String) {
@@ -245,6 +237,8 @@ class AppDrawerViewModel @Inject constructor(
     }
 
     fun onRomLaunchHandled() = _uiState.update { it.copy(pendingRomLaunch = null) }
+
+    fun onCrossBarAddHandled() = _uiState.update { it.copy(pendingCrossBarAdd = null) }
 
     fun refresh() {
         loadApps()
@@ -302,7 +296,7 @@ class AppDrawerViewModel @Inject constructor(
 
             AppMenuAction.UNINSTALL -> _uiState.update { it.copy(menuApp = null, confirmUninstall = app, uninstallConfirmFocused = false) }
 
-            AppMenuAction.ADD_TO_CROSS_BAR -> _uiState.update { it.copy(menuApp = null) }
+            AppMenuAction.ADD_TO_CROSS_BAR -> _uiState.update { it.copy(menuApp = null, pendingCrossBarAdd = app.packageName) }
         }
     }
 
@@ -454,10 +448,7 @@ class AppDrawerViewModel @Inject constructor(
         }
 
         if (action == GamepadAction.PREV_CATEGORY || action == GamepadAction.NEXT_CATEGORY) {
-            val filters = AppFilter.values()
-            val idx = filters.indexOf(state.activeFilter)
-            val target = if (action == GamepadAction.PREV_CATEGORY) idx - 1 else idx + 1
-            if (target in filters.indices) setFilter(filters[target])
+            setFilter(state.activeFilter.stepped(if (action == GamepadAction.PREV_CATEGORY) -1 else 1))
             return
         }
 
@@ -532,6 +523,7 @@ class AppDrawerViewModel @Inject constructor(
                 letterFilter = pick,
                 systemChips = chips,
                 systemFilter = system,
+                chipFocus = it.chipFocus && it.copy(systemChips = chips).showSystemChips,
             )
         }
     }

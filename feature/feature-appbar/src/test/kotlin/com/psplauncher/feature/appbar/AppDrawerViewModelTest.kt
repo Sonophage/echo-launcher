@@ -155,18 +155,6 @@ class AppDrawerViewModelTest {
     }
 
     @Test
-    fun `onAppSelected updates selectedIndex in state`() = runTest {
-        testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.onAppSelected(3)
-        testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.uiState.test {
-            val state = awaitItem()
-            assertEquals(3, state.selectedIndex)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
     fun `openUsageAccessSettings delegates to repository`() = runTest {
         viewModel.openUsageAccessSettings()
         verify { repository.openUsageAccessSettings() }
@@ -240,15 +228,67 @@ class AppDrawerViewModelTest {
         viewModel.handleGamepadAction(GamepadAction.PREV_CATEGORY)
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
-            assertEquals(AppFilter.RECENT, awaitItem().activeFilter)
+            assertEquals(AppFilter.GAMES, awaitItem().activeFilter)
             cancelAndIgnoreRemainingEvents()
         }
         viewModel.handleGamepadAction(GamepadAction.NEXT_CATEGORY)
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
-            assertEquals(AppFilter.APPS, awaitItem().activeFilter)
+            assertEquals(AppFilter.RECENT, awaitItem().activeFilter)
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `LB and RB wrap around the tabs, like the Tabs hint and the settings tabs`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.setFilter(AppFilter.entries.last())
+
+        viewModel.handleGamepadAction(GamepadAction.NEXT_CATEGORY)
+        assertEquals(AppFilter.entries.first(), viewModel.uiState.value.activeFilter)
+
+        viewModel.handleGamepadAction(GamepadAction.PREV_CATEGORY)
+        assertEquals(AppFilter.entries.last(), viewModel.uiState.value.activeFilter)
+    }
+
+    @Test
+    fun `Add to Cross Bar from the controller hands the app to the cross bar, as a tap does`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.setFilter(AppFilter.EMULATORS)
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.handleGamepadAction(GamepadAction.CHANGE_SORT)
+        testDispatcher.scheduler.advanceUntilIdle()
+        val app = viewModel.uiState.value.menuApp!!.packageName
+        assertEquals(AppMenuAction.ADD_TO_CROSS_BAR, viewModel.uiState.value.appMenu!!.rows[0].action)
+
+        viewModel.handleGamepadAction(GamepadAction.SELECT)
+
+        assertEquals(app, viewModel.uiState.value.pendingCrossBarAdd)
+        viewModel.onCrossBarAddHandled()
+        assertEquals(null, viewModel.uiState.value.pendingCrossBarAdd)
+    }
+
+    @Test
+    fun `a refresh that hides the system chips takes the focus off them, so left and right move the wall again`() = runTest {
+        val roms = listOf(
+            com.psplauncher.core.domain.model.Game(id = 1, title = "One", platformId = "psp"),
+            com.psplauncher.core.domain.model.Game(id = 2, title = "Two", platformId = "snes"),
+        )
+        every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf(roms)
+        val vm = drawerOver(fakeApps())
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.setFilter(AppFilter.GAMES)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("the fixture must show the chip row", vm.uiState.value.showSystemChips)
+        vm.handleGamepadAction(GamepadAction.NAVIGATE_UP)
+        assertTrue(vm.uiState.value.chipFocus)
+
+        every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf(emptyList())
+        vm.refresh()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse("the chip row is hidden", vm.uiState.value.showSystemChips)
+        assertFalse(vm.uiState.value.chipFocus)
     }
 
     @Test

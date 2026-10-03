@@ -9,7 +9,6 @@ import com.psplauncher.core.ui.design.PanelFocusRing
 import com.psplauncher.core.ui.design.panelBackdrop
 import androidx.compose.ui.unit.em
 import androidx.compose.foundation.ScrollState
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.core.animateFloatAsState
@@ -1120,7 +1118,11 @@ fun SettingsRow(
     val focusInfo = LocalSettingsFocusInfo.current
     var isFocused by remember { mutableStateOf(false) }
     if (isFocused && focusInfo != null) {
-        LaunchedEffect(label, value, sublabel) { focusInfo.value = SettingsFocusInfo(label, value, sublabel) }
+        DisposableEffect(label, value, sublabel) {
+            val info = SettingsFocusInfo(label, value, sublabel)
+            focusInfo.value = info
+            onDispose { if (focusInfo.value == info) focusInfo.value = null }
+        }
     }
 
     val row = rememberControllerRowRegistration(
@@ -1411,8 +1413,10 @@ fun SettingsTextFieldRow(
     var editing by remember { mutableStateOf(false) }
     var fieldFocused by remember { mutableStateOf(false) }
     if (fieldFocused && focusInfo != null) {
-        LaunchedEffect(label, value, helper) {
-            focusInfo.value = SettingsFocusInfo(label, value.takeUnless { isPassword }, helper)
+        DisposableEffect(label, value, helper) {
+            val info = SettingsFocusInfo(label, value.takeUnless { isPassword }, helper)
+            focusInfo.value = info
+            onDispose { if (focusInfo.value == info) focusInfo.value = null }
         }
     }
 

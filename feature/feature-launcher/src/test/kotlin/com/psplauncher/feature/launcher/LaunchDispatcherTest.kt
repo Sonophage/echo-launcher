@@ -9,6 +9,7 @@ import com.psplauncher.core.domain.model.IntentType
 import com.psplauncher.core.domain.model.PlaySession
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -64,7 +65,7 @@ class LaunchDispatcherTest {
         val gameRepository: com.psplauncher.core.domain.repository.GameRepository = mockk(relaxed = true)
         val launched = mutableListOf<Game>()
         val ledger: PlaySessionLedger = mockk(relaxed = true) {
-            every { foregroundMillis(any(), any(), any()) } returns null
+            coEvery { foregroundMillis(any(), any(), any()) } returns null
             coEvery { take() } returns null
         }
 
@@ -441,7 +442,7 @@ class LaunchDispatcherTest {
     fun `play time is the emulator's foreground time when usage access can say`() = runTest {
         val h = Harness(this)
         coEvery { h.recorder.record(any()) } returns Unit
-        every { h.ledger.foregroundMillis("com.github.stenzek.duckstation", any(), any()) } returns 600_000L
+        coEvery { h.ledger.foregroundMillis("com.github.stenzek.duckstation", any(), any()) } returns 600_000L
         assertIs<LaunchDispatchResult.Accepted>(h.dispatcher.launch(game, resolved, h.intent))
 
         h.dispatcher.onHostStopped()
@@ -458,7 +459,7 @@ class LaunchDispatcherTest {
     fun `a session the launcher was killed during is recorded on the next start`() = runTest {
         val h = Harness(this)
         coEvery { h.ledger.take() } returns OpenSession(7L, "psx", "com.github.stenzek.duckstation", 1_790_000_000_000L)
-        every { h.ledger.foregroundMillis("com.github.stenzek.duckstation", 1_790_000_000_000L, any()) } returns 5_400_000L
+        coEvery { h.ledger.foregroundMillis("com.github.stenzek.duckstation", 1_790_000_000_000L, any()) } returns 5_400_000L
 
         h.dispatcher.onHostResumed()
         advanceUntilIdle()
@@ -468,6 +469,23 @@ class LaunchDispatcherTest {
         assertEquals(7L, session.captured.gameId)
         assertEquals(5_400_000L, session.captured.durationMillis)
         assertEquals(1_790_000_000_000L, session.captured.launchedAt)
+    }
+
+    @Test
+    fun `the open session is noted before a quick return can take it, so no phantom session is left`() = runTest {
+        val h = Harness(this)
+        coEvery { h.recorder.record(any()) } returns Unit
+        coEvery { h.gameRepository.markOpened(any(), any()) } coAnswers { kotlinx.coroutines.delay(10_000) }
+        assertIs<LaunchDispatchResult.Accepted>(h.dispatcher.launch(game, resolved, h.intent))
+
+        h.dispatcher.onHostStopped()
+        h.dispatcher.onHostResumed()
+        advanceUntilIdle()
+
+        coVerifyOrder {
+            h.ledger.open(any())
+            h.ledger.take()
+        }
     }
 
     @Test
