@@ -123,6 +123,7 @@ dependencies {
     implementation(project(":feature:feature-appbar"))
     implementation(project(":feature:feature-backup"))
     implementation(project(":feature:feature-reader"))
+    implementation(project(":discord:discord-native"))
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     debugImplementation(libs.compose.ui.tooling)

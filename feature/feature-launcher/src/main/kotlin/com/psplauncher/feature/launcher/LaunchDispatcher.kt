@@ -5,6 +5,7 @@ import android.content.Intent
 import com.psplauncher.core.common.launch.LaunchTransition
 import com.psplauncher.core.common.launch.LaunchTransition.withoutTransition
 import com.psplauncher.core.domain.model.Game
+import com.psplauncher.core.domain.model.GameLaunchListener
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -52,6 +53,7 @@ class LaunchDispatcher @Inject constructor(
     private val autoCoreMemory: AutoCoreMemory,
     private val gameRepository: com.psplauncher.core.domain.repository.GameRepository,
     private val ledger: PlaySessionLedger,
+    private val launchListeners: Set<@JvmSuppressWildcards GameLaunchListener> = emptySet(),
 ) {
     private val _recoveryRequests = MutableStateFlow<LaunchRecoveryRequest?>(null)
 
@@ -82,6 +84,10 @@ class LaunchDispatcher @Inject constructor(
                     .onFailure { Timber.w(it, "Could not stamp gameId=${game.id} on the Last Played shelf") }
                 runCatching { ledger.open(OpenSession(game.id, game.platformId, packageName, dispatchedAtWall)) }
                     .onFailure { Timber.w(it, "Could not note the open session for gameId=${game.id}") }
+                launchListeners.forEach { listener ->
+                    runCatching { listener.onGameLaunched(game) }
+                        .onFailure { Timber.w(it, "A launch listener failed for gameId=${game.id}") }
+                }
             }
             acceptPending(
                 PendingLaunch(

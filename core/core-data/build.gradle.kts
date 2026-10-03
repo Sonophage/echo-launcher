@@ -83,8 +83,11 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.timber)
 
+    implementation(libs.bundles.ktor)
+
     testImplementation(libs.bundles.test.unit)
     testImplementation(libs.robolectric)
     testImplementation(libs.room.testing)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.ktor.client.mock)
 }

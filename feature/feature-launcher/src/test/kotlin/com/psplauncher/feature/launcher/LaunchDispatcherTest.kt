@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import com.psplauncher.core.domain.model.EmulatorProfile
 import com.psplauncher.core.domain.model.Game
+import com.psplauncher.core.domain.model.GameLaunchListener
 import com.psplauncher.core.domain.model.IntentType
 import com.psplauncher.core.domain.model.PlaySession
 import io.mockk.coEvery
@@ -61,6 +62,7 @@ class LaunchDispatcherTest {
         val menuSound: com.psplauncher.core.ui.sound.MenuSoundPlayer = mockk(relaxed = true)
         val autoCoreMemory: AutoCoreMemory = mockk(relaxed = true)
         val gameRepository: com.psplauncher.core.domain.repository.GameRepository = mockk(relaxed = true)
+        val launched = mutableListOf<Game>()
         val ledger: PlaySessionLedger = mockk(relaxed = true) {
             every { foregroundMillis(any(), any(), any()) } returns null
             coEvery { take() } returns null
@@ -77,6 +79,7 @@ class LaunchDispatcherTest {
             autoCoreMemory = autoCoreMemory,
             gameRepository = gameRepository,
             ledger = ledger,
+            launchListeners = setOf(GameLaunchListener { launched += it }),
         )
     }
 
@@ -139,6 +142,16 @@ class LaunchDispatcherTest {
 
         coVerify(exactly = 1) { h.gameRepository.markOpened(7L, 1_790_000_005_000L) }
         coVerify(exactly = 0) { h.gameRepository.recordPlaySession(any()) }
+    }
+
+    @Test
+    fun `a dispatched launch tells the listeners, so Discord can show what is being played`() = runTest {
+        val h = harness()
+
+        h.launchAccepted()
+        advanceUntilIdle()
+
+        assertEquals(listOf(game), h.launched)
     }
 
     @Test

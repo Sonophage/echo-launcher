@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.documentfile)
     implementation(libs.material.icons.extended)
+    implementation(libs.zxing.core)
 
     implementation(project(":core:core-common"))
     implementation(project(":core:core-domain"))

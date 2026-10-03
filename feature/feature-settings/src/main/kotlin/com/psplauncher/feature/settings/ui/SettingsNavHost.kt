@@ -38,6 +38,7 @@ val SETTINGS_SCREEN_ROUTES: Set<String> = setOf(
     "settings_permissions",
     "settings_about",
     "settings_credits",
+    "settings_discord",
 
     "settings_app_visibility",
 )
@@ -153,6 +154,7 @@ fun SettingsNavHost(
             "settings_permissions" -> PermissionsSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_about"      -> AboutSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_credits"    -> CreditsSettingsScreen(onBack = onBack, modifier = modifier)
+            "settings_discord"    -> DiscordSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_app_visibility" -> AppVisibilitySettingsScreen(onBack = onBack, modifier = modifier)
         }
     }

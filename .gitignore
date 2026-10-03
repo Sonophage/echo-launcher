@@ -99,3 +99,5 @@ docs/feedback/
 # Byte-identical copies of core/core-ui/src/main/res/raw — res/raw is the tracked copy.
 assets/SFX/active/*.wav
 assets/SFX/active/*.mp3
+# Discord Social SDK: proprietary, 29 MB. Fetch with tools/fetch-discord-sdk.sh.
+discord/discord-native/libs/*.aar
