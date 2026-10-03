@@ -525,16 +525,23 @@ open class BackupManager @Inject constructor(
             stringPreferencesKey("igdb_client_secret"),
             stringPreferencesKey("ss_username"),
             stringPreferencesKey("ss_password"),
+
+            stringPreferencesKey("ra_username"),
+            stringPreferencesKey("ra_api_key"),
+            stringPreferencesKey("steam_id64"),
+            stringPreferencesKey("steam_api_key"),
         ) +
 
             UiMediaSlot.entries.map { UiMediaStore.displayNameKey(it) }
 
-        private val ENCRYPTED_CREDENTIAL_KEYS = setOf(
+        internal val ENCRYPTED_CREDENTIAL_KEYS = setOf(
             "sgdb_api_key",
 
             "tmdb_api_key",
             "igdb_client_secret",
             "ss_password",
+            "ra_api_key",
+            "steam_api_key",
         )
 
         private val BACKED_UP_BOOLEAN_KEYS = listOf(
@@ -572,6 +579,8 @@ open class BackupManager @Inject constructor(
             booleanPreferencesKey("artwork_import_move_files"),
             booleanPreferencesKey("pref_dl_manuals"),
             booleanPreferencesKey("pref_dl_video_snaps"),
+
+            booleanPreferencesKey("achievements_enabled"),
 
             booleanPreferencesKey("windows_library_setup_prompt"),
 

@@ -24,6 +24,7 @@ class BackupKeyDriftTest {
             "marks a wizard in progress on this device; the seen flag is what a restore carries",
         "data_prep_version" to "migration marker",
         "open_play_session" to "a launch in progress on this device; it is settled and cleared on the next start",
+        "achievements_sync_last" to "when this device last synced; a restored device has not synced yet",
 
         "session_blob" to
             "the Discord sign-in, sealed with a Keystore key that never leaves this device; " +

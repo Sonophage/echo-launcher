@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Forum
+import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.AutoFixHigh
@@ -675,6 +676,7 @@ private fun settingsEntryIcon(id: String): ImageVector = when (id) {
     "settings_touch" -> Icons.Outlined.TouchApp
     "settings_performance" -> Icons.Outlined.Speed
     "settings_permissions" -> Icons.Outlined.Shield
+    "settings_accounts" -> Icons.Outlined.ManageAccounts
     "settings_about" -> Icons.Outlined.Info
     "settings_logs" -> Icons.Outlined.BugReport
     "settings_backup" -> Icons.Outlined.Backup

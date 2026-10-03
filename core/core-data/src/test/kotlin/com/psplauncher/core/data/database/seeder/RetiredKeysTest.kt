@@ -9,7 +9,7 @@ import org.junit.Test
 
 class RetiredKeysTest {
     @Test
-    fun `every achievement key a device still holds is wiped, whatever its type, and nothing else`() {
+    fun `only the Local Steam and Goldberg keys are wiped, the RetroAchievements and Steam accounts stay`() {
         val prefs = mutablePreferencesOf().apply {
             this[stringPreferencesKey("ra_username")] = "someone"
             this[stringPreferencesKey("ra_api_key")] = "secret"
@@ -25,8 +25,15 @@ class RetiredKeysTest {
         wipeRetiredKeys(prefs)
 
         assertEquals(
-            "only the live key should be left",
-            setOf("sgdb_api_key"),
+            setOf(
+                "ra_username",
+                "ra_api_key",
+                "steam_id64",
+                "steam_api_key",
+                "achievements_enabled",
+                "achievements_sync_last",
+                "sgdb_api_key",
+            ),
             prefs.asMap().keys.map { it.name }.toSet(),
         )
     }

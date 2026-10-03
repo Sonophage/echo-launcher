@@ -6,6 +6,9 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.psplauncher.core.data.model.StorefrontIdentity
+import com.psplauncher.core.data.database.dao.AccountAchievementDao
+import com.psplauncher.core.data.database.dao.AccountAchievementSetDao
+import com.psplauncher.core.data.database.dao.AchievementMatchNoteDao
 import com.psplauncher.core.data.database.dao.AppOverrideDao
 import com.psplauncher.core.data.database.dao.ArtworkImportReportDao
 import com.psplauncher.core.data.database.dao.ArtworkRecordDao
@@ -27,11 +30,16 @@ import com.psplauncher.core.data.database.dao.BookDao
 import com.psplauncher.core.data.database.dao.BookLibraryDao
 import com.psplauncher.core.data.database.dao.PhotoDao
 import com.psplauncher.core.data.database.dao.PhotoLibraryDao
+import com.psplauncher.core.data.database.dao.ProviderGameLinkDao
 import com.psplauncher.core.data.database.dao.ScanTombstoneDao
 import com.psplauncher.core.data.database.dao.SsMediaCacheDao
+import com.psplauncher.core.data.database.dao.SteamOwnedGamesDao
 import com.psplauncher.core.data.database.dao.VideoDao
 import com.psplauncher.core.data.database.dao.VideoLibraryDao
 import com.psplauncher.core.data.database.dao.VideoPlaylistDao
+import com.psplauncher.core.data.database.entity.AccountAchievementEntity
+import com.psplauncher.core.data.database.entity.AccountAchievementSetEntity
+import com.psplauncher.core.data.database.entity.AchievementMatchNoteEntity
 import com.psplauncher.core.data.database.entity.AppOverrideEntity
 import com.psplauncher.core.data.database.entity.ArtworkImportReportEntity
 import com.psplauncher.core.data.database.entity.ArtworkRecordEntity
@@ -55,14 +63,17 @@ import com.psplauncher.core.data.database.entity.BookEntity
 import com.psplauncher.core.data.database.entity.BookLibraryEntity
 import com.psplauncher.core.data.database.entity.PhotoEntity
 import com.psplauncher.core.data.database.entity.PhotoLibraryEntity
+import com.psplauncher.core.data.database.entity.ProviderGameLinkEntity
 import com.psplauncher.core.data.database.entity.ScanTombstoneEntity
 import com.psplauncher.core.data.database.entity.SsMediaCacheEntity
+import com.psplauncher.core.data.database.entity.SteamNoAchievementsEntity
+import com.psplauncher.core.data.database.entity.SteamOwnedGameEntity
 import com.psplauncher.core.data.database.entity.VideoEntity
 import com.psplauncher.core.data.database.entity.VideoLibraryEntity
 import com.psplauncher.core.data.database.entity.VideoPlaylistEntity
 import com.psplauncher.core.data.database.entity.VideoPlaylistItemEntity
 
-const val PFP_DATABASE_VERSION = 55
+const val PFP_DATABASE_VERSION = 56
 
 @Database(
     entities = [
@@ -95,6 +106,12 @@ const val PFP_DATABASE_VERSION = 55
         SsMediaCacheEntity::class,
         BookLibraryEntity::class,
         BookEntity::class,
+        AccountAchievementSetEntity::class,
+        AccountAchievementEntity::class,
+        ProviderGameLinkEntity::class,
+        AchievementMatchNoteEntity::class,
+        SteamOwnedGameEntity::class,
+        SteamNoAchievementsEntity::class,
     ],
     version = PFP_DATABASE_VERSION,
     exportSchema = true,
@@ -127,6 +144,11 @@ abstract class PFPDatabase : RoomDatabase() {
     abstract fun artworkRecordDao(): ArtworkRecordDao
     abstract fun artworkImportReportDao(): ArtworkImportReportDao
     abstract fun ssMediaCacheDao(): SsMediaCacheDao
+    abstract fun accountAchievementSetDao(): AccountAchievementSetDao
+    abstract fun accountAchievementDao(): AccountAchievementDao
+    abstract fun providerGameLinkDao(): ProviderGameLinkDao
+    abstract fun achievementMatchNoteDao(): AchievementMatchNoteDao
+    abstract fun steamOwnedGamesDao(): SteamOwnedGamesDao
 
     companion object {
         const val DATABASE_NAME = "pfp_database"
@@ -1235,6 +1257,48 @@ abstract class PFPDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_55_56 = object : Migration(55, 56) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `account_achievement_sets` (`provider` TEXT NOT NULL, " +
+                        "`provider_game_id` TEXT NOT NULL, `title` TEXT NOT NULL, `icon_url` TEXT, " +
+                        "`bronze_total` INTEGER NOT NULL, `silver_total` INTEGER NOT NULL, " +
+                        "`gold_total` INTEGER NOT NULL, `bronze_earned` INTEGER NOT NULL, " +
+                        "`silver_earned` INTEGER NOT NULL, `gold_earned` INTEGER NOT NULL, " +
+                        "`mastered` INTEGER NOT NULL, `last_synced_at` INTEGER, " +
+                        "PRIMARY KEY(`provider`, `provider_game_id`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `account_achievements` (`provider` TEXT NOT NULL, " +
+                        "`provider_game_id` TEXT NOT NULL, `provider_achievement_id` TEXT NOT NULL, " +
+                        "`title` TEXT NOT NULL, `description` TEXT NOT NULL, `tier` TEXT NOT NULL, " +
+                        "`global_rarity` REAL NOT NULL, `icon_url` TEXT, `is_hidden` INTEGER NOT NULL, " +
+                        "`is_earned` INTEGER NOT NULL, `earned_at` INTEGER, `points` INTEGER, " +
+                        "PRIMARY KEY(`provider`, `provider_game_id`, `provider_achievement_id`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `provider_game_links` (`game_id` INTEGER NOT NULL, " +
+                        "`provider` TEXT NOT NULL, `provider_game_id` TEXT NOT NULL, `source` TEXT NOT NULL, " +
+                        "`resolved_at` INTEGER NOT NULL, `ownership` TEXT, PRIMARY KEY(`game_id`, `provider`), " +
+                        "FOREIGN KEY(`game_id`) REFERENCES `games`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `achievement_match_notes` (`game_id` INTEGER NOT NULL, " +
+                        "`reason` TEXT NOT NULL, `checked_at` INTEGER NOT NULL, PRIMARY KEY(`game_id`), " +
+                        "FOREIGN KEY(`game_id`) REFERENCES `games`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `steam_owned_games` (`appid` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, `playtime_forever_minutes` INTEGER NOT NULL, " +
+                        "`synced_playtime_minutes` INTEGER, `fetched_at` INTEGER NOT NULL, PRIMARY KEY(`appid`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `steam_no_achievements` (`appid` TEXT NOT NULL, " +
+                        "`checked_at` INTEGER NOT NULL, PRIMARY KEY(`appid`))"
+                )
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -1290,6 +1354,7 @@ abstract class PFPDatabase : RoomDatabase() {
             MIGRATION_52_53,
             MIGRATION_53_54,
             MIGRATION_54_55,
+            MIGRATION_55_56,
         )
     }
 }

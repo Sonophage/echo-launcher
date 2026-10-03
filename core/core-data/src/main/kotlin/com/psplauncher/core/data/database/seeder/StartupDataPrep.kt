@@ -134,14 +134,8 @@ class StartupDataPrep @Inject constructor(
 }
 
 internal val RETIRED_ACHIEVEMENT_KEYS = setOf(
-    "achievements_enabled",
-    "achievements_sync_last",
     "goldberg_installer_enabled",
     "local_steam_tracking_enabled",
-    "ra_api_key",
-    "ra_username",
-    "steam_api_key",
-    "steam_id64",
 )
 
 internal fun wipeRetiredKeys(prefs: androidx.datastore.preferences.core.MutablePreferences) {

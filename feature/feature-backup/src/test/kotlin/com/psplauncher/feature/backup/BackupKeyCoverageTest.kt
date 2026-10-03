@@ -108,6 +108,17 @@ class BackupKeyCoverageTest {
     }
 
     @Test
+    fun `the RetroAchievements and Steam accounts are backed up, their API keys as encrypted credentials`() {
+        assertCovered("ra_username", "ra_api_key", "steam_id64", "steam_api_key", "achievements_enabled")
+        listOf("ra_api_key", "steam_api_key").forEach { key ->
+            assertTrue(
+                "$key is sealed with KeystoreSecretCipher; a restore must drop it when this device cannot decrypt it",
+                key in BackupManager.ENCRYPTED_CREDENTIAL_KEYS,
+            )
+        }
+    }
+
+    @Test
     fun `keys excluded on purpose stay excluded`() {
         val migrationMarkers = listOf(
             "debug_seeded_v1", "themes_seeded_v1", "library_consolidated_v22", "data_prep_version",
@@ -115,7 +126,7 @@ class BackupKeyCoverageTest {
 
         val danglingStamp = listOf("theme_icons_stamp")
 
-        val sessionState = listOf("session_blob")
+        val sessionState = listOf("achievements_sync_last", "session_blob")
 
         val derivedCaches = listOf("display_wallpaper_luma", "wallpaper_accent")
 

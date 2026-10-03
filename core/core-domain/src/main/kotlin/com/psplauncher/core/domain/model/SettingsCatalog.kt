@@ -10,7 +10,7 @@ enum class SettingsSectionId(
     OVERVIEW("settings_section_overview", "Overview", "Library, artwork & build"),
     EMULATORS("settings_section_emulators", "Emulators", "Library Manager, emulator profiles, RetroArch, artwork & hidden games"),
     LOOK_AND_FEEL("settings_section_look_and_feel", "Look & Feel", "Theme, wallpaper, layout, sound, controls & touch"),
-    SYSTEM("settings_section_system", "System", "Permissions, about, logs, backup, Discord & credits"),
+    SYSTEM("settings_section_system", "System", "Permissions, accounts, Discord, about, logs, backup & credits"),
     SETUP("settings_section_setup", "Setup", "The guided setup wizard"),
 }
 
@@ -46,6 +46,7 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_performance", "Performance", "Thermal, battery saver & rescanning", SettingsSectionId.LOOK_AND_FEEL),
 
     SettingsEntry("settings_permissions", "Permissions", "What PSPLauncher can reach, and how to grant it", SettingsSectionId.SYSTEM),
+    SettingsEntry("settings_accounts", "Accounts", "RetroAchievements & Steam", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_about", "About", "PSPLauncher", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_logs", "Logs", "Debug & error log viewer", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_backup", "Backup & Restore", "Export & import", SettingsSectionId.SYSTEM),

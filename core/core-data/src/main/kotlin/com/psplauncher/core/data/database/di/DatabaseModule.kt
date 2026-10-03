@@ -3,6 +3,9 @@ package com.psplauncher.core.data.database.di
 import android.content.Context
 import androidx.room.Room
 import com.psplauncher.core.data.database.PFPDatabase
+import com.psplauncher.core.data.database.dao.AccountAchievementDao
+import com.psplauncher.core.data.database.dao.AccountAchievementSetDao
+import com.psplauncher.core.data.database.dao.AchievementMatchNoteDao
 import com.psplauncher.core.data.database.dao.AppOverrideDao
 import com.psplauncher.core.data.database.dao.ArtworkImportReportDao
 import com.psplauncher.core.data.database.dao.ArtworkRecordDao
@@ -24,7 +27,9 @@ import com.psplauncher.core.data.database.dao.BookDao
 import com.psplauncher.core.data.database.dao.BookLibraryDao
 import com.psplauncher.core.data.database.dao.PhotoDao
 import com.psplauncher.core.data.database.dao.PhotoLibraryDao
+import com.psplauncher.core.data.database.dao.ProviderGameLinkDao
 import com.psplauncher.core.data.database.dao.ScanTombstoneDao
+import com.psplauncher.core.data.database.dao.SteamOwnedGamesDao
 import com.psplauncher.core.data.database.dao.VideoDao
 import com.psplauncher.core.data.database.dao.VideoLibraryDao
 import com.psplauncher.core.data.database.dao.VideoPlaylistDao
@@ -87,6 +92,11 @@ object DatabaseModule {
     @Provides fun provideBackupDao(db: PFPDatabase): BackupDao = db.backupDao()
     @Provides fun provideArtworkRecordDao(db: PFPDatabase): ArtworkRecordDao = db.artworkRecordDao()
     @Provides fun provideArtworkImportReportDao(db: PFPDatabase): ArtworkImportReportDao = db.artworkImportReportDao()
+    @Provides fun provideAccountAchievementSetDao(db: PFPDatabase): AccountAchievementSetDao = db.accountAchievementSetDao()
+    @Provides fun provideAccountAchievementDao(db: PFPDatabase): AccountAchievementDao = db.accountAchievementDao()
+    @Provides fun provideProviderGameLinkDao(db: PFPDatabase): ProviderGameLinkDao = db.providerGameLinkDao()
+    @Provides fun provideAchievementMatchNoteDao(db: PFPDatabase): AchievementMatchNoteDao = db.achievementMatchNoteDao()
+    @Provides fun provideSteamOwnedGamesDao(db: PFPDatabase): SteamOwnedGamesDao = db.steamOwnedGamesDao()
 }
 
 @Module
