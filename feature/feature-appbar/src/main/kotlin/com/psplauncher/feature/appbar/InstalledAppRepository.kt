@@ -39,6 +39,10 @@ data class InstalledApp(
     val art: String? = null,
 
     val playTimeMillis: Long = 0L,
+
+    val platformId: String? = null,
+
+    val platformName: String? = null,
 )
 
 @Singleton

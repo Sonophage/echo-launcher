@@ -5300,7 +5300,8 @@ class XMBViewModel @Inject constructor(
                     return
                 }
 
-                if (state.onLastPlayedHome && !state.recentRailVisible) {
+                if (recentRailStep(action, state.onLastPlayedHome, state.recentRailVisible) == RailStep.Open) {
+                    gamepadInputHandler.cancelRepeat()
                     menuSound.play(MenuSound.SYSTEM_BROWSE)
                     _uiState.update { it.copy(recentRailVisible = true) }
                     return
@@ -5313,8 +5314,11 @@ class XMBViewModel @Inject constructor(
             GamepadAction.NAVIGATE_RIGHT -> {
                 if (state.activePillIndex() != null && pillPressHandled(action, state)) return
 
-                if (state.onLastPlayedHome && state.recentRailVisible) {
+                if (recentRailStep(action, state.onLastPlayedHome, state.recentRailVisible) == RailStep.Close) {
+                    gamepadInputHandler.cancelRepeat()
+                    menuSound.play(MenuSound.SYSTEM_BROWSE)
                     _uiState.update { it.copy(recentRailVisible = false) }
+                    return
                 }
 
                 if (state.pillRowVisible && pillPressHandled(action, state)) return
@@ -5335,7 +5339,7 @@ class XMBViewModel @Inject constructor(
                     return
                 }
 
-                if (state.onLastPlayedHome && state.recentRailVisible) {
+                if (recentRailStep(action, state.onLastPlayedHome, state.recentRailVisible) == RailStep.Close) {
                     _uiState.update { it.copy(recentRailVisible = false) }
                     return
                 }

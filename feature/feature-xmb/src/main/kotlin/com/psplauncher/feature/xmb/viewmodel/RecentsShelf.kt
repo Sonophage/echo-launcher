@@ -1,5 +1,7 @@
 package com.psplauncher.feature.xmb.viewmodel
 
+import com.psplauncher.core.domain.model.GamepadAction
+
 enum class RecentFilter(val label: String) {
     ALL("All"),
     GAMES("Games"),
@@ -21,6 +23,15 @@ enum class RecentFilter(val label: String) {
         val here = cycle.indexOf(this)
         return if (here < 0) ALL else cycle[(here + delta).mod(cycle.size)]
     }
+}
+
+internal enum class RailStep { Open, Close, Pass }
+
+internal fun recentRailStep(action: GamepadAction, onLastPlayedHome: Boolean, railVisible: Boolean): RailStep = when {
+    !onLastPlayedHome -> RailStep.Pass
+    action == GamepadAction.NAVIGATE_LEFT && !railVisible -> RailStep.Open
+    (action == GamepadAction.NAVIGATE_RIGHT || action == GamepadAction.BACK) && railVisible -> RailStep.Close
+    else -> RailStep.Pass
 }
 
 internal enum class RecentLaunch { GAME, STORED_INTENT, SHORTCUT, APP, VIDEO, BOOK, TRACK, ALBUM }
