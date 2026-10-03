@@ -97,4 +97,10 @@ class XmbNavGesturesTest {
         assertEquals(13f, glideStart(20f, 10, maxLead = 3), 0f)
         assertEquals("a short move keeps where the column already was", 9.4f, glideStart(9.4f, 10, maxLead = 3), 0f)
     }
+
+    @Test fun `a column starts at the focused row, so nothing above it is drawn`() {
+        assertEquals(5, columnRows(5, 20, rowsBelow = 4).first)
+        assertEquals("the end still clamps to the list", 19, columnRows(17, 20, rowsBelow = 4).last)
+        assertTrue("an empty list draws no rows", columnRows(0, 0, rowsBelow = 4).isEmpty())
+    }
 }

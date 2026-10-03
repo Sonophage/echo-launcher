@@ -59,7 +59,6 @@ fun PfpHintBar(
     modifier: Modifier = Modifier,
     onAction: ((GamepadAction) -> Unit)? = null,
     primary: HintAction? = null,
-    position: String? = null,
 
     centre: (@Composable () -> Unit)? = null,
 ) {
@@ -75,10 +74,9 @@ fun PfpHintBar(
             .height(BarHeight)
 
             .background(Brush.verticalGradient(0f to Color.Transparent, 1f to BarScrim))
-            .padding(horizontal = u.dp(80)),
+            .padding(start = chromeGutter(), end = if (primary == null) chromeGutter(end = true) else 0.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(28))) {
-            position?.let { Text(it, color = Color.White.copy(alpha = 0.55f), style = hintText(u), maxLines = 1) }
             row.forEach { Hint(it, u, pad, onAction) }
         }
 
@@ -127,7 +125,7 @@ private fun ActionTab(
     val accent = LocalPFPColors.current.accentColor
     val edge = lerp(accent, Color.White, 0.3f)
     val radius = u.dp(20)
-    val shape = RoundedCornerShape(topStart = radius, topEnd = radius)
+    val shape = RoundedCornerShape(topStart = radius)
     val style = LocalControllerPromptStyle.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -155,15 +153,13 @@ private fun ActionTab(
                     moveTo(w / 2, size.height)
                     lineTo(w / 2, r)
                     arcTo(Rect(w / 2, w / 2, 2 * r - w / 2, 2 * r - w / 2), 180f, 90f, false)
-                    lineTo(size.width - r, w / 2)
-                    arcTo(Rect(size.width - 2 * r + w / 2, w / 2, size.width - w / 2, 2 * r - w / 2), 270f, 90f, false)
-                    lineTo(size.width - w / 2, size.height)
+                    lineTo(size.width, w / 2)
                 }
                 drawPath(path, edge.copy(alpha = 0.35f), style = Stroke(width = w * 4))
                 drawPath(path, edge, style = Stroke(width = w))
             }
             .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
-            .padding(start = u.dp(20), end = u.dp(20), top = u.dp(6), bottom = u.dp(14)),
+            .padding(start = u.dp(20), end = maxOf(u.dp(20), chromeGutter(end = true)), top = u.dp(6), bottom = u.dp(14)),
     ) {
         if (pad) {
             val size = glyphFor(u, 24, 14)

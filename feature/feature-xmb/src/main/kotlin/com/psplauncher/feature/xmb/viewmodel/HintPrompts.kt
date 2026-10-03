@@ -14,11 +14,7 @@ data class XmbPrompts(
     val primary: XmbPrompt?,
     val back: XmbPrompt,
     val right: List<XmbPrompt>,
-    val position: String? = null,
 )
-
-internal fun positionLabel(index: Int, count: Int): String? =
-    if (index in 0 until count) "${index + 1} of $count" else null
 
 internal fun primaryVerbFor(item: XMBItem?): String? = when {
     item == null || item.type == XMBItemType.EMPTY -> null
@@ -75,9 +71,6 @@ fun promptsFor(state: XMBUiState): XmbPrompts {
         primary = primaryVerbFor(focused)?.takeIf { !state.onLastPlayedHome }?.let {
             XmbPrompt(GamepadAction.SELECT, it, focused?.title, detail = focused?.subtitle)
         },
-        position = positionLabel(state.selectedItemIndex, state.currentItems.size)
-            .takeIf { focused != null && focused.type != XMBItemType.EMPTY },
-
         back = XmbPrompt(GamepadAction.BACK, if (state.isInSubItem || (state.onLastPlayedHome && state.recentRailVisible)) "Back" else "Apps"),
         right = right,
     )
