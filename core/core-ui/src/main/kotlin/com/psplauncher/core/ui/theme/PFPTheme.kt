@@ -6,7 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.psplauncher.themekit.ColorCascade
@@ -46,7 +46,7 @@ fun PFPColors.withArtTint(art: Color): PFPColors {
     )
 }
 
-val LocalPFPColors = staticCompositionLocalOf {
+val LocalPFPColors = compositionLocalOf {
     DefaultPFPColors
 }
 

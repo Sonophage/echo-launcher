@@ -151,6 +151,8 @@ fun XmbPspStatusStrip(
 
     compact: Boolean = false,
 
+    ambient: Boolean = true,
+
     modifier: Modifier = Modifier,
 
     centre: (@Composable BoxScope.(DesignUnits) -> Unit)? = null,
@@ -337,6 +339,7 @@ fun XmbPspStatusStrip(
         BatteryLine(
             level = batteryLevel,
             charging = isCharging,
+            glint = ambient,
             modifier = Modifier.align(Alignment.TopCenter),
         )
     }
@@ -533,10 +536,10 @@ internal fun StripSections(
 internal fun sectionLabelShown(active: Boolean, hasIcon: Boolean): Boolean = active || !hasIcon
 
 @Composable
-private fun BatteryLine(level: Int, charging: Boolean, modifier: Modifier = Modifier) {
+private fun BatteryLine(level: Int, charging: Boolean, glint: Boolean, modifier: Modifier = Modifier) {
     val fill = (level / 100f).coerceIn(0f, 1f)
-    val travel by androidx.compose.runtime.produceState(0f, charging) {
-        if (!charging) return@produceState
+    val travel by androidx.compose.runtime.produceState(0f, charging, glint) {
+        if (!charging || !glint) return@produceState
         while (true) {
             androidx.compose.animation.core.withInfiniteAnimationFrameMillis { nowMs ->
                 value = (com.psplauncher.core.ui.wave.steppedFrameMs(nowMs) % GLINT_PERIOD_MS) / GLINT_PERIOD_MS.toFloat()

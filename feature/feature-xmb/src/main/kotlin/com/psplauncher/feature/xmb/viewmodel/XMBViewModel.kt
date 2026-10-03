@@ -839,7 +839,7 @@ data class XMBUiState(
         get() = chromeOverlay || fullscreenOverlay
 
     val waveShown: Boolean
-        get() = !chromeOverlay && !notificationsOpen && !showBootSequence &&
+        get() = !chromeOverlay && !notificationsOpen && !showBootSequence && !onLastPlayedHome &&
             artworkStudioGameId == null && manualViewer == null && metadataPreview == null &&
             activeVideoId == null && activePhotoViewer == null && musicBrowser == null &&
             musicTrackPicker == null && !musicPlayerVisible

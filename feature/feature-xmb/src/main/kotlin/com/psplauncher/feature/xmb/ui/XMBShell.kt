@@ -1078,6 +1078,7 @@ fun XMBShell(
                 onSectionTapped = onBarCategory,
 
                 compact = !xmbContext,
+                ambient = uiState.waveShown,
 
                 centre = if (notificationsOpen) {
                     { u ->
