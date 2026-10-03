@@ -77,7 +77,7 @@ class CanonicalCategoryBarTest {
         assertTrue(BuiltInCategory.SETTINGS !in bar.map { it.id })
         assertTrue(
             "with Settings hidden, the panel must still reach the category manager or nothing hidden can come back",
-            PANEL_SETTINGS.any { it.id == "settings_categories" },
+            PANEL_SETTINGS.any { section -> com.psplauncher.core.domain.model.settingsEntriesIn(section).any { it.id == "settings_categories" } },
         )
     }
 

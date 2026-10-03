@@ -1248,6 +1248,12 @@ internal fun XMBUiState.withSettingsClosed(): XMBUiState = copy(
     settingsFromPanel = false,
 )
 
+internal fun XMBUiState.withSettingsOpen(screenId: String): XMBUiState = copy(
+    activeSettingsScreen = screenId,
+    gameInfo = null,
+    profile = null,
+)
+
 fun XMBUiState.withNamePromptText(text: String): XMBUiState = when {
     renameAppTarget != null      -> copy(renameAppText = text)
     collectionNameDialog != null -> copy(collectionNameDialog = collectionNameDialog.copy(text = text))
@@ -1413,13 +1419,13 @@ class XMBViewModel @Inject constructor(
                 viewModelScope.launch {
                     val platformId = gameId?.let { gameRepository.getById(it) }?.platformId
                     if (platformId != null) openDefaultEmulatorMenu(platformId)
-                    else _uiState.update { it.copy(activeSettingsScreen = "settings_library") }
+                    else _uiState.update { it.withSettingsOpen("settings_library") }
                 }
             }
 
             LaunchRecoveryAction.OPEN_LIBRARY -> {
                 launchDispatcher.dismissRecovery()
-                _uiState.update { it.copy(activeSettingsScreen = "settings_library") }
+                _uiState.update { it.withSettingsOpen("settings_library") }
             }
             LaunchRecoveryAction.COPY_DIAGNOSTIC -> {
                 val request = _uiState.value.launchRecovery ?: return
@@ -1443,7 +1449,7 @@ class XMBViewModel @Inject constructor(
     }
 
     fun confirmWindowsSetupPrompt() = _uiState.update {
-        it.copy(showWindowsSetupPrompt = false, activeSettingsScreen = "settings_library")
+        it.withSettingsOpen("settings_library").copy(showWindowsSetupPrompt = false)
     }
 
     fun dismissWindowsSetupPrompt() = _uiState.update { it.copy(showWindowsSetupPrompt = false) }
@@ -5586,7 +5592,7 @@ class XMBViewModel @Inject constructor(
         menuSound.play(MenuSound.SELECT)
         profileJob?.cancel()
         _uiState.update {
-            it.copy(profile = null, gameInfo = null, activeSettingsScreen = screenId, settingsReturnTo = null, settingsFromPanel = false)
+            it.withSettingsOpen(screenId).copy(settingsReturnTo = null, settingsFromPanel = false)
         }
     }
 
@@ -6073,8 +6079,8 @@ class XMBViewModel @Inject constructor(
             menu.mediaRootKind != null -> handleMediaFoldersAction(menu.mediaRootKind, itemId)
             menu.musicFolderId != null -> handleMusicFolderAction(menu.musicFolderId, itemId)
             menu.isAllGames -> when (itemId) {
-                "library_manager" -> _uiState.update { it.copy(activeSettingsScreen = "settings_library") }
-                "import_pc_games" -> _uiState.update { it.copy(activeSettingsScreen = "settings_import_pc") }
+                "library_manager" -> _uiState.update { it.withSettingsOpen("settings_library") }
+                "import_pc_games" -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
             }
             menu.platformId != null -> if (itemId.startsWith(PLATFORM_EMU_PREFIX)) {
                 setPlatformEmulator(menu.platformId, itemId.removePrefix(PLATFORM_EMU_PREFIX))
@@ -6087,13 +6093,13 @@ class XMBViewModel @Inject constructor(
                 "card_move_up"     -> moveCard(menu.platformId, up = true)
                 "card_move_down"   -> moveCard(menu.platformId, up = false)
                 "find_games"       -> openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
-                "import_pc_games"  -> _uiState.update { it.copy(activeSettingsScreen = "settings_import_pc") }
+                "import_pc_games"  -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
                 "scan_roms"        -> scanCard(menu.platformId)
                 "scrape_missing_artwork" -> scrapeMissingArtworkForPlatform(menu.platformId)
                 "update_metadata"        -> updatePlatformMetadata(menu.platformId)
                 "pin"              -> setCardPinned(menu.platformId, true)
                 "unpin"            -> setCardPinned(menu.platformId, false)
-                "library_manager"  -> _uiState.update { it.copy(activeSettingsScreen = "settings_library") }
+                "library_manager"  -> _uiState.update { it.withSettingsOpen("settings_library") }
                 "hide"             -> hideCard(menu.platformId)
                 "remove"           -> removeCard(menu.platformId)
             }
@@ -6644,23 +6650,15 @@ class XMBViewModel @Inject constructor(
     }
 
     private fun openPanelSetting(index: Int) {
-        val entry = PANEL_SETTINGS.getOrNull(index) ?: return
+        val screenId = panelSettingScreen(index) ?: return
         menuSound.play(MenuSound.SELECT)
         _uiState.update {
-            it.copy(
+            it.withSettingsOpen(screenId).copy(
                 notificationsOpen = false,
-                activeSettingsScreen = entry.id,
                 settingsReturnTo = null,
                 settingsFromPanel = true,
             )
         }
-    }
-
-    fun onSettingsPanelTabTapped(tab: PanelTab) {
-        if (_uiState.value.activeSettingsScreen in WIZARD_SCREEN_IDS) markInitialSetupSeen()
-        menuSound.play(MenuSound.SCROLL)
-        returnToPanelSettings()
-        _uiState.update { it.copy(panelTab = tab) }
     }
 
     private fun returnToPanelSettings() {
@@ -7460,12 +7458,12 @@ class XMBViewModel @Inject constructor(
 
         when (item?.id) {
             NO_CONSOLES_ITEM_ID -> {
-                _uiState.update { it.copy(activeSettingsScreen = "settings_library") }
+                _uiState.update { it.withSettingsOpen("settings_library") }
                 return
             }
             SETUP_GAP_ITEM_ID -> {
                 _uiState.update {
-                    it.copy(activeSettingsScreen = setupState.firstGap.repairScreenId)
+                    it.withSettingsOpen(setupState.firstGap.repairScreenId)
                 }
                 return
             }
@@ -7574,7 +7572,7 @@ class XMBViewModel @Inject constructor(
         when (item?.id) {
             SETUP_ITEM_ID -> {
                 Timber.d("Opening settings screen: settings_library (via setup prompt)")
-                _uiState.update { it.copy(activeSettingsScreen = "settings_library") }
+                _uiState.update { it.withSettingsOpen("settings_library") }
             }
 
             ANDROID_SETTINGS_ITEM_ID -> {
@@ -7588,13 +7586,13 @@ class XMBViewModel @Inject constructor(
             OPEN_SETTINGS_ITEM_ID -> {
                 val root = com.psplauncher.core.domain.model.SETTINGS_ROOT_SCREEN_ID
                 Timber.d("Opening settings: $root")
-                _uiState.update { it.copy(activeSettingsScreen = root) }
+                _uiState.update { it.withSettingsOpen(root) }
             }
             else -> when (category?.id) {
                 BuiltInCategory.SETTINGS -> {
                     item?.id?.let { id ->
                         Timber.d("Opening settings screen: $id")
-                        _uiState.update { it.copy(activeSettingsScreen = id) }
+                        _uiState.update { it.withSettingsOpen(id) }
                     }
                 }
                 BuiltInCategory.ANDROID -> {
@@ -8076,8 +8074,7 @@ class XMBViewModel @Inject constructor(
         }
         Timber.d("Settings rail -> %s", screenId)
         _uiState.update {
-            it.copy(
-                activeSettingsScreen = screenId,
+            it.withSettingsOpen(screenId).copy(
                 settingsReturnTo = nextReturnAddress(it.activeSettingsScreen, screenId, it.settingsReturnTo),
             )
         }
@@ -8090,8 +8087,7 @@ class XMBViewModel @Inject constructor(
         }
         _uiState.value.settingsReturnTo?.let { returnTo ->
             _uiState.update {
-                it.copy(
-                    activeSettingsScreen = returnTo,
+                it.withSettingsOpen(returnTo).copy(
                     settingsReturnTo = null,
                     pendingSettingsAction = null,
                 )
@@ -8104,8 +8100,7 @@ class XMBViewModel @Inject constructor(
             com.psplauncher.core.domain.model.settingsEntryFor(current) != null
         ) {
             _uiState.update {
-                it.copy(
-                    activeSettingsScreen = com.psplauncher.core.domain.model.SETTINGS_ROOT_SCREEN_ID,
+                it.withSettingsOpen(com.psplauncher.core.domain.model.SETTINGS_ROOT_SCREEN_ID).copy(
                     pendingSettingsAction = null,
                 )
             }
@@ -8662,7 +8657,7 @@ class XMBViewModel @Inject constructor(
                 InitialSetupDecision.OPEN_WIZARD -> {
                     context.pfpDataStore.edit { it[KEY_INITIAL_SETUP_STARTED] = true }
                     Timber.i("StartupSeq: fresh install, opening first-run wizard")
-                    _uiState.update { it.copy(activeSettingsScreen = INITIAL_SETUP_FIRST_RUN_SCREEN_ID) }
+                    _uiState.update { it.withSettingsOpen(INITIAL_SETUP_FIRST_RUN_SCREEN_ID) }
                 }
             }
 
@@ -8696,7 +8691,7 @@ class XMBViewModel @Inject constructor(
 
     fun openLibraryManager() {
         markInitialSetupSeen()
-        _uiState.update { it.copy(activeSettingsScreen = "settings_library") }
+        _uiState.update { it.withSettingsOpen("settings_library") }
     }
 
     fun goToLibrary() {

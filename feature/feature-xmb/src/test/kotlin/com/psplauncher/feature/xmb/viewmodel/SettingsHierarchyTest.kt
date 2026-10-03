@@ -120,16 +120,13 @@ class SettingsHierarchyTest {
             settingsEntriesIn(SettingsSectionId.LOOK_AND_FEEL).map { it.id },
         )
         assertEquals(
-
-            listOf(
-                "settings_permissions",
-                "settings_accounts",
-                "settings_about",
-                "settings_logs",
-                "settings_backup",
-                "settings_discord",
-                "settings_credits",
-            ),
+            "Accounts holds what signs in or grants access",
+            listOf("settings_permissions", "settings_accounts", "settings_discord"),
+            settingsEntriesIn(SettingsSectionId.ACCOUNTS).map { it.id },
+        )
+        assertEquals(
+            "System holds the launcher's own housekeeping",
+            listOf("settings_about", "settings_logs", "settings_backup", "settings_credits"),
             settingsEntriesIn(SettingsSectionId.SYSTEM).map { it.id },
         )
         assertEquals(

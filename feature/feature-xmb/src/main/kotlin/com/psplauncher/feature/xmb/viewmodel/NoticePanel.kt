@@ -21,9 +21,12 @@ val PANEL_QUICK_SETTINGS = listOf(QuickSetting.PROFILE, QuickSetting.WAVE, Quick
 
 const val LIBRARY_GRID_COLUMNS = 3
 
-const val SETTINGS_GRID_COLUMNS = 4
+const val SETTINGS_GRID_COLUMNS = 3
 
-val PANEL_SETTINGS: List<com.psplauncher.core.domain.model.SettingsEntry> = com.psplauncher.core.domain.model.SETTINGS_CATALOG
+val PANEL_SETTINGS: List<com.psplauncher.core.domain.model.SettingsSectionId> = com.psplauncher.core.domain.model.SettingsSectionId.entries
+
+fun panelSettingScreen(index: Int): String? =
+    PANEL_SETTINGS.getOrNull(index)?.let { com.psplauncher.core.domain.model.settingsEntriesIn(it).firstOrNull()?.id }
 
 enum class PanelTab(val label: String) {
     NOTIFICATIONS("Notifications"),
