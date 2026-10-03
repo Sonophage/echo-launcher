@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -34,10 +33,11 @@ internal fun AppDrawerCategoryTabs(
     filterCounts: Map<AppFilter, Int>,
     onFilterSelected: (AppFilter) -> Unit,
     u: DesignUnits,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = u.dp(8)),
-        horizontalArrangement = Arrangement.spacedBy(u.dp(30), Alignment.CenterHorizontally),
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(30)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val pad = LocalPadPrompts.current

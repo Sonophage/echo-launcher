@@ -5,6 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,9 +52,12 @@ import com.psplauncher.feature.appbar.appdrawer.AppDrawerCategoryTabs
 import com.psplauncher.feature.appbar.appdrawer.AppWall
 import com.psplauncher.feature.appbar.appdrawer.UninstallConfirmDialog
 import com.psplauncher.feature.appbar.appdrawer.WallBackdrop
-import com.psplauncher.feature.appbar.appdrawer.WallBand
+import com.psplauncher.feature.appbar.appdrawer.WallHero
 import com.psplauncher.feature.appbar.appdrawer.WallHeading
 import com.psplauncher.feature.appbar.appdrawer.WallHints
+import com.psplauncher.feature.appbar.appdrawer.WallInfo
+import com.psplauncher.feature.appbar.appdrawer.WallShade
+import com.psplauncher.feature.appbar.appdrawer.actionLabel
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -215,61 +221,74 @@ internal fun AppDrawerContent(
         val focused = state.visibleApps.getOrNull(state.selectedIndex)
         val focusedIcon = rememberAppIcon(focused?.packageName?.takeIf { focused.gameId == null })
         WallBackdrop(focused, focusedIcon, u)
+        WallHero(focused, focusedIcon, u, Modifier.fillMaxSize().padding(start = u.dp(660)))
+        WallShade()
 
-        Column(modifier = Modifier.fillMaxSize().padding(top = StatusStripHeight)) {
+        Column(modifier = Modifier.fillMaxSize()) {
             AppDrawerCategoryTabs(
                 activeFilter = state.activeFilter,
                 filterCounts = state.filterCounts,
                 onFilterSelected = onFilterSelected,
                 u = u,
+                modifier = Modifier.padding(start = u.dp(74), top = StatusStripHeight),
             )
 
-            Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = u.dp(80))) {
-                val tabMessage = @Composable {
-                    EmptyDrawerMessage(
-                        filter = state.activeFilter,
-                        hasUsageAccess = state.hasUsageAccess,
-                        onGrantUsageAccess = onGrantUsageAccess,
-                        u = u,
-                    )
-                }
-                when {
-                    state.isLoading -> {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.align(Alignment.Center),
+            Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Box(modifier = Modifier.padding(start = u.dp(80), top = u.dp(14)).width(u.dp(560)).fillMaxHeight()) {
+                    val tabMessage = @Composable {
+                        EmptyDrawerMessage(
+                            filter = state.activeFilter,
+                            hasUsageAccess = state.hasUsageAccess,
+                            onGrantUsageAccess = onGrantUsageAccess,
+                            u = u,
                         )
                     }
+                    when {
+                        state.isLoading -> {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.align(Alignment.Center),
+                            )
+                        }
 
-                    state.visibleApps.isEmpty() -> Box(Modifier.align(Alignment.Center)) { tabMessage() }
+                        state.visibleApps.isEmpty() -> Box(Modifier.align(Alignment.Center)) { tabMessage() }
 
-                    else -> {
-                        AppWall(
-                            apps = state.visibleApps,
-                            sectionCount = state.sectionApps.size,
-                            filter = state.activeFilter,
-                            selectedIndex = state.selectedIndex,
-                            usingTouch = state.usingTouch,
-                            u = u,
-                            onAppTapped = onAppTapped,
-                            onAppLaunched = onAppLaunched,
-                            onAppMenu = onAppMenu,
-                            restHeading = {
-                                if (state.sectionApps.isEmpty()) tabMessage() else WallHeading(EVERYTHING_ELSE, u)
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                        else -> {
+                            AppWall(
+                                apps = state.visibleApps,
+                                sectionCount = state.sectionApps.size,
+                                filter = state.activeFilter,
+                                selectedIndex = state.selectedIndex,
+                                usingTouch = state.usingTouch,
+                                u = u,
+                                onAppTapped = onAppTapped,
+                                onAppLaunched = onAppLaunched,
+                                onAppMenu = onAppMenu,
+                                restHeading = {
+                                    if (state.sectionApps.isEmpty()) tabMessage() else WallHeading(EVERYTHING_ELSE, u)
+                                },
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxHeight()
+                        .padding(start = u.dp(80), end = u.dp(80), bottom = u.dp(32)),
+                ) {
+                    focused?.let { app ->
+                        WallInfo(app, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
+                            modifier = Modifier.align(Alignment.BottomStart))
                     }
                 }
             }
 
-            Column(Modifier.fillMaxWidth().padding(start = u.dp(80), end = u.dp(80), bottom = u.dp(22))) {
-                focused?.let { app ->
-                    WallBand(app, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) })
-                }
-                Spacer(Modifier.height(u.dp(18)))
+            Column(Modifier.fillMaxWidth().padding(horizontal = u.dp(80))) {
+                Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
                 WallHints(
                     u = u,
+                    action = focused?.let(::actionLabel),
+                    onAction = { focused?.let(onBandLaunch) },
                     onNextTab = {
                         val filters = AppFilter.entries
                         onFilterSelected(filters[(filters.indexOf(state.activeFilter) + 1) % filters.size])
