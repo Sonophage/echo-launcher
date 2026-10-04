@@ -15,7 +15,4 @@ internal fun systemChips(games: List<InstalledApp>): List<SystemChip> =
 internal fun List<InstalledApp>.ofSystem(id: String?): List<InstalledApp> =
     if (id == null) this else filter { it.systemId == id }
 
-internal fun List<InstalledApp>.wallSections(tab: AppFilter, system: String?): Pair<List<InstalledApp>, List<InstalledApp>> =
-    filter(tab::matches).ofSystem(system) to filterNot(tab::matches)
-
 private const val ANDROID_LABEL = "Android"

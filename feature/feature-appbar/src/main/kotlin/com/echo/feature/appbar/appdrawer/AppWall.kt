@@ -116,7 +116,6 @@ internal fun WallShade() {
 @Composable
 internal fun AppWall(
     apps: List<InstalledApp>,
-    sectionCount: Int,
     filter: AppFilter,
     selectedIndex: Int,
     usingTouch: Boolean,
@@ -124,21 +123,19 @@ internal fun AppWall(
     onAppTapped: (Int) -> Unit,
     onAppLaunched: (String) -> Unit,
     onAppMenu: (InstalledApp) -> Unit,
-    restHeading: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cells = remember(sectionCount, apps.size) { wallLayout(sectionCount, apps.size) }
+    val cells = remember(apps.size) { wallLayout(apps.size) }
     val lines = remember(cells) {
-        cells.indices.groupBy { i -> if (sectionCount > 0 && cells[i].row < 2) 0 else cells[i].row }.values.toList()
+        cells.indices.groupBy { i -> if (cells[i].row < 2) 0 else cells[i].row }.values.toList()
     }
-    val restLine = if (sectionCount < apps.size) lines.indexOfFirst { it.first() >= sectionCount } else -1
     val listState = rememberLazyListState()
 
     LaunchedEffect(selectedIndex, usingTouch, lines) {
         if (usingTouch) return@LaunchedEffect
         val line = lines.indexOfFirst { selectedIndex in it }
         if (line < 0) return@LaunchedEffect
-        val item = line + if (restLine in 0..line) 1 else 0
+        val item = line
         val shown = listState.layoutInfo.visibleItemsInfo
         val fits = shown.any { it.index == item && it.offset >= 0 && it.offset + it.size <= listState.layoutInfo.viewportEndOffset }
         if (!fits) listState.animateScrollToItem((item - 1).coerceAtLeast(0))
@@ -173,9 +170,8 @@ internal fun AppWall(
             modifier = Modifier.fillMaxSize(),
         ) {
             lines.forEachIndexed { line, indices ->
-                if (line == restLine) item(key = "rest") { restHeading() }
                 item(key = indices.first()) {
-                    if (line == 0 && sectionCount > 0) {
+                    if (line == 0) {
                         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                             tile(0, true)
                             Column(verticalArrangement = Arrangement.spacedBy(gap)) {
@@ -364,12 +360,6 @@ internal fun SystemChipRow(
             }
         }
     }
-}
-
-@Composable
-internal fun WallHeading(text: String, u: DesignUnits) {
-    Text(text.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(12), letterSpacing = 0.16.em),
-        modifier = Modifier.padding(top = u.dp(6)))
 }
 
 private val NeutralTint = Color(0xFF222838)

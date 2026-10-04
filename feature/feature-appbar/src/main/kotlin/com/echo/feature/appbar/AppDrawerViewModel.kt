@@ -59,9 +59,7 @@ enum class AppMenuAction(val label: String, val group: MenuGroup) {
 data class AppDrawerUiState(
     val allApps: List<InstalledApp> = emptyList(),
 
-    val sectionApps: List<InstalledApp> = emptyList(),
-
-    val otherApps: List<InstalledApp> = emptyList(),
+    val visibleApps: List<InstalledApp> = emptyList(),
 
     val activeFilter: AppFilter = AppFilter.DEFAULT,
     val isLoading: Boolean = true,
@@ -99,10 +97,6 @@ data class AppDrawerUiState(
 
 ) {
     val showSystemChips: Boolean get() = activeFilter == AppFilter.GAMES && systemChips.size > 2
-
-    val visibleApps: List<InstalledApp> get() = sectionApps + otherApps
-
-    val sectionRowCount: Int get() = sectionApps.size
 
     val menuActions: List<AppMenuAction>
         get() = buildList {
@@ -466,7 +460,7 @@ class AppDrawerViewModel @Inject constructor(
             GamepadAction.CHANGE_SORT -> openAppMenuForSelected()
             GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT,
             GamepadAction.NAVIGATE_UP, GamepadAction.NAVIGATE_DOWN -> {
-                val cells = wallLayout(state.sectionRowCount, size)
+                val cells = wallLayout(size)
                 val next = wallMove(action, cur, cells)
 
                 if (next == cur && action == GamepadAction.NAVIGATE_UP && state.showSystemChips && cells[cur].row == 0) {
@@ -493,8 +487,7 @@ class AppDrawerViewModel @Inject constructor(
         val chips = if (state.activeFilter == AppFilter.GAMES) systemChips(tabApps) else emptyList()
         val system = state.systemFilter?.takeIf { id -> chips.any { it.id == id } }
 
-        val (section, rest) = state.allApps.wallSections(state.activeFilter, system)
-        val inTab = section
+        val inTab = tabApps.ofSystem(system)
             .let { apps ->
                 if (state.activeFilter == AppFilter.RECENT) {
                     apps.sortedByDescending { it.lastUsedAt }
@@ -509,14 +502,13 @@ class AppDrawerViewModel @Inject constructor(
             }
         }
 
-        val letters = letterMenuFor((inTab + rest).map { it.label })
+        val letters = letterMenuFor(inTab.map { it.label })
         val pick = state.letterFilter?.takeIf { it in letters }
         val kept = { app: InstalledApp -> pick == null || initialOf(app.label) == pick }
 
         _uiState.update {
             it.copy(
-                sectionApps = inTab.filter(kept),
-                otherApps = rest.filter(kept),
+                visibleApps = inTab.filter(kept),
                 filterCounts = counts,
                 letterMenu = letters,
                 letterFilter = pick,

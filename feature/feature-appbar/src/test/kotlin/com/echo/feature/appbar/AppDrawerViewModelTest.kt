@@ -62,24 +62,12 @@ class AppDrawerViewModelTest {
     }
 
     @Test
-    fun `ALL filter shows all apps`() = runTest {
-        testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.setFilter(AppFilter.EMULATORS)
-        testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.uiState.test {
-            val state = awaitItem()
-            assertEquals(fakeApps().size, state.visibleApps.size)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
     fun `APPS shows neither emulators nor games, and an app that is both is in both`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.setFilter(AppFilter.APPS)
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
-            val apps = awaitItem().sectionApps
+            val apps = awaitItem().visibleApps
             assertTrue("Apps must contain no emulators", apps.none { it.isEmulator })
             assertTrue("Apps must contain no games", apps.none { it.isGame })
             cancelAndIgnoreRemainingEvents()
@@ -91,7 +79,7 @@ class AppDrawerViewModelTest {
         viewModel.setFilter(AppFilter.EMULATORS)
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
-            assertTrue(awaitItem().sectionApps.map { it.label }.containsAll(both))
+            assertTrue(awaitItem().visibleApps.map { it.label }.containsAll(both))
             cancelAndIgnoreRemainingEvents()
         }
         viewModel.setFilter(AppFilter.GAMES)
@@ -99,7 +87,7 @@ class AppDrawerViewModelTest {
         viewModel.uiState.test {
             assertTrue(
                 "an app that is both an emulator and a game must appear under Games too",
-                awaitItem().sectionApps.map { it.label }.containsAll(both),
+                awaitItem().visibleApps.map { it.label }.containsAll(both),
             )
             cancelAndIgnoreRemainingEvents()
         }
@@ -112,9 +100,7 @@ class AppDrawerViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
             val state = awaitItem()
-            assertTrue("the row holds only emulators", state.sectionApps.all { it.isEmulator })
-
-            assertTrue("the list below holds no emulators", state.otherApps.none { it.isEmulator })
+            assertTrue("the wall holds only emulators", state.visibleApps.all { it.isEmulator })
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -126,8 +112,7 @@ class AppDrawerViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
             val state = awaitItem()
-            assertTrue("the row holds only games", state.sectionApps.all { it.isGame })
-            assertTrue("the list below holds no games", state.otherApps.none { it.isGame })
+            assertTrue("the wall holds only games", state.visibleApps.all { it.isGame })
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -139,7 +124,7 @@ class AppDrawerViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
             val state = awaitItem()
-            assertEquals(listOf("Minecraft", "Browser"), state.sectionApps.map { it.label })
+            assertEquals(listOf("Minecraft", "Browser"), state.visibleApps.map { it.label })
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -182,7 +167,7 @@ class AppDrawerViewModelTest {
             assertEquals(null, state.menuApp)
             assertEquals(null, state.confirmUninstall)
             assertEquals(0, state.selectedIndex)
-            assertEquals(fakeApps().size, state.visibleApps.size)
+            assertEquals(fakeApps().count { it.isEmulator }, state.visibleApps.size)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -205,7 +190,7 @@ class AppDrawerViewModelTest {
         viewModel.uiState.test {
             val state = awaitItem()
             assertEquals(AppFilter.RECENT, state.activeFilter)
-            assertTrue("the section itself is empty", state.sectionApps.isEmpty())
+            assertTrue("the section itself is empty", state.visibleApps.isEmpty())
             cancelAndIgnoreRemainingEvents()
         }
 
@@ -221,7 +206,7 @@ class AppDrawerViewModelTest {
         viewModel.uiState.test {
             val state = awaitItem()
             assertEquals(AppFilter.RECENT, state.activeFilter)
-            assertTrue("the section itself is empty", state.sectionApps.isEmpty())
+            assertTrue("the section itself is empty", state.visibleApps.isEmpty())
             cancelAndIgnoreRemainingEvents()
         }
 
@@ -311,7 +296,7 @@ class AppDrawerViewModelTest {
             val state = awaitItem()
             assertEquals(null, state.confirmUninstall)
             assertEquals(null, state.menuApp)
-            assertEquals(fakeApps().size, state.visibleApps.size)
+            assertEquals(fakeApps().count { it.isEmulator }, state.visibleApps.size)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -492,22 +477,17 @@ class AppDrawerViewModelTest {
     }
 
     @Test
-    fun `a letter with nothing in the tab still shows what the rest of the drawer has`() = runTest {
-        val recents = alphabetApps().map { if (it.label.startsWith("A")) it.copy(lastUsedAt = 5L) else it }
-        val vm = drawerOver(recents)
+    fun `a filtered tab shows only its own apps, with nothing from the rest of the drawer below`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
-        vm.setFilter(AppFilter.RECENT)
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        pick(vm, 'C')
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val state = vm.uiState.value
-        assertTrue("only A apps were ever used, so the tab itself must come up empty", state.sectionApps.isEmpty())
-        assertTrue(
-            "the drawer still holds C apps outside the tab, so it is not an empty drawer",
-            state.otherApps.isNotEmpty() && state.visibleApps.isNotEmpty(),
-        )
+        listOf(AppFilter.APPS, AppFilter.EMULATORS, AppFilter.GAMES, AppFilter.RECENT).forEach { filter ->
+            viewModel.setFilter(filter)
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals(
+                "$filter must show exactly the apps it matches",
+                fakeApps().filter(filter::matches).map { it.packageName }.sorted(),
+                viewModel.uiState.value.visibleApps.map { it.packageName }.sorted(),
+            )
+        }
     }
 
     @Test
@@ -535,22 +515,4 @@ class AppDrawerViewModelTest {
         InstalledApp(packageName = "org.ppsspp.ppsspp",           label = "PPSSPP",    icon = fakeDrawable, isEmulator = true,  isGame = false),
         InstalledApp(packageName = "com.retroarch",                label = "RetroArch", icon = fakeDrawable, isEmulator = true,  isGame = false),
     )
-
-    @Test
-    fun `under a tab the two halves partition every app, with nothing lost or doubled`() = runTest {
-        testDispatcher.scheduler.advanceUntilIdle()
-        listOf(AppFilter.APPS, AppFilter.EMULATORS, AppFilter.GAMES).forEach { filter ->
-            viewModel.setFilter(filter)
-            testDispatcher.scheduler.advanceUntilIdle()
-            val state = viewModel.uiState.value
-            val row = state.sectionApps.map { it.packageName }
-            val rest = state.otherApps.map { it.packageName }
-            assertEquals("$filter: an app is in both halves", emptyList<String>(), row.intersect(rest.toSet()).toList())
-            assertEquals(
-                "$filter: the two halves are not the whole drawer",
-                fakeApps().map { it.packageName }.sorted(),
-                (row + rest).sorted(),
-            )
-        }
-    }
 }

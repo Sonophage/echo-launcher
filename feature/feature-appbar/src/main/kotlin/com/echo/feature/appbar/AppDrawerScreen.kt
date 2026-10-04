@@ -52,7 +52,6 @@ import com.echo.feature.appbar.appdrawer.AppWall
 import com.echo.feature.appbar.appdrawer.UninstallConfirmDialog
 import com.echo.feature.appbar.appdrawer.WallBackdrop
 import com.echo.feature.appbar.appdrawer.WallHero
-import com.echo.feature.appbar.appdrawer.WallHeading
 import com.echo.feature.appbar.appdrawer.WallHints
 import com.echo.feature.appbar.appdrawer.WallInfo
 import com.echo.feature.appbar.appdrawer.WallShade
@@ -260,7 +259,6 @@ internal fun AppDrawerContent(
                             else -> {
                                 AppWall(
                                     apps = state.visibleApps,
-                                    sectionCount = state.sectionApps.size,
                                     filter = state.activeFilter,
                                     selectedIndex = if (state.chipFocus) -1 else state.selectedIndex,
                                     usingTouch = state.usingTouch,
@@ -268,9 +266,6 @@ internal fun AppDrawerContent(
                                     onAppTapped = onAppTapped,
                                     onAppLaunched = onAppLaunched,
                                     onAppMenu = onAppMenu,
-                                    restHeading = {
-                                        if (state.sectionApps.isEmpty()) tabMessage() else WallHeading(EVERYTHING_ELSE, u)
-                                    },
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }
@@ -381,8 +376,6 @@ private fun EmptyDrawerMessage(
     }
 }
 
-private const val EVERYTHING_ELSE = "Everything else"
-
 @CombinedPreviews
 @Composable
 fun AppDrawerScreenPreview() {
@@ -416,8 +409,7 @@ private fun AppDrawerPreviewContent() {
 
     val mockCounts = AppFilter.entries.associateWith { filter -> mockApps.count(filter::matches) }
     val mockState = AppDrawerUiState(
-        sectionApps = mockApps.filter(AppFilter.DEFAULT::matches),
-        otherApps = mockApps.filterNot(AppFilter.DEFAULT::matches),
+        visibleApps = mockApps.filter(AppFilter.DEFAULT::matches),
         activeFilter = AppFilter.DEFAULT,
         selectedIndex = 1,
         filterCounts = mockCounts,

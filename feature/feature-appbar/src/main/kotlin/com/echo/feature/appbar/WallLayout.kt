@@ -13,17 +13,14 @@ data class WallCell(val row: Int, val col: Int, val span: Int = 1) {
     }
 }
 
-fun wallLayout(sectionCount: Int, total: Int, columns: Int = WALL_COLUMNS): List<WallCell> {
-    val section = sectionCount.coerceIn(0, total)
+fun wallLayout(total: Int, columns: Int = WALL_COLUMNS): List<WallCell> {
     val beside = columns - 2
     val cells = ArrayList<WallCell>(total)
-    if (section > 0) cells += WallCell(0, 0, span = 2)
-    for (slot in 0 until section - 1) {
+    if (total > 0) cells += WallCell(0, 0, span = 2)
+    for (slot in 0 until total - 1) {
         cells += if (slot < 2 * beside) WallCell(slot / beside, 2 + slot % beside)
         else (slot - 2 * beside).let { WallCell(2 + it / columns, it % columns) }
     }
-    val restRow = if (section > 0) maxOf(2, cells.last().row + 1) else 0
-    for (i in 0 until total - section) cells += WallCell(restRow + i / columns, i % columns)
     return cells
 }
 
