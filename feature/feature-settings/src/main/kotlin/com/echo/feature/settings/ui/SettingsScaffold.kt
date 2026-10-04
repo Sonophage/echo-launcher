@@ -120,8 +120,13 @@ import com.echo.core.ui.theme.crossbarScrimAnchors
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import com.echo.core.ui.design.panelDesignUnits
+import com.echo.core.ui.components.contextMenuInk
 
 val LocalSettingsScreenId = compositionLocalOf<String?> { null }
+
+// set, rows draw as the kit's rail rows in these units: slim, a white fill on focus (owner, 2026-10-04,
+// the first-run wizard); unset, rows keep the settings plate
+val LocalSettingsRailUnits = compositionLocalOf<DesignUnits?> { null }
 
 val LocalSettingsOpenScreen = compositionLocalOf<(String) -> Unit> { {} }
 
@@ -1162,6 +1167,9 @@ fun SettingsRow(
 
     val rowSelected =
         isFocused && cursorVisible && !(hideRowHighlightOnActionFocus && anyActionFocused)
+    val rail = LocalSettingsRailUnits.current
+    val ink = if (rail != null) contextMenuInk(rowSelected) else Color.White
+    val textSize = rail?.sp(17) ?: CrossbarLayoutSpec.DEFAULT.itemTextSp.sp
 
     Column(
         modifier = Modifier
@@ -1188,11 +1196,22 @@ fun SettingsRow(
                 }
             }
 
-            .padding(horizontal = 40.dp, vertical = 3.dp)
-            .settingsSelectedPlate(rowSelected)
-            .focusable()
-
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .then(
+                if (rail != null) {
+                    Modifier
+                        .padding(horizontal = 40.dp, vertical = 1.dp)
+                        .clip(RoundedCornerShape(rail.dp(12)))
+                        .background(if (rowSelected) Color.White else Color.Transparent)
+                        .focusable()
+                        .padding(horizontal = rail.dp(14), vertical = rail.dp(9))
+                } else {
+                    Modifier
+                        .padding(horizontal = 40.dp, vertical = 3.dp)
+                        .settingsSelectedPlate(rowSelected)
+                        .focusable()
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                },
+            ),
     ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1206,10 +1225,10 @@ fun SettingsRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
-                color = Color.White
+                color = ink
                     .let { if (enabled) it else it.copy(alpha = it.alpha * DISABLED_ROW_ALPHA) },
 
-                fontSize = CrossbarLayoutSpec.DEFAULT.itemTextSp.sp,
+                fontSize = textSize,
                 fontWeight = if (rowSelected) FontWeight.Medium else FontWeight.Normal,
             )
         }
@@ -1218,10 +1237,10 @@ fun SettingsRow(
             Text(
                 text = value,
 
-                color = Color.White.copy(alpha = if (rowSelected) 0.9f else 0.6f)
+                color = ink.copy(alpha = if (rowSelected) 0.9f else 0.6f)
                     .let { if (enabled) it else it.copy(alpha = it.alpha * DISABLED_ROW_ALPHA) },
 
-                fontSize = CrossbarLayoutSpec.DEFAULT.itemTextSp.sp,
+                fontSize = textSize,
                 fontWeight = FontWeight.Light,
                 textAlign = TextAlign.End,
             )
@@ -1257,7 +1276,7 @@ fun SettingsRow(
             Spacer(Modifier.height(6.dp))
             Text(
                 text = sublabel,
-                color = Color.White.copy(alpha = 0.72f),
+                color = ink.copy(alpha = 0.72f),
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.Light,

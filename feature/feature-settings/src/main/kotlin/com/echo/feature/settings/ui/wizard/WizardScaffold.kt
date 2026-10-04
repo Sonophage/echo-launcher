@@ -5,8 +5,6 @@ import androidx.compose.runtime.setValue
 import com.echo.feature.settings.ui.SettingsRow
 import com.echo.feature.settings.ui.SettingsPageTitle
 import com.echo.feature.settings.ui.SettingsPaneText
-import com.echo.core.domain.model.SettingsSectionId
-import com.echo.core.ui.design.panelSectionTint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +24,12 @@ import com.echo.core.ui.sound.MenuSound
 import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.settings.ui.LocalSettingsScrollStateRegistrar
 import com.echo.feature.settings.ui.SettingsScaffold
+import com.echo.feature.settings.ui.LocalSettingsRailUnits
+import com.echo.core.ui.design.panelDesignUnits
+import com.echo.core.ui.theme.LocalEchoColors
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 
 
 
@@ -55,21 +59,22 @@ fun WizardScaffold(
 ) {
     val menuSounds = LocalMenuSounds.current
     val skip by rememberUpdatedState(onSkip)
+    val config = LocalConfiguration.current
+    val railUnits = panelDesignUnits(config.screenWidthDp.toFloat(), config.screenHeightDp.toFloat(), LocalDensity.current)
+    val step = if (stepNumber != null && stepCount > 0) "$title · Step $stepNumber of $stepCount" else title
     SettingsScaffold(
         title = title,
         subtitle = "",
         onBack = onBack,
         modifier = modifier,
 
-        panelTint = panelSectionTint(SettingsSectionId.SETUP),
+        // the kit's accent and wave, not the old orange Setup tint (owner, 2026-10-04)
+        panelTint = LocalEchoColors.current.accentColor,
 
         showRail = false,
-        paneText = SettingsPaneText(
-            eyebrow = if (stepNumber != null && stepCount > 0) "$title · Step $stepNumber of $stepCount" else title,
-            title = heading,
-            body = hint,
-        ),
-        header = { SettingsPageTitle(if (stepNumber != null && stepCount > 0) "$title · Step $stepNumber of $stepCount" else title, heading) },
+        // the heading is drawn once, top left; the pane carries the step's hint, or the focused row's reason
+        paneText = SettingsPaneText(eyebrow = step, title = hint ?: heading, body = null),
+        header = { SettingsPageTitle(step, heading) },
         // the kit footer every settings page uses, with the wizard's own actions
         helperFooterItems = listOfNotNull(
             ControllerPromptItem(GamepadAction.SELECT, "Enter"),
@@ -98,6 +103,7 @@ fun WizardScaffold(
             if (pagesSeen > 0) menuSounds(MenuSound.SYSTEM_BROWSE)
             pagesSeen++
         }
+        CompositionLocalProvider(LocalSettingsRailUnits provides railUnits) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -108,6 +114,7 @@ fun WizardScaffold(
             }
             content()
             Spacer(Modifier.height(24.dp))
+        }
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.echo.feature.settings.ui.wizard
 
-import androidx.compose.ui.unit.em
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -42,13 +41,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.R as CoreUiR
-import com.echo.core.ui.components.ControllerHintStyle
-import com.echo.core.ui.components.ControllerPromptItem
-import com.echo.core.ui.components.EchoControllerHints
 import com.echo.core.ui.icons.PortalIcon
 import com.echo.core.ui.sound.LocalMenuSounds
 import com.echo.core.ui.sound.MenuSound
 import com.echo.core.ui.wave.WaveLayers
+import com.echo.core.ui.wave.LocalWaveDesign
+import com.echo.core.ui.wave.WaveDesign
+import com.echo.core.ui.components.EchoHintBar
+import com.echo.core.ui.components.HintAction
+import com.echo.core.ui.components.HintBarHeight
+import com.echo.core.ui.design.panelDesignUnits
+import com.echo.core.ui.theme.EchoTextStyle
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.padding
 import com.echo.core.ui.wave.WaveStyle
 import com.echo.feature.settings.ui.LocalSettingsActionConsumed
 import com.echo.feature.settings.ui.LocalSettingsPendingAction
@@ -112,7 +118,8 @@ fun WizardSplash(onBegin: () -> Unit) {
             ),
         contentAlignment = Alignment.Center,
     ) {
-        WaveLayers(WaveStyle.ANIMATED)
+        // the kit's own wave on the first screen, whatever wave the user later picks (owner, 2026-10-04)
+        CompositionLocalProvider(LocalWaveDesign provides WaveDesign.ECHO_RINGS) { WaveLayers(WaveStyle.ANIMATED) }
 
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(
@@ -155,31 +162,30 @@ fun WizardSplash(onBegin: () -> Unit) {
             }
         }
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .graphicsLayer { alpha = (1f - t * PromptFadeRate).coerceIn(0f, 1f) },
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = "EXTENSIBLE CONSOLE HANDHELD OPERATOR",
-                color = Color.White.copy(alpha = 0.55f),
-                fontSize = 11.sp,
-                letterSpacing = 0.18.em,
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
+            val fade = (1f - t * PromptFadeRate).coerceIn(0f, 1f)
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = HintBarHeight)
+                    .graphicsLayer { alpha = fade },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("EXTENSIBLE CONSOLE HANDHELD OPERATOR", style = u.eyebrow())
+                Spacer(Modifier.height(u.dp(10)))
+                Text(
+                    "Your games, apps and media on one crossbar. Setup takes four short steps.",
+                    style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.85f), fontSize = u.sp(20), fontWeight = FontWeight.Light),
+                )
+            }
+            // the kit footer's A, as every other screen has it
+            EchoHintBar(
+                items = emptyList(),
+                onAction = { if (it == GamepadAction.SELECT) start() },
+                primary = HintAction(GamepadAction.SELECT, "Get started"),
+                modifier = Modifier.align(Alignment.BottomCenter).graphicsLayer { alpha = fade },
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Your games, apps and media on one crossbar. Setup takes four short steps.",
-                color = Color.White.copy(alpha = 0.85f),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Light,
-            )
-            Spacer(Modifier.height(10.dp))
-            EchoControllerHints(
-                items = listOf(ControllerPromptItem(GamepadAction.SELECT, "Get started")),
-                style = ControllerHintStyle.INLINE,
-            )
-            Spacer(Modifier.height(28.dp))
         }
     }
 }
