@@ -30,7 +30,7 @@ fun legibleTextPx(px: Float): Float = maxOf(px, LEGIBILITY_FLOOR_PX)
 fun mediaDesignScale(widthDp: Float, heightDp: Float): Float =
     minOf(widthDp / MEDIA_DESIGN_WIDTH, heightDp / MEDIA_DESIGN_HEIGHT)
 
-class DesignUnits(val scale: Float, private val density: Density) {
+class DesignUnits(val scale: Float, private val density: Density, val square: Boolean = false) {
     fun dp(px: Number): Dp = (px.toFloat() * scale).dp
     fun sp(px: Number): TextUnit = with(density) { legibleTextPx(dp(px).toPx()).toSp() }
 
@@ -49,7 +49,7 @@ fun MediaDesignFrame(
 ) {
     val density = LocalDensity.current
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val units = DesignUnits(mediaDesignScale(maxWidth.value, maxHeight.value), density)
+        val units = DesignUnits(mediaDesignScale(maxWidth.value, maxHeight.value), density, panelIsSquare(maxWidth.value, maxHeight.value))
         content(units)
     }
 }

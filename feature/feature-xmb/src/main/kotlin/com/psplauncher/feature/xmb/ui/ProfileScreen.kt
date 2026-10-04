@@ -260,9 +260,17 @@ internal fun ProfilePanel(
             Stats(data, u)
             Box(Modifier.padding(top = u.dp(18), bottom = u.dp(22)).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
             Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(u.dp(40))) {
-                RecentColumn(data, focus, u, onTapped, Modifier.width(u.dp(380)))
-                ShowcaseColumn(data, focus.spot == ProfileSpot.SHOWCASE, u, onTapped, Modifier.width(u.dp(300)))
-                FriendsColumn(data, focus.spot == ProfileSpot.FRIENDS, u, onTapped, Modifier.weight(1f))
+                if (u.square) {
+                    RecentColumn(data, focus, u, onTapped, Modifier.weight(1f))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(36))) {
+                        ShowcaseColumn(data, focus.spot == ProfileSpot.SHOWCASE, u, onTapped, Modifier.fillMaxWidth())
+                        FriendsColumn(data, focus.spot == ProfileSpot.FRIENDS, u, onTapped, Modifier.fillMaxWidth())
+                    }
+                } else {
+                    RecentColumn(data, focus, u, onTapped, Modifier.width(u.dp(380)))
+                    ShowcaseColumn(data, focus.spot == ProfileSpot.SHOWCASE, u, onTapped, Modifier.width(u.dp(300)))
+                    FriendsColumn(data, focus.spot == ProfileSpot.FRIENDS, u, onTapped, Modifier.weight(1f))
+                }
             }
         }
     }

@@ -61,6 +61,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -79,6 +82,7 @@ import com.psplauncher.core.ui.components.LocalPadPrompts
 import com.psplauncher.core.ui.components.StatusStripHeight
 import com.psplauncher.core.ui.components.chromeGutter
 import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.LEGIBILITY_FLOOR_PX
 import com.psplauncher.core.ui.design.mediaAccent
 import com.psplauncher.core.ui.icons.CategoryIconGlyph
 import com.psplauncher.core.ui.icons.rememberAppIcon
@@ -157,7 +161,7 @@ fun XmbPspStatusStrip(
 
     modifier: Modifier = Modifier,
 
-    centre: (@Composable BoxScope.(DesignUnits) -> Unit)? = null,
+    centre: (@Composable BoxScope.(DesignUnits, Boolean) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     var batteryLevel   by remember { mutableIntStateOf(0) }
@@ -234,107 +238,137 @@ fun XmbPspStatusStrip(
             )
         }
 
-        Box(
-            Modifier
-                .align(Alignment.TopCenter)
-                .wrapContentHeight(Alignment.Top, unbounded = true)
-                .height(band),
-            contentAlignment = Alignment.Center,
-        ) {
-            when {
-                centre != null -> centre.invoke(this, u)
-                else -> Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(u.dp(18)),
-                ) {
-                    if (sections.isNotEmpty()) {
-                        StripSections(
-                            labels = sections.map { it.name },
-                            selected = selectedSection,
-                            onTapped = onSectionTapped,
-                            u = u,
-                            shoulders = false,
-                        ) { i, _, m -> CategoryIconGlyph(sections[i].iconKey, sections[i].name, m) }
+        val centreSlot: @Composable (Boolean) -> Unit = { tight ->
+            Box(contentAlignment = Alignment.Center) {
+                when {
+                    centre != null -> centre.invoke(this, u, tight)
+                    else -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(u.dp(18)),
+                    ) {
+                        if (sections.isNotEmpty()) {
+                            StripSections(
+                                labels = sections.map { it.name },
+                                selected = selectedSection,
+                                onTapped = onSectionTapped,
+                                u = u,
+                                shoulders = false,
+                            ) { i, _, m -> CategoryIconGlyph(sections[i].iconKey, sections[i].name, m) }
+                        }
+                        sortLabel?.let { label ->
+                            Text(
+                                "⇅ $label",
+                                color = StripPrimary,
+                                fontSize = u.sp(10),
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(u.dp(9)))
+                                    .border(1.5.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(u.dp(9)))
+                                    .then(if (showSortButton) Modifier.clickable(onClick = onSortTapped) else Modifier)
+                                    .padding(horizontal = u.dp(9), vertical = u.dp(4)),
+                            )
+                        }
+                        if (hints.shoulder) StripHint("LB  RB", u)
+                        if (hints.leftRight) StripHint("◀  ▶", u)
                     }
-                    sortLabel?.let { label ->
-                        Text(
-                            "⇅ $label",
-                            color = StripPrimary,
-                            fontSize = u.sp(10),
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(u.dp(9)))
-                                .border(1.5.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(u.dp(9)))
-                                .then(if (showSortButton) Modifier.clickable(onClick = onSortTapped) else Modifier)
-                                .padding(horizontal = u.dp(9), vertical = u.dp(4)),
-                        )
-                    }
-                    if (hints.shoulder) StripHint("LB  RB", u)
-                    if (hints.leftRight) StripHint("◀  ▶", u)
                 }
             }
         }
 
         val sys = rememberSystemStatus()
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = chromeGutter(end = true))
-                .wrapContentHeight(Alignment.Top, unbounded = true)
-                .height(band),
-            verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(u.dp(22)),
-        ) {
-            NoticeBell(noticeCount, islandGlow, u, onNoticeCountTapped)
-
+        val endGutter = chromeGutter(end = true)
+        val statusSlot: @Composable (Boolean) -> Unit = { date ->
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
-                modifier = Modifier.alpha(0.85f),
+                modifier = Modifier.padding(end = endGutter),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(u.dp(22)),
             ) {
-                if (sys.controllerConnected) {
-                    Icon(
-                        imageVector        = Icons.Filled.SportsEsports,
-                        contentDescription = "Controller connected",
-                        tint               = StripPrimary,
-                        modifier           = Modifier.size(u.dp(17)),
-                    )
-                }
-                if (sys.bluetoothOn) {
-                    StatusIcon(
-                        XmbStatusIcons.bluetooth, "Bluetooth",
-                        Modifier.size(width = u.dp(11), height = u.dp(15)),
-                        tint = StripPrimary,
-                        slotKey = "status_bluetooth",
-                    )
-                }
-                sys.wifiLevel?.let { level ->
-                    WifiMeter(level, Modifier.size(width = u.dp(18), height = u.dp(15)))
-                }
-                sys.cellularLevel?.let { level ->
-                    SignalBars(level, Modifier.size(width = u.dp(16), height = u.dp(15)))
-                }
-            }
+                NoticeBell(noticeCount, islandGlow, u, onNoticeCountTapped)
 
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
-                Text(
-                    text       = timeString,
-                    color      = StripPrimary,
-                    fontSize   = u.sp(18),
-                    lineHeight = u.sp(18),
-                    fontWeight = FontWeight.Light,
-                    maxLines   = 1,
-                )
-                if (!compact) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
+                    modifier = Modifier.alpha(0.85f),
+                ) {
+                    if (sys.controllerConnected) {
+                        Icon(
+                            imageVector        = Icons.Filled.SportsEsports,
+                            contentDescription = "Controller connected",
+                            tint               = StripPrimary,
+                            modifier           = Modifier.size(u.dp(17)),
+                        )
+                    }
+                    if (sys.bluetoothOn) {
+                        StatusIcon(
+                            XmbStatusIcons.bluetooth, "Bluetooth",
+                            Modifier.size(width = u.dp(11), height = u.dp(15)),
+                            tint = StripPrimary,
+                            slotKey = "status_bluetooth",
+                        )
+                    }
+                    sys.wifiLevel?.let { level ->
+                        WifiMeter(level, Modifier.size(width = u.dp(18), height = u.dp(15)))
+                    }
+                    sys.cellularLevel?.let { level ->
+                        SignalBars(level, Modifier.size(width = u.dp(16), height = u.dp(15)))
+                    }
+                }
+
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
                     Text(
-                        text       = dateString,
-                        color      = StripPrimary.copy(alpha = 0.6f),
-                        fontSize   = u.sp(10),
+                        text       = timeString,
+                        color      = StripPrimary,
+                        fontSize   = u.sp(18),
+                        lineHeight = u.sp(18),
                         fontWeight = FontWeight.Light,
                         maxLines   = 1,
                     )
+                    if (date) {
+                        Text(
+                            text       = dateString,
+                            color      = StripPrimary.copy(alpha = 0.6f),
+                            fontSize   = u.sp(10),
+                            fontWeight = FontWeight.Light,
+                            maxLines   = 1,
+                        )
+                    }
                 }
+            }
+        }
+
+        val islandWidth = if (live != null) u.dp(264) + chromeGutter() + 5.dp else 0.dp
+        SubcomposeLayout(
+            Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .wrapContentHeight(Alignment.Top, unbounded = true)
+                .height(band),
+        ) { constraints ->
+            val loose = Constraints(maxWidth = constraints.maxWidth)
+            fun probe(key: String, content: @Composable () -> Unit) =
+                subcompose(key) { Box(Modifier.clearAndSetSemantics {}) { content() } }.first().measure(loose)
+            val full = probe("full") { centreSlot(false) }
+            val tight = probe("tight") { centreSlot(true) }
+            val dated = probe("dated") { statusSlot(!compact) }
+            val bare = probe("bare") { statusSlot(false) }
+            val width = constraints.maxWidth
+            val height = constraints.maxHeight
+            val fit = stripFit(
+                width = width,
+                left = islandWidth.roundToPx(),
+                gap = u.dp(18).roundToPx(),
+                centre = full.width,
+                tightCentre = tight.width,
+                dated = dated.width,
+                bare = bare.width,
+                dateRoom = !u.square,
+            )
+            val centrePlaceable = subcompose("centre") { centreSlot(!fit.labels) }.first().measure(loose)
+            val statusPlaceable = subcompose("status") { statusSlot(fit.date && !compact) }.first().measure(loose)
+            layout(width, height) {
+                centrePlaceable.place((width - centrePlaceable.width) / 2, (height - centrePlaceable.height) / 2)
+                statusPlaceable.place(width - statusPlaceable.width, (height - statusPlaceable.height) / 2)
             }
         }
 
@@ -480,7 +514,7 @@ private fun NoticeBell(count: Int, accent: Color, u: DesignUnits, onTapped: (() 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(u.dp(4)),
     ) {
-        Icon(Icons.Outlined.Notifications, null, Modifier.size(u.dp(17)), tint = Color.White)
+        Icon(Icons.Outlined.Notifications, null, Modifier.size(maxOf(u.dp(17), with(LocalDensity.current) { LEGIBILITY_FLOOR_PX.toDp() })), tint = Color.White)
         if (count > 0) {
             Box(
                 Modifier
@@ -536,6 +570,16 @@ internal fun StripSections(
         }
         if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(22), spacing = 0.dp)
     }
+}
+
+internal data class StripFit(val labels: Boolean, val date: Boolean)
+
+internal fun stripFit(width: Int, left: Int, gap: Int, centre: Int, tightCentre: Int, dated: Int, bare: Int, dateRoom: Boolean): StripFit {
+    fun fits(fit: StripFit): Boolean =
+        (if (fit.labels) centre else tightCentre) / 2 + gap <= width / 2 - maxOf(left, if (fit.date) dated else bare)
+    return listOf(StripFit(true, true), StripFit(true, false), StripFit(false, true), StripFit(false, false))
+        .filter { dateRoom || !it.date }
+        .firstOrNull(::fits) ?: StripFit(labels = false, date = false)
 }
 
 internal fun sectionLabelShown(active: Boolean, hasIcon: Boolean): Boolean = active || !hasIcon
