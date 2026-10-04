@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui.detail
 
+import com.echo.core.ui.components.EchoTrio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -103,7 +103,7 @@ fun MetadataPreviewPanel(
 
             if (ui.loading) {
                 Box(Modifier.fillMaxWidth().padding(vertical = 28.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = focusEdge)
+                    EchoTrio(color = focusEdge)
                 }
                 return@Column
             }

@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui.app
 
+import com.echo.core.ui.components.EchoTrio
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,7 +36,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -142,7 +142,7 @@ fun AppDetailScreen(
 
     if (state.isLoading) {
         EchoDetailBackground(modifier = modifier.fillMaxSize()) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center), color = detailPalette().focus)
+            EchoTrio(Modifier.align(Alignment.Center), color = detailPalette().focus)
         }
         return
     }
@@ -383,17 +383,13 @@ private fun AppArtworkPicker(
                         verticalAlignment     = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        CircularProgressIndicator(
-                            modifier    = Modifier.size(16.dp),
-                            color       = menuCursorEdge(),
-                            strokeWidth = 2.dp,
-                        )
+                        EchoTrio(color = menuCursorEdge(), dot = 5.dp)
                         Text("Saving…", color = TextMuted, fontSize = 12.sp)
                     }
                 }
                 state.artworkPickerLoading -> {
                     Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(Modifier.size(24.dp), color = menuCursorEdge(), strokeWidth = 2.dp)
+                        EchoTrio(color = menuCursorEdge(), dot = 8.dp)
                     }
                 }
                 state.artworkPickerError != null -> {

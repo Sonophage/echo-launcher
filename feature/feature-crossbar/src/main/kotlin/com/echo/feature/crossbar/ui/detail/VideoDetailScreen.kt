@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui.detail
 
+import com.echo.core.ui.components.EchoTrio
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -30,7 +31,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -146,7 +146,7 @@ fun VideoDetailScreen(
 
     if (state.isLoading) {
         Box(modifier.fillMaxSize().background(PageBg)) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center), color = menuCursorEdge())
+            EchoTrio(Modifier.align(Alignment.Center), color = menuCursorEdge())
         }
         return
     }

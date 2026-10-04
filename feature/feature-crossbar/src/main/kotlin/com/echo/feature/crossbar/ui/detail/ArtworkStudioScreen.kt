@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui.detail
 
+import com.echo.core.ui.components.EchoTrio
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,7 +31,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -434,7 +434,7 @@ internal fun ArtworkStudioContent(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     if (state.manualDownloading) {
-                        CircularProgressIndicator(color = accent)
+                        EchoTrio(color = accent)
                         Spacer(Modifier.height(10.dp))
                         Text("Downloading manual…", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
                     } else if (state.candidateManualPath != null) {
@@ -924,7 +924,7 @@ internal fun ArtworkStudioContent(
 
         if (state.cropPreparing) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = accent)
+                EchoTrio(color = accent)
             }
         }
     }
@@ -963,7 +963,7 @@ internal fun StudioTileBadge(
             modifier.size(size).background(Color.Black.copy(alpha = 0.55f), circle),
             contentAlignment = Alignment.Center,
         ) {
-            CircularProgressIndicator(color = accent, strokeWidth = 2.dp, modifier = Modifier.size(12.dp))
+            EchoTrio(color = accent, dot = 4.dp)
         }
         StudioTileMark.ADDED -> com.echo.core.ui.components.EchoCheckBadge(
             fill = Color(0xFF66BB6A),
@@ -1071,7 +1071,7 @@ private fun StudioCropEditor(
             }
         } else if (image == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = accent)
+                EchoTrio(color = accent)
             }
         } else {
             androidx.compose.foundation.Canvas(
@@ -1372,7 +1372,7 @@ private fun StudioPdfPage(
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            CircularProgressIndicator(color = Color.White.copy(alpha = 0.5f))
+            EchoTrio(color = Color.White.copy(alpha = 0.5f))
         }
     }
 }

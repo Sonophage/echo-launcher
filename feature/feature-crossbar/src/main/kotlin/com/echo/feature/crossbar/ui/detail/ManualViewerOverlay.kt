@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui.detail
 
+import com.echo.core.ui.components.EchoTrio
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
@@ -17,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -142,7 +142,7 @@ fun ManualViewerOverlay(
                 fontSize = 14.sp,
                 modifier = Modifier.align(Alignment.Center),
             )
-            pageBitmap == null -> CircularProgressIndicator(
+            pageBitmap == null -> EchoTrio(
                 Modifier.align(Alignment.Center),
                 color = menuCursorEdge(),
             )
