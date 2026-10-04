@@ -1,0 +1,395 @@
+package com.echo.feature.crossbar.viewmodel
+
+import com.echo.core.domain.model.BuiltInCategory
+import com.echo.core.domain.model.Category
+import com.echo.core.domain.model.CategoryType
+import com.echo.core.domain.model.HideLocationType
+import com.echo.core.domain.model.PlatformIds
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import com.echo.core.ui.components.MenuGroup
+import com.echo.core.ui.components.MenuState
+import com.echo.core.ui.components.rowsShown
+import com.echo.core.ui.components.foldedIntoGroups
+
+class ContextMenusTest {
+    private fun category(id: String, gaming: Boolean = false) = Category(
+        id = id, name = id, iconKey = id, type = CategoryType.BUILT_IN, position = 0,
+    ).let { if (gaming) it.copy(isGamingCategory = true) else it }
+
+    private fun state(
+        categories: List<Category> = listOf(category(BuiltInCategory.GAMES, gaming = true)),
+        selectedCategoryIndex: Int = 0,
+        selectedPlatformId: String? = null,
+    ) = CrossbarUiState(
+        categories = categories,
+        selectedCategoryIndex = selectedCategoryIndex,
+        selectedPlatformId = selectedPlatformId,
+    )
+
+    private fun game(
+        platformId: String? = "psp",
+        isFavorite: Boolean = false,
+        packageName: String? = null,
+        subtitle: String? = null,
+    ) = CrossbarItem(
+        id = "g1", title = "Crisis Core", gameId = 1L,
+        platformId = platformId, isFavorite = isFavorite, packageName = packageName,
+        subtitle = subtitle,
+    )
+
+    private fun ids(items: List<CrossbarContextMenuItem>) = items.map { it.action }
+
+    @Test
+    fun `choose disc appears only for a multi-disc set`() {
+        assertFalse("choose_disc" in ids(gameContextMenuItems(game(), state(), 1, false, null)))
+        assertTrue("choose_disc" in ids(gameContextMenuItems(game(), state(), 2, false, null)))
+    }
+
+    @Test
+    fun `an app off the home shelf has no remove from recent`() {
+        val items = ids(appContextMenuItems(state(), categoryId = null, onRecentShelf = false))
+        assertFalse(
+            "an app reached from a category has no shelf entry to remove, so offering it would " +
+                "name an action with nothing to act on",
+            items.contains("remove_from_recent"),
+        )
+    }
+
+    @Test
+    fun `the home shelf offers one way to take an app off it, not two`() {
+        val cats = listOf(category(BuiltInCategory.GAMES, gaming = true), category("retro", gaming = true))
+        val shelf = ids(appContextMenuItems(state(cats), categoryId = "retro", onRecentShelf = true))
+        assertTrue("the working one is offered", shelf.contains("remove_from_recent"))
+        assertFalse(
+            "hide_from_category writes a CATEGORY record and the shelf reads only RECENTS, so " +
+                "offering it here would be a second item for one intent that does nothing",
+            shelf.contains("hide_from_category"),
+        )
+
+        val elsewhere = ids(appContextMenuItems(state(cats), categoryId = "retro", onRecentShelf = false))
+        assertTrue("still offered everywhere else", elsewhere.contains("hide_from_category"))
+    }
+
+    @Test
+    fun `an app on the home shelf can be removed from recent`() {
+        val items = ids(appContextMenuItems(state(), categoryId = null, onRecentShelf = true))
+        assertTrue(
+            "the shelf is the one place an app's recency is visible, so it is the one place it " +
+                "can be taken off — UsageStatsManager owns the timestamp and will not forget it",
+            items.contains("remove_from_recent"),
+        )
+    }
+
+    @Test
+    fun `remove from recent is offered only on the home shelf`() {
+        assertFalse("remove_from_recent" in ids(gameContextMenuItems(game(), state(), 1, false, null)))
+        assertTrue("remove_from_recent" in ids(gameContextMenuItems(game(), state(), 1, true, null)))
+    }
+
+    @Test
+    fun `hide from here names the place, and vanishes where there is no place`() {
+        val none = gameContextMenuItems(game(), state(), 1, false, null)
+        assertFalse("hide_here" in ids(none))
+
+        val inFavorites = gameContextMenuItems(
+            game(), state(), 1, false,
+            Triple(HideLocationType.FAVORITES, "", "Favorites"),
+        )
+        assertEquals(
+            "Hide from Favorites",
+            inFavorites.first { it.action == "hide_here" }.label,
+        )
+    }
+
+    @Test
+    fun `the missing bucket offers exactly one destructive action, and it is the permanent one`() {
+        val items = gameContextMenuItems(
+            game(), state(selectedPlatformId = CrossbarViewModel.MISSING_PLATFORM_ID), 1, false, null,
+        )
+        assertEquals(listOf("remove_missing"), items.filter { it.isDestructive }.map { it.action })
+
+        assertFalse("remove_game" in ids(items))
+    }
+
+    @Test
+    fun `the main games category can only copy a game out, never move or remove it`() {
+        val cats = listOf(category(BuiltInCategory.GAMES, gaming = true), category("retro", gaming = true))
+        val items = ids(gameContextMenuItems(game(), state(cats, selectedCategoryIndex = 0), 1, false, null))
+        assertTrue("add_category" in items)
+        assertFalse("move_category" in items)
+        assertFalse("remove_category" in items)
+    }
+
+    @Test
+    fun `a custom gaming category can remove and pin, and can move when there is somewhere to go`() {
+        val cats = listOf(
+            category(BuiltInCategory.GAMES, gaming = true),
+            category("retro", gaming = true),
+            category("handhelds", gaming = true),
+        )
+        val items = ids(gameContextMenuItems(game(), state(cats, selectedCategoryIndex = 1), 1, false, null))
+        assertTrue("move_category" in items)
+        assertTrue("remove_category" in items)
+        assertTrue("pin_category" in items)
+    }
+
+    @Test
+    fun `move is hidden when the only other gaming category is Main Game`() {
+        val cats = listOf(category(BuiltInCategory.GAMES, gaming = true), category("retro", gaming = true))
+        val items = ids(gameContextMenuItems(game(), state(cats, selectedCategoryIndex = 1), 1, false, null))
+        assertFalse("move_category" in items)
+
+        assertTrue("remove_category" in items)
+        assertTrue("pin_category" in items)
+    }
+
+    @Test
+    fun `move and add are hidden when there is nowhere to move to`() {
+        val cats = listOf(category(BuiltInCategory.GAMES, gaming = true))
+        val items = ids(gameContextMenuItems(game(), state(cats, selectedCategoryIndex = 0), 1, false, null))
+        assertFalse("add_category" in items)
+    }
+
+    @Test
+    fun `pin flips to unpin for a pinned row`() {
+        val cats = listOf(category(BuiltInCategory.GAMES, gaming = true), category("retro", gaming = true))
+        val items = ids(
+            gameContextMenuItems(game(subtitle = "Pinned"), state(cats, selectedCategoryIndex = 1), 1, false, null),
+        )
+        assertTrue("unpin_category" in items)
+        assertFalse("pin_category" in items)
+    }
+
+    @Test
+    fun `one Shelves row replaces the favourite and mark-as rows`() {
+        listOf(false, true).forEach { fav ->
+            val items = ids(gameContextMenuItems(game(isFavorite = fav), state(), 1, false, null))
+            assertTrue("no way onto a shelf: $items", "shelves" in items)
+            assertFalse("favourite is still offered outside the picker", "favorite" in items)
+            assertFalse("unfavourite is still offered outside the picker", "unfavorite" in items)
+            assertFalse("Mark As is still offered outside the picker", "play_state" in items)
+        }
+    }
+
+    @Test
+    fun `an android game entry can be demoted rather than only deleted`() {
+        val items = ids(
+            gameContextMenuItems(
+                game(platformId = PlatformIds.ANDROID, packageName = "com.x"),
+                state(), 1, false, null,
+            ),
+        )
+        assertTrue("unmark_game" in items)
+        assertTrue("remove_app" in items)
+        assertFalse("remove_game" in items)
+    }
+
+    @Test
+    fun `an app outside any category loses every per-category row`() {
+        val items = ids(appContextMenuItems(state(), categoryId = null, onRecentShelf = false))
+        listOf("remove", "pin", "hide_from_category").forEach {
+            assertFalse("$it must not be offered with no category", it in items)
+        }
+
+        assertTrue("launch" in items)
+        assertTrue("hide_everywhere" in items)
+    }
+
+    @Test
+    fun `hide from category names the category`() {
+        val cats = listOf(category("retro"))
+        val items = appContextMenuItems(state(cats), categoryId = "retro", onRecentShelf = false)
+        assertEquals("Hide from retro", items.first { it.action == "hide_from_category" }.label)
+    }
+
+    @Test
+    fun `the music and video app categories get their display names, not their ids`() {
+        val s = state()
+        assertEquals("Music Apps", s.categoryDisplayNameOf(CrossbarViewModel.MUSIC_APPS_CATEGORY_ID))
+        assertEquals("Video Apps", s.categoryDisplayNameOf(CrossbarViewModel.VIDEO_APPS_CATEGORY_ID))
+    }
+
+    @Test
+    fun `recent removal is offered only where there is a stamp to clear`() {
+        assertFalse("book_remove_recent" in ids(bookContextMenuItems(hasOpenStamp = false)))
+        assertTrue("book_remove_recent" in ids(bookContextMenuItems(hasOpenStamp = true)))
+
+        assertFalse("remove_from_recent" in ids(musicTrackContextMenuItems(null, hasPlayStamp = false)))
+        assertTrue("remove_from_recent" in ids(musicTrackContextMenuItems(null, hasPlayStamp = true)))
+
+        assertFalse(
+            "video_remove_recent" in
+                ids(videoFileContextMenuItems(false, 0L, hasWatchStamp = false, inPlaylist = false)),
+        )
+        assertTrue(
+            "video_remove_recent" in
+                ids(videoFileContextMenuItems(false, 0L, hasWatchStamp = true, inPlaylist = false)),
+        )
+    }
+
+    @Test
+    fun `resume appears only when there is somewhere to resume to`() {
+        assertFalse("video_resume" in ids(videoFileContextMenuItems(false, 0L, false, false)))
+        assertTrue("video_resume" in ids(videoFileContextMenuItems(false, 90_000L, false, false)))
+    }
+
+    @Test
+    fun `removing from a playlist is offered only from inside one`() {
+        assertFalse("video_remove_playlist" in ids(videoFileContextMenuItems(false, 0L, false, inPlaylist = false)))
+        assertTrue("video_remove_playlist" in ids(videoFileContextMenuItems(false, 0L, false, inPlaylist = true)))
+
+        assertFalse("remove_from_playlist" in ids(musicTrackContextMenuItems(playlistId = null, hasPlayStamp = false)))
+        assertTrue("remove_from_playlist" in ids(musicTrackContextMenuItems(playlistId = 3L, hasPlayStamp = false)))
+    }
+
+    @Test
+    fun `the now playing menu says what the button will do, not what is happening`() {
+        assertEquals("Pause", nowPlayingContextMenuItems(isPlaying = true).first().label)
+        assertEquals("Resume", nowPlayingContextMenuItems(isPlaying = false).first().label)
+    }
+
+    @Test
+    fun `the windows card cannot be removed and offers its importer`() {
+        val windows = ids(platformContextMenuItems(PlatformIds.WINDOWS, false, "Global: Icon"))
+        assertTrue("import_pc_games" in windows)
+        assertFalse("remove" in windows)
+
+        val console = ids(platformContextMenuItems("psp", false, "Global: Icon"))
+        assertFalse("import_pc_games" in console)
+        assertTrue("remove" in console)
+    }
+
+    @Test
+    fun `android libraries find apps where consoles scan folders`() {
+        val android = ids(platformContextMenuItems(PlatformIds.ANDROID, false, "Global: Icon"))
+        assertTrue("find_games" in android)
+        assertFalse("scan_roms" in android)
+
+        val console = ids(platformContextMenuItems("psp", false, "Global: Icon"))
+        assertTrue("scan_roms" in console)
+        assertFalse("find_games" in console)
+    }
+
+    @Test
+    fun `pin flips to unpin on a pinned card`() {
+        assertTrue("pin" in ids(platformContextMenuItems("psp", pinned = false, "Global: Icon")))
+        assertTrue("unpin" in ids(platformContextMenuItems("psp", pinned = true, "Global: Icon")))
+    }
+
+    @Test
+    fun `no menu ever repeats an id`() {
+        val cats = listOf(category(BuiltInCategory.GAMES, gaming = true), category("retro", gaming = true))
+        val states = listOf(
+            state(), state(cats, 1),
+            state(selectedPlatformId = CrossbarViewModel.MISSING_PLATFORM_ID),
+        )
+        states.forEach { st ->
+            listOf(1, 2).forEach { discs ->
+                listOf(false, true).forEach { shelf ->
+                    val items = ids(gameContextMenuItems(game(), st, discs, shelf, null))
+                    assertEquals("duplicate in $items", items.distinct(), items)
+                }
+            }
+        }
+        val app = ids(appContextMenuItems(state(), "retro", onRecentShelf = false))
+        assertEquals(app.distinct(), app)
+    }
+
+    @Test
+    fun `play is in every game menu and drawn in none of them`() {
+        listOf(true, false).forEach { shelf ->
+            run {
+                val where = "shelf=$shelf"
+                val items = gameContextMenuItems(game(), state(), 1, shelf, null)
+                val play = items.firstOrNull { it.action == "play" }
+                assertTrue("$where: no play entry left to dispatch by id", play != null)
+                assertTrue("$where: Play is drawn in the menu", play!!.hidden)
+                assertFalse(
+                    "$where: Play reached the menu anyway",
+                    "play" in MenuState("t", items).rowsShown().map { it.action },
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `the rows that were behind Details are in the menu itself, as one group`() {
+        val rows = gameContextMenuItems(game(), state(), 1, false, null)
+        val wasBehindDetails = listOf(
+            "detail_title", "detail_note", "detail_ARTWORK",
+            "detail_METADATA", "detail_MANUAL", "detail_REFRESH",
+        )
+
+        wasBehindDetails.forEach { id ->
+            val row = rows.firstOrNull { it.action == id }
+            assertTrue("'$id' is no longer reachable from any menu", row != null)
+            assertEquals("$id: not in the Metadata group", MenuGroup.METADATA, row!!.group)
+        }
+
+        assertFalse(
+            "the Details submenu is still offered as well, so the rows are reachable two ways",
+            "game_details" in ids(rows),
+        )
+
+        val folded = MenuState("Gran Turismo 4", rows).rowsShown().filter { it.group == MenuGroup.METADATA }
+        assertEquals("six rows should fold to one", 1, folded.size)
+        assertEquals("Metadata", folded.single().label)
+    }
+
+    @Test
+    fun `Remove from Recent is one press from the root in every menu that offers it`() {
+        val menus = listOf(
+            "game" to gameContextMenuItems(game(), state(), 1, onRecentShelf = true, null),
+            "app" to appContextMenuItems(state(), categoryId = BuiltInCategory.GAMES, onRecentShelf = true),
+            "video" to videoFileContextMenuItems(
+                isFavorite = false, resumePositionMs = 0, hasWatchStamp = true, inPlaylist = false,
+            ),
+            "book" to bookContextMenuItems(hasOpenStamp = true),
+            "track" to musicTrackContextMenuItems(playlistId = null, hasPlayStamp = true),
+        )
+
+        menus.forEach { (name, items) ->
+            val root = MenuState(name, items).rowsShown().map { it.label }
+            assertTrue(
+                "$name: Remove from Recent folded into a submenu, so dropping something off the " +
+                    "shelf costs two presses instead of one",
+                "Remove from Recent" in root,
+            )
+        }
+    }
+
+    @Test
+    fun `a group's rows land together, whichever of them exists`() {
+        val main = category(BuiltInCategory.GAMES, gaming = true)
+        val shooters = category("shooters", gaming = true)
+
+        val all = listOf(main, shooters, category("rpgs", gaming = true))
+
+        listOf(0 to "add_category", 1 to "move_category").forEach { (index, id) ->
+            val rows = gameContextMenuItems(game(), state(all, index), 1, false, null).sortedBy { it.group.ordinal }
+            val category = rows.filter { it.group == MenuGroup.CATEGORY }.map { it.action }
+
+            assertTrue("no category rows at all from slot $index", category.isNotEmpty())
+            assertTrue("'$id' is not among the category rows", id in category)
+            assertEquals(
+                "the category rows are not contiguous",
+                category,
+                rows.map { it.action }.filter { it in category },
+            )
+        }
+    }
+
+    @Test
+    fun `the groups a game menu uses are the shared ones, in rank order`() {
+        val groups = gameContextMenuItems(game(), state(), 2, true, null)
+            .sortedBy { it.group.ordinal }
+            .map { it.group }
+
+        assertEquals("a group is split in two", groups.distinct(), groups.distinct().sortedBy { it.ordinal })
+        assertEquals("the menu does not open on its main action", MenuGroup.MAIN, groups.first())
+        assertEquals("something outranks the removals", MenuGroup.REMOVE, groups.last())
+    }
+}

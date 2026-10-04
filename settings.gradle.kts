@@ -36,7 +36,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PSPLauncher"
+rootProject.name = "ECHO"
 
 include(":app")
 
@@ -56,7 +56,7 @@ include(":core:core-navigation")
 include(":discord:discord-native")
 
 // Feature modules
-include(":feature:feature-xmb")
+include(":feature:feature-crossbar")
 include(":feature:feature-library")
 include(":feature:feature-launcher")
 include(":feature:feature-artwork")

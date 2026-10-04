@@ -25,15 +25,15 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.psplauncher.launcher"
+    namespace = "com.echo.launcher"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.psplauncher.launcher"
+        applicationId = "com.echo.launcher"
         minSdk = 29           // Android 10 — Winlator minimum
         targetSdk = 35
-        versionCode = 36
-        versionName = "1.23.4"
+        versionCode = 37
+        versionName = "2.0.0"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
@@ -115,7 +115,7 @@ dependencies {
     implementation(project(":core:core-domain"))
     implementation(project(":core:core-data"))
     implementation(project(":core:core-ui"))
-    implementation(project(":feature:feature-xmb"))
+    implementation(project(":feature:feature-crossbar"))
     implementation(project(":feature:feature-library"))
     implementation(project(":feature:feature-launcher"))
     implementation(project(":feature:feature-artwork"))
@@ -146,8 +146,8 @@ val copyReleaseApk = tasks.register<Copy>("copyReleaseToDist") {
     val version = appVersion
     from(layout.buildDirectory.dir("outputs/apk/release"))
     include("*.apk")
-    // Clean, versioned name in dist (e.g. PSPLauncher-1.3.0.apk).
-    rename { "PSPLauncher-$version.apk" }
+    // Clean, versioned name in dist (e.g. ECHO-1.3.0.apk).
+    rename { "ECHO-$version.apk" }
     into(distDir)
     // dist is a shared, versioned drop folder — always refresh so the current build is
     // guaranteed present even when the APK itself is up-to-date.
@@ -165,7 +165,7 @@ val copyDebugApk = tasks.register<Copy>("copyDebugToDebugDir") {
     val version = appVersion
     from(layout.buildDirectory.dir("outputs/apk/debug"))
     include("*.apk")
-    rename { "PSPLauncher-$version-debug.apk" }
+    rename { "ECHO-$version-debug.apk" }
     into(debugDir)
     outputs.upToDateWhen { false }
 }

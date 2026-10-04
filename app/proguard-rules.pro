@@ -12,11 +12,11 @@
 -keepclasseswithmembers class kotlinx.serialization.json.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep,includedescriptorclasses class com.psplauncher.**$$serializer { *; }
--keepclassmembers class com.psplauncher.** {
+-keep,includedescriptorclasses class com.echo.**$$serializer { *; }
+-keepclassmembers class com.echo.** {
     *** Companion;
 }
--keepclasseswithmembers class com.psplauncher.** {
+-keepclasseswithmembers class com.echo.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 

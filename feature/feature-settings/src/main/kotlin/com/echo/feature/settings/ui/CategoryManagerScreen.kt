@@ -1,0 +1,222 @@
+package com.echo.feature.settings.ui
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.echo.core.ui.icons.CategoryIconGlyph
+import com.echo.feature.settings.viewmodel.CREATE_CATEGORY_FOCUS_KEY
+import com.echo.feature.settings.viewmodel.CategoryManagerUiState
+import com.echo.feature.settings.viewmodel.CategoryManagerViewModel
+import com.echo.feature.settings.viewmodel.CategoryStep
+
+@Composable
+fun CategoryManagerScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: CategoryManagerViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsState()
+
+    val handleBack: () -> Unit = {
+        when {
+            viewModel.onBack() -> Unit
+            else               -> onBack()
+        }
+    }
+
+    when {
+        state.step == CategoryStep.PICK_ICON -> PickIconContent(state, viewModel, handleBack, modifier)
+        state.step == CategoryStep.PICK_TYPE -> PickTypeContent(state, viewModel, handleBack, modifier)
+        state.step == CategoryStep.DETAIL    -> CategoryDetailContent(state, viewModel, handleBack, modifier)
+        else -> CategoryListContent(
+            state = state,
+            vm = viewModel,
+            onBack = handleBack,
+            modifier = modifier,
+        )
+    }
+
+    if (state.showCreateNameDialog) {
+        var text by remember { mutableStateOf("") }
+        SettingsTextPromptOverlay(
+            title = "New Category",
+            value = text,
+            onValueChange = { text = it },
+            onConfirm = { viewModel.confirmCreateName(text) },
+            onCancel = { viewModel.cancelCreateName() },
+            placeholder = "Category name",
+            confirmLabel = "Next",
+        )
+    }
+
+    state.renameTargetId?.let { id ->
+        val current = state.categories.firstOrNull { it.id == id }?.name ?: ""
+        var text by remember(id) { mutableStateOf(current) }
+        SettingsTextPromptOverlay(
+            title = "Rename Category",
+            value = text,
+            onValueChange = { text = it },
+            onConfirm = { viewModel.confirmRename(text) },
+            onCancel = { viewModel.cancelRename() },
+        )
+    }
+}
+
+@Composable
+private fun CategoryListContent(
+    state: CategoryManagerUiState,
+    vm: CategoryManagerViewModel,
+    onBack: () -> Unit,
+    modifier: Modifier,
+) {
+    SettingsPageScaffold(
+        subtitle = "Categories",
+        onBack = onBack,
+        modifier = modifier,
+        restoreFocusKey = state.returnFocusKey,
+    ) {
+        val scrollState = rememberScrollState()
+        LocalSettingsScrollStateRegistrar.current(scrollState)
+        Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
+            SettingsGroup("Manage")
+            SettingsRow(
+                label    = "Create Category",
+                sublabel = "Add a new category to the Crossbar bar",
+                focusKey = CREATE_CATEGORY_FOCUS_KEY,
+                onClick  = { vm.startCreate() },
+            )
+
+            SettingsGroup("Crossbar Categories")
+            state.categories.forEach { cat ->
+                SettingsRow(
+                    label    = cat.name + if (!cat.visible) "  (Hidden)" else "",
+                    sublabel = "Icon: ${cat.iconKey}" + if (cat.protected) "  ·  Built-in" else "  ·  Custom",
+                    focusKey = cat.id,
+                    onClick  = { vm.openDetail(cat.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PickIconContent(
+    state: CategoryManagerUiState,
+    vm: CategoryManagerViewModel,
+    onBack: () -> Unit,
+    modifier: Modifier,
+) {
+    val subtitle = if (state.pickingIconForCreate) "Choose Icon" else "Change Icon"
+    SettingsPageScaffold(heading = "Category", subtitle = subtitle, onBack = onBack, modifier = modifier) {
+        val scrollState = rememberScrollState()
+        LocalSettingsScrollStateRegistrar.current(scrollState)
+        Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
+            SettingsGroup(state.pendingName ?: state.detail?.name ?: "Icon")
+            state.iconOptions.forEach { option ->
+                SettingsRow(
+                    label    = option.label,
+                    trailing = { CategoryIconGlyph(option.key, contentDescription = option.label, modifier = Modifier.size(40.dp)) },
+                    onClick  = { vm.chooseIcon(option.key) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PickTypeContent(
+    state: CategoryManagerUiState,
+    vm: CategoryManagerViewModel,
+    onBack: () -> Unit,
+    modifier: Modifier,
+) {
+    SettingsPageScaffold(heading = "Category", subtitle = "Content Type", onBack = onBack, modifier = modifier) {
+        val scrollState = rememberScrollState()
+        LocalSettingsScrollStateRegistrar.current(scrollState)
+        Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
+            SettingsGroup(state.pendingName ?: "Category Type")
+            SettingsRow(
+                label    = "Gaming",
+                sublabel = "For games",
+                onClick  = { vm.chooseType(isGaming = true) },
+            )
+            SettingsRow(
+                label    = "Non-Gaming",
+                sublabel = "For apps like Video, Music, Photos",
+                onClick  = { vm.chooseType(isGaming = false) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryDetailContent(
+    state: CategoryManagerUiState,
+    vm: CategoryManagerViewModel,
+    onBack: () -> Unit,
+    modifier: Modifier,
+) {
+    val cat = state.detail
+    if (cat == null) { LaunchedEffect(Unit) { vm.onBack() }; return }
+
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    SettingsPageScaffold(heading = "Categories", subtitle = cat.name, onBack = onBack, modifier = modifier) {
+        val scrollState = rememberScrollState()
+        LocalSettingsScrollStateRegistrar.current(scrollState)
+        Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
+            SettingsGroup("Edit")
+            SettingsRow(label = "Rename Category", onClick = { vm.beginRename(cat.id) })
+            SettingsValueRow(label = "Change Icon", value = cat.iconKey, onClick = { vm.startChangeIcon() })
+            SettingsToggleRow(
+                label    = "Show On Bar",
+                sublabel = "Hide or show this category in the Crossbar",
+                checked  = cat.visible,
+                onToggle = { vm.toggleVisible(cat.id, it) },
+            )
+            SettingsToggleRow(
+                label    = "Gaming Category",
+                sublabel = "Gaming: games · Non-gaming: apps",
+                checked  = cat.isGamingCategory,
+                onToggle = { vm.setGamingCategory(cat.id, it) },
+            )
+
+            SettingsGroup("Order")
+            SettingsRow(label = "Move Left",  onClick = { vm.move(cat.id, up = true) })
+            SettingsRow(label = "Move Right", onClick = { vm.move(cat.id, up = false) })
+
+            if (!cat.protected) {
+                SettingsGroup("Danger Zone")
+                SettingsRow(
+                    label    = "Delete Category",
+                    sublabel = "Removes this custom category. Apps are not uninstalled.",
+                    trailing = { Text("Delete", color = SettingsAccent) },
+                    onClick  = { showDeleteConfirm = true },
+                )
+            }
+        }
+    }
+
+    if (showDeleteConfirm) {
+        SettingsConfirmOverlay(
+            title = "Delete ${cat.name}?",
+            message = "This removes the category and its app assignments. Apps are not uninstalled.",
+            confirmLabel = "Delete",
+            onConfirm = { showDeleteConfirm = false; vm.delete(cat.id) },
+            onCancel = { showDeleteConfirm = false },
+        )
+    }
+}

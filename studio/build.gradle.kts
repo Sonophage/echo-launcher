@@ -38,7 +38,7 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "com.psplauncher.studio.MainKt"
+        mainClass = "com.echo.studio.MainKt"
         // Disable release minification: Compose bundles a Java 21 JBR the default ProGuard can't
         // read, and minifying strips reflection/entry-point classes the app needs at startup
         // ("Failed to launch JVM"). An unminified distribution is larger but launches reliably.
@@ -52,7 +52,7 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "PlayField Theme Studio"
             packageVersion = "1.2.0"
-            description = "Create, convert, and share PlayFieldPortal XMB themes"
+            description = "Create, convert, and share ECHO crossbar themes"
 
             windows {
                 // Desktop + Start Menu shortcuts, and let the user pick the install dir.

@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace  = "com.psplauncher.feature.reader"
+    namespace  = "com.echo.feature.reader"
     compileSdk = 37
     defaultConfig { minSdk = 29 }
     compileOptions {

@@ -1,0 +1,72 @@
+package com.echo.feature.crossbar.viewmodel
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class NamePromptTextTest {
+    private val prompts: List<Triple<String, (CrossbarUiState) -> CrossbarUiState, (CrossbarUiState) -> String?>> =
+        listOf(
+            Triple(
+                "rename shortcut",
+                { s: CrossbarUiState -> s.copy(renameAppTarget = "com.example", renameAppCurrent = "Example") },
+                { s: CrossbarUiState -> s.renameAppText },
+            ),
+            Triple(
+                "edit title",
+                { s: CrossbarUiState -> s.copy(collectionNameDialog = CollectionNameDialogState(title = "Edit Title")) },
+                { s: CrossbarUiState -> s.collectionNameDialog?.text },
+            ),
+            Triple(
+                "playlist name",
+                { s: CrossbarUiState -> s.copy(playlistNameDialog = PlaylistNameDialogState(title = "New Playlist")) },
+                { s: CrossbarUiState -> s.playlistNameDialog?.text },
+            ),
+            Triple(
+                "save theme name",
+                { s: CrossbarUiState -> s.copy(saveThemeNameDialog = PlaylistNameDialogState(title = "Save as Theme")) },
+                { s: CrossbarUiState -> s.saveThemeNameDialog?.text },
+            ),
+        )
+
+    @Test
+    fun `every name prompt receives what was typed into it`() {
+        assertEquals("the prompt table must cover all four name prompts", 4, prompts.size)
+
+        for ((name, open, read) in prompts) {
+            val typed = open(CrossbarUiState()).withNamePromptText("Backlog")
+            assertEquals("$name must receive the typed text", "Backlog", read(typed))
+        }
+    }
+
+    @Test
+    fun `a prompt opens with its seed text already in the live field`() {
+        val seeded = CollectionNameDialogState(title = "Edit Title", initialText = "Shooters")
+        assertEquals("the live field starts at the seed", "Shooters", seeded.text)
+    }
+
+    @Test
+    fun `typing with no prompt open changes nothing`() {
+        val idle = CrossbarUiState()
+        val after = idle.withNamePromptText("stray")
+        assertEquals("no prompt open means no rename text", "", after.renameAppText)
+        assertNull("no prompt open means no text prompt", after.collectionNameDialog)
+        assertEquals("the state is untouched", idle, after)
+    }
+
+    @Test
+    fun `the first prompt in gamepad order wins when two are somehow open`() {
+        val both = CrossbarUiState(
+            renameAppTarget = "com.example",
+            renameAppCurrent = "Example",
+            collectionNameDialog = CollectionNameDialogState(title = "Edit Title"),
+        ).withNamePromptText("Backlog")
+
+        assertEquals("the rename prompt is checked first, so it takes the text", "Backlog", both.renameAppText)
+        assertEquals(
+            "the text prompt must not also take it",
+            "",
+            both.collectionNameDialog?.text,
+        )
+    }
+}

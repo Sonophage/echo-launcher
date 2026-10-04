@@ -2,7 +2,7 @@
 // reads, so a hardening fix lands once instead of three times.
 //
 // Pure JVM on purpose, and for the same reason as :core:theme-kit — the desktop Theme Studio reads
-// .pfptheme bundles through PfpThemeCodec, so this module must never grow an Android dependency.
+// .pfptheme bundles through EchoThemeCodec, so this module must never grow an Android dependency.
 plugins {
     alias(libs.plugins.kotlin.jvm)
 }

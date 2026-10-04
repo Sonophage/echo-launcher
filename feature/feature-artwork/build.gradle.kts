@@ -63,7 +63,7 @@ private fun ssEncoded(prop: String, envName: String, fallbackProp: String? = nul
 }
 
 android {
-    namespace  = "com.psplauncher.feature.artwork"
+    namespace  = "com.echo.feature.artwork"
     compileSdk = 37
     defaultConfig {
         minSdk = 29

@@ -1,0 +1,80 @@
+package com.echo.feature.settings.ui
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.echo.core.ui.preview.CombinedPreviews
+import com.echo.core.ui.preview.EchoPreview
+
+@Composable
+fun AboutSettingsScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val packageInfo = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
+    }
+    val versionName = packageInfo?.versionName ?: "unknown"
+    val versionCode = packageInfo?.longVersionCode?.toString() ?: "unknown"
+
+    val scrollState = rememberScrollState()
+    SettingsPageScaffold(
+        subtitle = "About",
+        onBack   = onBack,
+        modifier = modifier,
+        onInterceptAction = rememberReadOnlyPageScroll(scrollState),
+    ) {
+        LocalSettingsScrollStateRegistrar.current(scrollState)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+        ) {
+            SettingsGroup("ECHO")
+
+            SettingsValueRow(label = "Version",      value = versionName)
+            SettingsValueRow(label = "Build",        value = versionCode)
+            SettingsValueRow(label = "Min Android",  value = "Android 10 (API 29)")
+            SettingsValueRow(label = "Target",       value = "Android 15 (API 35)")
+
+            SettingsGroup("Open Source")
+
+            SettingsValueRow(label = "Jetpack Compose",   value = "UI framework")
+            SettingsValueRow(label = "Room",              value = "Local database")
+            SettingsValueRow(label = "Hilt",              value = "Dependency injection")
+            SettingsValueRow(label = "Ktor",              value = "Network client")
+            SettingsValueRow(label = "Coil",              value = "Image loading")
+            SettingsValueRow(label = "Media3",            value = "Video snaps & playback")
+            SettingsValueRow(label = "WorkManager",       value = "Background tasks")
+            SettingsValueRow(label = "Timber",            value = "Logging")
+
+            SettingsGroup("Credits")
+
+            SettingsValueRow(label = "Artwork & Media", value = "ScreenScraper · SteamGridDB")
+            SettingsValueRow(label = "Metadata",        value = "ScreenScraper · IGDB")
+            SettingsValueRow(label = "Inspired by",     value = "Sony PSP XMB")
+            SettingsValueRow(label = "See also",        value = "Settings ▸ Credits")
+
+            SettingsGroup("Legal")
+
+            SettingsRow(
+                label    = "ECHO is an independent fan project, not affiliated with Sony Interactive Entertainment.",
+                sublabel = "PlayStation, PSP and XMB are trademarks of Sony Interactive Entertainment Inc.",
+            )
+        }
+    }
+}
+
+@CombinedPreviews
+@Composable
+fun AboutSettingsScreenPreview() {
+    EchoPreview {
+        AboutSettingsScreen(onBack = {})
+    }
+}

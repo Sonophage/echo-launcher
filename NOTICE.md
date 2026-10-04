@@ -2,9 +2,10 @@
 
 ## What this is
 
-PSPLauncher is a personal fork of **PlayFieldPortal**, an XMB-style Android home launcher by
+ECHO (Extensible Console Handheld Operator, formerly PSPLauncher) is a personal fork of **PlayFieldPortal**, an XMB-style Android home launcher by
 **JohnnyC96 / JohnnyCollado** (`github.com/JohnnyCollado/PlayFieldPortal`). The fork was renamed
-and re-packaged from `com.playfieldportal.launcher` to `com.psplauncher` in commit `c7aa063a`.
+and re-packaged from `com.playfieldportal.launcher` to `com.psplauncher` in commit `c7aa063a`, and renamed to ECHO
+(`com.echo.launcher`) in version 2.0.0.
 
 It is maintained for private use on one device. It is not published, distributed or offered to
 anyone else.
@@ -48,7 +49,7 @@ their own `LICENSE.txt` files. Both the packs and their licences were removed up
 `1ad59452`; nothing in the current tree depends on them.
 
 The bundled menu sounds were Sony-derived in early history and were replaced with an original
-seven-sound set in commit `52c3b949`.
+seven-sound set in commit `52c3b949`. From version 2.0.0 no sounds are bundled at all.
 
 Remaining assets under `assets/` are the project's own. If you add third-party material, record it
 here with its terms.

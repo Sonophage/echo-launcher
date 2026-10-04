@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace  = "com.psplauncher.feature.achievements"
+    namespace  = "com.echo.feature.achievements"
     compileSdk = 37
     defaultConfig { minSdk = 29 }
     compileOptions {

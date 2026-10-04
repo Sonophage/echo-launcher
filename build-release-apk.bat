@@ -5,7 +5,7 @@ REM ============================================================
 REM  Play Field Portal - Release APK Builder
 REM  Builds the signed release APK. Gradle's copyReleaseToDist
 REM  task (app/build.gradle.kts) is what renames and drops it into
-REM  <root>\dist as PSPLauncher-<version>.apk -- this script
+REM  <root>\dist as ECHO-<version>.apk -- this script
 REM  drives and verifies that, it never copies or renames on its own.
 REM
 REM  Usage: build-release-apk.bat
@@ -79,11 +79,11 @@ echo BUILD SUCCESS
 echo ========================================
 echo.
 echo Artifacts in %~dp0dist:
-set "_APK=%~dp0dist\PSPLauncher-%_VERSION%.apk"
+set "_APK=%~dp0dist\ECHO-%_VERSION%.apk"
 if exist "!_APK!" (
     for %%A in ("!_APK!") do echo   %%~nxA   ^(%%~zA bytes^)
 ) else (
-    echo   MISSING: PSPLauncher-%_VERSION%.apk 1>&2
+    echo   MISSING: ECHO-%_VERSION%.apk 1>&2
     set "_FAIL=1"
 )
 

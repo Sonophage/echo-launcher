@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace  = "com.psplauncher.core.domain"
+    namespace  = "com.echo.core.domain"
     compileSdk = 37
     defaultConfig { minSdk = 29 }
     compileOptions {

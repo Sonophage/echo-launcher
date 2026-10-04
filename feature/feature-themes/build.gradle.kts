@@ -7,7 +7,7 @@
 }
 
 android {
-    namespace  = "com.psplauncher.feature.themes"
+    namespace  = "com.echo.feature.themes"
     compileSdk = 37
     defaultConfig { minSdk = 29 }
     compileOptions {

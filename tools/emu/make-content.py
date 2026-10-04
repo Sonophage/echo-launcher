@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a dummy content tree for the PSPLauncher emulators.
+"""Build a dummy content tree for the ECHO emulators.
 
 Everything is GENERATED, not downloaded: no copyright question, and — more usefully — the
 metadata is exactly what the app's own parsers read, so the UI can be driven into states that

@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace  = "com.psplauncher.discord"
+    namespace  = "com.echo.discord"
     compileSdk = 37
     ndkVersion = "27.0.12077973"
 

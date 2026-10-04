@@ -1,0 +1,489 @@
+package com.echo.feature.crossbar.ui.app
+
+import android.graphics.drawable.Drawable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
+import androidx.core.graphics.drawable.toBitmap
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import coil3.compose.AsyncImage
+import com.echo.core.ui.image.rememberArtworkModel
+import com.echo.core.domain.model.GamepadAction
+import com.echo.core.ui.theme.LocalEchoColors
+import com.echo.core.ui.theme.menuCursorEdge
+import com.echo.core.ui.components.EchoContextMenuOverlay
+import com.echo.feature.crossbar.ui.detail.ArtworkType
+import com.echo.feature.crossbar.ui.detail.displayLabel
+import com.echo.core.ui.detail.DetailRowSpacing
+import com.echo.core.ui.detail.EchoDetailBreadcrumb
+import com.echo.core.ui.detail.detailPalette
+import com.echo.core.ui.detail.EchoDetailBackground
+import com.echo.core.ui.detail.LocalDetailViewportHeight
+import com.echo.core.ui.detail.detailHeroHeightFor
+import com.echo.core.ui.detail.EchoDetailHelperFooter
+import com.echo.core.ui.detail.EchoDetailHeroBanner
+import com.echo.core.ui.detail.EchoDetailIconTile
+import com.echo.core.ui.detail.EchoDetailLaunchButton
+import com.echo.core.ui.detail.EchoDetailQuickAction
+import com.echo.core.ui.detail.EchoDetailScaffold
+import com.echo.core.ui.components.ControllerPromptItem
+import androidx.compose.runtime.ReadOnlyComposable
+import com.echo.core.ui.theme.LocalEchoTextColors
+import com.echo.core.ui.detail.EchoTextPromptOverlay
+
+private val TextPrimary: Color @Composable @ReadOnlyComposable get() = LocalEchoTextColors.current.primary
+
+private val TextMuted: Color @Composable @ReadOnlyComposable get() = LocalEchoTextColors.current.secondary
+private val ActionFill    = Color(0xFF1B1B26)
+
+@Composable
+fun AppDetailScreen(
+    gameId: Long,
+    onBack: () -> Unit,
+    pendingGamepadAction: GamepadAction? = null,
+    onGamepadActionConsumed: () -> Unit = {},
+
+    showTouchControls: Boolean = true,
+    onTouchInput: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    viewModel: AppDetailViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsState()
+
+    var pendingArtworkType by remember { mutableStateOf<ArtworkType?>(null) }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val type = pendingArtworkType
+        if (uri != null && type != null) viewModel.onLocalFilePicked(uri, type)
+        pendingArtworkType = null
+    }
+
+    LaunchedEffect(gameId) {
+        viewModel.prepareForOpen()
+        viewModel.loadApp(gameId)
+    }
+    LaunchedEffect(state.closed) {
+        if (state.closed) {
+            viewModel.prepareForOpen()
+            onBack()
+        }
+    }
+
+    val routeAction: (GamepadAction) -> Unit = { viewModel.handleGamepadAction(it) }
+    LaunchedEffect(pendingGamepadAction) {
+        if (pendingGamepadAction != null) {
+            routeAction(pendingGamepadAction)
+            onGamepadActionConsumed()
+        }
+    }
+    LaunchedEffect(state.artworkPendingLocal) {
+        val type = state.artworkPendingLocal ?: return@LaunchedEffect
+        pendingArtworkType = type
+        filePicker.launch(arrayOf("image/png", "image/jpeg", "image/webp"))
+        viewModel.consumeLocalFilePick()
+    }
+
+    if (state.isLoading) {
+        EchoDetailBackground(modifier = modifier.fillMaxSize()) {
+            CircularProgressIndicator(Modifier.align(Alignment.Center), color = detailPalette().focus)
+        }
+        return
+    }
+
+    val game = state.game ?: return
+    val echoColors = LocalEchoColors.current
+
+    EchoDetailScaffold(
+        modifier = modifier
+
+            .pointerInput(Unit) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false); onTouchInput() } },
+        header = {
+            EchoDetailBreadcrumb(
+                title = "Apps",
+                subtitle = "Android App",
+                onBack = viewModel::close,
+            )
+        },
+        footer = {
+            EchoDetailHelperFooter(
+                items = appDetailHelperItems(),
+                visible = !showTouchControls,
+                onAction = routeAction,
+            )
+        },
+        overlay = {
+        AnimatedVisibility(state.showOptions, enter = fadeIn(), exit = fadeOut()) {
+            EchoContextMenuOverlay(
+                state = AppDetailOption.menu("Options", AppDetailOption.OPTIONS_MENU, state.optionsIndex),
+                onRowActivated = { viewModel.onMenuRowActivated(AppDetailOption.OPTIONS_MENU, it) },
+                onDismiss = viewModel::closeMenus,
+            )
+        }
+
+        AnimatedVisibility(state.showArtworkMenu, enter = fadeIn(), exit = fadeOut()) {
+            EchoContextMenuOverlay(
+                state = AppDetailOption.menu("Artwork", AppDetailOption.ARTWORK_MENU, state.optionsIndex),
+                onRowActivated = { viewModel.onMenuRowActivated(AppDetailOption.ARTWORK_MENU, it) },
+                onDismiss = viewModel::closeMenus,
+            )
+        }
+
+        AnimatedVisibility(
+            visible = state.isEditingName,
+            enter   = fadeIn(),
+            exit    = fadeOut(),
+        ) {
+            EchoTextPromptOverlay(
+                title         = "Change Display Name",
+                subtitle      = "Sets the display name used in the launcher and for artwork scraping.",
+                value         = state.nameText,
+                placeholder   = "Display Name",
+                onValueChange = viewModel::onNameTextChanged,
+                onConfirm     = viewModel::confirmNameEdit,
+                onCancel      = viewModel::cancelNameEdit,
+                resetLabel    = "Reset to Default",
+                onReset       = viewModel::resetNameToDefault,
+            )
+        }
+
+        AnimatedVisibility(
+            visible = state.showArtworkPicker,
+            enter   = fadeIn(),
+            exit    = fadeOut(),
+        ) {
+            AppArtworkPicker(
+                state       = state,
+                onSelectArt = viewModel::onSgdbArtSelected,
+                onPickLocal = { viewModel.requestLocalFilePick(state.artworkPickerType) },
+                onClear     = { viewModel.clearArtwork(state.artworkPickerType) },
+                onClose     = viewModel::closeArtworkPicker,
+            )
+        }
+        },
+    ) {
+        Spacer(Modifier.height(16.dp))
+
+        EchoDetailHeroBanner(
+            artworkUri  = game.artworkUri,
+            title       = game.displayTitle,
+            platform    = game.packageName.orEmpty(),
+            accentColor = echoColors.accentColor,
+            height      = detailHeroHeightFor(LocalDetailViewportHeight.current, messageLine = state.artworkMessage != null),
+        )
+
+        Spacer(Modifier.height(DetailRowSpacing + 6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            EchoDetailIconTile(uri = null, title = game.displayTitle) {
+                AppIconPreview(
+                    packageName   = game.packageName ?: "",
+                    customIconUri = game.iconUri,
+                    modifier      = Modifier.fillMaxSize(),
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                EchoDetailLaunchButton(
+                    label     = "Launch",
+                    icon      = Icons.Filled.PlayArrow,
+                    focused   = state.mainFocus == 0,
+                    onClick   = viewModel::launchApp,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    EchoDetailQuickAction(
+                        label     = "Options",
+                        icon      = Icons.Filled.Settings,
+                        focused   = state.mainFocus == 1,
+                        available = true,
+                        onClick   = viewModel::openOptions,
+                        contentDescription = "Options",
+                        modifier  = Modifier.weight(1f),
+                    )
+                    EchoDetailQuickAction(
+                        label     = "Artwork",
+                        icon      = Icons.Filled.Brush,
+                        focused   = state.mainFocus == 2,
+                        available = true,
+                        onClick   = viewModel::openArtworkMenu,
+                        contentDescription = "Edit artwork",
+                        modifier  = Modifier.weight(1f),
+                    )
+                }
+                state.artworkMessage?.let {
+                    Text(it, color = detailPalette().focus, fontSize = 12.sp)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(DetailRowSpacing))
+    }
+}
+
+private fun appDetailHelperItems(): List<ControllerPromptItem> = listOf(
+    ControllerPromptItem(GamepadAction.SELECT, "Launch"),
+    ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
+    ControllerPromptItem(GamepadAction.BACK, "Back"),
+)
+
+@Composable
+private fun AppIconPreview(
+    packageName: String,
+    customIconUri: String?,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color(0xFF12121C))
+            .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(6.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            !customIconUri.isNullOrBlank() -> AsyncImage(
+                model              = rememberArtworkModel(customIconUri),
+                contentDescription = null,
+                contentScale       = ContentScale.Crop,
+                modifier           = Modifier.fillMaxSize(),
+            )
+            packageName.isNotBlank() -> NativeAppIcon(
+                packageName = packageName.orEmpty(),
+                modifier    = Modifier.size(48.dp),
+            )
+            else -> Text("No Icon", color = TextMuted, fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+private fun NativeAppIcon(packageName: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val drawable: Drawable? = remember(packageName) {
+        runCatching { context.packageManager.getApplicationIcon(packageName) }.getOrNull()
+    }
+    if (drawable != null) {
+        val bitmap = remember(drawable) { runCatching { drawable.toBitmap() }.getOrNull() }
+        if (bitmap != null) {
+            Image(
+                bitmap             = bitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier           = modifier,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppArtworkPicker(
+    state: AppDetailUiState,
+    onSelectArt: (String) -> Unit,
+    onPickLocal: () -> Unit,
+    onClear: () -> Unit,
+    onClose: () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xCC000000))
+            .clickable(onClick = onClose),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(min = 300.dp, max = 480.dp)
+                .fillMaxWidth(0.92f)
+                .heightIn(max = 520.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0xF20A0A14))
+                .clickable(enabled = false) {}
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Change ${state.artworkPickerType.displayLabel}",
+                    color      = TextPrimary,
+                    fontSize   = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                TextButton(onClick = onClose) {
+                    Text("Close", color = TextMuted, fontSize = 12.sp)
+                }
+            }
+
+            when {
+                state.artworkIsProcessing -> {
+                    Row(
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        CircularProgressIndicator(
+                            modifier    = Modifier.size(16.dp),
+                            color       = menuCursorEdge(),
+                            strokeWidth = 2.dp,
+                        )
+                        Text("Saving…", color = TextMuted, fontSize = 12.sp)
+                    }
+                }
+                state.artworkPickerLoading -> {
+                    Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(Modifier.size(24.dp), color = menuCursorEdge(), strokeWidth = 2.dp)
+                    }
+                }
+                state.artworkPickerError != null -> {
+                    Text("SteamGridDB", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(state.artworkPickerError, color = Color(0xFFFF6B6B), fontSize = 12.sp)
+                }
+                state.artworkPickerItems.isNotEmpty() -> {
+                    Text("SteamGridDB", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    val lazyState = rememberLazyListState()
+                    LaunchedEffect(state.artworkPickerFocus) {
+                        if (state.artworkPickerItems.isNotEmpty()) {
+                            lazyState.animateScrollToItem(state.artworkPickerFocus.coerceIn(0, state.artworkPickerItems.lastIndex))
+                        }
+                    }
+                    LazyRow(
+                        state                   = lazyState,
+                        horizontalArrangement   = Arrangement.spacedBy(6.dp),
+                    ) {
+                        itemsIndexed(state.artworkPickerItems) { index, art ->
+                            val isFocused = state.artworkPickerFocus == index
+                            AsyncImage(
+                                model              = art.thumbUrl ?: art.url,
+                                contentDescription = null,
+                                contentScale       = ContentScale.Crop,
+                                modifier           = Modifier
+                                    .size(width = 88.dp, height = 60.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .border(
+                                        width  = if (isFocused) 2.dp else 1.dp,
+                                        color  = if (isFocused) menuCursorEdge() else Color(0x33FFFFFF),
+                                        shape  = RoundedCornerShape(4.dp),
+                                    )
+                                    .clickable { onSelectArt(art.url) },
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                PickerChip(
+                    label     = "Pick Local File",
+                    onClick   = onPickLocal,
+                    modifier  = Modifier.weight(1f),
+                )
+                PickerChip(
+                    label     = when (state.artworkPickerType) {
+                        ArtworkType.ICON -> "Restore Native Icon"
+                        else             -> "Remove Custom Art"
+                    },
+                    destructive = true,
+                    onClick     = onClear,
+                    modifier    = Modifier.weight(1f),
+                )
+            }
+
+            Text(
+                "◄ ►  Browse   A  Pick   B  Back",
+                color    = TextMuted.copy(alpha = 0.5f),
+                fontSize = 10.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PickerChip(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    destructive: Boolean = false,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(ActionFill)
+            .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 9.dp, horizontal = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            color    = if (destructive) Color(0xFFFF8A8A) else TextPrimary,
+            fontSize = 12.sp,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+        )
+    }
+}

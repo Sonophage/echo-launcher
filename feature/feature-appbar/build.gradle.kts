@@ -7,7 +7,7 @@
 }
 
 android {
-    namespace  = "com.psplauncher.feature.appbar"
+    namespace  = "com.echo.feature.appbar"
     compileSdk = 37
     defaultConfig { minSdk = 29 }
     compileOptions {

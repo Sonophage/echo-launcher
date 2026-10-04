@@ -7,7 +7,7 @@
 }
 
 android {
-    namespace  = "com.psplauncher.feature.library"
+    namespace  = "com.echo.feature.library"
     compileSdk = 37
     defaultConfig { minSdk = 29 }
     compileOptions {

@@ -7,14 +7,14 @@
 //
 // It matters more here than in most apps: this IS the home screen, so a cold start happens every
 // time the user presses Home. Before this, the shipped profile carried only the AndroidX and
-// Compose library profiles, and none of PSPLauncher's own startup path.
+// Compose library profiles, and none of ECHO's own startup path.
 plugins {
     alias(libs.plugins.android.test)
     alias(libs.plugins.baselineprofile)
 }
 
 android {
-    namespace  = "com.psplauncher.baselineprofile"
+    namespace  = "com.echo.baselineprofile"
     compileSdk = 37
     defaultConfig {
         // Macrobenchmark needs 28+; the app's own floor is 29, so this follows the app.

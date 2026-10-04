@@ -7,7 +7,7 @@
 }
 
 android {
-    namespace  = "com.psplauncher.feature.backup"
+    namespace  = "com.echo.feature.backup"
     compileSdk = 37
     defaultConfig { minSdk = 29 }
     compileOptions {

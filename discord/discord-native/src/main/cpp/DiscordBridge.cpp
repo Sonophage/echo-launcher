@@ -91,7 +91,7 @@ void pumpLoop() {
 extern "C" {
 
 JNIEXPORT void JNICALL
-Java_com_psplauncher_discord_DiscordNativeBridge_nativeInit(
+Java_com_echo_discord_DiscordNativeBridge_nativeInit(
     JNIEnv* /*env*/, jobject /*thiz*/, jlong applicationId) {
     if (gClient) return;
     gClient = std::make_shared<discordpp::Client>();
@@ -101,7 +101,7 @@ Java_com_psplauncher_discord_DiscordNativeBridge_nativeInit(
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_psplauncher_discord_DiscordNativeBridge_nativeUpdateToken(
+Java_com_echo_discord_DiscordNativeBridge_nativeUpdateToken(
     JNIEnv* env, jobject /*thiz*/, jstring jToken) {
     if (!gClient) return JNI_FALSE;
     const std::string token = jstr(env, jToken);
@@ -126,7 +126,7 @@ Java_com_psplauncher_discord_DiscordNativeBridge_nativeUpdateToken(
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_psplauncher_discord_DiscordNativeBridge_nativeGetCurrentUserJson(
+Java_com_echo_discord_DiscordNativeBridge_nativeGetCurrentUserJson(
     JNIEnv* env, jobject /*thiz*/) {
     if (!gClient) return env->NewStringUTF("");
     const std::string result = awaitJson([]() -> std::string {
@@ -147,7 +147,7 @@ Java_com_psplauncher_discord_DiscordNativeBridge_nativeGetCurrentUserJson(
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_psplauncher_discord_DiscordNativeBridge_nativeGetFriendsJson(
+Java_com_echo_discord_DiscordNativeBridge_nativeGetFriendsJson(
     JNIEnv* env, jobject /*thiz*/) {
     if (!gClient) return env->NewStringUTF("[]");
     const std::string result = awaitJson([]() -> std::string {
@@ -191,7 +191,7 @@ Java_com_psplauncher_discord_DiscordNativeBridge_nativeGetFriendsJson(
 }
 
 JNIEXPORT void JNICALL
-Java_com_psplauncher_discord_DiscordNativeBridge_nativeSetActivity(
+Java_com_echo_discord_DiscordNativeBridge_nativeSetActivity(
     JNIEnv* env, jobject /*thiz*/, jstring jName, jstring jDetails) {
     if (!gClient) return;
     const std::string name = jstr(env, jName);
@@ -206,14 +206,14 @@ Java_com_psplauncher_discord_DiscordNativeBridge_nativeSetActivity(
 }
 
 JNIEXPORT void JNICALL
-Java_com_psplauncher_discord_DiscordNativeBridge_nativeClearActivity(
+Java_com_echo_discord_DiscordNativeBridge_nativeClearActivity(
     JNIEnv* /*env*/, jobject /*thiz*/) {
     if (!gClient) return;
     post([]() { gClient->ClearRichPresence(); });
 }
 
 JNIEXPORT void JNICALL
-Java_com_psplauncher_discord_DiscordNativeBridge_nativeDisconnect(
+Java_com_echo_discord_DiscordNativeBridge_nativeDisconnect(
     JNIEnv* /*env*/, jobject /*thiz*/) {
     if (!gClient) return;
     auto done = std::make_shared<std::promise<void>>();

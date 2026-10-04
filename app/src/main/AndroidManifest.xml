@@ -56,10 +56,10 @@
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
 
     <application
-        android:name=".PFPApplication"
+        android:name=".EchoApplication"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
-        android:theme="@style/Theme.PFP"
+        android:theme="@style/Theme.Echo"
         android:supportsRtl="true"
         android:hardwareAccelerated="true"
         android:networkSecurityConfig="@xml/network_security_config"
@@ -128,7 +128,7 @@
             android:exported="false" />
 
         <!-- ═══ WorkManager ══════════════════════════════════════════════ -->
-        <!-- On-demand init: PFPApplication is the Configuration.Provider (Hilt-Work), so the -->
+        <!-- On-demand init: EchoApplication is the Configuration.Provider (Hilt-Work), so the -->
         <!-- default WorkManagerInitializer must be removed from the startup provider.        -->
         <provider
             android:name="androidx.startup.InitializationProvider"
@@ -144,7 +144,7 @@
         <!-- Keeps in-app music playing (with a media notification) while the user is in other
              apps. Started on-demand from the player's "Play in Background". -->
         <service
-            android:name="com.psplauncher.feature.xmb.music.MusicPlaybackService"
+            android:name="com.echo.feature.crossbar.music.MusicPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
@@ -154,7 +154,7 @@
              Settings ▸ Notification access, and until they do the service is never constructed
              and the launcher shows no count. -->
         <service
-            android:name="com.psplauncher.launcher.notification.PfpNotificationListener"
+            android:name="com.echo.launcher.notification.EchoNotificationListener"
             android:exported="true"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">

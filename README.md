@@ -1,9 +1,9 @@
-# PSPLauncher
+# ECHO
 
-**A controller-first Android home screen in the style of the PSP's XrossMediaBar.**
+**Extensible Console Handheld Operator: a controller-first Android home screen in the style of the PSP's XrossMediaBar.**
 
 <p align="center">
-  <img src="docs/screenshots/last-played.jpg" alt="PSPLauncher: Last Played, the home shelf, with Skyrim's art filling the screen" width="820">
+  <img src="docs/screenshots/last-played.jpg" alt="ECHO: Last Played, the home shelf, with Skyrim's art filling the screen" width="820">
 </p>
 
 <p align="center">
@@ -12,14 +12,14 @@
   &nbsp;·&nbsp; Side-loaded APK, not on the Play Store
 </p>
 
-PSPLauncher replaces your Android home screen with one crossbar: categories run left to right,
+ECHO replaces your Android home screen with one crossbar: categories run left to right,
 their items run top to bottom. Games from the emulators you already have, Android apps, and your
 own music, video, photos and books all live on it, and all of it works from a controller.
 
 It is local-first. There is no account and no telemetry, and it only goes online when you ask it
 to fetch artwork or metadata.
 
-> **PSPLauncher is a fork of [PlayFieldPortal](https://github.com/JohnnyCollado/PlayFieldPortal)**
+> **ECHO is a fork of [PlayFieldPortal](https://github.com/JohnnyCollado/PlayFieldPortal)**
 > by JohnnyC96 / JohnnyCollado. Most of its foundation is their work.
 > [What the fork changed and removed](#a-fork-of-playfieldportal) is listed below.
 
@@ -150,12 +150,12 @@ Five sections: **Overview, Emulators, Look & Feel, System, Setup**.
 
 ## Handhelds and tablets
 
-PSPLauncher is developed and tested on two devices: a 1080p handheld (AYANEO Pocket FIT Elite)
+ECHO is developed and tested on two devices: a 1080p handheld (AYANEO Pocket FIT Elite)
 and a 2400×1504 tablet. The same build runs on both. Phones and foldables work too.
 
 - **The layout sizes itself to the screen.** Screens are grouped by their smallest width: compact
   (under 600 dp, most handhelds and phones), medium (600 to 839 dp, most tablets) and expanded
-  (840 dp and up). Each group keeps its own **Adjust XMB Layout** tuning, so tuning the handheld
+  (840 dp and up). Each group keeps its own **Adjust Crossbar Layout** tuning, so tuning the handheld
   never distorts the tablet.
 - **Touch works everywhere.** Swipe up and down to move through a column and sideways to change
   category, tap to select and tap again to open, long-press for the options menu, and swipe in
@@ -172,10 +172,11 @@ and a 2400×1504 tablet. The same build runs on both. Phones and foldables work 
 
 ## A fork of PlayFieldPortal
 
-PSPLauncher is a personal fork of **[PlayFieldPortal](https://github.com/JohnnyCollado/PlayFieldPortal)**,
+ECHO is a personal fork of **[PlayFieldPortal](https://github.com/JohnnyCollado/PlayFieldPortal)**,
 the XMB-style Android launcher by **JohnnyC96 / JohnnyCollado**. The fork split from upstream on
 2026-09-18 at `9c8a6ec9`, the last upstream commit in this history, and was renamed from
-`com.playfieldportal.launcher` to `com.psplauncher` in `c7aa063a` the same day. Upstream is still
+`com.playfieldportal.launcher` to `com.psplauncher` in `c7aa063a` the same day. It was renamed again,
+to ECHO (`com.echo.launcher`), from version 2.0.0. Upstream is still
 active and is not merged back. [NOTICE.md](NOTICE.md) covers authorship and why there is no
 licence file.
 
@@ -234,15 +235,15 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 ## Install
 
 **You need** Android 10 (API 29) or newer, and the emulators you want to use, installed
-separately; PSPLauncher launches them and does not emulate anything itself. A controller is
+separately; ECHO launches them and does not emulate anything itself. A controller is
 recommended, and touch works throughout.
 
-1. Download `PSPLauncher-<version>.apk` from
+1. Download `ECHO-<version>.apk` from
    [Releases](https://github.com/Sonophage/platform-selection-portal-launcher/releases).
    A release can also carry a `-debug.apk`; that one installs as
-   `com.psplauncher.launcher.debug`, beside the normal app rather than over it.
+   `com.echo.launcher.debug`, beside the normal app rather than over it.
 2. Open it on the device, allow installs from that source when Android asks, and tap **Install**.
-3. Optional: press **Home**, pick **PSPLauncher**, choose **Always**. Importing shortcuts from other
+3. Optional: press **Home**, pick **ECHO**, choose **Always**. Importing shortcuts from other
    launchers needs it to be the default home app.
 
 ### First run
@@ -265,16 +266,16 @@ matching Settings screen. Run it again any time from **Settings ▸ Setup ▸ Se
 
 ### Permissions
 
-PSPLauncher asks only when a feature needs something. **Settings ▸ System ▸ Permissions** shows
+ECHO asks only when a feature needs something. **Settings ▸ System ▸ Permissions** shows
 what is granted and opens the screen to grant the rest.
 
 - **Notifications** (Android 13+): scan and artwork progress, and confirming shortcuts that other
   apps try to add.
 - **Notification access**: your device notifications in the Start sheet.
 - **Usage access**: the App Drawer's Recently Used tab. Android blocks this for side-loaded apps
-  until you allow it under *Android Settings ▸ Apps ▸ PSPLauncher ▸ ⋮ ▸ Allow restricted settings*.
+  until you allow it under *Android Settings ▸ Apps ▸ ECHO ▸ ⋮ ▸ Allow restricted settings*.
 
-Folders are granted one at a time through Android's folder picker. PSPLauncher never asks for
+Folders are granted one at a time through Android's folder picker. ECHO never asks for
 access to all of your storage.
 
 ---
@@ -389,7 +390,7 @@ ES-DE media folder and its `gamelist.xml`, and exports for ES-DE.
 
 ```text
 {Artwork Folder}/
-├─ pfp-artwork-library.json     marks the folder as a PSPLauncher library
+├─ pfp-artwork-library.json     marks the folder as an ECHO library
 ├─ Import/{Launcher}/           drop another launcher's ES-DE media here to import it
 └─ Artwork/{platform}/          covers, miximages, fanart, marquees, screenshots,
                                 titlescreens, physicalmedia, 3dboxes, manuals, videos
@@ -430,12 +431,13 @@ Each column also lists its apps. Add more with its **Add** row.
   themes as shareable `.pfptheme` files.
 - **Wallpaper & Text**: a still or motion wallpaper, the wave and whether it draws over the
   wallpaper, Last Played size, and the status strip.
-- **Layout**: **Adjust XMB Layout** scales and shifts the crossbar over the live screen, kept
-  separately for each screen size. **Customize XMB Icons** replaces any of the 42 theme glyphs
+- **Layout**: **Adjust Crossbar Layout** scales and shifts the crossbar over the live screen, kept
+  separately for each screen size. **Customize Crossbar Icons** replaces any of the 42 theme glyphs
   or a console's icon, live.
 - **Boot**: the boot sequence, your own boot video, the launch disc, and GameBoot (two seconds, or
   your own video).
-- **Sound**: replace any interface sound and set looping **Menu Music**.
+- **Sound**: add any interface sound and set looping **Menu Music**. ECHO ships with no sounds;
+  the interface is silent until you add some.
 - **Categories, Controller, Touch, Performance**.
 
 **Custom icons** can be PNG, JPG, WebP, BMP, HEIC or animated GIF, up to 8 MB (GIFs up to 512 px,
@@ -458,7 +460,7 @@ pause during video, behind fullscreen overlays, and on battery saver.
 | Launch Sound | Starting an app | 3 s |
 | Notification | Preview only in this build | 2 s |
 | Boot Sound | Startup | 10 s |
-| Launch Disc Sound | The launch disc (silent by default) | 10 s |
+| Launch Disc Sound | The launch disc | 10 s |
 | GameBoot Sound | A game launching | 10 s |
 
 Boot and GameBoot videos can be MP4 or WebM, up to 10 seconds and 25 MB. A GameBoot that has not
@@ -502,14 +504,14 @@ Media folders are not in Settings; they are on each column's **Folders** row.
 
 | Problem | Fix |
 |---|---|
-| Home does not open PSPLauncher | *Android Settings ▸ Apps ▸ Default apps ▸ Home app* |
+| Home does not open ECHO | *Android Settings ▸ Apps ▸ Default apps ▸ Home app* |
 | A console shows no new games | **△ ▸ Scan This Console**, or turn on *Rescan On Return* |
 | A game will not launch | Check the emulator is installed, then **△ ▸ Settings ▸ Change Emulator** and the card's **Default Emulator** |
 | Games or media went missing after a reinstall or restore | Relink the folder: **Folders ▸ △ ▸ Relink Folder** |
 | Artwork will not download | Add a key in *Emulators ▸ Scraping Sources* and check the connection |
-| Recently Used is empty | Allow restricted settings for PSPLauncher, then grant usage access (see [Permissions](#permissions)) |
+| Recently Used is empty | Allow restricted settings for ECHO, then grant usage access (see [Permissions](#permissions)) |
 | No notifications in the Start sheet | Grant notification access in *System ▸ Permissions* |
-| The interface is too big, small or off-centre | *Look & Feel ▸ Layout ▸ Adjust XMB Layout* |
+| The interface is too big, small or off-centre | *Look & Feel ▸ Layout ▸ Adjust Crossbar Layout* |
 
 For a bug report, open *System ▸ Logs*, press **△** on a log and choose **Share**. Logs are
 redacted.
@@ -566,7 +568,7 @@ core/
   core-navigation/   pure navigation logic
   core-ui/           theme, wave, icons, motion wallpaper, menu sounds
 feature/
-  feature-xmb/       the crossbar, hover panel, players, Artwork Studio, boot
+  feature-crossbar/  the crossbar, hover panel, players, Artwork Studio, boot
   feature-library/   ROM and media scanners
   feature-launcher/  emulator detection and launching
   feature-artwork/   scrapers, artwork folder, ES-DE import and export
@@ -584,7 +586,7 @@ baselineprofile/     startup baseline profile (test only, never shipped)
 **Upstream.** PlayFieldPortal by **JohnnyC96 / JohnnyCollado**, which this project is a fork of.
 
 **Interface.** Inspired by Sony's **XMB (XrossMediaBar)** on the PSP and PS3. "XrossMediaBar",
-"XMB", "PSP" and "PlayStation" are trademarks of Sony Interactive Entertainment Inc. PSPLauncher is
+"XMB", "PSP" and "PlayStation" are trademarks of Sony Interactive Entertainment Inc. ECHO is
 an independent, non-commercial fan project, not affiliated with or endorsed by Sony, and ships none
 of Sony's code, firmware, fonts or audio.
 
@@ -610,9 +612,7 @@ by Anthony Caccese, building on InitialDin's original work. All rights remain wi
 Switch 2 button packs, under [CC BY 3.0](http://creativecommons.org/licenses/by/3.0/). The files
 are unmodified apart from their names.
 
-**Menu sounds.** Navigation, back, confirm, boot and game boot are the maintainer's own.
-Notification is from [Pixabay](https://pixabay.com). Error is original to this project. No Sony
-audio is bundled.
+**Sounds.** No audio is bundled. Every sound is one you add yourself.
 
 **Game artwork and metadata** are fetched on request from ScreenScraper, SteamGridDB, IGDB, the
 Steam store and TMDB, and belong to their owners. This product uses the TMDB API but is not endorsed

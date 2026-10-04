@@ -1,0 +1,98 @@
+package com.echo.core.ui.icons
+
+import androidx.annotation.DrawableRes
+import com.echo.core.ui.R
+
+data class CategoryIcon(
+    val key: String,
+    val label: String,
+    @DrawableRes val resId: Int,
+)
+
+val CATEGORY_ICON_CATALOG: List<CategoryIcon> = listOf(
+
+    CategoryIcon("ic_settings",  "Settings",  R.drawable.catbar_settings),
+    CategoryIcon("ic_photos",    "Photos",    R.drawable.catbar_photos),
+    CategoryIcon("ic_music",     "Music",     R.drawable.catbar_music),
+    CategoryIcon("ic_videos",    "Video",     R.drawable.catbar_video),
+    CategoryIcon("ic_games",     "Games",     R.drawable.catbar_games),
+    CategoryIcon("ic_network",   "Network",   R.drawable.catbar_network),
+    CategoryIcon("ic_appstore",  "App Store", R.drawable.catbar_appstore),
+    CategoryIcon("ic_library",   "Library",   R.drawable.catbar_library),
+    CategoryIcon("ic_favorites", "Favorites", R.drawable.catbar_favorites),
+    CategoryIcon("ic_recent",    "Last Played", R.drawable.catbar_recent),
+
+    CategoryIcon("ic_nes",            "NES",                  R.drawable.sysicon_nes),
+    CategoryIcon("ic_snes",           "Super NES",            R.drawable.sysicon_snes),
+    CategoryIcon("ic_n64",            "Nintendo 64",          R.drawable.sysicon_n64),
+    CategoryIcon("ic_gc",             "GameCube",             R.drawable.sysicon_gc),
+    CategoryIcon("ic_wii",            "Wii",                  R.drawable.sysicon_wii),
+    CategoryIcon("ic_wiiu",           "Wii U",                R.drawable.sysicon_wiiu),
+    CategoryIcon("ic_switch",         "Switch",               R.drawable.sysicon_switch),
+    CategoryIcon("ic_gb",             "Game Boy",             R.drawable.sysicon_gb),
+    CategoryIcon("ic_gbc",            "Game Boy Color",       R.drawable.sysicon_gbc),
+    CategoryIcon("ic_gba",            "Game Boy Advance",     R.drawable.sysicon_gba),
+    CategoryIcon("ic_nds",            "Nintendo DS",          R.drawable.sysicon_nds),
+    CategoryIcon("ic_n3ds",           "Nintendo 3DS",         R.drawable.sysicon_n3ds),
+    CategoryIcon("ic_virtualboy",     "Virtual Boy",          R.drawable.sysicon_virtualboy),
+    CategoryIcon("ic_psx",            "PlayStation",          R.drawable.sysicon_psx),
+    CategoryIcon("ic_ps2",            "PlayStation 2",        R.drawable.sysicon_ps2),
+    CategoryIcon("ic_ps3",            "PlayStation 3",        R.drawable.sysicon_ps3),
+    CategoryIcon("ic_psp",            "PSP",                  R.drawable.sysicon_psp),
+    CategoryIcon("ic_psvita",         "PS Vita",              R.drawable.sysicon_psvita),
+    CategoryIcon("ic_mastersystem",   "Master System",        R.drawable.sysicon_mastersystem),
+    CategoryIcon("ic_megadrive",      "Genesis / Mega Drive", R.drawable.sysicon_megadrive),
+    CategoryIcon("ic_sega32x",        "Sega 32X",             R.drawable.sysicon_sega32x),
+    CategoryIcon("ic_segacd",         "Sega CD",              R.drawable.sysicon_segacd),
+    CategoryIcon("ic_saturn",         "Saturn",               R.drawable.sysicon_saturn),
+    CategoryIcon("ic_dreamcast",      "Dreamcast",            R.drawable.sysicon_dreamcast),
+    CategoryIcon("ic_gamegear",       "Game Gear",            R.drawable.sysicon_gamegear),
+    CategoryIcon("ic_pcengine",       "PC Engine / TG-16",    R.drawable.sysicon_pcengine),
+    CategoryIcon("ic_neogeo",         "Neo Geo",              R.drawable.sysicon_neogeo),
+    CategoryIcon("ic_ngp",            "Neo Geo Pocket",       R.drawable.sysicon_ngp),
+    CategoryIcon("ic_wonderswan",     "WonderSwan",           R.drawable.sysicon_wonderswan),
+    CategoryIcon("ic_wonderswancolor", "WonderSwan Color",    R.drawable.sysicon_wonderswancolor),
+    CategoryIcon("ic_atari2600",      "Atari 2600",           R.drawable.sysicon_atari2600),
+    CategoryIcon("ic_atari5200",      "Atari 5200",           R.drawable.sysicon_atari5200),
+    CategoryIcon("ic_atari7800",      "Atari 7800",           R.drawable.sysicon_atari7800),
+    CategoryIcon("ic_atarilynx",      "Atari Lynx",           R.drawable.sysicon_atarilynx),
+    CategoryIcon("ic_c64",            "Commodore 64",         R.drawable.sysicon_c64),
+    CategoryIcon("ic_mame",           "Arcade (MAME)",        R.drawable.sysicon_mame),
+    CategoryIcon("ic_windows",        "Windows / PC",         R.drawable.sysicon_windows),
+    CategoryIcon("ic_desktop",        "Desktop PC",           R.drawable.sysicon_desktop),
+    CategoryIcon("ic_xbox360",        "Xbox 360",             R.drawable.sysicon_x360),
+    CategoryIcon("ic_android",        "Android",              R.drawable.sysicon_android),
+)
+
+private val CATALOG_BY_KEY: Map<String, CategoryIcon> = CATEGORY_ICON_CATALOG.associateBy { it.key }
+
+private val LEGACY_ALIASES: Map<String, String> = mapOf(
+    "ic_arcade"      to "ic_mame",
+    "ic_pc"          to "ic_windows",
+    "ic_genesis"     to "ic_megadrive",
+    "ic_gameboy"     to "ic_gb",
+    "ic_ds"          to "ic_nds",
+    "ic_vita"        to "ic_psvita",
+    "ic_ps1"         to "ic_psx",
+    "ic_ps_generic"  to "ic_ps2",
+    "ic_gamecube"    to "ic_gc",
+    "ic_turbografx"  to "ic_pcengine",
+    "ic_sega_cd"     to "ic_segacd",
+    "ic_atari"       to "ic_atari2600",
+    "ic_xbox"        to "ic_xbox360",
+)
+
+val FALLBACK_CATEGORY_ICON: CategoryIcon = CATALOG_BY_KEY.getValue("ic_games")
+
+fun consolePlatformIdFor(iconKey: String): String? {
+    val resolved = CATALOG_BY_KEY[iconKey]?.key ?: LEGACY_ALIASES[iconKey] ?: return null
+    return when (resolved) {
+        "ic_xbox360" -> "x360"
+        else -> resolved.removePrefix("ic_").takeIf { it != resolved }
+    }
+}
+
+fun categoryIconFor(iconKey: String): CategoryIcon =
+    CATALOG_BY_KEY[iconKey]
+        ?: LEGACY_ALIASES[iconKey]?.let { CATALOG_BY_KEY[it] }
+        ?: FALLBACK_CATEGORY_ICON

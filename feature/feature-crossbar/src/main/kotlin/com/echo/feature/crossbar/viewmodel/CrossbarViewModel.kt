@@ -1,0 +1,9240 @@
+package com.echo.feature.crossbar.viewmodel
+
+import com.echo.core.ui.components.MenuGroup
+import com.echo.core.ui.components.MenuRow
+import com.echo.core.ui.components.MenuSelect
+import com.echo.core.ui.components.MenuState
+import com.echo.core.ui.components.chose
+import com.echo.core.ui.components.rowsShown
+import com.echo.core.domain.model.PlatformIds.ANDROID as ANDROID_PLATFORM_ID
+
+import com.echo.core.domain.model.PlatformIds.WINDOWS as WINDOWS_PLATFORM_ID
+
+import android.net.Uri
+import android.content.Context
+import android.content.Intent
+import android.os.SystemClock
+import android.provider.MediaStore
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.echo.core.data.database.dao.PlatformDao
+import com.echo.core.data.database.entity.HiddenPlacementEntity
+import com.echo.core.data.database.entity.PlatformEntity
+import com.echo.core.data.datastore.echoDataStore
+import com.echo.core.data.repository.CategoryRepositoryImpl
+import com.echo.core.data.repository.ControllerMappingRepository
+import com.echo.core.data.repository.CustomIconStore
+import com.echo.core.data.repository.MediaRootKind
+import com.echo.core.data.repository.MediaScannedEntry
+import com.echo.core.data.repository.SafGrants
+import com.echo.core.data.music.MusicIntentResolver
+import com.echo.core.data.repository.mediaRootDisplayName
+import com.echo.core.data.repository.RomFolderEntry
+import com.echo.core.data.repository.isRomDirUnder
+import com.echo.core.data.repository.mediaRootRows
+import com.echo.core.data.repository.romFolderEntries
+import com.echo.feature.launcher.PlatformEmulatorChoices
+import com.echo.feature.launcher.platformEmulatorChoices
+import com.echo.core.data.repository.MemoryCardRepository
+import com.echo.core.data.repository.EchoThemeStore
+import com.echo.core.ui.icons.CustomIcon
+import com.echo.core.ui.icons.GifFrameProbe
+import com.echo.core.ui.media.resolveGameBootAudio
+import com.echo.themekit.CustomizableIcons
+import com.echo.core.domain.model.BuiltInCategory
+import com.echo.core.domain.model.Category
+import com.echo.core.domain.model.ControllerHintPolicy
+import com.echo.core.domain.model.Game
+import com.echo.core.domain.model.GameContentType
+import com.echo.core.domain.model.GamepadAction
+import com.echo.feature.crossbar.ui.detail.DetailPanelContent
+import com.echo.feature.crossbar.ui.detail.DetailPanelPage
+import com.echo.feature.crossbar.ui.detail.detailPanelContentFor
+import com.echo.feature.crossbar.ui.detail.stepPanelPage
+import com.echo.core.domain.model.HiddenPlacement
+import com.echo.core.domain.model.HideLocationType
+import com.echo.core.domain.model.PlayState
+import com.echo.core.domain.model.VideoSnapPlacement
+import com.echo.core.domain.model.MemoryCard
+import com.echo.core.domain.model.MusicTrack
+import com.echo.core.domain.model.CrossbarColorScheme
+import com.echo.core.domain.model.CrossbarPalette
+import com.echo.core.ui.theme.withWaveTint
+import com.echo.core.domain.model.displayLabel
+import com.echo.core.domain.model.resolve
+import com.echo.core.domain.repository.GameRepository
+import com.echo.core.ui.icons.GameIconStyle
+import com.echo.core.ui.notification.AndroidNotice
+import com.echo.core.ui.notification.AndroidNotifications
+import com.echo.core.ui.notification.BackgroundTaskNotifier
+import com.echo.feature.artwork.match.MetadataApply
+import com.echo.feature.artwork.match.MetadataApplyPolicy
+import com.echo.feature.artwork.match.MetadataField
+import com.echo.feature.crossbar.ui.detail.ManualViewerUi
+import com.echo.feature.crossbar.ui.detail.MetadataPreviewUi
+import com.echo.feature.artwork.store.ArtworkKind
+import com.echo.core.ui.notification.SystemToasts
+import com.echo.core.ui.notification.ToastKind
+import com.echo.core.ui.sound.MenuSound
+import com.echo.core.ui.theme.DefaultEchoColors
+import com.echo.core.ui.theme.EchoColors
+import com.echo.core.ui.wave.WaveStyle
+import com.echo.feature.appbar.AppCategoryRepository
+import com.echo.feature.appbar.CategorizedApp
+import com.echo.feature.appbar.LauncherShortcutRepository
+import com.echo.feature.launcher.LaunchDispatchResult
+import com.echo.feature.launcher.LaunchRecoveryAction
+import com.echo.feature.launcher.ResolvedLaunch
+import com.echo.feature.artwork.api.ArtworkRepository
+import com.echo.feature.library.scanner.LibraryScanner
+import com.echo.feature.library.scanner.ScanStatus
+import com.echo.feature.library.scanner.scanOutcomeMessage
+import com.echo.feature.crossbar.R
+import com.echo.feature.crossbar.gamepad.GamepadInputHandler
+import com.echo.core.ui.components.LetterJumpState
+import com.echo.core.ui.components.at
+import com.echo.core.ui.components.move
+import com.echo.feature.crossbar.gamepad.ShoulderHold
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transformWhile
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import timber.log.Timber
+
+private fun CrossbarPalette.toEchoColors() = EchoColors(
+    waveColor         = androidx.compose.ui.graphics.Color(waveColor),
+    accentColor       = androidx.compose.ui.graphics.Color(accentColor),
+    textPrimary       = androidx.compose.ui.graphics.Color(textColor),
+    textSecondary     = androidx.compose.ui.graphics.Color(textColor).copy(alpha = 0.7f),
+    backgroundOverlay = androidx.compose.ui.graphics.Color(0x88000000),
+    selectedItem      = androidx.compose.ui.graphics.Color(accentColor),
+    categoryBar       = androidx.compose.ui.graphics.Color(0x00000000),
+    backgroundTop     = androidx.compose.ui.graphics.Color(backgroundTop),
+    backgroundBottom  = androidx.compose.ui.graphics.Color(backgroundBottom),
+)
+
+data class CrossbarContextMenu(
+    val state: MenuState<String>,
+
+    val primaryId: String? = null,
+
+    val platformId: String? = null,
+
+    val isAllGames: Boolean = false,
+    val gameId: Long? = null,
+    val packageName: String? = null,
+
+    val categoryContext: String? = null,
+
+    val pendingAppAction: String? = null,
+
+    val isAddMenu: Boolean = false,
+
+    val shortcutId: String? = null,
+
+    val launchIntentUri: String? = null,
+
+    val musicFolderId: String? = null,
+    val musicTrackId: String? = null,
+
+    val playlistId: Long? = null,
+
+    val playlistPickerTrackId: String? = null,
+
+    val videoPlaylistId: Long? = null,
+
+    val videoFileId: String? = null,
+
+    val videoLibraryId: String? = null,
+
+    val videoPlaylistPickerVideoId: String? = null,
+
+    val bookFileId: String? = null,
+
+    val photoFileId: String? = null,
+
+    val photoLibraryId: String? = null,
+
+    val mediaRootUri: String? = null,
+    val mediaRootKind: MediaRootKind? = null,
+) {
+    val title: String get() = state.title
+    val items: List<CrossbarContextMenuItem> get() = state.rows
+    val subtitle: String? get() = state.subtitle
+    val selectedIndex: Int? get() = state.selectedIndex
+    val parent: MenuState<String>? get() = state.parent
+
+    fun withSelected(index: Int): CrossbarContextMenu = copy(state = state.copy(selectedIndex = index))
+}
+
+typealias CrossbarContextMenuItem = MenuRow<String>
+
+data class CollectionNameDialogState(
+    val title: String,
+
+    val subtitle: String? = null,
+
+    val resetLabel: String? = null,
+
+    val initialText: String = "",
+
+    val text: String = initialText,
+
+    val editTitleGameId: Long? = null,
+
+    val editNoteGameId: Long? = null,
+
+    val quickSearch: Boolean = false,
+
+    val renameCardPlatformId: String? = null,
+
+    val renameProfile: Boolean = false,
+
+    val placeholder: String = "e.g. RPGs, Currently Playing",
+    val confirmLabel: String = "Save",
+)
+
+data class InfoDialogState(
+    val title: String,
+    val message: String,
+)
+
+data class ColorSchemePickerState(
+    val options: List<ColorSchemeOption>,
+    val selectedIndex: Int = 0,
+)
+
+data class ColorSchemeOption(
+    val scheme: CrossbarColorScheme?,
+    val label: String,
+
+    val sublabel: String?,
+    val swatch: Long,
+    val isCustom: Boolean = false,
+)
+
+data class CustomColorPickerState(
+    val hue: Float,
+    val saturation: Float,
+    val brightness: Float,
+    val selectedChannel: Int = 0,
+)
+
+data class CrossbarLayoutAdjustSession(
+    val draft: com.echo.themekit.CrossbarLayoutAdjust,
+    val original: com.echo.themekit.CrossbarLayoutAdjust,
+    val bucketKey: String,
+    val slidersVisible: Boolean = false,
+)
+
+data class CustomIconSession(
+    val groups: List<com.echo.themekit.IconSlot.Group>,
+    val groupIndex: Int = 0,
+    val slotIndex: Int = 0,
+    val message: String? = null,
+
+    val revision: Int = 0,
+) {
+    val group: com.echo.themekit.IconSlot.Group get() = groups[groupIndex]
+
+    val focusedSlot: com.echo.themekit.IconSlot?
+        get() = CustomizableIcons.group(group).getOrNull(slotIndex)
+}
+
+sealed interface AppPickerTarget {
+    data class AndroidGames(val platformId: String) : AppPickerTarget
+
+    data class CategoryShortcuts(val categoryId: String) : AppPickerTarget
+}
+
+data class AppPickerEntry(
+    val packageName: String,
+    val label: String,
+)
+
+const val PICKER_GRID_COLUMNS = 7
+
+data class AppPickerState(
+    val title: String,
+    val target: AppPickerTarget,
+    val apps: List<AppPickerEntry>,
+    val selected: Set<String> = emptySet(),
+
+    val initialSelected: Set<String> = emptySet(),
+
+    val focusedIndex: Int = 0,
+    val query: String = "",
+    val searchActive: Boolean = false,
+    val confirmingRemovals: Boolean = false,
+
+    val confirmFocusedOption: Int = CONFIRM_CANCEL,
+
+    val columns: Int = PICKER_GRID_COLUMNS,
+
+    val usingTouch: Boolean = false,
+) {
+    companion object {
+        const val CONFIRM_CANCEL = 0
+        const val CONFIRM_REMOVE = 1
+    }
+}
+
+sealed interface VideoNav {
+    data object Root : VideoNav
+    data object Folders : VideoNav
+    data object AllVideos : VideoNav
+
+    data object Collections : VideoNav
+    data object RecentlyWatched : VideoNav
+    data object Favorites : VideoNav
+    data object Playlists : VideoNav
+    data class Playlist(val id: Long, val name: String) : VideoNav
+    data object Libraries : VideoNav
+    data class Library(val id: String, val name: String) : VideoNav
+}
+
+private val VideoNav.isVideoCollectionChild: Boolean
+    get() = this == VideoNav.RecentlyWatched || this == VideoNav.Favorites || this == VideoNav.Playlists
+
+sealed interface BooksNav {
+    data object Root : BooksNav
+    data object Folders : BooksNav
+    data object AllBooks : BooksNav
+    data object Shelves : BooksNav
+    data class Shelf(val id: String, val name: String) : BooksNav
+
+    data object SeriesList : BooksNav
+
+    data class Series(val name: String) : BooksNav
+}
+
+data class BookSeries(val name: String, val bookCount: Int, val coverUri: String?)
+
+sealed interface PhotoNav {
+    data object Root : PhotoNav
+    data object Folders : PhotoNav
+    data object AllPhotos : PhotoNav
+    data object Albums : PhotoNav
+    data object Favorites : PhotoNav
+    data class Library(val id: String, val name: String) : PhotoNav
+}
+
+data class PhotoViewerRequest(
+    val photoId: String,
+    val libraryId: String?,
+    val openWallpaperPreview: Boolean = false,
+    val favoritesOnly: Boolean = false,
+)
+
+sealed interface RootTarget {
+    data class Media(val kind: MediaRootKind) : RootTarget
+    data object Rom : RootTarget
+}
+
+data class RootPick(val target: RootTarget, val relinkFrom: String? = null)
+
+sealed interface MusicNav {
+    data object Root : MusicNav
+    data object Folders : MusicNav
+    data object AllMusic : MusicNav
+    data object Playlists : MusicNav
+    data class Playlist(val id: Long, val name: String) : MusicNav
+}
+
+sealed interface MusicBrowserView {
+    data object AllMusic : MusicBrowserView
+    data object Playlists : MusicBrowserView
+    data class Playlist(val id: Long, val name: String) : MusicBrowserView
+
+    data object Artists : MusicBrowserView
+    data object Albums : MusicBrowserView
+    data class Artist(val name: String, val key: String) : MusicBrowserView
+    data class Album(val name: String, val key: String) : MusicBrowserView
+}
+
+internal val MusicBrowserView.listsGroups: Boolean
+    get() = this == MusicBrowserView.Artists || this == MusicBrowserView.Albums
+
+data class MusicBrowserState(
+    val view: MusicBrowserView,
+    val title: String,
+    val query: String = "",
+    val rows: List<CrossbarItem> = emptyList(),
+    val selectedIndex: Int = 0,
+
+    val sortLabel: String? = null,
+
+    val scrollToTopToken: Int = 0,
+)
+
+data class SearchState(
+    val scope: SearchScope,
+    val query: String = "",
+    val rows: List<CrossbarItem> = emptyList(),
+    val selectedIndex: Int = 0,
+
+    val scrollToTopToken: Int = 0,
+
+    val loaded: Boolean = false,
+)
+
+data class PlaylistNameDialogState(
+    val title: String,
+    val initialText: String = "",
+
+    val text: String = initialText,
+    val forTrackId: String? = null,
+
+    val renamePlaylistId: Long? = null,
+
+    val videoContext: Boolean = false,
+
+    val forVideoId: String? = null,
+)
+
+data class MusicTrackPickerState(
+    val playlistId: Long,
+    val playlistName: String,
+    val tracks: List<MusicTrack>,
+    val selected: Set<String> = emptySet(),
+    val selectedIndex: Int = 0,
+)
+
+enum class DrillOutStep {
+    MUSIC,
+
+    VIDEO_LIBRARY,
+    VIDEO_PLAYLIST,
+    VIDEO_COLLECTION_CHILD,
+    VIDEO,
+
+    PHOTO_LIBRARY,
+    PHOTO,
+
+    LIBRARY_SHELF,
+
+    LIBRARY_SERIES,
+    LIBRARY,
+    ROM_FOLDERS,
+
+    PLATFORM_FOLDER,
+}
+
+internal enum class InitialSetupDecision { ALREADY_SEEN, SEED_AS_SEEN, OPEN_WIZARD }
+
+@androidx.compose.runtime.Immutable
+
+data class MediaCovers(
+    val music: List<String> = emptyList(),
+    val video: List<String> = emptyList(),
+    val photo: List<String> = emptyList(),
+    val books: List<String> = emptyList(),
+)
+
+data class CrossbarUiState(
+
+    val categories: List<Category> = emptyList(),
+    val selectedCategoryIndex: Int = 0,
+    val platformGameCounts: Map<String, Int> = emptyMap(),
+
+    val allGamesCount: Int = 0,
+
+    val cardFanCovers: Map<String, List<String>> = emptyMap(),
+
+    val shelfFanCovers: Map<String, List<String>> = emptyMap(),
+
+    val favoritesCount: Int = 0,
+
+    val missingCount: Int = 0,
+
+    val playStateCounts: Map<PlayState, Int> = emptyMap(),
+    val recentlyAddedCount: Int = 0,
+    val selectedPlatformId: String? = null,
+
+    val musicNav: MusicNav = MusicNav.Root,
+    val rootPick: RootPick? = null,
+    val romFoldersOpen: Boolean = false,
+    val musicFolders: List<com.echo.core.domain.model.MusicFolder> = emptyList(),
+
+    val mediaCovers: MediaCovers = MediaCovers(),
+
+    val musicPlaylists: List<com.echo.core.domain.model.Playlist> = emptyList(),
+    val videoPlaylists: List<com.echo.core.domain.model.VideoPlaylist> = emptyList(),
+
+    val gameSortMode: CrossbarSortMode = CrossbarSortMode.TITLE,
+    val musicSortMode: CrossbarSortMode = CrossbarSortMode.TITLE,
+    val videoSortMode: CrossbarSortMode = CrossbarSortMode.TITLE,
+    val bookSortMode: CrossbarSortMode = CrossbarSortMode.TITLE,
+    val sortLabel: String? = null,
+
+    val musicPlayerVisible: Boolean = false,
+    val musicPlayback: com.echo.feature.crossbar.music.MusicPlaybackState =
+        com.echo.feature.crossbar.music.MusicPlaybackState(),
+    val musicAccentArgb: Long? = null,
+
+    val currentItems: List<CrossbarItem> = emptyList(),
+    val selectedItemIndex: Int = 0,
+
+    val letterJump: LetterJumpState? = null,
+
+    val drillTitle: String? = null,
+
+    val drillSiblings: List<CrossbarItem> = emptyList(),
+    val drillSiblingIndex: Int = 0,
+
+    val scrollToTopToken: Int = 0,
+
+    val lastInputWasTouch: Boolean = false,
+
+    val inColumn: Boolean = false,
+
+    val showContextMenuHint: Boolean = false,
+
+    val idle: Boolean = false,
+
+    val showSettingsHint: Boolean = false,
+
+    val contextMenuHintEnabled: Boolean = ControllerHintPolicy.DEFAULT_ENABLED,
+
+    val contextMenuHintDelaySeconds: Float = ControllerHintPolicy.DEFAULT_DELAY_SECONDS,
+    val touchNavButtonMode: com.echo.core.domain.model.TouchNavButtonMode =
+        com.echo.core.domain.model.TouchNavButtonMode.AUTO,
+
+    val touchSensitivity: com.echo.core.domain.model.TouchSensitivity =
+        com.echo.core.domain.model.TouchSensitivity.NORMAL,
+
+    val waveStyle: WaveStyle = WaveStyle.ANIMATED,
+
+    val respectBatterySaver: Boolean = true,
+
+    val waveOverWallpaper: Boolean = false,
+
+    val wallpaperAccent: Long? = null,
+    val thermalThrottleAware: Boolean = true,
+    val customWallpaperPath: String? = null,
+
+    val motionWallpaperPath: String? = null,
+
+    val showBootSequence: Boolean = true,
+
+    val bootVideoPath: String? = null,
+    val bootAudioPath: String? = null,
+
+    val activeGameBoot: com.echo.feature.launcher.GameBootRequest? = null,
+
+    val gameBootIsPreview: Boolean = false,
+
+    val discCeremony: DiscCeremonyState? = null,
+
+    val startupPermissionsSettled: Boolean = false,
+
+    val initialSetupDecided: Boolean = false,
+
+    val activeSettingsScreen: String? = null,
+
+    val settingsReturnTo: String? = null,
+
+    val leftBacksOut: Boolean = true,
+    val pendingSettingsAction: GamepadAction? = null,
+    val activeAppDrawerFilter: String? = null,
+    val pendingDrawerAction: GamepadAction? = null,
+
+    val drawerLetterRailHeld: Boolean = false,
+
+    val pendingDrawerTypedChar: String? = null,
+    val artworkFetchTitle: String? = null,
+
+    val artworkStudioGameId: Long? = null,
+
+    val pendingArtworkStudioAction: GamepadAction? = null,
+
+    val manualViewer: com.echo.feature.crossbar.ui.detail.ManualViewerUi? = null,
+
+    val metadataPreview: com.echo.feature.crossbar.ui.detail.MetadataPreviewUi? = null,
+
+    val metadataPreviewGameId: Long? = null,
+
+    val gameInfo: GameInfoState? = null,
+
+    val profile: ProfileState? = null,
+    val profileName: String = DEFAULT_PROFILE_NAME,
+    val profileAvatar: String? = null,
+    val profileAvatarPick: Boolean = false,
+    val profileData: ProfileData = ProfileData(),
+
+
+
+
+
+    val activeAppId: Long? = null,
+
+    val pendingAppDetailAction: GamepadAction? = null,
+
+    val videoNav: VideoNav = VideoNav.Root,
+    val videoLibraries: List<com.echo.core.domain.model.VideoLibrary> = emptyList(),
+    val activeVideoId: String? = null,
+
+    val resumeVideo: com.echo.core.domain.model.Video? = null,
+
+    val activeVideoAutoPlay: Boolean = false,
+    val pendingVideoDetailAction: GamepadAction? = null,
+
+    val photoNav: PhotoNav = PhotoNav.Root,
+    val booksNav: BooksNav = BooksNav.Root,
+
+    val continueBook: com.echo.core.domain.model.Book? = null,
+    val bookLibraries: List<com.echo.core.domain.model.BookLibrary> = emptyList(),
+
+    val bookSeries: List<BookSeries> = emptyList(),
+
+    val defaultReader: String? = null,
+    val defaultReaderLabel: String? = null,
+    val photoLibraries: List<com.echo.core.domain.model.PhotoLibrary> = emptyList(),
+    val photoFavoriteCount: Int = 0,
+    val activePhotoViewer: PhotoViewerRequest? = null,
+    val pendingPhotoViewerAction: GamepadAction? = null,
+
+    val activeContextMenu: CrossbarContextMenu? = null,
+
+    val colorSchemePicker: ColorSchemePickerState? = null,
+    val customColorPicker: CustomColorPickerState? = null,
+
+    val renameAppTarget: String? = null,
+    val renameAppCurrent: String? = null,
+    val renameAppText: String = "",
+
+    val collectionNameDialog: CollectionNameDialogState? = null,
+
+    val playlistNameDialog: PlaylistNameDialogState? = null,
+
+    val musicTrackPicker: MusicTrackPickerState? = null,
+
+    val musicBrowser: MusicBrowserState? = null,
+    val search: SearchState? = null,
+
+    val infoDialog: InfoDialogState? = null,
+
+    val showWindowsSetupPrompt: Boolean = false,
+
+    val launchRecovery: com.echo.feature.launcher.LaunchRecoveryRequest? = null,
+
+    val launchRecoveryCursor: Int = 0,
+
+    val appPicker: AppPickerState? = null,
+
+    val gamePickerCategoryId: String? = null,
+    val pendingGamePickerAction: GamepadAction? = null,
+
+    val iconStyle: GameIconStyle = GameIconStyle.PSP_RECTANGLE,
+
+    val iconLegibility: com.echo.core.domain.model.IconLegibilityStyle =
+        com.echo.core.domain.model.IconLegibilityStyle.DEFAULT,
+
+    val fadeByDistance: Boolean = true,
+
+    val cardArtGrid: Boolean = true,
+
+    val recentsIncludeApps: Boolean = false,
+    val interfaceChoices: com.echo.core.data.repository.InterfaceChoices =
+        com.echo.core.data.repository.InterfaceChoices(),
+
+    val textShadow: Boolean = true,
+
+    val focusedGameVideo: com.echo.feature.crossbar.ui.FocusedGameVideo? = null,
+
+    val snapPlacement: com.echo.core.domain.model.VideoSnapPlacement =
+        com.echo.core.domain.model.VideoSnapPlacement.DEFAULT,
+
+    val gameMetadataVisible: Boolean = true,
+
+    val itemBackdropEnabled: Boolean = true,
+
+    val focusedItemAccentArgb: Long? = null,
+
+    val focusedItemBackdrop: String? = null,
+
+    val recentFilter: RecentFilter = RecentFilter.ALL,
+
+    val recentRailVisible: Boolean = false,
+
+    val pillCursor: PillCursor? = null,
+
+    val notificationsOpen: Boolean = false,
+
+    val panelTab: PanelTab = PanelTab.NOTIFICATIONS,
+    val noticeCursor: Int = 0,
+    val panelQuick: QuickSetting = QuickSetting.WAVE,
+    val panelProfile: ProfileFocus = ProfileFocus(),
+    val panelChip: Int = 0,
+    val panelSetting: Int = 0,
+    val settingsFromPanel: Boolean = false,
+    val libraryChips: List<LibraryChip> = emptyList(),
+    val launcherNotices: List<com.echo.core.ui.notification.SystemToast> = emptyList(),
+
+    val androidNotices: List<AndroidNotice> = emptyList(),
+    val externalPlayback: com.echo.core.ui.notification.ExternalPlayback? = null,
+
+    val recentTop: CrossbarItem? = null,
+    val recentTopAt: Long? = null,
+    val panelPage: DetailPanelPage = DetailPanelPage.LOGO,
+    val panelPageGameId: Long? = null,
+    val librarySetupComplete: Boolean = false,
+    val themeColors: EchoColors = DefaultEchoColors,
+
+    val iconOverrides: Map<String, CustomIcon> = emptyMap(),
+
+    val customIcons: Map<String, CustomIcon> = emptyMap(),
+
+    val customIconSession: CustomIconSession? = null,
+
+    val pendingThemeShareFile: java.io.File? = null,
+
+    val pendingCustomIconsAction: GamepadAction? = null,
+
+    val saveThemeNameDialog: PlaylistNameDialogState? = null,
+
+    val layoutSpec: com.echo.themekit.CrossbarLayoutSpec = com.echo.themekit.CrossbarLayoutSpec.DEFAULT,
+
+
+    val crossbarLayoutAdjustMap: Map<String, com.echo.themekit.CrossbarLayoutAdjust> = emptyMap(),
+
+    val crossbarLayoutAdjust: CrossbarLayoutAdjustSession? = null,
+) {
+    val isInSubItem: Boolean
+        get() = drillOutStep != null
+
+    val drillOutStep: DrillOutStep?
+        get() = when {
+            musicNav != MusicNav.Root -> DrillOutStep.MUSIC
+            videoNav is VideoNav.Library -> DrillOutStep.VIDEO_LIBRARY
+            videoNav is VideoNav.Playlist -> DrillOutStep.VIDEO_PLAYLIST
+            videoNav.isVideoCollectionChild -> DrillOutStep.VIDEO_COLLECTION_CHILD
+            videoNav != VideoNav.Root -> DrillOutStep.VIDEO
+            photoNav is PhotoNav.Library -> DrillOutStep.PHOTO_LIBRARY
+            photoNav != PhotoNav.Root -> DrillOutStep.PHOTO
+            booksNav is BooksNav.Series -> DrillOutStep.LIBRARY_SERIES
+            booksNav is BooksNav.Shelf -> DrillOutStep.LIBRARY_SHELF
+            booksNav != BooksNav.Root -> DrillOutStep.LIBRARY
+            romFoldersOpen -> DrillOutStep.ROM_FOLDERS
+            selectedPlatformId != null -> DrillOutStep.PLATFORM_FOLDER
+            else -> null
+        }
+
+    val focusedItem: CrossbarItem?
+        get() = currentItems.getOrNull(selectedItemIndex)
+
+    val hoverPanelItem: CrossbarItem?
+        get() = focusedItem?.takeIf {
+            (it.isRealGame || onLastPlayedHome) && it.backdropArt.isNotEmpty()
+        }
+
+    val effectivePanelPage: DetailPanelPage
+        get() = if (panelStripOpen) panelPage else DetailPanelPage.LOGO
+
+    val panelStripOpen: Boolean
+        get() = panelPageGameId != null && panelPageGameId == hoverPanelItem?.gameId
+
+    val onLastPlayedHome: Boolean
+        get() = categories.getOrNull(selectedCategoryIndex)?.id == BuiltInCategory.RECENTLY_PLAYED &&
+            !isInSubItem &&
+            !(recentFilter == RecentFilter.ALL && currentItems.isEmpty())
+
+    val hoverPanelContent: DetailPanelContent?
+        get() = hoverPanelItem?.let { item ->
+            detailPanelContentFor(
+                item = item,
+                platformName = item.platformId?.let { com.echo.core.domain.model.platformLabel(it, null) }.orEmpty(),
+                videoUri = focusedGameVideo?.takeIf { it.gameId == item.gameId }?.uri,
+            )
+        }
+
+    val canFilterRecents: Boolean
+        get() = onLastPlayedHome
+
+    val hoverPanelHasPages: Boolean
+        get() = (hoverPanelContent?.pages?.size ?: 0) > 1
+
+    val focusedItemHasContextMenu: Boolean
+        get() = focusedItem?.hasContextMenu(this) == true
+
+    val canSortCurrentList: Boolean
+        get() = activeSortModes() != null
+
+    val resolvedShowTouchButton: Boolean
+        get() = when (touchNavButtonMode) {
+            com.echo.core.domain.model.TouchNavButtonMode.AUTO -> lastInputWasTouch
+            com.echo.core.domain.model.TouchNavButtonMode.ALWAYS_SHOW -> true
+            com.echo.core.domain.model.TouchNavButtonMode.ALWAYS_HIDE -> false
+        }
+
+    val overlayKeepsChrome: Boolean
+        get() = (activeContextMenu != null || notificationsOpen) && !otherBlockingOverlay
+
+    val noticeFocusables: List<NoticeFocus>
+        get() = buildList {
+            if (musicPlayback.track != null || externalPlayback != null || recentTop != null) add(NoticeFocus.Media)
+            panelEntries(androidNotices, launcherNotices).forEach { add(it.focus) }
+        }
+
+    val focusedNotice: NoticeFocus?
+        get() = if (panelTab != PanelTab.NOTIFICATIONS) null else noticeFocusables.let { rows ->
+            if (rows.isEmpty()) null else rows[noticeCursor.coerceIn(0, rows.lastIndex)]
+        }
+
+    val shelfCards: List<ShelfCard>
+        get() = buildList {
+            if (favoritesCount > 0) add(ShelfCard.Favorites(favoritesCount))
+            PlayState.entries.forEach { state ->
+                playStateCounts[state]?.takeIf { it > 0 }?.let { add(ShelfCard.Marked(state, it)) }
+            }
+            if (recentlyAddedCount > 0) add(ShelfCard.RecentlyAdded(recentlyAddedCount))
+        }
+
+    fun categoryReachable(category: Category): Boolean =
+        category.id != BuiltInCategory.SHELVES || shelfCards.isNotEmpty()
+
+    val enterOpensAppDrawer: Boolean
+        get() = search == null &&
+            !hasBlockingOverlay &&
+            !isInSubItem &&
+            !onLastPlayedHome &&
+            activePillIndex() == null
+
+    val hasBlockingOverlay: Boolean
+        get() = otherBlockingOverlay || activeContextMenu != null || notificationsOpen
+
+    private val otherBlockingOverlay: Boolean
+        get() = chromeOverlay || fullscreenOverlay
+
+    val waveShown: Boolean
+        get() = !chromeOverlay && !notificationsOpen && !showBootSequence && !onLastPlayedHome &&
+            artworkStudioGameId == null && manualViewer == null && metadataPreview == null &&
+            activeVideoId == null && activePhotoViewer == null && musicBrowser == null &&
+            musicTrackPicker == null && !musicPlayerVisible
+
+    private val chromeOverlay: Boolean
+        get() = activeSettingsScreen != null ||
+            appPicker != null ||
+            gamePickerCategoryId != null ||
+            activeAppDrawerFilter != null ||
+            activeAppId != null ||
+            gameInfo != null ||
+            profile != null ||
+            search != null
+
+    private val fullscreenOverlay: Boolean
+        get() = showBootSequence ||
+            artworkStudioGameId != null ||
+            manualViewer != null ||
+            metadataPreview != null ||
+            activeGameBoot != null ||
+            discCeremony != null ||
+            activeVideoId != null ||
+            activePhotoViewer != null ||
+            colorSchemePicker != null ||
+            customColorPicker != null ||
+            crossbarLayoutAdjust != null ||
+            customIconSession != null ||
+            saveThemeNameDialog != null ||
+            renameAppTarget != null ||
+            collectionNameDialog != null ||
+            playlistNameDialog != null ||
+            musicTrackPicker != null ||
+            musicBrowser != null ||
+            musicPlayerVisible ||
+            infoDialog != null ||
+            launchRecovery != null ||
+            showWindowsSetupPrompt
+
+    val stripShowsCrossbarContext: Boolean
+        get() = !hasBlockingOverlay || overlayKeepsChrome
+
+    val statusStripVisible: Boolean
+        get() = !fullscreenOverlay
+}
+
+data class DiscCeremonyState(val art: Any?)
+
+enum class CrossbarItemType {
+    STANDARD,
+    ALL_GAMES,
+    FAVORITES,
+
+    SHELF,
+
+    MISSING,
+    MEMORY_CARD,
+    COLLECTION,
+
+    MUSIC_GROUP,
+
+    MUSIC_ARTISTS,
+    MUSIC_ALBUMS,
+    MUSIC_TRACK,
+    PLAYLIST,
+    VIDEO_LIBRARY,
+    VIDEO_FOLDER,
+    VIDEO_FILE,
+    VIDEO_RECENT,
+    VIDEO_FAVORITES,
+    VIDEO_COLLECTIONS,
+    PHOTO_ALBUMS,
+    PHOTO_FAVORITES,
+    PHOTO_FOLDER,
+
+    LIBRARY_SHELVES,
+    LIBRARY_READER,
+    LIBRARY_FOLDER,
+    LIBRARY_BOOK,
+
+    LIBRARY_SERIES,
+    PHOTO_FILE,
+    CAMERA,
+
+    SEARCH,
+
+    MEDIA_ROOT,
+
+    ADD_ACTION,
+    EMPTY,
+}
+
+enum class CrossbarSortMode(val label: String) {
+    TITLE("Title"),
+    ARTIST("Artist"),
+    ALBUM("Album"),
+    RECENT_PLAYED("Recently Played"),
+    DATE_ADDED("Date Added"),
+    SERIES("Series"),
+}
+
+private val MUSIC_SORTS = listOf(CrossbarSortMode.TITLE, CrossbarSortMode.ARTIST, CrossbarSortMode.ALBUM, CrossbarSortMode.DATE_ADDED)
+private val GAME_SORTS  = listOf(CrossbarSortMode.TITLE, CrossbarSortMode.RECENT_PLAYED, CrossbarSortMode.DATE_ADDED)
+private val VIDEO_SORTS = listOf(CrossbarSortMode.TITLE, CrossbarSortMode.DATE_ADDED, CrossbarSortMode.RECENT_PLAYED)
+private val BOOK_SORTS  = listOf(CrossbarSortMode.TITLE, CrossbarSortMode.SERIES, CrossbarSortMode.DATE_ADDED)
+
+private val BY_SERIES_POSITION = compareBy<com.echo.core.domain.model.Book>(
+    { it.seriesIndex ?: Double.MAX_VALUE },
+    { it.displayTitle.lowercase() },
+)
+
+internal fun List<com.echo.core.domain.model.Book>.inSeriesOrder(): List<com.echo.core.domain.model.Book> =
+    sortedWith(BY_SERIES_POSITION)
+
+internal fun List<com.echo.core.domain.model.Book>.seriesGroups(): List<BookSeries> =
+    filter { it.seriesName != null }
+        .groupBy { it.seriesName!! }
+        .map { (name, books) ->
+            BookSeries(
+                name = name,
+                bookCount = books.size,
+                coverUri = books.inSeriesOrder().firstNotNullOfOrNull { it.coverUri },
+            )
+        }
+        .sortedBy { it.name.lowercase() }
+
+internal fun List<com.echo.core.domain.model.Book>.bookSorted(mode: CrossbarSortMode): List<com.echo.core.domain.model.Book> = when (mode) {
+    CrossbarSortMode.SERIES -> sortedWith(
+        compareBy<com.echo.core.domain.model.Book> { it.seriesName == null }
+            .thenBy { it.seriesName?.lowercase() ?: "" }
+            .then(BY_SERIES_POSITION)
+    )
+    CrossbarSortMode.DATE_ADDED -> sortedByDescending { it.dateAdded ?: 0L }
+    else -> sortedBy { it.displayTitle.lowercase() }
+}
+
+internal fun List<com.echo.core.domain.model.Video>.videoSorted(mode: CrossbarSortMode): List<com.echo.core.domain.model.Video> = when (mode) {
+    CrossbarSortMode.RECENT_PLAYED -> sortedByDescending { it.lastWatchedAt ?: 0L }
+    CrossbarSortMode.DATE_ADDED    -> sortedByDescending { it.dateAdded ?: 0L }
+    else                      -> sortedBy { it.displayTitle.lowercase() }
+}
+
+internal fun List<Game>.gameSorted(mode: CrossbarSortMode): List<Game> = when (mode) {
+    CrossbarSortMode.RECENT_PLAYED -> sortedByDescending { it.lastPlayedAt ?: 0L }
+    CrossbarSortMode.DATE_ADDED    -> sortedByDescending { it.id }
+    else                      -> sortedBy { it.displayTitle.lowercase() }
+}
+
+internal fun cursorAfterRefresh(previous: List<CrossbarItem>, previousIndex: Int, next: List<CrossbarItem>): Int {
+    val selectedId = previous.getOrNull(previousIndex)?.id
+    val kept = selectedId?.let { id -> next.indexOfFirst { it.id == id } } ?: -1
+    return if (kept >= 0) kept else previousIndex.coerceIn(0, (next.size - 1).coerceAtLeast(0))
+}
+
+internal fun List<Game>.projectGamesForDisplay(): List<Game> {
+    val singles = filter { it.discSetKey == null && !it.isMissing }
+    val sets = groupBy { it.discSetKey }
+        .filterKeys { it != null }
+        .values
+        .mapNotNull { members ->
+            val present = members.filterNot { it.isMissing }
+            if (present.isEmpty()) return@mapNotNull null
+            val display = members.firstOrNull { it.isDiscPrimary } ?: present.first()
+
+            display.copy(isFavorite = members.any { it.isFavorite })
+        }
+    return singles + sets
+}
+
+internal fun List<MusicTrack>.trackSorted(mode: CrossbarSortMode): List<MusicTrack> = when (mode) {
+    CrossbarSortMode.ARTIST     -> sortedWith(
+        compareBy(nullsLast<String>()) { t: MusicTrack -> t.artist?.lowercase() }
+            .thenBy(nullsLast<String>()) { t -> t.album?.lowercase() }
+            .thenBy { t -> t.displayTitle.lowercase() }
+    )
+    CrossbarSortMode.ALBUM      -> sortedWith(
+        compareBy(nullsLast<String>()) { t: MusicTrack -> t.album?.lowercase() }
+            .thenBy { t -> t.trackNumber ?: Int.MAX_VALUE }
+            .thenBy { t -> t.displayTitle.lowercase() }
+    )
+    CrossbarSortMode.DATE_ADDED -> sortedByDescending { it.lastModified ?: 0L }
+    else                   -> sortedBy { it.displayTitle.lowercase() }
+}
+
+internal fun CrossbarItem.owningCategory(): String? = when (type) {
+    CrossbarItemType.VIDEO_FILE -> BuiltInCategory.VIDEO
+    CrossbarItemType.PHOTO_FILE -> BuiltInCategory.PHOTO
+    CrossbarItemType.LIBRARY_BOOK -> BuiltInCategory.LIBRARY
+    CrossbarItemType.MUSIC_TRACK -> BuiltInCategory.MUSIC
+    else -> if (gameId != null) BuiltInCategory.GAMES else null
+}
+
+internal fun CrossbarItem.menuHostCategory(currentCategoryId: String?): String? =
+    owningCategory() ?: currentCategoryId
+
+fun CrossbarItem.hasContextMenu(state: CrossbarUiState): Boolean {
+    val categoryId = menuHostCategory(state.categories.getOrNull(state.selectedCategoryIndex)?.id)
+    return when {
+        categoryId == BuiltInCategory.MUSIC && (
+            id == CrossbarViewModel.NOW_PLAYING_ITEM_ID ||
+                type == CrossbarItemType.MUSIC_TRACK ||
+                (type == CrossbarItemType.PLAYLIST && playlistId != null)
+        ) -> true
+
+        categoryId == BuiltInCategory.VIDEO && (
+            (type == CrossbarItemType.VIDEO_FILE && id.startsWith("vid_")) ||
+                (type == CrossbarItemType.VIDEO_FOLDER && id.startsWith("vlib_")) ||
+                (type == CrossbarItemType.PLAYLIST && playlistId != null)
+        ) -> true
+
+        categoryId == BuiltInCategory.LIBRARY &&
+            type == CrossbarItemType.LIBRARY_BOOK && id.startsWith("book_") -> true
+
+        categoryId == BuiltInCategory.PHOTO && (
+            (type == CrossbarItemType.PHOTO_FILE && id.startsWith("pho_")) ||
+                (type == CrossbarItemType.PHOTO_FOLDER && id.startsWith("plib_"))
+        ) -> true
+        mediaRootKind != null && type == CrossbarItemType.MEDIA_ROOT -> true
+        type == CrossbarItemType.MEDIA_ROOT -> true
+        gameId != null -> true
+        type == CrossbarItemType.ALL_GAMES -> true
+        platformId != null -> true
+        packageName != null -> true
+        else -> false
+    }
+}
+
+fun CrossbarUiState.activeSortModes(): List<CrossbarSortMode>? {
+    val cat = categories.getOrNull(selectedCategoryIndex) ?: return null
+    return when {
+        cat.id == BuiltInCategory.MUSIC &&
+            (musicNav == MusicNav.AllMusic || musicNav is MusicNav.Playlist) -> MUSIC_SORTS
+
+        cat.id == BuiltInCategory.VIDEO &&
+            (videoNav == VideoNav.AllVideos || videoNav == VideoNav.Favorites ||
+                videoNav is VideoNav.Library) -> VIDEO_SORTS
+
+        cat.id == BuiltInCategory.LIBRARY &&
+            (booksNav == BooksNav.AllBooks || booksNav is BooksNav.Shelf) -> BOOK_SORTS
+        cat.id == BuiltInCategory.GAMES &&
+            selectedPlatformId != null -> GAME_SORTS
+        cat.isGamingCategory -> GAME_SORTS
+        else -> null
+    }
+}
+
+internal fun canonicalCrossbarCategories(
+    categories: List<Category>,
+    fallbacks: List<Category>,
+): List<Category> {
+    val byId = categories.associateBy { it.id }
+    val builtInIds = fallbacks.map { it.id }.toSet()
+
+    val builtIns = fallbacks.mapNotNull { fallback ->
+        val stored = byId[fallback.id]
+
+        if (stored == null) return@mapNotNull null
+        fallback.copy(
+            name             = stored.name.takeIf { it.isNotBlank() } ?: fallback.name,
+            position         = stored.position,
+            accentColor      = stored.accentColor,
+            customIconUri    = stored.customIconUri,
+            filterRules      = stored.filterRules,
+
+            isGamingCategory = stored.isGamingCategory,
+        )
+    }
+
+    val customCategories = categories.filter { it.id !in builtInIds }
+
+    return (builtIns + customCategories).sortedBy { it.position }
+}
+
+internal fun CrossbarUiState.sortModeFor(cycle: List<CrossbarSortMode>): CrossbarSortMode = when {
+    cycle === MUSIC_SORTS -> musicSortMode
+    cycle === VIDEO_SORTS -> videoSortMode
+    cycle === BOOK_SORTS  -> bookSortMode
+    else                  -> gameSortMode
+}
+
+internal fun CrossbarUiState.withSortMode(cycle: List<CrossbarSortMode>, mode: CrossbarSortMode): CrossbarUiState = when {
+    cycle === MUSIC_SORTS -> copy(musicSortMode = mode)
+    cycle === VIDEO_SORTS -> copy(videoSortMode = mode)
+    cycle === BOOK_SORTS  -> copy(bookSortMode = mode)
+    else                  -> copy(gameSortMode = mode)
+}
+
+val CrossbarUiState.hintsAutoHide: Boolean
+    get() = contextMenuHintDelaySeconds > 0f
+
+internal fun CrossbarUiState.withHintsShownNow(): CrossbarUiState = copy(
+    showContextMenuHint = shouldShowContextMenuHint(this, 0L),
+    showSettingsHint = shouldShowSettingsHint(this, 0L),
+)
+
+fun shouldShowContextMenuHint(state: CrossbarUiState, idleMs: Long): Boolean =
+    state.contextMenuHintEnabled &&
+
+        state.stripShowsCrossbarContext &&
+
+        (state.focusedItemHasContextMenu || state.canSortCurrentList || state.canFilterRecents) &&
+        idleMs >= (state.contextMenuHintDelaySeconds * 1_000f).toLong()
+
+fun shouldShowSettingsHint(state: CrossbarUiState, idleMs: Long): Boolean =
+    state.contextMenuHintEnabled &&
+        state.activeSettingsScreen != null &&
+        idleMs >= (state.contextMenuHintDelaySeconds * 1_000f).toLong()
+
+internal fun gameMetadataLine(
+    releaseYear: Int?,
+    genre: String?,
+    developer: String?,
+    players: String?,
+): String? {
+    fun String?.clean(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
+    val parts = listOfNotNull(
+
+        releaseYear?.takeIf { it > 0 }?.toString(),
+        genre.clean(),
+        developer.clean(),
+
+        players.clean()?.let { if (it == "1") "1 player" else "$it players" },
+    )
+    return parts.takeIf { it.isNotEmpty() }?.joinToString("   ·   ")
+}
+
+data class CrossbarItem(
+    val id: String,
+    val title: String,
+    val artworkUri: String? = null,
+    val iconUri: String? = null,
+    val logoUri: String? = null,
+
+    val subtitle: String? = null,
+
+    val metadataLine: String? = null,
+
+    val description: String? = null,
+    val romPath: String? = null,
+
+    val totalPlayTimeMillis: Long = 0L,
+
+    val insideCovers: List<String> = emptyList(),
+    val gameId: Long? = null,
+    val platformId: String? = null,
+    val iconKey: String? = null,
+    val accentColor: Long? = null,
+    val isFavorite: Boolean = false,
+
+    val playState: String? = null,
+    val isAndroidApp: Boolean = false,
+
+    val isRealGame: Boolean = false,
+    val packageName: String? = null,
+
+    val shortcutId: String? = null,
+
+    val launchIntentUri: String? = null,
+
+    val musicFolderId: String? = null,
+
+    val mediaRootUri: String? = null,
+    val mediaRootKind: MediaRootKind? = null,
+
+    val musicGroupKey: String? = null,
+    val mediaUri: String? = null,
+    val mimeType: String? = null,
+
+    val coverUri: String? = null,
+
+    val progressFraction: Float? = null,
+
+    val progressLabel: String? = null,
+
+    val playlistId: Long? = null,
+
+    val textOnly: Boolean = false,
+
+    val type: CrossbarItemType = CrossbarItemType.STANDARD,
+
+    val lastOpenedAt: Long? = null,
+) {
+    val backdropArt: List<String>
+        get() = listOfNotNull(artworkUri, coverUri, iconUri)
+            .filter { it.isNotBlank() && it != CrossbarViewModel.MEMORY_CARD_ASSET_URI }
+
+    val shelfCoverArt: String?
+        get() = listOfNotNull(coverUri, artworkUri, iconUri)
+            .firstOrNull { it.isNotBlank() && it != CrossbarViewModel.MEMORY_CARD_ASSET_URI }
+
+    val tileArt: String?
+        get() = listOfNotNull(iconUri, coverUri, artworkUri)
+            .firstOrNull { it.isNotBlank() && it != CrossbarViewModel.MEMORY_CARD_ASSET_URI }
+
+    val hasVisibleLogo: Boolean
+        get() = !logoUri.isNullOrBlank() && backdropArt.isNotEmpty()
+}
+
+data class BackgroundTaskInfo(
+    val id: String,
+    val label: String,
+    val progress: Float?,
+)
+
+internal fun CrossbarUiState.withSettingsClosed(): CrossbarUiState = copy(
+    activeSettingsScreen = null,
+    settingsReturnTo = null,
+    pendingSettingsAction = null,
+    settingsFromPanel = false,
+)
+
+internal fun CrossbarUiState.withSettingsOpen(screenId: String): CrossbarUiState = copy(
+    activeSettingsScreen = screenId,
+    gameInfo = null,
+    profile = null,
+)
+
+internal fun CrossbarUiState.withGameInfoOpen(info: GameInfoState): CrossbarUiState = copy(gameInfo = info, profile = null)
+
+fun CrossbarUiState.withNamePromptText(text: String): CrossbarUiState = when {
+    renameAppTarget != null      -> copy(renameAppText = text)
+    collectionNameDialog != null -> copy(collectionNameDialog = collectionNameDialog.copy(text = text))
+    playlistNameDialog != null   -> copy(playlistNameDialog = playlistNameDialog.copy(text = text))
+    saveThemeNameDialog != null  -> copy(saveThemeNameDialog = saveThemeNameDialog.copy(text = text))
+    else -> this
+}
+
+@HiltViewModel
+class CrossbarViewModel @Inject constructor(
+    private val gameRepository: GameRepository,
+    private val platformDao: PlatformDao,
+    private val memoryCardRepository: MemoryCardRepository,
+    private val categoryRepository: CategoryRepositoryImpl,
+    private val appCategoryRepository: AppCategoryRepository,
+    private val gameCategoryRepository: com.echo.core.data.repository.GameCategoryRepository,
+    private val launcherShortcutRepository: LauncherShortcutRepository,
+    private val libraryScanner: LibraryScanner,
+    private val artworkRepository: ArtworkRepository,
+    @ApplicationContext private val context: Context,
+    private val gamepadInputHandler: GamepadInputHandler,
+    private val remapCoordinator: com.echo.core.data.repository.RemapCoordinator,
+    private val mappingRepository: ControllerMappingRepository,
+    private val controllerLayoutRepository: com.echo.core.data.repository.ControllerLayoutRepository,
+    private val menuSound: com.echo.core.ui.sound.MenuSoundPlayer,
+    private val musicRepository: com.echo.core.domain.repository.MusicRepository,
+    private val musicScanner: com.echo.feature.library.scanner.MusicScanner,
+    private val musicPlayer: com.echo.feature.crossbar.music.MusicPlayerController,
+    private val emulatorProfileRepository: com.echo.feature.launcher.EmulatorProfileRepository,
+    private val intentResolver: com.echo.feature.launcher.EmulatorIntentResolver,
+    private val videoRepository: com.echo.core.domain.repository.VideoRepository,
+    private val photoRepository: com.echo.core.domain.repository.PhotoRepository,
+    private val photoScanner: com.echo.feature.library.scanner.PhotoScanner,
+    private val bookRepository: com.echo.core.domain.repository.BookRepository,
+    private val bookIntentResolver: com.echo.core.data.book.BookIntentResolver,
+    private val hiddenPlacementDao: com.echo.core.data.database.dao.HiddenPlacementDao,
+    private val iconDisplayPreferences: com.echo.core.data.repository.IconDisplayPreferences,
+    private val artworkStore: com.echo.feature.artwork.store.ArtworkStore,
+    private val artworkAccent: com.echo.core.data.repository.ArtworkAccent,
+    private val windowsLibrarySetup: com.echo.core.data.repository.WindowsLibrarySetup,
+    private val pcShortcutImporter: com.echo.feature.launcher.PcShortcutImporter,
+    private val pcGameScanner: com.echo.feature.settings.pc.PcGameScanner,
+    private val pcGameExporter: com.echo.feature.settings.pc.PcGameExporter,
+    private val launchDispatcher: com.echo.feature.launcher.LaunchDispatcher,
+    private val launchResolver: com.echo.feature.launcher.GameLaunchResolver,
+    private val setupStateProvider: com.echo.feature.launcher.SetupStateProvider,
+    private val customIconStore: CustomIconStore,
+    private val echoThemeStore: EchoThemeStore,
+    private val uiMediaStore: com.echo.core.data.repository.UiMediaStore,
+    private val gameBootGate: com.echo.feature.launcher.GameBootGate,
+    private val mediaLaunchGate: com.echo.core.data.launch.MediaLaunchGate,
+
+    private val uiMediaAudioPlayer: com.echo.core.ui.media.UiMediaAudioPlayer,
+    private val mediaRootRepository: com.echo.core.data.repository.MediaRootRepository,
+    private val videoScanner: com.echo.feature.library.scanner.VideoScanner,
+    private val bookScanner: com.echo.feature.library.scanner.BookScanner,
+    private val musicIntentResolver: com.echo.core.data.music.MusicIntentResolver,
+    private val videoIntentResolver: com.echo.core.data.video.VideoIntentResolver,
+    private val photoIntentResolver: com.echo.core.data.photo.PhotoIntentResolver,
+    private val autoCoreMemory: com.echo.feature.launcher.AutoCoreMemory,
+    private val romRootRepository: com.echo.core.data.repository.RomRootRepository,
+    private val achievementController: com.echo.feature.achievements.AchievementController,
+    private val achievementCredentials: com.echo.core.data.achievement.AchievementCredentialsProvider,
+    private val discordSocial: com.echo.core.data.discord.DiscordSocialRepository,
+) : ViewModel() {
+    private var currentMusicTracks: List<MusicTrack> = emptyList()
+    private var currentMusicTracksRaw: List<MusicTrack> = emptyList()
+
+    private var lastHadPlayingTrack = false
+
+    @Volatile
+    private var defaultMusicPlayer: String? = null
+
+    @Volatile
+    private var lastInteractionMs: Long = 0L
+
+    private val _uiState = MutableStateFlow(CrossbarUiState())
+    val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
+
+    val musicPositionMs: StateFlow<Int> get() = musicPlayer.positionMs
+
+    val externalPositionMs: StateFlow<Long> get() = AndroidNotifications.playbackPositionMs
+
+    private var currentItemsJob: Job? = null
+
+    private var musicBrowserJob: Job? = null
+    private var browserRawTracks: List<MusicTrack> = emptyList()
+    private var browserRawPlaylists: List<com.echo.core.domain.model.Playlist> = emptyList()
+    private var platformCache: Map<String, PlatformEntity> = emptyMap()
+    private var enabledCards: List<MemoryCard> = emptyList()
+    private var baseThemeColors: EchoColors = DefaultEchoColors
+
+    private val taskNotifier = BackgroundTaskNotifier(context)
+
+    init {
+        gamepadInputHandler.scope = viewModelScope
+
+        musicPlayer.onTrackStarted = { track ->
+            viewModelScope.launch {
+                runCatching { musicRepository.markTrackPlayed(track.id, System.currentTimeMillis()) }
+                    .onFailure { Timber.w(it, "Could not stamp ${track.displayTitle} as played") }
+            }
+        }
+        observeContextMenuHintIdle()
+        observeIconPreferences()
+        observeFocusedGameVideo()
+        observeFocusedItemAccent()
+        observeBackgroundSettings()
+        observeTouchNavButtonMode()
+        observeWallpaper()
+        observeLibrarySetupState()
+        checkInitialSetup()
+        logStartupSequence()
+        observeColorScheme()
+        observeCategoryBar()
+        observeLibraryChips()
+        observeProfilePrefs()
+        observeProfileData()
+        observeCategories()
+        observeMissingGames()
+        observeAppChanges()
+        observeGamepadMappings()
+        observeBootPreferences()
+        observeGameBoot()
+        observeMediaLaunch()
+        observeMusic()
+        observeVideo()
+        observePhoto()
+        observeBooks()
+        observeMediaCovers()
+        observeContinueBook()
+        observeHiddenPlacements()
+        observeAndroidNotices()
+        observeRecentTop()
+        observeShelfCounts()
+        collectGamepadActions()
+        consumeWindowsSetupPrompt()
+        observeLaunchRecoveryRequests()
+        observeSetupState()
+
+        pcShortcutImporter.watchPinChanges(viewModelScope)
+    }
+
+    private fun observeLaunchRecoveryRequests() {
+        viewModelScope.launch {
+            launchDispatcher.recoveryRequests.collect { request ->
+                _uiState.update { it.copy(launchRecovery = request) }
+            }
+        }
+    }
+
+    fun onLaunchRecoveryAction(action: LaunchRecoveryAction) {
+        when (action) {
+            LaunchRecoveryAction.DISMISS -> launchDispatcher.dismissRecovery()
+            LaunchRecoveryAction.RETRY   -> {
+                val request = _uiState.value.launchRecovery ?: return
+                launchDispatcher.dismissRecovery()
+                launchGameDirectly(request.gameId)
+            }
+            LaunchRecoveryAction.CHANGE_EMULATOR -> {
+                val gameId = _uiState.value.launchRecovery?.gameId ?: return
+                launchDispatcher.dismissRecovery()
+                openEmulatorPickerMenu(gameId)
+            }
+            LaunchRecoveryAction.PER_SYSTEM_DEFAULTS -> {
+                val gameId = _uiState.value.launchRecovery?.gameId
+                launchDispatcher.dismissRecovery()
+                viewModelScope.launch {
+                    val platformId = gameId?.let { gameRepository.getById(it) }?.platformId
+                    if (platformId != null) openDefaultEmulatorMenu(platformId)
+                    else _uiState.update { it.withSettingsOpen("settings_library") }
+                }
+            }
+
+            LaunchRecoveryAction.OPEN_LIBRARY -> {
+                launchDispatcher.dismissRecovery()
+                _uiState.update { it.withSettingsOpen("settings_library") }
+            }
+            LaunchRecoveryAction.COPY_DIAGNOSTIC -> {
+                val request = _uiState.value.launchRecovery ?: return
+                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText(
+                    "ECHO launch diagnostic", request.diagnostic,
+                ))
+                taskNotifier.complete(
+                    "launch_diag_${request.gameId}", request.gameTitle, "Diagnostic copied to clipboard",
+                )
+            }
+        }
+    }
+
+    private fun consumeWindowsSetupPrompt() {
+        viewModelScope.launch {
+            if (runCatching { windowsLibrarySetup.consumeSetupPrompt() }.getOrDefault(false)) {
+                _uiState.update { it.copy(showWindowsSetupPrompt = true) }
+            }
+        }
+    }
+
+    fun confirmWindowsSetupPrompt() = _uiState.update {
+        it.withSettingsOpen("settings_library").copy(showWindowsSetupPrompt = false)
+    }
+
+    fun dismissWindowsSetupPrompt() = _uiState.update { it.copy(showWindowsSetupPrompt = false) }
+
+    private fun gameMetaLabel(g: Game): String = gameMetaLine(
+        platform = platformCache[g.platformId]?.name ?: g.platformId,
+        lastPlayedAt = g.lastPlayedAt,
+        publisher = g.publisher,
+    )
+
+    private fun observeMediaCovers() {
+        viewModelScope.launch {
+            combine(
+                musicRepository.observeNewestArtUris(MEDIA_COVER_POOL),
+                videoRepository.observeNewestArtUris(MEDIA_COVER_POOL),
+                photoRepository.observeNewestArtUris(MEDIA_COVER_POOL),
+                bookRepository.observeNewestArtUris(MEDIA_COVER_POOL),
+            ) { music, video, photo, books -> MediaCovers(music, video, photo, books) }
+                .collect { covers ->
+                    if (_uiState.value.mediaCovers == covers) return@collect
+                    _uiState.update { it.copy(mediaCovers = covers) }
+                    val id = currentCategory()?.id
+                    if (id == BuiltInCategory.MUSIC || id == BuiltInCategory.VIDEO ||
+                        id == BuiltInCategory.PHOTO || id == BuiltInCategory.LIBRARY
+                    ) {
+                        loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
+                    }
+                }
+        }
+    }
+
+    private fun observeMusic() {
+        viewModelScope.launch {
+            musicRepository.observeFolders().collect { folders ->
+                _uiState.update { it.copy(musicFolders = folders) }
+                if (currentCategory()?.id == BuiltInCategory.MUSIC &&
+                    _uiState.value.musicNav == MusicNav.Root
+                ) {
+                    loadItemsForCategory(currentCategory())
+                }
+            }
+        }
+        viewModelScope.launch {
+            musicRepository.observeDefaultPlayerPackage().collect { defaultMusicPlayer = it }
+        }
+        viewModelScope.launch {
+            musicPlayer.state
+                .map { it.track?.artUri }
+                .distinctUntilChanged()
+                .collectLatest { art ->
+                    val accent = art?.let { artworkAccent.of(it) }
+                    _uiState.update { it.copy(musicAccentArgb = accent) }
+                }
+        }
+        viewModelScope.launch {
+            musicPlayer.state.collect { playback ->
+                _uiState.update { it.copy(musicPlayback = playback) }
+
+                val hasTrack = playback.track != null
+                if (hasTrack != lastHadPlayingTrack) {
+                    lastHadPlayingTrack = hasTrack
+                    if (currentCategory()?.id == BuiltInCategory.MUSIC &&
+                        _uiState.value.musicNav == MusicNav.Root
+                    ) {
+                        refreshMusicRootPreservingCursor()
+                    }
+                }
+            }
+        }
+    }
+
+    private data class SchemePrefs(
+        val schemeName: String,
+        val accentOverride: Long?,
+        val iconColor: Long?,
+        val iconsStamp: Long?,
+        val layoutJson: String?,
+
+        val layoutAdjustJson: String?,
+
+        val customIconsStamp: Long?,
+
+        val textColor: Long?,
+    )
+
+    private fun observeColorScheme() {
+        viewModelScope.launch {
+            context.echoDataStore.data
+                .map { prefs ->
+                    SchemePrefs(
+                        schemeName = prefs[KEY_COLOR_SCHEME] ?: CrossbarColorScheme.CLASSIC_BLUE.name,
+                        accentOverride = prefs[KEY_ACCENT_OVERRIDE],
+                        iconColor = prefs[KEY_ICON_COLOR],
+                        iconsStamp = prefs[com.echo.core.data.repository.EchoThemeStore.KEY_THEME_ICONS_STAMP],
+                        layoutJson = prefs[com.echo.core.data.repository.EchoThemeStore.KEY_THEME_LAYOUT],
+                        layoutAdjustJson = prefs[KEY_Crossbar_LAYOUT_ADJUST],
+                        customIconsStamp = prefs[CustomIconStore.KEY_CUSTOM_ICONS_STAMP],
+                        textColor = prefs[KEY_TEXT_COLOR],
+                    )
+                }
+                .distinctUntilChanged()
+                .collect { (name, accentOverride, iconColorArgb, iconsStamp, layoutJson, layoutAdjustJson, customIconsStamp, textColorArgb) ->
+                    val base = if (accentOverride != null) {
+                        DefaultEchoColors.withWaveTint(
+                            androidx.compose.ui.graphics.Color(accentOverride and 0xFFFFFFFFL),
+                        )
+                    } else {
+                        val scheme = runCatching { CrossbarColorScheme.valueOf(name) }
+                            .getOrDefault(CrossbarColorScheme.CLASSIC_BLUE)
+                        val month = java.time.LocalDate.now().monthValue
+                        scheme.resolve(month).toEchoColors()
+                    }
+
+                    val textColor = textColorArgb
+                        ?.let { androidx.compose.ui.graphics.Color(it and 0xFFFFFFFFL) }
+                        ?: base.textPrimary
+                    baseThemeColors = base.copy(
+                        iconColor = iconColorArgb
+                            ?.let { androidx.compose.ui.graphics.Color(it and 0xFFFFFFFFL) }
+                            ?: androidx.compose.ui.graphics.Color.White,
+                        textPrimary = textColor,
+                        textSecondary = textColor.copy(alpha = 0.7f),
+                    )
+
+                    val iconOverrides = if (iconsStamp != null) loadThemeIconOverrides() else emptyMap()
+                    val customIcons =
+                        if (customIconsStamp != null) customIconStore.load() else emptyMap()
+
+                    val themeSpec = com.echo.themekit.CrossbarLayoutSpecCodec.decode(layoutJson)
+                        ?: com.echo.themekit.CrossbarLayoutSpec.DEFAULT
+
+                    val adjustMap = com.echo.themekit.CrossbarLayoutAdjustCodec.decode(layoutAdjustJson)
+                    _uiState.update {
+                        it.copy(
+                            themeColors = baseThemeColors,
+                            iconOverrides = iconOverrides,
+                            customIcons = customIcons,
+                            layoutSpec = themeSpec,
+                            crossbarLayoutAdjustMap = adjustMap,
+                        )
+                    }
+                }
+        }
+    }
+
+    private suspend fun loadThemeIconOverrides(): Map<String, CustomIcon> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val iconsDir = java.io.File(context.filesDir, EchoThemeStore.THEME_ICONS_DIR)
+            iconsDir.listFiles { f -> f.isFile }.orEmpty().mapNotNull { file ->
+                val key = file.nameWithoutExtension
+                if (!CustomizableIcons.isValidKey(key)) return@mapNotNull null
+                val ext = file.extension.lowercase()
+
+                val bitmap = com.echo.core.data.repository.SafeMedia
+                    .decodeFileCapped(file.absolutePath, maxDimension = 2048, targetDimension = 2048)
+                    ?: return@mapNotNull null
+                val firstFrame = bitmap.asImageBitmap()
+                if (ext == "gif") {
+                    if (GifFrameProbe.countFrames(file) > 1) {
+                        key to CustomIcon.Animated(path = file.absolutePath, firstFrame = firstFrame)
+                    } else {
+                        key to CustomIcon.Still(firstFrame)
+                    }
+                } else {
+                    key to CustomIcon.Still(firstFrame)
+                }
+            }.toMap()
+        }
+
+    private fun observeCategoryBar() {
+        viewModelScope.launch {
+            categoryRepository.observeVisible().collect { categories ->
+                val allCategories = canonicalCrossbarCategories(categories.ifEmpty { FALLBACK_CATEGORIES })
+                val prevId   = _uiState.value.categories.getOrNull(_uiState.value.selectedCategoryIndex)?.id
+                val isInitialSelection = _uiState.value.categories.isEmpty()
+
+                val newIndex = if (isInitialSelection) {
+                    defaultCrossbarCategoryIndex(allCategories)
+                } else {
+                    allCategories.indexOfFirst { it.id == prevId }
+                        .takeIf { it >= 0 }
+                        ?: defaultCrossbarCategoryIndex(allCategories)
+                }
+                val newId    = allCategories.getOrNull(newIndex)?.id
+
+                _uiState.update { it.copy(categories = allCategories, selectedCategoryIndex = newIndex) }
+
+                if (newId != prevId || _uiState.value.currentItems.isEmpty()) {
+                    tintWaveForCategory(allCategories.getOrNull(newIndex))
+                    loadItemsForCategory(allCategories.getOrNull(newIndex))
+                }
+            }
+        }
+    }
+
+    private fun observeMissingGames() {
+        viewModelScope.launch {
+            gameRepository.observeMissing().collect { missing ->
+                val was = _uiState.value.missingCount
+                _uiState.update { it.copy(missingCount = missing.size) }
+
+                if ((was == 0) != (missing.size == 0) &&
+                    currentCategory()?.id == BuiltInCategory.GAMES
+                ) {
+                    loadItemsForCategory(currentCategory())
+                }
+            }
+        }
+    }
+
+    private fun observeCategories() {
+        viewModelScope.launch {
+            combine(
+                memoryCardRepository.observeEnabled(),
+                gameRepository.observeAll(),
+                platformDao.observeAll(),
+                gameRepository.observeFavorites(),
+            ) { cards, games, platforms, favorites ->
+                CardsGamesPlatforms(cards, games, platforms, favorites)
+            }
+                .collect { (cards, games, platforms, favorites) ->
+                    platformCache = platforms.associateBy { it.id }
+                    enabledCards  = cards
+
+                    val displayGames = games.projectGamesForDisplay()
+                    val counts = displayGames.filter { it.contentType == GameContentType.GAME }
+                        .groupBy { it.platformId }.mapValues { it.value.size }
+                    val gamesOnlyTotal = displayGames.count { it.contentType == GameContentType.GAME }
+
+                    val favoritesTotal = favorites.size
+
+                    fun fanOf(games: List<Game>): List<String> = fanCoversOf(games)
+                    val realGames = displayGames.filter { it.contentType == GameContentType.GAME }
+                    val fanCovers = buildMap<String, List<String>> {
+                        put(ALL_GAMES_ITEM_ID, fanOf(realGames))
+
+                        realGames.groupBy { it.platformId }
+                            .forEach { (pid, list) -> put(cardItemId(pid), fanOf(list)) }
+                    }
+
+                    val validPlatformId = _uiState.value.selectedPlatformId
+                        ?.takeIf { id ->
+                            id == ALL_GAMES_PLATFORM_ID ||
+                                id == FAVORITES_PLATFORM_ID ||
+                                id == MISSING_PLATFORM_ID ||
+                                cards.any { c -> c.platformId == id }
+                        }
+
+                    _uiState.update { it.copy(
+                        platformGameCounts = counts,
+                        allGamesCount = gamesOnlyTotal,
+                        cardFanCovers = fanCovers,
+                        favoritesCount = favoritesTotal,
+                        selectedPlatformId = validPlatformId,
+                    )}
+
+                    if (categoryShowsGameRows(currentCategory())) {
+                        loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
+                    }
+                }
+        }
+    }
+
+    private data class CardsGamesPlatforms(
+        val cards: List<MemoryCard>,
+        val games: List<Game>,
+        val platforms: List<PlatformEntity>,
+        val favorites: List<Game>,
+    )
+
+    private fun observeAppChanges() {
+        viewModelScope.launch {
+            appCategoryRepository.changes().collect {
+                val category = currentCategory() ?: return@collect
+                if (isAppCategory(category.id)) loadItemsForCategory(category)
+            }
+        }
+    }
+
+    private fun currentCategory(): Category? = _uiState.value.currentCategoryOrNull()
+
+    private fun isAppCategory(categoryId: String): Boolean =
+        categoryId != BuiltInCategory.SETTINGS && categoryId != BuiltInCategory.GAMES
+
+    private val nonGameRowCategoryIds = setOf(
+        BuiltInCategory.FAVORITES, BuiltInCategory.RECENTLY_PLAYED, BuiltInCategory.MUSIC,
+        BuiltInCategory.VIDEO, BuiltInCategory.PHOTO, BuiltInCategory.ANDROID,
+        BuiltInCategory.APP_DRAWER, BuiltInCategory.SETTINGS,
+    )
+
+    private fun categoryShowsGameRows(category: Category?): Boolean {
+        if (category == null) return false
+        return category.isGamingCategory || category.id !in nonGameRowCategoryIds
+    }
+
+
+    private fun loadItemsForCategory(category: Category?, keepCursorOnRow: Boolean = false) {
+        currentItemsJob?.cancel()
+        if (category == null) { _uiState.update { it.copy(currentItems = emptyList(), sortLabel = null, drillTitle = null, drillSiblings = emptyList(), drillSiblingIndex = 0) }; return }
+        val drill = computeDrillTitle()
+        val (sibs, sibIdx) = if (drill != null) computeDrillSiblings(category) else (emptyList<CrossbarItem>() to 0)
+        _uiState.update { it.copy(sortLabel = currentSortLabel(), drillTitle = drill, drillSiblings = sibs, drillSiblingIndex = sibIdx) }
+
+        currentItemsJob = viewModelScope.launch {
+            when (category.id) {
+                BuiltInCategory.FAVORITES -> {
+                    var keepCursor = keepCursorOnRow
+                    gameRepository.observeFavorites().collect { games ->
+                        publishGameItems(games.notHiddenAt(HideLocationType.FAVORITES).gameSorted(_uiState.value.gameSortMode).toCrossbarItems(), keepCursor)
+                        keepCursor = true
+                    }
+                }
+                BuiltInCategory.SHELVES -> {
+                    var keepCursor = keepCursorOnRow
+                    when (val shelf = shelfCardFor(_uiState.value.selectedPlatformId)) {
+                        null -> _uiState.update { s ->
+                            val items = s.shelfCards.map { card ->
+                                CrossbarItem(
+                                    id       = card.cardId,
+                                    title    = card.title,
+                                    subtitle = countLabel(card.count, "game", "games"),
+                                    insideCovers = s.shelfFanCovers[card.cardId].orEmpty(),
+                                    type     = CrossbarItemType.SHELF,
+                                )
+                            }
+                            s.copy(
+                                currentItems = items,
+                                selectedItemIndex = s.selectedItemIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0)),
+                            )
+                        }
+
+                        is ShelfCard.Favorites -> gameRepository.observeFavorites().collect { games ->
+                            publishGameItems(
+                                games.notHiddenAt(HideLocationType.FAVORITES)
+                                    .gameSorted(_uiState.value.gameSortMode).toCrossbarItems(),
+                                keepCursor,
+                            )
+                            keepCursor = true
+                        }
+                        is ShelfCard.Marked -> gameRepository.observeByPlayState(shelf.state).collect { games ->
+                            publishGameItems(
+                                games.notHiddenAt(HideLocationType.ALL_GAMES)
+                                    .gameSorted(_uiState.value.gameSortMode).toCrossbarItems(),
+                                keepCursor,
+                            )
+                            keepCursor = true
+                        }
+
+                        is ShelfCard.RecentlyAdded -> gameRepository.observeRecentlyAdded().collect { games ->
+                            publishGameItems(
+                                games.notHiddenAt(HideLocationType.ALL_GAMES).toCrossbarItems(),
+                                keepCursor,
+                            )
+                            keepCursor = true
+                        }
+                    }
+                }
+                BuiltInCategory.RECENTLY_PLAYED -> {
+                    var keepCursor = keepCursorOnRow
+                    combine(
+                        gameRepository.observeRecentlyPlayed(RECENTLY_PLAYED_LIMIT),
+                        musicRepository.observeRecentlyPlayedTracks(RECENTLY_PLAYED_LIMIT),
+                        bookRepository.observeRecentlyOpenedBooks(RECENTLY_PLAYED_LIMIT),
+                        videoRepository.observeRecentlyWatched(),
+
+                        recentFilterAndApps(),
+                    ) { games, tracks, books, videos, filterAndApps ->
+                        val (filter, appRows, limit) = filterAndApps
+
+                        currentMusicTracks = tracks
+                        val visibleGames = games.notHiddenAt(HideLocationType.ALL_GAMES)
+                        mergeRecents(
+                            games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(visibleGames.toCrossbarItems()),
+
+                            music  = tracks.recentMusicRows(),
+                            books  = books.map { it.lastOpenedAt ?: 0L }.zip(bookItems(books)),
+                            videos = videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
+                            apps   = appRows,
+                            filter = filter,
+                            limit  = limit,
+                        )
+                    }.collect { items ->
+
+                        publishGameItems(items, keepCursor)
+                        keepCursor = true
+                    }
+                }
+                BuiltInCategory.ANDROID -> {
+                    _uiState.update { it.copy(currentItems = ANDROID_ITEMS) }
+                }
+                BuiltInCategory.SETTINGS -> {
+                    _uiState.update { state ->
+                        val items = SETTINGS_ROOT_ITEMS
+                        state.copy(
+                            currentItems = items,
+                            selectedItemIndex = state.selectedItemIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0)),
+                        )
+                    }
+                }
+                BuiltInCategory.GAMES -> {
+                    val platformId = _uiState.value.selectedPlatformId
+                    if (_uiState.value.romFoldersOpen) {
+                        _uiState.update { it.copy(currentItems = romFolderItems()) }
+                    } else if (platformId == ALL_GAMES_PLATFORM_ID) {
+                        var keepCursor = keepCursorOnRow
+                        gameRepository.observeAllGames().collect { games ->
+                            val visible = games.notHiddenAt(HideLocationType.ALL_GAMES)
+                            val items = if (visible.isEmpty()) listOf(emptyAllGamesItem())
+                                        else visible.gameSorted(_uiState.value.gameSortMode).toCrossbarItems()
+                            publishGameItems(items, keepCursor)
+                            keepCursor = true
+                        }
+                    } else if (platformId == FAVORITES_PLATFORM_ID) {
+                        var keepCursor = keepCursorOnRow
+                        gameRepository.observeFavorites().collect { games ->
+                            val visible = games.notHiddenAt(HideLocationType.FAVORITES)
+                            val items = if (visible.isEmpty()) listOf(emptyFavoritesItem())
+                                        else visible.gameSorted(_uiState.value.gameSortMode).toCrossbarItems()
+                            publishGameItems(items, keepCursor)
+                            keepCursor = true
+                        }
+                    } else if (platformId == MISSING_PLATFORM_ID) {
+                        var keepCursor = keepCursorOnRow
+                        gameRepository.observeMissing().collect { games ->
+                            val items = if (games.isEmpty()) listOf(emptyMissingItem())
+                                        else games.gameSorted(_uiState.value.gameSortMode)
+                                            .toCrossbarItems()
+
+                                            .map { it.copy(subtitle = MISSING_REASON) }
+                            publishGameItems(items, keepCursor)
+                            keepCursor = true
+                        }
+                    } else if (platformId != null) {
+                        var keepCursor = keepCursorOnRow
+                        gameRepository.observePlatformGames(platformId).collect { all ->
+
+                            val games = all.filter { it.contentType == GameContentType.GAME }
+
+                            val visible = if (platformId == ANDROID_PLATFORM_ID)
+                                games.notHiddenAt(HideLocationType.ANDROID_PLATFORM)
+                            else
+                                games.notHiddenAt(HideLocationType.PLATFORM, platformId)
+                            val items = if (visible.isEmpty()) listOf(emptyFolderItem(platformId))
+                                        else visible.gameSorted(_uiState.value.gameSortMode).toCrossbarItems()
+                            publishGameItems(items, keepCursor)
+                            keepCursor = true
+                        }
+                    } else {
+                        combine(
+                            memoryCardRepository.observeEnabled(),
+                            gameRepository.observeAll(),
+                        ) { _, _ -> }.collect {
+                            _uiState.update { it.copy(currentItems = memoryCardItems()) }
+                        }
+                    }
+                }
+                BuiltInCategory.MUSIC -> when (val nav = _uiState.value.musicNav) {
+                    MusicNav.Folders -> mediaRootRepository.roots(MediaRootKind.MUSIC).collect {
+                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.MUSIC)) }
+                    }
+                    MusicNav.Root -> {
+                        clearMusicTrackCache()
+                        _uiState.update { it.copy(currentItems = musicRootItems()) }
+                    }
+                    MusicNav.AllMusic -> musicRepository.observeAllTracks().collect { tracks ->
+                        setMusicTrackItems(tracks, emptyAllMusicItem())
+                    }
+                    is MusicNav.Playlist -> musicRepository.observePlaylistTracks(nav.id).collect { tracks ->
+                        setMusicTrackItems(tracks, emptyPlaylistItem(), trailing = listOf(addTracksItem()))
+                    }
+                    MusicNav.Playlists -> {
+                        clearMusicTrackCache()
+                        musicRepository.observePlaylists().collect { playlists ->
+                            _uiState.update { it.copy(currentItems = playlistRootItems(playlists), musicPlaylists = playlists) }
+                        }
+                    }
+                }
+                BuiltInCategory.VIDEO -> when (val nav = _uiState.value.videoNav) {
+                    VideoNav.Folders -> mediaRootRepository.roots(MediaRootKind.VIDEO).collect {
+                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.VIDEO)) }
+                    }
+                    VideoNav.Root -> _uiState.update { it.copy(currentItems = videoRootItems()) }
+                    VideoNav.Collections -> _uiState.update { it.copy(currentItems = videoCollectionsItems()) }
+                    VideoNav.AllVideos -> videoRepository.observeAllVideos().collect { videos ->
+                        setVideoItems(videos, emptyAllVideosItem())
+                    }
+                    VideoNav.RecentlyWatched -> videoRepository.observeRecentlyWatched().collect { videos ->
+
+                        setVideoItems(videos, emptyRecentItem(), sortable = false)
+                    }
+                    VideoNav.Favorites -> videoRepository.observeFavorites().collect { videos ->
+                        setVideoItems(videos, emptyFavoriteVideosItem())
+                    }
+                    VideoNav.Playlists -> videoRepository.observePlaylists().collect { playlists ->
+                        _uiState.update { it.copy(currentItems = videoPlaylistItems(playlists), videoPlaylists = playlists) }
+                    }
+                    is VideoNav.Playlist -> videoRepository.observePlaylistVideos(nav.id).collect { videos ->
+
+                        setVideoItems(videos, emptyPlaylistVideosItem(), sortable = false)
+                    }
+                    VideoNav.Libraries -> videoRepository.observeLibraries().collect { libs ->
+                        _uiState.update { it.copy(currentItems = videoLibraryItems(libs)) }
+                    }
+                    is VideoNav.Library -> videoRepository.observeVideosByLibrary(nav.id).collect { videos ->
+                        setVideoItems(videos, emptyAllVideosItem())
+                    }
+                }
+                BuiltInCategory.PHOTO -> when (val nav = _uiState.value.photoNav) {
+                    PhotoNav.Folders -> mediaRootRepository.roots(MediaRootKind.PHOTO).collect {
+                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.PHOTO)) }
+                    }
+                    PhotoNav.Root -> _uiState.update { it.copy(currentItems = photoRootItems()) }
+                    PhotoNav.AllPhotos -> photoRepository.observeAllPhotos().collect { photos ->
+                        setPhotoItems(photos, emptyAllPhotosItem())
+                    }
+                    PhotoNav.Favorites -> photoRepository.observeFavorites().collect { photos ->
+                        setPhotoItems(photos, emptyFavoritePhotosItem())
+                    }
+                    PhotoNav.Albums -> photoRepository.observeLibraries().collect { libs ->
+                        _uiState.update { it.copy(currentItems = photoAlbumItems(libs)) }
+                    }
+                    is PhotoNav.Library -> photoRepository.observePhotosByLibrary(nav.id).collect { photos ->
+                        setPhotoItems(photos, emptyLibraryPhotosItem())
+                    }
+                }
+                BuiltInCategory.LIBRARY -> when (val nav = _uiState.value.booksNav) {
+                    BooksNav.Folders -> mediaRootRepository.roots(MediaRootKind.BOOK).collect {
+                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.BOOK)) }
+                    }
+                    BooksNav.Root -> _uiState.update { it.copy(currentItems = booksRootItems()) }
+                    BooksNav.Shelves -> bookRepository.observeLibraries().collect { shelves ->
+                        _uiState.update { it.copy(bookLibraries = shelves, currentItems = bookShelfItems()) }
+                    }
+                    BooksNav.AllBooks -> bookRepository.observeAllBooks().collect { books ->
+                        _uiState.update { it.copy(currentItems = bookItems(books.bookSorted(it.bookSortMode)).ifEmpty { listOf(emptyBooksItem()) }) }
+                    }
+                    is BooksNav.Shelf -> bookRepository.observeBooksByLibrary(nav.id).collect { books ->
+                        _uiState.update { it.copy(currentItems = bookItems(books.bookSorted(it.bookSortMode)).ifEmpty { listOf(emptyBooksItem()) }) }
+                    }
+                    BooksNav.SeriesList -> bookRepository.observeAllBooks().collect { books ->
+                        _uiState.update {
+                            it.copy(
+                                bookSeries = books.seriesGroups(),
+                                currentItems = bookSeriesItems().ifEmpty { listOf(emptySeriesItem()) },
+                            )
+                        }
+                    }
+
+                    is BooksNav.Series -> bookRepository.observeAllBooks().collect { books ->
+                        val inSeries = books.filter { it.seriesName == nav.name }.inSeriesOrder()
+                        _uiState.update { it.copy(currentItems = bookItems(inSeries).ifEmpty { listOf(emptyBooksItem()) }) }
+                    }
+                }
+                else -> {
+                    if (category.isGamingCategory) {
+                        val gameRows = gameCategoryRepository.itemsForCategory(category.id)
+                            .filterIsInstance<com.echo.core.data.repository.GameCategoryItem.GameItem>()
+                            .filterNot { isHiddenAt(HiddenPlacement.gameKey(it.game.id), HideLocationType.CATEGORY, category.id) }
+                        val pinnedGameIds = gameRows.filter { it.pinned }.map { it.game.id }.toSet()
+                        val gameItems = gameRows.map { it.game }.gameSorted(_uiState.value.gameSortMode).toCrossbarItems().map { crossbar ->
+                            if (crossbar.gameId in pinnedGameIds) crossbar.copy(subtitle = "Pinned") else crossbar
+                        }
+
+                        val combined = gameItems
+                        val items = if (combined.isEmpty()) listOf(emptyCategoryItem(category)) else combined
+
+                        publishGameItems(items + addGamesItem(), keepCursorOnRow)
+                    } else {
+                        val apps = appCategoryRepository.appsForCategory(category.id)
+                            .notHiddenAt(HideLocationType.CATEGORY, category.id)
+                        val appItems = apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
+
+                        val combined = appItems
+                        val items = if (combined.isEmpty()) listOf(emptyCategoryItem(category)) else combined
+
+                        val lead = if (category.id == NETWORK_CATEGORY_ID) listOf(quickSearchItem()) else emptyList()
+
+                        _uiState.update { it.copy(currentItems = lead + items + addAppsItem()) }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun CategorizedApp.toCrossbarItem(
+        artwork: com.echo.core.domain.model.Game? = null,
+    ): CrossbarItem = CrossbarItem(
+        id           = "app_$packageName",
+        title        = label,
+        subtitle     = if (pinned) "Pinned" else null,
+        packageName  = packageName,
+        isAndroidApp = true,
+        iconUri      = artwork?.let { it.iconUri ?: it.artworkUri },
+
+        artworkUri   = artwork?.artworkUri,
+        accentColor  = artwork?.let { platformCache[it.platformId]?.accentColor },
+    )
+
+    private fun libraryColumn(body: List<CrossbarItem>, scope: SearchScope): List<CrossbarItem> =
+        body + librarySearchItem(scope)
+
+    private fun librarySearchItem(scope: SearchScope): CrossbarItem = CrossbarItem(
+        id       = SEARCH_ITEM_ID,
+        title    = scope.label,
+        subtitle = scope.hint,
+        type     = CrossbarItemType.SEARCH,
+    )
+
+    private fun quickSearchItem(): CrossbarItem = CrossbarItem(
+        id       = QUICK_SEARCH_ITEM_ID,
+        title    = "Quick Search",
+        subtitle = "Search the web, or type an address",
+        type     = CrossbarItemType.SEARCH,
+    )
+
+    private fun addAppsItem(): CrossbarItem = CrossbarItem(
+        id       = ADD_APPS_ITEM_ID,
+        title    = "Add Apps",
+        subtitle = "Pick installed apps to add to this section",
+        type     = CrossbarItemType.ADD_ACTION,
+    )
+
+    private fun addGamesItem(): CrossbarItem = CrossbarItem(
+        id       = ADD_GAMES_ITEM_ID,
+        title    = "Add Games",
+        subtitle = "Pick games to add to this category",
+        type     = CrossbarItemType.ADD_ACTION,
+    )
+
+    private suspend fun refreshMusicRootPreservingCursor() {
+        val s = _uiState.value
+        val selectedId = s.currentItems.getOrNull(s.selectedItemIndex)?.id
+        clearMusicTrackCache()
+        val items = musicRootItems()
+        val restored = selectedId
+            ?.let { id -> items.indexOfFirst { it.id == id } }
+            ?.takeIf { it >= 0 }
+            ?: s.selectedItemIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0))
+        _uiState.update { it.copy(currentItems = items, selectedItemIndex = restored) }
+    }
+
+    private fun musicAddActions(): List<CrossbarItem> = buildList {
+        if (_uiState.value.musicFolders.none { it.lastScannedAt != null }) add(addMusicFolderItem())
+        add(addMusicAppsItem())
+    }
+
+    private suspend fun musicRootItems(): List<CrossbarItem> =
+        libraryColumn(
+            mediaColumn(_uiState.value.musicRootSections(), musicAppItems(), musicAddActions()),
+            SearchScope.MUSIC,
+        )
+
+    private fun currentAddActions(): List<CrossbarItem> = when (currentCategory()?.id) {
+        BuiltInCategory.MUSIC   -> musicAddActions()
+        BuiltInCategory.VIDEO   -> videoAddActions()
+        BuiltInCategory.PHOTO   -> photoAddActions()
+        BuiltInCategory.LIBRARY -> booksAddActions()
+        else -> emptyList()
+    }
+
+    private fun openAddMenu() {
+        val actions = currentAddActions()
+        if (actions.isEmpty()) return
+        _uiState.update { state ->
+            state.copy(
+                activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Add", rows = actions.map { CrossbarContextMenuItem(it.id, it.title) }), isAddMenu = true)
+            )
+        }
+    }
+
+    private fun addMusicFolderItem(): CrossbarItem = CrossbarItem(
+        id       = ADD_MUSIC_FOLDER_ITEM_ID,
+        title    = "Add Music Folder",
+        subtitle = "Set your Music root folder in Settings to get started",
+        type     = CrossbarItemType.ADD_ACTION,
+    )
+
+    private fun playlistRootItems(playlists: List<com.echo.core.domain.model.Playlist>): List<CrossbarItem> {
+        val rows = playlists.map { pl ->
+            CrossbarItem(
+                id         = "pl_${pl.id}",
+                title      = pl.name,
+                subtitle   = countLabel(pl.trackCount, "track", "tracks"),
+                playlistId = pl.id,
+                type       = CrossbarItemType.PLAYLIST,
+            )
+        }
+        return rows + CrossbarItem(
+            id       = CREATE_PLAYLIST_ITEM_ID,
+            title    = "Create Playlist",
+            subtitle = "Start a new playlist",
+            type     = CrossbarItemType.ADD_ACTION,
+        )
+    }
+
+    private suspend fun musicAppItems(): List<CrossbarItem> {
+        val apps = appCategoryRepository.appsForCategory(MUSIC_APPS_CATEGORY_ID)
+            .notHiddenAt(HideLocationType.CATEGORY, MUSIC_APPS_CATEGORY_ID)
+        return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
+    }
+
+    private fun addMusicAppsItem(): CrossbarItem = CrossbarItem(
+        id       = ADD_MUSIC_APPS_ITEM_ID,
+        title    = "Add Music Apps",
+        subtitle = "Pick installed apps to show here",
+        type     = CrossbarItemType.ADD_ACTION,
+    )
+
+    private fun addTracksItem(): CrossbarItem = CrossbarItem(
+        id       = ADD_TRACKS_ITEM_ID,
+        title    = "Add Tracks",
+        subtitle = "Pick songs to add to this playlist",
+        type     = CrossbarItemType.ADD_ACTION,
+    )
+
+    private fun setMusicTrackItems(
+        tracks: List<MusicTrack>,
+        emptyItem: CrossbarItem,
+        trailing: List<CrossbarItem> = emptyList(),
+    ) {
+        currentMusicTracksRaw = tracks
+        val sorted = tracks.trackSorted(_uiState.value.musicSortMode)
+        currentMusicTracks = sorted
+        val items = if (sorted.isEmpty()) listOf(emptyItem) else sorted.toMusicItems()
+        _uiState.update { it.copy(currentItems = items + trailing) }
+    }
+
+    private fun clearMusicTrackCache() {
+        currentMusicTracks = emptyList()
+        currentMusicTracksRaw = emptyList()
+    }
+
+    private fun emptyAllMusicItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_CATEGORY_ITEM_ID,
+        title    = "No music found",
+        subtitle = "Add a music folder from the Folders row",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun emptyPlaylistItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_PLAYLIST_ITEM_ID,
+        title    = "This playlist is empty",
+        subtitle = "Add tracks below or from a song's Options menu.",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun openMusicView(nav: MusicNav) = navigateRememberingCursor { it.copy(musicNav = nav) }
+
+    private fun closeMusicView() = openMusicView(MusicNav.Root)
+
+    @Volatile private var hiddenKeys: Set<String> = emptySet()
+
+    private fun observeHiddenPlacements() {
+        viewModelScope.launch {
+            hiddenPlacementDao.observeAll().collect { rows ->
+                hiddenKeys = rows.map { "${it.itemKey}|${it.locationType}|${it.locationId}" }.toSet()
+
+                loadItemsForCategory(currentCategory())
+            }
+        }
+    }
+
+    private fun isHiddenAt(itemKey: String, type: HideLocationType, locationId: String = ""): Boolean =
+        hiddenKeys.contains("$itemKey|${type.name}|$locationId")
+
+    @JvmName("gamesNotHiddenAt")
+    private fun List<Game>.notHiddenAt(type: HideLocationType, locationId: String = ""): List<Game> =
+        filterNot { isHiddenAt(HiddenPlacement.gameKey(it.id), type, locationId) }
+
+    @JvmName("appsNotHiddenAt")
+    private fun List<CategorizedApp>.notHiddenAt(type: HideLocationType, locationId: String = ""): List<CategorizedApp> =
+        filterNot { isHiddenAt(HiddenPlacement.appKey(it.packageName), type, locationId) }
+
+    private fun persistHide(itemKey: String, itemLabel: String, type: HideLocationType, locationId: String, locationLabel: String) {
+        viewModelScope.launch {
+            hiddenPlacementDao.upsert(
+                HiddenPlacementEntity(itemKey, itemLabel, type.name, locationId, locationLabel, System.currentTimeMillis())
+            )
+        }
+    }
+
+    /**
+     * Drops an app off the Last Played shelf until it is used again. Deliberately not
+     * persistHide: hiding is permanent until undone in Settings, and these are two
+     * different things that used to be one.
+     */
+    private fun dismissAppFromRecents(packageName: String) {
+        viewModelScope.launch {
+            context.echoDataStore.edit { prefs ->
+                prefs[KEY_RECENT_APP_DISMISSALS] = withRecentDismissal(
+                    prefs[KEY_RECENT_APP_DISMISSALS].orEmpty(), packageName, System.currentTimeMillis(),
+                )
+            }
+        }
+    }
+
+    private fun categoryDisplayName(id: String): String = _uiState.value.categoryDisplayNameOf(id)
+
+    private fun knownPlatformName(platformId: String): String? =
+        enabledCards.firstOrNull { it.platformId == platformId }?.displayName
+            ?: shelfCardFor(platformId)?.title
+            ?: platformCache[platformId]?.name
+
+    private fun currentHideLocation(): Triple<HideLocationType, String, String>? {
+        val s = _uiState.value
+        val cat = currentCategory()
+        return when {
+            s.selectedPlatformId == FAVORITES_PLATFORM_ID || cat?.id == BuiltInCategory.FAVORITES ->
+                Triple(HideLocationType.FAVORITES, "", "Favorites")
+
+            s.selectedPlatformId == MISSING_PLATFORM_ID -> null
+            s.selectedPlatformId == ANDROID_PLATFORM_ID -> Triple(HideLocationType.ANDROID_PLATFORM, "", "Android")
+
+            s.selectedPlatformId == ALL_GAMES_PLATFORM_ID ->
+                Triple(HideLocationType.ALL_GAMES, "", "All Games")
+
+            s.selectedPlatformId != null -> {
+                val name = knownPlatformName(s.selectedPlatformId) ?: s.selectedPlatformId
+                Triple(HideLocationType.PLATFORM, s.selectedPlatformId, name)
+            }
+
+            cat != null && cat.isGamingCategory && cat.id != BuiltInCategory.GAMES ->
+                Triple(HideLocationType.CATEGORY, cat.id, cat.name)
+            else -> null
+        }
+    }
+
+    private fun observeVideo() {
+        viewModelScope.launch {
+            videoRepository.observeRecentlyWatched().collect { videos ->
+                val resumable = videos.firstOrNull { v ->
+                    val total = v.durationMs ?: 0L
+                    total > 0L && v.resumePositionMs > 0L &&
+                        v.resumePositionMs.toFloat() / total < RESUME_DONE_FRACTION
+                }
+                if (_uiState.value.resumeVideo?.id != resumable?.id) {
+                    _uiState.update { it.copy(resumeVideo = resumable) }
+                    if (currentCategory()?.id == BuiltInCategory.VIDEO &&
+                        _uiState.value.videoNav == VideoNav.Root
+                    ) {
+                        loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
+                    }
+                }
+            }
+        }
+        viewModelScope.launch {
+            videoRepository.observeLibraries().collect { libraries ->
+                _uiState.update { it.copy(videoLibraries = libraries) }
+                if (currentCategory()?.id == BuiltInCategory.VIDEO &&
+                    _uiState.value.videoNav == VideoNav.Root
+                ) {
+                    loadItemsForCategory(currentCategory())
+                }
+            }
+        }
+    }
+
+    private fun videoAddActions(): List<CrossbarItem> = buildList {
+        if (_uiState.value.videoLibraries.none { it.lastScannedAt != null }) add(addVideosItem())
+        add(addVideoAppsItem())
+    }
+
+    private suspend fun videoRootItems(): List<CrossbarItem> =
+        libraryColumn(
+            mediaColumn(_uiState.value.videoRootSections(), videoAppItems(), videoAddActions()),
+            SearchScope.VIDEOS,
+        )
+
+    private fun addVideosItem(): CrossbarItem = CrossbarItem(
+        id       = ADD_VIDEOS_ITEM_ID,
+        title    = "Add Videos",
+        subtitle = "Set your Video root folder in Settings to get started",
+        type     = CrossbarItemType.ADD_ACTION,
+    )
+
+    private fun videoCollectionsItems(): List<CrossbarItem> = listOf(
+        CrossbarItem(
+            id       = RECENTLY_WATCHED_ITEM_ID,
+            title    = "Recently Watched",
+            subtitle = "Pick up where you left off",
+            type     = CrossbarItemType.VIDEO_RECENT,
+        ),
+        CrossbarItem(
+            id       = FAVORITE_VIDEOS_ITEM_ID,
+            title    = "Favorites",
+            subtitle = "Your starred videos",
+            type     = CrossbarItemType.VIDEO_FAVORITES,
+        ),
+        CrossbarItem(
+            id       = VIDEO_PLAYLISTS_ITEM_ID,
+            title    = "Playlists",
+            subtitle = "Build and play your own lists",
+            type     = CrossbarItemType.PLAYLIST,
+        ),
+    )
+
+    private fun videoLibraryItems(libraries: List<com.echo.core.domain.model.VideoLibrary>): List<CrossbarItem> {
+        val rows = libraries.map { lib ->
+            CrossbarItem(
+                id       = "vlib_${lib.id}",
+                title    = lib.displayName,
+                subtitle = countLabel(lib.videoCount, "video", "videos"),
+                coverUri = lib.artworkUri,
+                type     = CrossbarItemType.VIDEO_FOLDER,
+            )
+        }
+        return rows.ifEmpty {
+            listOf(
+                CrossbarItem(
+                    id = EMPTY_CATEGORY_ITEM_ID,
+                    title = "No video libraries yet",
+                    subtitle = "Add a folder from the Folders row",
+                    type = CrossbarItemType.EMPTY,
+                ),
+            )
+        }
+    }
+
+    private suspend fun videoAppItems(): List<CrossbarItem> {
+        val apps = appCategoryRepository.appsForCategory(VIDEO_APPS_CATEGORY_ID)
+            .notHiddenAt(HideLocationType.CATEGORY, VIDEO_APPS_CATEGORY_ID)
+        return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
+    }
+
+    private fun addVideoAppsItem(): CrossbarItem = CrossbarItem(
+        id       = ADD_VIDEO_APPS_ITEM_ID,
+        title    = "Add Video Apps",
+        subtitle = "Pick installed apps to show here",
+        type     = CrossbarItemType.ADD_ACTION,
+    )
+
+    private fun List<com.echo.core.domain.model.Video>.toVideoItems(): List<CrossbarItem> =
+        map { it.toCrossbarRow() }
+
+    private fun setVideoItems(
+        videos: List<com.echo.core.domain.model.Video>,
+        emptyItem: CrossbarItem,
+        sortable: Boolean = true,
+    ) {
+        val ordered = if (sortable) videos.videoSorted(_uiState.value.videoSortMode) else videos
+        val items = if (ordered.isEmpty()) listOf(emptyItem) else ordered.toVideoItems()
+        _uiState.update { it.copy(currentItems = items) }
+    }
+
+    private fun videoPlaylistItems(playlists: List<com.echo.core.domain.model.VideoPlaylist>): List<CrossbarItem> {
+        val rows = playlists.map { pl ->
+            CrossbarItem(
+                id         = "vpl_${pl.id}",
+                title      = pl.name,
+                subtitle   = countLabel(pl.videoCount, "video", "videos"),
+                playlistId = pl.id,
+                type       = CrossbarItemType.PLAYLIST,
+            )
+        }
+        return rows + CrossbarItem(
+            id       = CREATE_VIDEO_PLAYLIST_ITEM_ID,
+            title    = "Create Playlist",
+            subtitle = "Start a new video playlist",
+            type     = CrossbarItemType.ADD_ACTION,
+        )
+    }
+
+    private fun emptyAllVideosItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_CATEGORY_ITEM_ID,
+        title    = "No videos found",
+        subtitle = "Add a video folder from the Folders row",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun emptyRecentItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_CATEGORY_ITEM_ID,
+        title    = "Nothing watched yet",
+        subtitle = "Videos you play show up here",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun emptyFavoriteVideosItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_CATEGORY_ITEM_ID,
+        title    = "No favorites yet",
+        subtitle = "Star a video from its ⚙ Options menu",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun emptyPlaylistVideosItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_PLAYLIST_ITEM_ID,
+        title    = "This playlist is empty",
+        subtitle = "Add videos from a video's ⚙ Options menu",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun handleVideoSelection(item: CrossbarItem): Boolean = when {
+        item.id == SEARCH_ITEM_ID -> { openSearch(SearchScope.VIDEOS); true }
+        item.id == ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openAddMenu(); true }
+        item.type == CrossbarItemType.EMPTY -> true
+        item.id == ALL_VIDEOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.AllVideos); true }
+        item.id == VIDEO_COLLECTIONS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Collections); true }
+        item.id == RECENTLY_WATCHED_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.RecentlyWatched); true }
+        item.id == FAVORITE_VIDEOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Favorites); true }
+        item.id == VIDEO_PLAYLISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Playlists); true }
+        item.id == CREATE_VIDEO_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreateVideoPlaylist(); true }
+        item.id.startsWith("vpl_") && item.playlistId != null -> {
+            menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Playlist(item.playlistId, item.title)); true
+        }
+        item.id == VIDEO_LIBRARIES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Libraries); true }
+        item.id == ADD_VIDEOS_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT)
+            openMediaFolders(MediaRootKind.VIDEO)
+            true
+        }
+        item.id == ADD_VIDEO_APPS_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT)
+            openAppPicker(AppPickerTarget.CategoryShortcuts(VIDEO_APPS_CATEGORY_ID), "Add Video Apps")
+            true
+        }
+        item.id.startsWith("vlib_") -> {
+            menuSound.play(MenuSound.SELECT)
+            val libId = item.id.removePrefix("vlib_")
+            openVideoView(VideoNav.Library(libId, item.title))
+            true
+        }
+        item.type == CrossbarItemType.VIDEO_FILE -> {
+            menuSound.play(MenuSound.SELECT)
+            _uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
+            true
+        }
+
+        item.packageName != null -> {
+            menuSound.play(MenuSound.LAUNCH)
+            launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            true
+        }
+        else -> false
+    }
+
+    private val viewCursor = mutableMapOf<String, Int>()
+
+    private fun viewCursorKey(s: CrossbarUiState): String {
+        val catId = s.categories.getOrNull(s.selectedCategoryIndex)?.id ?: "none"
+        val sub = when {
+            catId == BuiltInCategory.MUSIC -> "music_${musicNavKey(s.musicNav)}"
+            catId == BuiltInCategory.VIDEO -> "video_${videoNavKey(s.videoNav)}"
+            catId == BuiltInCategory.PHOTO -> "photo_${photoNavKey(s.photoNav)}"
+            catId == BuiltInCategory.LIBRARY -> "books_${booksNavKey(s.booksNav)}"
+            catId == BuiltInCategory.SETTINGS -> "settings_root"
+            s.selectedPlatformId != null   -> "plat_${s.selectedPlatformId}"
+            else                           -> "root"
+        }
+        return "$catId/$sub"
+    }
+
+    private fun navigateRememberingCursor(mutate: (CrossbarUiState) -> CrossbarUiState) {
+        val cur = _uiState.value
+        viewCursor[viewCursorKey(cur)] = cur.selectedItemIndex
+        _uiState.update { state ->
+            val next = mutate(state)
+            val remembered = viewCursor[viewCursorKey(next)] ?: 0
+            next.copy(selectedItemIndex = remembered)
+        }
+        loadItemsForCategory(currentCategory())
+    }
+
+    private fun musicNavKey(nav: MusicNav): String = when (nav) {
+        MusicNav.Folders     -> "folders"
+        MusicNav.Root        -> "root"
+        MusicNav.AllMusic    -> "all"
+        MusicNav.Playlists   -> "playlists"
+        is MusicNav.Playlist -> "playlist_${nav.id}"
+    }
+
+    private fun videoNavKey(nav: VideoNav): String = when (nav) {
+        VideoNav.Folders         -> "folders"
+        VideoNav.Root            -> "root"
+        VideoNav.AllVideos       -> "all"
+        VideoNav.Collections     -> "collections"
+        VideoNav.RecentlyWatched -> "recent"
+        VideoNav.Favorites       -> "favorites"
+        VideoNav.Playlists       -> "playlists"
+        is VideoNav.Playlist     -> "playlist_${nav.id}"
+        VideoNav.Libraries       -> "libraries"
+        is VideoNav.Library      -> "library_${nav.id}"
+    }
+
+    private fun openVideoView(nav: VideoNav) = navigateRememberingCursor { it.copy(videoNav = nav) }
+
+    private fun closeVideoView() = openVideoView(VideoNav.Root)
+
+    fun onCloseVideoDetail() {
+        _uiState.update { it.copy(activeVideoId = null, activeVideoAutoPlay = false, pendingVideoDetailAction = null) }
+    }
+
+    fun consumeVideoDetailAction() {
+        _uiState.update { it.copy(pendingVideoDetailAction = null) }
+    }
+
+    private fun promptCreateVideoPlaylist(forVideoId: String? = null) {
+        _uiState.update { it.copy(
+            playlistNameDialog = PlaylistNameDialogState(title = "New Video Playlist", videoContext = true, forVideoId = forVideoId)
+        )}
+    }
+
+    private fun promptRenameVideoPlaylist(playlistId: Long) {
+        val name = _uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
+        _uiState.update { it.copy(
+            playlistNameDialog = PlaylistNameDialogState(
+                title = "Rename Playlist",
+                initialText = name,
+                renamePlaylistId = playlistId,
+                videoContext = true,
+            )
+        )}
+    }
+
+    private fun openVideoPlaylistContextMenu(playlistId: Long, name: String) {
+        val items = videoPlaylistContextMenuItems()
+        _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = name, rows = items), videoPlaylistId = playlistId)) }
+    }
+
+    private fun openVideoContextMenu(item: CrossbarItem): Boolean {
+        if (item.menuHostCategory(currentCategory()?.id) != BuiltInCategory.VIDEO) return false
+        return when {
+            item.type == CrossbarItemType.VIDEO_FILE && item.id.startsWith("vid_") -> {
+                openVideoFileContextMenu(item.id.removePrefix("vid_"), item.title); true
+            }
+            item.type == CrossbarItemType.VIDEO_FOLDER && item.id.startsWith("vlib_") -> {
+                openVideoLibraryContextMenu(item.id.removePrefix("vlib_"), item.title); true
+            }
+            item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
+                openVideoPlaylistContextMenu(item.playlistId, item.title); true
+            }
+            item.packageName != null -> {
+                openAppContextMenu(item, categoryIdOverride = VIDEO_APPS_CATEGORY_ID); true
+            }
+            else -> false
+        }
+    }
+
+    private fun openVideoFileContextMenu(videoId: String, title: String) {
+        viewModelScope.launch {
+            val video = videoRepository.getVideo(videoId) ?: return@launch
+            val inPlaylist = _uiState.value.videoNav is VideoNav.Playlist
+            val items = videoFileContextMenuItems(
+                isFavorite = video.isFavorite,
+                resumePositionMs = video.resumePositionMs,
+                hasWatchStamp = video.lastWatchedAt != null,
+                inPlaylist = inPlaylist,
+            )
+            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = items), videoFileId = videoId)) }
+        }
+    }
+
+    private fun handleVideoFileAction(videoId: String, itemId: String) {
+        when (itemId) {
+            "video_play", "video_resume", "video_details" ->
+                _uiState.update { it.copy(activeVideoId = videoId) }
+            "video_favorite" -> appAction {
+                val v = videoRepository.getVideo(videoId) ?: return@appAction
+                videoRepository.setFavorite(videoId, !v.isFavorite)
+            }
+            "video_add_playlist" -> openVideoPlaylistPicker(videoId)
+            "video_remove_playlist" -> (_uiState.value.videoNav as? VideoNav.Playlist)?.let { nav ->
+                appAction { videoRepository.removeVideoFromPlaylist(nav.id, videoId) }
+            }
+
+            "video_remove_recent" -> appAction { videoRepository.clearLastWatched(videoId) }
+            "video_remove" -> appAction { videoRepository.removeVideo(videoId) }
+        }
+    }
+
+    private fun openVideoPlaylistPicker(videoId: String, selectIndex: Int? = 0) {
+        viewModelScope.launch {
+            val playlists = videoRepository.observePlaylists().first()
+            val memberOf = videoRepository.getPlaylistIdsForVideo(videoId).toSet()
+            val items = buildList {
+                playlists.forEach { pl -> add(CrossbarContextMenuItem("vpl_${pl.id}", pl.name, checked = pl.id in memberOf)) }
+                add(CrossbarContextMenuItem("vpl_new", "Create New Playlist"))
+            }
+            _uiState.update { it.copy(
+                activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Add to Playlist", rows = items, selectedIndex = selectIndex?.coerceIn(0, items.lastIndex.coerceAtLeast(0))), videoPlaylistPickerVideoId = videoId)
+            )}
+        }
+    }
+
+    private fun openVideoLibraryContextMenu(libraryId: String, name: String) {
+        val items = videoLibraryContextMenuItems()
+        _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = name, rows = items), videoLibraryId = libraryId)) }
+    }
+
+    private fun handleVideoLibraryAction(libraryId: String, itemId: String) {
+        when (itemId) {
+            "video_lib_open" -> {
+                val name = _uiState.value.currentItems.firstOrNull { it.id == "vlib_$libraryId" }?.title.orEmpty()
+                openVideoView(VideoNav.Library(libraryId, name))
+            }
+            "video_lib_manage" -> openMediaFolders(MediaRootKind.VIDEO)
+        }
+    }
+
+    private fun handleVideoPlaylistRowAction(playlistId: Long, itemId: String) {
+        when (itemId) {
+            "open_video_playlist" -> {
+                val name = _uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
+                openVideoView(VideoNav.Playlist(playlistId, name))
+            }
+            "rename_video_playlist" -> promptRenameVideoPlaylist(playlistId)
+            "delete_video_playlist" -> appAction {
+                videoRepository.deletePlaylist(playlistId)
+                if ((_uiState.value.videoNav as? VideoNav.Playlist)?.id == playlistId) openVideoView(VideoNav.Playlists)
+            }
+        }
+    }
+
+    private fun observeContinueBook() {
+        viewModelScope.launch {
+            bookRepository.observeRecentlyOpenedBooks(1).collect { books ->
+                val latest = books.firstOrNull()
+                if (_uiState.value.continueBook?.id != latest?.id) {
+                    _uiState.update { it.copy(continueBook = latest) }
+                    if (currentCategory()?.id == BuiltInCategory.LIBRARY &&
+                        _uiState.value.booksNav == BooksNav.Root
+                    ) {
+                        loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun observeBooks() {
+        viewModelScope.launch {
+            bookRepository.observeLibraries().collect { libraries ->
+                _uiState.update { it.copy(bookLibraries = libraries) }
+                refreshBooksRootIfShowing()
+            }
+        }
+        viewModelScope.launch {
+            bookRepository.observeAllBooks().collect { books ->
+                _uiState.update { it.copy(bookSeries = books.seriesGroups()) }
+                refreshBooksRootIfShowing()
+            }
+        }
+        viewModelScope.launch {
+            bookRepository.observeDefaultReader().collect { reader ->
+                _uiState.update {
+                    it.copy(
+                        defaultReader = reader,
+                        defaultReaderLabel = reader?.let { pkg -> bookIntentResolver.readerLabel(pkg) },
+                    )
+                }
+                refreshBooksRootIfShowing()
+            }
+        }
+    }
+
+    private suspend fun refreshBooksRootIfShowing() {
+        if (currentCategory()?.id == BuiltInCategory.LIBRARY &&
+            _uiState.value.booksNav == BooksNav.Root
+        ) {
+            _uiState.update { it.copy(currentItems = booksRootItems()) }
+        }
+    }
+
+    private fun booksAddActions(): List<CrossbarItem> = buildList {
+        if (_uiState.value.bookLibraries.none { it.lastScannedAt != null }) {
+            add(
+                CrossbarItem(
+                    id       = ADD_BOOK_FOLDER_ITEM_ID,
+                    title    = "Add Book Folder",
+                    subtitle = "Point the Library at a folder of EPUBs",
+                    type     = CrossbarItemType.ADD_ACTION,
+                )
+            )
+        }
+        add(addBookAppsItem())
+    }
+
+    private suspend fun booksRootItems(): List<CrossbarItem> =
+        libraryColumn(
+            mediaColumn(_uiState.value.booksRootSections(), bookAppItems(), booksAddActions()),
+            SearchScope.BOOKS,
+        )
+
+    private suspend fun bookAppItems(): List<CrossbarItem> {
+        val apps = appCategoryRepository.appsForCategory(LIBRARY_APPS_CATEGORY_ID)
+            .notHiddenAt(HideLocationType.CATEGORY, LIBRARY_APPS_CATEGORY_ID)
+        return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
+    }
+
+    private fun addBookAppsItem(): CrossbarItem = CrossbarItem(
+        id       = ADD_LIBRARY_APPS_ITEM_ID,
+        title    = "Add Book Apps",
+        subtitle = "Pick installed apps to show here",
+        type     = CrossbarItemType.ADD_ACTION,
+    )
+
+    private fun bookItems(books: List<com.echo.core.domain.model.Book>): List<CrossbarItem> =
+        books.map { book ->
+            CrossbarItem(
+                id       = "book_${book.id}",
+                title    = book.displayTitle,
+                subtitle = bookRowSubtitle(book.author, book.seriesName, book.seriesIndex),
+                coverUri = book.coverUri,
+
+                artworkUri = book.coverUri,
+                type     = CrossbarItemType.LIBRARY_BOOK,
+            )
+        }
+
+    private fun emptyBooksItem(): CrossbarItem = CrossbarItem(
+        id       = "books_empty",
+        title    = "No books yet",
+        subtitle = "Add a folder of EPUBs in Settings, then rescan",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun bookShelfItems(): List<CrossbarItem> =
+        _uiState.value.bookLibraries.map {
+            CrossbarItem(
+                id       = "shelf_${it.id}",
+                title    = it.displayName,
+                subtitle = countLabel(it.bookCount, "book", "books"),
+                type     = CrossbarItemType.LIBRARY_FOLDER,
+            )
+        }
+
+    private fun bookSeriesItems(): List<CrossbarItem> =
+        _uiState.value.bookSeries.map { series ->
+            CrossbarItem(
+                id       = "series_${series.name}",
+                title    = series.name,
+                subtitle = countLabel(series.bookCount, "book", "books"),
+                coverUri = series.coverUri,
+                artworkUri = series.coverUri,
+                type     = CrossbarItemType.LIBRARY_SERIES,
+            )
+        }
+
+    private fun emptySeriesItem(): CrossbarItem = CrossbarItem(
+        id       = "series_empty",
+        title    = "No series yet",
+        subtitle = "No scanned book declares one. Embed series metadata, then Deep Rescan.",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun handleBooksSelection(item: CrossbarItem): Boolean = when {
+        item.id == SEARCH_ITEM_ID -> { openSearch(SearchScope.BOOKS); true }
+        item.id == ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openAddMenu(); true }
+        item.id == OPEN_READER_ITEM_ID -> {
+            menuSound.play(MenuSound.LAUNCH)
+            val reader = _uiState.value.defaultReader
+            val error = reader?.let { bookIntentResolver.launchReader(it) }
+            if (error != null) {
+                _uiState.update { it.copy(infoDialog = InfoDialogState(title = "Library", message = error)) }
+            }
+            true
+        }
+        item.id == BOOK_SHELVES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.Shelves); true }
+        item.id == ALL_BOOKS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.AllBooks); true }
+        item.id == BOOK_SERIES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.SeriesList); true }
+        item.id == ADD_BOOK_FOLDER_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT)
+            openMediaFolders(MediaRootKind.BOOK)
+            true
+        }
+        item.type == CrossbarItemType.LIBRARY_SERIES -> {
+            menuSound.play(MenuSound.SELECT)
+            openBooksView(BooksNav.Series(item.title))
+            true
+        }
+        item.type == CrossbarItemType.LIBRARY_FOLDER -> {
+            menuSound.play(MenuSound.SELECT)
+            openBooksView(BooksNav.Shelf(item.id.removePrefix("shelf_"), item.title))
+            true
+        }
+        item.type == CrossbarItemType.LIBRARY_BOOK -> { openBook(item.id.removePrefix("book_")); true }
+        item.id == ADD_LIBRARY_APPS_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT)
+            openAppPicker(AppPickerTarget.CategoryShortcuts(LIBRARY_APPS_CATEGORY_ID), "Add Book Apps")
+            true
+        }
+
+        item.packageName != null -> {
+            menuSound.play(MenuSound.LAUNCH)
+            launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            true
+        }
+        else -> false
+    }
+
+    private fun openBook(bookId: String) {
+        menuSound.play(MenuSound.LAUNCH)
+        viewModelScope.launch {
+            val book = bookRepository.getBook(bookId) ?: return@launch
+
+            awaitDiscHandOff(book.coverUri)
+            val error = bookIntentResolver.launch(book, _uiState.value.defaultReader)
+            if (error != null) {
+                _uiState.update { it.copy(infoDialog = InfoDialogState(title = book.displayTitle, message = error)) }
+                return@launch
+            }
+
+            bookRepository.markBookOpened(bookId, System.currentTimeMillis())
+        }
+    }
+
+    private fun booksNavKey(nav: BooksNav): String = when (nav) {
+        BooksNav.Folders  -> "folders"
+        BooksNav.Root     -> "root"
+        BooksNav.AllBooks -> "all"
+        BooksNav.Shelves  -> "shelves"
+        is BooksNav.Shelf -> "shelf_${nav.id}"
+        BooksNav.SeriesList -> "series"
+        is BooksNav.Series  -> "series_${nav.name}"
+    }
+
+    private fun openBooksView(nav: BooksNav) = navigateRememberingCursor { it.copy(booksNav = nav) }
+
+    private fun closeBooksView() = openBooksView(BooksNav.Root)
+
+    private fun observePhoto() {
+        viewModelScope.launch {
+            photoRepository.observeFavorites().collect { favorites ->
+                _uiState.update { it.copy(photoFavoriteCount = favorites.size) }
+                if (currentCategory()?.id == BuiltInCategory.PHOTO && _uiState.value.photoNav == PhotoNav.Root) {
+                    _uiState.update { it.copy(currentItems = photoRootItems()) }
+                }
+            }
+        }
+        viewModelScope.launch {
+            photoRepository.observeLibraries().collect { libraries ->
+                _uiState.update { it.copy(photoLibraries = libraries) }
+                if (currentCategory()?.id == BuiltInCategory.PHOTO &&
+                    _uiState.value.photoNav == PhotoNav.Root
+                ) {
+                    _uiState.update { it.copy(currentItems = photoRootItems()) }
+                }
+            }
+        }
+    }
+
+    @Suppress("QueryPermissionsNeeded")
+    private val cameraAvailable: Boolean by lazy {
+        runCatching {
+            Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+                .resolveActivity(context.packageManager) != null
+        }.getOrDefault(false)
+    }
+
+    private fun launchCamera() {
+        runCatching {
+            context.startActivity(
+                Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }.onFailure { Timber.w(it, "Could not launch a camera app") }
+    }
+
+    private fun photoAddActions(): List<CrossbarItem> = buildList {
+        if (_uiState.value.photoLibraries.none { it.lastScannedAt != null }) add(addPhotoLibraryItem())
+        add(addPhotoAppsItem())
+    }
+
+    private suspend fun photoRootItems(): List<CrossbarItem> =
+        libraryColumn(
+            mediaColumn(_uiState.value.photoRootSections(cameraAvailable), photoAppItems(), photoAddActions()),
+            SearchScope.PHOTOS,
+        )
+
+    private fun addPhotoLibraryItem(): CrossbarItem = CrossbarItem(
+        id       = ADD_PHOTO_LIBRARY_ITEM_ID,
+        title    = "Add Photo Library",
+        subtitle = "Set your Photo root folder in Settings to get started",
+        type     = CrossbarItemType.ADD_ACTION,
+    )
+
+    private suspend fun photoAppItems(): List<CrossbarItem> {
+        val apps = appCategoryRepository.appsForCategory(PHOTO_APPS_CATEGORY_ID)
+            .notHiddenAt(HideLocationType.CATEGORY, PHOTO_APPS_CATEGORY_ID)
+        return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
+    }
+
+    private fun addPhotoAppsItem(): CrossbarItem = CrossbarItem(
+        id       = ADD_PHOTO_APPS_ITEM_ID,
+        title    = "Add Photo Apps",
+        subtitle = "Pick installed apps to show here",
+        type     = CrossbarItemType.ADD_ACTION,
+    )
+
+    private fun photoAlbumItems(libraries: List<com.echo.core.domain.model.PhotoLibrary>): List<CrossbarItem> {
+        val rows = libraries.map { lib ->
+            CrossbarItem(
+                id       = "plib_${lib.id}",
+                title    = lib.displayName,
+                subtitle = countLabel(lib.photoCount, "photo", "photos"),
+                type     = CrossbarItemType.PHOTO_FOLDER,
+            )
+        }
+        return rows.ifEmpty {
+            listOf(
+                CrossbarItem(
+                    id = EMPTY_CATEGORY_ITEM_ID,
+                    title = "No albums yet",
+                    subtitle = "Add a folder from the Folders row",
+                    type = CrossbarItemType.EMPTY,
+                ),
+            )
+        }
+    }
+
+    private fun List<com.echo.core.domain.model.Photo>.toPhotoItems(): List<CrossbarItem> =
+        map { photo ->
+            CrossbarItem(
+                id       = "pho_${photo.id}",
+                title    = photo.displayName,
+                subtitle = photoRowSubtitle(photo.displayDateMs, photo.resolutionLabel, photo.sizeBytes),
+                type     = CrossbarItemType.PHOTO_FILE,
+                mediaUri = photo.uri,
+                mimeType = photo.mimeType,
+                coverUri = photo.thumbnailUri,
+            )
+        }
+
+    private fun setPhotoItems(
+        photos: List<com.echo.core.domain.model.Photo>,
+        emptyItem: CrossbarItem,
+    ) {
+        val items = if (photos.isEmpty()) listOf(emptyItem) else photos.toPhotoItems()
+        _uiState.update { it.copy(currentItems = items) }
+    }
+
+    private fun emptyFavoritePhotosItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_CATEGORY_ITEM_ID,
+        title    = "No favourites yet",
+        subtitle = "Add one from a photo's info panel",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun emptyAllPhotosItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_CATEGORY_ITEM_ID,
+        title    = "No photos found",
+        subtitle = "Add a photo library and scan it",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun emptyLibraryPhotosItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_CATEGORY_ITEM_ID,
+        title    = "No photos in this album",
+        subtitle = "Scan it from its ⚙ Options menu",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun handlePhotoSelection(item: CrossbarItem): Boolean = when {
+        item.id == SEARCH_ITEM_ID -> { openSearch(SearchScope.PHOTOS); true }
+        item.id == ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openAddMenu(); true }
+        item.id == ALL_PHOTOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.AllPhotos); true }
+        item.id == PHOTO_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Albums); true }
+        item.id == PHOTO_FAVORITES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Favorites); true }
+        item.id == CAMERA_ITEM_ID -> { menuSound.play(MenuSound.LAUNCH); launchCamera(); true }
+        item.id == ADD_PHOTO_LIBRARY_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT)
+            openMediaFolders(MediaRootKind.PHOTO)
+            true
+        }
+        item.id == ADD_PHOTO_APPS_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT)
+            openAppPicker(AppPickerTarget.CategoryShortcuts(PHOTO_APPS_CATEGORY_ID), "Add Photo Apps")
+            true
+        }
+
+        item.packageName != null -> {
+            menuSound.play(MenuSound.LAUNCH)
+            launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            true
+        }
+        item.type == CrossbarItemType.PHOTO_FOLDER && item.id.startsWith("plib_") -> {
+            menuSound.play(MenuSound.SELECT)
+            openPhotoView(PhotoNav.Library(item.id.removePrefix("plib_"), item.title))
+            true
+        }
+        item.type == CrossbarItemType.PHOTO_FILE && item.id.startsWith("pho_") -> {
+            menuSound.play(MenuSound.SELECT)
+            openPhoto(item.id.removePrefix("pho_"))
+            true
+        }
+        else -> false
+    }
+
+    private fun photoNavKey(nav: PhotoNav): String = when (nav) {
+        PhotoNav.Folders    -> "folders"
+        PhotoNav.Root       -> "root"
+        PhotoNav.AllPhotos  -> "all"
+        PhotoNav.Albums     -> "albums"
+        PhotoNav.Favorites  -> "favorites"
+        is PhotoNav.Library -> "library_${nav.id}"
+    }
+
+    private fun openPhotoView(nav: PhotoNav) = navigateRememberingCursor { it.copy(photoNav = nav) }
+
+    private fun closePhotoView() = openPhotoView(PhotoNav.Root)
+
+    private fun openPhoto(photoId: String) {
+        viewModelScope.launch {
+            val open = photoOpenFor(photoRepository.observeDefaultViewer().first())
+            val photo = if (open == PhotoOpen.BuiltIn) null else photoRepository.getPhoto(photoId)
+            if (photo == null) {
+                openPhotoViewer(photoId)
+                return@launch
+            }
+            val error = photoIntentResolver.launch(photo, (open as? PhotoOpen.App)?.packageName)
+            if (error != null) {
+                _uiState.update { it.copy(infoDialog = InfoDialogState(title = photo.displayName, message = error)) }
+            }
+        }
+    }
+
+    private fun openPhotoViewer(photoId: String, wallpaperPreview: Boolean = false) {
+        val nav = _uiState.value.photoNav
+        val libraryId = (nav as? PhotoNav.Library)?.id
+        _uiState.update {
+            it.copy(activePhotoViewer = PhotoViewerRequest(photoId, libraryId, openWallpaperPreview = wallpaperPreview,
+                favoritesOnly = nav == PhotoNav.Favorites))
+        }
+    }
+
+    fun onClosePhotoViewer() {
+        _uiState.update { it.copy(activePhotoViewer = null, pendingPhotoViewerAction = null) }
+    }
+
+    fun consumePhotoViewerAction() {
+        _uiState.update { it.copy(pendingPhotoViewerAction = null) }
+    }
+
+    private fun openBookContextMenu(item: CrossbarItem): Boolean {
+        if (item.menuHostCategory(currentCategory()?.id) != BuiltInCategory.LIBRARY) return false
+        if (item.type != CrossbarItemType.LIBRARY_BOOK || !item.id.startsWith("book_")) return false
+        val bookId = item.id.removePrefix("book_")
+        viewModelScope.launch {
+            val onShelf = runCatching { bookRepository.getBook(bookId) }
+                .getOrNull()?.lastOpenedAt != null
+            val items = bookContextMenuItems(hasOpenStamp = onShelf)
+            _uiState.update {
+                it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), bookFileId = bookId))
+            }
+        }
+        return true
+    }
+
+    private fun handleBookAction(bookId: String, itemId: String) {
+        when (itemId) {
+            "book_open" -> openBook(bookId)
+
+            "book_remove_recent" -> appAction { bookRepository.clearBookLastOpened(bookId) }
+            "book_remove" -> appAction { bookRepository.removeBook(bookId) }
+        }
+    }
+
+    private fun openPhotoContextMenu(item: CrossbarItem): Boolean {
+        if (item.menuHostCategory(currentCategory()?.id) != BuiltInCategory.PHOTO) return false
+        return when {
+            item.type == CrossbarItemType.PHOTO_FILE && item.id.startsWith("pho_") -> {
+                openPhotoFileContextMenu(item.id.removePrefix("pho_"), item.title); true
+            }
+            item.type == CrossbarItemType.PHOTO_FOLDER && item.id.startsWith("plib_") -> {
+                openPhotoLibraryContextMenu(item.id.removePrefix("plib_"), item.title); true
+            }
+            item.packageName != null -> {
+                openAppContextMenu(item, categoryIdOverride = PHOTO_APPS_CATEGORY_ID); true
+            }
+            else -> false
+        }
+    }
+
+    private fun openPhotoFileContextMenu(photoId: String, title: String) {
+        val items = photoFileContextMenuItems()
+        _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = items), photoFileId = photoId)) }
+    }
+
+    private fun handlePhotoFileAction(photoId: String, itemId: String) {
+        when (itemId) {
+            "photo_open"          -> openPhoto(photoId)
+
+            "photo_set_wallpaper" -> openPhotoViewer(photoId, wallpaperPreview = true)
+            "photo_remove"        -> appAction { photoRepository.removePhoto(photoId) }
+        }
+    }
+
+    private fun openPhotoLibraryContextMenu(libraryId: String, name: String) {
+        val items = photoLibraryContextMenuItems()
+        _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = name, rows = items), photoLibraryId = libraryId)) }
+    }
+
+    private fun handlePhotoLibraryAction(libraryId: String, itemId: String) {
+        when (itemId) {
+            "photo_lib_open" -> {
+                val name = _uiState.value.photoLibraries.firstOrNull { it.id == libraryId }?.displayName.orEmpty()
+                openPhotoView(PhotoNav.Library(libraryId, name))
+            }
+            "photo_lib_scan" -> appAction { scanPhotoLibrary(libraryId) }
+            "photo_lib_manage" -> openMediaFolders(MediaRootKind.PHOTO)
+        }
+    }
+
+    private suspend fun scanPhotoLibrary(libraryId: String) {
+        val library = photoRepository.getLibrary(libraryId) ?: return
+        val taskId = "photo_scan_${library.id}"
+        val notifier = BackgroundTaskNotifier(context)
+        notifier.running(taskId, "Scanning ${library.displayName}", null)
+        val existing = photoRepository.getPhotosForLibrary(library.id)
+        photoScanner.scan(library, deep = false, existing = existing).collect { result ->
+            when (result) {
+                is com.echo.feature.library.scanner.PhotoScanResult.Progress ->
+                    notifier.running(taskId, "Scanning ${result.libraryName}", null)
+                is com.echo.feature.library.scanner.PhotoScanResult.Complete -> {
+                    photoRepository.replacePhotosForLibrary(result.libraryId, result.photos, System.currentTimeMillis())
+                    notifier.complete(taskId, "Scanned ${library.displayName}", "${result.photos.size} photos")
+                }
+                is com.echo.feature.library.scanner.PhotoScanResult.Error ->
+                    notifier.failed(taskId, "Scan failed: ${library.displayName}", result.message)
+            }
+        }
+    }
+
+    private fun openMusicBrowser(view: MusicBrowserView) {
+        musicBrowserJob?.cancel()
+        val title = when (view) {
+            MusicBrowserView.AllMusic    -> "Songs"
+            MusicBrowserView.Playlists   -> "Playlists"
+            MusicBrowserView.Artists     -> "Artists"
+            MusicBrowserView.Albums      -> "Albums"
+            is MusicBrowserView.Playlist -> view.name
+            is MusicBrowserView.Artist   -> view.name
+            is MusicBrowserView.Album    -> view.name
+        }
+        _uiState.update { it.copy(musicBrowser = MusicBrowserState(view = view, title = title)) }
+        musicBrowserJob = viewModelScope.launch {
+            when (view) {
+                MusicBrowserView.AllMusic -> musicRepository.observeAllTracks().collect { tracks ->
+                    browserRawTracks = tracks; rebuildBrowserTrackRows()
+                }
+                is MusicBrowserView.Playlist -> musicRepository.observePlaylistTracks(view.id).collect { tracks ->
+                    browserRawTracks = tracks; rebuildBrowserTrackRows()
+                }
+                MusicBrowserView.Playlists -> musicRepository.observePlaylists().collect { playlists ->
+                    browserRawPlaylists = playlists; rebuildBrowserPlaylistRows()
+                }
+
+                MusicBrowserView.Artists, MusicBrowserView.Albums ->
+                    musicRepository.observeAllTracks().collect { tracks ->
+                        browserRawTracks = tracks; rebuildBrowserGroupRows()
+                    }
+                is MusicBrowserView.Artist -> musicRepository.observeAllTracks().collect { tracks ->
+
+                    browserRawTracks = tracks.tracksByArtistKey(view.key)
+                    rebuildBrowserTrackRows()
+                }
+                is MusicBrowserView.Album -> musicRepository.observeAllTracks().collect { tracks ->
+                    browserRawTracks = tracks.filter { it.album.musicGroupKey() == view.key }
+                    rebuildBrowserTrackRows()
+                }
+            }
+        }
+    }
+
+    private fun MusicTrack.matchesQuery(q: String): Boolean =
+        displayTitle.lowercase().contains(q) ||
+            artist?.lowercase()?.contains(q) == true ||
+            album?.lowercase()?.contains(q) == true
+
+    private fun rebuildBrowserTrackRows() {
+        val state = _uiState.value.musicBrowser ?: return
+        val isPlaylist = state.view is MusicBrowserView.Playlist
+        val q = state.query.trim().lowercase()
+        val sorted = browserRawTracks.trackSorted(_uiState.value.musicSortMode)
+        val filtered = if (q.isBlank()) sorted else sorted.filter { it.matchesQuery(q) }
+        currentMusicTracks = filtered
+        val baseRows = when {
+            filtered.isNotEmpty() -> filtered.toMusicItems()
+            q.isNotBlank()        -> listOf(browserNoResultsItem())
+            isPlaylist            -> listOf(emptyPlaylistItem())
+            else                  -> listOf(emptyAllMusicItem())
+        }
+        val rows = if (isPlaylist) baseRows + addTracksItem() else baseRows
+
+        val label = _uiState.value.musicSortMode.label
+        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
+            rows = rows,
+            selectedIndex = state.selectedIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0)),
+            sortLabel = label,
+        )) }
+    }
+
+    private fun rebuildBrowserGroupRows() {
+        val state = _uiState.value.musicBrowser ?: return
+        val q = state.query.trim().lowercase()
+        val prefix = if (state.view == MusicBrowserView.Artists) "art" else "alb"
+        val groups = if (state.view == MusicBrowserView.Artists) browserRawTracks.artistGroups()
+                     else browserRawTracks.albumGroups()
+        val filtered = if (q.isBlank()) groups else groups.filter { it.name.lowercase().contains(q) }
+        val rows = when {
+            filtered.isNotEmpty() -> filtered.map { it.toBrowserItem(prefix) }
+            q.isNotBlank()        -> listOf(browserNoResultsItem())
+            else                  -> listOf(emptyAllMusicItem())
+        }
+        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
+            rows = rows,
+            selectedIndex = state.selectedIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0)),
+            sortLabel = null,
+        )) }
+    }
+
+    private fun MusicGroup.toBrowserItem(prefix: String): CrossbarItem = CrossbarItem(
+        id            = "mg_${prefix}_$key",
+        title         = name,
+        subtitle      = subtitle,
+        coverUri      = artUri,
+        musicGroupKey = key,
+        type          = CrossbarItemType.MUSIC_GROUP,
+    )
+
+    private fun rebuildBrowserPlaylistRows() {
+        val state = _uiState.value.musicBrowser ?: return
+        val q = state.query.trim().lowercase()
+        val filtered = if (q.isBlank()) browserRawPlaylists
+                       else browserRawPlaylists.filter { it.name.lowercase().contains(q) }
+        val rows = playlistRootItems(filtered)
+        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
+            rows = rows,
+            selectedIndex = state.selectedIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0)),
+            sortLabel = null,
+        )) }
+    }
+
+    private fun browserNoResultsItem(): CrossbarItem = CrossbarItem(
+        id = EMPTY_CATEGORY_ITEM_ID, title = "No matches", subtitle = "Try a different search.",
+        type = CrossbarItemType.EMPTY,
+    )
+
+    fun onMusicBrowserQueryChange(query: String) {
+        markTouchInput()
+        val state = _uiState.value.musicBrowser ?: return
+        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
+            query = query, selectedIndex = 0,
+            scrollToTopToken = state.scrollToTopToken + 1,
+        )) }
+        when {
+            state.view is MusicBrowserView.Playlists -> rebuildBrowserPlaylistRows()
+            state.view.listsGroups -> rebuildBrowserGroupRows()
+            else -> rebuildBrowserTrackRows()
+        }
+    }
+
+    private var searchGames: List<com.echo.core.domain.model.Game> = emptyList()
+
+    private var searchApps: List<com.echo.feature.appbar.InstalledApp> = emptyList()
+    private var searchVideos: List<com.echo.core.domain.model.Video> = emptyList()
+    private var searchPhotos: List<com.echo.core.domain.model.Photo> = emptyList()
+    private var searchBooks: List<com.echo.core.domain.model.Book> = emptyList()
+    private var searchTracks: List<com.echo.core.domain.model.MusicTrack> = emptyList()
+
+    fun enterOpensAppDrawer(): Boolean = _uiState.value.enterOpensAppDrawer
+
+    fun onTypedCharacter(ch: String): Boolean {
+        if (_uiState.value.activeAppDrawerFilter != null) {
+            _uiState.update { it.copy(pendingDrawerTypedChar = ch) }
+            return true
+        }
+        if (!typeToSearchAllowed()) return false
+        openSearchTyping(ch)
+        return true
+    }
+
+    fun onDrawerTypedCharConsumed() {
+        _uiState.update { it.copy(pendingDrawerTypedChar = null) }
+    }
+
+    fun typeToSearchAllowed(): Boolean {
+        val state = _uiState.value
+        return state.search == null && state.stripShowsCrossbarContext
+    }
+
+    fun openSearchTyping(query: String) {
+        openSearch(SearchScope.ALL)
+        onSearchQueryChange(query)
+    }
+
+    fun openAppSearch(initialQuery: String) {
+        openSearch(SearchScope.APPS)
+        if (initialQuery.isNotEmpty()) onSearchQueryChange(initialQuery)
+    }
+
+    fun openSearch(scope: SearchScope) {
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update { it.copy(search = SearchState(scope = scope)) }
+        viewModelScope.launch {
+            val wantsGames = scope == SearchScope.ALL || scope == SearchScope.GAMES
+            val wantsVideos = scope == SearchScope.ALL || scope == SearchScope.VIDEOS
+            val wantsPhotos = scope == SearchScope.ALL || scope == SearchScope.PHOTOS
+            val wantsBooks = scope == SearchScope.ALL || scope == SearchScope.BOOKS
+            searchGames = if (wantsGames) gameRepository.observeAllGames().first() else emptyList()
+            searchVideos = if (wantsVideos) videoRepository.observeAllVideos().first() else emptyList()
+            searchPhotos = if (wantsPhotos) photoRepository.observeAllPhotos().first() else emptyList()
+            searchBooks = if (wantsBooks) bookRepository.observeAllBooks().first() else emptyList()
+
+            val wantsTracks = scope == SearchScope.ALL || scope == SearchScope.MUSIC
+            searchTracks = if (wantsTracks) musicRepository.observeAllTracks().first() else emptyList()
+
+            val wantsApps = scope == SearchScope.ALL || scope == SearchScope.APPS
+            searchApps = if (wantsApps) appCategoryRepository.allInstalledApps() else emptyList()
+            _uiState.update { it.copy(search = it.search?.copy(loaded = true)) }
+            rebuildSearchRows()
+        }
+    }
+
+    fun onSearchQueryChange(query: String) {
+        markTouchInput()
+        val state = _uiState.value.search ?: return
+        _uiState.update { it.copy(search = it.search?.copy(
+            query = query,
+            selectedIndex = 0,
+            scrollToTopToken = state.scrollToTopToken + 1,
+        )) }
+        rebuildSearchRows()
+    }
+
+    fun closeSearch() {
+        menuSound.play(MenuSound.BACK)
+
+        searchGames = emptyList(); searchVideos = emptyList(); searchPhotos = emptyList()
+        searchApps = emptyList()
+        searchBooks = emptyList(); searchTracks = emptyList()
+        _uiState.update { it.copy(search = null) }
+    }
+
+    private fun rebuildSearchRows() {
+        val state = _uiState.value.search ?: return
+        val q = state.query
+        val rows = buildList {
+            searchApps.filter { matchesSearch(q, it.label, it.packageName) }
+                .take(SEARCH_RESULTS_PER_LIBRARY)
+                .forEach { app ->
+                    add(
+                        CrossbarItem(
+                            id = "searchapp_${app.packageName}",
+                            title = app.label,
+                            subtitle = "App",
+                            packageName = app.packageName,
+
+                            isAndroidApp = true,
+                        ),
+                    )
+                }
+
+            searchGames.filter {
+                matchesSearch(q, it.title, it.developer, it.publisher, platformCache[it.platformId]?.name)
+            }
+                .take(SEARCH_RESULTS_PER_LIBRARY)
+                .forEach { add(it.toSearchRow()) }
+            searchVideos.filter { matchesSearch(q, it.displayTitle, it.displayName) }
+                .take(SEARCH_RESULTS_PER_LIBRARY)
+                .forEach { add(it.toSearchRow()) }
+            searchPhotos.filter { matchesSearch(q, it.displayName, it.relativePath) }
+                .take(SEARCH_RESULTS_PER_LIBRARY)
+                .forEach { add(it.toSearchRow()) }
+            searchBooks.filter { matchesSearch(q, it.displayTitle, it.author, it.seriesName) }
+                .take(SEARCH_RESULTS_PER_LIBRARY)
+                .forEach { add(it.toSearchRow()) }
+            searchTracks.filter { matchesSearch(q, it.displayTitle, it.artist, it.album) }
+                .take(SEARCH_RESULTS_PER_LIBRARY)
+                .forEach { add(it.toSearchRow()) }
+        }
+
+        val anyContent = searchGames.isNotEmpty() || searchVideos.isNotEmpty() ||
+            searchPhotos.isNotEmpty() || searchBooks.isNotEmpty() || searchTracks.isNotEmpty() ||
+            searchApps.isNotEmpty()
+        val display = when {
+            rows.isNotEmpty() -> rows
+            else -> when (searchEmptyState(state.loaded, q, anyContent)) {
+                SearchEmptyState.LOADING -> searchNoticeItem("Reading your libraries", "One moment.")
+                SearchEmptyState.EMPTY_LIBRARY -> searchNoticeItem(state.scope.emptyTitle, state.scope.emptyHint)
+                SearchEmptyState.PROMPT -> searchNoticeItem("Type to search", state.scope.hint)
+                SearchEmptyState.NO_MATCHES -> searchNoticeItem("No matches", "Nothing here matches that.")
+            }.let(::listOf)
+        }
+        _uiState.update { it.copy(search = it.search?.copy(
+            rows = display,
+            selectedIndex = state.selectedIndex.coerceIn(0, (display.size - 1).coerceAtLeast(0)),
+        )) }
+    }
+
+    private fun searchNoticeItem(title: String, subtitle: String): CrossbarItem =
+        CrossbarItem(id = EMPTY_CATEGORY_ITEM_ID, title = title, subtitle = subtitle, type = CrossbarItemType.EMPTY)
+
+    fun onSearchFocusedAt(index: Int) {
+        markTouchInput()
+        moveSearch(index - (_uiState.value.search?.selectedIndex ?: return))
+    }
+
+    private fun moveSearch(delta: Int) {
+        val state = _uiState.value.search ?: return
+        if (state.rows.isEmpty()) return
+        val next = (state.selectedIndex + delta).coerceIn(0, state.rows.lastIndex)
+        if (next == state.selectedIndex) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(search = it.search?.copy(selectedIndex = next)) }
+    }
+
+    fun onSearchActivatedAt(index: Int) {
+        val state = _uiState.value.search ?: return
+        val row = state.rows.getOrNull(index) ?: return
+        if (row.type == CrossbarItemType.EMPTY) return
+        _uiState.update { it.copy(search = it.search?.copy(selectedIndex = index)) }
+
+        val appPackage = row.packageName?.takeIf { row.isInstalledApp }
+        if (appPackage != null) {
+            closeSearch()
+            launchAppWithDisc(appPackage, row.shelfCoverArt)
+            return
+        }
+
+        val categoryId = searchRowCategory(row) ?: return
+        closeSearch()
+        selectCategoryById(categoryId)
+        when (row.type) {
+            CrossbarItemType.VIDEO_FILE ->
+                _uiState.update { it.copy(activeVideoId = row.id.removePrefix("vid_"), activeVideoAutoPlay = true) }
+            CrossbarItemType.PHOTO_FILE -> openSearchedPhoto(row)
+            CrossbarItemType.LIBRARY_BOOK -> openBook(row.id.removePrefix("book_"))
+            CrossbarItemType.MUSIC_TRACK -> openSearchedTrack(row)
+
+            else -> row.gameId?.let { id -> launchGameDirectly(id) }
+        }
+    }
+
+    private fun searchRowCategory(row: CrossbarItem): String? = row.owningCategory()
+
+    private fun selectCategoryById(categoryId: String) {
+        val index = _uiState.value.categories.indexOfFirst { it.id == categoryId }
+        if (index >= 0) onCategorySelected(index)
+    }
+
+    private fun openSearchedPhoto(row: CrossbarItem) {
+        val photoId = row.id.removePrefix("pho_")
+        val libraryId = searchPhotos.firstOrNull { it.id == photoId }?.libraryId ?: return
+        val name = _uiState.value.photoLibraries.firstOrNull { it.id == libraryId }?.displayName.orEmpty()
+        _uiState.update { it.copy(photoNav = PhotoNav.Library(libraryId, name)) }
+        openPhoto(photoId)
+    }
+
+    private fun openSearchedTrack(row: CrossbarItem) {
+        val trackId = row.id.removePrefix("mt_")
+        val track = searchTracks.firstOrNull { it.id == trackId } ?: return
+        viewModelScope.launch {
+            awaitDiscHandOff(track.artUri)
+            musicPlayer.setQueue(listOf(track), 0)
+            _uiState.update { it.copy(musicPlayerVisible = true) }
+        }
+    }
+
+    private fun com.echo.core.domain.model.Game.toSearchRow(): CrossbarItem = CrossbarItem(
+        id = "search_game_$id",
+        title = title,
+        subtitle = listOfNotNull("Game", platformCache[platformId]?.name).joinToString("  ·  "),
+
+        coverUri = artworkUri,
+        metadataLine = gameMetadataLine(releaseYear, genre, developer, players),
+        totalPlayTimeMillis = totalPlayTimeMillis,
+        lastOpenedAt = lastPlayedAt,
+        gameId = id,
+        platformId = platformId,
+        type = CrossbarItemType.STANDARD,
+    )
+
+    private fun com.echo.core.domain.model.Video.toSearchRow(): CrossbarItem = CrossbarItem(
+        id = "vid_$id",
+        title = displayTitle,
+        subtitle = listOfNotNull("Video", videoRowSubtitle(durationMs, resolutionLabel, sizeBytes)).joinToString("  ·  "),
+        coverUri = effectiveThumbnailUri,
+        mediaUri = uri,
+        mimeType = mimeType,
+        type = CrossbarItemType.VIDEO_FILE,
+    )
+
+    private fun com.echo.core.domain.model.Photo.toSearchRow(): CrossbarItem = CrossbarItem(
+        id = "pho_$id",
+        title = displayName,
+        subtitle = listOfNotNull("Photo", relativePath).joinToString("  ·  "),
+        coverUri = thumbnailUri ?: uri,
+        mediaUri = uri,
+        type = CrossbarItemType.PHOTO_FILE,
+    )
+
+    private fun com.echo.core.domain.model.Book.toSearchRow(): CrossbarItem = CrossbarItem(
+        id = "book_$id",
+        title = displayTitle,
+        subtitle = listOfNotNull("Book", bookRowSubtitle(author, seriesName, seriesIndex)).joinToString("  ·  "),
+        coverUri = coverUri,
+        type = CrossbarItemType.LIBRARY_BOOK,
+    )
+
+    private fun com.echo.core.domain.model.MusicTrack.toSearchRow(): CrossbarItem = CrossbarItem(
+        id = "mt_$id",
+        title = displayTitle,
+        subtitle = listOfNotNull("Music", musicRowSubtitle(artist, album, durationMs)).joinToString("  ·  "),
+        coverUri = artUri,
+        mediaUri = uri,
+        mimeType = mimeType,
+        type = CrossbarItemType.MUSIC_TRACK,
+    )
+
+    private fun moveMusicBrowser(delta: Int) {
+        val b = _uiState.value.musicBrowser ?: return
+        val next = (b.selectedIndex + delta).coerceIn(0, (b.rows.size - 1).coerceAtLeast(0))
+        if (next != b.selectedIndex) {
+            _uiState.update { it.copy(musicBrowser = b.copy(selectedIndex = next)) }
+            menuSound.play(MenuSound.SCROLL)
+        }
+    }
+
+    private fun activateMusicBrowser() {
+        val b = _uiState.value.musicBrowser ?: return
+        handleMusicBrowserRow(b.rows.getOrNull(b.selectedIndex) ?: return)
+    }
+
+    fun onMusicBrowserActivatedAt(index: Int) {
+        markTouchInput()
+        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(selectedIndex = index)) }
+        activateMusicBrowser()
+    }
+
+    private fun handleMusicBrowserRow(item: CrossbarItem) {
+        when {
+            item.type == CrossbarItemType.EMPTY -> Unit
+            item.id == CREATE_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreatePlaylist() }
+            item.id == ADD_TRACKS_ITEM_ID -> {
+                menuSound.play(MenuSound.SELECT)
+                (_uiState.value.musicBrowser?.view as? MusicBrowserView.Playlist)?.let { openMusicTrackPicker(it.id) }
+            }
+            item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
+                menuSound.play(MenuSound.SELECT)
+                openMusicBrowser(MusicBrowserView.Playlist(item.playlistId, item.title))
+            }
+            item.type == CrossbarItemType.MUSIC_GROUP && item.musicGroupKey != null -> {
+                menuSound.play(MenuSound.SELECT)
+                openMusicBrowser(
+                    if (_uiState.value.musicBrowser?.view == MusicBrowserView.Artists)
+                        MusicBrowserView.Artist(item.title, item.musicGroupKey)
+                    else MusicBrowserView.Album(item.title, item.musicGroupKey)
+                )
+            }
+            item.type == CrossbarItemType.MUSIC_TRACK -> { menuSound.play(MenuSound.SELECT); openMusicPlayerForItem(item) }
+        }
+    }
+
+    private fun openMusicBrowserContextMenu() {
+        val b = _uiState.value.musicBrowser ?: return
+        val item = b.rows.getOrNull(b.selectedIndex) ?: return
+        when {
+            item.type == CrossbarItemType.MUSIC_TRACK -> openMusicTrackContextMenu(item)
+            item.type == CrossbarItemType.PLAYLIST && item.playlistId != null ->
+                openPlaylistRowContextMenu(item.playlistId, item.title)
+        }
+    }
+
+    fun onMusicBrowserLongPressAt(index: Int) {
+        markTouchInput()
+        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(selectedIndex = index)) }
+        openMusicBrowserContextMenu()
+    }
+
+    fun onMusicBrowserBack() {
+        markTouchInput()
+        val b = _uiState.value.musicBrowser ?: return
+        menuSound.play(MenuSound.BACK)
+        when (b.view) {
+            is MusicBrowserView.Playlist -> openMusicBrowser(MusicBrowserView.Playlists)
+            is MusicBrowserView.Artist -> openMusicBrowser(MusicBrowserView.Artists)
+            is MusicBrowserView.Album -> openMusicBrowser(MusicBrowserView.Albums)
+            else -> closeMusicBrowser()
+        }
+    }
+
+    private fun closeMusicBrowser() {
+        musicBrowserJob?.cancel(); musicBrowserJob = null
+        val view = _uiState.value.musicBrowser?.view
+        browserRawTracks = emptyList(); browserRawPlaylists = emptyList()
+        _uiState.update { it.copy(musicBrowser = null) }
+
+        if (currentCategory()?.id == BuiltInCategory.MUSIC && _uiState.value.musicNav == MusicNav.Root) {
+            val targetId = when (view) {
+                is MusicBrowserView.Playlists, is MusicBrowserView.Playlist -> PLAYLISTS_ITEM_ID
+                is MusicBrowserView.Artists, is MusicBrowserView.Artist -> MUSIC_ARTISTS_ITEM_ID
+                is MusicBrowserView.Albums, is MusicBrowserView.Album -> MUSIC_ALBUMS_ITEM_ID
+                else -> ALL_MUSIC_ITEM_ID
+            }
+            val idx = _uiState.value.currentItems.indexOfFirst { it.id == targetId }
+            if (idx >= 0) _uiState.update { it.copy(selectedItemIndex = idx) }
+        }
+    }
+
+    fun onMusicBrowserSortTapped() {
+        markTouchInput()
+        cycleSort()
+    }
+
+    fun onMusicBrowserOptionsTapped() {
+        markTouchInput()
+        openMusicBrowserContextMenu()
+    }
+
+    private fun currentPlaylistContextId(): Long? =
+        (_uiState.value.musicBrowser?.view as? MusicBrowserView.Playlist)?.id
+            ?: (_uiState.value.musicNav as? MusicNav.Playlist)?.id
+
+    private fun handleMusicSelection(item: CrossbarItem): Boolean = when {
+        item.id == SEARCH_ITEM_ID -> { openSearch(SearchScope.MUSIC); true }
+        item.id == ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openAddMenu(); true }
+        item.type == CrossbarItemType.EMPTY -> true
+        item.id == NOW_PLAYING_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT)
+            if (_uiState.value.musicPlayback.track != null) _uiState.update { it.copy(musicPlayerVisible = true) }
+            true
+        }
+
+        item.id == PLAYLISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Playlists); true }
+        item.id == ALL_MUSIC_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.AllMusic); true }
+        item.id == MUSIC_ARTISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Artists); true }
+        item.id == MUSIC_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Albums); true }
+        item.id == ADD_MUSIC_FOLDER_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT)
+            openMediaFolders(MediaRootKind.MUSIC)
+            true
+        }
+        item.id == CREATE_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreatePlaylist(); true }
+        item.id == ADD_MUSIC_APPS_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT)
+            openAppPicker(AppPickerTarget.CategoryShortcuts(MUSIC_APPS_CATEGORY_ID), "Add Music Apps")
+            true
+        }
+        item.id == ADD_TRACKS_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT)
+            (_uiState.value.musicNav as? MusicNav.Playlist)?.let { openMusicTrackPicker(it.id) }
+            true
+        }
+        item.type == CrossbarItemType.MUSIC_TRACK -> { menuSound.play(MenuSound.SELECT); openMusicPlayerForItem(item); true }
+        item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
+            menuSound.play(MenuSound.SELECT); openMusicView(MusicNav.Playlist(item.playlistId, item.title)); true
+        }
+
+        item.packageName != null -> {
+            menuSound.play(MenuSound.LAUNCH)
+            launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            true
+        }
+        else -> false
+    }
+
+    private fun openMusicPlayerForItem(item: CrossbarItem) {
+        val trackId = item.id.removePrefix("mt_")
+        val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
+        if (currentMusicTracks.isEmpty()) return
+        val track = currentMusicTracks[startIndex]
+        viewModelScope.launch {
+            awaitDiscHandOff(track.artUri)
+            musicPlayer.setQueue(currentMusicTracks, startIndex)
+            _uiState.update { it.copy(musicPlayerVisible = true) }
+        }
+    }
+
+    fun musicPlayPause() = musicPlayer.playPause()
+    fun musicNext() = musicPlayer.next()
+    fun musicPrev() = musicPlayer.prev()
+    fun musicSeekTo(ms: Int) = musicPlayer.seekTo(ms)
+    fun musicToggleShuffle() = musicPlayer.toggleShuffle()
+    fun musicCycleRepeat() = musicPlayer.cycleRepeat()
+    private fun musicSeekBy(deltaMs: Int) = musicPlayer.seekBy(deltaMs)
+
+    fun closeMusicPlayer() {
+        _uiState.update { it.copy(musicPlayerVisible = false) }
+    }
+
+    private fun stopAndCloseMusicPlayer() {
+        musicPlayer.stop()
+        _uiState.update { it.copy(musicPlayerVisible = false) }
+    }
+
+    private fun openMusicPlayerOptions() {
+        val title = musicPlayer.currentTrack()?.displayTitle ?: "Now Playing"
+        _uiState.update {
+            it.copy(
+                activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = musicPlayerMenuItems(it.musicPlayback)), musicTrackId = MUSIC_PLAYER_MENU_MARKER)
+            )
+        }
+    }
+
+    private fun openNowPlayingContextMenu() {
+        val playback = _uiState.value.musicPlayback
+        if (playback.track == null) return
+        _uiState.update {
+            it.copy(
+                activeContextMenu = CrossbarContextMenu(state = MenuState(title = playback.track.displayTitle, rows = nowPlayingContextMenuItems(playback.isPlaying)), musicTrackId = MUSIC_PLAYER_MENU_MARKER)
+            )
+        }
+    }
+
+    private fun musicPlayInBackground() {
+        if (musicPlayer.currentTrack() == null) return
+        com.echo.feature.crossbar.music.MusicPlaybackService.start(context)
+        _uiState.update { it.copy(musicPlayerVisible = false) }
+    }
+
+    private fun openMusicTrackContextMenu(item: CrossbarItem) {
+        val playlistId = currentPlaylistContextId()
+
+        val trackId = item.id.removePrefix("mt_")
+        viewModelScope.launch {
+            val onShelf = runCatching { musicRepository.getTrack(trackId) }
+                .getOrNull()?.lastPlayedAt != null
+            val items = musicTrackContextMenuItems(playlistId = playlistId, hasPlayStamp = onShelf)
+            _uiState.update { it.copy(
+                activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), musicTrackId = trackId, playlistId = playlistId)
+            )}
+        }
+    }
+
+    private fun openPlaylistRowContextMenu(playlistId: Long, name: String) {
+        val items = playlistRowContextMenuItems()
+        _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = name, rows = items), playlistId = playlistId)) }
+    }
+
+    private fun openPlaylistPicker(trackId: String, selectIndex: Int? = 0) {
+        viewModelScope.launch {
+            val playlists = musicRepository.observePlaylists().first()
+            val memberOf = musicRepository.getPlaylistIdsForTrack(trackId).toSet()
+            val items = buildList {
+                playlists.forEach { pl ->
+                    add(CrossbarContextMenuItem("pl_${pl.id}", pl.name, checked = pl.id in memberOf))
+                }
+                add(CrossbarContextMenuItem("pl_new", "Create New Playlist"))
+            }
+            _uiState.update { it.copy(
+                activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Add to Playlist", rows = items, selectedIndex = selectIndex?.coerceIn(0, items.lastIndex.coerceAtLeast(0))), playlistPickerTrackId = trackId)
+            )}
+        }
+    }
+
+    private fun openMusicContextMenu(item: CrossbarItem): Boolean {
+        if (item.menuHostCategory(currentCategory()?.id) != BuiltInCategory.MUSIC) return false
+        return when {
+            item.id == NOW_PLAYING_ITEM_ID -> { openNowPlayingContextMenu(); true }
+            item.type == CrossbarItemType.MUSIC_TRACK -> { openMusicTrackContextMenu(item); true }
+            item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
+                openPlaylistRowContextMenu(item.playlistId, item.title); true
+            }
+            item.packageName != null -> {
+                openAppContextMenu(item, categoryIdOverride = MUSIC_APPS_CATEGORY_ID); true
+            }
+            else -> false
+        }
+    }
+
+    private fun promptCreatePlaylist(forTrackId: String? = null) {
+        _uiState.update { it.copy(
+            playlistNameDialog = PlaylistNameDialogState(title = "New Playlist", forTrackId = forTrackId)
+        )}
+    }
+
+    private fun promptRenamePlaylist(playlistId: Long) {
+        val name = _uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
+        _uiState.update { it.copy(
+            playlistNameDialog = PlaylistNameDialogState(
+                title = "Rename Playlist",
+                initialText = name,
+                renamePlaylistId = playlistId,
+            )
+        )}
+    }
+
+    fun onConfirmPlaylistName(name: String) {
+        val dialog = _uiState.value.playlistNameDialog ?: return
+        _uiState.update { it.copy(playlistNameDialog = null) }
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            val renameId = dialog.renamePlaylistId
+            if (dialog.videoContext) {
+                if (renameId != null) {
+                    videoRepository.renamePlaylist(renameId, name)
+                } else {
+                    val id = videoRepository.createPlaylist(name)
+                    dialog.forVideoId?.let { videoRepository.addVideoToPlaylist(id, it) }
+                }
+            } else if (renameId != null) {
+                musicRepository.renamePlaylist(renameId, name)
+            } else {
+                val id = musicRepository.createPlaylist(name)
+                dialog.forTrackId?.let { musicRepository.addTrackToPlaylist(id, it) }
+            }
+        }
+    }
+
+    fun onCancelPlaylistName() {
+        _uiState.update { it.copy(playlistNameDialog = null) }
+    }
+
+    private fun openMusicTrackPicker(playlistId: Long) {
+        viewModelScope.launch {
+            val playlist = musicRepository.observePlaylists().first().firstOrNull { it.id == playlistId }
+
+            val inPlaylist = musicRepository.observePlaylistTracks(playlistId).first().map { it.id }.toSet()
+            val tracks = musicRepository.observeAllTracks().first()
+                .filterNot { it.id in inPlaylist }
+                .trackSorted(_uiState.value.musicSortMode)
+            _uiState.update { it.copy(
+                musicTrackPicker = MusicTrackPickerState(
+                    playlistId   = playlistId,
+                    playlistName = playlist?.name ?: "Playlist",
+                    tracks       = tracks,
+                )
+            )}
+        }
+    }
+
+    private fun moveMusicTrackPicker(delta: Int) {
+        val picker = _uiState.value.musicTrackPicker ?: return
+        val maxIndex = picker.tracks.size
+        val next = (picker.selectedIndex + delta).coerceIn(0, maxIndex)
+        _uiState.update { it.copy(musicTrackPicker = picker.copy(selectedIndex = next)) }
+    }
+
+    private fun activateMusicTrackPicker() {
+        val picker = _uiState.value.musicTrackPicker ?: return
+        if (picker.selectedIndex == 0) {
+            confirmMusicTrackPicker()
+        } else {
+            val track = picker.tracks.getOrNull(picker.selectedIndex - 1) ?: return
+            val selected = if (track.id in picker.selected) picker.selected - track.id
+                           else picker.selected + track.id
+            _uiState.update { it.copy(musicTrackPicker = picker.copy(selected = selected)) }
+        }
+    }
+
+    fun onMusicTrackPickerActivatedAt(index: Int) {
+        _uiState.update { it.copy(musicTrackPicker = it.musicTrackPicker?.copy(selectedIndex = index)) }
+        activateMusicTrackPicker()
+    }
+
+    fun onMusicTrackPickerConfirm() = confirmMusicTrackPicker()
+
+    fun closeMusicTrackPicker() {
+        _uiState.update { it.copy(musicTrackPicker = null) }
+    }
+
+    private fun confirmMusicTrackPicker() {
+        val picker = _uiState.value.musicTrackPicker ?: return
+        val playlistId = picker.playlistId
+        val trackIds = picker.tracks.map { it.id }.filter { it in picker.selected }
+        closeMusicTrackPicker()
+        if (trackIds.isEmpty()) return
+        viewModelScope.launch {
+            trackIds.forEach { musicRepository.addTrackToPlaylist(playlistId, it) }
+        }
+    }
+
+
+    private fun mediaRootKindOf(categoryId: String?): MediaRootKind? = when (categoryId) {
+        BuiltInCategory.MUSIC   -> MediaRootKind.MUSIC
+        BuiltInCategory.VIDEO   -> MediaRootKind.VIDEO
+        BuiltInCategory.PHOTO   -> MediaRootKind.PHOTO
+        BuiltInCategory.LIBRARY -> MediaRootKind.BOOK
+        else -> null
+    }
+
+    private fun mediaKindNouns(kind: MediaRootKind): Pair<String, String> = when (kind) {
+        MediaRootKind.MUSIC -> "track" to "tracks"
+        MediaRootKind.VIDEO -> "video" to "videos"
+        MediaRootKind.PHOTO -> "photo" to "photos"
+        MediaRootKind.BOOK  -> "book" to "books"
+    }
+
+    private suspend fun scannedEntriesFor(kind: MediaRootKind): List<MediaScannedEntry> = when (kind) {
+        MediaRootKind.MUSIC -> musicRepository.getFolders().map {
+            MediaScannedEntry(it.treeUri, it.displayName, it.trackCount, it.lastScannedAt)
+        }
+        MediaRootKind.VIDEO -> videoRepository.getLibraries().map {
+            MediaScannedEntry(it.treeUri, it.displayName, it.videoCount, it.lastScannedAt)
+        }
+        MediaRootKind.PHOTO -> photoRepository.getLibraries().map {
+            MediaScannedEntry(it.treeUri, it.displayName, it.photoCount, it.lastScannedAt)
+        }
+        MediaRootKind.BOOK -> bookRepository.getLibraries().map {
+            MediaScannedEntry(it.treeUri, it.displayName, it.bookCount, it.lastScannedAt)
+        }
+    }
+
+    private suspend fun mediaFolderItems(kind: MediaRootKind): List<CrossbarItem> {
+        val roots = mediaRootRepository.getAll(kind)
+        val persisted = SafGrants.persistedReadUris(context.contentResolver)
+        val rows = mediaRootRows(roots, persisted, scannedEntriesFor(kind)) { treeUri ->
+            mediaRootDisplayName(context, treeUri, mediaKindLabel(kind))
+        }
+        val (one, many) = mediaKindNouns(kind)
+
+        return rows.map { row ->
+            CrossbarItem(
+                id       = mediaRootItemId(kind, row.treeUri),
+                title    = row.name,
+                subtitle = row.itemCount.let { count ->
+                    when {
+                        !row.linked   -> "Access lost — Relink to grant it again"
+                        count == null -> "Not scanned yet"
+                        else          -> countLabel(count, one, many)
+                    }
+                },
+                type          = CrossbarItemType.MEDIA_ROOT,
+                mediaRootUri  = row.treeUri,
+                mediaRootKind = kind,
+            )
+        } + CrossbarItem(
+            id       = addMediaRootItemId(kind),
+            title    = "Add Folder",
+            subtitle = if (rows.isEmpty()) "Grant a ${mediaKindFolderWord(kind)} folder to start"
+                       else "Grant another ${mediaKindFolderWord(kind)} folder",
+            type          = CrossbarItemType.ADD_ACTION,
+            mediaRootKind = kind,
+        )
+    }
+
+    private fun openMediaFolders(kind: MediaRootKind) = when (kind) {
+        MediaRootKind.MUSIC -> openMusicView(MusicNav.Folders)
+        MediaRootKind.VIDEO -> openVideoView(VideoNav.Folders)
+        MediaRootKind.PHOTO -> openPhotoView(PhotoNav.Folders)
+        MediaRootKind.BOOK  -> openBooksView(BooksNav.Folders)
+    }
+
+    fun requestMediaRootPick(kind: MediaRootKind, relinkFrom: String? = null) {
+        _uiState.update { it.copy(rootPick = RootPick(RootTarget.Media(kind), relinkFrom)) }
+    }
+
+    fun requestRomRootPick(relinkFrom: String? = null) {
+        _uiState.update { it.copy(rootPick = RootPick(RootTarget.Rom, relinkFrom)) }
+    }
+
+    fun onMediaRootPicked(uri: Uri?) {
+        val request = _uiState.value.rootPick ?: return
+        _uiState.update { it.copy(rootPick = null) }
+        if (uri == null) return
+        viewModelScope.launch {
+            when (val target = request.target) {
+                is RootTarget.Media -> {
+                    mediaRootRepository.persist(uri)
+                    if (request.relinkFrom != null) {
+                        mediaRootRepository.replace(target.kind, request.relinkFrom, uri.toString())
+                    } else {
+                        mediaRootRepository.add(target.kind, uri.toString())
+                    }
+                    rescanMediaKind(target.kind)
+                }
+                RootTarget.Rom -> {
+                    romRootRepository.persist(uri, writable = true)
+                    if (request.relinkFrom != null) {
+                        romRootRepository.replace(request.relinkFrom, uri.toString())
+                    } else {
+                        romRootRepository.add(uri.toString())
+                    }
+                    refreshRomFolders()
+                }
+            }
+        }
+    }
+
+    private fun removeMediaRoot(kind: MediaRootKind, treeUri: String) {
+        appAction {
+            mediaRootRepository.remove(kind, treeUri)
+            rescanMediaKind(kind)
+        }
+    }
+
+    private suspend fun pruneOrphanEntries(kind: MediaRootKind, roots: List<String>) {
+        when (kind) {
+            MediaRootKind.MUSIC -> musicRepository.getFolders()
+                .filter { it.treeUri !in roots }.forEach { musicRepository.removeFolder(it.id) }
+            MediaRootKind.VIDEO -> videoRepository.getLibraries()
+                .filter { it.treeUri !in roots }.forEach { videoRepository.removeLibrary(it.id) }
+            MediaRootKind.PHOTO -> photoRepository.getLibraries()
+                .filter { it.treeUri !in roots }.forEach { photoRepository.removeLibrary(it.id) }
+            MediaRootKind.BOOK -> bookRepository.getLibraries()
+                .filter { it.treeUri !in roots }.forEach { bookRepository.removeLibrary(it.id) }
+        }
+    }
+
+    private suspend fun entryIdForRoot(kind: MediaRootKind, treeUri: String): String {
+        val name = mediaRootDisplayName(context, treeUri, mediaKindLabel(kind))
+        return when (kind) {
+            MediaRootKind.MUSIC ->
+                (musicRepository.getFolders().firstOrNull { it.treeUri == treeUri }
+                    ?: musicRepository.addFolder(name, treeUri)).id
+            MediaRootKind.VIDEO ->
+                (videoRepository.getLibraries().firstOrNull { it.treeUri == treeUri }
+                    ?: videoRepository.addLibrary(name, treeUri)).id
+            MediaRootKind.PHOTO ->
+                (photoRepository.getLibraries().firstOrNull { it.treeUri == treeUri }
+                    ?: photoRepository.addLibrary(name, treeUri)).id
+            MediaRootKind.BOOK ->
+                (bookRepository.getLibraries().firstOrNull { it.treeUri == treeUri }
+                    ?: bookRepository.addLibrary(name, treeUri)).id
+        }
+    }
+
+    private suspend fun scanOneRoot(kind: MediaRootKind, treeUri: String, deep: Boolean) {
+        val entryId = entryIdForRoot(kind, treeUri)
+        when (kind) {
+            MediaRootKind.MUSIC -> scanMusicFolder(entryId)
+            MediaRootKind.VIDEO -> scanVideoLibrary(entryId, deep)
+            MediaRootKind.PHOTO -> scanPhotoLibrary(entryId)
+            MediaRootKind.BOOK  -> scanBookLibrary(entryId, deep)
+        }
+    }
+
+    private fun rescanMediaRoot(kind: MediaRootKind, treeUri: String, deep: Boolean = false) {
+        viewModelScope.launch { scanOneRoot(kind, treeUri, deep) }
+    }
+
+    private fun rescanMediaKind(kind: MediaRootKind, deep: Boolean = false) {
+        viewModelScope.launch {
+            val roots = mediaRootRepository.getAll(kind)
+            pruneOrphanEntries(kind, roots)
+            roots.forEach { scanOneRoot(kind, it, deep) }
+        }
+    }
+
+    private fun openMediaRootContextMenu(item: CrossbarItem) {
+        val kind = item.mediaRootKind ?: return
+        val treeUri = item.mediaRootUri ?: return
+        val linked = item.subtitle?.startsWith("Access lost") != true
+        _uiState.update {
+            it.copy(
+                activeContextMenu = CrossbarContextMenu(
+                    state = MenuState(
+                        title = item.title,
+                        rows = mediaRootContextMenuItems(linked, kind),
+                    ),
+                    mediaRootUri = treeUri,
+                    mediaRootKind = kind,
+                ),
+            )
+        }
+    }
+
+    private fun handleMediaRootAction(kind: MediaRootKind, treeUri: String, itemId: String) {
+        when (mediaRootActionOf(itemId)) {
+            MediaRootAction.RESCAN      -> rescanMediaRoot(kind, treeUri)
+            MediaRootAction.RESCAN_DEEP -> rescanMediaRoot(kind, treeUri, deep = true)
+            MediaRootAction.RELINK      -> requestMediaRootPick(kind, relinkFrom = treeUri)
+            MediaRootAction.REMOVE      -> removeMediaRoot(kind, treeUri)
+            null -> Unit
+        }
+    }
+
+
+    private fun openMediaFoldersContextMenu(item: CrossbarItem) {
+        val kind = item.mediaRootKind ?: return
+        _uiState.update {
+            it.copy(
+                activeContextMenu = CrossbarContextMenu(
+                    state = MenuState(title = item.title, rows = mediaFoldersContextMenuItems(kind)),
+                    mediaRootKind = kind,
+                ),
+            )
+        }
+    }
+
+    private fun openDefaultMediaAppMenu(kind: MediaRootKind) {
+        viewModelScope.launch {
+            val current: String? = when (kind) {
+                MediaRootKind.MUSIC -> musicRepository.observeDefaultPlayerPackage().first()
+                MediaRootKind.VIDEO -> videoRepository.observeDefaultVideoPlayer().first()
+                MediaRootKind.BOOK  -> bookRepository.observeDefaultReader().first()
+                MediaRootKind.PHOTO -> photoRepository.observeDefaultViewer().first()
+            }
+
+            val choices: List<Pair<String?, String>> = when (kind) {
+                MediaRootKind.MUSIC -> listOf(
+                    MusicIntentResolver.BUILTIN to "ECHO",
+                    null to "System Default",
+                ) + musicIntentResolver.availablePlayers().map { it.packageName to it.label }
+
+                MediaRootKind.VIDEO -> listOf(
+                    VIDEO_PLAYER_BUILTIN to "ECHO",
+                    VIDEO_PLAYER_ASK to "System Default",
+                ) + videoIntentResolver.availablePlayers().map { it.packageName to it.label }
+
+                MediaRootKind.BOOK -> listOf(
+                    null to "ECHO",
+                    com.echo.core.data.book.BuiltInReader.ASK_EVERY_TIME to "Ask Every Time",
+                ) + bookIntentResolver.availableReaders().map { it.packageName to it.label }
+
+                MediaRootKind.PHOTO -> listOf(
+                    null to "ECHO",
+                    PHOTO_VIEWER_ASK to "Ask Every Time",
+                ) + photoIntentResolver.availableViewers().map { it.packageName to it.label }
+            }
+
+            val rows = choices.map { (pkg, label) ->
+                CrossbarContextMenuItem(
+                    "$MEDIA_APP_PREFIX${pkg ?: MEDIA_APP_NONE}",
+                    label,
+                    checked = current == pkg,
+                )
+            }
+            _uiState.update {
+                it.copy(
+                    activeContextMenu = CrossbarContextMenu(
+                        state = MenuState(title = "Default App", rows = rows),
+                        mediaRootKind = kind,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun setDefaultMediaApp(kind: MediaRootKind, packageName: String?) {
+        appAction {
+            when (kind) {
+                MediaRootKind.MUSIC -> musicRepository.setDefaultPlayerPackage(packageName)
+                MediaRootKind.VIDEO -> videoRepository.setDefaultVideoPlayer(packageName)
+                MediaRootKind.BOOK  -> bookRepository.setDefaultReader(packageName)
+                MediaRootKind.PHOTO -> photoRepository.setDefaultViewer(packageName)
+            }
+        }
+    }
+
+    private fun clearMediaCache(kind: MediaRootKind) {
+        appAction {
+            val removed = when (kind) {
+                MediaRootKind.PHOTO -> photoScanner.clearThumbnailCache()
+                MediaRootKind.BOOK  -> bookScanner.clearCoverCache()
+                else -> return@appAction
+            }
+            SystemToasts.post("Cleared $removed cached file(s)", "Rescan to regenerate them.", ToastKind.SUCCESS)
+        }
+    }
+
+    private fun handleMediaFoldersAction(kind: MediaRootKind, itemId: String) {
+        when (mediaFoldersActionOf(itemId)) {
+            MediaFoldersAction.ADD_ROOT        -> requestMediaRootPick(kind)
+            MediaFoldersAction.RESCAN_ALL      -> rescanMediaKind(kind)
+            MediaFoldersAction.RESCAN_ALL_DEEP -> rescanMediaKind(kind, deep = true)
+            MediaFoldersAction.DEFAULT_APP     -> openDefaultMediaAppMenu(kind)
+            MediaFoldersAction.CLEAR_CACHE     -> clearMediaCache(kind)
+            MediaFoldersAction.PICK_APP        -> setDefaultMediaApp(
+                kind,
+                itemId.removePrefix(MEDIA_APP_PREFIX).takeIf { it != MEDIA_APP_NONE },
+            )
+            null -> Unit
+        }
+    }
+
+    private fun handleMusicFolderAction(folderId: String, itemId: String) {
+        when (itemId) {
+            "scan_folder" -> appAction { scanMusicFolder(folderId) }
+            "rename_folder" -> openMediaFolders(MediaRootKind.MUSIC)
+            "enable_folder" -> appAction { musicRepository.setFolderEnabled(folderId, true) }
+            "disable_folder" -> appAction { musicRepository.setFolderEnabled(folderId, false) }
+            "remove_folder" -> appAction { musicRepository.removeFolder(folderId) }
+        }
+    }
+
+    private fun handleMusicTrackAction(trackId: String, itemId: String, playlistId: Long?) {
+        when (itemId) {
+            "play" -> {
+                val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
+                if (currentMusicTracks.isNotEmpty()) {
+                    musicPlayer.setQueue(currentMusicTracks, startIndex)
+                    _uiState.update { it.copy(musicPlayerVisible = true) }
+                }
+            }
+
+            "play_background" -> {
+                val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
+                if (currentMusicTracks.isNotEmpty()) {
+                    musicPlayer.setQueue(currentMusicTracks, startIndex)
+                    com.echo.feature.crossbar.music.MusicPlaybackService.start(context)
+                }
+            }
+            "add_to_playlist" -> openPlaylistPicker(trackId)
+            "remove_from_playlist" -> if (playlistId != null) {
+                appAction { musicRepository.removeTrackFromPlaylist(playlistId, trackId) }
+            }
+
+            "remove_from_recent" -> appAction { musicRepository.clearTrackLastPlayed(trackId) }
+            "remove_track" -> appAction {
+                val track = musicRepository.getTrack(trackId) ?: return@appAction
+                removeSingleTrack(track.folderId, trackId)
+            }
+        }
+    }
+
+    private fun handlePlaylistRowAction(playlistId: Long, itemId: String) {
+        when (itemId) {
+            "open_playlist"   -> {
+                val name = _uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
+                openMusicView(MusicNav.Playlist(playlistId, name))
+            }
+            "add_tracks"      -> openMusicTrackPicker(playlistId)
+            "rename_playlist" -> promptRenamePlaylist(playlistId)
+            "delete_playlist" -> appAction {
+                musicRepository.deletePlaylist(playlistId)
+                if ((_uiState.value.musicNav as? MusicNav.Playlist)?.id == playlistId) closeMusicView()
+            }
+        }
+    }
+
+    private suspend fun scanMusicFolder(folderId: String) {
+        val folder = musicRepository.getFolder(folderId) ?: return
+        val taskId = "music_scan_$folderId"
+        addBackgroundTask(BackgroundTaskInfo(taskId, "Scanning ${folder.displayName}", null))
+        musicScanner.scan(folder).collect { result ->
+            when (result) {
+                is com.echo.feature.library.scanner.MusicScanResult.Progress -> Unit
+                is com.echo.feature.library.scanner.MusicScanResult.Complete -> {
+                    musicRepository.replaceTracksForFolder(result.folderId, result.tracks, System.currentTimeMillis())
+                    completeBackgroundTask(taskId, "${result.tracks.size} tracks")
+                }
+                is com.echo.feature.library.scanner.MusicScanResult.Error ->
+                    failBackgroundTask(taskId, result.message)
+            }
+        }
+    }
+
+    private suspend fun scanVideoLibrary(libraryId: String, deep: Boolean = false) {
+        val library = videoRepository.getLibrary(libraryId) ?: return
+        val taskId = "video_scan_$libraryId"
+        addBackgroundTask(BackgroundTaskInfo(taskId, "Scanning ${library.displayName}", null))
+        val existing = videoRepository.getVideosForLibrary(libraryId)
+        videoScanner.scan(library, deep = deep, existing = existing).collect { result ->
+            when (result) {
+                is com.echo.feature.library.scanner.VideoScanResult.Progress -> Unit
+                is com.echo.feature.library.scanner.VideoScanResult.Complete -> {
+                    videoRepository.replaceVideosForLibrary(result.libraryId, result.videos, System.currentTimeMillis())
+                    completeBackgroundTask(taskId, "${result.videos.size} videos")
+                }
+                is com.echo.feature.library.scanner.VideoScanResult.Error ->
+                    failBackgroundTask(taskId, result.message)
+            }
+        }
+    }
+
+    private suspend fun scanBookLibrary(libraryId: String, deep: Boolean = false) {
+        val library = bookRepository.getLibrary(libraryId) ?: return
+        val taskId = "book_scan_$libraryId"
+        addBackgroundTask(BackgroundTaskInfo(taskId, "Scanning ${library.displayName}", null))
+        val existing = bookRepository.getBooksForLibrary(libraryId)
+        bookScanner.scan(library, deep = deep, existing = existing).collect { result ->
+            when (result) {
+                is com.echo.feature.library.scanner.BookScanResult.Progress -> Unit
+                is com.echo.feature.library.scanner.BookScanResult.Complete -> {
+                    bookRepository.replaceBooksForLibrary(result.libraryId, result.books, System.currentTimeMillis())
+                    completeBackgroundTask(taskId, "${result.books.size} books")
+                }
+                is com.echo.feature.library.scanner.BookScanResult.Error ->
+                    failBackgroundTask(taskId, result.message)
+            }
+        }
+    }
+
+    private suspend fun removeSingleTrack(folderId: String, trackId: String) {
+        val tracks = musicRepository.observeTracksByFolder(folderId).first().filterNot { it.id == trackId }
+        musicRepository.replaceTracksForFolder(folderId, tracks, System.currentTimeMillis())
+    }
+
+    private fun activeSortContext(): List<CrossbarSortMode>? = _uiState.value.activeSortModes()
+
+    fun onSortLabelTapped() {
+        markTouchInput()
+        cycleSort()
+    }
+
+    private fun recentFilterAndApps(): Flow<Triple<RecentFilter, List<Pair<Long, CrossbarItem>>, Int>> =
+        combine(
+            _uiState.map { it.recentFilter }.distinctUntilChanged(),
+            recentAppRows(),
+            _uiState.map { it.interfaceChoices.lastPlayedSize }.distinctUntilChanged(),
+        ) { filter, rows, limit -> Triple(filter, rows, limit) }
+
+    private fun recentAppRows(): Flow<List<Pair<Long, CrossbarItem>>> =
+        combine(
+            _uiState.map { it.recentsIncludeApps }.distinctUntilChanged(),
+            appCategoryRepository.changes().onStart { emit(Unit) },
+            context.echoDataStore.data
+                .map { it[KEY_RECENT_APP_DISMISSALS].orEmpty() }
+                .distinctUntilChanged(),
+        ) { includeApps, _, dismissals -> includeApps to dismissals }
+            .map { (includeApps, dismissals) ->
+                if (!includeApps) return@map emptyList()
+                val dismissedAt = parseRecentDismissals(dismissals)
+                appCategoryRepository.allInstalledApps()
+                    .filter { it.lastUsedAt > 0L }
+
+                    .filterNot { dismissedFromRecents(it.lastUsedAt, dismissedAt[it.packageName]) }
+
+                    .filterNot { isHiddenAt(HiddenPlacement.appKey(it.packageName), HideLocationType.RECENTS) }
+                    .sortedByDescending { it.lastUsedAt }
+                    .take(RECENTLY_PLAYED_LIMIT)
+                    .map { app ->
+                        app.lastUsedAt to CrossbarItem(
+                            id = "$RECENT_APP_ID_PREFIX${app.packageName}",
+                            title = app.label,
+                            subtitle = "App",
+                            packageName = app.packageName,
+
+                            isAndroidApp = true,
+                        )
+                    }
+            }
+
+    private fun stepRecentFilter(delta: Int) =
+        setRecentFilter(_uiState.value.let { it.recentFilter.step(delta, it.recentsIncludeApps) })
+
+    fun setRecentFilter(filter: RecentFilter) {
+        menuSound.play(MenuSound.SYSTEM_BROWSE)
+        _uiState.update { it.copy(recentFilter = filter, selectedItemIndex = 0) }
+    }
+
+
+    private fun cycleSort() {
+        _uiState.value.musicBrowser?.let { browser ->
+            if (browser.view is MusicBrowserView.Playlists || browser.view.listsGroups) return
+            val next = MUSIC_SORTS[(MUSIC_SORTS.indexOf(_uiState.value.musicSortMode).coerceAtLeast(0) + 1) % MUSIC_SORTS.size]
+            menuSound.play(MenuSound.SYSTEM_BROWSE)
+            _uiState.update { it.copy(
+                musicSortMode = next,
+                musicBrowser = it.musicBrowser?.copy(
+                    selectedIndex = 0,
+                    scrollToTopToken = browser.scrollToTopToken + 1,
+                ),
+            )}
+            rebuildBrowserTrackRows()
+            return
+        }
+        val cycle = activeSortContext() ?: return
+        val isMusic = cycle === MUSIC_SORTS
+        val current = _uiState.value.sortModeFor(cycle)
+        val next = cycle[(cycle.indexOf(current).coerceAtLeast(0) + 1) % cycle.size]
+        menuSound.play(MenuSound.SYSTEM_BROWSE)
+
+        _uiState.update {
+            it.withSortMode(cycle, next)
+                .copy(selectedItemIndex = 0, scrollToTopToken = it.scrollToTopToken + 1)
+        }
+
+        if (isMusic) {
+            val trailing = if (_uiState.value.musicNav is MusicNav.Playlist) listOf(addTracksItem()) else emptyList()
+            val emptyItem = if (_uiState.value.musicNav is MusicNav.Playlist) emptyPlaylistItem() else emptyAllMusicItem()
+            setMusicTrackItems(currentMusicTracksRaw, emptyItem, trailing)
+            _uiState.update { it.copy(sortLabel = currentSortLabel()) }
+            return
+        }
+        loadItemsForCategory(currentCategory())
+    }
+
+    private fun computeDrillTitle(): String? {
+        val s = _uiState.value
+
+        val musicTitle = when (val nav = s.musicNav) {
+            MusicNav.AllMusic    -> "Music"
+            MusicNav.Playlists   -> "Playlist"
+            is MusicNav.Playlist -> nav.name
+            MusicNav.Folders     -> "Folders"
+            MusicNav.Root        -> null
+        }
+        if (musicTitle != null) return musicTitle
+
+        val videoTitle = when (val nav = s.videoNav) {
+            VideoNav.AllVideos       -> "All Videos"
+            VideoNav.Collections     -> "Collections"
+            VideoNav.RecentlyWatched -> "Recently Watched"
+            VideoNav.Favorites       -> "Favorites"
+            VideoNav.Playlists       -> "Playlists"
+            is VideoNav.Playlist     -> nav.name
+            VideoNav.Libraries       -> "Video Libraries"
+            is VideoNav.Library      -> nav.name
+            VideoNav.Folders         -> "Folders"
+            VideoNav.Root            -> null
+        }
+        if (videoTitle != null) return videoTitle
+
+        val photoTitle = when (val nav = s.photoNav) {
+            PhotoNav.AllPhotos  -> "All Photos"
+            PhotoNav.Albums     -> "Albums"
+            PhotoNav.Favorites  -> "Favourites"
+            is PhotoNav.Library -> nav.name
+            PhotoNav.Folders    -> "Folders"
+            PhotoNav.Root       -> null
+        }
+        if (photoTitle != null) return photoTitle
+        val booksTitle = when (val nav = s.booksNav) {
+            BooksNav.AllBooks -> "Books"
+            BooksNav.Shelves  -> "Shelves"
+            is BooksNav.Shelf -> nav.name
+            BooksNav.SeriesList -> "Series"
+            is BooksNav.Series  -> nav.name
+            BooksNav.Folders  -> "Folders"
+            BooksNav.Root     -> null
+        }
+        if (booksTitle != null) return booksTitle
+        return when {
+            s.selectedPlatformId == ALL_GAMES_PLATFORM_ID -> "All Games"
+            s.selectedPlatformId == FAVORITES_PLATFORM_ID -> "Favorites"
+            s.selectedPlatformId == MISSING_PLATFORM_ID   -> "Missing"
+            s.selectedPlatformId != null ->
+                knownPlatformName(s.selectedPlatformId) ?: s.selectedPlatformId
+            else -> null
+        }
+    }
+
+    private fun videoLibrarySiblings(): List<CrossbarItem> =
+        _uiState.value.videoLibraries.map { CrossbarItem(id = "vlib_${it.id}", title = it.displayName, type = CrossbarItemType.VIDEO_FOLDER) }
+
+    private fun photoAlbumSiblings(): List<CrossbarItem> =
+        _uiState.value.photoLibraries.map { CrossbarItem(id = "plib_${it.id}", title = it.displayName, type = CrossbarItemType.PHOTO_FOLDER) }
+
+    private fun musicPlaylistSiblings(): List<CrossbarItem> =
+        _uiState.value.musicPlaylists.map { CrossbarItem(id = "pl_${it.id}", title = it.name, playlistId = it.id, type = CrossbarItemType.PLAYLIST) }
+
+    private fun videoPlaylistSiblings(): List<CrossbarItem> =
+        _uiState.value.videoPlaylists.map { CrossbarItem(id = "vpl_${it.id}", title = it.name, playlistId = it.id, type = CrossbarItemType.PLAYLIST) }
+
+    private fun computeDrillSiblings(category: Category?): Pair<List<CrossbarItem>, Int> {
+        val s = _uiState.value
+
+        if (s.musicNav != MusicNav.Root) {
+            (s.musicNav as? MusicNav.Playlist)?.let { nav ->
+                val pls = musicPlaylistSiblings()
+                if (pls.isNotEmpty()) return pls to pls.indexOfFirst { it.playlistId == nav.id }.coerceAtLeast(0)
+            }
+            val sibs = _uiState.value.musicRootSections().filter {
+                it.type == CrossbarItemType.PLAYLIST || it.type == CrossbarItemType.MEMORY_CARD
+            }
+            val idx = sibs.indexOfFirst { sib ->
+                when (s.musicNav) {
+                    MusicNav.AllMusic  -> sib.type == CrossbarItemType.MEMORY_CARD
+                    else               -> sib.type == CrossbarItemType.PLAYLIST
+                }
+            }.coerceAtLeast(0)
+            return sibs to idx
+        }
+
+        if (s.videoNav != VideoNav.Root) {
+            (s.videoNav as? VideoNav.Library)?.let { nav ->
+                val libs = videoLibrarySiblings()
+                if (libs.isNotEmpty()) return libs to libs.indexOfFirst { it.id == "vlib_${nav.id}" }.coerceAtLeast(0)
+            }
+            (s.videoNav as? VideoNav.Playlist)?.let { nav ->
+                val pls = videoPlaylistSiblings()
+                if (pls.isNotEmpty()) return pls to pls.indexOfFirst { it.playlistId == nav.id }.coerceAtLeast(0)
+            }
+
+            if (s.videoNav.isVideoCollectionChild || s.videoNav is VideoNav.Playlist) {
+                val sibs = videoCollectionsItems()
+                val idx = sibs.indexOfFirst { sib ->
+                    when (s.videoNav) {
+                        VideoNav.RecentlyWatched -> sib.type == CrossbarItemType.VIDEO_RECENT
+                        VideoNav.Favorites       -> sib.type == CrossbarItemType.VIDEO_FAVORITES
+                        else                     -> sib.type == CrossbarItemType.PLAYLIST
+                    }
+                }.coerceAtLeast(0)
+                return sibs to idx
+            }
+
+            val sibs = _uiState.value.videoRootSections().filter {
+                it.type == CrossbarItemType.MEMORY_CARD || it.type == CrossbarItemType.VIDEO_COLLECTIONS ||
+                    it.type == CrossbarItemType.VIDEO_LIBRARY
+            }
+            val idx = sibs.indexOfFirst { sib ->
+                when (s.videoNav) {
+                    VideoNav.AllVideos   -> sib.type == CrossbarItemType.MEMORY_CARD
+                    VideoNav.Collections -> sib.type == CrossbarItemType.VIDEO_COLLECTIONS
+                    else                 -> sib.type == CrossbarItemType.VIDEO_LIBRARY
+                }
+            }.coerceAtLeast(0)
+            return sibs to idx
+        }
+
+        if (s.photoNav != PhotoNav.Root) {
+            (s.photoNav as? PhotoNav.Library)?.let { nav ->
+                val albums = photoAlbumSiblings()
+                if (albums.isNotEmpty()) return albums to albums.indexOfFirst { it.id == "plib_${nav.id}" }.coerceAtLeast(0)
+            }
+            val sibs = _uiState.value.photoRootSections(cameraAvailable).filter {
+                it.type == CrossbarItemType.MEMORY_CARD || it.type == CrossbarItemType.PHOTO_ALBUMS || it.type == CrossbarItemType.PHOTO_FAVORITES
+            }
+            val idx = sibs.indexOfFirst { sib ->
+                when (s.photoNav) {
+                    PhotoNav.AllPhotos -> sib.type == CrossbarItemType.MEMORY_CARD
+                    PhotoNav.Favorites -> sib.type == CrossbarItemType.PHOTO_FAVORITES
+                    else               -> sib.type == CrossbarItemType.PHOTO_ALBUMS
+                }
+            }.coerceAtLeast(0)
+            return sibs to idx
+        }
+        if (category?.id == BuiltInCategory.GAMES) {
+            val sibs = memoryCardItems().filter {
+                it.type == CrossbarItemType.ALL_GAMES || it.type == CrossbarItemType.FAVORITES ||
+                    it.type == CrossbarItemType.MISSING ||
+                    it.type == CrossbarItemType.MEMORY_CARD
+            }
+            val idx = sibs.indexOfFirst { sib ->
+                when {
+                    s.selectedPlatformId == ALL_GAMES_PLATFORM_ID -> sib.type == CrossbarItemType.ALL_GAMES
+                    s.selectedPlatformId == FAVORITES_PLATFORM_ID -> sib.type == CrossbarItemType.FAVORITES
+                    s.selectedPlatformId == MISSING_PLATFORM_ID   -> sib.type == CrossbarItemType.MISSING
+                    s.selectedPlatformId != null                 -> sib.platformId == s.selectedPlatformId
+                    else -> false
+                }
+            }.coerceAtLeast(0)
+            return sibs to idx
+        }
+
+        val parent = CrossbarItem(id = "drill_parent", title = computeDrillTitle().orEmpty(), type = CrossbarItemType.COLLECTION)
+        return listOf(parent) to 0
+    }
+
+    private fun currentSortLabel(): String? {
+        val cycle = activeSortContext() ?: return null
+        return _uiState.value.sortModeFor(cycle).label
+    }
+
+    private fun emptyCategoryItem(category: Category): CrossbarItem {
+        val (message, subtitle) = if (category.isGamingCategory) {
+            "No games assigned." to "Add games to this category."
+        } else {
+            val msg = when (category.id) {
+                "network"   -> "No browser apps found."
+                else        -> "No apps assigned."
+            }
+            msg to "Install some apps to get started."
+        }
+        return CrossbarItem(
+            id       = EMPTY_CATEGORY_ITEM_ID,
+            title    = message,
+            subtitle = subtitle,
+            type     = CrossbarItemType.EMPTY,
+        )
+    }
+
+    private fun cardItemId(platformId: String): String = "card_" + platformId
+
+    private fun memoryCardItems(): List<CrossbarItem> {
+        val totalGames = _uiState.value.allGamesCount
+        val allGamesItem = CrossbarItem(
+            id       = ALL_GAMES_ITEM_ID,
+            title    = "All Games",
+            subtitle = countLabel(totalGames, "game", "games"),
+            insideCovers = _uiState.value.cardFanCovers[ALL_GAMES_ITEM_ID].orEmpty(),
+            type     = CrossbarItemType.ALL_GAMES,
+        )
+
+        val missingCount = _uiState.value.missingCount
+        val missingItem = if (missingCount > 0) {
+            CrossbarItem(
+                id       = MISSING_ITEM_ID,
+                title    = "Missing",
+                subtitle = countLabel(missingCount, "game", "games"),
+                type     = CrossbarItemType.MISSING,
+            )
+        } else null
+        val header = listOfNotNull(allGamesItem, missingItem)
+
+        val visibleCards = enabledCards.filter { card ->
+            card.platformId != WINDOWS_PLATFORM_ID ||
+                (_uiState.value.platformGameCounts[WINDOWS_PLATFORM_ID] ?: card.gameCount) > 0
+        }
+
+        if (visibleCards.isEmpty()) {
+            return libraryColumn(
+                header + CrossbarItem(
+                    id       = NO_CONSOLES_ITEM_ID,
+                    title    = "No consoles configured",
+                    subtitle = "Open Library Manager to add a Memory Card",
+                    type     = CrossbarItemType.EMPTY,
+                ),
+                SearchScope.GAMES,
+            )
+        }
+
+        val cardRows = visibleCards.map { card ->
+            val count = _uiState.value.platformGameCounts[card.platformId] ?: card.gameCount
+            CrossbarItem(
+                id          = cardItemId(card.platformId),
+                title       = if (card.platformId == WINDOWS_PLATFORM_ID) "Windows Games" else card.displayName,
+                subtitle    = countLabel(count, "game", "games"),
+                platformId  = card.platformId,
+                insideCovers = _uiState.value.cardFanCovers[cardItemId(card.platformId)].orEmpty(),
+                accentColor = platformCache[card.platformId]?.accentColor,
+                type        = CrossbarItemType.MEMORY_CARD,
+            )
+        }
+
+        val gapRow = if (totalGames == 0) setupGapItem() else null
+        val foldersRow = CrossbarItem(
+            id       = ROM_FOLDERS_ITEM_ID,
+            title    = "Folders",
+            subtitle = countLabel(visibleCards.size, "console", "consoles"),
+            type     = CrossbarItemType.MEDIA_ROOT,
+        )
+        return libraryColumn(
+            header + cardRows + listOfNotNull(gapRow) + foldersRow,
+            SearchScope.GAMES,
+        )
+    }
+
+    private fun setupGapItem(): CrossbarItem? {
+        val gap = setupState.firstGap
+        if (gap == com.echo.feature.launcher.SetupGap.NONE) return null
+        return CrossbarItem(
+            id       = SETUP_GAP_ITEM_ID,
+            title    = gap.message,
+            subtitle = "Press confirm to open Settings and fix it.",
+            type     = CrossbarItemType.EMPTY,
+        )
+    }
+
+    private fun emptyAllGamesItem(): CrossbarItem {
+        setupGapItem()?.let { return it }
+        return CrossbarItem(
+            id       = NO_GAMES_ITEM_ID,
+            title    = "No games imported yet",
+            subtitle = "Open a Memory Card to scan your library.",
+            type     = CrossbarItemType.EMPTY,
+        )
+    }
+
+    private fun emptyFavoritesItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_FAVORITES_ITEM_ID,
+        title    = "No favorites yet",
+        subtitle = "Mark a game as a favorite from its options (△) menu.",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun emptyMissingItem(): CrossbarItem = CrossbarItem(
+        id       = EMPTY_MISSING_ITEM_ID,
+        title    = "Nothing missing",
+        subtitle = "Every game's file was found on the last scan.",
+        type     = CrossbarItemType.EMPTY,
+    )
+
+    private fun emptyFolderItem(platformId: String): CrossbarItem {
+        if (platformId == ANDROID_PLATFORM_ID) {
+            return CrossbarItem(
+                id         = FIND_GAMES_ITEM_ID,
+                title      = "Find Games",
+                subtitle   = "Pick installed apps to add to this library",
+                platformId = platformId,
+            )
+        }
+        val card = enabledCards.firstOrNull { it.platformId == platformId }
+
+        val gap = setupState.firstGap
+        if (gap != com.echo.feature.launcher.SetupGap.NONE) {
+            return CrossbarItem(
+                id         = SETUP_GAP_ITEM_ID,
+                title      = gap.message,
+                subtitle   = "Press confirm to open Settings and fix it.",
+                platformId = platformId,
+                type       = CrossbarItemType.EMPTY,
+            )
+        }
+        val subtitle = when {
+            card?.romDirectory == null -> "ROM directory not configured"
+            else                       -> "Press ▲ to scan this console"
+        }
+        return CrossbarItem(
+            id         = NO_GAMES_ITEM_ID,
+            title      = "No games found in this folder",
+            subtitle   = subtitle,
+            platformId = platformId,
+            type       = CrossbarItemType.EMPTY,
+        )
+    }
+
+    private fun publishGameItems(items: List<CrossbarItem>, keepCursorOnRow: Boolean) = _uiState.update {
+        if (!keepCursorOnRow) it.copy(currentItems = items)
+        else it.copy(
+            currentItems = items,
+            selectedItemIndex = cursorAfterRefresh(it.currentItems, it.selectedItemIndex, items),
+        )
+    }
+
+    private fun List<com.echo.core.domain.model.Game>.toCrossbarItems() = map { g ->
+        CrossbarItem(
+            id           = g.id.toString(),
+            title        = g.displayTitle,
+            artworkUri   = g.artworkUri,
+            iconUri      = g.iconUri,
+            logoUri      = g.logoUri,
+            subtitle     = gameMetaLabel(g),
+            metadataLine = gameMetadataLine(g.releaseYear, g.genre, g.developer, g.players),
+            description  = g.description,
+            romPath      = g.romPath,
+            totalPlayTimeMillis = g.totalPlayTimeMillis,
+            gameId       = g.id,
+            platformId   = g.platformId,
+            accentColor  = platformCache[g.platformId]?.accentColor,
+            isFavorite   = g.isFavorite,
+            playState    = g.playState,
+            isAndroidApp = g.packageName != null,
+            isRealGame   = g.contentType == GameContentType.GAME,
+            packageName  = g.packageName,
+            shortcutId   = g.shortcutId,
+            launchIntentUri = g.launchIntentUri,
+        )
+    }
+
+    private fun tintWaveForCategory(category: Category?) {
+        _uiState.update { it.copy(themeColors = baseThemeColors) }
+    }
+
+    private fun observeGamepadMappings() {
+        viewModelScope.launch {
+            mappingRepository.mappings.collect { mappings ->
+                gamepadInputHandler.currentMappings = mappings
+            }
+        }
+        viewModelScope.launch {
+            controllerLayoutRepository.prefs.collect { prefs ->
+
+                gamepadInputHandler.scrollSpeed = prefs.scrollSpeed
+                gamepadInputHandler.stickSensitivity = prefs.stickSensitivity
+                gamepadInputHandler.triggerSensitivity = prefs.triggerSensitivity
+                gamepadInputHandler.shoulderHoldMs = prefs.shoulderHoldTime.millis
+                _uiState.update { it.copy(leftBacksOut = prefs.leftBacksOut) }
+            }
+        }
+    }
+
+    fun onPromptTapped(action: GamepadAction) {
+        markTouchInput()
+        dispatchGamepadAction(action)
+    }
+
+    fun onClaimedKey(action: GamepadAction) {
+        markControllerInput()
+        onUserInteraction()
+        dispatchGamepadAction(action)
+    }
+
+    private fun collectGamepadActions() {
+        viewModelScope.launch {
+            gamepadInputHandler.actions.collect { action ->
+                markControllerInput()
+                onUserInteraction()
+                dispatchGamepadAction(action)
+            }
+        }
+        viewModelScope.launch {
+            gamepadInputHandler.shoulderHolds.collect { hold ->
+                markControllerInput()
+                onUserInteraction()
+                if (_uiState.value.activeAppDrawerFilter != null) {
+                    _uiState.update { it.copy(drawerLetterRailHeld = hold is ShoulderHold.Start) }
+                    return@collect
+                }
+                when (hold) {
+                    is ShoulderHold.Start -> openLetterJump()
+
+                    is ShoulderHold.End ->
+                        if (_uiState.value.letterJump != null) closeLetterJump()
+                        else dispatchGamepadAction(hold.action)
+                }
+            }
+        }
+    }
+
+    private fun openLetterJump() {
+        val s = _uiState.value
+        if (s.hasBlockingOverlay || s.letterJump != null) return
+        val rail = letterJumpFor(s.currentItems, s.selectedItemIndex) ?: return
+        _uiState.update { it.copy(letterJump = rail, selectedItemIndex = rail.targetIndex) }
+    }
+
+    private fun closeLetterJump() = _uiState.update { it.copy(letterJump = null) }
+
+    private fun moveLetterJump(delta: Int) {
+        val rail = _uiState.value.letterJump ?: return
+        val next = rail.move(delta)
+        if (next === rail) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(letterJump = next, selectedItemIndex = next.targetIndex) }
+    }
+
+    fun onLetterRailTouch(rung: Int) {
+        onUserInteraction()
+        val s = _uiState.value
+
+        if (s.hasBlockingOverlay) return
+        val rail = s.letterJump
+            ?: letterJumpFor(s.currentItems, s.selectedItemIndex)?.also { raised ->
+                _uiState.update { it.copy(letterJump = raised) }
+            }
+            ?: return
+        val next = rail.at(rung)
+        if (next === rail) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(letterJump = next, selectedItemIndex = next.targetIndex) }
+    }
+
+    fun onLetterRailReleased() = closeLetterJump()
+
+    private fun observeContextMenuHintIdle() {
+        viewModelScope.launch {
+            while (isActive) {
+                delay(IDLE_HINT_POLL_MS)
+                val s = _uiState.value
+                val idleMs = SystemClock.elapsedRealtime() - lastInteractionMs
+
+                val waveIdle = idleMs >= WAVE_IDLE_MS
+                if (waveIdle != s.idle) _uiState.update { it.copy(idle = waveIdle) }
+                val shouldShow = com.echo.feature.crossbar.viewmodel.shouldShowContextMenuHint(
+                    state = s,
+                    idleMs = idleMs,
+                )
+
+                val shouldShowSettings = com.echo.feature.crossbar.viewmodel.shouldShowSettingsHint(
+                    state = s,
+                    idleMs = idleMs,
+                )
+                if (shouldShow != s.showContextMenuHint ||
+                    shouldShowSettings != s.showSettingsHint
+                ) {
+                    _uiState.update {
+                        it.copy(
+                            showContextMenuHint = shouldShow,
+                            showSettingsHint = shouldShowSettings,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun dispatchGamepadAction(action: GamepadAction) {
+        val state = _uiState.value
+
+        if (state.letterJump != null) {
+            when (action) {
+                GamepadAction.NAVIGATE_UP -> moveLetterJump(-1)
+                GamepadAction.NAVIGATE_DOWN -> moveLetterJump(+1)
+                GamepadAction.BACK -> _uiState.update {
+                    it.copy(letterJump = null, selectedItemIndex = state.letterJump.returnIndex)
+                }
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.appPicker != null) {
+            when (action) {
+                GamepadAction.NAVIGATE_UP,
+                GamepadAction.NAVIGATE_DOWN,
+                GamepadAction.NAVIGATE_LEFT,
+                GamepadAction.NAVIGATE_RIGHT -> moveAppPicker(action)
+
+                GamepadAction.SELECT -> {
+                    val picker = state.appPicker
+                    if (picker.confirmingRemovals) {
+                        if (picker.confirmFocusedOption == AppPickerState.CONFIRM_REMOVE) commitAppPicker()
+                        else cancelConfirm()
+                    } else toggleFocusedApp()
+                }
+
+                GamepadAction.HOME -> requestApplyAppPicker()
+                GamepadAction.CHANGE_SORT -> _uiState.update { s ->
+                    s.copy(appPicker = s.appPicker?.let { p ->
+                        (if (p.searchActive) closeAppPickerSearch(p) else p.copy(searchActive = true)).clampFocus()
+                    })
+                }
+
+                GamepadAction.BACK,
+                GamepadAction.OPEN_CONTEXT_MENU -> handleAppPickerBack()
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.musicTrackPicker != null) {
+            when (action) {
+                GamepadAction.NAVIGATE_UP   -> moveMusicTrackPicker(-1)
+                GamepadAction.NAVIGATE_DOWN -> moveMusicTrackPicker(+1)
+                GamepadAction.SELECT        -> activateMusicTrackPicker()
+                GamepadAction.HOME          -> confirmMusicTrackPicker()
+                GamepadAction.BACK,
+                GamepadAction.OPEN_CONTEXT_MENU    -> closeMusicTrackPicker()
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.gamePickerCategoryId != null) {
+            when (action) {
+                GamepadAction.NAVIGATE_UP,
+                GamepadAction.NAVIGATE_DOWN,
+                GamepadAction.SELECT,
+                GamepadAction.HOME,
+                GamepadAction.BACK,
+                GamepadAction.OPEN_CONTEXT_MENU -> _uiState.update { it.copy(pendingGamePickerAction = action) }
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.notificationsOpen) {
+            val onMusic = state.focusedNotice == NoticeFocus.Media &&
+                (state.mediaStage() as? PanelStage.Music)?.let { it.loaded && it.packageName == null } == true
+            when (action) {
+                GamepadAction.NAVIGATE_UP   -> movePanelCursor(PanelMove.UP)
+                GamepadAction.NAVIGATE_DOWN -> movePanelCursor(PanelMove.DOWN)
+                GamepadAction.NAVIGATE_LEFT  ->
+                    if (onMusic) musicPlayer.prev() else movePanelCursor(PanelMove.LEFT)
+                GamepadAction.NAVIGATE_RIGHT ->
+                    if (onMusic) musicPlayer.next() else movePanelCursor(PanelMove.RIGHT)
+                GamepadAction.PREV_CATEGORY -> movePanelCursor(PanelMove.PREV_TAB)
+                GamepadAction.NEXT_CATEGORY -> movePanelCursor(PanelMove.NEXT_TAB)
+                GamepadAction.SELECT,
+                GamepadAction.CHANGE_SORT,
+                GamepadAction.OPEN_CONTEXT_MENU -> when (state.panelTab) {
+                    PanelTab.NOTIFICATIONS -> runStageButton(action)
+                    PanelTab.PROFILE -> runPanelProfile(action)
+                    PanelTab.QUICK -> if (action == GamepadAction.SELECT) toggleQuickSetting(state.panelQuick)
+                    PanelTab.LIBRARIES -> if (action == GamepadAction.SELECT) toggleQuickSetting(QuickSetting.LIBRARIES)
+                    PanelTab.SETTINGS -> if (action == GamepadAction.SELECT) openPanelSetting(state.panelSetting)
+                }
+                GamepadAction.BACK,
+                GamepadAction.HOME               -> if (action == GamepadAction.BACK && state.panelTab == PanelTab.PROFILE && state.panelProfile.choosing) {
+                    menuSound.play(MenuSound.BACK)
+                    _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
+                } else {
+                    menuSound.play(MenuSound.BACK)
+                    closeNotifications()
+                }
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.activeContextMenu != null) {
+            when (action) {
+                GamepadAction.NAVIGATE_UP   -> shiftContextMenu(-1)
+                GamepadAction.NAVIGATE_DOWN -> shiftContextMenu(+1)
+
+                GamepadAction.SELECT        -> {
+                    val menu = state.activeContextMenu
+                    val picked = menu.selectedIndex?.let { state.menuRows().getOrNull(it) }
+                    when {
+                        picked != null -> onContextMenuItemActivatedAt(menu.selectedIndex!!)
+                        menu.primaryId != null -> activateContextMenuItem(menu.primaryId)
+                        else -> Unit
+                    }
+                }
+                GamepadAction.BACK                   -> popContextMenu()
+                GamepadAction.OPEN_CONTEXT_MENU      -> closeContextMenu()
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.crossbarLayoutAdjust != null) {
+            when (action) {
+                GamepadAction.NAVIGATE_LEFT  -> nudgeCrossbarLayoutHorizontal(-1)
+                GamepadAction.NAVIGATE_RIGHT -> nudgeCrossbarLayoutHorizontal(+1)
+                GamepadAction.NAVIGATE_UP    -> nudgeCrossbarLayoutVertical(-1)
+                GamepadAction.NAVIGATE_DOWN  -> nudgeCrossbarLayoutVertical(+1)
+                GamepadAction.PREV_CATEGORY  -> nudgeCrossbarLayoutScale(-1)
+                GamepadAction.NEXT_CATEGORY  -> nudgeCrossbarLayoutScale(+1)
+                GamepadAction.OPEN_CONTEXT_MENU -> resetCrossbarLayoutAdjust()
+
+                GamepadAction.CHANGE_SORT       -> toggleCrossbarLayoutSliders()
+                GamepadAction.SELECT         -> saveCrossbarLayoutAdjust()
+                GamepadAction.BACK           -> cancelCrossbarLayoutAdjust()
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.musicPlayerVisible) {
+            when (action) {
+                GamepadAction.SELECT         -> musicPlayPause()
+                GamepadAction.NAVIGATE_LEFT  -> musicPrev()
+                GamepadAction.NAVIGATE_RIGHT -> musicNext()
+                GamepadAction.NAVIGATE_UP    -> musicSeekBy(10_000)
+                GamepadAction.NAVIGATE_DOWN  -> musicSeekBy(-10_000)
+                GamepadAction.OPEN_CONTEXT_MENU     -> openMusicPlayerOptions()
+                GamepadAction.BACK           -> closeMusicPlayer()
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.customColorPicker != null) {
+            when (action) {
+                GamepadAction.NAVIGATE_UP -> moveCustomColorChannel(-1)
+                GamepadAction.NAVIGATE_DOWN -> moveCustomColorChannel(1)
+                GamepadAction.NAVIGATE_LEFT -> adjustCustomColor(-0.04f)
+                GamepadAction.NAVIGATE_RIGHT -> adjustCustomColor(0.04f)
+                GamepadAction.SELECT -> confirmCustomColor()
+                GamepadAction.BACK, GamepadAction.OPEN_CONTEXT_MENU -> cancelCustomColor()
+                else -> Unit
+            }
+            return
+        }
+        if (state.colorSchemePicker != null) {
+            when (action) {
+                GamepadAction.NAVIGATE_UP   -> moveColorSchemePicker(-1)
+                GamepadAction.NAVIGATE_DOWN -> moveColorSchemePicker(+1)
+                GamepadAction.SELECT        -> confirmColorSchemePicker()
+                GamepadAction.BACK,
+                GamepadAction.OPEN_CONTEXT_MENU    -> cancelColorSchemePicker()
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.renameAppTarget != null) {
+            when (action) {
+                GamepadAction.SELECT -> onConfirmAppRename(state.renameAppText)
+                GamepadAction.BACK   -> onCancelAppRename()
+                else                 -> Unit
+            }
+            return
+        }
+        if (state.collectionNameDialog != null) {
+            when (action) {
+                GamepadAction.SELECT -> onConfirmCollectionName(state.collectionNameDialog.text)
+                GamepadAction.BACK   -> onCancelCollectionName()
+                else                 -> Unit
+            }
+            return
+        }
+        if (state.playlistNameDialog != null) {
+            when (action) {
+                GamepadAction.SELECT -> onConfirmPlaylistName(state.playlistNameDialog.text)
+                GamepadAction.BACK   -> onCancelPlaylistName()
+                else                 -> Unit
+            }
+            return
+        }
+
+        if (state.infoDialog != null) {
+            if (action == GamepadAction.BACK || action == GamepadAction.SELECT) dismissInfoDialog()
+            return
+        }
+
+        state.launchRecovery?.let { recovery ->
+            val actions = com.echo.feature.launcher.launchRecoveryActions(recovery)
+            when (action) {
+                GamepadAction.NAVIGATE_UP -> _uiState.update {
+                    it.copy(launchRecoveryCursor = (it.launchRecoveryCursor - 1 + actions.size) % actions.size)
+                }
+                GamepadAction.NAVIGATE_DOWN -> _uiState.update {
+                    it.copy(launchRecoveryCursor = (it.launchRecoveryCursor + 1) % actions.size)
+                }
+                GamepadAction.SELECT -> actions
+                    .getOrNull(state.launchRecoveryCursor.coerceIn(0, actions.lastIndex))
+                    ?.let { (a, _) -> onLaunchRecoveryAction(a) }
+                GamepadAction.BACK -> onLaunchRecoveryAction(LaunchRecoveryAction.DISMISS)
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.showWindowsSetupPrompt) {
+            when (action) {
+                GamepadAction.SELECT -> confirmWindowsSetupPrompt()
+                GamepadAction.BACK   -> dismissWindowsSetupPrompt()
+                else                 -> Unit
+            }
+            return
+        }
+
+        if (state.search != null) {
+            when (action) {
+                GamepadAction.NAVIGATE_UP,
+                GamepadAction.NAVIGATE_DOWN,
+                GamepadAction.NAVIGATE_LEFT,
+                GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action))
+                GamepadAction.SELECT        -> onSearchActivatedAt(state.search.selectedIndex)
+                GamepadAction.BACK          -> closeSearch()
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.musicBrowser != null) {
+            when (action) {
+                GamepadAction.NAVIGATE_UP    -> moveMusicBrowser(-1)
+                GamepadAction.NAVIGATE_DOWN  -> moveMusicBrowser(+1)
+                GamepadAction.SELECT         -> activateMusicBrowser()
+                GamepadAction.BACK           -> onMusicBrowserBack()
+                GamepadAction.OPEN_CONTEXT_MENU     -> openMusicBrowserContextMenu()
+                GamepadAction.CHANGE_SORT    -> cycleSort()
+                else -> Unit
+            }
+            return
+        }
+
+        if (state.showBootSequence) {
+            if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
+                onBootSequenceComplete()
+            }
+            return
+        }
+
+        if (state.activeGameBoot != null) {
+            if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
+                onGameBootComplete()
+            }
+            return
+        }
+
+        if (action == GamepadAction.HOME && state.statusStripVisible) {
+            toggleNotifications()
+            return
+        }
+
+        when {
+            state.activePhotoViewer != null -> {
+                _uiState.update { it.copy(pendingPhotoViewerAction = action) }
+                return
+            }
+            state.activeVideoId != null -> {
+                _uiState.update { it.copy(pendingVideoDetailAction = action) }
+                return
+            }
+            state.metadataPreview != null -> {
+                handleMetadataPreviewInput(action)
+                return
+            }
+            state.manualViewer != null -> {
+                handleManualViewerInput(action)
+                return
+            }
+            state.artworkStudioGameId != null -> {
+                _uiState.update { it.copy(pendingArtworkStudioAction = action) }
+                return
+            }
+            state.activeAppId != null -> {
+                _uiState.update { it.copy(pendingAppDetailAction = action) }
+                return
+            }
+            state.activeSettingsScreen != null -> {
+                Timber.d("Gamepad → settings(${state.activeSettingsScreen}): $action")
+
+                when (action) {
+                    GamepadAction.BACK,
+                    GamepadAction.NAVIGATE_UP,
+                    GamepadAction.NAVIGATE_DOWN,
+
+                    GamepadAction.NAVIGATE_LEFT,
+                    GamepadAction.NAVIGATE_RIGHT,
+                    GamepadAction.OPEN_CONTEXT_MENU,
+                    GamepadAction.CHANGE_SORT,
+
+                    GamepadAction.PREV_CATEGORY,
+                    GamepadAction.NEXT_CATEGORY,
+                    GamepadAction.SELECT -> _uiState.update { it.copy(pendingSettingsAction = action) }
+                    else -> Unit
+                }
+                return
+            }
+            state.activeAppDrawerFilter != null -> {
+                _uiState.update { it.copy(pendingDrawerAction = action) }
+                return
+            }
+            state.saveThemeNameDialog != null -> {
+                when (action) {
+                    GamepadAction.SELECT -> confirmSaveCurrentLookAsTheme(state.saveThemeNameDialog.text)
+                    GamepadAction.BACK   -> dismissSaveThemeNameDialog()
+                    else                 -> Unit
+                }
+                return
+            }
+            state.customIconSession != null -> {
+                when (action) {
+                    GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_UP -> onCustomIconSlotMove(-1)
+                    GamepadAction.NAVIGATE_RIGHT, GamepadAction.NAVIGATE_DOWN -> onCustomIconSlotMove(+1)
+                    GamepadAction.PREV_CATEGORY -> onCustomIconGroupMove(-1)
+                    GamepadAction.NEXT_CATEGORY -> onCustomIconGroupMove(+1)
+                    GamepadAction.SELECT,
+                    GamepadAction.OPEN_CONTEXT_MENU,
+                    GamepadAction.BACK -> _uiState.update { it.copy(pendingCustomIconsAction = action) }
+                    else -> Unit
+                }
+                return
+            }
+            state.profile != null -> {
+                handleProfileInput(state.profile, action)
+                return
+            }
+            state.gameInfo != null -> {
+                handleGameInfoInput(state.gameInfo, state.androidNotices, action)
+                return
+            }
+        }
+
+        if (state.hasBlockingOverlay) {
+            Timber.w("Gamepad action $action dropped: a blocking overlay has no branch in this dispatcher")
+            return
+        }
+
+        when (action) {
+            GamepadAction.NAVIGATE_UP   -> {
+                if (state.activePillIndex() != null) {
+                    menuSound.play(MenuSound.SCROLL)
+                    _uiState.update { it.copy(pillCursor = null) }
+                    return
+                }
+                if (!moveItemCursor(-1)) gamepadInputHandler.cancelRepeat()
+            }
+            GamepadAction.NAVIGATE_DOWN -> when (
+                downStep(
+                    inPillRow = state.activePillIndex() != null,
+                    pillRowVisible = state.pillRowVisible,
+                    inColumn = state.inColumn,
+                    hasPills = state.focusedPills().isNotEmpty(),
+                )
+            ) {
+                DownStep.EnterColumn -> {
+                    menuSound.play(MenuSound.SCROLL)
+                    _uiState.update { it.copy(inColumn = true) }
+                }
+
+                DownStep.LeaveRowAndStepItem ->
+                    if (moveItemCursor(+1)) _uiState.update { it.copy(pillCursor = null) }
+                    else gamepadInputHandler.cancelRepeat()
+
+                DownStep.EnterRow ->
+                    if (!pillPressHandled(action, state)) gamepadInputHandler.cancelRepeat()
+
+                DownStep.StepItem ->
+                    if (!moveItemCursor(+1)) gamepadInputHandler.cancelRepeat()
+            }
+            GamepadAction.NAVIGATE_LEFT -> {
+                if (state.activePillIndex() != null && pillPressHandled(action, state)) return
+
+                if (state.isInSubItem) {
+                    gamepadInputHandler.cancelRepeat()
+                    if (!state.leftBacksOut) return
+                    menuSound.play(MenuSound.BACK)
+                    backOutOfDrill(state)
+                    return
+                }
+
+                if (recentRailStep(action, state.onLastPlayedHome, state.recentRailVisible) == RailStep.Open) {
+                    gamepadInputHandler.cancelRepeat()
+                    menuSound.play(MenuSound.SYSTEM_BROWSE)
+                    _uiState.update { it.copy(recentRailVisible = true) }
+                    return
+                }
+                if (state.pillRowVisible && pillPressHandled(action, state)) return
+                val next = state.stepToReachableCategory(-1)
+                if (next != state.selectedCategoryIndex) onCategorySelected(next)
+                else gamepadInputHandler.cancelRepeat()
+            }
+            GamepadAction.NAVIGATE_RIGHT -> {
+                if (state.activePillIndex() != null && pillPressHandled(action, state)) return
+
+                if (recentRailStep(action, state.onLastPlayedHome, state.recentRailVisible) == RailStep.Close) {
+                    gamepadInputHandler.cancelRepeat()
+                    menuSound.play(MenuSound.SYSTEM_BROWSE)
+                    _uiState.update { it.copy(recentRailVisible = false) }
+                    return
+                }
+
+                if (state.pillRowVisible && pillPressHandled(action, state)) return
+                if (state.isInSubItem) { gamepadInputHandler.cancelRepeat(); return }
+                val next = state.stepToReachableCategory(+1)
+                if (next != state.selectedCategoryIndex) onCategorySelected(next)
+                else gamepadInputHandler.cancelRepeat()
+            }
+            GamepadAction.SELECT     -> {
+                val pill = state.activePillIndex()?.let { state.focusedPills().getOrNull(it) }
+                if (pill != null) onPillActivated(pill.id) else onItemSelected(state.selectedItemIndex)
+            }
+            GamepadAction.BACK       -> {
+                menuSound.play(MenuSound.BACK)
+
+                if (state.activePillIndex() != null) {
+                    _uiState.update { it.copy(pillCursor = null) }
+                    return
+                }
+
+                if (recentRailStep(action, state.onLastPlayedHome, state.recentRailVisible) == RailStep.Close) {
+                    _uiState.update { it.copy(recentRailVisible = false) }
+                    return
+                }
+
+                if (!backOutOfDrill(state)) onOpenAppDrawer()
+            }
+
+            GamepadAction.OPEN_CONTEXT_MENU -> openContextMenuForFocusedItem()
+
+            // the crossbar does not page; the triggers are the Artwork Studio's
+            GamepadAction.PREV_PAGE,
+            GamepadAction.NEXT_PAGE     -> Unit
+            GamepadAction.HOME          -> toggleNotifications()
+
+            GamepadAction.CHANGE_SORT -> when {
+                !state.onLastPlayedHome -> cycleSort()
+                state.recentRailVisible -> state.focusedItem?.let(::removeFromRecent)
+                else -> state.focusedItem?.takeIf { recentKind(it) == RecentKind.GAME || recentKind(it) == RecentKind.APP }
+                    ?.let(::onOpenGameInfo)
+            }
+
+            GamepadAction.OPEN_SEARCH -> openSearch(SearchScope.ALL)
+
+            GamepadAction.PREV_CATEGORY -> if (state.onLastPlayedHome) stepRecentFilter(-1) else stepHoverPanelPage(-1)
+            GamepadAction.NEXT_CATEGORY -> if (state.onLastPlayedHome) stepRecentFilter(+1) else stepHoverPanelPage(+1)
+        }
+    }
+
+    fun onOpenGameInfo(item: CrossbarItem) {
+        menuSound.play(MenuSound.SELECT)
+        val info = GameInfoState(item)
+        _uiState.update { it.withGameInfoOpen(info) }
+        viewModelScope.launch {
+            val loaded = withContext(Dispatchers.IO) { if (info.isApp) loadAppInfo(info) else loadGameInfo(info) }
+            _uiState.update { s -> if (s.gameInfo?.item?.id == item.id) s.copy(gameInfo = loaded.copy(cursor = s.gameInfo.cursor, band = s.gameInfo.band, open = s.gameInfo.open)) else s }
+        }
+    }
+
+    private suspend fun loadGameInfo(info: GameInfoState): GameInfoState {
+        val gid = info.item.gameId ?: return info
+        val game = runCatching { gameRepository.getById(gid) }.getOrNull() ?: return info
+        val platform = com.echo.core.domain.model.platformLabel(game.platformId, runCatching { platformDao.getById(game.platformId)?.name }.getOrNull())
+        val media = (artworkStore.findAll(gid, ArtworkKind.SCREENSHOT) + listOfNotNull(artworkStore.find(gid, ArtworkKind.TITLESCREEN)))
+            .map { com.echo.feature.crossbar.ui.detail.DetailMedia(it, isVideo = false) }
+        val video = if (videoSnapsAllowed()) artworkStore.find(gid, ArtworkKind.ICON1) ?: artworkStore.find(gid, ArtworkKind.VIDEO) else null
+        val set = runCatching { achievementController.observeSetForGame(gid).first() }.getOrNull()
+        return info.copy(
+            content = detailPanelContentFor(game, platform, media, video),
+            achievementsStat = set?.takeIf { it.total > 0 }?.let { "${it.unlocked}/${it.total}" },
+            videoUri = artworkStore.find(gid, ArtworkKind.VIDEO) ?: artworkStore.find(gid, ArtworkKind.ICON1),
+            manualPath = artworkStore.find(gid, ArtworkKind.MANUAL),
+        )
+    }
+
+    private fun loadAppInfo(info: GameInfoState): GameInfoState {
+        val pkg = info.item.packageName ?: return info
+        val pm = context.packageManager
+        val version = runCatching { pm.getPackageInfo(pkg, 0).versionName }.getOrNull()
+        val storage = if (com.echo.core.data.permission.UsageAccess.isGranted(context)) runCatching {
+            val stats = context.getSystemService(android.app.usage.StorageStatsManager::class.java)
+                .queryStatsForPackage(pm.getApplicationInfo(pkg, 0).storageUuid, pkg, android.os.Process.myUserHandle())
+            stats.appBytes + stats.dataBytes
+        }.getOrNull() else null
+        return info.copy(appVersion = version, appStorageBytes = storage)
+    }
+
+    private fun handleGameInfoInput(info: GameInfoState, notices: List<com.echo.core.ui.notification.AndroidNotice>, action: GamepadAction) {
+        if (info.open != null) {
+            when (action) {
+                GamepadAction.BACK -> closeGameInfoPanel()
+                GamepadAction.NAVIGATE_UP -> scrollGameInfo(-1)
+                GamepadAction.NAVIGATE_DOWN -> scrollGameInfo(+1)
+                else -> Unit
+            }
+            return
+        }
+        when (action) {
+            GamepadAction.BACK -> closeGameInfo()
+            GamepadAction.SELECT -> {
+                val notice = info.cursor?.let { info.notices(notices).getOrNull(it) }
+                when {
+                    notice != null -> openAndroidNotice(notice.key)
+                    info.cursor == null -> onGameInfoAction(info.band)
+                    else -> playFromGameInfo(info.item)
+                }
+            }
+            GamepadAction.OPEN_CONTEXT_MENU -> openGameInfoOptions(info)
+            GamepadAction.CHANGE_SORT -> if (info.achievementsStat != null) openProfile(ProfileTab.ACHIEVEMENTS, info.item.gameId)
+            GamepadAction.NAVIGATE_LEFT,
+            GamepadAction.NAVIGATE_RIGHT -> if (info.cursor == null) {
+                onGameInfoBand(stepGameInfoBand(info.band, gameInfoActions(info), if (action == GamepadAction.NAVIGATE_LEFT) -1 else +1))
+            } else {
+                onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
+            }
+            GamepadAction.NAVIGATE_UP,
+            GamepadAction.NAVIGATE_DOWN -> onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
+            else -> Unit
+        }
+    }
+
+    fun onGameInfoBand(action: GameInfoAction) {
+        val info = _uiState.value.gameInfo ?: return
+        if (action == info.band && info.cursor == null) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(band = action, cursor = null)) }
+    }
+
+    fun onGameInfoAction(action: GameInfoAction) {
+        val info = _uiState.value.gameInfo ?: return
+        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(band = action, cursor = null)) }
+        when (action) {
+            GameInfoAction.PLAY -> playFromGameInfo(info.item)
+            GameInfoAction.OPTIONS -> openGameInfoOptions(info)
+            GameInfoAction.MANUAL -> info.item.gameId?.let {
+                menuSound.play(MenuSound.SELECT)
+                openManualFor(it)
+            }
+            GameInfoAction.INFO, GameInfoAction.VIDEO -> {
+                menuSound.play(MenuSound.SELECT)
+                _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(open = action, infoScroll = 0)) }
+            }
+        }
+    }
+
+    fun closeGameInfoPanel() {
+        if (_uiState.value.gameInfo?.open == null) return
+        menuSound.play(MenuSound.BACK)
+        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(open = null)) }
+    }
+
+    private fun scrollGameInfo(delta: Int) = _uiState.update { s ->
+        val info = s.gameInfo?.takeIf { it.open == GameInfoAction.INFO } ?: return@update s
+        s.copy(gameInfo = info.scrolledBy(delta))
+    }
+
+    fun onGameInfoScrollMax(max: Int) = _uiState.update { s ->
+        s.gameInfo?.let { s.copy(gameInfo = it.copy(infoScrollMax = max)) } ?: s
+    }
+
+    fun onGameInfoCursor(cursor: Int?) {
+        val info = _uiState.value.gameInfo ?: return
+        if (cursor == info.cursor) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(cursor = cursor)) }
+    }
+
+    fun onGameInfoNoticeTapped(key: String) = openAndroidNotice(key)
+
+    fun closeGameInfo() {
+        if (_uiState.value.gameInfo == null) return
+        menuSound.play(MenuSound.BACK)
+        _uiState.update { it.copy(gameInfo = null) }
+    }
+
+    fun openProfile(tab: ProfileTab, gameId: Long? = null, set: Int = 0, fromPanel: Boolean = false) {
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update {
+            it.copy(
+                notificationsOpen = if (fromPanel) false else it.notificationsOpen,
+                profile = ProfileState(tab = tab, set = set, openOnGameId = gameId, returnToPanel = fromPanel).withData(it.profileData),
+            )
+        }
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun observeProfileData() {
+        viewModelScope.launch {
+            _uiState.map { it.notificationsOpen || it.profile != null }.distinctUntilChanged()
+                .flatMapLatest { shown -> if (shown) profileData() else kotlinx.coroutines.flow.emptyFlow() }
+                .collect { data -> _uiState.update { s -> s.copy(profileData = data, profile = s.profile?.withData(data)) } }
+        }
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun profileData(): Flow<ProfileData> {
+        val achievements = combine(achievementController.observeSets(), achievementController.observeAllAchievements()) { sets, all ->
+            sets to sets.associate { set -> setKey(set) to all[set.provider to set.providerGameId].orEmpty() }
+        }
+        val accounts = combine(
+            achievementCredentials.raUsernameFlow,
+            achievementCredentials.steamId64Flow,
+            discordSocial.signedIn,
+            discordSocial.user,
+            discordSocial.friends,
+        ) { ra, steam, signedIn, user, friends ->
+            ProfileData(
+                raLinked = !ra.isNullOrBlank(),
+                steamLinked = !steam.isNullOrBlank(),
+                discordSignedIn = signedIn,
+                discordUser = user,
+                friends = friends,
+            )
+        }
+        val library = combine(
+            gameRepository.observeGamesOnlyStats(),
+            gameRepository.observeRecentGamesOnly(RECENTLY_PLAYED_COUNT * 8),
+        ) { stats, recent -> stats to recentlyPlayed(recent) }
+        return combine(
+            library,
+            achievements,
+            achievementController.observeTotals(),
+            accounts,
+            platformDao.observeAll(),
+        ) { (stats, recent), (sets, badges), totals, acc, platforms ->
+            val platformOf = platforms.associate { it.id to it.shortName }
+            acc.copy(
+                games = stats.games,
+                playTimeMs = stats.playTimeMs,
+                recent = recent,
+                totals = totals,
+                sets = sets,
+                badges = badges,
+                platforms = sets.mapNotNull { set -> set.gameId?.let { id -> platformOf[set.platformId]?.let { id to it } } }.toMap(),
+            )
+        }
+    }
+
+    private fun handleProfileInput(p: ProfileState, action: GamepadAction) {
+        when {
+            action == GamepadAction.BACK -> closeProfile()
+            p.tab == ProfileTab.ACHIEVEMENTS && p.data.sets.isEmpty() && action == GamepadAction.SELECT ->
+                openSettingsFromProfile("settings_accounts")
+            p.tab == ProfileTab.FRIENDS && !p.data.discordSignedIn && action == GamepadAction.SELECT ->
+                openSettingsFromProfile("settings_discord")
+            else -> setProfile(stepProfile(p, action))
+        }
+    }
+
+    private fun setProfile(next: ProfileState) {
+        val current = _uiState.value.profile ?: return
+        if (next == current) {
+            gamepadInputHandler.cancelRepeat()
+            return
+        }
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { s -> s.copy(profile = s.profile?.let { next.copy(data = it.data) }) }
+    }
+
+    fun onProfileSetTapped(index: Int) {
+        _uiState.value.profile?.let { setProfile(it.copy(set = index, inGrid = false, badge = 0)) }
+    }
+
+    fun onProfileBadgeTapped(index: Int) {
+        _uiState.value.profile?.let { setProfile(it.copy(inGrid = true, badge = index)) }
+    }
+
+    fun onProfileFilterTapped(filter: BadgeFilter) {
+        _uiState.value.profile?.let { setProfile(it.copy(filter = filter, inGrid = false, badge = 0)) }
+    }
+
+    fun onProfileFriendTapped(index: Int) {
+        _uiState.value.profile?.let { setProfile(it.copy(friend = index)) }
+    }
+
+    fun closeProfile() {
+        val profile = _uiState.value.profile ?: return
+        menuSound.play(MenuSound.BACK)
+        _uiState.update {
+            if (profile.returnToPanel) it.copy(profile = null, notificationsOpen = true, panelTab = PanelTab.PROFILE) else it.copy(profile = null)
+        }
+    }
+
+    private fun runPanelProfile(action: GamepadAction) {
+        val s = _uiState.value
+        val focus = s.panelProfile
+        when (action) {
+            GamepadAction.CHANGE_SORT -> onPanelProfileTapped(ProfileSpot.EDIT, 0)
+            GamepadAction.SELECT -> onPanelProfileTapped(focus.spot, if (focus.spot == ProfileSpot.SHOWCASE) showcaseSet(s.profileData) else focus.recent)
+            else -> Unit
+        }
+    }
+
+    fun onPanelProfileTapped(spot: ProfileSpot, index: Int) {
+        val s = _uiState.value
+        when (spot) {
+            ProfileSpot.EDIT -> {
+                menuSound.play(MenuSound.SELECT)
+                _uiState.update { it.copy(panelTab = PanelTab.PROFILE, panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT_NAME)) }
+            }
+            ProfileSpot.EDIT_NAME -> {
+                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
+                closeNotifications()
+                editProfileName()
+            }
+            ProfileSpot.EDIT_PICTURE -> {
+                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
+                pickProfileAvatar()
+            }
+            ProfileSpot.RECENT -> s.profileData.recent.getOrNull(index)?.let { game ->
+                _uiState.update { it.copy(panelProfile = ProfileFocus(ProfileSpot.RECENT, index)) }
+                closeNotifications()
+                onOpenGameInfo(game.toSearchRow())
+            }
+            ProfileSpot.SHOWCASE -> {
+                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.SHOWCASE)) }
+                openProfile(ProfileTab.ACHIEVEMENTS, set = index, fromPanel = true)
+            }
+            ProfileSpot.FRIENDS -> {
+                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.FRIENDS)) }
+                openProfile(ProfileTab.FRIENDS, fromPanel = true)
+            }
+        }
+    }
+
+    private fun openSettingsFromProfile(screenId: String) {
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update {
+            it.withSettingsOpen(screenId).copy(settingsReturnTo = null, settingsFromPanel = false)
+        }
+    }
+
+    fun editProfileName() {
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update {
+            it.copy(collectionNameDialog = CollectionNameDialogState(
+                title = "Profile name",
+                subtitle = "The name your profile shows. It stays on this device.",
+                initialText = it.profileName,
+                renameProfile = true,
+                placeholder = DEFAULT_PROFILE_NAME,
+            ))
+        }
+    }
+
+    fun pickProfileAvatar() {
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update { it.copy(profileAvatarPick = true) }
+    }
+
+    fun onProfileAvatarPicked(uri: android.net.Uri?) {
+        _uiState.update { it.copy(profileAvatarPick = false) }
+        if (uri == null) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val dir = java.io.File(context.filesDir, "profile").apply { mkdirs() }
+            val dest = java.io.File(dir, "avatar_${System.currentTimeMillis()}.jpg")
+            val ok = runCatching {
+                context.contentResolver.openInputStream(uri)?.use { input -> dest.outputStream().use { input.copyTo(it) } } != null &&
+                    android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        .also { android.graphics.BitmapFactory.decodeFile(dest.absolutePath, it) }.outWidth > 0
+            }.getOrDefault(false)
+            if (!ok) {
+                dest.delete()
+                Timber.w("Profile picture %s could not be read", uri)
+                return@launch
+            }
+            context.echoDataStore.edit { it[KEY_PROFILE_AVATAR] = dest.absolutePath }
+            dir.listFiles()?.filter { it != dest }?.forEach { it.delete() }
+        }
+    }
+
+    private fun observeProfilePrefs() {
+        viewModelScope.launch {
+            context.echoDataStore.data.collect { prefs ->
+                val avatar = prefs[KEY_PROFILE_AVATAR]?.takeIf { java.io.File(it).exists() }
+                _uiState.update {
+                    it.copy(profileName = prefs[KEY_PROFILE_NAME]?.ifBlank { null } ?: DEFAULT_PROFILE_NAME, profileAvatar = avatar)
+                }
+            }
+        }
+    }
+
+    private fun openGameInfoOptions(info: GameInfoState) {
+        if (info.isApp) openAppContextMenu(info.item) else openGameContextMenu(info.item)
+    }
+
+    private fun playFromGameInfo(item: CrossbarItem) {
+        _uiState.update { it.copy(gameInfo = null) }
+        val index = _uiState.value.currentItems.indexOfFirst { it.id == item.id }
+        when {
+            index >= 0 -> onItemSelected(index)
+            item.gameId != null -> launchGameDirectly(item.gameId)
+        }
+    }
+
+    private fun openAndroidNotice(key: String) {
+        menuSound.play(MenuSound.SELECT)
+        if (!AndroidNotifications.open(key)) Timber.i("Notification $key had nothing to open")
+    }
+
+    private fun removeFromRecent(item: CrossbarItem) {
+        if (!item.removableFromRecent) return
+        menuSound.play(MenuSound.SELECT)
+        when {
+            item.type == CrossbarItemType.VIDEO_FILE -> handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent")
+            item.type == CrossbarItemType.LIBRARY_BOOK -> handleBookAction(item.id.removePrefix("book_"), "book_remove_recent")
+            item.type == CrossbarItemType.MUSIC_TRACK -> handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null)
+            item.gameId != null -> {
+                val gid = item.gameId
+                appAction { gameRepository.clearLastPlayed(gid) }
+            }
+            item.packageName != null -> dismissAppFromRecents(item.packageName)
+        }
+    }
+
+    fun onPanelPageTapped(page: DetailPanelPage) = _uiState.update {
+        it.copy(panelPage = page, panelPageGameId = it.hoverPanelItem?.gameId)
+    }
+
+    private fun stepHoverPanelPage(delta: Int) = _uiState.update { s ->
+        val content = s.hoverPanelContent ?: return@update s
+
+        if (!s.panelStripOpen) {
+            return@update s.copy(
+                panelPage = DetailPanelPage.LOGO,
+                panelPageGameId = s.hoverPanelItem?.gameId,
+            )
+        }
+
+        if (delta < 0 && s.effectivePanelPage == DetailPanelPage.LOGO) {
+            return@update s.copy(panelPageGameId = null)
+        }
+        s.copy(
+
+            panelPage = stepPanelPage(s.effectivePanelPage, content.pages, delta),
+            panelPageGameId = s.hoverPanelItem?.gameId,
+        )
+    }
+
+    private fun openPlatformContextMenu(platformId: String) {
+        val card = enabledCards.firstOrNull { it.platformId == platformId } ?: return
+        viewModelScope.launch {
+            val choices = platformChoices(platformId)
+            val overrideCount = if (platformId in NON_EMULATOR_PLATFORM_IDS) 0
+                else gameRepository.getByPlatform(platformId).count { !it.emulatorPackage.isNullOrBlank() }
+
+            val items = platformContextMenuItems(
+                platformId = platformId,
+                pinned = card.pinned,
+                emulatorLabel = choices?.let { it.resolvedName ?: "None" },
+                overrideCount = overrideCount,
+                romDirectory = card.romDirectory,
+            )
+
+            _uiState.update { it.copy(
+                activeContextMenu = CrossbarContextMenu(state = MenuState(title = card.displayName, rows = items), platformId = platformId)
+            )}
+        }
+    }
+
+    private suspend fun platformChoices(platformId: String): PlatformEmulatorChoices? {
+        if (platformId in NON_EMULATOR_PLATFORM_IDS) return null
+        val card = enabledCards.firstOrNull { it.platformId == platformId }
+        return platformEmulatorChoices(
+            platformId = platformId,
+            installedProfiles = emulatorProfileRepository.getInstalledProfiles(),
+            rememberedCoreId = autoCoreMemory.rememberedIds()[platformId],
+            memoryCardEmulatorId = card?.emulatorId,
+            platformDefaultPackage = platformDao.getById(platformId)?.preferredEmulatorPackage,
+        )
+    }
+
+    private fun openDefaultEmulatorMenu(platformId: String) {
+        viewModelScope.launch {
+            val choices = platformChoices(platformId) ?: return@launch
+            val rows = buildList {
+                val recommended = choices.choices.firstOrNull { it.isRecommended }?.name
+                add(
+                    CrossbarContextMenuItem(
+                        "emu_automatic",
+                        if (recommended != null) "Automatic  ·  $recommended" else "Automatic",
+                        checked = choices.isAutomatic,
+                    ),
+                )
+                choices.choices.forEach { choice ->
+                    add(
+                        CrossbarContextMenuItem(
+                            "$PLATFORM_EMU_PREFIX${choice.profileId}",
+                            choice.name,
+                            checked = choice.isCurrent,
+                        ),
+                    )
+                }
+            }
+            _uiState.update { it.copy(
+                activeContextMenu = CrossbarContextMenu(
+                    state = MenuState(title = "Default Emulator", rows = rows),
+                    platformId = platformId,
+                ),
+            )}
+        }
+    }
+
+    private fun setPlatformEmulator(platformId: String, profileId: String?) {
+        appAction { memoryCardRepository.setEmulator(platformId, profileId) }
+    }
+
+    private fun clearPlatformEmulatorOverrides(platformId: String) {
+        appAction { gameRepository.clearPreferredEmulatorForPlatform(platformId) }
+    }
+
+    private fun moveCard(platformId: String, up: Boolean) {
+        appAction { memoryCardRepository.move(platformId, up) }
+    }
+
+    private fun promptRenameCard(platformId: String) {
+        val card = enabledCards.firstOrNull { it.platformId == platformId } ?: return
+        closeContextMenu()
+        _uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+            title = "Rename Memory Card",
+            subtitle = "The name this console shows under on the crossbar.",
+            initialText = card.displayName,
+            renameCardPlatformId = platformId,
+        ))}
+    }
+
+
+    private suspend fun romFolderItems(): List<CrossbarItem> {
+        val roots = romRootRepository.getAll()
+        val persisted = SafGrants.persistedReadUris(context.contentResolver)
+        val entries = romFolderEntries(
+            roots = roots,
+            persistedReadUris = persisted,
+            cards = enabledCards,
+            rawPathOfTree = { com.echo.core.data.repository.RomRootRepository.rawPathOfTree(it) },
+            fallbackName = { "ROM Root" },
+        )
+
+        return entries.map { entry ->
+            when (entry) {
+                is RomFolderEntry.Root -> CrossbarItem(
+                    id       = "romroot_${entry.treeUri}",
+                    title    = entry.name,
+                    subtitle = if (!entry.linked) "Access lost — Relink to grant it again"
+                        else countLabel(entry.consoleCount, "console", "consoles") +
+                            "  ·  " + countLabel(entry.gameCount, "game", "games"),
+                    type         = CrossbarItemType.MEDIA_ROOT,
+                    mediaRootUri = entry.treeUri,
+                )
+                is RomFolderEntry.Console -> CrossbarItem(
+                    id         = "romcard_${entry.platformId}",
+                    title      = entry.displayName,
+                    subtitle   = if (!entry.underRoot) "Not under any granted folder"
+                        else entry.romDirectory ?: countLabel(entry.gameCount, "game", "games"),
+                    platformId = entry.platformId,
+                    type       = CrossbarItemType.MEMORY_CARD,
+                )
+            }
+        } + CrossbarItem(
+            id       = ADD_ROM_ROOT_ITEM_ID,
+            title    = "Add ROM Folder",
+            subtitle = if (roots.isEmpty()) "Grant the folder your ROMs live in"
+                       else "Grant another folder — an SD card, say",
+            type     = CrossbarItemType.ADD_ACTION,
+        )
+    }
+
+    private fun openRomFolders() = navigateRememberingCursor { it.copy(romFoldersOpen = true) }
+
+    private fun closeRomFolders() = navigateRememberingCursor { it.copy(romFoldersOpen = false) }
+
+    private fun refreshRomFolders() {
+        if (!_uiState.value.romFoldersOpen) return
+        viewModelScope.launch { _uiState.update { it.copy(currentItems = romFolderItems()) } }
+    }
+
+    private fun romRootContextMenuItems(linked: Boolean): List<CrossbarContextMenuItem> = buildList {
+        if (linked) add(CrossbarContextMenuItem("rom_root_scan", "Scan This Folder"))
+        add(CrossbarContextMenuItem("rom_root_relink", "Relink Folder", group = MenuGroup.SETTINGS))
+        add(
+            CrossbarContextMenuItem(
+                "rom_root_remove", "Remove Folder",
+                isDestructive = true, group = MenuGroup.REMOVE,
+            ),
+        )
+    }
+
+    private fun openRomRootContextMenu(item: CrossbarItem) {
+        val treeUri = item.mediaRootUri ?: return
+        val linked = item.subtitle?.startsWith("Access lost") != true
+        _uiState.update { it.copy(
+            activeContextMenu = CrossbarContextMenu(
+                state = MenuState(title = item.title, rows = romRootContextMenuItems(linked)),
+                mediaRootUri = treeUri,
+            ),
+        )}
+    }
+
+    private fun scanCardsUnderRoot(treeUri: String) {
+        val rawPath = com.echo.core.data.repository.RomRootRepository.rawPathOfTree(treeUri)
+        if (rawPath == null) {
+            SystemToasts.post("Cannot read that folder", "Relink it and try again.", ToastKind.ERROR)
+            return
+        }
+        val under = enabledCards.filter { card ->
+            card.romDirectory?.let { isRomDirUnder(it, rawPath) } == true
+        }
+        if (under.isEmpty()) {
+            SystemToasts.post("No consoles under this folder", "Scan a console to create one.", ToastKind.ERROR)
+            return
+        }
+        under.forEach { scanCard(it.platformId) }
+    }
+
+    private fun handleRomRootAction(treeUri: String, itemId: String) {
+        when (itemId) {
+            "rom_root_scan"   -> scanCardsUnderRoot(treeUri)
+            "rom_root_relink" -> requestRomRootPick(relinkFrom = treeUri)
+            "rom_root_remove" -> appAction {
+                romRootRepository.remove(treeUri)
+                refreshRomFolders()
+            }
+        }
+    }
+
+    private fun openAllGamesContextMenu() {
+        _uiState.update { it.copy(
+            activeContextMenu = CrossbarContextMenu(state = MenuState(title = "All Games", rows = allGamesContextMenuItems()), isAllGames = true)
+        )}
+    }
+
+    private fun openGameContextMenu(item: CrossbarItem) {
+        val gameId = item.gameId
+        if (gameId == null) {
+            openGameContextMenuCore(item, discCount = 0)
+            return
+        }
+
+        viewModelScope.launch {
+            val game = runCatching { gameRepository.getById(gameId) }.getOrNull()
+            val discCount = runCatching {
+                game?.discSetKey?.let { gameRepository.getDiscSetMembers(it).size } ?: 0
+            }.getOrDefault(0)
+
+            openGameContextMenuCore(item, discCount, onRecentShelf = game?.lastPlayedAt != null)
+        }
+    }
+
+    private fun openGameContextMenuCore(item: CrossbarItem, discCount: Int, onRecentShelf: Boolean = false) {
+        val state = _uiState.value
+        val currentCat = currentCategory()
+        val inGamingCategory = currentCat?.isGamingCategory == true
+        val items = gameContextMenuItems(
+            item = item,
+            state = state,
+            discCount = discCount,
+            onRecentShelf = onRecentShelf,
+            hideLocation = currentHideLocation(),
+        )
+        _uiState.update { it.copy(
+            activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = item.packageName, shortcutId = item.shortcutId, launchIntentUri = item.launchIntentUri, categoryContext = if (inGamingCategory) currentCat.id else null, primaryId = "play")
+        )}
+    }
+
+    private fun openAppContextMenu(item: CrossbarItem, categoryIdOverride: String? = null) {
+        val pkg = item.packageName ?: return
+        val categoryId = categoryIdOverride ?: currentCategory()?.id
+
+        val items = appContextMenuItems(_uiState.value, categoryId, onRecentShelf = item.id.startsWith(RECENT_APP_ID_PREFIX))
+        _uiState.update { it.copy(
+            activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = pkg, categoryContext = categoryId)
+        )}
+    }
+
+    private fun openCategoryPicker(pkg: String, fromCategory: String?, action: String) {
+        val items = _uiState.value.categories.map { cat ->
+            CrossbarContextMenuItem("pick_${cat.id}", cat.name)
+        }
+        _uiState.update { it.copy(
+            activeContextMenu = CrossbarContextMenu(state = MenuState(title = if (action == "move") "Move To…" else "Add To…", rows = items), packageName = pkg, categoryContext = fromCategory, pendingAppAction = action)
+        )}
+    }
+
+    private fun shiftContextMenu(delta: Int) {
+        val state = _uiState.value
+        val menu = state.activeContextMenu ?: return
+
+        val rows = state.menuRows()
+        if (rows.isEmpty()) return
+
+        val current = menu.selectedIndex ?: return run {
+            val entry = if (delta > 0) 0 else rows.lastIndex
+            _uiState.update { it.copy(activeContextMenu = menu.withSelected(entry)) }
+        }
+        val next = (current + delta).coerceIn(0, rows.size - 1)
+        _uiState.update { it.copy(activeContextMenu = menu.withSelected(next)) }
+    }
+
+    private fun activateContextMenuItem(itemId: String) {
+        val state  = _uiState.value
+        val menu   = state.activeContextMenu ?: return
+
+        if (itemId.startsWith("cat_") && menu.gameId != null && menu.categoryContext != null && menu.pendingAppAction != null) {
+            val gameId = menu.gameId
+            val fromCategory = menu.categoryContext
+            val toCategory = itemId.removePrefix("cat_")
+            val action = menu.pendingAppAction
+            closeContextMenu()
+
+            appAction {
+                when (action) {
+                    "move" -> gameCategoryRepository.moveGameToCategory(gameId, fromCategory, toCategory)
+                    "add"  -> gameCategoryRepository.addGameToCategory(gameId, toCategory)
+                }
+                if (currentCategory()?.id == fromCategory) {
+                    loadItemsForCategory(currentCategory())
+                }
+            }
+            return
+        }
+
+        if (menu.isAddMenu) {
+            val row = currentAddActions().firstOrNull { it.id == itemId }
+            closeContextMenu()
+            if (row != null) dispatchCategorySelection(row)
+            return
+        }
+
+        if (menu.videoPlaylistPickerVideoId != null) {
+            val videoId = menu.videoPlaylistPickerVideoId
+            val keepIndex = menu.selectedIndex
+            when {
+                itemId == "vpl_new" -> {
+                    closeContextMenu()
+                    promptCreateVideoPlaylist(forVideoId = videoId)
+                }
+                itemId.startsWith("vpl_") -> {
+                    val playlistId = itemId.removePrefix("vpl_").toLongOrNull() ?: return
+                    viewModelScope.launch {
+                        videoRepository.toggleVideoInPlaylist(playlistId, videoId)
+                        openVideoPlaylistPicker(videoId, keepIndex)
+                    }
+                }
+            }
+            return
+        }
+
+        if (menu.playlistPickerTrackId != null) {
+            val trackId = menu.playlistPickerTrackId
+            val keepIndex = menu.selectedIndex
+            when {
+                itemId == "pl_new" -> {
+                    closeContextMenu()
+                    promptCreatePlaylist(forTrackId = trackId)
+                }
+                itemId.startsWith("pl_") -> {
+                    val playlistId = itemId.removePrefix("pl_").toLongOrNull() ?: return
+                    viewModelScope.launch {
+                        musicRepository.toggleTrackInPlaylist(playlistId, trackId)
+
+                        openPlaylistPicker(trackId, keepIndex)
+                    }
+                }
+            }
+            return
+        }
+
+        closeContextMenu()
+
+        if (menu.videoFileId != null) {
+            handleVideoFileAction(menu.videoFileId, itemId)
+            return
+        }
+        if (menu.bookFileId != null) {
+            handleBookAction(menu.bookFileId, itemId)
+            return
+        }
+        if (menu.videoLibraryId != null) {
+            handleVideoLibraryAction(menu.videoLibraryId, itemId)
+            return
+        }
+        if (menu.photoFileId != null) {
+            handlePhotoFileAction(menu.photoFileId, itemId)
+            return
+        }
+        if (menu.photoLibraryId != null) {
+            handlePhotoLibraryAction(menu.photoLibraryId, itemId)
+            return
+        }
+        if (menu.videoPlaylistId != null) {
+            handleVideoPlaylistRowAction(menu.videoPlaylistId, itemId)
+            return
+        }
+
+        if (menu.playlistId != null && menu.musicTrackId == null) {
+            handlePlaylistRowAction(menu.playlistId, itemId)
+            return
+        }
+
+        when {
+            menu.musicTrackId == MUSIC_PLAYER_MENU_MARKER -> when (itemId) {
+                "music_background" -> musicPlayInBackground()
+                "music_playpause"  -> musicPlayPause()
+                "music_close"      -> stopAndCloseMusicPlayer()
+                "music_shuffle"    -> musicToggleShuffle()
+                "music_repeat"     -> musicCycleRepeat()
+            }
+            menu.musicTrackId != null -> handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId)
+            menu.mediaRootKind != null && menu.mediaRootUri != null ->
+                handleMediaRootAction(menu.mediaRootKind, menu.mediaRootUri, itemId)
+            menu.mediaRootKind == null && menu.mediaRootUri != null ->
+                handleRomRootAction(menu.mediaRootUri, itemId)
+            menu.mediaRootKind != null -> handleMediaFoldersAction(menu.mediaRootKind, itemId)
+            menu.musicFolderId != null -> handleMusicFolderAction(menu.musicFolderId, itemId)
+            menu.isAllGames -> when (itemId) {
+                "library_manager" -> _uiState.update { it.withSettingsOpen("settings_library") }
+                "import_pc_games" -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
+            }
+            menu.platformId != null -> if (itemId.startsWith(PLATFORM_EMU_PREFIX)) {
+                setPlatformEmulator(menu.platformId, itemId.removePrefix(PLATFORM_EMU_PREFIX))
+            } else when (itemId) {
+                "default_emulator" -> openDefaultEmulatorMenu(menu.platformId)
+                "emu_automatic"    -> setPlatformEmulator(menu.platformId, null)
+                "clear_emulator_overrides" -> clearPlatformEmulatorOverrides(menu.platformId)
+                "rename_card"      -> promptRenameCard(menu.platformId)
+                "card_rom_directory" -> openRomFolders()
+                "card_move_up"     -> moveCard(menu.platformId, up = true)
+                "card_move_down"   -> moveCard(menu.platformId, up = false)
+                "find_games"       -> openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
+                "import_pc_games"  -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
+                "scan_roms"        -> scanCard(menu.platformId)
+                "scrape_missing_artwork" -> scrapeMissingArtworkForPlatform(menu.platformId)
+                "update_metadata"        -> updatePlatformMetadata(menu.platformId)
+                "pin"              -> setCardPinned(menu.platformId, true)
+                "unpin"            -> setCardPinned(menu.platformId, false)
+                "library_manager"  -> _uiState.update { it.withSettingsOpen("settings_library") }
+                "hide"             -> hideCard(menu.platformId)
+                "remove"           -> removeCard(menu.platformId)
+            }
+            menu.gameId != null -> if (itemId.startsWith("emu_pick_")) {
+                val gid = menu.gameId
+                val choice = itemId.removePrefix("emu_pick_")
+                appAction {
+                    gameRepository.setPreferredEmulator(gid, choice.takeIf { it != "default" })
+                }
+            } else if (itemId.startsWith("detail_")) {
+                val gid = menu.gameId
+                when (val what = itemId.removePrefix("detail_")) {
+                    "title" -> viewModelScope.launch {
+                        val game = gameRepository.getById(gid) ?: return@launch
+                        closeContextMenu()
+                        _uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+                            title = "Edit Title",
+                            subtitle = "The name shown in the launcher and used when scraping artwork.",
+                            resetLabel = "Use Scanned Name",
+                            initialText = game.displayTitle,
+                            editTitleGameId = gid,
+                            placeholder = "Leave blank to use the scanned name",
+                        ))}
+                    }
+                    "note" -> viewModelScope.launch {
+                        val game = gameRepository.getById(gid) ?: return@launch
+                        closeContextMenu()
+                        _uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+                            title = "Edit Note",
+                            subtitle = "Kept with the game. Only you see it.",
+                            initialText = game.userNote.orEmpty(),
+                            editNoteGameId = gid,
+                            placeholder = "Anything you want to remember about this game",
+                        ))}
+                    }
+                    "ARTWORK"  -> openArtworkStudio(gid)
+                    "MANUAL"   -> openManualFor(gid)
+                    "METADATA" -> openMetadataPreviewFor(gid)
+                    "REFRESH"  -> fetchArtworkFor(gid)
+                    else -> Timber.w("Details row '$what' has no handler")
+                }
+            } else if (itemId == "shelf_favorite") {
+                val onShelf = menu.items.firstOrNull { it.action == "shelf_favorite" }?.checked == true
+                toggleGameFavorite(menu.gameId, !onShelf)
+            } else if (itemId.startsWith("pstate_")) {
+                val gid = menu.gameId
+                val choice = itemId.removePrefix("pstate_")
+                appAction {
+                    gameRepository.setPlayState(gid, PlayState.fromName(choice))
+                }
+            } else if (itemId.startsWith("disc_pick_")) {
+                val discId = itemId.removePrefix("disc_pick_").toLongOrNull()
+                if (discId != null) {
+                    menuSound.play(MenuSound.SELECT)
+                    appAction { gameRepository.setPreferredDisc(menu.gameId, discId) }
+                }
+            } else when (itemId) {
+
+                "play"                   -> launchGameDirectly(menu.gameId)
+                "game_info"              -> _uiState.value.currentItems.firstOrNull { it.gameId == menu.gameId }?.let(::onOpenGameInfo)
+                "choose_disc"             -> openDiscPickerMenu(menu.gameId)
+                "export_game"            -> exportGameFromMenu(menu.gameId)
+                "edit_app"               -> openAppDetail(menu.gameId, menu.packageName ?: return)
+                "favorite"               -> toggleGameFavorite(menu.gameId, true)
+                "unfavorite"             -> toggleGameFavorite(menu.gameId, false)
+
+                "remove_from_recent"     -> {
+                    val gid = menu.gameId
+                    appAction { gameRepository.clearLastPlayed(gid) }
+                }
+                "add_category"           -> menu.categoryContext?.let { openGameCategoryPicker(menu.gameId, it, "add") }
+                "move_category"          -> menu.categoryContext?.let { openGameCategoryPicker(menu.gameId, it, "move") }
+                "remove_category"        -> menu.categoryContext?.let { cat ->
+                    val gid = menu.gameId
+                    appAction {
+                        gameCategoryRepository.removeGameFromCategory(gid, cat)
+                        loadItemsForCategory(currentCategory())
+                    }
+                }
+                "pin_category"           -> menu.categoryContext?.let { cat ->
+                    val gid = menu.gameId
+                    appAction {
+                        gameCategoryRepository.pinGameInCategory(gid, cat, true)
+                        loadItemsForCategory(currentCategory())
+                    }
+                }
+                "unpin_category"         -> menu.categoryContext?.let { cat ->
+                    val gid = menu.gameId
+                    appAction {
+                        gameCategoryRepository.pinGameInCategory(gid, cat, false)
+                        loadItemsForCategory(currentCategory())
+                    }
+                }
+                "file_location"          -> showGameFileLocation(menu.gameId)
+                "change_emulator"        -> openEmulatorPickerMenu(menu.gameId)
+                "shelves"                -> openShelvesPickerMenu(menu.gameId)
+
+                "remove_game", "remove_missing" -> {
+                    val gid = menu.gameId
+                    appAction { removeGameFromLibrary(gid) }
+                }
+                "hide_here"              -> currentHideLocation()?.let { (type, id, label) ->
+                    persistHide(HiddenPlacement.gameKey(menu.gameId), menu.title, type, id, label)
+                }
+                "remove_app"             -> {
+                    val gid = menu.gameId
+                    appAction {
+                        gameRepository.delete(gid)
+                        memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
+                    }
+                }
+
+                "unmark_game"            -> {
+                    val gid = menu.gameId
+                    appAction {
+                        gameRepository.getById(gid)?.let { g ->
+                            gameRepository.upsert(g.copy(
+                                platformId  = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
+                                contentType = GameContentType.ANDROID_APP,
+                            ))
+                        }
+                        memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
+                        loadItemsForCategory(currentCategory())
+                    }
+                }
+            }
+            menu.packageName != null -> {
+                val pkg = menu.packageName
+                if (itemId.startsWith("pick_")) {
+                    val targetCategory = itemId.removePrefix("pick_")
+                    when (menu.pendingAppAction) {
+                        "move" -> appAction { appCategoryRepository.moveToCategory(pkg, targetCategory) }
+                        "add"  -> appAction { appCategoryRepository.addToCategory(pkg, targetCategory) }
+                    }
+                } else when (itemId) {
+                    "launch"    -> launchAppWithDisc(pkg, selectedItemArt())
+                    "edit_app"  -> openAppDetail(menu.gameId, pkg)
+
+                    "mark_game" -> appAction {
+                        val existing = gameRepository.getAppEntry(pkg)
+                        if (existing == null) {
+                            gameRepository.upsert(Game(
+                                title         = menu.title,
+                                platformId    = ANDROID_PLATFORM_ID,
+                                packageName   = pkg,
+                                isManualEntry = true,
+                                contentType   = GameContentType.GAME,
+                            ))
+                        } else {
+                            gameRepository.upsert(existing.copy(
+                                platformId  = ANDROID_PLATFORM_ID,
+                                contentType = GameContentType.GAME,
+                            ))
+                        }
+                        memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
+                    }
+                    "favorite"          -> addAppToFavorites(pkg, menu.title)
+                    "move"      -> openCategoryPicker(pkg, menu.categoryContext, "move")
+                    "add"       -> openCategoryPicker(pkg, menu.categoryContext, "add")
+                    "remove"    -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.removeFromCategory(pkg, cat) } }
+                    "pin"       -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.pinToCategory(pkg, cat) } }
+                    "hide_from_category" -> menu.categoryContext?.let { cat ->
+                        persistHide(HiddenPlacement.appKey(pkg), menu.title, HideLocationType.CATEGORY, cat, categoryDisplayName(cat))
+                    }
+
+                    "remove_from_recent" -> dismissAppFromRecents(pkg)
+                    "hide_everywhere" -> appAction { appCategoryRepository.setHidden(pkg, true) }
+                    "rename"    -> _uiState.update {
+                        it.copy(renameAppTarget = pkg, renameAppCurrent = menu.title, renameAppText = menu.title)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun appAction(block: suspend () -> Unit) {
+        viewModelScope.launch { block() }
+    }
+
+    private fun openShelvesPickerMenu(gameId: Long) {
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val current = PlayState.fromName(game.playState)
+            val items = buildList {
+                add(CrossbarContextMenuItem("shelf_favorite", "Favorites", checked = game.isFavorite))
+                PlayState.entries.forEach { state ->
+                    add(CrossbarContextMenuItem("pstate_${state.name}", state.label, checked = current == state))
+                }
+                add(CrossbarContextMenuItem("pstate_none", "Unmarked", checked = current == null))
+            }
+            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Shelves", rows = items), gameId = gameId))}
+        }
+    }
+
+    private fun openPlayStatePickerMenu(gameId: Long) {
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val current = PlayState.fromName(game.playState)
+            val items = buildList {
+                add(CrossbarContextMenuItem("pstate_none", "Unmarked", checked = current == null))
+                PlayState.entries.forEach { state ->
+                    add(CrossbarContextMenuItem("pstate_${state.name}", state.label, checked = current == state))
+                }
+            }
+            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Mark As", rows = items), gameId = gameId))}
+        }
+    }
+
+    private fun openEmulatorPickerMenu(gameId: Long) {
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val profiles = emulatorProfileRepository.getProfilesForPlatform(game.platformId)
+            val items = buildList {
+                add(CrossbarContextMenuItem("emu_pick_default", "Use Platform Default"))
+                profiles.forEach { add(CrossbarContextMenuItem("emu_pick_${it.id}", it.name)) }
+            }
+            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Choose Emulator", rows = items), gameId = gameId))}
+        }
+    }
+
+    private fun openDiscPickerMenu(gameId: Long) {
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val key = game.discSetKey ?: return@launch
+            val members = gameRepository.getDiscSetMembers(key)
+            if (members.size <= 1) return@launch
+            val preferredDiscId = members.firstOrNull { it.isDiscPrimary }?.id
+            val items = members
+                .sortedWith(compareBy<Game> { it.discNumber == null }.thenBy { it.discNumber ?: Int.MAX_VALUE }.thenBy { it.id })
+                .map { member ->
+                    CrossbarContextMenuItem(
+                        action = "disc_pick_${member.id}",
+                        label   = member.discNumber?.let { "Disc $it" } ?: "Playlist",
+                        checked = member.id == preferredDiscId,
+                    )
+                }
+            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Choose Disc", rows = items), gameId = gameId))}
+        }
+    }
+
+    private suspend fun removeGameFromLibrary(gameId: Long) {
+        val game = gameRepository.getById(gameId) ?: return
+        gameRepository.delete(gameId)
+        memoryCardRepository.recountGames(game.platformId)
+        loadItemsForCategory(currentCategory())
+    }
+
+    fun onConfirmAppRename(newLabel: String) {
+        val pkg = _uiState.value.renameAppTarget ?: return
+        viewModelScope.launch {
+            appCategoryRepository.rename(pkg, newLabel.ifBlank { null })
+            _uiState.update { it.copy(renameAppTarget = null, renameAppCurrent = null) }
+        }
+    }
+
+    fun onNamePromptTextChanged(text: String) {
+        _uiState.update { it.withNamePromptText(text) }
+    }
+
+    fun onCancelAppRename() {
+        _uiState.update { it.copy(renameAppTarget = null, renameAppCurrent = null) }
+    }
+
+    fun onConfirmCollectionName(name: String) {
+        val dialog = _uiState.value.collectionNameDialog ?: return
+        _uiState.update { it.copy(collectionNameDialog = null) }
+        if (dialog.quickSearch) { runQuickSearch(name); return }
+
+        if (dialog.editTitleGameId != null) {
+            viewModelScope.launch {
+                gameRepository.updateUserTitleOverride(dialog.editTitleGameId, name.trim().ifBlank { null })
+
+                loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
+            }
+            return
+        }
+        if (dialog.editNoteGameId != null) {
+            viewModelScope.launch {
+                gameRepository.updateNote(dialog.editNoteGameId, name.trim().ifBlank { null })
+            }
+            return
+        }
+        if (dialog.renameProfile) {
+            viewModelScope.launch { context.echoDataStore.edit { it[KEY_PROFILE_NAME] = name.trim().ifBlank { DEFAULT_PROFILE_NAME } } }
+            return
+        }
+        if (dialog.renameCardPlatformId != null) {
+            val trimmed = name.trim()
+            if (trimmed.isEmpty()) return
+            appAction { memoryCardRepository.rename(dialog.renameCardPlatformId, trimmed) }
+            return
+        }
+    }
+
+    private fun runQuickSearch(text: String) {
+        val intent = when (val action = quickSearchActionFor(text)) {
+            is QuickSearchAction.None -> return
+            is QuickSearchAction.Open ->
+                android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(action.url))
+            is QuickSearchAction.Search ->
+                android.content.Intent(android.content.Intent.ACTION_WEB_SEARCH)
+                    .putExtra(android.app.SearchManager.QUERY, action.query)
+        }.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        menuSound.play(MenuSound.LAUNCH)
+        try {
+            context.startActivity(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            Timber.w(e, "No app can handle Quick Search")
+            _uiState.update {
+                it.copy(
+                    infoDialog = InfoDialogState(
+                        title = "Nothing to search with",
+                        message = "No app on this device can open a web search. Install a browser, " +
+                            "then try again.",
+                    )
+                )
+            }
+        }
+    }
+
+    fun onCancelCollectionName() {
+        _uiState.update { it.copy(collectionNameDialog = null) }
+    }
+
+    private fun showGameFileLocation(gameId: Long) {
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val location = game.romPath
+                ?: game.packageName?.let { "Package: $it" }
+                ?: "No file location on record"
+            _uiState.update {
+                it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = location))
+            }
+        }
+    }
+
+    fun dismissInfoDialog() = _uiState.update { it.copy(infoDialog = null) }
+
+    private fun exportGameFromMenu(gameId: Long) {
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val report = runCatching { pcGameExporter.exportGame(gameId) }
+                .onFailure { Timber.e(it, "Export Game failed for gameId=$gameId") }
+                .getOrNull()
+            _uiState.update {
+                it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = report?.message ?: "Export failed — see the log."))
+            }
+        }
+    }
+
+    private fun normalizePcTitleKey(title: String): String =
+        title.lowercase().filter { it.isLetterOrDigit() }
+
+    private fun openContextMenuForFocusedItem() {
+        val state = _uiState.value
+        val item = state.currentItems.getOrNull(state.selectedItemIndex)
+        when {
+            item?.mediaRootUri != null && item.mediaRootKind == null -> openRomRootContextMenu(item)
+            item?.mediaRootUri != null -> openMediaRootContextMenu(item)
+            item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
+                openMediaFoldersContextMenu(item)
+            item != null && openMusicContextMenu(item) -> Unit
+            item != null && openVideoContextMenu(item) -> Unit
+            item != null && openBookContextMenu(item) -> Unit
+            item != null && openPhotoContextMenu(item) -> Unit
+            item?.gameId != null -> openGameContextMenu(item)
+            item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu()
+            item?.platformId != null -> openPlatformContextMenu(item.platformId)
+            item?.packageName != null -> openAppContextMenu(item)
+        }
+    }
+
+    private fun pillPressHandled(action: GamepadAction, state: CrossbarUiState): Boolean {
+        val pills = state.focusedPills()
+        return when (val nav = pillNav(action, state.activePillIndex(), pills.size)) {
+            is PillNav.Move -> {
+                val item = state.currentItems.getOrNull(state.selectedItemIndex) ?: return false
+                menuSound.play(MenuSound.SCROLL)
+                _uiState.update { it.copy(pillCursor = PillCursor(item.id, nav.index)) }
+                true
+            }
+            PillNav.ExitAndPass -> {
+                _uiState.update { it.copy(pillCursor = null) }
+                false
+            }
+            PillNav.Pass -> false
+        }
+    }
+
+    private fun observeAndroidNotices() {
+        viewModelScope.launch {
+            combine(
+                AndroidNotifications.active,
+                _uiState.map { it.interfaceChoices.showDeviceNotifications }.distinctUntilChanged(),
+            ) { notices, show -> if (show) notices else emptyList() }
+                .collect { notices ->
+                    _uiState.update { it.copy(androidNotices = notices) }
+                }
+        }
+        viewModelScope.launch {
+            combine(
+                AndroidNotifications.playback,
+                _uiState.map { it.interfaceChoices.showDeviceNotifications }.distinctUntilChanged(),
+            ) { playback, show -> playback?.takeIf { show } }
+                .collect { playback ->
+                    _uiState.update { it.copy(externalPlayback = playback) }
+                }
+        }
+    }
+
+    private fun observeShelfCounts() {
+        viewModelScope.launch {
+            val marks = PlayState.entries
+
+            combine(
+                marks.map { gameRepository.observeByPlayState(it) } +
+                    gameRepository.observeRecentlyAdded() +
+                    gameRepository.observeFavorites(),
+            ) { lists ->
+                val byState = marks.mapIndexed { i, state -> state to lists[i] }.toMap()
+                Triple(byState, lists[marks.size], lists[marks.size + 1])
+            }.collect { (byState, recentlyAdded, favorites) ->
+                _uiState.update { state ->
+                    state.copy(
+                        playStateCounts = byState.mapValues { (_, games) -> games.size },
+                        recentlyAddedCount = recentlyAdded.size,
+
+                        shelfFanCovers = buildMap {
+                            put(SHELF_FAVORITES_ID, fanCoversOf(favorites))
+                            put(SHELF_RECENT_ID, fanCoversOf(recentlyAdded))
+                            byState.forEach { (mark, games) ->
+                                put("$SHELF_MARKED_PREFIX${mark.name}", fanCoversOf(games))
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    private fun observeRecentTop() {
+        viewModelScope.launch {
+            combine(
+                gameRepository.observeRecentlyPlayed(RECENTLY_PLAYED_LIMIT),
+                musicRepository.observeRecentlyPlayedTracks(RECENTLY_PLAYED_LIMIT),
+                bookRepository.observeRecentlyOpenedBooks(RECENTLY_PLAYED_LIMIT),
+                videoRepository.observeRecentlyWatched(),
+                recentAppRows(),
+            ) { games, tracks, books, videos, appRows ->
+                val visibleGames = games.notHiddenAt(HideLocationType.ALL_GAMES)
+                val rows = listOf(
+                    visibleGames.map { it.lastPlayedAt ?: 0L }.zip(visibleGames.toCrossbarItems()),
+                    tracks.recentMusicRows(),
+                    books.map { it.lastOpenedAt ?: 0L }.zip(bookItems(books)),
+                    videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
+                    appRows,
+                )
+                val top = mergeRecents(
+                    games  = rows[0],
+                    music  = rows[1],
+                    books  = rows[2],
+                    videos = rows[3],
+                    apps   = rows[4],
+                    filter = RecentFilter.ALL,
+                    limit  = RECENTLY_PLAYED_LIMIT,
+                ).firstOrNull { recentLaunchFor(it) != null }
+                top to top?.let { t -> rows.flatten().firstOrNull { it.second.id == t.id }?.first?.takeIf { it > 0L } }
+            }.collect { (top, at) ->
+                _uiState.update { it.copy(recentTop = top, recentTopAt = at) }
+            }
+        }
+    }
+
+    fun launchRecentTop() {
+        val item = _uiState.value.recentTop ?: return
+        _uiState.update { it.copy(activeAppDrawerFilter = null, pendingDrawerAction = null) }
+
+        when (recentLaunchFor(item)) {
+            RecentLaunch.GAME  -> item.gameId?.let { launchGameDirectly(it) }
+            RecentLaunch.STORED_INTENT -> item.launchIntentUri?.let { launchStoredIntent(it, item.title) }
+            RecentLaunch.SHORTCUT -> {
+                val pkg = item.packageName ?: return
+                val shortcut = item.shortcutId ?: return
+                launchHarvestedShortcut(pkg, shortcut)
+            }
+            RecentLaunch.APP   -> item.packageName?.let { launchAppWithDisc(it, item.shelfCoverArt) }
+            RecentLaunch.VIDEO -> {
+                menuSound.play(MenuSound.SELECT)
+                _uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
+            }
+            RecentLaunch.BOOK  -> {
+                menuSound.play(MenuSound.SELECT)
+                openBook(item.id.removePrefix("book_"))
+            }
+            RecentLaunch.TRACK -> {
+                menuSound.play(MenuSound.SELECT)
+                openMusicPlayerForItem(item)
+            }
+            RecentLaunch.ALBUM -> item.musicGroupKey?.let {
+                menuSound.play(MenuSound.SELECT)
+                openMusicBrowser(MusicBrowserView.Album(item.title, it))
+            }
+            null -> Unit
+        }
+    }
+
+    fun toggleNotifications() {
+        menuSound.play(if (_uiState.value.notificationsOpen) MenuSound.BACK else MenuSound.SYSTEM_BROWSE)
+        _uiState.update {
+            it.copy(
+                notificationsOpen = !it.notificationsOpen,
+                panelTab = PanelTab.NOTIFICATIONS,
+                noticeCursor = 0,
+                panelQuick = QuickSetting.WAVE,
+                panelProfile = ProfileFocus(),
+                panelChip = 0,
+                panelSetting = 0,
+            )
+        }
+    }
+
+    fun onNotificationsSwipedOpen() {
+        if (!_uiState.value.notificationsOpen) toggleNotifications()
+    }
+
+    fun onNotificationsSwipedClosed() {
+        if (_uiState.value.notificationsOpen) toggleNotifications()
+    }
+
+    private fun movePanelCursor(move: PanelMove) {
+        val s = _uiState.value
+        val before = PanelCursor(s.panelTab, s.noticeCursor, PANEL_QUICK_SETTINGS.indexOf(s.panelQuick).coerceAtLeast(0), s.panelChip, s.panelSetting, s.panelProfile)
+        val after = movePanel(
+            before, move,
+            rows = s.noticeFocusables.size,
+            quicks = PANEL_QUICK_SETTINGS.size,
+            chips = s.libraryChips.size,
+            recents = s.profileData.recent.size,
+        )
+        if (after == before) {
+            gamepadInputHandler.cancelRepeat()
+            return
+        }
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update {
+            it.copy(
+                panelTab = after.tab,
+                noticeCursor = after.notice,
+                panelQuick = PANEL_QUICK_SETTINGS[after.quick],
+                panelChip = after.chip,
+                panelSetting = after.setting,
+                panelProfile = after.profile,
+            )
+        }
+    }
+
+    fun onPanelSettingTapped(index: Int) {
+        _uiState.update { it.copy(panelTab = PanelTab.SETTINGS, panelSetting = index) }
+        openPanelSetting(index)
+    }
+
+    private fun openPanelSetting(index: Int) {
+        val screenId = panelSettingScreen(index) ?: return
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update {
+            it.withSettingsOpen(screenId).copy(
+                notificationsOpen = false,
+                settingsReturnTo = null,
+                settingsFromPanel = true,
+            )
+        }
+    }
+
+    private fun returnToPanelSettings() {
+        _uiState.update { it.withSettingsClosed().copy(notificationsOpen = true, panelTab = PanelTab.SETTINGS) }
+    }
+
+    fun onPanelTabTapped(tab: PanelTab) {
+        if (_uiState.value.panelTab == tab) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(panelTab = tab) }
+    }
+
+    fun toggleQuickSetting(setting: QuickSetting, chip: Int = _uiState.value.panelChip) {
+        menuSound.play(MenuSound.SELECT)
+        val s = _uiState.value
+        viewModelScope.launch {
+            when (setting) {
+                QuickSetting.WAVE -> context.echoDataStore.edit { prefs ->
+                    prefs[KEY_WAVE_STYLE] = (if (s.waveStyle == WaveStyle.OFF) waveStyleBeforeOff else WaveStyle.OFF).name
+                    if (s.waveStyle != WaveStyle.OFF) waveStyleBeforeOff = s.waveStyle
+                }
+                QuickSetting.BACKDROP -> iconDisplayPreferences.setItemBackdrop(!s.itemBackdropEnabled)
+                QuickSetting.RECENT_APPS -> context.echoDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
+                QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
+                QuickSetting.ANDROID_SETTINGS -> {
+                    closeNotifications()
+                    runCatching {
+                        context.startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }.onFailure { Timber.w(it, "Could not open device settings") }
+                }
+            }
+        }
+    }
+
+    fun onQuickSettingTapped(setting: QuickSetting, chip: Int = 0) {
+        _uiState.update {
+            it.copy(
+                panelTab = if (setting == QuickSetting.LIBRARIES) PanelTab.LIBRARIES else PanelTab.QUICK,
+                panelQuick = if (setting == QuickSetting.LIBRARIES) it.panelQuick else setting,
+                panelChip = chip,
+            )
+        }
+        toggleQuickSetting(setting, chip)
+    }
+
+    private var waveStyleBeforeOff = WaveStyle.ANIMATED
+
+    private fun observeLibraryChips() {
+        viewModelScope.launch {
+            com.echo.core.ui.notification.SystemToasts.recent.collect { recent ->
+                _uiState.update { it.copy(launcherNotices = recent) }
+            }
+        }
+        viewModelScope.launch {
+            categoryRepository.observeAll().collect { all ->
+                val chips = LIBRARY_CHIP_IDS.mapNotNull { id ->
+                    all.firstOrNull { it.id == id }?.let { LibraryChip(it.id, it.name, it.isVisible) }
+                }
+                _uiState.update { it.copy(libraryChips = chips, panelChip = it.panelChip.coerceIn(0, (chips.size - 1).coerceAtLeast(0))) }
+            }
+        }
+    }
+
+    fun closeNotifications() {
+        _uiState.update { it.copy(notificationsOpen = false) }
+    }
+
+    private fun runStageButton(button: GamepadAction) {
+        val s = _uiState.value
+        stageActions(s.panelStage(), s.clearableNoticeCount)
+            .firstOrNull { it.button == button }
+            ?.let { runStageCommand(it.command) }
+    }
+
+    fun onStageActionTapped(command: StageCommand) = runStageCommand(command)
+
+    fun onPanelRowTapped(focus: NoticeFocus) {
+        val s = _uiState.value
+        val index = s.noticeFocusables.indexOf(focus)
+        if (index < 0) return
+        if (s.panelTab == PanelTab.NOTIFICATIONS && s.focusedNotice == focus) {
+            runStageButton(GamepadAction.SELECT)
+            return
+        }
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(panelTab = PanelTab.NOTIFICATIONS, noticeCursor = index) }
+    }
+
+    private fun runStageCommand(command: StageCommand) {
+        val s = _uiState.value
+        val focus = s.focusedNotice
+        val external = (s.panelStage() as? PanelStage.Music)?.packageName
+        when (command) {
+            StageCommand.PLAY_PAUSE -> if (external != null) AndroidNotifications.playPause() else musicPlayer.playPause()
+            StageCommand.NEXT_TRACK -> if (external != null) AndroidNotifications.skipNext() else musicPlayer.next()
+            StageCommand.OPEN_APP -> {
+                val pkg = external ?: return
+                menuSound.play(MenuSound.SELECT)
+                closeNotifications()
+                launchAppWithDisc(pkg, (s.panelStage() as? PanelStage.Music)?.art)
+            }
+            StageCommand.OPEN_MUSIC -> {
+                menuSound.play(MenuSound.SELECT)
+                closeNotifications()
+                if (s.musicPlayback.track != null) _uiState.update { it.copy(musicPlayerVisible = true) }
+            }
+            StageCommand.LAUNCH_RECENT -> {
+                closeNotifications()
+                launchRecentTop()
+            }
+            StageCommand.OPEN_NOTICE -> {
+                val key = (focus as? NoticeFocus.Notice)?.key ?: return
+                openAndroidNotice(key)
+                closeNotifications()
+            }
+            StageCommand.DISMISS -> {
+                menuSound.play(MenuSound.BACK)
+                when (focus) {
+                    is NoticeFocus.Notice -> AndroidNotifications.dismiss(focus.key)
+                    is NoticeFocus.Launcher -> com.echo.core.ui.notification.SystemToasts.dismiss(focus.id)
+                    else -> Unit
+                }
+            }
+            StageCommand.CLEAR_ALL -> {
+                menuSound.play(MenuSound.BACK)
+                s.androidNotices.filter { it.canDismiss }.forEach { AndroidNotifications.dismiss(it.key) }
+                com.echo.core.ui.notification.SystemToasts.clear()
+            }
+        }
+    }
+
+    private val MENU_RAISE_TIMEOUT_MS = 500L
+
+    fun onPillActivated(pillId: String) {
+        viewModelScope.launch {
+            openContextMenuForFocusedItem()
+
+            val menu = withTimeoutOrNull(MENU_RAISE_TIMEOUT_MS) {
+                uiState.first { it.activeContextMenu != null }.activeContextMenu
+            }
+            if (menu == null) {
+                Timber.w("Pill '$pillId' pressed on a row that raised no menu")
+                return@launch
+            }
+
+            if (menu.items.none { it.action == pillId }) {
+                Timber.w("Pill '$pillId' is not offered by the focused row's menu")
+                closeContextMenu()
+                return@launch
+            }
+            activateContextMenuItem(pillId)
+        }
+    }
+
+    fun onContextMenuItemActivatedAt(index: Int) {
+        val state = _uiState.value
+        val menu = state.activeContextMenu ?: return
+
+        when (val chosen = state.menuWithPills()?.chose(index)) {
+            is MenuSelect.Replace -> _uiState.update { it.copy(activeContextMenu = menu.copy(state = chosen.state)) }
+            is MenuSelect.Run -> {
+                _uiState.update { it.copy(activeContextMenu = menu.withSelected(index)) }
+                activateContextMenuItem(chosen.action)
+            }
+            else -> Unit
+        }
+    }
+
+    fun closeContextMenu() {
+        _uiState.update { it.copy(activeContextMenu = null) }
+    }
+
+    fun popContextMenu() {
+        _uiState.update { s ->
+            val menu = s.activeContextMenu ?: return@update s
+            s.copy(activeContextMenu = menu.state.parent?.let { menu.copy(state = it) })
+        }
+    }
+
+    private fun openAppPicker(target: AppPickerTarget, title: String) {
+        viewModelScope.launch {
+            val installed = appCategoryRepository.allInstalledApps()
+
+            val entries = installed.map {
+                AppPickerEntry(packageName = it.packageName, label = it.label)
+            }
+            val membership: Set<String> = when (target) {
+                is AppPickerTarget.AndroidGames ->
+                    gameRepository.observeByPlatform(target.platformId).first()
+                        .mapNotNull { it.packageName }
+                        .toSet()
+                is AppPickerTarget.CategoryShortcuts ->
+                    appCategoryRepository.packagesIn(target.categoryId)
+            }
+            _uiState.update {
+                it.copy(appPicker = AppPickerState(
+                    title           = title,
+                    target          = target,
+                    apps            = entries,
+                    selected        = membership,
+                    initialSelected = membership,
+                ))
+            }
+        }
+    }
+
+    fun onAppPickerColumnsMeasured(columns: Int) {
+        if (columns <= 0) return
+        _uiState.update {
+            val picker = it.appPicker ?: return@update it
+            if (picker.columns == columns) it else it.copy(appPicker = picker.copy(columns = columns))
+        }
+    }
+
+    fun onAppPickerTileTapped(index: Int) {
+        markTouchInput()
+
+        if (_uiState.value.appPicker?.confirmingRemovals == true) return
+        _uiState.update {
+            val picker = it.appPicker ?: return@update it
+            val visible = picker.visibleApps()
+            val app = visible.getOrNull(index) ?: return@update it
+            it.copy(appPicker = picker.copy(focusedIndex = index, usingTouch = true)
+                .toggle(app.packageName))
+        }
+    }
+
+    fun onAppPickerTouchBrowse(index: Int) {
+        markTouchInput()
+        if (_uiState.value.appPicker?.confirmingRemovals == true) return
+        _uiState.update {
+            val picker = it.appPicker ?: return@update it
+            val lastIndex = (picker.visibleApps().size - 1).coerceAtLeast(0)
+            it.copy(appPicker = picker.copy(
+                focusedIndex = index.coerceIn(0, lastIndex),
+                usingTouch = true,
+            ))
+        }
+    }
+
+    fun onAppPickerHeaderBack() {
+        markTouchInput()
+        handleAppPickerBack()
+    }
+
+    fun onAppPickerConfirmRemoval() {
+        markTouchInput()
+        commitAppPicker()
+    }
+
+    fun onAppPickerCancelRemoval() {
+        markTouchInput()
+        cancelConfirm()
+    }
+
+    fun onAppPickerApply() {
+        markTouchInput()
+        requestApplyAppPicker()
+    }
+
+    fun onAppPickerSearchToggle(active: Boolean) {
+        markTouchInput()
+        _uiState.update {
+            val picker = it.appPicker ?: return@update it
+            it.copy(appPicker = (if (active) picker.copy(searchActive = true) else closeAppPickerSearch(picker)).clampFocus())
+        }
+    }
+
+    fun onAppPickerQueryChange(query: String) {
+        _uiState.update {
+            val picker = it.appPicker ?: return@update it
+
+            it.copy(appPicker = picker.copy(query = query).clampFocus())
+        }
+    }
+
+    private fun closeAppPickerSearch(picker: AppPickerState): AppPickerState =
+        picker.copy(searchActive = false, query = "")
+
+    fun onAppPickerSearchDone() {
+    }
+
+    private fun moveAppPicker(action: GamepadAction) {
+        _uiState.update { state ->
+            val picker = state.appPicker ?: return@update state
+
+            state.copy(appPicker = if (picker.confirmingRemovals) picker.moveConfirm(action) else picker.move(action))
+        }
+    }
+
+    private fun toggleFocusedApp() {
+        _uiState.update {
+            val picker = it.appPicker ?: return@update it
+            val app = picker.visibleApps().getOrNull(picker.focusedIndex) ?: return@update it
+            it.copy(appPicker = picker.toggle(app.packageName))
+        }
+    }
+
+    private fun cancelConfirm() {
+        _uiState.update {
+            val picker = it.appPicker ?: return@update it
+            it.copy(appPicker = picker.cancelConfirm())
+        }
+    }
+
+    fun closeAppPicker() {
+        _uiState.update { it.copy(appPicker = null) }
+    }
+
+    private fun requestApplyAppPicker() {
+        val picker = _uiState.value.appPicker ?: return
+        val adds = picker.pendingAdds()
+        val removals = picker.pendingRemovals()
+        if (adds.isEmpty() && removals.isEmpty()) {
+            closeAppPicker()
+            return
+        }
+        if (removals.isNotEmpty() && !picker.confirmingRemovals) {
+            _uiState.update { state ->
+                state.copy(appPicker = state.appPicker?.openConfirm())
+            }
+            return
+        }
+        commitAppPicker()
+    }
+
+    private fun commitAppPicker() {
+        val picker = _uiState.value.appPicker ?: return
+        val adds = picker.pendingAdds()
+        val removals = picker.pendingRemovals()
+        if (adds.isEmpty() && removals.isEmpty()) {
+            closeAppPicker()
+            return
+        }
+
+        menuSound.play(MenuSound.CONFIRM)
+        val target = picker.target
+        closeAppPicker()
+
+        viewModelScope.launch {
+            when (target) {
+                is AppPickerTarget.AndroidGames -> {
+                    if (adds.isNotEmpty()) importAndroidGames(target.platformId, adds)
+                    if (removals.isNotEmpty()) removeAndroidGames(target.platformId, removals)
+
+                    memoryCardRepository.recountGames(target.platformId)
+                }
+                is AppPickerTarget.CategoryShortcuts -> {
+                    adds.forEach { pkg -> appCategoryRepository.addToCategory(pkg, target.categoryId) }
+                    removals.forEach { pkg -> appCategoryRepository.removeFromCategory(pkg, target.categoryId) }
+                }
+            }
+        }
+    }
+
+    private suspend fun removeAndroidGames(platformId: String, packages: Set<String>) {
+        packages.forEach { pkg ->
+            val entry = gameRepository.getAppEntry(pkg) ?: return@forEach
+            if (entry.platformId != platformId) return@forEach
+            gameRepository.delete(entry.id)
+        }
+        Timber.i("Android library removal: ${packages.size} app(s) removed from $platformId")
+    }
+
+    private fun handleAppPickerBack() {
+        val picker = _uiState.value.appPicker ?: return
+        when {
+            picker.searchActive -> _uiState.update { state ->
+                state.copy(appPicker = state.appPicker?.let(::closeAppPickerSearch)?.clampFocus())
+            }
+            picker.confirmingRemovals -> cancelConfirm()
+            else -> closeAppPicker()
+        }
+    }
+
+    fun openGamePicker(categoryId: String) {
+        _uiState.update { it.copy(gamePickerCategoryId = categoryId) }
+    }
+
+    fun closeGamePicker() {
+        _uiState.update { it.copy(gamePickerCategoryId = null, pendingGamePickerAction = null) }
+    }
+
+    fun consumeGamePickerAction() {
+        _uiState.update { it.copy(pendingGamePickerAction = null) }
+    }
+
+    fun confirmGamePicker(selectedGameIds: Set<Long>) {
+        val categoryId = _uiState.value.gamePickerCategoryId ?: return
+        menuSound.play(MenuSound.CONFIRM)
+        closeGamePicker()
+
+        viewModelScope.launch {
+            selectedGameIds.forEach { gameId ->
+                gameCategoryRepository.addGameToCategory(gameId, categoryId)
+            }
+
+            val category = _uiState.value.categories.getOrNull(_uiState.value.selectedCategoryIndex)
+            if (category?.id == categoryId) {
+                loadItemsForCategory(category)
+            }
+        }
+    }
+
+    private fun openGameCategoryPicker(gameId: Long, fromCategoryId: String, action: String) {
+        val items = buildList {
+            _uiState.value.categories
+                .filter { it.isGamingCategory && it.id != fromCategoryId && it.id != BuiltInCategory.GAMES }
+                .forEach { cat ->
+                    add(CrossbarContextMenuItem("cat_${cat.id}", cat.name))
+                }
+        }
+
+        if (items.isEmpty()) return
+
+        _uiState.update { it.copy(
+            activeContextMenu = CrossbarContextMenu(state = MenuState(title = if (action == "move") "Move Game To" else "Add Game To", rows = items), gameId = gameId, categoryContext = fromCategoryId, pendingAppAction = action)
+        )}
+    }
+
+    private suspend fun importAndroidGames(platformId: String, packages: Set<String>) {
+        val labels = appCategoryRepository.allInstalledApps().associateBy { it.packageName }
+
+        packages.forEach { pkg ->
+
+            val existing = gameRepository.getAppEntry(pkg)
+            when {
+                existing == null -> gameRepository.upsert(
+                    com.echo.core.domain.model.Game(
+                        title         = labels[pkg]?.label ?: pkg,
+                        platformId    = platformId,
+                        packageName   = pkg,
+                        isManualEntry = true,
+
+                        contentType   = com.echo.core.domain.model.GameContentType.GAME,
+                    )
+                )
+
+                existing.platformId != platformId ||
+                    existing.contentType != com.echo.core.domain.model.GameContentType.GAME ->
+                    gameRepository.upsert(existing.copy(
+                        platformId  = platformId,
+                        contentType = com.echo.core.domain.model.GameContentType.GAME,
+                    ))
+            }
+        }
+        memoryCardRepository.recountGames(platformId)
+        Timber.i("Android library import: ${packages.size} app(s) selected for $platformId")
+    }
+
+    fun onPlatformLongPress(categoryIndex: Int) {
+        _uiState.value.currentItems.getOrNull(categoryIndex)?.platformId?.let(::openPlatformContextMenu)
+    }
+
+    private fun scanCard(platformId: String) {
+        viewModelScope.launch {
+            val card = memoryCardRepository.getById(platformId) ?: return@launch
+            val taskId = "scan_$platformId"
+
+            if (platformId == WINDOWS_PLATFORM_ID) {
+                addBackgroundTask(BackgroundTaskInfo(id = taskId, label = "Scanning ${card.displayName}…", progress = null))
+                val report = runCatching { pcGameScanner.scan() }
+                    .onFailure { Timber.e(it, "PC scan failed") }
+                    .getOrNull()
+                if (report == null) {
+                    failBackgroundTask(taskId, "PC scan failed")
+                } else {
+                    memoryCardRepository.recordScan(platformId, System.currentTimeMillis())
+                    completeBackgroundTask(
+                        taskId,
+                        if (report.newGames == 0) "No new PC games found" else report.message,
+                    )
+                }
+                return@launch
+            }
+
+            addBackgroundTask(BackgroundTaskInfo(id = taskId, label = "Scanning ${card.displayName}…", progress = null))
+            val outcome = libraryScanner.scanPlatform(platformId, removeMissing = true)
+            when (outcome.status) {
+                ScanStatus.COMPLETED -> completeBackgroundTask(
+                    taskId,
+                    scanOutcomeMessage(outcome, removeMissing = true),
+                )
+                else -> failBackgroundTask(
+                    taskId,
+                    scanOutcomeMessage(outcome, removeMissing = true),
+                )
+            }
+        }
+    }
+
+    private fun cardName(platformId: String): String =
+        knownPlatformName(platformId) ?: platformId.uppercase()
+
+    private fun scrapeMissingArtworkForPlatform(platformId: String) {
+        viewModelScope.launch {
+            val taskId = "scrape_missing_$platformId"
+            addBackgroundTask(BackgroundTaskInfo(id = taskId, label = "Scraping missing artwork: ${cardName(platformId)}", progress = 0f))
+            runCatching {
+                artworkRepository.scrapeMissingForPlatform(platformId) { p ->
+                    updateBackgroundTask(taskId, p.current.toFloat() / p.total.coerceAtLeast(1))
+                }
+            }.onSuccess { result ->
+                completeBackgroundTask(taskId,
+                    if (result.total == 0) "No games are missing artwork"
+                    else "${result.succeeded} of ${result.total} game(s) updated"
+                )
+                loadItemsForCategory(currentCategory())
+            }.onFailure {
+                if (it is kotlinx.coroutines.CancellationException) throw it
+                failBackgroundTask(taskId, "Artwork scrape failed")
+            }
+        }
+    }
+
+    private fun updatePlatformMetadata(platformId: String) {
+        viewModelScope.launch {
+            val taskId = "update_metadata_$platformId"
+            addBackgroundTask(BackgroundTaskInfo(id = taskId, label = "Updating metadata: ${cardName(platformId)}", progress = 0f))
+            runCatching {
+                artworkRepository.updateMetadataForPlatform(platformId) { p ->
+                    updateBackgroundTask(taskId, p.current.toFloat() / p.total.coerceAtLeast(1))
+                }
+            }.onSuccess { result ->
+                completeBackgroundTask(taskId,
+                    if (result.total == 0) "No games on this card"
+                    else "${result.succeeded} of ${result.total} game(s) updated"
+                )
+                loadItemsForCategory(currentCategory())
+            }.onFailure {
+                if (it is kotlinx.coroutines.CancellationException) throw it
+                failBackgroundTask(taskId, "Metadata update failed")
+            }
+        }
+    }
+
+    private fun setCardPinned(platformId: String, pinned: Boolean) {
+        viewModelScope.launch { memoryCardRepository.setPinned(platformId, pinned) }
+    }
+
+    private fun hideCard(platformId: String) {
+        viewModelScope.launch {
+            memoryCardRepository.setEnabled(platformId, false)
+            if (_uiState.value.selectedPlatformId == platformId) closePlatformFolder()
+        }
+    }
+
+    private fun removeCard(platformId: String) {
+        viewModelScope.launch {
+            memoryCardRepository.remove(platformId)
+            if (_uiState.value.selectedPlatformId == platformId) closePlatformFolder()
+        }
+    }
+
+    private fun toggleGameFavorite(gameId: Long, isFavorite: Boolean) {
+        viewModelScope.launch {
+            gameRepository.setFavorite(gameId, isFavorite)
+        }
+    }
+
+    private val taskLabels = mutableMapOf<String, String>()
+
+    private fun addBackgroundTask(task: BackgroundTaskInfo) {
+        taskLabels[task.id] = task.label
+        taskNotifier.running(task.id, task.label, task.progress)
+    }
+
+    private fun updateBackgroundTask(id: String, progress: Float) {
+        val label = taskLabels[id] ?: return
+        taskNotifier.running(id, label, progress.coerceIn(0f, 1f))
+    }
+
+    private fun completeBackgroundTask(id: String, message: String? = null) {
+        val label = taskLabels.remove(id) ?: "Done"
+        taskNotifier.complete(id, label, message)
+    }
+
+    private fun failBackgroundTask(id: String, message: String) {
+        val label = taskLabels.remove(id) ?: "Task failed"
+        taskNotifier.failed(id, label, message)
+    }
+
+    fun onCategorySelected(index: Int) {
+        if (index != _uiState.value.selectedCategoryIndex) menuSound.play(MenuSound.SYSTEM_BROWSE)
+        val category = _uiState.value.categories.getOrNull(index)
+
+        _uiState.update { it.copy(selectedCategoryIndex = index, selectedItemIndex = 0, inColumn = false, pillCursor = null, recentRailVisible = false, selectedPlatformId = null, musicNav = MusicNav.Root, videoNav = VideoNav.Root, photoNav = PhotoNav.Root, romFoldersOpen = false, activeAppDrawerFilter = null) }
+        tintWaveForCategory(category)
+        loadItemsForCategory(category)
+    }
+
+    fun onCategoryTapped(index: Int) {
+        markTouchInput()
+        val s = _uiState.value
+        if (s.hasBlockingOverlay || s.isInSubItem) return
+        onCategorySelected(index)
+    }
+
+    fun stepCategory(direction: Int) {
+        markTouchInput()
+        val s = _uiState.value
+        if (s.hasBlockingOverlay) return
+
+        if (s.isInSubItem) return
+        val next = (s.selectedCategoryIndex + direction)
+            .coerceIn(0, (s.categories.size - 1).coerceAtLeast(0))
+        if (next != s.selectedCategoryIndex) onCategorySelected(next)
+    }
+
+    private fun CrossbarUiState.stepToReachableCategory(delta: Int): Int {
+        var next = selectedCategoryIndex + delta
+        while (next in categories.indices) {
+            if (categoryReachable(categories[next])) return next
+            next += delta
+        }
+        return selectedCategoryIndex
+    }
+
+    private fun moveItemCursor(delta: Int): Boolean {
+        val s = _uiState.value
+        if (s.hasBlockingOverlay || delta == 0) return false
+        val max = (s.currentItems.size - 1).coerceAtLeast(0)
+        val next = (s.selectedItemIndex + delta).coerceIn(0, max)
+        if (next == s.selectedItemIndex) return false
+        _uiState.update {
+            it.copy(
+                selectedItemIndex = next,
+                inColumn = true,
+                recentRailVisible = it.recentRailVisible || it.onLastPlayedHome,
+            )
+        }
+        menuSound.play(MenuSound.SCROLL)
+        return true
+    }
+
+    fun stepItem(steps: Int) {
+        markTouchInput()
+        moveItemCursor(steps)
+    }
+
+    fun onRecentCardTap(index: Int) {
+        markTouchInput()
+        val s = _uiState.value
+        if (s.hasBlockingOverlay || index !in s.currentItems.indices) return
+        onItemSelected(index)
+    }
+
+    fun onItemTap(index: Int) {
+        markTouchInput()
+        val s = _uiState.value
+        if (s.hasBlockingOverlay) return
+        if (index == s.selectedItemIndex) {
+            activateSelected()
+        } else {
+            val clamped = index.coerceIn(0, (s.currentItems.size - 1).coerceAtLeast(0))
+            if (clamped != s.selectedItemIndex) {
+                _uiState.update { it.copy(selectedItemIndex = clamped, inColumn = true) }
+                menuSound.play(MenuSound.SCROLL)
+            }
+        }
+    }
+
+    private fun activateSelected() {
+        onItemSelected(_uiState.value.selectedItemIndex)
+    }
+
+    fun markTouchInput() {
+        lastInteractionMs = SystemClock.elapsedRealtime()
+
+        _uiState.update {
+            if (!it.hintsAutoHide) {
+                it.copy(lastInputWasTouch = true).withHintsShownNow()
+            } else if (it.lastInputWasTouch &&
+                !it.showContextMenuHint &&
+                !it.showSettingsHint
+            ) it
+            else it.copy(
+                lastInputWasTouch = true,
+                showContextMenuHint = false,
+                showSettingsHint = false,
+            )
+        }
+    }
+
+    private fun dispatchCategorySelection(item: CrossbarItem): Boolean {
+        romFolderSelection(item)?.let { return it }
+        mediaRootSelection(item)?.let { return it }
+        return when (item.menuHostCategory(currentCategory()?.id)) {
+            BuiltInCategory.MUSIC   -> handleMusicSelection(item)
+            BuiltInCategory.VIDEO   -> handleVideoSelection(item)
+            BuiltInCategory.PHOTO   -> handlePhotoSelection(item)
+            BuiltInCategory.LIBRARY -> handleBooksSelection(item)
+            else -> false
+        }
+    }
+
+    private fun romFolderSelection(item: CrossbarItem): Boolean? = when {
+        item.id == ROM_FOLDERS_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT); openRomFolders(); true
+        }
+        item.id == ADD_ROM_ROOT_ITEM_ID -> {
+            menuSound.play(MenuSound.SELECT); requestRomRootPick(); true
+        }
+        item.id.startsWith("romroot_") -> {
+            menuSound.play(MenuSound.SELECT); openRomRootContextMenu(item); true
+        }
+        else -> null
+    }
+
+    private fun mediaRootSelection(item: CrossbarItem): Boolean? {
+        val kind = item.mediaRootKind ?: return null
+        return when {
+            item.id == mediaFoldersItemId(kind) -> {
+                menuSound.play(MenuSound.SELECT); openMediaFolders(kind); true
+            }
+            item.id == addMediaRootItemId(kind) -> {
+                menuSound.play(MenuSound.SELECT); requestMediaRootPick(kind); true
+            }
+            item.mediaRootUri != null -> {
+                menuSound.play(MenuSound.SELECT); openMediaRootContextMenu(item); true
+            }
+            else -> null
+        }
+    }
+
+    private fun markControllerInput() {
+        lastInteractionMs = SystemClock.elapsedRealtime()
+        _uiState.update {
+            if (!it.hintsAutoHide) {
+                it.copy(lastInputWasTouch = false).withHintsShownNow()
+            } else if (!it.lastInputWasTouch &&
+                !it.showContextMenuHint &&
+                !it.showSettingsHint
+            ) it
+            else it.copy(
+                lastInputWasTouch = false,
+                showContextMenuHint = false,
+                showSettingsHint = false,
+            )
+        }
+    }
+
+    private fun backOutOfDrill(s: CrossbarUiState): Boolean {
+        when (s.drillOutStep) {
+            DrillOutStep.MUSIC -> closeMusicView()
+
+            DrillOutStep.VIDEO_LIBRARY -> openVideoView(VideoNav.Libraries)
+            DrillOutStep.VIDEO_PLAYLIST -> openVideoView(VideoNav.Playlists)
+            DrillOutStep.VIDEO_COLLECTION_CHILD -> openVideoView(VideoNav.Collections)
+            DrillOutStep.VIDEO -> closeVideoView()
+
+            DrillOutStep.PHOTO_LIBRARY -> openPhotoView(PhotoNav.Albums)
+            DrillOutStep.PHOTO -> closePhotoView()
+            DrillOutStep.LIBRARY_SERIES -> openBooksView(BooksNav.SeriesList)
+            DrillOutStep.LIBRARY_SHELF -> openBooksView(BooksNav.Shelves)
+            DrillOutStep.LIBRARY -> closeBooksView()
+            DrillOutStep.ROM_FOLDERS -> closeRomFolders()
+            DrillOutStep.PLATFORM_FOLDER -> closePlatformFolder()
+            null -> return false
+        }
+        return true
+    }
+
+    fun onHomeBack() {
+        markTouchInput()
+        val s = _uiState.value
+        if (s.hasBlockingOverlay) return
+        menuSound.play(MenuSound.BACK)
+        if (!backOutOfDrill(s)) onOpenAppDrawer()
+    }
+
+    fun onItemSelected(index: Int) {
+        if (_uiState.value.hasBlockingOverlay) return
+        _uiState.update { it.copy(selectedItemIndex = index) }
+        val category = _uiState.value.categories.getOrNull(_uiState.value.selectedCategoryIndex)
+        val item     = _uiState.value.currentItems.getOrNull(index)
+
+        if (item != null && dispatchCategorySelection(item)) return
+
+        val silentRow = item?.id in setOf(NO_GAMES_ITEM_ID, EMPTY_CATEGORY_ITEM_ID)
+
+        val launchesGame = item?.gameId != null && item.isRealGame
+        val launches = item?.launchIntentUri != null ||
+            (item?.shortcutId != null && item.packageName != null) ||
+            item?.packageName != null
+
+        val event = when {
+            silentRow -> null
+            launchesGame -> null
+            launches -> MenuSound.LAUNCH
+            else -> MenuSound.SELECT
+        }
+        event?.let { menuSound.play(it) }
+
+        when (item?.id) {
+            NO_CONSOLES_ITEM_ID -> {
+                _uiState.update { it.withSettingsOpen("settings_library") }
+                return
+            }
+            SETUP_GAP_ITEM_ID -> {
+                _uiState.update {
+                    it.withSettingsOpen(setupState.firstGap.repairScreenId)
+                }
+                return
+            }
+            ALL_GAMES_ITEM_ID -> {
+                openAllGamesFolder()
+                return
+            }
+
+            in SHELF_CARD_IDS -> {
+                item?.id?.let { openShelf(it) }
+                return
+            }
+            MISSING_ITEM_ID -> {
+                openMissingFolder()
+                return
+            }
+            QUICK_SEARCH_ITEM_ID -> {
+                _uiState.update {
+                    it.copy(collectionNameDialog = CollectionNameDialogState(
+                        title = "Quick Search",
+                        quickSearch = true,
+                        placeholder = "Search the web, or type an address",
+                        confirmLabel = "Search",
+                    ))
+                }
+                return
+            }
+            SEARCH_ITEM_ID -> {
+                openSearch(SearchScope.GAMES)
+                return
+            }
+            ADD_APPS_ITEM_ID -> {
+                category?.id?.let { openAppPicker(AppPickerTarget.CategoryShortcuts(it), "Add Apps") }
+                return
+            }
+            ADD_GAMES_ITEM_ID -> {
+                category?.id?.let { openGamePicker(it) }
+                return
+            }
+            FIND_GAMES_ITEM_ID -> {
+                (item.platformId ?: _uiState.value.selectedPlatformId)?.let {
+                    openAppPicker(AppPickerTarget.AndroidGames(it), "Find Games")
+                }
+                return
+            }
+            NO_GAMES_ITEM_ID,
+            EMPTY_CATEGORY_ITEM_ID -> return
+        }
+
+        if (item != null) when (item.type) {
+            CrossbarItemType.VIDEO_FILE -> {
+                menuSound.play(MenuSound.SELECT)
+                _uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
+                return
+            }
+            CrossbarItemType.LIBRARY_BOOK -> {
+                menuSound.play(MenuSound.SELECT)
+                openBook(item.id.removePrefix("book_"))
+                return
+            }
+            CrossbarItemType.MUSIC_TRACK -> {
+                menuSound.play(MenuSound.SELECT)
+                openMusicPlayerForItem(item)
+                return
+            }
+
+            CrossbarItemType.MUSIC_GROUP -> {
+                item.musicGroupKey?.let {
+                    menuSound.play(MenuSound.SELECT)
+                    openMusicBrowser(MusicBrowserView.Album(item.title, it))
+                }
+                return
+            }
+            else -> Unit
+        }
+
+        if (item?.gameId != null && item.isRealGame) {
+            launchGameDirectly(item.gameId)
+            return
+        }
+
+        if (item?.launchIntentUri != null) {
+            launchStoredIntent(item.launchIntentUri, item.title)
+            return
+        }
+
+        if (item?.shortcutId != null && item.packageName != null) {
+            launchHarvestedShortcut(item.packageName, item.shortcutId)
+            return
+        }
+
+        if (item?.packageName != null) {
+            launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            return
+        }
+
+        if (item?.gameId != null) {
+            openContextMenuForFocusedItem()
+            return
+        }
+        if (item?.platformId != null) {
+            openPlatformFolder(item.platformId)
+            return
+        }
+
+        when (item?.id) {
+            SETUP_ITEM_ID -> {
+                Timber.d("Opening settings screen: settings_library (via setup prompt)")
+                _uiState.update { it.withSettingsOpen("settings_library") }
+            }
+
+            ANDROID_SETTINGS_ITEM_ID -> {
+                runCatching {
+                    context.startActivity(
+                        android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }.onFailure { Timber.w(it, "Could not open device settings") }
+            }
+            OPEN_SETTINGS_ITEM_ID -> {
+                val root = com.echo.core.domain.model.SETTINGS_ROOT_SCREEN_ID
+                Timber.d("Opening settings: $root")
+                _uiState.update { it.withSettingsOpen(root) }
+            }
+            else -> when (category?.id) {
+                BuiltInCategory.SETTINGS -> {
+                    item?.id?.let { id ->
+                        Timber.d("Opening settings screen: $id")
+                        _uiState.update { it.withSettingsOpen(id) }
+                    }
+                }
+                BuiltInCategory.ANDROID -> {
+                    if (item?.id?.startsWith("drawer_") == true) {
+                        val filter = item.id.removePrefix("drawer_").uppercase()
+                        _uiState.update { it.copy(activeAppDrawerFilter = filter) }
+                    }
+                }
+            }
+        }
+    }
+
+    fun onItemLongPress(index: Int) {
+        if (_uiState.value.hasBlockingOverlay) return
+        val item = _uiState.value.currentItems.getOrNull(index)
+        when {
+            item?.mediaRootUri != null && item.mediaRootKind == null -> openRomRootContextMenu(item)
+            item?.mediaRootUri != null -> openMediaRootContextMenu(item)
+            item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
+                openMediaFoldersContextMenu(item)
+            item != null && openMusicContextMenu(item) -> Unit
+            item != null && openVideoContextMenu(item) -> Unit
+            item != null && openBookContextMenu(item) -> Unit
+            item != null && openPhotoContextMenu(item) -> Unit
+            item?.gameId != null -> openGameContextMenu(item)
+            item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu()
+            item?.platformId != null -> openPlatformContextMenu(item.platformId)
+            item?.packageName != null -> openAppContextMenu(item)
+        }
+    }
+
+    private fun openPlatformFolder(platformId: String) {
+        val gamesCategoryIndex = _uiState.value.categories.indexOfFirst { it.id == BuiltInCategory.GAMES }
+        navigateRememberingCursor {
+            it.copy(
+                selectedCategoryIndex = gamesCategoryIndex.takeIf { index -> index >= 0 } ?: it.selectedCategoryIndex,
+                selectedPlatformId = platformId,
+            )
+        }
+    }
+
+    private fun openAllGamesFolder() {
+        val gamesCategoryIndex = _uiState.value.categories.indexOfFirst { it.id == BuiltInCategory.GAMES }
+        navigateRememberingCursor {
+            it.copy(
+                selectedCategoryIndex = gamesCategoryIndex.takeIf { index -> index >= 0 } ?: it.selectedCategoryIndex,
+                selectedPlatformId = ALL_GAMES_PLATFORM_ID,
+            )
+        }
+    }
+
+    private fun openShelf(cardId: String) {
+        navigateRememberingCursor {
+            it.copy(selectedPlatformId = cardId)
+        }
+    }
+
+    private fun openMissingFolder() {
+        val gamesCategoryIndex = _uiState.value.categories.indexOfFirst { it.id == BuiltInCategory.GAMES }
+        navigateRememberingCursor {
+            it.copy(
+                selectedCategoryIndex = gamesCategoryIndex.takeIf { index -> index >= 0 } ?: it.selectedCategoryIndex,
+                selectedPlatformId = MISSING_PLATFORM_ID,
+            )
+        }
+    }
+
+    private fun closePlatformFolder() = navigateRememberingCursor {
+        it.copy(selectedPlatformId = null)
+    }
+
+
+    fun openArtworkStudio(gameId: Long) {
+        closeContextMenu()
+        _uiState.update { it.copy(artworkStudioGameId = gameId) }
+    }
+
+    fun consumeArtworkStudioAction() =
+        _uiState.update { it.copy(pendingArtworkStudioAction = null) }
+
+    fun closeArtworkStudio() {
+        val id = _uiState.value.artworkStudioGameId
+        _uiState.update { it.copy(artworkStudioGameId = null) }
+        if (id != null) viewModelScope.launch { loadItemsForCategory(currentCategory()) }
+    }
+
+    private fun openManualFor(gameId: Long) {
+        closeContextMenu()
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val path = artworkStore.find(gameId, ArtworkKind.MANUAL)
+            if (path == null) {
+                SystemToasts.post("No manual available for this game", null, ToastKind.ERROR)
+                return@launch
+            }
+            _uiState.update {
+                it.copy(manualViewer = ManualViewerUi(uri = path, title = game.displayTitle))
+            }
+        }
+    }
+
+    fun closeManualViewer() {
+        if (_uiState.value.manualViewer == null) return
+        menuSound.play(MenuSound.BACK)
+        _uiState.update { it.copy(manualViewer = null) }
+    }
+
+    fun setManualPageCount(count: Int) = _uiState.update { s ->
+        val m = s.manualViewer ?: return@update s
+        s.copy(manualViewer = m.copy(pageCount = count, page = m.page.coerceIn(0, (count - 1).coerceAtLeast(0))))
+    }
+
+    fun manualPrevPage() = _uiState.update { s ->
+        val m = s.manualViewer ?: return@update s
+        s.copy(manualViewer = m.copy(page = (m.page - 1).coerceAtLeast(0), scrollSteps = 0))
+    }
+
+    fun manualNextPage() = _uiState.update { s ->
+        val m = s.manualViewer ?: return@update s
+        s.copy(manualViewer = m.copy(
+            page = (m.page + 1).coerceAtMost((m.pageCount - 1).coerceAtLeast(0)),
+            scrollSteps = 0,
+        ))
+    }
+
+    private fun scrollManual(delta: Int) = _uiState.update { s ->
+        val m = s.manualViewer ?: return@update s
+        s.copy(manualViewer = m.copy(scrollSteps = (m.scrollSteps + delta).coerceIn(0, MANUAL_MAX_SCROLL_STEPS_)))
+    }
+
+    private fun handleManualViewerInput(action: GamepadAction) {
+        when (action) {
+            GamepadAction.NAVIGATE_LEFT  -> manualPrevPage()
+            GamepadAction.NAVIGATE_RIGHT -> manualNextPage()
+            GamepadAction.NAVIGATE_DOWN  -> scrollManual(+1)
+            GamepadAction.NAVIGATE_UP    -> scrollManual(-1)
+            GamepadAction.BACK           -> closeManualViewer()
+            else -> Unit
+        }
+    }
+
+    private fun fetchArtworkFor(gameId: Long) {
+        closeContextMenu()
+        if (_uiState.value.artworkFetchTitle != null) return
+        viewModelScope.launch {
+            val before = gameRepository.getById(gameId)
+            _uiState.update { it.copy(artworkFetchTitle = before?.displayTitle ?: "this game") }
+            val result = artworkRepository.fetchArtworkForGame(gameId, before?.title.orEmpty())
+            val updated = gameRepository.getById(gameId)
+            artworkRepository.evictFromImageCache((artRefsOf(before) + artRefsOf(updated)).toSet())
+            _uiState.update { it.copy(artworkFetchTitle = null) }
+            SystemToasts.post(
+                when {
+                    result.success -> "Artwork updated"
+                    result.skipped -> "Already has artwork"
+                    else           -> result.errorMessage ?: "Artwork fetch failed"
+                },
+                null,
+                if (result.success || result.skipped) ToastKind.SUCCESS else ToastKind.ERROR,
+            )
+            loadItemsForCategory(currentCategory())
+        }
+    }
+
+    private fun artRefsOf(game: Game?): List<String> = listOfNotNull(
+        game?.artworkUri, game?.logoUri, game?.iconUri,
+    )
+
+    private fun openMetadataPreviewFor(gameId: Long) {
+        closeContextMenu()
+        if (_uiState.value.metadataPreview != null) return
+        val generation = ++metadataPreviewGeneration
+        _uiState.update { it.copy(metadataPreview = MetadataPreviewUi(), metadataPreviewGameId = gameId) }
+        viewModelScope.launch {
+            val outcome = runCatching { artworkRepository.fetchMetadataPreview(gameId) }
+                .onFailure { Timber.w(it, "Metadata preview failed for game $gameId") }
+            val preview = outcome.getOrNull()
+            if (generation != metadataPreviewGeneration) return@launch
+            _uiState.update { s ->
+                if (s.metadataPreview == null) return@update s
+                if (preview == null || preview.presets.isEmpty()) {
+                    return@update s.copy(
+                        metadataPreview = MetadataPreviewUi(loading = false, failed = outcome.isFailure),
+                    )
+                }
+                s.copy(metadataPreview = MetadataPreviewUi(
+                    loading = false,
+                    current = preview.current,
+                    presets = preview.presets,
+                    chosen  = MetadataApply.changedFields(preview.current, preview.presets.first()),
+                ))
+            }
+        }
+    }
+
+    fun closeMetadataPreview() {
+        metadataPreviewGeneration++
+        _uiState.update { it.copy(metadataPreview = null, metadataPreviewGameId = null) }
+    }
+
+    fun selectMetadataPolicy(policy: MetadataApplyPolicy) = updateMetadataPreview { it.copy(policy = policy) }
+
+    private fun cycleMetadataPolicy(delta: Int) = updateMetadataPreview { p ->
+        val all = MetadataApplyPolicy.entries
+        p.copy(policy = all[(p.policy.ordinal + delta).mod(all.size)])
+    }
+
+    fun cycleMetadataSource(delta: Int) = updateMetadataPreview { p ->
+        if (p.presets.size < 2) return@updateMetadataPreview p
+        val index = (p.presetIndex + delta).mod(p.presets.size)
+        val next = p.copy(presetIndex = index, chosen = MetadataApply.changedFields(p.current, p.presets[index]))
+        next.copy(focus = next.focus.coerceIn(0, next.applyIndex))
+    }
+
+    fun toggleMetadataField(field: MetadataField) = updateMetadataPreview { p ->
+        p.copy(
+            policy = MetadataApplyPolicy.CHOOSE_FIELDS,
+            chosen = if (field in p.chosen) p.chosen - field else p.chosen + field,
+        )
+    }
+
+    private fun moveMetadataFocus(delta: Int) = updateMetadataPreview { p ->
+        p.copy(focus = (p.focus + delta).coerceIn(0, p.applyIndex))
+    }
+
+    fun applyMetadataPreview() {
+        val gameId = _uiState.value.metadataPreviewGameId ?: return
+        val p = _uiState.value.metadataPreview ?: return
+        if (p.loading || p.applying) return
+
+        val preset = p.preset ?: return closeMetadataPreview()
+        if (p.policy == MetadataApplyPolicy.KEEP_CURRENT) {
+            closeMetadataPreview()
+            SystemToasts.post("Kept current metadata", null, ToastKind.SUCCESS)
+            return
+        }
+        _uiState.update { it.copy(metadataPreview = p.copy(applying = true)) }
+        viewModelScope.launch {
+            val written = runCatching { artworkRepository.applyMetadata(gameId, preset, p.policy, p.chosen) }
+                .onFailure { Timber.w(it, "Metadata apply failed for game $gameId") }
+            metadataPreviewGeneration++
+            _uiState.update { it.copy(metadataPreview = null, metadataPreviewGameId = null) }
+            SystemToasts.post(
+                written.fold(
+                    onSuccess = { fields ->
+                        when (fields.size) {
+                            0    -> "Nothing to change"
+                            1    -> "Updated 1 field from ${preset.provider.label}"
+                            else -> "Updated ${fields.size} fields from ${preset.provider.label}"
+                        }
+                    },
+                    onFailure = { "Metadata update failed" },
+                ),
+                null,
+                if (written.isSuccess) ToastKind.SUCCESS else ToastKind.ERROR,
+            )
+            loadItemsForCategory(currentCategory())
+        }
+    }
+
+    private fun updateMetadataPreview(
+        transform: (MetadataPreviewUi) -> MetadataPreviewUi,
+    ) = _uiState.update { s ->
+        val p = s.metadataPreview ?: return@update s
+        if (p.loading || p.applying) s else s.copy(metadataPreview = transform(p))
+    }
+
+    private fun handleMetadataPreviewInput(action: GamepadAction) {
+        val p = _uiState.value.metadataPreview ?: return
+        if (p.applying) return
+        if (p.nothingFound) {
+            if (action == GamepadAction.SELECT || action == GamepadAction.BACK) closeMetadataPreview()
+            return
+        }
+        when (action) {
+            GamepadAction.BACK           -> closeMetadataPreview()
+            GamepadAction.NAVIGATE_LEFT  -> cycleMetadataPolicy(-1)
+            GamepadAction.NAVIGATE_RIGHT -> cycleMetadataPolicy(+1)
+            GamepadAction.PREV_CATEGORY  -> cycleMetadataSource(-1)
+            GamepadAction.NEXT_CATEGORY  -> cycleMetadataSource(+1)
+            GamepadAction.NAVIGATE_UP    -> moveMetadataFocus(-1)
+            GamepadAction.NAVIGATE_DOWN  -> moveMetadataFocus(+1)
+            GamepadAction.SELECT         ->
+                if (p.focus >= p.applyIndex) applyMetadataPreview()
+                else p.rows.getOrNull(p.focus)?.let { toggleMetadataField(it.field) }
+            else -> Unit
+        }
+    }
+
+    private var metadataPreviewGeneration = 0
+
+    private val MANUAL_MAX_SCROLL_STEPS_ = 20
+
+    fun launchGameFromDrawer(gameId: Long) {
+        _uiState.update { it.copy(activeAppDrawerFilter = null, pendingDrawerAction = null) }
+        launchGameDirectly(gameId)
+    }
+
+    private fun launchGameDirectly(gameId: Long, discId: Long? = null) {
+        viewModelScope.launch {
+            val selected = gameRepository.getById(gameId) ?: run {
+                Timber.w("Direct launch requested for missing game id=$gameId")
+                return@launch
+            }
+            val game = if (discId != null) gameRepository.getById(discId) ?: selected else selected
+            if (game.isMissing) {
+                Timber.i("Direct launch refused for missing game: ${game.title}")
+                return@launch
+            }
+            launchResolvedGame(game)
+        }
+    }
+
+    private suspend fun launchResolvedGame(game: Game) {
+        val shortcutId = game.shortcutId
+        val packageName = game.packageName
+        if (shortcutId != null && packageName != null) {
+            launcherShortcutRepository.launch(packageName, shortcutId)
+                .onFailure { e ->
+                    Timber.w(e, "Direct shortcut launch failed")
+                    launchDispatcher.recordPreflightFailure(game, null, "Couldn't launch: ${e.message}")
+                }
+            return
+        }
+        if (game.launchIntentUri != null) {
+            runCatching {
+                val parsed = Intent.parseUri(game.launchIntentUri, Intent.URI_INTENT_SCHEME)
+                com.echo.core.common.security.ShortcutIntentSanitizer.sanitize(parsed, context.packageManager)
+                    ?: error("Captured shortcut is not safe to launch")
+            }.onSuccess { intent -> launchIntentFromCrossbar(intent, game, null) }
+                .onFailure { e ->
+                    Timber.w(e, "Direct stored-intent launch failed")
+                    launchDispatcher.recordPreflightFailure(game, null, "Couldn't launch: ${e.message}")
+                }
+            return
+        }
+        if (game.romPath.isNullOrBlank() && !game.packageName.isNullOrBlank()) {
+            intentResolver.resolveNativeApp(game).fold(
+                onSuccess = { intent -> launchIntentFromCrossbar(intent, game, null) },
+                onFailure = { e ->
+                    Timber.w(e, "Direct native-app launch failed")
+                    launchDispatcher.recordPreflightFailure(game, null, e.message ?: "Could not launch ${game.title}")
+                },
+            )
+            return
+        }
+
+        val resolvedLaunch = launchResolver.resolve(game).getOrElse { reason ->
+            Timber.w(reason, "Direct launch unresolved: gameId=${game.id}, platform=${game.platformId}")
+
+            launchDispatcher.recordPreflightFailure(
+                game, null,
+                reason.message ?: "No emulator is set up for ${game.platformId.uppercase()}.",
+            )
+            return
+        }
+        val profile = resolvedLaunch.profile
+
+        val validation = runCatching { intentResolver.validateBeforeLaunch(game, profile) }
+        if (validation.isFailure) {
+            Timber.w(
+                validation.exceptionOrNull(),
+                "Direct emulator launch blocked by preflight: ${profile.name}",
+            )
+            val blocked = validation.exceptionOrNull() as? com.echo.feature.launcher.LaunchBlockedException
+            launchDispatcher.recordPreflightFailure(
+                game, resolvedLaunch,
+                validation.exceptionOrNull()?.message ?: "Could not launch ${profile.name}",
+
+                kind = blocked?.kind ?: com.echo.feature.launcher.LaunchFailureKind.UNKNOWN,
+            )
+            return
+        }
+        intentResolver.resolve(game, profile).fold(
+            onSuccess = { intent -> launchIntentFromCrossbar(intent, game, resolvedLaunch) },
+            onFailure = { e ->
+                Timber.w(e, "Direct emulator launch failed: ${profile.name}")
+                launchDispatcher.recordPreflightFailure(game, resolvedLaunch, e.message ?: "Could not launch ${profile.name}")
+            },
+        )
+    }
+
+    private suspend fun launchIntentFromCrossbar(intent: Intent, game: Game, resolved: ResolvedLaunch?) {
+        when (val result = launchDispatcher.launch(game, resolved, intent)) {
+            is LaunchDispatchResult.Rejected -> Timber.w("Direct launch rejected: ${result.message}")
+            LaunchDispatchResult.Accepted -> Unit
+        }
+    }
+
+    private fun openAppDetail(knownGameId: Long?, packageName: String) {
+        if (knownGameId != null) {
+            _uiState.update { it.copy(activeAppId = knownGameId) }
+            return
+        }
+        viewModelScope.launch {
+            val id = ensureAppShortcut(packageName)
+            _uiState.update { it.copy(activeAppId = id) }
+        }
+    }
+
+    private suspend fun ensureAppShortcut(packageName: String): Long {
+        gameRepository.getAppEntry(packageName)?.let { return it.id }
+        val label = runCatching {
+            context.packageManager.getApplicationLabel(
+                context.packageManager.getApplicationInfo(packageName, 0)
+            ).toString()
+        }.getOrDefault(packageName)
+        return gameRepository.upsert(
+            Game(
+                title         = label,
+
+                platformId    = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
+                packageName   = packageName,
+                isManualEntry = true,
+                contentType   = GameContentType.ANDROID_APP,
+            )
+        )
+    }
+
+    private fun addAppToFavorites(packageName: String, label: String) {
+        viewModelScope.launch {
+            runCatching {
+                val id = ensureAppShortcut(packageName)
+                gameRepository.setFavorite(id, true)
+            }.onSuccess {
+                Timber.i("App shortcut favorited: $packageName")
+                taskNotifier.complete("shortcut_fav_$packageName", label, "Added to Favorites")
+            }.onFailure { e ->
+                Timber.e(e, "Failed to add app to Favorites: $packageName")
+                taskNotifier.failed("shortcut_fav_$packageName", label, "Couldn't add to Favorites: ${e.message}")
+            }
+        }
+    }
+
+
+    private fun launchHarvestedShortcut(hostPackage: String?, shortcutId: String?) {
+        if (hostPackage == null || shortcutId == null) return
+        launcherShortcutRepository.launch(hostPackage, shortcutId).onFailure { e ->
+            Timber.e(e, "Failed to launch shortcut $hostPackage/$shortcutId")
+            taskNotifier.failed("launch_sc_$shortcutId", hostPackage, "Couldn't launch: ${e.message}")
+        }
+    }
+
+    private fun launchStoredIntent(intentUri: String, label: String) {
+        runCatching {
+            val parsed = android.content.Intent.parseUri(intentUri, android.content.Intent.URI_INTENT_SCHEME)
+
+            val launch = (com.echo.core.common.security.ShortcutIntentSanitizer
+                .sanitize(parsed, context.packageManager)
+                ?: error("Captured shortcut is not safe to launch"))
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            context.startActivity(
+                launch,
+                com.echo.core.common.launch.LaunchTransition.options(context),
+            )
+        }.onFailure { e ->
+            Timber.e(e, "Failed to launch captured shortcut: $label")
+            taskNotifier.failed("launch_intent_${label.hashCode()}", label, "Couldn't launch: ${e.message}")
+        }
+    }
+
+    fun onCloseAppDetail() {
+        _uiState.update { it.copy(activeAppId = null, pendingAppDetailAction = null) }
+
+        loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
+    }
+
+    fun consumeAppDetailAction() {
+        _uiState.update { it.copy(pendingAppDetailAction = null) }
+    }
+
+    fun onOpenSettingsScreen(screenId: String) {
+        if (screenId != com.echo.core.domain.model.SETTINGS_ROOT_SCREEN_ID &&
+            com.echo.core.domain.model.settingsEntryFor(screenId) == null
+        ) {
+            Timber.w("Settings rail asked for a screen outside the catalog: %s", screenId)
+            return
+        }
+        Timber.d("Settings rail -> %s", screenId)
+        _uiState.update {
+            it.withSettingsOpen(screenId).copy(
+                settingsReturnTo = nextReturnAddress(it.activeSettingsScreen, screenId, it.settingsReturnTo),
+            )
+        }
+    }
+
+    fun onSettingsBack() {
+        if (_uiState.value.settingsFromPanel && _uiState.value.settingsReturnTo == null) {
+            returnToPanelSettings()
+            return
+        }
+        _uiState.value.settingsReturnTo?.let { returnTo ->
+            _uiState.update {
+                it.withSettingsOpen(returnTo).copy(
+                    settingsReturnTo = null,
+                    pendingSettingsAction = null,
+                )
+            }
+            return
+        }
+        val current = _uiState.value.activeSettingsScreen
+        if (current != null &&
+            current != com.echo.core.domain.model.SETTINGS_ROOT_SCREEN_ID &&
+            com.echo.core.domain.model.settingsEntryFor(current) != null
+        ) {
+            _uiState.update {
+                it.withSettingsOpen(com.echo.core.domain.model.SETTINGS_ROOT_SCREEN_ID).copy(
+                    pendingSettingsAction = null,
+                )
+            }
+            return
+        }
+        onCloseSettingsScreen()
+    }
+
+    fun onCloseSettingsScreen() {
+        Timber.d("Settings closed")
+
+        val closing = _uiState.value.activeSettingsScreen
+        if (closing in WIZARD_SCREEN_IDS) {
+            markInitialSetupSeen()
+        }
+        if (_uiState.value.settingsFromPanel) {
+            returnToPanelSettings()
+            return
+        }
+        _uiState.update { it.withSettingsClosed() }
+    }
+
+    fun openAndroidLibraryPicker() {
+        _uiState.update { it.withSettingsClosed() }
+        openAppPicker(AppPickerTarget.AndroidGames(ANDROID_PLATFORM_ID), "Add Android Apps")
+    }
+
+    fun consumeSettingsAction() {
+        _uiState.update { it.copy(pendingSettingsAction = null) }
+    }
+
+    fun onOpenAppDrawer() {
+        _uiState.update { it.copy(activeAppDrawerFilter = com.echo.feature.appbar.AppFilter.DEFAULT.name) }
+    }
+
+    fun addAppToOpenCategory(packageName: String) {
+        val category = currentCategory() ?: return
+        if (!categoryShowsApps(category)) {
+            SystemToasts.post("${category.name} can't hold apps", null, ToastKind.ERROR)
+            return
+        }
+        viewModelScope.launch {
+            appCategoryRepository.addToCategory(packageName, category.id)
+            SystemToasts.post("Added to ${category.name}", null, ToastKind.SUCCESS)
+        }
+    }
+
+    fun onCloseAppDrawer() {
+        _uiState.update { it.copy(activeAppDrawerFilter = null, pendingDrawerAction = null, pendingDrawerTypedChar = null, drawerLetterRailHeld = false) }
+    }
+
+    fun consumeDrawerAction() {
+        _uiState.update { it.copy(pendingDrawerAction = null) }
+    }
+
+    private var colorSchemeOriginal: CrossbarColorScheme? = null
+
+    private var accentOverrideOriginal: Long? = null
+
+    fun openColorSchemePicker() {
+        viewModelScope.launch {
+            val prefs = context.echoDataStore.data.first()
+            val current = runCatching {
+                CrossbarColorScheme.valueOf(prefs[KEY_COLOR_SCHEME] ?: CrossbarColorScheme.CLASSIC_BLUE.name)
+            }.getOrDefault(CrossbarColorScheme.CLASSIC_BLUE)
+            colorSchemeOriginal = current
+            accentOverrideOriginal = prefs[KEY_ACCENT_OVERRIDE]
+
+            val month = java.time.LocalDate.now().monthValue
+            val options = CrossbarColorScheme.values().map { scheme ->
+                ColorSchemeOption(
+                    scheme   = scheme,
+                    label    = scheme.displayLabel(),
+
+                    sublabel = if (scheme == CrossbarColorScheme.ORIGINAL) "Changes with the month" else null,
+                    swatch   = scheme.resolve(month).waveColor,
+                )
+            }
+            val custom = prefs[KEY_ACCENT_OVERRIDE]
+            val pickerOptions = options + ColorSchemeOption(
+                scheme = null,
+                label = "Custom",
+                sublabel = "Choose a custom accent color",
+                swatch = custom ?: 0xFF888888L,
+                isCustom = true,
+            )
+            val index = if (custom != null) pickerOptions.lastIndex else options.indexOfFirst { it.scheme == current }.coerceAtLeast(0)
+            _uiState.update { it.copy(colorSchemePicker = ColorSchemePickerState(pickerOptions, index)) }
+        }
+    }
+
+    private fun moveColorSchemePicker(delta: Int) {
+        val picker = _uiState.value.colorSchemePicker ?: return
+        val next = (picker.selectedIndex + delta).coerceIn(0, picker.options.lastIndex)
+        if (next == picker.selectedIndex) { gamepadInputHandler.cancelRepeat(); return }
+        _uiState.update { it.copy(colorSchemePicker = picker.copy(selectedIndex = next)) }
+        picker.options[next].scheme?.let(::previewColorScheme)
+    }
+
+    fun onColorSchemeHighlightedAt(index: Int) {
+        val picker = _uiState.value.colorSchemePicker ?: return
+        if (index !in picker.options.indices || index == picker.selectedIndex) return
+        _uiState.update { it.copy(colorSchemePicker = picker.copy(selectedIndex = index)) }
+        picker.options[index].scheme?.let(::previewColorScheme)
+    }
+
+    private fun previewColorScheme(scheme: CrossbarColorScheme) {
+        viewModelScope.launch {
+            context.echoDataStore.edit {
+                it[KEY_COLOR_SCHEME] = scheme.name
+
+                it.remove(KEY_ACCENT_OVERRIDE)
+            }
+        }
+    }
+
+    fun confirmColorSchemePicker() {
+        val picker = _uiState.value.colorSchemePicker ?: return
+        val selected = picker.options.getOrNull(picker.selectedIndex)
+        val chosen = selected?.scheme
+        if (selected?.isCustom == true) {
+            openCustomColorPicker()
+            return
+        }
+        viewModelScope.launch {
+            if (chosen != null) {
+                context.echoDataStore.edit {
+                    it[KEY_COLOR_SCHEME] = chosen.name
+
+                    it.remove(KEY_ACCENT_OVERRIDE)
+                    it.remove(com.echo.core.data.repository.EchoThemeStore.KEY_THEME_ICONS_STAMP)
+                    it.remove(com.echo.core.data.repository.EchoThemeStore.KEY_THEME_LAYOUT)
+                }
+            }
+            colorSchemeOriginal = null
+            accentOverrideOriginal = null
+            _uiState.update { it.copy(colorSchemePicker = null) }
+        }
+    }
+
+    private fun openCustomColorPicker() {
+        val argb = _uiState.value.themeColors.accentColor.toArgb().toLong() and 0xFFFFFFFFL
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV((argb and 0xFFFFFFFFL).toInt(), hsv)
+        _uiState.update { state ->
+            return@update state.copy(customColorPicker = CustomColorPickerState(hsv[0], hsv[1], hsv[2]))
+        }
+    }
+
+    fun updateCustomColor(channel: Int, fraction: Float) {
+        _uiState.update { state ->
+            val picker = state.customColorPicker ?: return@update state
+            val clamped = fraction.coerceIn(0f, 1f)
+            return@update state.copy(customColorPicker = picker.copy(
+                hue = if (channel == 0) clamped * 360f else picker.hue,
+                saturation = if (channel == 1) clamped else picker.saturation,
+                brightness = if (channel == 2) clamped else picker.brightness,
+                selectedChannel = channel,
+            ))
+        }
+    }
+
+    fun moveCustomColorChannel(delta: Int) {
+        _uiState.update { state ->
+            val picker = state.customColorPicker ?: return@update state
+            state.copy(customColorPicker = picker.copy(selectedChannel = (picker.selectedChannel + delta + 3) % 3))
+        }
+    }
+
+    fun adjustCustomColor(delta: Float) {
+        val picker = _uiState.value.customColorPicker ?: return
+        val value = when (picker.selectedChannel) {
+            0 -> ((picker.hue / 360f) + delta).mod(1f)
+            1 -> picker.saturation + delta
+            else -> picker.brightness + delta
+        }
+        updateCustomColor(picker.selectedChannel, value)
+    }
+
+    fun confirmCustomColor() {
+        val picker = _uiState.value.customColorPicker ?: return
+        viewModelScope.launch {
+            context.echoDataStore.edit { it[KEY_ACCENT_OVERRIDE] = android.graphics.Color.HSVToColor(floatArrayOf(picker.hue, picker.saturation, picker.brightness)).toLong() and 0xFFFFFFFFL }
+            _uiState.update { it.copy(customColorPicker = null, colorSchemePicker = null) }
+        }
+    }
+
+    fun cancelCustomColor() {
+        _uiState.update { it.copy(customColorPicker = null) }
+    }
+
+    fun cancelColorSchemePicker() {
+        val original = colorSchemeOriginal
+        val accentOriginal = accentOverrideOriginal
+        viewModelScope.launch {
+            if (original != null) {
+                context.echoDataStore.edit {
+                    it[KEY_COLOR_SCHEME] = original.name
+
+                    if (accentOriginal != null) it[KEY_ACCENT_OVERRIDE] = accentOriginal
+                }
+            }
+            colorSchemeOriginal = null
+            accentOverrideOriginal = null
+            _uiState.update { it.copy(colorSchemePicker = null) }
+        }
+    }
+
+    fun openCrossbarLayoutAdjust() {
+        val swDp = context.resources.configuration.smallestScreenWidthDp
+        val bucket = com.echo.themekit.CrossbarFormFactor.forSmallestWidthDp(swDp).key
+        val s = _uiState.value
+        val seed = s.crossbarLayoutAdjustMap[bucket] ?: com.echo.themekit.CrossbarLayoutAdjust(
+            scale = 1f,
+            barLeftFraction = 0f,
+            barTopFraction = s.layoutSpec.barTopFraction,
+        )
+        _uiState.update {
+            it.withSettingsClosed().copy(
+                crossbarLayoutAdjust = CrossbarLayoutAdjustSession(draft = seed, original = seed, bucketKey = bucket),
+            )
+        }
+    }
+
+    private fun updateAdjustDraft(transform: (com.echo.themekit.CrossbarLayoutAdjust) -> com.echo.themekit.CrossbarLayoutAdjust) {
+        val session = _uiState.value.crossbarLayoutAdjust ?: return
+        val next = com.echo.themekit.CrossbarLayoutAdjustCodec.sanitize(transform(session.draft))
+        _uiState.update { it.copy(crossbarLayoutAdjust = session.copy(draft = next)) }
+    }
+
+    fun nudgeCrossbarLayoutHorizontal(dir: Int) = updateAdjustDraft { it.copy(barLeftFraction = it.barLeftFraction + dir * 0.01f) }
+    fun nudgeCrossbarLayoutVertical(dir: Int) = updateAdjustDraft { it.copy(barTopFraction = it.barTopFraction + dir * 0.01f) }
+    fun nudgeCrossbarLayoutScale(dir: Int) = updateAdjustDraft { it.copy(scale = it.scale + dir * 0.02f) }
+
+    fun setCrossbarLayoutScale(v: Float) = updateAdjustDraft { it.copy(scale = v) }
+    fun setCrossbarLayoutHorizontal(v: Float) = updateAdjustDraft { it.copy(barLeftFraction = v) }
+    fun setCrossbarLayoutVertical(v: Float) = updateAdjustDraft { it.copy(barTopFraction = v) }
+
+    fun toggleCrossbarLayoutSliders() {
+        val session = _uiState.value.crossbarLayoutAdjust ?: return
+        _uiState.update { it.copy(crossbarLayoutAdjust = session.copy(slidersVisible = !session.slidersVisible)) }
+    }
+
+    fun resetCrossbarLayoutAdjust() = updateAdjustDraft { com.echo.themekit.CrossbarLayoutAdjust() }
+
+    fun saveCrossbarLayoutAdjust() {
+        val session = _uiState.value.crossbarLayoutAdjust ?: return
+        val map = _uiState.value.crossbarLayoutAdjustMap.toMutableMap()
+        map[session.bucketKey] = session.draft
+        viewModelScope.launch {
+            context.echoDataStore.edit {
+                it[KEY_Crossbar_LAYOUT_ADJUST] = com.echo.themekit.CrossbarLayoutAdjustCodec.encode(map)
+            }
+            _uiState.update { it.copy(crossbarLayoutAdjust = null) }
+        }
+    }
+
+    fun cancelCrossbarLayoutAdjust() {
+        _uiState.update { it.copy(crossbarLayoutAdjust = null) }
+    }
+
+    private val customIconGroups: List<com.echo.themekit.IconSlot.Group> =
+    listOf(
+        com.echo.themekit.IconSlot.Group.CATEGORY_BAR,
+        com.echo.themekit.IconSlot.Group.ITEMS,
+        com.echo.themekit.IconSlot.Group.STATUS,
+        com.echo.themekit.IconSlot.Group.CONSOLE,
+    )
+
+    fun openCustomIcons() {
+        _uiState.update {
+            it.withSettingsClosed().copy(
+                customIconSession = CustomIconSession(groups = customIconGroups),
+            )
+        }
+    }
+
+    fun closeCustomIcons() {
+        _uiState.update { it.copy(customIconSession = null, saveThemeNameDialog = null) }
+    }
+
+    fun onCustomIconGroupMove(dir: Int) {
+        val session = _uiState.value.customIconSession ?: return
+        val next = (session.groupIndex + dir).mod(session.groups.size)
+        _uiState.update {
+            it.copy(customIconSession = session.copy(groupIndex = next, slotIndex = 0, message = null))
+        }
+    }
+
+    fun onCustomIconSlotMove(dir: Int) {
+        val session = _uiState.value.customIconSession ?: return
+        val count = CustomizableIcons.group(session.group).size
+        val next = (session.slotIndex + dir).coerceIn(0, (count - 1).coerceAtLeast(0))
+        _uiState.update { it.copy(customIconSession = session.copy(slotIndex = next, message = null)) }
+    }
+
+    fun onCustomIconSlotFocused(index: Int) {
+        val session = _uiState.value.customIconSession ?: return
+        _uiState.update { it.copy(customIconSession = session.copy(slotIndex = index, message = null)) }
+    }
+
+    fun onIconPicked(slotKey: String, uri: android.net.Uri) {
+        val session = _uiState.value.customIconSession ?: return
+        viewModelScope.launch {
+            val mime = context.contentResolver.getType(uri)
+            val result = customIconStore.import(slotKey, uri, mime)
+
+            menuSound.play(if (result.ok) MenuSound.CONFIRM else MenuSound.ERROR)
+            _uiState.update {
+                val s = it.customIconSession ?: return@update it
+                it.copy(customIconSession = s.copy(message = result.message, revision = s.revision + 1))
+            }
+        }
+    }
+
+    fun onResetSlot(slotKey: String) {
+        viewModelScope.launch {
+            val removed = customIconStore.clear(slotKey)
+            _uiState.update {
+                val s = it.customIconSession ?: return@update it
+                val themed = it.iconOverrides.containsKey(slotKey)
+                val message = when {
+                    removed && themed -> context.getString(R.string.crossbar_icons_reset_removed_themed)
+                    removed -> null
+                    themed -> context.getString(R.string.crossbar_icons_reset_themed_slot)
+                    else -> context.getString(R.string.crossbar_icons_reset_builtin_slot)
+                }
+                it.copy(customIconSession = s.copy(message = message, revision = s.revision + 1))
+            }
+        }
+    }
+
+    fun onResetAll() {
+        viewModelScope.launch {
+            val removed = customIconStore.clearAll()
+            _uiState.update {
+                val s = it.customIconSession ?: return@update it
+                val message = when {
+                    !removed -> context.getString(R.string.crossbar_icons_reset_all_none)
+                    it.iconOverrides.isNotEmpty() -> context.getString(R.string.crossbar_icons_reset_all_themed)
+                    else -> null
+                }
+                it.copy(customIconSession = s.copy(message = message, revision = s.revision + 1))
+            }
+        }
+    }
+
+    fun onThemeShareConsumed() {
+        _uiState.update { it.copy(pendingThemeShareFile = null) }
+    }
+
+    fun requestSaveCurrentLookAsTheme() {
+        _uiState.update {
+            it.copy(saveThemeNameDialog = PlaylistNameDialogState(title = "Save Current Look as Theme"))
+        }
+    }
+
+    fun confirmSaveCurrentLookAsTheme(name: String) {
+        _uiState.update { it.copy(saveThemeNameDialog = null) }
+        menuSound.play(MenuSound.CONFIRM)
+        saveCurrentLookAsTheme(name)
+    }
+
+    fun dismissSaveThemeNameDialog() {
+        _uiState.update { it.copy(saveThemeNameDialog = null) }
+    }
+
+    fun onCustomIconsActionConsumed() {
+        _uiState.update { it.copy(pendingCustomIconsAction = null) }
+    }
+
+    fun saveCurrentLookAsTheme(name: String) {
+        viewModelScope.launch {
+            val saved = echoThemeStore.saveCurrentLook(name)
+            val message = when {
+                saved == null -> "Couldn't save the theme"
+                else -> "Theme saved — ${saved.name}"
+            }
+            val shareFile = saved?.let { echoThemeStore.exportForShare(it.id) }
+            _uiState.update {
+                val s = it.customIconSession ?: return@update it
+                it.copy(
+                    customIconSession = s.copy(message = message, revision = s.revision + 1),
+                    pendingThemeShareFile = shareFile,
+                )
+            }
+        }
+    }
+
+    @Volatile
+    private var bootEnabled: Boolean = true
+
+    @Volatile
+    private var bootOnResume: Boolean = false
+
+    private fun observeBootPreferences() {
+        viewModelScope.launch {
+            val prefs = context.echoDataStore.data.first()
+            bootEnabled = prefs[KEY_SHOW_BOOT] ?: true
+            bootOnResume = prefs[KEY_BOOT_ON_RESUME] ?: false
+            if (!bootEnabled) {
+                _uiState.update { it.copy(showBootSequence = false) }
+            }
+        }
+        viewModelScope.launch {
+            context.echoDataStore.data
+                .map { (it[KEY_SHOW_BOOT] ?: true) to (it[KEY_BOOT_ON_RESUME] ?: false) }
+                .distinctUntilChanged()
+                .collect { (enabled, onResume) ->
+                    bootEnabled = enabled
+                    bootOnResume = onResume
+                }
+        }
+
+        viewModelScope.launch {
+            uiMediaStore.stamp
+                .distinctUntilChanged()
+                .collect {
+                    val (video, audio) = withContext(Dispatchers.IO) {
+                        val video = uiMediaStore.pathFor(com.echo.core.domain.model.UiMediaSlot.BOOT_VIDEO)
+                        val audio = uiMediaStore.pathFor(com.echo.core.domain.model.UiMediaSlot.BOOT_AUDIO)
+                        video to audio
+                    }
+                    _uiState.update { it.copy(bootVideoPath = video, bootAudioPath = audio) }
+                }
+        }
+    }
+
+    fun onHostResumed() {
+        if (!bootEnabled || !bootOnResume) return
+        _uiState.update { it.copy(showBootSequence = true) }
+    }
+
+    private fun observeMediaLaunch() {
+        viewModelScope.launch {
+            mediaLaunchGate.active.collect { request ->
+                _uiState.update { it.copy(discCeremony = request?.let { r -> DiscCeremonyState(r.art) }) }
+            }
+        }
+    }
+
+    private suspend fun awaitDiscHandOff(art: Any?) = mediaLaunchGate.awaitHandOff(art)
+
+    private fun selectedItemArt(): Any? =
+        _uiState.value.currentItems.getOrNull(_uiState.value.selectedItemIndex)?.shelfCoverArt
+
+    private fun launchAppWithDisc(packageName: String, art: Any?) {
+        viewModelScope.launch {
+            awaitDiscHandOff(art ?: appLauncherIcon(packageName))
+            appCategoryRepository.launch(packageName)
+        }
+    }
+
+    private fun appLauncherIcon(packageName: String): Any? =
+        runCatching { context.packageManager.getApplicationIcon(packageName) }.getOrNull()
+
+    fun onDiscCeremonyHandOff() = mediaLaunchGate.onHandOff()
+
+    fun onDiscCeremonyFinished() = mediaLaunchGate.onDismissed()
+
+    private fun observeGameBoot() {
+        viewModelScope.launch {
+            gameBootGate.active.collect { request ->
+                _uiState.update {
+                    if (request == null && it.gameBootIsPreview) it
+                    else it.copy(activeGameBoot = request, gameBootIsPreview = false)
+                }
+            }
+        }
+    }
+
+    fun onGameBootHandOff() {
+        if (!_uiState.value.gameBootIsPreview) gameBootGate.onPresentationFinished()
+    }
+
+    fun onGameBootComplete() {
+        val wasPreview = _uiState.value.gameBootIsPreview
+        _uiState.update { it.copy(activeGameBoot = null, gameBootIsPreview = false) }
+        if (wasPreview) {
+            uiMediaAudioPlayer.stop()
+        } else {
+            gameBootGate.onPresentationFinished()
+            gameBootGate.onPresentationDismissed()
+        }
+    }
+
+    fun previewBootSequence() {
+        _uiState.update { it.copy(showBootSequence = true) }
+    }
+
+    fun previewGameBoot() {
+        viewModelScope.launch {
+            val (video, audio) = withContext(Dispatchers.IO) {
+                val customVideo = uiMediaStore.pathFor(com.echo.core.domain.model.UiMediaSlot.GAMEBOOT_VIDEO)
+                customVideo to resolveGameBootAudio(
+                    customVideoPath = customVideo,
+                    customAudioPath = uiMediaStore.pathFor(
+                        com.echo.core.domain.model.UiMediaSlot.GAMEBOOT_AUDIO,
+                    ),
+                )
+            }
+
+            val previewArt = if (video != null) null else runCatching {
+                gameRepository.observeAllGames().first().firstNotNullOfOrNull { it.discFaceUri }
+            }.getOrNull()
+
+            audio?.let {
+                uiMediaAudioPlayer.play(
+                    uri = it,
+                    clipEndMs = com.echo.themekit.UiMediaLimits.GAMEBOOT_SEQUENCE_MS,
+                    label = "gameboot-preview",
+                )
+            }
+            _uiState.update {
+                it.copy(
+                    activeGameBoot = com.echo.feature.launcher.GameBootRequest(
+                        gameTitle = "Preview",
+                        videoPath = video,
+                        audioPath = audio,
+                        coverArt = previewArt,
+                    ),
+                    gameBootIsPreview = true,
+                )
+            }
+        }
+    }
+
+    fun onBootSequenceComplete() {
+        Timber.d("StartupSeq: boot sequence complete")
+        _uiState.update { it.copy(showBootSequence = false) }
+    }
+
+    fun onStartupPermissionsSettled() {
+        Timber.d("StartupSeq: notification permission settled")
+        _uiState.update { it.copy(startupPermissionsSettled = true) }
+    }
+
+    private fun checkInitialSetup() {
+        viewModelScope.launch {
+            val prefs = context.echoDataStore.data.first()
+            when (initialSetupDecision(prefs, existingCards())) {
+                InitialSetupDecision.ALREADY_SEEN ->
+                    Timber.d("StartupSeq: initial setup already seen")
+                InitialSetupDecision.SEED_AS_SEEN -> {
+                    context.echoDataStore.edit { it[KEY_INITIAL_SETUP_SEEN] = true }
+                    Timber.i("StartupSeq: existing configuration found, wizard seeded as seen")
+                }
+                InitialSetupDecision.OPEN_WIZARD -> {
+                    context.echoDataStore.edit { it[KEY_INITIAL_SETUP_STARTED] = true }
+                    Timber.i("StartupSeq: fresh install, opening first-run wizard")
+                    _uiState.update { it.withSettingsOpen(INITIAL_SETUP_FIRST_RUN_SCREEN_ID) }
+                }
+            }
+
+            _uiState.update { it.copy(initialSetupDecided = true) }
+        }
+    }
+
+    private suspend fun existingCards(): List<MemoryCard> =
+        runCatching { memoryCardRepository.getAll() }.getOrDefault(emptyList())
+
+    private fun logStartupSequence() {
+        viewModelScope.launch {
+            _uiState
+                .map { Triple(it.startupPermissionsSettled, it.showBootSequence, it.activeSettingsScreen) }
+                .distinctUntilChanged()
+                .transformWhile { emit(it); it.second }
+                .collect { (settled, boot, screen) ->
+                    Timber.v(
+                        "StartupSeq: permissionsSettled=$settled showBootSequence=$boot " +
+                            "activeSettingsScreen=$screen xmbForegroundVisible=${!boot && screen == null}"
+                    )
+                }
+        }
+    }
+
+    private fun markInitialSetupSeen() {
+        viewModelScope.launch {
+            context.echoDataStore.edit { it[KEY_INITIAL_SETUP_SEEN] = true }
+        }
+    }
+
+    fun openLibraryManager() {
+        markInitialSetupSeen()
+        _uiState.update { it.withSettingsOpen("settings_library") }
+    }
+
+    fun goToLibrary() {
+        markInitialSetupSeen()
+        _uiState.update { it.withSettingsClosed() }
+        openAllGamesFolder()
+        viewModelScope.launch {
+            val first = runCatching { gameRepository.observeGamesOnly().first() }
+                .getOrDefault(emptyList())
+                .filterNot { it.isMissing }
+                .minByOrNull { it.title.lowercase() }
+            if (first != null) {
+                val idx = _uiState.value.currentItems.indexOfFirst { it.gameId == first.id }
+                if (idx > 0) _uiState.update { it.copy(selectedItemIndex = idx) }
+            }
+        }
+    }
+
+    private var setupState: com.echo.feature.launcher.SetupState =
+        com.echo.feature.launcher.SetupState()
+
+    private fun observeSetupState() {
+        viewModelScope.launch {
+            setupStateProvider.observe().collect { fresh ->
+                if (fresh != setupState) {
+                    setupState = fresh
+
+                    if (_uiState.value.currentItems.any { it.type == CrossbarItemType.EMPTY }) {
+                        loadItemsForCategory(currentCategory())
+                    }
+                }
+            }
+        }
+    }
+
+    fun onUserInteraction() {
+        lastInteractionMs = SystemClock.elapsedRealtime()
+        if (!_uiState.value.hintsAutoHide) {
+            _uiState.update { it.withHintsShownNow() }
+        } else if (_uiState.value.showContextMenuHint ||
+            _uiState.value.showSettingsHint
+        ) {
+            _uiState.update {
+                it.copy(
+                    showContextMenuHint = false,
+                    showSettingsHint = false,
+                )
+            }
+        }
+    }
+
+    private fun observeLibrarySetupState() {
+        viewModelScope.launch {
+            context.echoDataStore.data.collect { prefs ->
+                val complete = prefs[KEY_SETUP_COMPLETE] ?: false
+                _uiState.update { it.copy(librarySetupComplete = complete) }
+            }
+        }
+    }
+
+    private fun observeIconPreferences() {
+        viewModelScope.launch {
+            iconDisplayPreferences.animatedIconsFlow.collect { enabled ->
+                animatedIconsEnabled = enabled
+                if (!enabled) _uiState.update { it.copy(focusedGameVideo = null) }
+            }
+        }
+        viewModelScope.launch {
+            iconDisplayPreferences.gameMetadataFlow.collect { visible ->
+                _uiState.update { it.copy(gameMetadataVisible = visible) }
+            }
+        }
+        viewModelScope.launch {
+            iconDisplayPreferences.itemBackdropFlow.collect { on ->
+                _uiState.update { it.copy(itemBackdropEnabled = on) }
+            }
+        }
+        viewModelScope.launch {
+            iconDisplayPreferences.snapPlacementFlow.collect { placement ->
+
+                _uiState.update { it.copy(snapPlacement = placement, focusedGameVideo = null) }
+            }
+        }
+        viewModelScope.launch {
+            iconDisplayPreferences.lingerDelaySecondsFlow.collect { seconds ->
+                icon1LingerMs = (seconds * 1_000f).toLong()
+            }
+        }
+    }
+
+    @Volatile private var animatedIconsEnabled = true
+
+    private val ACCENT_SETTLE_MS = 220L
+
+    @Volatile private var icon1LingerMs = ICON1_LINGER_MS
+
+    private fun observeFocusedItemAccent() {
+        viewModelScope.launch {
+            _uiState
+                .map { s -> s.currentItems.getOrNull(s.selectedItemIndex)?.takeIf { it.backdropArt.isNotEmpty() } }
+
+                .distinctUntilChanged { a, b -> a?.backdropIdentity() == b?.backdropIdentity() }
+                .collectLatest { item ->
+                    if (item == null) {
+                        _uiState.update {
+                            it.copy(focusedItemAccentArgb = null, focusedItemBackdrop = null)
+                        }
+                        return@collectLatest
+                    }
+                    kotlinx.coroutines.delay(ACCENT_SETTLE_MS)
+                    val art = artworkAccent.resolve(*item.backdropArt.toTypedArray())
+
+                    _uiState.update {
+                        it.copy(
+                            focusedItemAccentArgb = art?.accent,
+                            focusedItemBackdrop = art?.uri,
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun CrossbarItem.backdropIdentity() =
+        Triple(id, backdropArt, backdropArt.map { com.echo.core.ui.image.ArtworkRevisions.of(it) })
+
+    private fun observeFocusedGameVideo() {
+        viewModelScope.launch {
+            _uiState
+                .map { s ->
+                    val item = s.currentItems.getOrNull(s.selectedItemIndex)
+
+                    val eligible = item?.gameId != null && item.isRealGame &&
+                        !s.hasBlockingOverlay &&
+                        com.echo.feature.crossbar.ui.snapSiteFor(
+                            s.snapPlacement,
+                            s.effectivePanelPage == DetailPanelPage.VIDEO,
+                        ) != null
+                    if (eligible) item.gameId else null
+                }
+                .distinctUntilChanged()
+                .collectLatest { gameId ->
+                    if (_uiState.value.focusedGameVideo?.gameId != gameId) {
+                        _uiState.update { it.copy(focusedGameVideo = null) }
+                    }
+                    if (gameId == null) return@collectLatest
+                    kotlinx.coroutines.delay(icon1LingerMs)
+                    if (!videoSnapsAllowed()) {
+                        Timber.d("ICON1: gates vetoed playback for game $gameId (toggle/battery/thermal)")
+                        return@collectLatest
+                    }
+
+                    val uri = artworkStore.find(gameId, com.echo.feature.artwork.store.ArtworkKind.ICON1)
+                        ?: artworkStore.find(gameId, com.echo.feature.artwork.store.ArtworkKind.VIDEO)
+                    if (uri == null) {
+                        Timber.d("ICON1: no icon video stored for game $gameId (enable Download Video Snaps + rescrape)")
+                        return@collectLatest
+                    }
+                    Timber.d("ICON1: playing snap for game $gameId from $uri")
+                    _uiState.update {
+                        it.copy(
+                            focusedGameVideo = com.echo.feature.crossbar.ui.FocusedGameVideo(
+                                gameId = gameId,
+                                uri = uri,
+                                placement = it.snapPlacement,
+                            ),
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun videoSnapsAllowed(): Boolean {
+        if (!animatedIconsEnabled) return false
+        val pm = context.getSystemService(android.os.PowerManager::class.java)
+        if (pm?.isPowerSaveMode == true) return false
+        if ((pm?.currentThermalStatus ?: 0) >= android.os.PowerManager.THERMAL_STATUS_MODERATE) return false
+        val bm = context.getSystemService(android.os.BatteryManager::class.java)
+        val level = bm?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
+        if (level in 1 until 20 && bm?.isCharging != true) return false
+        return true
+    }
+
+    private fun observeTouchNavButtonMode() {
+        viewModelScope.launch {
+            context.echoDataStore.data.collect { prefs ->
+                val mode = com.echo.core.domain.model.TouchNavButtonMode
+                    .fromName(prefs[KEY_TOUCH_NAV_BUTTON])
+                val sensitivity = com.echo.core.domain.model.TouchSensitivity
+                    .fromName(prefs[KEY_TOUCH_SENSITIVITY])
+                val hintEnabled = prefs[KEY_CONTEXT_MENU_HINT] ?: ControllerHintPolicy.DEFAULT_ENABLED
+                val hintDelaySeconds =
+                    ControllerHintPolicy.clampDelay(
+                        prefs[KEY_CONTEXT_MENU_HINT_DELAY_SECONDS] ?: ControllerHintPolicy.DEFAULT_DELAY_SECONDS
+                    )
+                val legibility = com.echo.core.domain.model.IconLegibilityStyle
+                    .fromName(prefs[KEY_ICON_LEGIBILITY])
+                val fadeByDistance = prefs[KEY_FADE_BY_DISTANCE] ?: true
+                val cardArtGrid = prefs[KEY_CARD_ART_GRID] ?: true
+                val recentsIncludeApps = prefs[KEY_RECENTS_INCLUDE_APPS] ?: false
+                val interfaceChoices = com.echo.core.data.repository.InterfacePreferences.read(prefs)
+                val textShadow = prefs[KEY_TEXT_SHADOW] ?: true
+                _uiState.update {
+                    it.copy(
+                        touchNavButtonMode = mode,
+                        touchSensitivity = sensitivity,
+                        contextMenuHintEnabled = hintEnabled,
+                        contextMenuHintDelaySeconds = hintDelaySeconds,
+                        iconLegibility = legibility,
+                        fadeByDistance = fadeByDistance,
+                        cardArtGrid = cardArtGrid,
+                        recentsIncludeApps = recentsIncludeApps,
+                        interfaceChoices = interfaceChoices,
+                        textShadow = textShadow,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun observeBackgroundSettings() {
+        viewModelScope.launch {
+            context.echoDataStore.data.collect { prefs ->
+                val style = runCatching {
+                    WaveStyle.valueOf(prefs[KEY_WAVE_STYLE] ?: WaveStyle.ANIMATED.name)
+                }.getOrDefault(WaveStyle.ANIMATED)
+                _uiState.update {
+                    it.copy(
+                        waveStyle            = style,
+                        respectBatterySaver  = prefs[KEY_RESPECT_BATTERY] ?: true,
+                        waveOverWallpaper    = prefs[KEY_WAVE_OVER_WALLPAPER] ?: false,
+                        thermalThrottleAware = prefs[KEY_THERMAL_AWARE] ?: true,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun observeWallpaper() {
+        viewModelScope.launch {
+            context.echoDataStore.data.collect { prefs ->
+                val path = prefs[KEY_CUSTOM_WALLPAPER]
+
+                val validPath = if (path != null && java.io.File(path).exists()) path else null
+
+                val motionPath = prefs[KEY_MOTION_WALLPAPER]
+                    ?.takeIf { validPath != null && java.io.File(it).exists() }
+
+                val accent = prefs[com.echo.core.data.wallpaper.WallpaperLuminanceProbe.KEY_WALLPAPER_ACCENT]
+                    ?.takeIf { validPath != null }
+                _uiState.update {
+                    it.copy(
+                        customWallpaperPath = validPath,
+                        motionWallpaperPath = motionPath,
+                        wallpaperAccent = accent,
+                    )
+                }
+            }
+        }
+    }
+
+    companion object {
+        private val KEY_WAVE_STYLE        = stringPreferencesKey("display_wave_style")
+
+        private val KEY_RESPECT_BATTERY   = booleanPreferencesKey("display_battery_saver")
+
+        private val KEY_WAVE_OVER_WALLPAPER = booleanPreferencesKey("display_wave_over_wallpaper")
+        private val KEY_THERMAL_AWARE     = booleanPreferencesKey("display_thermal_aware")
+        private val KEY_COLOR_SCHEME      = stringPreferencesKey("display_color_scheme")
+
+        private val KEY_ACCENT_OVERRIDE   = longPreferencesKey("theme_accent_override")
+
+        private val KEY_ICON_COLOR        = longPreferencesKey("theme_icon_color")
+
+        private val KEY_TEXT_COLOR        = longPreferencesKey("display_text_color")
+
+
+        internal const val WAVE_IDLE_MS = 12_000L
+
+        internal const val IDLE_HINT_POLL_MS  = 500L
+        private val KEY_Crossbar_LAYOUT_ADJUST = stringPreferencesKey("display_xmb_layout_adjust")
+        private val KEY_SETUP_COMPLETE    = booleanPreferencesKey("library_setup_complete")
+
+        private val KEY_INITIAL_SETUP_SEEN = com.echo.core.data.repository.InitialSetupFlag.KEY_SEEN
+
+        private val KEY_INITIAL_SETUP_STARTED = com.echo.core.data.repository.InitialSetupFlag.KEY_STARTED
+
+        internal fun returnAddressFor(screenId: String?): String? =
+            screenId.takeIf { it in WIZARD_SCREEN_IDS }
+
+        internal fun nextReturnAddress(from: String?, to: String, held: String?): String? =
+            (returnAddressFor(from) ?: held)?.takeIf { it != to }
+
+        internal val WIZARD_SCREEN_IDS: Set<String>
+            get() = setOf(INITIAL_SETUP_SCREEN_ID, INITIAL_SETUP_FIRST_RUN_SCREEN_ID)
+
+        internal const val INITIAL_SETUP_SCREEN_ID = "settings_initial_setup"
+
+        internal const val INITIAL_SETUP_FIRST_RUN_SCREEN_ID = "settings_initial_setup_first"
+
+        private val EXISTING_CONFIG_STRING_KEYS = listOf(
+            stringPreferencesKey("library_rom_root_tree_uris"),
+            stringPreferencesKey("library_rom_root_tree_uri"),
+            stringPreferencesKey("artwork_folder_tree_uri"),
+
+            stringPreferencesKey("sgdb_api_key"),
+            stringPreferencesKey("igdb_client_id"),
+            stringPreferencesKey("ss_username"),
+            stringPreferencesKey("tmdb_api_key"),
+        ) + com.echo.core.data.repository.MediaRootKind.entries.map { stringPreferencesKey(it.key) }
+
+        internal fun hasExistingSetupConfig(prefs: androidx.datastore.preferences.core.Preferences): Boolean =
+            prefs[KEY_SETUP_COMPLETE] == true ||
+                EXISTING_CONFIG_STRING_KEYS.any { !prefs[it].isNullOrBlank() }
+
+        internal fun initialSetupDecision(
+            prefs: androidx.datastore.preferences.core.Preferences,
+            cards: List<MemoryCard>,
+        ): InitialSetupDecision = when {
+            prefs[KEY_INITIAL_SETUP_SEEN] == true -> InitialSetupDecision.ALREADY_SEEN
+            prefs[KEY_INITIAL_SETUP_STARTED] == true -> InitialSetupDecision.OPEN_WIZARD
+            hasExistingSetupConfig(prefs) || cards.any { it.isUserLibrary() } -> InitialSetupDecision.SEED_AS_SEEN
+            else -> InitialSetupDecision.OPEN_WIZARD
+        }
+
+        private fun MemoryCard.isUserLibrary(): Boolean =
+            platformId != ANDROID_PLATFORM_ID || gameCount > 0
+        private val KEY_CUSTOM_WALLPAPER  = stringPreferencesKey("display_custom_wallpaper")
+
+        private val KEY_MOTION_WALLPAPER = stringPreferencesKey("display_motion_wallpaper")
+
+        private val KEY_SHOW_BOOT       = booleanPreferencesKey("display_show_boot")
+        private val KEY_BOOT_ON_RESUME  = booleanPreferencesKey("display_boot_on_resume")
+
+        private val KEY_TOUCH_NAV_BUTTON  = stringPreferencesKey("interface_touch_nav_button")
+
+        private val KEY_CONTEXT_MENU_HINT = booleanPreferencesKey("interface_context_menu_hint")
+        private val KEY_CONTEXT_MENU_HINT_DELAY_SECONDS =
+            floatPreferencesKey("interface_context_menu_hint_delay_seconds")
+
+        private val KEY_TOUCH_SENSITIVITY = stringPreferencesKey("interface_touch_sensitivity")
+
+        private val KEY_ICON_LEGIBILITY = stringPreferencesKey("display_icon_legibility")
+
+        private val KEY_FADE_BY_DISTANCE = booleanPreferencesKey("display_fade_by_distance")
+
+        private val KEY_CARD_ART_GRID = booleanPreferencesKey("display_card_art_grid")
+
+        private val KEY_RECENTS_INCLUDE_APPS = booleanPreferencesKey("display_recents_include_apps")
+
+        private val KEY_TEXT_SHADOW = booleanPreferencesKey("display_text_shadow")
+
+        private val KEY_PROFILE_NAME = stringPreferencesKey("profile_name")
+
+        private val KEY_PROFILE_AVATAR = stringPreferencesKey("profile_avatar_uri")
+
+        private const val ICON1_LINGER_MS = 1_500L
+        private const val SETUP_ITEM_ID = "library_setup"
+        private const val NO_CONSOLES_ITEM_ID = "no_consoles"
+
+        private const val SETUP_GAP_ITEM_ID = "setup_gap"
+        private const val NO_GAMES_ITEM_ID    = "no_games"
+        private const val EMPTY_FAVORITES_ITEM_ID = "empty_favorites"
+        private const val EMPTY_CATEGORY_ITEM_ID = "empty_category"
+        private const val ALL_GAMES_ITEM_ID = "all_games"
+
+        private const val RESUME_DONE_FRACTION = 0.97f
+        private const val ALL_GAMES_PLATFORM_ID = "__all_games__"
+        private const val FAVORITES_ITEM_ID = "favorites_folder"
+
+        internal const val FAVORITES_PLATFORM_ID = "__favorites__"
+        private const val MISSING_ITEM_ID = "missing_folder"
+        internal const val MISSING_PLATFORM_ID = "__missing__"
+        private const val EMPTY_MISSING_ITEM_ID = "empty_missing"
+
+        private const val MISSING_REASON = "File not found on last scan"
+        private const val ADD_APPS_ITEM_ID = "add_apps"
+
+        internal const val RECENT_APP_ID_PREFIX = "recentapp_"
+        private const val ADD_GAMES_ITEM_ID = "add_games"
+        private const val FIND_GAMES_ITEM_ID = "find_games"
+
+
+        private const val ADD_MUSIC_FOLDER_ITEM_ID = "add_music_folder"
+        private const val ADD_ROM_ROOT_ITEM_ID = "add_rom_root"
+        internal const val ROM_FOLDERS_ITEM_ID = "rom_folders"
+        private val NON_EMULATOR_PLATFORM_IDS = setOf(ANDROID_PLATFORM_ID, WINDOWS_PLATFORM_ID)
+        private const val PLATFORM_EMU_PREFIX = "pemu_pick_"
+        internal const val MEDIA_APP_NONE = "__none__"
+        private const val VIDEO_PLAYER_BUILTIN = "builtin"
+        private const val VIDEO_PLAYER_ASK = "ask"
+        internal fun mediaRootItemId(kind: MediaRootKind, treeUri: String) = "mediaroot_${kind.name}_$treeUri"
+        internal fun addMediaRootItemId(kind: MediaRootKind) = "add_mediaroot_${kind.name}"
+        internal fun mediaFoldersItemId(kind: MediaRootKind) = "media_folders_${kind.name}"
+        internal const val ALL_MUSIC_ITEM_ID = "all_music"
+        internal const val NOW_PLAYING_ITEM_ID = "now_playing"
+        internal const val PLAYLISTS_ITEM_ID = "playlists"
+        internal const val MUSIC_ARTISTS_ITEM_ID = "music_artists"
+        internal const val MUSIC_ALBUMS_ITEM_ID = "music_albums"
+        private const val ADD_MUSIC_APPS_ITEM_ID = "add_music_apps"
+        private const val CREATE_PLAYLIST_ITEM_ID = "create_playlist"
+        private const val ADD_TRACKS_ITEM_ID = "add_tracks"
+        private const val EMPTY_PLAYLIST_ITEM_ID = "empty_playlist"
+
+        internal const val MUSIC_APPS_CATEGORY_ID = "music"
+
+        internal const val ALL_VIDEOS_ITEM_ID = "all_videos"
+        internal const val VIDEO_COLLECTIONS_ITEM_ID = "video_collections"
+        private const val RECENTLY_WATCHED_ITEM_ID = "recently_watched"
+        private const val FAVORITE_VIDEOS_ITEM_ID = "favorite_videos"
+        private const val VIDEO_PLAYLISTS_ITEM_ID = "video_playlists"
+        private const val CREATE_VIDEO_PLAYLIST_ITEM_ID = "create_video_playlist"
+        internal const val VIDEO_LIBRARIES_ITEM_ID = "video_libraries"
+        private const val ADD_VIDEOS_ITEM_ID = "add_videos"
+        private const val ADD_VIDEO_APPS_ITEM_ID = "add_video_apps"
+        internal const val VIDEO_APPS_CATEGORY_ID = "videos"
+
+        internal const val ALL_PHOTOS_ITEM_ID = "all_photos"
+        internal const val CAMERA_ITEM_ID = "photo_camera"
+        private const val ADD_PHOTO_LIBRARY_ITEM_ID = "add_photo_library"
+        internal const val PHOTO_ALBUMS_ITEM_ID = "photo_albums"
+        internal const val PHOTO_FAVORITES_ITEM_ID = "photo_favorites"
+        internal const val OPEN_READER_ITEM_ID = "library_open_reader"
+        internal const val BOOK_SHELVES_ITEM_ID = "library_shelves"
+        internal const val BOOK_SERIES_ITEM_ID = "library_series"
+        internal const val ALL_BOOKS_ITEM_ID = "all_books"
+        private const val ADD_BOOK_FOLDER_ITEM_ID = "add_book_folder"
+        private const val ADD_LIBRARY_APPS_ITEM_ID = "add_library_apps"
+
+        private val RECENTLY_PLAYED_LIMIT = com.echo.core.data.repository.InterfacePreferences.LAST_PLAYED_SIZES.max()
+
+        private val KEY_RECENT_APP_DISMISSALS = stringSetPreferencesKey("recent_app_dismissals")
+        internal const val ADD_MENU_ITEM_ID = "add_menu"
+        internal const val QUICK_SEARCH_ITEM_ID = "quick_search"
+        internal const val SEARCH_ITEM_ID = "library_search"
+
+        private const val SEARCH_RESULTS_PER_LIBRARY = 40
+        private const val NETWORK_CATEGORY_ID = "network"
+
+        private const val LIBRARY_APPS_CATEGORY_ID = BuiltInCategory.LIBRARY
+        private const val ADD_PHOTO_APPS_ITEM_ID = "add_photo_apps"
+        private const val PHOTO_APPS_CATEGORY_ID = "photos"
+
+        internal const val MEMORY_CARD_ASSET_URI =
+            "file:///android_asset/systems/physical-media/_default.png"
+
+        private const val MUSIC_PLAYER_MENU_MARKER = "__music_player__"
+
+        val FALLBACK_CATEGORIES: List<Category> =
+            com.echo.core.domain.model.BUILT_IN_CATEGORIES
+
+        private val ANDROID_ITEMS = com.echo.feature.appbar.AppFilter.entries.map { filter ->
+            CrossbarItem(
+                id = "drawer_${filter.name.lowercase()}",
+                title = filter.label,
+                subtitle = filter.subtitle,
+            )
+        }
+
+        internal const val ANDROID_SETTINGS_ITEM_ID = "settings_android_system"
+
+        internal const val OPEN_SETTINGS_ITEM_ID = "settings_open"
+
+        internal val SETTINGS_ROOT_ITEMS = listOf(
+            CrossbarItem(
+                id = OPEN_SETTINGS_ITEM_ID,
+                title = "Settings",
+                subtitle = "Library, emulators, appearance, media & system",
+            ),
+            CrossbarItem(id = ANDROID_SETTINGS_ITEM_ID, title = "Android Settings", subtitle = "Opens device settings"),
+        )
+    }
+
+    private fun canonicalCrossbarCategories(categories: List<Category>): List<Category> =
+        canonicalCrossbarCategories(categories, FALLBACK_CATEGORIES)
+
+    private fun defaultCrossbarCategoryIndex(categories: List<Category>): Int =
+        categories.indexOfFirst { it.id == BuiltInCategory.RECENTLY_PLAYED }
+            .takeIf { it >= 0 }
+            ?: categories.indexOfFirst { it.id == BuiltInCategory.GAMES }
+                .takeIf { it >= 0 }
+            ?: 0
+}
