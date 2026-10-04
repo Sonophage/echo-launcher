@@ -446,7 +446,7 @@ class CrossbarMusic(
 
         item.packageName != null -> {
             menuSound.play(MenuSound.LAUNCH)
-            vm.launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            vm.launching.launchAppWithDisc(item.packageName, item.shelfCoverArt)
             true
         }
         else -> false
@@ -458,7 +458,7 @@ class CrossbarMusic(
         if (currentMusicTracks.isEmpty()) return
         val track = currentMusicTracks[startIndex]
         scope.launch {
-            vm.awaitDiscHandOff(track.artUri)
+            vm.launching.awaitDiscHandOff(track.artUri)
             musicPlayer.setQueue(currentMusicTracks, startIndex)
             uiState.update { it.copy(musicPlayerVisible = true) }
         }

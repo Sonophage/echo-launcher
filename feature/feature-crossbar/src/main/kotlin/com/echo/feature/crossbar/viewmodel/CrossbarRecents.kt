@@ -172,14 +172,14 @@ class CrossbarRecents(
         uiState.update { it.copy(activeAppDrawerFilter = null, pendingDrawerAction = null) }
 
         when (recentLaunchFor(item)) {
-            RecentLaunch.GAME  -> item.gameId?.let { vm.launchGameDirectly(it) }
-            RecentLaunch.STORED_INTENT -> item.launchIntentUri?.let { vm.launchStoredIntent(it, item.title) }
+            RecentLaunch.GAME  -> item.gameId?.let { vm.launching.launchGameDirectly(it) }
+            RecentLaunch.STORED_INTENT -> item.launchIntentUri?.let { vm.launching.launchStoredIntent(it, item.title) }
             RecentLaunch.SHORTCUT -> {
                 val pkg = item.packageName ?: return
                 val shortcut = item.shortcutId ?: return
-                vm.launchHarvestedShortcut(pkg, shortcut)
+                vm.launching.launchHarvestedShortcut(pkg, shortcut)
             }
-            RecentLaunch.APP   -> item.packageName?.let { vm.launchAppWithDisc(it, item.shelfCoverArt) }
+            RecentLaunch.APP   -> item.packageName?.let { vm.launching.launchAppWithDisc(it, item.shelfCoverArt) }
             RecentLaunch.VIDEO -> {
                 menuSound.play(MenuSound.SELECT)
                 uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }

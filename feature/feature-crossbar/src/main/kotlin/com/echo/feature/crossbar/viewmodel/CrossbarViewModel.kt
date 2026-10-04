@@ -35,7 +35,6 @@ import com.echo.feature.launcher.platformEmulatorChoices
 import com.echo.core.data.repository.MemoryCardRepository
 import com.echo.core.data.repository.EchoThemeStore
 import com.echo.core.ui.icons.CustomIcon
-import com.echo.core.ui.media.resolveGameBootAudio
 import com.echo.themekit.CustomizableIcons
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.domain.model.Category
@@ -76,9 +75,7 @@ import com.echo.core.ui.wave.WaveStyle
 import com.echo.feature.appbar.AppCategoryRepository
 import com.echo.feature.appbar.CategorizedApp
 import com.echo.feature.appbar.LauncherShortcutRepository
-import com.echo.feature.launcher.LaunchDispatchResult
 import com.echo.feature.launcher.LaunchRecoveryAction
-import com.echo.feature.launcher.ResolvedLaunch
 import com.echo.feature.artwork.api.ArtworkRepository
 import com.echo.feature.library.scanner.LibraryScanner
 import com.echo.feature.crossbar.R
@@ -90,7 +87,6 @@ import com.echo.feature.crossbar.gamepad.ShoulderHold
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,7 +102,6 @@ import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 internal fun CrossbarPalette.toEchoColors() = EchoColors(
@@ -1284,11 +1279,11 @@ class CrossbarViewModel @Inject constructor(
     private val setupStateProvider: com.echo.feature.launcher.SetupStateProvider,
     internal val customIconStore: CustomIconStore,
     internal val echoThemeStore: EchoThemeStore,
-    private val uiMediaStore: com.echo.core.data.repository.UiMediaStore,
+    internal val uiMediaStore: com.echo.core.data.repository.UiMediaStore,
     private val gameBootGate: com.echo.feature.launcher.GameBootGate,
     private val mediaLaunchGate: com.echo.core.data.launch.MediaLaunchGate,
 
-    private val uiMediaAudioPlayer: com.echo.core.ui.media.UiMediaAudioPlayer,
+    internal val uiMediaAudioPlayer: com.echo.core.ui.media.UiMediaAudioPlayer,
     private val mediaRootRepository: com.echo.core.data.repository.MediaRootRepository,
     private val videoScanner: com.echo.feature.library.scanner.VideoScanner,
     private val bookScanner: com.echo.feature.library.scanner.BookScanner,
@@ -1306,6 +1301,8 @@ class CrossbarViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
+
+    internal val launching = CrossbarLauncher(this, _uiState, viewModelScope, launchDispatcher, launchResolver, intentResolver, gameBootGate, mediaLaunchGate, launcherShortcutRepository, menuSound)
 
     internal val appPickerSection = CrossbarAppPicker(this, _uiState, viewModelScope, menuSound)
 
@@ -1339,7 +1336,7 @@ class CrossbarViewModel @Inject constructor(
 
     internal var platformCache: Map<String, PlatformEntity> = emptyMap()
     internal var enabledCards: List<MemoryCard> = emptyList()
-    private val taskNotifier = BackgroundTaskNotifier(context)
+    internal val taskNotifier = BackgroundTaskNotifier(context)
 
     init {
         gamepadInputHandler.scope = viewModelScope
@@ -1370,9 +1367,9 @@ class CrossbarViewModel @Inject constructor(
         observeMissingGames()
         observeAppChanges()
         observeGamepadMappings()
-        observeBootPreferences()
-        observeGameBoot()
-        observeMediaLaunch()
+        launching.observeBootPreferences()
+        launching.observeGameBoot()
+        launching.observeMediaLaunch()
         music.observeMusic()
         video.observeVideo()
         gallery.observePhoto()
@@ -1385,58 +1382,10 @@ class CrossbarViewModel @Inject constructor(
         recents.observeShelfCounts()
         collectGamepadActions()
         consumeWindowsSetupPrompt()
-        observeLaunchRecoveryRequests()
+        launching.observeLaunchRecoveryRequests()
         observeSetupState()
 
         pcShortcutImporter.watchPinChanges(viewModelScope)
-    }
-
-    private fun observeLaunchRecoveryRequests() {
-        viewModelScope.launch {
-            launchDispatcher.recoveryRequests.collect { request ->
-                _uiState.update { it.copy(launchRecovery = request) }
-            }
-        }
-    }
-
-    fun onLaunchRecoveryAction(action: LaunchRecoveryAction) {
-        when (action) {
-            LaunchRecoveryAction.DISMISS -> launchDispatcher.dismissRecovery()
-            LaunchRecoveryAction.RETRY   -> {
-                val request = _uiState.value.launchRecovery ?: return
-                launchDispatcher.dismissRecovery()
-                launchGameDirectly(request.gameId)
-            }
-            LaunchRecoveryAction.CHANGE_EMULATOR -> {
-                val gameId = _uiState.value.launchRecovery?.gameId ?: return
-                launchDispatcher.dismissRecovery()
-                openEmulatorPickerMenu(gameId)
-            }
-            LaunchRecoveryAction.PER_SYSTEM_DEFAULTS -> {
-                val gameId = _uiState.value.launchRecovery?.gameId
-                launchDispatcher.dismissRecovery()
-                viewModelScope.launch {
-                    val platformId = gameId?.let { gameRepository.getById(it) }?.platformId
-                    if (platformId != null) openDefaultEmulatorMenu(platformId)
-                    else _uiState.update { it.withSettingsOpen("settings_library") }
-                }
-            }
-
-            LaunchRecoveryAction.OPEN_LIBRARY -> {
-                launchDispatcher.dismissRecovery()
-                _uiState.update { it.withSettingsOpen("settings_library") }
-            }
-            LaunchRecoveryAction.COPY_DIAGNOSTIC -> {
-                val request = _uiState.value.launchRecovery ?: return
-                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                cm.setPrimaryClip(android.content.ClipData.newPlainText(
-                    "ECHO launch diagnostic", request.diagnostic,
-                ))
-                taskNotifier.complete(
-                    "launch_diag_${request.gameId}", request.gameTitle, "Diagnostic copied to clipboard",
-                )
-            }
-        }
     }
 
     private fun consumeWindowsSetupPrompt() {
@@ -2070,15 +2019,6 @@ class CrossbarViewModel @Inject constructor(
             Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
                 .resolveActivity(context.packageManager) != null
         }.getOrDefault(false)
-    }
-
-    internal fun launchCamera() {
-        runCatching {
-            context.startActivity(
-                Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-        }.onFailure { Timber.w(it, "Could not launch a camera app") }
     }
 
     internal suspend fun photoAppItems(): List<CrossbarItem> {
@@ -2913,8 +2853,8 @@ class CrossbarViewModel @Inject constructor(
                 }
                 GamepadAction.SELECT -> actions
                     .getOrNull(state.launchRecoveryCursor.coerceIn(0, actions.lastIndex))
-                    ?.let { (a, _) -> onLaunchRecoveryAction(a) }
-                GamepadAction.BACK -> onLaunchRecoveryAction(LaunchRecoveryAction.DISMISS)
+                    ?.let { (a, _) -> launching.onLaunchRecoveryAction(a) }
+                GamepadAction.BACK -> launching.onLaunchRecoveryAction(LaunchRecoveryAction.DISMISS)
                 else -> Unit
             }
             return
@@ -2957,14 +2897,14 @@ class CrossbarViewModel @Inject constructor(
 
         if (state.showBootSequence) {
             if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
-                onBootSequenceComplete()
+                launching.onBootSequenceComplete()
             }
             return
         }
 
         if (state.activeGameBoot != null) {
             if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
-                onGameBootComplete()
+                launching.onGameBootComplete()
             }
             return
         }
@@ -3235,7 +3175,7 @@ class CrossbarViewModel @Inject constructor(
         )
     }
 
-    private fun openDefaultEmulatorMenu(platformId: String) {
+    internal fun openDefaultEmulatorMenu(platformId: String) {
         viewModelScope.launch {
             val choices = platformChoices(platformId) ?: return@launch
             val rows = buildList {
@@ -3264,14 +3204,6 @@ class CrossbarViewModel @Inject constructor(
                 ),
             )}
         }
-    }
-
-    private fun setPlatformEmulator(platformId: String, profileId: String?) {
-        appAction { memoryCardRepository.setEmulator(platformId, profileId) }
-    }
-
-    private fun clearPlatformEmulatorOverrides(platformId: String) {
-        appAction { gameRepository.clearPreferredEmulatorForPlatform(platformId) }
     }
 
     private fun moveCard(platformId: String, up: Boolean) {
@@ -3484,11 +3416,11 @@ class CrossbarViewModel @Inject constructor(
                 "import_pc_games" -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
             }
             menu.platformId != null -> if (itemId.startsWith(PLATFORM_EMU_PREFIX)) {
-                setPlatformEmulator(menu.platformId, itemId.removePrefix(PLATFORM_EMU_PREFIX))
+                launching.setPlatformEmulator(menu.platformId, itemId.removePrefix(PLATFORM_EMU_PREFIX))
             } else when (itemId) {
                 "default_emulator" -> openDefaultEmulatorMenu(menu.platformId)
-                "emu_automatic"    -> setPlatformEmulator(menu.platformId, null)
-                "clear_emulator_overrides" -> clearPlatformEmulatorOverrides(menu.platformId)
+                "emu_automatic"    -> launching.setPlatformEmulator(menu.platformId, null)
+                "clear_emulator_overrides" -> launching.clearPlatformEmulatorOverrides(menu.platformId)
                 "rename_card"      -> promptRenameCard(menu.platformId)
                 "card_rom_directory" -> folders.openRomFolders()
                 "card_move_up"     -> moveCard(menu.platformId, up = true)
@@ -3559,7 +3491,7 @@ class CrossbarViewModel @Inject constructor(
                 }
             } else when (itemId) {
 
-                "play"                   -> launchGameDirectly(menu.gameId)
+                "play"                   -> launching.launchGameDirectly(menu.gameId)
                 "game_info"              -> _uiState.value.currentItems.firstOrNull { it.gameId == menu.gameId }?.let(gameDetail::onOpenGameInfo)
                 "choose_disc"             -> openDiscPickerMenu(menu.gameId)
                 "export_game"            -> exportGameFromMenu(menu.gameId)
@@ -3636,7 +3568,7 @@ class CrossbarViewModel @Inject constructor(
                         "add"  -> appAction { appCategoryRepository.addToCategory(pkg, targetCategory) }
                     }
                 } else when (itemId) {
-                    "launch"    -> launchAppWithDisc(pkg, selectedItemArt())
+                    "launch"    -> launching.launchAppWithDisc(pkg, selectedItemArt())
                     "edit_app"  -> openAppDetail(menu.gameId, pkg)
 
                     "mark_game" -> appAction {
@@ -3709,7 +3641,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun openEmulatorPickerMenu(gameId: Long) {
+    internal fun openEmulatorPickerMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val profiles = emulatorProfileRepository.getProfilesForPlatform(game.platformId)
@@ -3964,7 +3896,7 @@ class CrossbarViewModel @Inject constructor(
                 val pkg = external ?: return
                 menuSound.play(MenuSound.SELECT)
                 panel.closeNotifications()
-                launchAppWithDisc(pkg, (s.panelStage() as? PanelStage.Music)?.art)
+                launching.launchAppWithDisc(pkg, (s.panelStage() as? PanelStage.Music)?.art)
             }
             StageCommand.OPEN_MUSIC -> {
                 menuSound.play(MenuSound.SELECT)
@@ -4491,22 +4423,22 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (item?.gameId != null && item.isRealGame) {
-            launchGameDirectly(item.gameId)
+            launching.launchGameDirectly(item.gameId)
             return
         }
 
         if (item?.launchIntentUri != null) {
-            launchStoredIntent(item.launchIntentUri, item.title)
+            launching.launchStoredIntent(item.launchIntentUri, item.title)
             return
         }
 
         if (item?.shortcutId != null && item.packageName != null) {
-            launchHarvestedShortcut(item.packageName, item.shortcutId)
+            launching.launchHarvestedShortcut(item.packageName, item.shortcutId)
             return
         }
 
         if (item?.packageName != null) {
-            launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            launching.launchAppWithDisc(item.packageName, item.shelfCoverArt)
             return
         }
 
@@ -4775,102 +4707,6 @@ class CrossbarViewModel @Inject constructor(
 
     internal val MANUAL_MAX_SCROLL_STEPS_ = 20
 
-    fun launchGameFromDrawer(gameId: Long) {
-        _uiState.update { it.copy(activeAppDrawerFilter = null, pendingDrawerAction = null) }
-        launchGameDirectly(gameId)
-    }
-
-    internal fun launchGameDirectly(gameId: Long, discId: Long? = null) {
-        viewModelScope.launch {
-            val selected = gameRepository.getById(gameId) ?: run {
-                Timber.w("Direct launch requested for missing game id=$gameId")
-                return@launch
-            }
-            val game = if (discId != null) gameRepository.getById(discId) ?: selected else selected
-            if (game.isMissing) {
-                Timber.i("Direct launch refused for missing game: ${game.title}")
-                return@launch
-            }
-            launchResolvedGame(game)
-        }
-    }
-
-    private suspend fun launchResolvedGame(game: Game) {
-        val shortcutId = game.shortcutId
-        val packageName = game.packageName
-        if (shortcutId != null && packageName != null) {
-            launcherShortcutRepository.launch(packageName, shortcutId)
-                .onFailure { e ->
-                    Timber.w(e, "Direct shortcut launch failed")
-                    launchDispatcher.recordPreflightFailure(game, null, "Couldn't launch: ${e.message}")
-                }
-            return
-        }
-        if (game.launchIntentUri != null) {
-            runCatching {
-                val parsed = Intent.parseUri(game.launchIntentUri, Intent.URI_INTENT_SCHEME)
-                com.echo.core.common.security.ShortcutIntentSanitizer.sanitize(parsed, context.packageManager)
-                    ?: error("Captured shortcut is not safe to launch")
-            }.onSuccess { intent -> launchIntentFromCrossbar(intent, game, null) }
-                .onFailure { e ->
-                    Timber.w(e, "Direct stored-intent launch failed")
-                    launchDispatcher.recordPreflightFailure(game, null, "Couldn't launch: ${e.message}")
-                }
-            return
-        }
-        if (game.romPath.isNullOrBlank() && !game.packageName.isNullOrBlank()) {
-            intentResolver.resolveNativeApp(game).fold(
-                onSuccess = { intent -> launchIntentFromCrossbar(intent, game, null) },
-                onFailure = { e ->
-                    Timber.w(e, "Direct native-app launch failed")
-                    launchDispatcher.recordPreflightFailure(game, null, e.message ?: "Could not launch ${game.title}")
-                },
-            )
-            return
-        }
-
-        val resolvedLaunch = launchResolver.resolve(game).getOrElse { reason ->
-            Timber.w(reason, "Direct launch unresolved: gameId=${game.id}, platform=${game.platformId}")
-
-            launchDispatcher.recordPreflightFailure(
-                game, null,
-                reason.message ?: "No emulator is set up for ${game.platformId.uppercase()}.",
-            )
-            return
-        }
-        val profile = resolvedLaunch.profile
-
-        val validation = runCatching { intentResolver.validateBeforeLaunch(game, profile) }
-        if (validation.isFailure) {
-            Timber.w(
-                validation.exceptionOrNull(),
-                "Direct emulator launch blocked by preflight: ${profile.name}",
-            )
-            val blocked = validation.exceptionOrNull() as? com.echo.feature.launcher.LaunchBlockedException
-            launchDispatcher.recordPreflightFailure(
-                game, resolvedLaunch,
-                validation.exceptionOrNull()?.message ?: "Could not launch ${profile.name}",
-
-                kind = blocked?.kind ?: com.echo.feature.launcher.LaunchFailureKind.UNKNOWN,
-            )
-            return
-        }
-        intentResolver.resolve(game, profile).fold(
-            onSuccess = { intent -> launchIntentFromCrossbar(intent, game, resolvedLaunch) },
-            onFailure = { e ->
-                Timber.w(e, "Direct emulator launch failed: ${profile.name}")
-                launchDispatcher.recordPreflightFailure(game, resolvedLaunch, e.message ?: "Could not launch ${profile.name}")
-            },
-        )
-    }
-
-    private suspend fun launchIntentFromCrossbar(intent: Intent, game: Game, resolved: ResolvedLaunch?) {
-        when (val result = launchDispatcher.launch(game, resolved, intent)) {
-            is LaunchDispatchResult.Rejected -> Timber.w("Direct launch rejected: ${result.message}")
-            LaunchDispatchResult.Accepted -> Unit
-        }
-    }
-
     private fun openAppDetail(knownGameId: Long?, packageName: String) {
         if (knownGameId != null) {
             _uiState.update { it.copy(activeAppId = knownGameId) }
@@ -4916,33 +4752,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-
-    internal fun launchHarvestedShortcut(hostPackage: String?, shortcutId: String?) {
-        if (hostPackage == null || shortcutId == null) return
-        launcherShortcutRepository.launch(hostPackage, shortcutId).onFailure { e ->
-            Timber.e(e, "Failed to launch shortcut $hostPackage/$shortcutId")
-            taskNotifier.failed("launch_sc_$shortcutId", hostPackage, "Couldn't launch: ${e.message}")
-        }
-    }
-
-    internal fun launchStoredIntent(intentUri: String, label: String) {
-        runCatching {
-            val parsed = android.content.Intent.parseUri(intentUri, android.content.Intent.URI_INTENT_SCHEME)
-
-            val launch = (com.echo.core.common.security.ShortcutIntentSanitizer
-                .sanitize(parsed, context.packageManager)
-                ?: error("Captured shortcut is not safe to launch"))
-                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addFlags(android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION)
-            context.startActivity(
-                launch,
-                com.echo.core.common.launch.LaunchTransition.options(context),
-            )
-        }.onFailure { e ->
-            Timber.e(e, "Failed to launch captured shortcut: $label")
-            taskNotifier.failed("launch_intent_${label.hashCode()}", label, "Couldn't launch: ${e.message}")
-        }
-    }
 
     fun onCloseAppDetail() {
         _uiState.update { it.copy(activeAppId = null, pendingAppDetailAction = null) }
@@ -5189,147 +4998,18 @@ class CrossbarViewModel @Inject constructor(
     }
 
     @Volatile
-    private var bootEnabled: Boolean = true
+    internal var bootEnabled: Boolean = true
 
     @Volatile
-    private var bootOnResume: Boolean = false
-
-    private fun observeBootPreferences() {
-        viewModelScope.launch {
-            val prefs = context.echoDataStore.data.first()
-            bootEnabled = prefs[KEY_SHOW_BOOT] ?: true
-            bootOnResume = prefs[KEY_BOOT_ON_RESUME] ?: false
-            if (!bootEnabled) {
-                _uiState.update { it.copy(showBootSequence = false) }
-            }
-        }
-        viewModelScope.launch {
-            context.echoDataStore.data
-                .map { (it[KEY_SHOW_BOOT] ?: true) to (it[KEY_BOOT_ON_RESUME] ?: false) }
-                .distinctUntilChanged()
-                .collect { (enabled, onResume) ->
-                    bootEnabled = enabled
-                    bootOnResume = onResume
-                }
-        }
-
-        viewModelScope.launch {
-            uiMediaStore.stamp
-                .distinctUntilChanged()
-                .collect {
-                    val (video, audio) = withContext(Dispatchers.IO) {
-                        val video = uiMediaStore.pathFor(com.echo.core.domain.model.UiMediaSlot.BOOT_VIDEO)
-                        val audio = uiMediaStore.pathFor(com.echo.core.domain.model.UiMediaSlot.BOOT_AUDIO)
-                        video to audio
-                    }
-                    _uiState.update { it.copy(bootVideoPath = video, bootAudioPath = audio) }
-                }
-        }
-    }
+    internal var bootOnResume: Boolean = false
 
     fun onHostResumed() {
         if (!bootEnabled || !bootOnResume) return
         _uiState.update { it.copy(showBootSequence = true) }
     }
 
-    private fun observeMediaLaunch() {
-        viewModelScope.launch {
-            mediaLaunchGate.active.collect { request ->
-                _uiState.update { it.copy(discCeremony = request?.let { r -> DiscCeremonyState(r.art) }) }
-            }
-        }
-    }
-
-    internal suspend fun awaitDiscHandOff(art: Any?) = mediaLaunchGate.awaitHandOff(art)
-
     private fun selectedItemArt(): Any? =
         _uiState.value.currentItems.getOrNull(_uiState.value.selectedItemIndex)?.shelfCoverArt
-
-    internal fun launchAppWithDisc(packageName: String, art: Any?) {
-        viewModelScope.launch {
-            awaitDiscHandOff(art ?: appLauncherIcon(packageName))
-            appCategoryRepository.launch(packageName)
-        }
-    }
-
-    private fun appLauncherIcon(packageName: String): Any? =
-        runCatching { context.packageManager.getApplicationIcon(packageName) }.getOrNull()
-
-    fun onDiscCeremonyHandOff() = mediaLaunchGate.onHandOff()
-
-    fun onDiscCeremonyFinished() = mediaLaunchGate.onDismissed()
-
-    private fun observeGameBoot() {
-        viewModelScope.launch {
-            gameBootGate.active.collect { request ->
-                _uiState.update {
-                    if (request == null && it.gameBootIsPreview) it
-                    else it.copy(activeGameBoot = request, gameBootIsPreview = false)
-                }
-            }
-        }
-    }
-
-    fun onGameBootHandOff() {
-        if (!_uiState.value.gameBootIsPreview) gameBootGate.onPresentationFinished()
-    }
-
-    fun onGameBootComplete() {
-        val wasPreview = _uiState.value.gameBootIsPreview
-        _uiState.update { it.copy(activeGameBoot = null, gameBootIsPreview = false) }
-        if (wasPreview) {
-            uiMediaAudioPlayer.stop()
-        } else {
-            gameBootGate.onPresentationFinished()
-            gameBootGate.onPresentationDismissed()
-        }
-    }
-
-    fun previewBootSequence() {
-        _uiState.update { it.copy(showBootSequence = true) }
-    }
-
-    fun previewGameBoot() {
-        viewModelScope.launch {
-            val (video, audio) = withContext(Dispatchers.IO) {
-                val customVideo = uiMediaStore.pathFor(com.echo.core.domain.model.UiMediaSlot.GAMEBOOT_VIDEO)
-                customVideo to resolveGameBootAudio(
-                    customVideoPath = customVideo,
-                    customAudioPath = uiMediaStore.pathFor(
-                        com.echo.core.domain.model.UiMediaSlot.GAMEBOOT_AUDIO,
-                    ),
-                )
-            }
-
-            val previewArt = if (video != null) null else runCatching {
-                gameRepository.observeAllGames().first().firstNotNullOfOrNull { it.discFaceUri }
-            }.getOrNull()
-
-            audio?.let {
-                uiMediaAudioPlayer.play(
-                    uri = it,
-                    clipEndMs = com.echo.themekit.UiMediaLimits.GAMEBOOT_SEQUENCE_MS,
-                    label = "gameboot-preview",
-                )
-            }
-            _uiState.update {
-                it.copy(
-                    activeGameBoot = com.echo.feature.launcher.GameBootRequest(
-                        gameTitle = "Preview",
-                        videoPath = video,
-                        audioPath = audio,
-                        coverArt = previewArt,
-                    ),
-                    gameBootIsPreview = true,
-                )
-            }
-        }
-    }
-
-    fun onBootSequenceComplete() {
-        Timber.d("StartupSeq: boot sequence complete")
-        _uiState.update { it.copy(showBootSequence = false) }
-    }
 
     fun onStartupPermissionsSettled() {
         Timber.d("StartupSeq: notification permission settled")
@@ -5688,8 +5368,8 @@ class CrossbarViewModel @Inject constructor(
 
         internal val KEY_MOTION_WALLPAPER = stringPreferencesKey("display_motion_wallpaper")
 
-        private val KEY_SHOW_BOOT       = booleanPreferencesKey("display_show_boot")
-        private val KEY_BOOT_ON_RESUME  = booleanPreferencesKey("display_boot_on_resume")
+        internal val KEY_SHOW_BOOT       = booleanPreferencesKey("display_show_boot")
+        internal val KEY_BOOT_ON_RESUME  = booleanPreferencesKey("display_boot_on_resume")
 
         private val KEY_TOUCH_NAV_BUTTON  = stringPreferencesKey("interface_touch_nav_button")
 

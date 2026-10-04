@@ -178,7 +178,7 @@ class CrossbarBookshelf(
 
         item.packageName != null -> {
             menuSound.play(MenuSound.LAUNCH)
-            vm.launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            vm.launching.launchAppWithDisc(item.packageName, item.shelfCoverArt)
             true
         }
         else -> false
@@ -189,7 +189,7 @@ class CrossbarBookshelf(
         scope.launch {
             val book = bookRepository.getBook(bookId) ?: return@launch
 
-            vm.awaitDiscHandOff(book.coverUri)
+            vm.launching.awaitDiscHandOff(book.coverUri)
             val error = bookIntentResolver.launch(book, uiState.value.defaultReader)
             if (error != null) {
                 uiState.update { it.copy(infoDialog = InfoDialogState(title = book.displayTitle, message = error)) }

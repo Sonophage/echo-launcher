@@ -177,7 +177,7 @@ class CrossbarSearch(
         val appPackage = row.packageName?.takeIf { row.isInstalledApp }
         if (appPackage != null) {
             closeSearch()
-            vm.launchAppWithDisc(appPackage, row.shelfCoverArt)
+            vm.launching.launchAppWithDisc(appPackage, row.shelfCoverArt)
             return
         }
 
@@ -191,7 +191,7 @@ class CrossbarSearch(
             CrossbarItemType.LIBRARY_BOOK -> vm.bookshelf.openBook(row.id.removePrefix("book_"))
             CrossbarItemType.MUSIC_TRACK -> openSearchedTrack(row)
 
-            else -> row.gameId?.let { id -> vm.launchGameDirectly(id) }
+            else -> row.gameId?.let { id -> vm.launching.launchGameDirectly(id) }
         }
     }
 
@@ -209,7 +209,7 @@ class CrossbarSearch(
         val trackId = row.id.removePrefix("mt_")
         val track = searchTracks.firstOrNull { it.id == trackId } ?: return
         scope.launch {
-            vm.awaitDiscHandOff(track.artUri)
+            vm.launching.awaitDiscHandOff(track.artUri)
             vm.musicPlayer.setQueue(listOf(track), 0)
             uiState.update { it.copy(musicPlayerVisible = true) }
         }

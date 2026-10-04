@@ -146,7 +146,7 @@ class CrossbarGameInfo(
         val index = uiState.value.currentItems.indexOfFirst { it.id == item.id }
         when {
             index >= 0 -> vm.onItemSelected(index)
-            item.gameId != null -> vm.launchGameDirectly(item.gameId)
+            item.gameId != null -> vm.launching.launchGameDirectly(item.gameId)
         }
     }
 

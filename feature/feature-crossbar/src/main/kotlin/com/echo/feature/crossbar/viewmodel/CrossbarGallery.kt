@@ -136,7 +136,7 @@ class CrossbarGallery(
         item.id == CrossbarViewModel.ALL_PHOTOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.AllPhotos); true }
         item.id == CrossbarViewModel.PHOTO_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Albums); true }
         item.id == CrossbarViewModel.PHOTO_FAVORITES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Favorites); true }
-        item.id == CrossbarViewModel.CAMERA_ITEM_ID -> { menuSound.play(MenuSound.LAUNCH); vm.launchCamera(); true }
+        item.id == CrossbarViewModel.CAMERA_ITEM_ID -> { menuSound.play(MenuSound.LAUNCH); vm.launching.launchCamera(); true }
         item.id == CrossbarViewModel.ADD_PHOTO_LIBRARY_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
             vm.folders.openMediaFolders(MediaRootKind.PHOTO)
@@ -150,7 +150,7 @@ class CrossbarGallery(
 
         item.packageName != null -> {
             menuSound.play(MenuSound.LAUNCH)
-            vm.launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            vm.launching.launchAppWithDisc(item.packageName, item.shelfCoverArt)
             true
         }
         item.type == CrossbarItemType.PHOTO_FOLDER && item.id.startsWith("plib_") -> {

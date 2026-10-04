@@ -205,7 +205,7 @@ class CrossbarVideo(
 
         item.packageName != null -> {
             menuSound.play(MenuSound.LAUNCH)
-            vm.launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            vm.launching.launchAppWithDisc(item.packageName, item.shelfCoverArt)
             true
         }
         else -> false
