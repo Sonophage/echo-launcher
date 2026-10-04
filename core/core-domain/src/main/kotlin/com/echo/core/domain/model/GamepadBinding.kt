@@ -30,7 +30,7 @@ val DEFAULT_BINDINGS = listOf(
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_A,      GamepadAction.SELECT),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_B,      GamepadAction.BACK),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_X,      GamepadAction.CHANGE_SORT),
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_Y,      GamepadAction.OPEN_CONTEXT_MENU),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_Y,      GamepadAction.OPEN_SEARCH),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_UP,       GamepadAction.NAVIGATE_UP),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_DOWN,     GamepadAction.NAVIGATE_DOWN),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_LEFT,     GamepadAction.NAVIGATE_LEFT),
@@ -39,9 +39,13 @@ val DEFAULT_BINDINGS = listOf(
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_R1,     GamepadAction.NEXT_CATEGORY),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_L2,     GamepadAction.PREV_PAGE),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_R2,     GamepadAction.NEXT_PAGE),
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_START,  GamepadAction.HOME),
+    // the kit's buttons (owner, 2026-10-04): the guide button is Home, the menu button Options, Y search.
+    // MODE comes before SELECT so the hint draws Home with the guide glyph, the Echo mark.
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_MODE,   GamepadAction.HOME),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_START,  GamepadAction.OPEN_CONTEXT_MENU),
 
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.OPEN_SEARCH),
+    // View is Home too, for systems that keep the guide button for themselves
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.HOME),
     GamepadBinding(KeyEvent.KEYCODE_ENTER,         GamepadAction.SELECT),
     GamepadBinding(KeyEvent.KEYCODE_BACK,          GamepadAction.BACK),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_CENTER,   GamepadAction.SELECT),
@@ -62,7 +66,7 @@ fun gamepadMappingsFor(
         ConfirmBackLayout.STANDARD -> KeyEvent.KEYCODE_BUTTON_A
         ConfirmBackLayout.REVERSED -> KeyEvent.KEYCODE_BUTTON_B
     }
-    val contextMenuKey = when (xy) {
+    val searchKey = when (xy) {
         XYLayout.STANDARD -> KeyEvent.KEYCODE_BUTTON_Y
         XYLayout.SWAPPED -> KeyEvent.KEYCODE_BUTTON_X
     }
@@ -75,8 +79,8 @@ fun gamepadMappingsFor(
                 )
                 KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_Y -> GamepadBinding(
                     binding.keyCode,
-                    if (binding.keyCode == contextMenuKey) {
-                        GamepadAction.OPEN_CONTEXT_MENU
+                    if (binding.keyCode == searchKey) {
+                        GamepadAction.OPEN_SEARCH
                     } else {
                         GamepadAction.CHANGE_SORT
                     },
@@ -85,6 +89,23 @@ fun gamepadMappingsFor(
             }
         },
     )
+}
+
+// mappings saved before the kit's buttons have Options on a face button and Home on Start. Moves
+// those three roles to where DEFAULT_BINDINGS has them and keeps every other choice (A/B and X/Y swaps,
+// remapped keys). A mapping that already binds the guide button is taken as current.
+fun GamepadMappings.withKitButtons(): GamepadMappings {
+    if (bindings.any { it.keyCode == KeyEvent.KEYCODE_BUTTON_MODE }) return this
+    val moved = bindings.map { b ->
+        when {
+            b.keyCode == KeyEvent.KEYCODE_BUTTON_START && b.action == GamepadAction.HOME -> b.copy(action = GamepadAction.OPEN_CONTEXT_MENU)
+            b.keyCode == KeyEvent.KEYCODE_BUTTON_SELECT && b.action == GamepadAction.OPEN_SEARCH -> b.copy(action = GamepadAction.HOME)
+            (b.keyCode == KeyEvent.KEYCODE_BUTTON_X || b.keyCode == KeyEvent.KEYCODE_BUTTON_Y) &&
+                b.action == GamepadAction.OPEN_CONTEXT_MENU -> b.copy(action = GamepadAction.OPEN_SEARCH)
+            else -> b
+        }
+    }
+    return GamepadMappings(listOf(GamepadBinding(KeyEvent.KEYCODE_BUTTON_MODE, GamepadAction.HOME)) + moved)
 }
 
 fun GamepadAction.displayLabel(): String = when (this) {
@@ -101,7 +122,7 @@ fun GamepadAction.displayLabel(): String = when (this) {
     GamepadAction.NEXT_CATEGORY     -> "Next Tab (App Drawer)"
     GamepadAction.PREV_PAGE         -> "Previous Page"
     GamepadAction.NEXT_PAGE         -> "Next Page"
-    GamepadAction.HOME              -> "Start (Confirm in pickers)"
+    GamepadAction.HOME              -> "Home (Confirm in pickers)"
 }
 
 fun Int.keycodeDisplayName(): String = when (this) {

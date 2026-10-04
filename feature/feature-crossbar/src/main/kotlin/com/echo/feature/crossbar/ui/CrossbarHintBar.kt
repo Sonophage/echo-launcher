@@ -25,6 +25,8 @@ fun CrossbarHintBar(
 ) {
     EchoHintBar(
         items = buildList {
+            // kit hint row: Home (the Echo mark) leads, then Back
+            add(ControllerPromptItem(listOf(GamepadAction.HOME), "Home"))
             add(prompts.back.item())
             prompts.right.forEach { add(it.item()) }
         },

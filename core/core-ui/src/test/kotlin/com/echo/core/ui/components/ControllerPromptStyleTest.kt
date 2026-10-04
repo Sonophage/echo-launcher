@@ -54,12 +54,12 @@ class ControllerPromptStyleTest {
     }
 
     @Test
-    fun `swapping X-Y moves the options art, for every family`() {
+    fun `swapping X-Y moves the search art, for every family`() {
         for (family in ART_FAMILIES) {
-            val standard = style(family).artFor(GamepadAction.OPEN_CONTEXT_MENU)
-            val swapped = style(family, xy = XYLayout.SWAPPED).artFor(GamepadAction.OPEN_CONTEXT_MENU)
+            val standard = style(family).artFor(GamepadAction.OPEN_SEARCH)
+            val swapped = style(family, xy = XYLayout.SWAPPED).artFor(GamepadAction.OPEN_SEARCH)
             assertNotNull(swapped)
-            assert(standard != swapped) { "$family draws the same Options art in both layouts" }
+            assert(standard != swapped) { "$family draws the same Search art in both layouts" }
             assertEquals(style(family).artFor(GamepadAction.CHANGE_SORT), swapped)
         }
     }

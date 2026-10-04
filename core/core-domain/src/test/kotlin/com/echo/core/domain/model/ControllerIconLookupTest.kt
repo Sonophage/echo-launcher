@@ -60,11 +60,20 @@ class ControllerIconLookupTest {
     }
 
     @Test
-    fun `the context menu prompt follows the X-Y setting`() {
-        assertEquals(ControllerIcon.FACE_NORTH, standard.iconFor(GamepadAction.OPEN_CONTEXT_MENU))
+    fun `search follows the X-Y setting, as Options did before the kit's buttons`() {
+        assertEquals(ControllerIcon.FACE_NORTH, standard.iconFor(GamepadAction.OPEN_SEARCH))
 
         val swapped = mappings(ConfirmBackLayout.STANDARD, XYLayout.SWAPPED)
-        assertEquals(ControllerIcon.FACE_WEST, swapped.iconFor(GamepadAction.OPEN_CONTEXT_MENU))
+        assertEquals(ControllerIcon.FACE_WEST, swapped.iconFor(GamepadAction.OPEN_SEARCH))
+    }
+
+    @Test
+    fun `Options sits on the menu button under every layout, as the kit's hint row draws it`() {
+        for (confirmBack in ConfirmBackLayout.entries) {
+            for (xy in XYLayout.entries) {
+                assertEquals(ControllerIcon.START, mappings(confirmBack, xy).iconFor(GamepadAction.OPEN_CONTEXT_MENU))
+            }
+        }
     }
 
     @Test
@@ -80,7 +89,7 @@ class ControllerIconLookupTest {
         val both = mappings(ConfirmBackLayout.REVERSED, XYLayout.SWAPPED)
         assertEquals(ControllerIcon.FACE_EAST, both.iconFor(GamepadAction.SELECT))
         assertEquals(ControllerIcon.FACE_SOUTH, both.iconFor(GamepadAction.BACK))
-        assertEquals(ControllerIcon.FACE_WEST, both.iconFor(GamepadAction.OPEN_CONTEXT_MENU))
+        assertEquals(ControllerIcon.FACE_WEST, both.iconFor(GamepadAction.OPEN_SEARCH))
         assertEquals(ControllerIcon.FACE_NORTH, both.iconFor(GamepadAction.CHANGE_SORT))
     }
 
@@ -240,11 +249,11 @@ class ControllerIconLookupTest {
     }
 
     @Test
-    fun `the track picker Add prompt sits on Start under every layout`() {
+    fun `Home, and the pickers' Add, draw the guide button, which the Echo mark stands in for`() {
         for (confirmBack in ConfirmBackLayout.entries) {
             for (xy in XYLayout.entries) {
                 assertEquals(
-                    ControllerIcon.START,
+                    ControllerIcon.SYSTEM,
                     mappings(confirmBack, xy).iconFor(GamepadAction.HOME),
                 )
             }

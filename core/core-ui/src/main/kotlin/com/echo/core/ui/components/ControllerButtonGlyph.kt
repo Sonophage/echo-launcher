@@ -1,5 +1,6 @@
 package com.echo.core.ui.components
 
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
@@ -232,6 +233,16 @@ fun ControllerIconGlyph(
     size: Dp = 22.dp,
     tint: Color = GenericGlyphTint,
 ) {
+    // kit: the Echo mark stands in for the Home (guide) button, whatever the controller
+    if (icon == ControllerIcon.SYSTEM) {
+        Image(
+            painter = painterResource(R.drawable.echo_logo),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(if (family == ControllerDisplayType.GENERIC) tint else Color.White),
+            modifier = modifier.size(size),
+        )
+        return
+    }
     if (family == ControllerDisplayType.GENERIC) {
         GenericGlyph(icon.genericLabel(), size, tint, modifier)
         return

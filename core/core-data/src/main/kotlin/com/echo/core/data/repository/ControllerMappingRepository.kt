@@ -1,5 +1,6 @@
 package com.echo.core.data.repository
 
+import com.echo.core.domain.model.withKitButtons
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -29,7 +30,7 @@ class ControllerMappingRepository @Inject constructor(
         .map { prefs ->
             val raw = prefs[KEY_MAPPINGS]
             if (raw != null) {
-                runCatching { json.decodeFromString<GamepadMappings>(raw) }
+                runCatching { json.decodeFromString<GamepadMappings>(raw).withKitButtons() }
                     .getOrElse {
                         Timber.w("Failed to parse controller mappings, using defaults")
                         GamepadMappings()
@@ -57,7 +58,7 @@ class ControllerMappingRepository @Inject constructor(
         val prefs = context.echoDataStore.data.first()
         val current = prefs[KEY_MAPPINGS]?.let {
             runCatching { json.decodeFromString<GamepadMappings>(it) }.getOrNull()
-        } ?: GamepadMappings()
+        }?.withKitButtons() ?: GamepadMappings()
 
         val updated = current.bindings
             .filter { it.keyCode != newKeyCode && it.action != action }

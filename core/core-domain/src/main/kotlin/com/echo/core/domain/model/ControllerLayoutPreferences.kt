@@ -18,8 +18,8 @@ enum class XYLayout {
 }
 
 fun XYLayout.displayLabel(): String = when (this) {
-    XYLayout.STANDARD -> "Standard (Y = Options, X = Sort)"
-    XYLayout.SWAPPED  -> "Swapped (X = Options, Y = Sort)"
+    XYLayout.STANDARD -> "Standard (Y = Search, X = Sort)"
+    XYLayout.SWAPPED  -> "Swapped (X = Search, Y = Sort)"
 }
 
 enum class ControllerDisplayType {
