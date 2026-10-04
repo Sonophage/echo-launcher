@@ -1,6 +1,5 @@
 package com.echo.studio.preview
 
-import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -38,11 +37,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
+import com.echo.themekit.CrossbarLayoutSpec
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -205,7 +206,7 @@ private fun CategoryCell(model: CrossbarPreviewModel, category: SampleContent.Ca
             color = if (selected) Color.White else LabelInactive,
             fontSize = if (selected) 15.sp else 13.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            style = if (selected) EchoTextStyle.copy(shadow = SelectedLabelShadow) else EchoTextStyle,
+            style = if (selected) TextStyle(shadow = SelectedLabelShadow) else TextStyle.Default,
             textAlign = TextAlign.Center,
             maxLines = 1,
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp).alpha(if (selected) 1f else 0.82f),
@@ -278,7 +279,7 @@ private fun androidx.compose.foundation.layout.BoxScope.ContextMenuFrame(model: 
             color = Color.White,
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
-            style = EchoTextStyle.copy(shadow = SelectedLabelShadow),
+            style = TextStyle(shadow = SelectedLabelShadow),
         )
         Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.3f)).padding(top = 8.dp))
         Spacer(Modifier.height(12.dp))
