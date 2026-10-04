@@ -31,6 +31,13 @@ internal fun gameContextMenuItems(
     return buildList {
         add(CrossbarContextMenuItem("play", "Play", hidden = true))
         if (state.gameInfo == null) add(CrossbarContextMenuItem("game_info", "Game Info"))
+        // the kit's Game Info has no buttons, so its extras live in Options (owner, 2026-10-04)
+        state.gameInfo?.takeIf { it.item.gameId == item.gameId }?.let { info ->
+            val offered = gameInfoActions(info)
+            if (GameInfoAction.INFO in offered) add(CrossbarContextMenuItem("info_about", "Info"))
+            if (GameInfoAction.VIDEO in offered) add(CrossbarContextMenuItem("info_video", "Video"))
+            if (GameInfoAction.MANUAL in offered) add(CrossbarContextMenuItem("info_manual", "Manual"))
+        }
 
         if (discCount > 1) add(CrossbarContextMenuItem("choose_disc", "Choose Disc"))
         if (item.platformId == PlatformIds.WINDOWS) {

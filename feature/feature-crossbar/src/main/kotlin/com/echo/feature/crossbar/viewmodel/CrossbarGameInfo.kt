@@ -29,7 +29,7 @@ class CrossbarGameInfo(
         uiState.update { it.withGameInfoOpen(info) }
         scope.launch {
             val loaded = withContext(Dispatchers.IO) { if (info.isApp) vm.loadAppInfo(info) else loadGameInfo(info) }
-            uiState.update { s -> if (s.gameInfo?.item?.id == item.id) s.copy(gameInfo = loaded.copy(cursor = s.gameInfo.cursor, band = s.gameInfo.band, open = s.gameInfo.open)) else s }
+            uiState.update { s -> if (s.gameInfo?.item?.id == item.id) s.copy(gameInfo = loaded.copy(cursor = s.gameInfo.cursor, open = s.gameInfo.open)) else s }
         }
     }
 
@@ -65,7 +65,6 @@ class CrossbarGameInfo(
                 val notice = info.cursor?.let { info.notices(notices).getOrNull(it) }
                 when {
                     notice != null -> vm.panel.openAndroidNotice(notice.key)
-                    info.cursor == null && info.band != GameInfoAction.PLAY -> onGameInfoAction(info.band)
                     info.cursor == null -> {
                         if (!vm.holdToLaunch(info.item) { onGameInfoAction(GameInfoAction.PLAY) }) onGameInfoAction(GameInfoAction.PLAY)
                     }
@@ -75,27 +74,16 @@ class CrossbarGameInfo(
             GamepadAction.OPEN_CONTEXT_MENU -> openGameInfoOptions(info)
             GamepadAction.CHANGE_SORT -> if (info.achievementsStat != null) vm.panel.openProfile(ProfileTab.ACHIEVEMENTS, info.item.gameId)
             GamepadAction.NAVIGATE_LEFT,
-            GamepadAction.NAVIGATE_RIGHT -> if (info.cursor == null) {
-                onGameInfoBand(stepGameInfoBand(info.band, gameInfoActions(info), if (action == GamepadAction.NAVIGATE_LEFT) -1 else +1))
-            } else {
-                onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
-            }
+            GamepadAction.NAVIGATE_RIGHT -> if (info.cursor != null) onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
             GamepadAction.NAVIGATE_UP,
             GamepadAction.NAVIGATE_DOWN -> onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
             else -> Unit
         }
     }
 
-    fun onGameInfoBand(action: GameInfoAction) {
-        val info = uiState.value.gameInfo ?: return
-        if (action == info.band && info.cursor == null) return
-        menuSound.play(MenuSound.SCROLL)
-        uiState.update { it.copy(gameInfo = it.gameInfo?.copy(band = action, cursor = null)) }
-    }
-
     fun onGameInfoAction(action: GameInfoAction) {
         val info = uiState.value.gameInfo ?: return
-        uiState.update { it.copy(gameInfo = it.gameInfo?.copy(band = action, cursor = null)) }
+        uiState.update { it.copy(gameInfo = it.gameInfo?.copy(cursor = null)) }
         when (action) {
             GameInfoAction.PLAY -> playFromGameInfo(info.item)
             GameInfoAction.OPTIONS -> openGameInfoOptions(info)

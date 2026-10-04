@@ -283,7 +283,6 @@ fun CrossbarShellContainer(
         onCloseAppDetail = viewModel::onCloseAppDetail,
         onGameInfoCardFocused = viewModel.gameDetail::onGameInfoCursor,
         onGameInfoNoticeTapped = viewModel.gameDetail::onGameInfoNoticeTapped,
-        onGameInfoAction = viewModel.gameDetail::onGameInfoAction,
         onGameInfoPanelClose = viewModel.gameDetail::closeGameInfoPanel,
         onGameInfoScrollMax = viewModel.gameDetail::onGameInfoScrollMax,
         onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
@@ -464,7 +463,6 @@ fun CrossbarShell(
     onCloseAppDetail: () -> Unit = {},
     onGameInfoCardFocused: (Int) -> Unit = {},
     onGameInfoNoticeTapped: (String) -> Unit = {},
-    onGameInfoAction: (com.echo.feature.crossbar.viewmodel.GameInfoAction) -> Unit = {},
     onGameInfoPanelClose: () -> Unit = {},
     onGameInfoScrollMax: (Int) -> Unit = {},
     onPanelProfileTapped: (com.echo.feature.crossbar.viewmodel.ProfileSpot, Int) -> Unit = { _, _ -> },
@@ -1315,7 +1313,6 @@ fun CrossbarShell(
                     onNoticeTapped = onGameInfoNoticeTapped,
                     launchHold = uiState.launchHold,
                     modifier = Modifier.fillMaxSize(),
-                    onBandAction = onGameInfoAction,
                     onClosePanel = onGameInfoPanelClose,
                     onScrollMax = onGameInfoScrollMax,
                 )

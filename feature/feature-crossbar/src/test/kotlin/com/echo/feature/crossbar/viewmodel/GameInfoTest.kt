@@ -40,7 +40,7 @@ class GameInfoTest {
     }
 
     @Test
-    fun `the band offers Video and Manual only when the game has them, and focus never lands on a missing one`() {
+    fun `Game Info offers Video and Manual only when the game has them, so Options never lists a dead row`() {
         val bare = GameInfoState(CrossbarItem(id = "g", title = "Ico", gameId = 1L))
         assertEquals(listOf(GameInfoAction.PLAY, GameInfoAction.OPTIONS), gameInfoActions(bare))
 
@@ -53,10 +53,6 @@ class GameInfoTest {
             listOf(GameInfoAction.PLAY, GameInfoAction.INFO, GameInfoAction.VIDEO, GameInfoAction.MANUAL, GameInfoAction.OPTIONS),
             actions,
         )
-        assertEquals(GameInfoAction.VIDEO, stepGameInfoBand(GameInfoAction.INFO, actions, +1))
-        assertEquals(GameInfoAction.OPTIONS, stepGameInfoBand(GameInfoAction.OPTIONS, actions, +1))
-        assertEquals(GameInfoAction.PLAY, stepGameInfoBand(GameInfoAction.PLAY, actions, -1))
-        assertEquals(GameInfoAction.PLAY, stepGameInfoBand(GameInfoAction.MANUAL, gameInfoActions(loaded), +1))
 
         val app = GameInfoState(CrossbarItem(id = "a", title = "Discord", packageName = "com.discord"), videoUri = "/x.mp4", manualPath = "/x.pdf")
         assertEquals(listOf(GameInfoAction.PLAY, GameInfoAction.OPTIONS), gameInfoActions(app))

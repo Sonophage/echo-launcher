@@ -1,12 +1,9 @@
 package com.echo.feature.crossbar.ui
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
-import com.echo.core.ui.design.pressAndHold
+import com.echo.core.ui.components.ControllerPromptItem
+import com.echo.core.ui.components.HintAction
+import com.echo.core.ui.components.EchoHintBar
 import com.echo.feature.crossbar.viewmodel.holdMsFor
-import com.echo.core.ui.design.holdProgress
-import com.echo.core.ui.design.holdOutline
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -63,7 +60,6 @@ import com.echo.feature.crossbar.ui.detail.DetailPanelContent
 import com.echo.feature.crossbar.viewmodel.GameInfoAction
 import com.echo.feature.crossbar.viewmodel.GameInfoState
 import com.echo.feature.crossbar.viewmodel.GameInfoStat
-import com.echo.feature.crossbar.viewmodel.gameInfoActions
 import com.echo.feature.crossbar.viewmodel.gameInfoStats
 import com.echo.feature.crossbar.viewmodel.notices
 import com.echo.core.ui.design.PANEL_DESIGN_HEIGHT
@@ -78,7 +74,6 @@ fun GameInfoScreen(
     onCardFocused: (Int) -> Unit,
     onNoticeTapped: (String) -> Unit,
     modifier: Modifier = Modifier,
-    onBandAction: (GameInfoAction) -> Unit = {},
     onClosePanel: () -> Unit = {},
     onScrollMax: (Int) -> Unit = {},
 
@@ -158,30 +153,8 @@ fun GameInfoScreen(
             }
         }
 
-        Row(
-            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(426) + drop),
-            horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
-        ) {
-            gameInfoActions(info).forEach { action ->
-                val label = when (action) {
-                    GameInfoAction.PLAY -> when {
-                        info.isApp -> "Open"
-                        item.lastOpenedAt != null -> "Continue"
-                        else -> "Play"
-                    }
-                    GameInfoAction.INFO -> "Info"
-                    GameInfoAction.VIDEO -> "Video"
-                    GameInfoAction.MANUAL -> "Manual"
-                    GameInfoAction.OPTIONS -> "⋯"
-                }
-                val focused = info.cursor == null && info.band == action
-                val holdMs = if (focused && action == GameInfoAction.PLAY) holdMsFor(item) else 0L
-                BandButton(label, focused, action == GameInfoAction.OPTIONS, u, holdMs, launchHold == item.id) { onBandAction(action) }
-            }
-        }
-
         Column(
-            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(498) + drop).fillMaxWidth(),
+            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(440) + drop).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
             val media = info.content?.media.orEmpty()
@@ -206,21 +179,28 @@ fun GameInfoScreen(
             }
         }
 
-        Box(
-            Modifier.align(Alignment.BottomStart).padding(start = u.dp(68), bottom = u.dp(14))
-                .heightIn(min = 40.dp)
-                .clip(RoundedCornerShape(u.dp(20)))
-                .clickable { onAction(GamepadAction.BACK) }
-                .padding(horizontal = u.dp(12)),
-            contentAlignment = Alignment.Center,
-        ) {
-            val style = EchoTextStyle.copy(fontSize = u.sp(13), fontWeight = FontWeight.Light)
-            if (LocalPadPrompts.current) {
-                ControllerPrompt(GamepadAction.BACK, "Back", labelStyle = style, glyphSize = u.dp(22), spacing = u.dp(8))
-            } else {
-                Text("Back", color = Color.White.copy(alpha = 0.75f), style = style)
-            }
-        }
+        // kit screens 3-4: Home, Back, Options on the left, the action orb on the right
+        EchoHintBar(
+            items = listOfNotNull(
+                ControllerPromptItem(listOf(GamepadAction.HOME), "Home"),
+                ControllerPromptItem(GamepadAction.BACK, "Back"),
+                ControllerPromptItem(GamepadAction.CHANGE_SORT, "Achievements").takeIf { info.achievementsStat != null },
+                ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
+            ),
+            modifier = Modifier.align(Alignment.BottomCenter),
+            onAction = onAction,
+            primary = HintAction(
+                GamepadAction.SELECT,
+                when {
+                    info.isApp -> "Open"
+                    item.lastOpenedAt != null -> "Continue"
+                    else -> "Play"
+                },
+                item.title,
+                holdMs = holdMsFor(item),
+                holding = launchHold == item.id,
+            ),
+        )
 
         when (info.open) {
             GameInfoAction.INFO -> info.content?.let { InfoSheet(info, it, now, u, onClosePanel, onScrollMax) }
@@ -237,43 +217,6 @@ fun GameInfoScreen(
     }
 }
 
-@Composable
-private fun BandButton(
-    label: String,
-    focused: Boolean,
-    options: Boolean,
-    u: DesignUnits,
-    holdMs: Long,
-    holding: Boolean,
-    onClick: () -> Unit,
-) {
-    val ink = if (focused) Color(0xFF0A0A0A) else Color.White
-    var pressing by remember { mutableStateOf(false) }
-    val progress = if (holdMs > 0L) holdProgress(holding || pressing, holdMs) else 0f
-    Box(
-        Modifier
-            .height(u.dp(52))
-            .clip(RoundedCornerShape(u.dp(26)))
-            .background(if (focused) Color.White else Color.White.copy(alpha = 0.12f))
-            .holdOutline(progress, ink, u.dp(3))
-            .then(if (holdMs > 0L) Modifier.pressAndHold(holdMs, label, { pressing = it }, onClick) else Modifier.clickable(onClick = onClick))
-            .padding(horizontal = u.dp(if (focused) 26 else 22)),
-        contentAlignment = Alignment.Center,
-    ) {
-        val labelStyle = EchoTextStyle.copy(fontSize = u.sp(15), fontWeight = if (focused) FontWeight.Medium else FontWeight.Normal)
-        val glyph = when {
-            !LocalPadPrompts.current -> null
-            focused -> GamepadAction.SELECT
-            options -> GamepadAction.OPEN_CONTEXT_MENU
-            else -> null
-        }
-        if (glyph != null) {
-            ControllerPrompt(glyph, label, labelColor = ink, labelStyle = labelStyle, glyphSize = u.dp(20), spacing = u.dp(10))
-        } else {
-            Text(label, color = ink, style = labelStyle)
-        }
-    }
-}
 
 @Composable
 private fun InfoSheet(info: GameInfoState, content: DetailPanelContent, now: Long, u: DesignUnits, onClose: () -> Unit, onScrollMax: (Int) -> Unit) {

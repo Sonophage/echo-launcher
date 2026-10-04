@@ -16,7 +16,6 @@ data class GameInfoState(
     val cursor: Int? = null,
     val videoUri: String? = null,
     val manualPath: String? = null,
-    val band: GameInfoAction = GameInfoAction.PLAY,
     val open: GameInfoAction? = null,
     val infoScroll: Int = 0,
     val infoScrollMax: Int = 0,
@@ -36,11 +35,6 @@ fun gameInfoActions(info: GameInfoState): List<GameInfoAction> = listOfNotNull(
     GameInfoAction.OPTIONS,
 )
 
-fun stepGameInfoBand(current: GameInfoAction, actions: List<GameInfoAction>, delta: Int): GameInfoAction {
-    val index = actions.indexOf(current)
-    if (index < 0) return actions.first()
-    return actions[(index + delta).coerceIn(0, actions.lastIndex)]
-}
 
 data class GameInfoStat(val label: String, val value: String)
 

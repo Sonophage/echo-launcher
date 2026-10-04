@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.feature.crossbar.ui.detail.DetailPanelContent
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.domain.model.Category
 import com.echo.core.domain.model.CategoryType
@@ -391,5 +392,20 @@ class ContextMenusTest {
         assertEquals("a group is split in two", groups.distinct(), groups.distinct().sortedBy { it.ordinal })
         assertEquals("the menu does not open on its main action", MenuGroup.MAIN, groups.first())
         assertEquals("something outranks the removals", MenuGroup.REMOVE, groups.last())
+    }
+
+    @Test
+    fun `with Game Info open, Options carries its Info, Video and Manual, since the kit's page has no buttons`() {
+        val info = GameInfoState(game(), content = DetailPanelContent(title = "Crisis Core", platformName = "PSP"),
+            videoUri = "/v.mp4", manualPath = "/m.pdf")
+        val open = ids(gameContextMenuItems(game(), state().copy(gameInfo = info), 1, false, null))
+        assertTrue(listOf("info_about", "info_video", "info_manual").all { it in open })
+        assertFalse("Game Info does not offer itself", "game_info" in open)
+
+        val closed = ids(gameContextMenuItems(game(), state(), 1, false, null))
+        assertFalse("the crossbar's menu has no Game Info extras", closed.any { it?.startsWith("info_") == true })
+
+        val bare = ids(gameContextMenuItems(game(), state().copy(gameInfo = GameInfoState(game())), 1, false, null))
+        assertFalse("a game without a manual lists no Manual row", "info_manual" in bare)
     }
 }

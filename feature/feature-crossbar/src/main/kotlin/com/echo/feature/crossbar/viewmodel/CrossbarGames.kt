@@ -323,6 +323,9 @@ class CrossbarGames(
 
             "play"                   -> vm.launching.launchGameDirectly(gameId)
             "game_info"              -> uiState.value.currentItems.firstOrNull { it.gameId == gameId }?.let(vm.gameDetail::onOpenGameInfo)
+            "info_about"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.INFO) }
+            "info_video"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.VIDEO) }
+            "info_manual"            -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.MANUAL) }
             "choose_disc"             -> vm.openDiscPickerMenu(gameId)
             "export_game"            -> vm.exportGameFromMenu(gameId)
             "edit_app"               -> vm.openAppDetail(gameId, menu.packageName ?: return)
