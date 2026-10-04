@@ -19,6 +19,7 @@ import com.echo.core.data.repository.UiMediaStore
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.clearWallpaperLuma
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.setWallpaperLuma
+import com.echo.core.data.wallpaper.StillWallpaper
 import com.echo.core.domain.model.ControllerHintPolicy
 import com.echo.core.domain.model.UiMediaKind
 import com.echo.core.domain.model.UiMediaSlot
@@ -185,6 +186,7 @@ class DisplaySettingsViewModel @Inject constructor(
     private val launchDiscPreferences: com.echo.core.data.launch.LaunchDiscPreferences,
     private val menuSound: com.echo.core.ui.sound.MenuSoundPlayer,
     private val controllerLayout: ControllerLayoutRepository,
+    private val stillWallpaper: StillWallpaper,
 
     @com.echo.feature.settings.di.SettingsIoDispatcher
     private val io: CoroutineDispatcher = Dispatchers.IO,
@@ -373,34 +375,10 @@ class DisplaySettingsViewModel @Inject constructor(
     }
 
     private suspend fun importStillWallpaper(uri: Uri) {
-        val dir = wallpaperDir()
-
-        val stamp = System.currentTimeMillis()
-        val dest = File(dir, "wallpaper_$stamp.jpg")
-        val ok = runCatching {
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                dest.outputStream().use { out -> input.copyTo(out) }
-            } != null && isDecodableImage(dest)
-        }.getOrDefault(false)
-        if (ok) {
-            val luma = withContext(io) {
-                WallpaperLuminanceProbe.survey(dest.absolutePath)
-            }
-
-            val saved = saveThenPrune(
-                save = {
-                    context.echoDataStore.edit {
-                        it[KEY_CUSTOM_WALLPAPER] = dest.absolutePath
-                        it.remove(KEY_MOTION_WALLPAPER)
-                        it.setWallpaperLuma(luma)
-                    }
-                },
-                prune = { pruneWallpaperDir(keep = listOf(dest)) },
-            )
-            _wallpaperMessage.value = if (saved) "Wallpaper applied" else WALLPAPER_SAVE_FAILED
-        } else {
-            runCatching { dest.delete() }
-            _wallpaperMessage.value = "Couldn't read that file — try a different one"
+        _wallpaperMessage.value = when (stillWallpaper.apply { context.contentResolver.openInputStream(uri) }) {
+            StillWallpaper.Result.APPLIED -> "Wallpaper applied"
+            StillWallpaper.Result.SAVE_FAILED -> WALLPAPER_SAVE_FAILED
+            StillWallpaper.Result.UNREADABLE -> "Couldn't read that file — try a different one"
         }
     }
 
@@ -520,22 +498,9 @@ class DisplaySettingsViewModel @Inject constructor(
         }
     }.getOrNull()
 
-    private fun isDecodableImage(file: File): Boolean {
-        val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        android.graphics.BitmapFactory.decodeFile(file.absolutePath, opts)
-        return opts.outWidth > 0 && opts.outHeight > 0
-    }
+    private fun wallpaperDir(): File = stillWallpaper.dir
 
-    private fun wallpaperDir(): File = File(context.filesDir, "wallpaper").apply { mkdirs() }
-
-    private suspend fun pruneWallpaperDir(keep: List<File>) {
-        val keepNames = keep.map { it.name }.toSet()
-        withContext(io) {
-            wallpaperDir().listFiles()?.forEach { f ->
-                if (f.name !in keepNames) runCatching { f.delete() }
-            }
-        }
-    }
+    private suspend fun pruneWallpaperDir(keep: List<File>) = stillWallpaper.prune(keep)
 
     fun clearWallpaper() {
         viewModelScope.launch {

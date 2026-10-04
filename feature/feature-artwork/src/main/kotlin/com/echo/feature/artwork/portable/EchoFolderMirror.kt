@@ -25,25 +25,29 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 // keeps the ECHO folder's copy of ECHO's settings and look current (owner, 2026-10-04): settings.json
-// when a setting changes, and Look/ when a sound, icon or the wallpaper changes. It only writes;
-// reading the folder back comes later.
+// when a setting changes, and Look/ when a sound, icon or the wallpaper changes. EchoFolderReader runs
+// first on start, so an edit made while ECHO was closed is read before anything is written.
 @Singleton
 class EchoFolderMirror @Inject constructor(
     @ApplicationContext private val context: Context,
     private val folderRepository: ArtworkFolderRepository,
     private val library: PortableArtworkLibrary,
+    private val reader: EchoFolderReader,
 ) {
     @OptIn(FlowPreview::class)
-    fun start(scope: CoroutineScope) {
+    fun start(scope: CoroutineScope) = scope.launch {
+        // the folder is read before anything is written to it, or an edit made while ECHO was closed
+        // would be written over
+        runCatching { reader.read(always = false) }.onFailure { Timber.w(it, "ECHO folder: reading on start failed") }
         val prefs = context.echoDataStore.data
         val tree = folderRepository.treeUri
-        scope.launch {
+        launch {
             combine(tree, prefs.map { p -> EchoSettingsExport.json(p.asMap().mapKeys { it.key.name }) }) { t, json -> t to json }
                 .distinctUntilChanged()
                 .debounce(SETTLE_MS)
                 .collect { (t, json) -> liveTree(t)?.let { writeSettings(it, json) } }
         }
-        scope.launch {
+        launch {
             combine(tree, prefs.map { p -> LOOK_TRIGGERS.map { p.asMap().entries.firstOrNull { e -> e.key.name == it }?.value } }) { t, look -> t to look }
                 .distinctUntilChanged()
                 .debounce(SETTLE_MS)
@@ -65,8 +69,8 @@ class EchoFolderMirror @Inject constructor(
         library.ensureEchoLayout(tree)
         val files = context.filesDir
         var copied = 0
-        suspend fun mirror(segments: List<String>, file: File) {
-            if (file.isFile && library.mirrorFile(tree, segments, file.name, file)) copied++
+        suspend fun mirror(segments: List<String>, file: File, name: String = file.name) {
+            if (file.isFile && library.mirrorFile(tree, segments, name, file)) copied++
         }
         File(files, UiMediaStore.UI_MEDIA_DIR).listFiles().orEmpty().forEach { mirror(listOf(DIR_LOOK, EchoFolder.lookFolderFor(it.name)), it) }
         listOf(CustomIconStore.CUSTOM_ICONS_DIR, EchoThemeStore.THEME_ICONS_DIR).forEach { dir ->
@@ -74,7 +78,11 @@ class EchoFolderMirror @Inject constructor(
         }
         // only the wallpaper in use: the folder holds what ECHO shows, not every one it has kept
         val current = context.echoDataStore.data.first()
-        for (key in WALLPAPER_KEYS) current[stringPreferencesKey(key)]?.let { mirror(listOf(DIR_LOOK, "Wallpapers"), File(it)) }
+        // one name for the wallpaper in use, so the folder does not collect a copy per change
+        for (key in WALLPAPER_KEYS) current[stringPreferencesKey(key)]?.let { path ->
+            val file = File(path)
+            mirror(listOf(DIR_LOOK, "Wallpapers"), file, "current.${file.extension}")
+        }
         Timber.i("ECHO folder: Look/ checked, $copied files current")
     }
 

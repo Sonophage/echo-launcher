@@ -58,6 +58,8 @@ class DisplaySettingsViewModelLegibilityTest {
                 )
             },
 
+            com.echo.core.data.wallpaper.StillWallpaper(context),
+
             io = dispatcher,
         )
 

@@ -60,6 +60,14 @@ fun ArtworkImportScreen(
         ) {
             SettingsGroup("Artwork Folder")
 
+            // the result of the last folder action sits at the top, where it is seen (owner, 2026-10-04)
+            state.notice?.let {
+                SettingsRow(label = it, sublabel = "Tap to dismiss", onClick = { viewModel.dismissError() })
+            }
+            state.error?.let {
+                SettingsRow(label = "Error", sublabel = "$it  (tap to dismiss)", onClick = { viewModel.dismissError() })
+            }
+
             SettingsRow(
                 label    = "Folder",
                 sublabel = when {
@@ -69,6 +77,15 @@ fun ArtworkImportScreen(
                 },
                 onClick  = { folderPicker.launch(if (state.grantAlive) null else state.folderStart?.toUri()) },
             )
+
+            if (state.folderLinked && state.grantAlive) {
+                SettingsRow(
+                    label    = "Reload ECHO Folder",
+                    sublabel = "Applies settings.json, the sounds in Look/Sounds and Look/Boot, and the newest " +
+                        "image in Look/Wallpapers. A file only replaces ECHO's when it is newer and different.",
+                    onClick  = { viewModel.reloadEchoFolder() },
+                )
+            }
 
             if (state.folderLinked && state.grantAlive && !state.folderIsEcho) {
                 SettingsRow(
@@ -318,12 +335,6 @@ fun ArtworkImportScreen(
                 )
             }
 
-            state.notice?.let {
-                SettingsRow(label = it, sublabel = "Tap to dismiss", onClick = { viewModel.dismissError() })
-            }
-            state.error?.let {
-                SettingsRow(label = "Error", sublabel = "$it  (tap to dismiss)", onClick = { viewModel.dismissError() })
-            }
         }
     }
 }

@@ -44,6 +44,15 @@ object EchoFolder {
         else -> true
     }
 
+    // whether a file in the folder replaces ECHO's own: when ECHO has none, or the folder's is newer and
+    // holds different bytes. A copy ECHO itself wrote is newer but the same, so it never comes back.
+    fun shouldRead(folderModified: Long?, appModified: Long?, sameContent: Boolean): Boolean = when {
+        appModified == null -> true
+        sameContent -> false
+        folderModified == null -> false
+        else -> folderModified > appModified
+    }
+
     private fun treeDocId(treeUri: String): String? =
         treeUri.substringAfter(TREE, "").substringBefore('/').takeIf { it.isNotEmpty() }
 

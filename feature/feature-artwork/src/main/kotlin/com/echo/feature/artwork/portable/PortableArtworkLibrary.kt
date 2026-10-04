@@ -359,6 +359,33 @@ class PortableArtworkLibrary @Inject constructor(
         current == text || writeText(treeUri, root, name, mime, text)
     }
 
+    // the text of [name] at the folder's root, up to [maxBytes]; null when it is missing or larger
+    suspend fun readRootText(treeUri: Uri, name: String, maxBytes: Int): Pair<String, Long?>? = withContext(Dispatchers.IO) {
+        val child = findChild(treeUri, DocumentsContract.getTreeDocumentId(treeUri), name) ?: return@withContext null
+        readTextCapped(child.uri, maxBytes)?.let { it to child.lastModified }
+    }
+
+    // the files in [segments] under the folder, or none when the folder is not there
+    suspend fun filesIn(treeUri: Uri, segments: List<String>): List<SafChild> = withContext(Dispatchers.IO) {
+        val dir = resolveExistingPath(treeUri, segments) ?: return@withContext emptyList()
+        listChildren(treeUri, dir).filter { !it.isDirectory }
+    }
+
+    // whether the folder's file holds the same bytes as [file]
+    suspend fun sameContent(child: SafChild, file: java.io.File): Boolean = withContext(Dispatchers.IO) {
+        if (!file.isFile || child.sizeBytes != file.length()) return@withContext false
+        runCatching {
+            resolver.openInputStream(child.uri)?.use { a -> file.inputStream().use { b -> digest(a).contentEquals(digest(b)) } } ?: false
+        }.getOrDefault(false)
+    }
+
+    private fun digest(stream: java.io.InputStream): ByteArray {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val buf = ByteArray(64 * 1024)
+        while (true) { val n = stream.read(buf); if (n < 0) break; md.update(buf, 0, n) }
+        return md.digest()
+    }
+
     // copies [source] to [segments]/[name] unless the copy there is current or newer (EchoFolder.shouldWrite)
     suspend fun mirrorFile(treeUri: Uri, segments: List<String>, name: String, source: java.io.File): Boolean = withContext(Dispatchers.IO) {
         val dir = ensureDirPath(treeUri, segments) ?: return@withContext false
@@ -609,8 +636,12 @@ private val ECHO_README_TEXT = """
     settings.json  How ECHO looks and behaves: colours, wave, layout, controls and default players.
                    ECHO writes it when a setting changes.
 
-    ECHO does not read Look/ or settings.json yet; a later version will, and a Reload in Settings
-    will apply them. Until then, changes to settings.json are written over.
+    To use your changes, edit the files here, then choose Reload ECHO Folder in ECHO's artwork folder
+    settings. ECHO applies settings.json, a sound in Look/Sounds or Look/Boot that is named after its
+    slot (sound_back.mp3, boot_audio.mp3 and so on), and the newest picture in Look/Wallpapers. A file
+    is applied only when it is newer than ECHO's own and different from it. When ECHO starts it also
+    applies a settings.json that was changed while it was closed. Fonts and Icons are not read yet.
+    ECHO's background also becomes Android's home and lock wallpaper.
 
     No passwords, API keys, account details, folder paths or reading positions are kept here.
 """.trimIndent() + "\n"

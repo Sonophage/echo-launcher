@@ -11,6 +11,10 @@ class BackupKeyDriftTest {
             "a one-time local repair of this device's artwork columns; carrying it would " +
             "stop the repair running on a device that still needs it",
 
+        "system_wallpaper_applied_path" to
+            "the ECHO wallpaper last given to Android, a path on this device; carrying it would " +
+            "stop a restored device's wallpaper being given to Android",
+
         "db_seeded_v1" to "seed marker",
         "debug_seeded_v1" to "seed marker",
         "themes_seeded_v1" to "seed marker",

@@ -94,6 +94,7 @@ class ArtworkImportViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val importManager: ArtworkImportManager,
     private val artworkFolderSetup: ArtworkFolderSetup,
+    private val echoFolderReader: com.echo.feature.artwork.portable.EchoFolderReader,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ArtworkImportUiState())
     val uiState: StateFlow<ArtworkImportUiState> = _uiState.asStateFlow()
@@ -173,6 +174,13 @@ class ArtworkImportViewModel @Inject constructor(
             val step = artworkFolderSetup.renameLinked()
             _uiState.value = if (step != null) _uiState.value.copy(notice = step.message, pickAgain = step.start.toString())
                 else _uiState.value.copy(error = ArtworkFolderSetup.RENAME_FAILED)
+        }
+    }
+
+    // applies the ECHO folder's settings.json, sounds and wallpaper now (owner, 2026-10-04)
+    fun reloadEchoFolder() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(notice = echoFolderReader.read(always = true).message())
         }
     }
 

@@ -1,7 +1,13 @@
 package com.echo.core.data.repository
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.floatOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -15,29 +21,63 @@ object EchoSettingsExport {
     const val FORMAT = "echo-settings"
     const val VERSION = 1
 
-    val GROUPS: Map<String, List<String>> = linkedMapOf(
-        "look" to listOf(
-            "display_color_scheme", "theme_accent_override", "theme_accent_from_wallpaper", "theme_icon_color",
-            "display_text_color", "display_wave_design", "display_wave_style", "display_wave_over_wallpaper",
-            "display_icon_legibility", "display_xmb_layout_adjust", "theme_layout_spec",
+    // how ECHO stores each setting, so a value read back from the folder keeps the type ECHO reads
+    enum class Kind { BOOL, INT, LONG, FLOAT, TEXT, JSON }
+
+    val GROUPS: Map<String, Map<String, Kind>> = linkedMapOf(
+        "look" to linkedMapOf(
+            "display_color_scheme" to Kind.TEXT,
+            "theme_accent_override" to Kind.LONG,
+            "theme_accent_from_wallpaper" to Kind.BOOL,
+            "theme_icon_color" to Kind.LONG,
+            "display_text_color" to Kind.LONG,
+            "display_wave_design" to Kind.TEXT,
+            "display_wave_style" to Kind.TEXT,
+            "display_wave_over_wallpaper" to Kind.BOOL,
+            "display_icon_legibility" to Kind.TEXT,
+            "display_xmb_layout_adjust" to Kind.JSON,
+            "theme_layout_spec" to Kind.JSON,
         ),
-        "interface" to listOf(
-            "interface_last_played_size", "interface_island_shows_recent", "display_recents_include_apps",
-            "interface_show_device_notifications", "interface_context_menu_hint",
-            "interface_context_menu_hint_delay_seconds", "pref_xmb_item_backdrop", "pref_xmb_game_metadata",
-            "pref_animated_icons", "display_launch_disc", "display_gameboot_enabled", "display_gameboot_mode",
-            "display_show_boot", "display_boot_on_resume", "sound_menu_enabled", "sound_menu_music",
-            "display_battery_saver", "display_thermal_aware",
+        "interface" to linkedMapOf(
+            "interface_last_played_size" to Kind.INT,
+            "interface_island_shows_recent" to Kind.BOOL,
+            "display_recents_include_apps" to Kind.BOOL,
+            "interface_show_device_notifications" to Kind.BOOL,
+            "interface_context_menu_hint" to Kind.BOOL,
+            "interface_context_menu_hint_delay_seconds" to Kind.FLOAT,
+            "pref_xmb_item_backdrop" to Kind.BOOL,
+            "pref_xmb_game_metadata" to Kind.BOOL,
+            "pref_animated_icons" to Kind.BOOL,
+            "display_launch_disc" to Kind.BOOL,
+            "display_gameboot_enabled" to Kind.BOOL,
+            "display_gameboot_mode" to Kind.TEXT,
+            "display_show_boot" to Kind.BOOL,
+            "display_boot_on_resume" to Kind.BOOL,
+            "sound_menu_enabled" to Kind.BOOL,
+            "sound_menu_music" to Kind.BOOL,
+            "display_battery_saver" to Kind.BOOL,
+            "display_thermal_aware" to Kind.BOOL,
         ),
-        "controls" to listOf(
-            "controller_confirm_back_layout", "controller_xy_layout", "controller_left_backs_out",
-            "controller_scroll_speed", "controller_stick_sensitivity", "controller_trigger_sensitivity",
-            "controller_shoulder_hold", "controller_display_type", "controller_mappings_v1",
-            "interface_touch_sensitivity", "interface_touch_nav_button",
+        "controls" to linkedMapOf(
+            "controller_confirm_back_layout" to Kind.TEXT,
+            "controller_xy_layout" to Kind.TEXT,
+            "controller_left_backs_out" to Kind.BOOL,
+            "controller_scroll_speed" to Kind.TEXT,
+            "controller_stick_sensitivity" to Kind.TEXT,
+            "controller_trigger_sensitivity" to Kind.TEXT,
+            "controller_shoulder_hold" to Kind.TEXT,
+            "controller_display_type" to Kind.TEXT,
+            "controller_mappings_v1" to Kind.JSON,
+            "interface_touch_sensitivity" to Kind.TEXT,
+            "interface_touch_nav_button" to Kind.TEXT,
         ),
-        "players" to listOf(
-            "music_default_player_package", "video_default_player", "photo_default_viewer",
-            "books_default_reader", "video_seek_step_seconds", "video_controls_hide_ms",
+        "players" to linkedMapOf(
+            "music_default_player_package" to Kind.TEXT,
+            "video_default_player" to Kind.TEXT,
+            "photo_default_viewer" to Kind.TEXT,
+            "books_default_reader" to Kind.TEXT,
+            "video_seek_step_seconds" to Kind.INT,
+            "video_controls_hide_ms" to Kind.INT,
         ),
     )
 
@@ -50,7 +90,7 @@ object EchoSettingsExport {
             put("format", FORMAT)
             put("version", VERSION)
             GROUPS.forEach { (group, keys) ->
-                val values = keys.mapNotNull { key -> prefs[key]?.let { key to element(it) } }.toMap()
+                val values = keys.keys.mapNotNull { key -> prefs[key]?.let { key to element(it) } }.toMap()
                 if (values.isNotEmpty()) put(group, JsonObject(values))
             }
         },
@@ -63,5 +103,40 @@ object EchoSettingsExport {
         is String -> value.takeIf { it.startsWith("{") || it.startsWith("[") }
             ?.let { runCatching { Json.parseToJsonElement(it) }.getOrNull() } ?: JsonPrimitive(value)
         else -> JsonPrimitive(value.toString())
+    }
+
+    // what a settings.json from the folder holds: the listed settings with the type ECHO stores them
+    // as (Boolean, Int, Long, Float or String); anything else is skipped and named in [skipped]
+    data class Parsed(val values: Map<String, Any>, val skipped: List<String>)
+
+    fun parse(text: String): Parsed? {
+        val root = runCatching { Json.parseToJsonElement(text) as? JsonObject }.getOrNull() ?: return null
+        if ((root["format"] as? JsonPrimitive)?.contentOrNull != FORMAT) return null
+        val values = LinkedHashMap<String, Any>()
+        val skipped = ArrayList<String>()
+        root.forEach { (group, element) ->
+            if (group == "format" || group == "version") return@forEach
+            val listed = GROUPS[group]
+            val entries = element as? JsonObject
+            if (listed == null || entries == null) { skipped += group; return@forEach }
+            entries.forEach { (key, value) ->
+                val kind = listed[key]
+                val typed = kind?.let { typed(it, value) }
+                if (typed == null) skipped += "$group.$key" else values[key] = typed
+            }
+        }
+        return Parsed(values, skipped)
+    }
+
+    private fun typed(kind: Kind, value: JsonElement): Any? {
+        val p = value as? JsonPrimitive
+        return when (kind) {
+            Kind.BOOL -> p?.takeUnless { it.isString }?.booleanOrNull
+            Kind.INT -> p?.takeUnless { it.isString }?.intOrNull
+            Kind.LONG -> p?.takeUnless { it.isString }?.longOrNull
+            Kind.FLOAT -> p?.takeUnless { it.isString }?.floatOrNull
+            Kind.TEXT -> p?.takeIf { it.isString }?.content
+            Kind.JSON -> (value as? JsonObject ?: value as? JsonArray)?.toString()
+        }
     }
 }

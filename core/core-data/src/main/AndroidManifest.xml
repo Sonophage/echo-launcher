@@ -3,4 +3,8 @@
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- SystemWallpaperFollow sets Android's wallpaper. Declared here as well as in the app because
+         lint checks this module against its own manifest; merging makes it one declaration. -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
 </manifest>

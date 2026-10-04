@@ -149,10 +149,20 @@ your folders, emulators and accounts. Each step runs the same code as its Settin
 
 ### The ECHO folder
 
-ECHO keeps its own folder on your storage, named **ECHO**: `Artwork/` (art for each game, one
-folder per console), `Import/` (other launchers' media to bring in) and `Look/` (icons, sounds,
-fonts, boot and wallpapers as files, kept for themes in a later version). You can open and edit it
-with any file manager. No passwords, API keys or account details are kept there.
+ECHO keeps its own folder on your storage, named **ECHO**, that you can open and edit with any file
+manager:
+
+- `Artwork/`: art for each game, one folder per console.
+- `Import/`: other launchers' media to bring in.
+- `Look/`: ECHO's sounds, boot audio, wallpaper and icons as files.
+- `settings.json`: how ECHO looks and behaves: colours, wave, layout, controls and default players.
+
+ECHO keeps the folder current as you change things. To use your own changes, edit the files, then
+choose **Reload ECHO Folder** in the artwork folder settings: ECHO applies `settings.json`, any sound
+named after its slot (`sound_back.mp3`, `boot_audio.mp3`, ...), and the newest picture in
+`Look/Wallpapers`. A file you edit is never written over by ECHO. ECHO's background is also set as
+Android's home and lock wallpaper. No passwords, API keys, account details or folder paths are kept
+in the folder.
 
 ---
 

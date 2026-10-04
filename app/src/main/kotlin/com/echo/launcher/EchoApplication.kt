@@ -24,6 +24,7 @@ class EchoApplication : Application(), Configuration.Provider {
     @Inject lateinit var emulatorAutoConfigService: EmulatorAutoConfigService
     @Inject lateinit var artworkImageCache: ArtworkImageCache
     @Inject lateinit var echoFolderMirror: com.echo.feature.artwork.portable.EchoFolderMirror
+    @Inject lateinit var systemWallpaperFollow: com.echo.core.data.wallpaper.SystemWallpaperFollow
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -35,6 +36,7 @@ class EchoApplication : Application(), Configuration.Provider {
         initDatabase()
         initEmulators()
         echoFolderMirror.start(appScope)
+        systemWallpaperFollow.start(appScope)
     }
 
     private fun initDatabase() {

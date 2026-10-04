@@ -56,6 +56,8 @@ class DisplaySettingsViewModelWallpaperTest {
                 )
             },
 
+            com.echo.core.data.wallpaper.StillWallpaper(context),
+
             io = dispatcher,
         )
     }
