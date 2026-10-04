@@ -3,21 +3,21 @@ package com.echo.feature.artwork.portable
 import com.echo.feature.artwork.store.ArtworkKind
 
 object ArtworkPathResolver {
-    const val DIR_Echo = "pfp"
+    const val DIR_ECHO = "pfp"
 
-    const val DIR_ICON0 = "$DIR_Echo/icon0"
+    const val DIR_ICON0 = "$DIR_ECHO/icon0"
 
-    const val DIR_ICON1 = "$DIR_Echo/icon1"
+    const val DIR_ICON1 = "$DIR_ECHO/icon1"
 
-    const val DIR_VERSIONS = "$DIR_Echo/versions"
+    const val DIR_VERSIONS = "$DIR_ECHO/versions"
 
-    const val DIR_ORIGINALS = "$DIR_Echo/originals"
+    const val DIR_ORIGINALS = "$DIR_ECHO/originals"
 
     fun versionsDirSegments(platformId: String, kind: ArtworkKind): List<String> =
-        listOf(ArtworkLibraryManifest.DIR_ARTWORK, platformId, DIR_Echo, "versions", kind.name.lowercase())
+        listOf(ArtworkLibraryManifest.DIR_ARTWORK, platformId, DIR_ECHO, "versions", kind.name.lowercase())
 
     fun originalsDirSegments(platformId: String, kind: ArtworkKind): List<String> =
-        listOf(ArtworkLibraryManifest.DIR_ARTWORK, platformId, DIR_Echo, "originals", kind.name.lowercase())
+        listOf(ArtworkLibraryManifest.DIR_ARTWORK, platformId, DIR_ECHO, "originals", kind.name.lowercase())
 
     private val KIND_TO_DIR: Map<ArtworkKind, String> = mapOf(
         ArtworkKind.ICON           to DIR_ICON0,

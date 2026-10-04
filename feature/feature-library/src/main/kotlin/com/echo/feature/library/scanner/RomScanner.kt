@@ -58,8 +58,8 @@ data class PcExportFile(
 
 private val PC_EXPORT_EXTENSIONS = setOf("steam", "epic", "gog", "amazon", "pcgame", "desktop", "pfpgame")
 
-private const val Echo_EXPORT_EXTENSION = "pfpgame"
-private const val MAX_Echo_EXPORT_BYTES = 256L * 1024
+private const val ECHO_EXPORT_EXTENSION = "pfpgame"
+private const val MAX_ECHO_EXPORT_BYTES = 256L * 1024
 
 private const val MAX_LAUNCHER_EXPORT_BYTES = 256L
 
@@ -335,7 +335,7 @@ class RomScanner @Inject constructor(
                     val title = child.name.substringBeforeLast('.', child.name)
 
                     val readCapBytes = when (ext) {
-                        Echo_EXPORT_EXTENSION -> MAX_Echo_EXPORT_BYTES
+                        ECHO_EXPORT_EXTENSION -> MAX_ECHO_EXPORT_BYTES
                         "desktop" -> null
                         else -> MAX_LAUNCHER_EXPORT_BYTES
                     }

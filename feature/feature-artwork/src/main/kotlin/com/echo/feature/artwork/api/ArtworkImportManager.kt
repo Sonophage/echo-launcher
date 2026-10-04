@@ -330,11 +330,11 @@ class ArtworkImportManager @Inject constructor(
 
             val mediaDirs = mutableListOf<Pair<ArtworkKind, SafChild>>()
             for (child in library.listChildren(tree, platformDir.documentId).filter { it.isDirectory }) {
-                if (child.name.equals(ArtworkPathResolver.DIR_Echo, ignoreCase = true)) {
+                if (child.name.equals(ArtworkPathResolver.DIR_ECHO, ignoreCase = true)) {
                     library.listChildren(tree, child.documentId)
                         .filter { it.isDirectory }
                         .forEach { sub ->
-                            ArtworkPathResolver.kindForMediaDir("${ArtworkPathResolver.DIR_Echo}/${sub.name}")
+                            ArtworkPathResolver.kindForMediaDir("${ArtworkPathResolver.DIR_ECHO}/${sub.name}")
                                 ?.let { mediaDirs += it to sub }
                         }
                 } else {

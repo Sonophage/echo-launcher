@@ -8,7 +8,7 @@ import com.echo.core.ui.theme.EchoColors
 import com.echo.core.ui.theme.composite
 import com.echo.core.ui.theme.contrastRatio
 import com.echo.core.ui.theme.relativeLuminance
-import com.echo.core.ui.theme.Crossbar_SCRIM_TOP_ALPHA
+import com.echo.core.ui.theme.CROSSBAR_SCRIM_TOP_ALPHA
 import com.echo.core.ui.theme.storefrontColorsFor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -55,7 +55,7 @@ class DetailPaletteTest {
             assertEquals(drawer.backgroundMid, page.pageBottom)
         }
 
-        assertEquals(Crossbar_SCRIM_TOP_ALPHA, detailPaletteFor(classicBlue).pageTop.alpha, 0.005f)
+        assertEquals(CROSSBAR_SCRIM_TOP_ALPHA, detailPaletteFor(classicBlue).pageTop.alpha, 0.005f)
     }
 
     @Test

@@ -1552,7 +1552,7 @@ class CrossbarViewModel @Inject constructor(
                         iconColor = prefs[KEY_ICON_COLOR],
                         iconsStamp = prefs[com.echo.core.data.repository.EchoThemeStore.KEY_THEME_ICONS_STAMP],
                         layoutJson = prefs[com.echo.core.data.repository.EchoThemeStore.KEY_THEME_LAYOUT],
-                        layoutAdjustJson = prefs[KEY_Crossbar_LAYOUT_ADJUST],
+                        layoutAdjustJson = prefs[KEY_CROSSBAR_LAYOUT_ADJUST],
                         customIconsStamp = prefs[CustomIconStore.KEY_CUSTOM_ICONS_STAMP],
                         textColor = prefs[KEY_TEXT_COLOR],
                     )
@@ -8425,7 +8425,7 @@ class CrossbarViewModel @Inject constructor(
         map[session.bucketKey] = session.draft
         viewModelScope.launch {
             context.echoDataStore.edit {
-                it[KEY_Crossbar_LAYOUT_ADJUST] = com.echo.themekit.CrossbarLayoutAdjustCodec.encode(map)
+                it[KEY_CROSSBAR_LAYOUT_ADJUST] = com.echo.themekit.CrossbarLayoutAdjustCodec.encode(map)
             }
             _uiState.update { it.copy(crossbarLayoutAdjust = null) }
         }
@@ -9050,7 +9050,7 @@ class CrossbarViewModel @Inject constructor(
         internal const val WAVE_IDLE_MS = 12_000L
 
         internal const val IDLE_HINT_POLL_MS  = 500L
-        private val KEY_Crossbar_LAYOUT_ADJUST = stringPreferencesKey("display_xmb_layout_adjust")
+        private val KEY_CROSSBAR_LAYOUT_ADJUST = stringPreferencesKey("display_xmb_layout_adjust")
         private val KEY_SETUP_COMPLETE    = booleanPreferencesKey("library_setup_complete")
 
         private val KEY_INITIAL_SETUP_SEEN = com.echo.core.data.repository.InitialSetupFlag.KEY_SEEN

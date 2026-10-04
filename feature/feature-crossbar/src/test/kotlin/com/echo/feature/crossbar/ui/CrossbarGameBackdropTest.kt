@@ -27,9 +27,9 @@ class CrossbarGameBackdropTest {
 
     @Test
     fun `the transition happens around the middle of the screen, not at an edge`() {
-        assertTrue("solid band ends at $Crossbar_STILL_SOLID_END", Crossbar_STILL_SOLID_END in 0.25f..0.55f)
-        assertTrue("fade ends at $Crossbar_STILL_FADE_END", Crossbar_STILL_FADE_END in 0.55f..0.85f)
-        assertTrue("the fade must have width", Crossbar_STILL_FADE_END > Crossbar_STILL_SOLID_END)
+        assertTrue("solid band ends at $CROSSBAR_STILL_SOLID_END", CROSSBAR_STILL_SOLID_END in 0.25f..0.55f)
+        assertTrue("fade ends at $CROSSBAR_STILL_FADE_END", CROSSBAR_STILL_FADE_END in 0.55f..0.85f)
+        assertTrue("the fade must have width", CROSSBAR_STILL_FADE_END > CROSSBAR_STILL_SOLID_END)
     }
 
     @Test
@@ -89,6 +89,6 @@ class CrossbarGameBackdropTest {
 
     @Test
     fun `the crossfade is slow enough to read as a fade, not a blink`() {
-        assertTrue("$Crossbar_BACKDROP_FADE_MS ms", Crossbar_BACKDROP_FADE_MS in 400..1200)
+        assertTrue("$CROSSBAR_BACKDROP_FADE_MS ms", CROSSBAR_BACKDROP_FADE_MS in 400..1200)
     }
 }

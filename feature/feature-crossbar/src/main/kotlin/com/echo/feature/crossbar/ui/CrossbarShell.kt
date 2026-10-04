@@ -125,12 +125,12 @@ import com.echo.feature.crossbar.viewmodel.fanCoversToDraw
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 
-private const val Crossbar_BASELINE_HEIGHT_DP = 468f
+private const val CROSSBAR_BASELINE_HEIGHT_DP = 468f
 
-private const val Crossbar_BASELINE_WIDTH_DP = 832f
-private const val Crossbar_MAX_SCALE = 2.5f
+private const val CROSSBAR_BASELINE_WIDTH_DP = 832f
+private const val CROSSBAR_MAX_SCALE = 2.5f
 
-private const val Crossbar_MIN_SCALE = 0.75f
+private const val CROSSBAR_MIN_SCALE = 0.75f
 
 private val DRILL_CROSSBAR_LEFT_MARGIN = 16.dp
 
@@ -573,9 +573,9 @@ fun CrossbarShell(
             val baseDensity = LocalDensity.current
 
             val uiScale = minOf(
-                maxHeight.value / Crossbar_BASELINE_HEIGHT_DP,
-                maxWidth.value / Crossbar_BASELINE_WIDTH_DP,
-            ).coerceIn(Crossbar_MIN_SCALE, Crossbar_MAX_SCALE)
+                maxHeight.value / CROSSBAR_BASELINE_HEIGHT_DP,
+                maxWidth.value / CROSSBAR_BASELINE_WIDTH_DP,
+            ).coerceIn(CROSSBAR_MIN_SCALE, CROSSBAR_MAX_SCALE)
 
             val config = LocalConfiguration.current
             val layoutAdjust = uiState.crossbarLayoutAdjust?.draft
@@ -659,7 +659,7 @@ fun CrossbarShell(
                     it.gameId == selectedItem?.gameId
             }
 
-            Crossfade(targetState = backdrop, animationSpec = tween(Crossbar_BACKDROP_FADE_MS), label = "xmbGameBackground") { bg ->
+            Crossfade(targetState = backdrop, animationSpec = tween(CROSSBAR_BACKDROP_FADE_MS), label = "xmbGameBackground") { bg ->
                 if (bg != null || backgroundSnap != null) {
                     Box(Modifier.fillMaxSize()) {
                         if (backgroundSnap != null) {

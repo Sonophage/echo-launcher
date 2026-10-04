@@ -83,11 +83,11 @@ fun solveScrimColor(
 }
 
 fun crossbarScrimAnchors(backgroundTop: Color, backgroundBottom: Color): Pair<Color, Color> =
-    solveScrimColor(backgroundTop, alpha = Crossbar_SCRIM_TOP_ALPHA).copy(alpha = Crossbar_SCRIM_TOP_ALPHA) to
-        solveScrimColor(backgroundBottom, alpha = Crossbar_SCRIM_BOTTOM_ALPHA).copy(alpha = Crossbar_SCRIM_BOTTOM_ALPHA)
+    solveScrimColor(backgroundTop, alpha = CROSSBAR_SCRIM_TOP_ALPHA).copy(alpha = CROSSBAR_SCRIM_TOP_ALPHA) to
+        solveScrimColor(backgroundBottom, alpha = CROSSBAR_SCRIM_BOTTOM_ALPHA).copy(alpha = CROSSBAR_SCRIM_BOTTOM_ALPHA)
 
-const val Crossbar_SCRIM_TOP_ALPHA = 0.72f
-const val Crossbar_SCRIM_BOTTOM_ALPHA = 0.90f
+const val CROSSBAR_SCRIM_TOP_ALPHA = 0.72f
+const val CROSSBAR_SCRIM_BOTTOM_ALPHA = 0.90f
 
 @Immutable
 data class ResolvedTextColor(
