@@ -71,7 +71,7 @@ class CrossbarRecents(
                     .take(CrossbarViewModel.RECENTLY_PLAYED_LIMIT)
                     .map { app ->
                         app.lastUsedAt to CrossbarItem(
-                            id = "$CrossbarViewModel.RECENT_APP_ID_PREFIX${app.packageName}",
+                            id = recentAppId(app.packageName),
                             title = app.label,
                             subtitle = "App",
                             packageName = app.packageName,

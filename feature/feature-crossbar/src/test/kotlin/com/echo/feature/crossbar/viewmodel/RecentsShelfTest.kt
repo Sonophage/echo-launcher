@@ -255,4 +255,11 @@ class RecentAppDismissalTest {
 
         assertEquals("only the well formed entry survives", mapOf("a.b.c" to 7L), parsed)
     }
+
+    @Test
+    fun `a recent app's id carries the prefix, or its menu would never offer Remove from Recent`() {
+        val id = recentAppId("com.discord")
+        assertEquals("recentapp_com.discord", id)
+        assertTrue(id.startsWith(CrossbarViewModel.RECENT_APP_ID_PREFIX))
+    }
 }

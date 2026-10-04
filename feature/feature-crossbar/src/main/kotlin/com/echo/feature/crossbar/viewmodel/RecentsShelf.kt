@@ -90,6 +90,9 @@ internal fun groupRecentsByDay(
     return RecentDay.entries.mapNotNull { day -> byDay[day]?.let { day to it } }
 }
 
+// an app on the Recent shelf; the menu offers "Remove from Recent" only to ids that start this way
+internal fun recentAppId(packageName: String): String = "${CrossbarViewModel.RECENT_APP_ID_PREFIX}$packageName"
+
 internal val CrossbarItem.removableFromRecent: Boolean
     get() = when (type) {
         CrossbarItemType.VIDEO_FILE, CrossbarItemType.LIBRARY_BOOK, CrossbarItemType.MUSIC_TRACK -> true
