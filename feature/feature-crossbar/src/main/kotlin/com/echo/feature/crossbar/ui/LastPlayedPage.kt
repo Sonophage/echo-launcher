@@ -1,5 +1,7 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.design.RailPanelFill
+import com.echo.core.ui.design.RAIL_PANEL_WIDTH
 import androidx.compose.foundation.border
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.Crossfade
@@ -205,13 +207,13 @@ private fun RecentList(
                 modifier = Modifier.fillMaxSize().blur(u.dp(24)).graphicsLayer(alpha = 0.4f),
             )
         }
-        Box(Modifier.fillMaxSize().padding(start = u.dp(480))) {
+        Box(Modifier.fillMaxSize().padding(start = u.dp(RAIL_PANEL_WIDTH))) {
             ItemArt(focused, u.dp(150), Alignment.Center)
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to PanelBase.copy(alpha = 0.85f), 0.3f to Color.Transparent)))
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to PanelBase.copy(alpha = 0.92f))))
         }
         wave?.invoke()
-        Box(Modifier.fillMaxHeight().width(u.dp(480)).background(Color.Black.copy(alpha = 0.45f)))
+        Box(Modifier.fillMaxHeight().width(u.dp(RAIL_PANEL_WIDTH)).background(RailPanelFill))
 
         Column(
             Modifier
@@ -247,7 +249,7 @@ private fun RecentList(
         }
 
         Column(
-            Modifier.align(Alignment.BottomStart).padding(start = u.dp(540), end = u.dp(80), bottom = u.dp(80)),
+            Modifier.align(Alignment.BottomStart).padding(start = u.dp(RAIL_PANEL_WIDTH + 60), end = u.dp(80), bottom = u.dp(80)),
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
             if (focused == null) {

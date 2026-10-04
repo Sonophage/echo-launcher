@@ -40,6 +40,11 @@ fun Modifier.panelBackdrop(tint: Color): Modifier = this
         drawRect(Brush.horizontalGradient(0.45f to Color.Transparent, 1f to PanelEdgeShade))
     }
 
+// the side rail the Recent rail and every context menu share (owner, 2026-10-04): its width in
+// panel design units and its see-through backing, so the wave still shows behind it
+const val RAIL_PANEL_WIDTH = 480
+val RailPanelFill = Color.Black.copy(alpha = 0.45f)
+
 val MenuScrim = Color(0xF7050201)
 
 fun Modifier.menuBackdrop(): Modifier = background(

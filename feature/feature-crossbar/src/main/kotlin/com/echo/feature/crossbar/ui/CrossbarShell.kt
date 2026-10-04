@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.design.LocalBackdropWave
 import androidx.compose.ui.graphics.toArgb
 import com.echo.feature.crossbar.viewmodel.resumeHoldId
 import com.echo.feature.crossbar.viewmodel.resumableFocus
@@ -1136,47 +1137,49 @@ fun CrossbarShell(
             }
 
             val panelStage = uiState.panelStage()
-            CrossbarNotificationBar(
-                open = notificationsOpen,
-                tab = uiState.panelTab,
-                entries = uiState.noticeEntries,
-                stage = panelStage,
-                focus = uiState.focusedNotice,
-                chip = uiState.noticeChip,
-                allCount = panelEntries(androidNotices, uiState.launcherNotices).size,
-                onChipTapped = onNoticeChipTapped,
-                androidAccessGranted = androidAccess,
-                onGrantAndroidAccess = {
-                    onNotificationsDismissed()
-                    runCatching {
-                        strip.startActivity(
-                            AndroidNotifications.settingsIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    }
-                },
-                quick = QuickSettingsState(
-                    waveOn = uiState.waveStyle != com.echo.core.ui.wave.WaveStyle.OFF,
-                    backdropOn = uiState.itemBackdropEnabled,
-                    recentAppsOn = uiState.recentsIncludeApps,
-                    chips = uiState.libraryChips,
-                ),
-                profile = uiState.profileData,
-                profileName = uiState.profileName,
-                profileAvatar = uiState.profileAvatar,
-                profileFocus = uiState.panelProfile,
-                onProfileTapped = onPanelProfileTapped,
-                quickFocus = uiState.panelQuick,
-                chipFocus = uiState.panelChip,
-                accent = com.echo.core.ui.theme.menuCursorEdge(),
-                onRowTapped = onPanelRowTapped,
-                settingFocus = uiState.panelSetting,
-                onQuickTapped = onQuickSettingTapped,
-                onSettingTapped = onPanelSettingTapped,
-                pull = panelPull,
-                onOpened = onNotificationsSwipedOpen,
-                onClosed = onNotificationsSwipedClosed,
-                modifier = Modifier.zIndex(NotificationBarZ),
-            )
+            CompositionLocalProvider(LocalBackdropWave provides homeWave) {
+                CrossbarNotificationBar(
+                    open = notificationsOpen,
+                    tab = uiState.panelTab,
+                    entries = uiState.noticeEntries,
+                    stage = panelStage,
+                    focus = uiState.focusedNotice,
+                    chip = uiState.noticeChip,
+                    allCount = panelEntries(androidNotices, uiState.launcherNotices).size,
+                    onChipTapped = onNoticeChipTapped,
+                    androidAccessGranted = androidAccess,
+                    onGrantAndroidAccess = {
+                        onNotificationsDismissed()
+                        runCatching {
+                            strip.startActivity(
+                                AndroidNotifications.settingsIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
+                    },
+                    quick = QuickSettingsState(
+                        waveOn = uiState.waveStyle != com.echo.core.ui.wave.WaveStyle.OFF,
+                        backdropOn = uiState.itemBackdropEnabled,
+                        recentAppsOn = uiState.recentsIncludeApps,
+                        chips = uiState.libraryChips,
+                    ),
+                    profile = uiState.profileData,
+                    profileName = uiState.profileName,
+                    profileAvatar = uiState.profileAvatar,
+                    profileFocus = uiState.panelProfile,
+                    onProfileTapped = onPanelProfileTapped,
+                    quickFocus = uiState.panelQuick,
+                    chipFocus = uiState.panelChip,
+                    accent = com.echo.core.ui.theme.menuCursorEdge(),
+                    onRowTapped = onPanelRowTapped,
+                    settingFocus = uiState.panelSetting,
+                    onQuickTapped = onQuickSettingTapped,
+                    onSettingTapped = onPanelSettingTapped,
+                    pull = panelPull,
+                    onOpened = onNotificationsSwipedOpen,
+                    onClosed = onNotificationsSwipedClosed,
+                    modifier = Modifier.zIndex(NotificationBarZ),
+                )
+            }
 
             val rootActionsVisible = uiState.stripShowsCrossbarContext && !uiState.isInSubItem
 
@@ -1223,28 +1226,30 @@ fun CrossbarShell(
                 LocalDensity provides Density(baseDensity.density, baseDensity.fontScale),
             ) {
             if (uiState.colorSchemePicker == null) {
-                uiState.activeSettingsScreen?.let { screenId ->
-                    SettingsNavHost(
-                        screenId = screenId,
-                        onBack = onCloseSettingsScreen,
-                        pendingGamepadAction = uiState.pendingSettingsAction,
-                        onGamepadActionConsumed = onSettingsActionConsumed,
-                        onPromptTapped = onPromptTapped,
-                        showControllerHint = uiState.showSettingsHint,
-                        leftBacksOut = uiState.leftBacksOut,
-                        lastInputWasTouch = uiState.lastInputWasTouch,
-                        onTouchInteraction = onTouchInput,
-                        onOpenColorSchemePicker = onOpenColorSchemePicker,
-                        onOpenCrossbarLayoutAdjust = onOpenCrossbarLayoutAdjust,
-                        onOpenCustomIcons = onOpenCustomIcons,
-                        onPreviewBootSequence = onPreviewBootSequence,
-                        onPreviewGameBoot = onPreviewGameBoot,
-                        onAddAndroidApps = onOpenAndroidLibraryPicker,
-                        onOpenLibraryManager = onOpenLibraryManager,
-                        onGoToLibrary = onGoToLibrary,
-                        onOpenScreen = onOpenSettingsScreen,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                CompositionLocalProvider(LocalBackdropWave provides homeWave) {
+                                    uiState.activeSettingsScreen?.let { screenId ->
+                        SettingsNavHost(
+                            screenId = screenId,
+                            onBack = onCloseSettingsScreen,
+                            pendingGamepadAction = uiState.pendingSettingsAction,
+                            onGamepadActionConsumed = onSettingsActionConsumed,
+                            onPromptTapped = onPromptTapped,
+                            showControllerHint = uiState.showSettingsHint,
+                            leftBacksOut = uiState.leftBacksOut,
+                            lastInputWasTouch = uiState.lastInputWasTouch,
+                            onTouchInteraction = onTouchInput,
+                            onOpenColorSchemePicker = onOpenColorSchemePicker,
+                            onOpenCrossbarLayoutAdjust = onOpenCrossbarLayoutAdjust,
+                            onOpenCustomIcons = onOpenCustomIcons,
+                            onPreviewBootSequence = onPreviewBootSequence,
+                            onPreviewGameBoot = onPreviewGameBoot,
+                            onAddAndroidApps = onOpenAndroidLibraryPicker,
+                            onOpenLibraryManager = onOpenLibraryManager,
+                            onGoToLibrary = onGoToLibrary,
+                            onOpenScreen = onOpenSettingsScreen,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 }
             }
 
@@ -1263,23 +1268,25 @@ fun CrossbarShell(
             uiState.activeAppDrawerFilter?.let { filterName ->
                 val initialFilter = runCatching { AppFilter.valueOf(filterName) }
                     .getOrDefault(AppFilter.DEFAULT)
-                AppDrawerScreen(
-                    initialFilter = initialFilter,
-                    onBack = onCloseAppDrawer,
-                    pendingGamepadAction = uiState.pendingDrawerAction,
-                    selectReleases = uiState.drawerSelectReleases,
-                    typedChar = uiState.pendingDrawerTypedChar,
-                    onTypedCharConsumed = onDrawerTypedCharConsumed,
-                    onGamepadActionConsumed = onDrawerActionConsumed,
-
-                    letterRailHeld = uiState.drawerLetterRailHeld,
-
-                    onTouchInteraction = onTouchInput,
-                    onAddToCrossBar = onAddAppToOpenCategory,
-                    onLaunchRom = onLaunchRomFromDrawer,
-                    onOpenAppSearch = onOpenAppSearch,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                CompositionLocalProvider(LocalBackdropWave provides homeWave) {
+                    AppDrawerScreen(
+                        initialFilter = initialFilter,
+                        onBack = onCloseAppDrawer,
+                        pendingGamepadAction = uiState.pendingDrawerAction,
+                        selectReleases = uiState.drawerSelectReleases,
+                        typedChar = uiState.pendingDrawerTypedChar,
+                        onTypedCharConsumed = onDrawerTypedCharConsumed,
+                        onGamepadActionConsumed = onDrawerActionConsumed,
+    
+                        letterRailHeld = uiState.drawerLetterRailHeld,
+    
+                        onTouchInteraction = onTouchInput,
+                        onAddToCrossBar = onAddAppToOpenCategory,
+                        onLaunchRom = onLaunchRomFromDrawer,
+                        onOpenAppSearch = onOpenAppSearch,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
 
             uiState.search?.let { search ->

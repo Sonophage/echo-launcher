@@ -1,5 +1,7 @@
 package com.echo.feature.appbar.appdrawer
 
+import com.echo.core.ui.design.GlowSide
+import com.echo.core.ui.design.GlowMaskedWave
 import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import android.os.Build
@@ -78,6 +80,7 @@ import com.echo.core.ui.design.PanelBase
 internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits) {
     val tint by animateColorAsState(icon?.color ?: NeutralTint, tween(500), label = "wallTint")
     Box(Modifier.fillMaxSize().panelBackdrop(tint)) {
+        GlowMaskedWave(GlowSide.RIGHT)
         app?.art?.let { AsyncImage(rememberBlurSourceModel(it), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(u.dp(26))) }
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 0.55f else 0.75f)))
     }

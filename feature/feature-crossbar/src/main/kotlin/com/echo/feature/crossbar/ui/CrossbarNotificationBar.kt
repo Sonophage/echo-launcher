@@ -1,5 +1,7 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.design.GlowSide
+import com.echo.core.ui.design.GlowMaskedWave
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.ControllerPrompt
 import com.echo.core.ui.components.LocalPadPrompts
@@ -188,6 +190,7 @@ fun CrossbarNotificationBar(
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                 .panelPullGesture(pull, onOpened, onClosed),
         ) {
+            GlowMaskedWave(GlowSide.LEFT)
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
             when (tab) {
                 // kit 11: chips, the focused notice large on the left, the rest on the right

@@ -1,5 +1,7 @@
 package com.echo.feature.settings.ui
 
+import com.echo.core.ui.design.GlowSide
+import com.echo.core.ui.design.GlowMaskedWave
 import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.ui.design.PANEL_CARD_RADIUS
 import com.echo.core.ui.design.PANEL_FOCUS_RING_WIDTH
@@ -691,6 +693,8 @@ fun SettingsScaffold(
             val tabs = tabEntries.isNotEmpty()
             val paneShown = (tabs || paneText != null) && maxWidth - SETTINGS_COLUMN_MAX_WIDTH >= SETTINGS_HELP_PANE_MIN_WIDTH
             backdrop?.invoke()
+            // the wave shows inside the panel's glow, on the left (owner, 2026-10-04)
+            if (backdrop == null && panelTint != null) GlowMaskedWave(GlowSide.LEFT)
             Column(
                 modifier = Modifier
                     .fillMaxSize()

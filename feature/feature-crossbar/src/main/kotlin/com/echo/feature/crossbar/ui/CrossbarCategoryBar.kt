@@ -1,5 +1,22 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.icons.LocalCrossbarIconOverrides
+import com.echo.core.ui.icons.LocalCustomIcons
+import com.echo.core.ui.icons.categoryIconFor
+import com.echo.core.ui.icons.catbarSlotKeyFor
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Games
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.Icons
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -141,7 +158,8 @@ private fun CrossbarCategoryItem(
     iconAnimatingAllowed: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val iconSize = CrossbarLayoutSpec.DEFAULT.categoryIconDp.dp
+    // owner, 2026-10-04: smaller, and drawn with the Recent filters' icons
+    val iconSize = (CrossbarLayoutSpec.DEFAULT.categoryIconDp * XMB_ICON_SCALE).dp
     val itemAlpha by animateFloatAsState(
 
         targetValue = when {
@@ -175,18 +193,25 @@ private fun CrossbarCategoryItem(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(82.dp)
+                .size(60.dp)
                 .alpha(itemAlpha),
         ) {
             androidx.compose.runtime.CompositionLocalProvider(
                 com.echo.core.ui.icons.LocalIconAnimating provides
                     (isSelected && iconAnimatingAllowed),
             ) {
-            CategoryIconGlyph(
-                iconKey = category.iconKey,
-                contentDescription = category.name,
-                modifier = Modifier.size(iconSize),
-            )
+            val slot = catbarSlotKeyFor(category.iconKey)
+            val themed = slot != null && (LocalCustomIcons.current[slot] ?: LocalCrossbarIconOverrides.current[slot]) != null
+            val filterIcon = xmbFilterIcon(category.iconKey)?.takeIf { !themed }
+            if (filterIcon != null) {
+                Icon(filterIcon, category.name, Modifier.size(iconSize), tint = Color.White)
+            } else {
+                CategoryIconGlyph(
+                    iconKey = category.iconKey,
+                    contentDescription = category.name,
+                    modifier = Modifier.size(iconSize),
+                )
+            }
             }
         }
 
@@ -204,4 +229,22 @@ private fun CrossbarCategoryItem(
                 .alpha(labelAlpha),
         )
     }
+}
+
+private const val XMB_ICON_SCALE = 0.72f
+
+// the built-in categories drawn with the icons the Recent filter row uses; a theme's own icon or a
+// console's icon still wins
+internal fun xmbFilterIcon(iconKey: String): ImageVector? = when (categoryIconFor(iconKey).key) {
+    "ic_recent" -> Icons.Outlined.History
+    "ic_games" -> Icons.Outlined.Games
+    "ic_music" -> Icons.Outlined.MusicNote
+    "ic_videos" -> Icons.Outlined.Movie
+    "ic_library" -> Icons.AutoMirrored.Outlined.MenuBook
+    "ic_photos" -> Icons.Outlined.Image
+    "ic_network" -> Icons.Outlined.Language
+    "ic_appstore" -> Icons.Outlined.Apps
+    "ic_favorites" -> Icons.Outlined.StarOutline
+    "ic_settings" -> Icons.Outlined.Settings
+    else -> null
 }

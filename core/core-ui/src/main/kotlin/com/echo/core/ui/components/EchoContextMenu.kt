@@ -1,5 +1,11 @@
 package com.echo.core.ui.components
 
+import com.echo.core.ui.design.RailPanelFill
+import com.echo.core.ui.design.RAIL_PANEL_WIDTH
+import com.echo.core.ui.design.panelDesignUnits
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.BoxWithConstraints
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -68,17 +74,16 @@ fun <T> EchoContextMenuOverlay(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .menuBackdrop(),
-    ) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Box(Modifier.fillMaxSize().clickable(onClick = onDismiss))
+        Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(u.dp(RAIL_PANEL_WIDTH)).background(RailPanelFill))
 
         Column(
             horizontalAlignment = Alignment.End,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
+                .width(u.dp(RAIL_PANEL_WIDTH))
                 .padding(top = StatusStripHeight, bottom = HintBarHeight, end = RailEdgeGap),
         ) {
             ContextMenuHeader(title, subtitle)
