@@ -118,3 +118,29 @@ class HintPromptsTest {
         )
     }
 }
+
+class LastPlayedPromptsTest {
+    private fun home(item: CrossbarItem, rail: Boolean = false) = CrossbarUiState(
+        categories = listOf(
+            Category(id = BuiltInCategory.RECENTLY_PLAYED, name = "Recent", iconKey = "ic_recent", type = CategoryType.BUILT_IN, position = 0),
+        ),
+        currentItems = listOf(item),
+        recentRailVisible = rail,
+    )
+
+    private val skyrim = CrossbarItem(id = "g", title = "Skyrim", gameId = 1L, isRealGame = true)
+
+    @Test
+    fun `the action orb carries the stage's verb, since the page has no buttons of its own`() {
+        val prompts = promptsFor(home(skyrim))
+        assertEquals("Continue", prompts.primary?.verb)
+        assertEquals("Skyrim", prompts.primary?.target)
+    }
+
+    @Test
+    fun `X opens info on the stage and removes the row in the rail`() {
+        assertTrue(promptsFor(home(skyrim)).right.any { it.action == GamepadAction.CHANGE_SORT && it.verb == "Game info" })
+        val app = CrossbarItem(id = "a", title = "Discord", packageName = "com.discord")
+        assertTrue(promptsFor(home(app)).right.any { it.verb == "App info" })
+    }
+}

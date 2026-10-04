@@ -31,6 +31,22 @@ internal fun primaryVerbFor(item: CrossbarItem?): String? = when {
     else -> "Open"
 }
 
+// Last Played's verb, which the action orb carries (kit: "Continue Skyrim", "Resume 14:02")
+internal fun recentVerbFor(item: CrossbarItem): String = when (recentKind(item)) {
+    RecentKind.GAME, RecentKind.BOOK -> "Continue"
+    RecentKind.VIDEO -> if (item.progressFraction != null) "Resume" else "Play"
+    RecentKind.MUSIC -> "Play"
+    RecentKind.APP -> "Open"
+}
+
+// X on Last Played: the stage opens info, the rail removes the row
+private fun recentInfoPrompt(state: CrossbarUiState, item: CrossbarItem): CrossbarPrompt? = when {
+    state.recentRailVisible -> CrossbarPrompt(GamepadAction.CHANGE_SORT, "Remove").takeIf { item.removableFromRecent }
+    recentKind(item) == RecentKind.GAME -> CrossbarPrompt(GamepadAction.CHANGE_SORT, "Game info")
+    recentKind(item) == RecentKind.APP -> CrossbarPrompt(GamepadAction.CHANGE_SORT, "App info")
+    else -> null
+}
+
 fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
     val focused = state.currentItems.getOrNull(state.selectedItemIndex)
 
@@ -63,12 +79,13 @@ fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
             state.canFilterRecents -> add(CrossbarPrompt(GamepadAction.PREV_CATEGORY, "Filter", pairedWith = GamepadAction.NEXT_CATEGORY))
             state.canSortCurrentList -> add(CrossbarPrompt(GamepadAction.CHANGE_SORT, "Sort"))
         }
+        if (state.onLastPlayedHome) focused?.let { recentInfoPrompt(state, it) }?.let(::add)
         if (state.focusedItemHasContextMenu) add(CrossbarPrompt(GamepadAction.OPEN_CONTEXT_MENU, "Options"))
         if (!state.isInSubItem) add(CrossbarPrompt(GamepadAction.OPEN_SEARCH, "Search"))
     }
 
     return CrossbarPrompts(
-        primary = primaryVerbFor(focused)?.takeIf { !state.onLastPlayedHome }?.let {
+        primary = (if (state.onLastPlayedHome) focused?.takeIf { it.type != CrossbarItemType.EMPTY }?.let(::recentVerbFor) else primaryVerbFor(focused))?.let {
             CrossbarPrompt(GamepadAction.SELECT, it, focused?.title, detail = focused?.subtitle)
         },
         back = CrossbarPrompt(GamepadAction.BACK, if (state.isInSubItem || (state.onLastPlayedHome && state.recentRailVisible)) "Back" else "Apps"),

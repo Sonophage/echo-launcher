@@ -816,8 +816,6 @@ fun CrossbarShell(
                     filter = uiState.recentFilter,
                     railVisible = uiState.recentRailVisible,
                     onCardTapped = onRecentCardTap,
-                    onAction = onPromptTapped,
-                    launchHold = uiState.launchHold,
                     modifier = Modifier
                         .fillMaxSize()
                         .crossbarNavGestures(

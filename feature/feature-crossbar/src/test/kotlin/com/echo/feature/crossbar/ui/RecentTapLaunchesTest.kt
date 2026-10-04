@@ -39,7 +39,6 @@ class RecentTapLaunchesTest {
                     filter = RecentFilter.ALL,
                     railVisible = railVisible,
                     onCardTapped = onCardTapped,
-                    onAction = {},
                 )
             }
         }

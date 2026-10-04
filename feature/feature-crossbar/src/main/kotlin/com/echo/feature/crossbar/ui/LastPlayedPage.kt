@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import coil3.compose.AsyncImage
 import kotlin.math.abs
-import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.ContextMenuEyebrow
 import com.echo.core.ui.components.ContextMenuHeader
 import com.echo.core.ui.components.ContextMenuRowLabel
@@ -77,13 +76,10 @@ import com.echo.feature.crossbar.viewmodel.RecentFilter
 import com.echo.feature.crossbar.viewmodel.RecentKind
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.groupRecentsByDay
-import com.echo.feature.crossbar.viewmodel.holdMsFor
 import com.echo.feature.crossbar.viewmodel.isInstalledApp
 import com.echo.feature.crossbar.viewmodel.recentKind
 import com.echo.core.common.format.playTimeLabel
 import com.echo.core.common.format.relativeTime
-import com.echo.core.ui.design.PanelButton
-import com.echo.feature.crossbar.viewmodel.removableFromRecent
 import com.echo.core.ui.design.panelDesignUnits
 
 private const val SQUARE_FOOT = 64
@@ -98,10 +94,7 @@ fun LastPlayedPage(
 
     railVisible: Boolean,
     onCardTapped: (Int) -> Unit,
-    onAction: (GamepadAction) -> Unit,
     modifier: Modifier = Modifier,
-
-    launchHold: String? = null,
 ) {
     val focused = items.getOrNull(selectedIndex)
     val now = System.currentTimeMillis()
@@ -111,9 +104,9 @@ fun LastPlayedPage(
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Crossfade(railVisible, animationSpec = tween(220), label = "recentRail") { rail ->
             if (rail) {
-                RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, onAction, launchHold)
+                RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped)
             } else {
-                Letterbox(focused, now, empty, u, { onCardTapped(selectedIndex) }, onAction, launchHold)
+                Letterbox(focused, now, empty, u) { onCardTapped(selectedIndex) }
             }
         }
     }
@@ -126,14 +119,17 @@ private fun Letterbox(
     empty: String,
     u: DesignUnits,
     onArtTapped: () -> Unit,
-    onAction: (GamepadAction) -> Unit,
-    launchHold: String?,
 ) {
     Box(
         Modifier
             .fillMaxSize()
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onArtTapped),
     ) {
+        val kind = item?.let(::recentKind)
+        if (item != null && (kind == RecentKind.MUSIC || kind == RecentKind.VIDEO || kind == RecentKind.BOOK)) {
+            MediaStage(item, kind, now, u)
+            return@Box
+        }
         ItemArt(item, u.dp(150), BiasAlignment(0f, -0.2f))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.92f))))
         Column(
@@ -142,6 +138,7 @@ private fun Letterbox(
                 .fillMaxWidth()
                 .padding(bottom = HintBarHeight + u.dp(if (u.square) SQUARE_FOOT else 40)),
         ) {
+            item?.let { Box(Modifier.padding(start = u.dp(80), bottom = u.dp(18))) { Eyebrow(it, u) } }
             Box(Modifier.padding(start = u.dp(80), end = u.dp(80), bottom = u.dp(14))) {
                 val logo = item?.logoUri?.takeIf { item.hasVisibleLogo }
                 if (logo != null) {
@@ -164,22 +161,15 @@ private fun Letterbox(
                 }
             }
             if (item != null) {
-                Row(
+                Column(
                     Modifier.padding(top = u.dp(25), start = u.dp(80), end = u.dp(80)).fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(u.dp(30)),
+                    verticalArrangement = Arrangement.spacedBy(u.dp(6)),
                 ) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-                        Text(detailLine(item, now), color = Color.White, fontSize = u.sp(20), fontWeight = FontWeight.Light,
+                    Text(detailLine(item, now), color = Color.White, fontSize = u.sp(20), fontWeight = FontWeight.Light,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    subLine(item)?.let {
+                        Text(it, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(13), fontWeight = FontWeight.Light,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        subLine(item)?.let {
-                            Text(it, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(13), fontWeight = FontWeight.Light,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                        PanelButton(GamepadAction.SELECT, primaryLabel(item), u, holdMsFor(item), launchHold == item.id) { onAction(GamepadAction.SELECT) }
-                        infoLabel(item)?.let { PanelButton(GamepadAction.CHANGE_SORT, it, u) { onAction(GamepadAction.CHANGE_SORT) } }
                     }
                 }
             }
@@ -198,8 +188,6 @@ private fun RecentList(
     empty: String,
     u: DesignUnits,
     onCardTapped: (Int) -> Unit,
-    onAction: (GamepadAction) -> Unit,
-    launchHold: String?,
 ) {
     val groups = remember(items, now / 60_000L) { groupRecentsByDay(items, now) }
     val rows = remember(groups) {
@@ -273,12 +261,6 @@ private fun RecentList(
                         focused.progressLabel?.let {
                             Text(it, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(13), fontWeight = FontWeight.Light, maxLines = 1)
                         }
-                    }
-                }
-                Row(Modifier.padding(top = u.dp(8)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                    PanelButton(GamepadAction.SELECT, primaryLabel(focused), u, holdMsFor(focused), launchHold == focused.id) { onAction(GamepadAction.SELECT) }
-                    if (focused.removableFromRecent) {
-                        PanelButton(GamepadAction.CHANGE_SORT, "Remove", u) { onAction(GamepadAction.CHANGE_SORT) }
                     }
                 }
             }
@@ -360,18 +342,7 @@ private fun kindGlyph(item: CrossbarItem): ImageVector = when (recentKind(item))
     RecentKind.APP -> Icons.Outlined.Apps
 }
 
-private fun primaryLabel(item: CrossbarItem): String = when (recentKind(item)) {
-    RecentKind.GAME, RecentKind.BOOK -> "Continue"
-    RecentKind.VIDEO -> if (item.progressFraction != null) "Resume" else "Play"
-    RecentKind.MUSIC -> "Play"
-    RecentKind.APP -> "Open"
-}
 
-private fun infoLabel(item: CrossbarItem): String? = when (recentKind(item)) {
-    RecentKind.GAME -> "Game info"
-    RecentKind.APP -> "App info"
-    else -> null
-}
 
 private fun detailLine(item: CrossbarItem, now: Long): String {
     val verb = when (recentKind(item)) {
@@ -419,4 +390,65 @@ private fun filterGlyph(filter: RecentFilter): ImageVector = when (filter) {
     RecentFilter.BOOKS -> Icons.AutoMirrored.Outlined.MenuBook
     RecentFilter.VIDEO -> Icons.Outlined.Movie
     RecentFilter.APPS -> Icons.Outlined.Apps
+}
+
+@Composable
+private fun Eyebrow(item: CrossbarItem, u: DesignUnits) {
+    Text(
+        "From recent · ${kindLabel(item)}".uppercase(),
+        style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(13), letterSpacing = 0.18.em),
+        maxLines = 1,
+    )
+}
+
+// kit 07-09: the art takes the shape of its kind (square record, wide frame, portrait cover) with the details beside it
+@Composable
+private fun MediaStage(item: CrossbarItem, kind: RecentKind, now: Long, u: DesignUnits) {
+    val art = item.shelfCoverArt ?: item.tileArt ?: item.backdropArt.firstOrNull()
+    art?.let {
+        AsyncImage(
+            model = rememberBlurSourceModel(it),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().blur(u.dp(40)).graphicsLayer(alpha = 0.35f),
+        )
+    }
+    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.2f), 1f to Color.Black.copy(alpha = 0.8f))))
+    val (w, h) = when (kind) {
+        RecentKind.MUSIC -> 375 to 375
+        RecentKind.VIDEO -> 560 to 315
+        else -> 250 to 375
+    }
+    Row(
+        Modifier
+            .fillMaxSize()
+            .padding(start = u.dp(60), end = u.dp(60), top = stripBandHeight(rememberStripUnits()), bottom = HintBarHeight),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(50)),
+    ) {
+        Box(
+            Modifier.size(u.dp(w), u.dp(h)).clip(RoundedCornerShape(u.dp(16))).background(Color.White.copy(alpha = 0.08f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(kindGlyph(item), null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(u.dp(72)))
+            art?.let { AsyncImage(rememberArtworkModel(it), item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
+            Eyebrow(item, u)
+            Headline(item.title, u.sp(50), 2)
+            // the progress label sits under the bar, so this line is the artist, season or chapter
+            (item.subtitle?.takeIf { it.isNotBlank() && it != kindLabel(item) } ?: detailLine(item, now).takeIf { it.isNotBlank() })?.let {
+                Text(it, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(18), fontWeight = FontWeight.Light,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            item.progressFraction?.let { p ->
+                Column(Modifier.width(u.dp(450)).padding(top = u.dp(16)), verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
+                    ProgressBar(p, u.dp(4), Modifier.fillMaxWidth())
+                    item.progressLabel?.let {
+                        Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13), fontWeight = FontWeight.Light, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
 }
