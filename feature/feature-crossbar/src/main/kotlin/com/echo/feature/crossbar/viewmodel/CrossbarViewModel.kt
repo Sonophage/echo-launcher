@@ -5,7 +5,6 @@ import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.components.MenuSelect
 import com.echo.core.ui.components.MenuState
 import com.echo.core.ui.components.chose
-import com.echo.core.ui.components.rowsShown
 import com.echo.core.domain.model.PlatformIds.ANDROID as ANDROID_PLATFORM_ID
 
 import com.echo.core.domain.model.PlatformIds.WINDOWS as WINDOWS_PLATFORM_ID
@@ -1274,7 +1273,7 @@ class CrossbarViewModel @Inject constructor(
     private val launcherShortcutRepository: LauncherShortcutRepository,
     private val libraryScanner: LibraryScanner,
     private val artworkRepository: ArtworkRepository,
-    @ApplicationContext private val context: Context,
+    @ApplicationContext internal val context: Context,
     private val gamepadInputHandler: GamepadInputHandler,
     private val remapCoordinator: com.echo.core.data.repository.RemapCoordinator,
     private val mappingRepository: ControllerMappingRepository,
@@ -1285,7 +1284,7 @@ class CrossbarViewModel @Inject constructor(
     private val musicPlayer: com.echo.feature.crossbar.music.MusicPlayerController,
     private val emulatorProfileRepository: com.echo.feature.launcher.EmulatorProfileRepository,
     private val intentResolver: com.echo.feature.launcher.EmulatorIntentResolver,
-    private val videoRepository: com.echo.core.domain.repository.VideoRepository,
+    internal val videoRepository: com.echo.core.domain.repository.VideoRepository,
     private val photoRepository: com.echo.core.domain.repository.PhotoRepository,
     private val photoScanner: com.echo.feature.library.scanner.PhotoScanner,
     private val bookRepository: com.echo.core.domain.repository.BookRepository,
@@ -1320,19 +1319,13 @@ class CrossbarViewModel @Inject constructor(
     private val achievementCredentials: com.echo.core.data.achievement.AchievementCredentialsProvider,
     private val discordSocial: com.echo.core.data.discord.DiscordSocialRepository,
 ) : ViewModel() {
-    private var currentMusicTracks: List<MusicTrack> = emptyList()
-    private var currentMusicTracksRaw: List<MusicTrack> = emptyList()
-
-    private var lastHadPlayingTrack = false
-
-    @Volatile
-    private var defaultMusicPlayer: String? = null
-
     @Volatile
     private var lastInteractionMs: Long = 0L
 
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
+
+    internal val music = CrossbarMusic(this, _uiState, viewModelScope, musicRepository, musicPlayer, musicScanner, menuSound, artworkAccent)
 
     val musicPositionMs: StateFlow<Int> get() = musicPlayer.positionMs
 
@@ -1340,9 +1333,6 @@ class CrossbarViewModel @Inject constructor(
 
     private var currentItemsJob: Job? = null
 
-    private var musicBrowserJob: Job? = null
-    private var browserRawTracks: List<MusicTrack> = emptyList()
-    private var browserRawPlaylists: List<com.echo.core.domain.model.Playlist> = emptyList()
     private var platformCache: Map<String, PlatformEntity> = emptyMap()
     private var enabledCards: List<MemoryCard> = emptyList()
     private var baseThemeColors: EchoColors = DefaultEchoColors
@@ -1381,7 +1371,7 @@ class CrossbarViewModel @Inject constructor(
         observeBootPreferences()
         observeGameBoot()
         observeMediaLaunch()
-        observeMusic()
+        music.observeMusic()
         observeVideo()
         observePhoto()
         observeBooks()
@@ -1485,46 +1475,6 @@ class CrossbarViewModel @Inject constructor(
                         loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
                     }
                 }
-        }
-    }
-
-    private fun observeMusic() {
-        viewModelScope.launch {
-            musicRepository.observeFolders().collect { folders ->
-                _uiState.update { it.copy(musicFolders = folders) }
-                if (currentCategory()?.id == BuiltInCategory.MUSIC &&
-                    _uiState.value.musicNav == MusicNav.Root
-                ) {
-                    loadItemsForCategory(currentCategory())
-                }
-            }
-        }
-        viewModelScope.launch {
-            musicRepository.observeDefaultPlayerPackage().collect { defaultMusicPlayer = it }
-        }
-        viewModelScope.launch {
-            musicPlayer.state
-                .map { it.track?.artUri }
-                .distinctUntilChanged()
-                .collectLatest { art ->
-                    val accent = art?.let { artworkAccent.of(it) }
-                    _uiState.update { it.copy(musicAccentArgb = accent) }
-                }
-        }
-        viewModelScope.launch {
-            musicPlayer.state.collect { playback ->
-                _uiState.update { it.copy(musicPlayback = playback) }
-
-                val hasTrack = playback.track != null
-                if (hasTrack != lastHadPlayingTrack) {
-                    lastHadPlayingTrack = hasTrack
-                    if (currentCategory()?.id == BuiltInCategory.MUSIC &&
-                        _uiState.value.musicNav == MusicNav.Root
-                    ) {
-                        refreshMusicRootPreservingCursor()
-                    }
-                }
-            }
         }
     }
 
@@ -1736,7 +1686,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun currentCategory(): Category? = _uiState.value.currentCategoryOrNull()
+    internal fun currentCategory(): Category? = _uiState.value.currentCategoryOrNull()
 
     private fun isAppCategory(categoryId: String): Boolean =
         categoryId != BuiltInCategory.SETTINGS && categoryId != BuiltInCategory.GAMES
@@ -1753,7 +1703,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
 
-    private fun loadItemsForCategory(category: Category?, keepCursorOnRow: Boolean = false) {
+    internal fun loadItemsForCategory(category: Category?, keepCursorOnRow: Boolean = false) {
         currentItemsJob?.cancel()
         if (category == null) { _uiState.update { it.copy(currentItems = emptyList(), sortLabel = null, drillTitle = null, drillSiblings = emptyList(), drillSiblingIndex = 0) }; return }
         val drill = computeDrillTitle()
@@ -1826,7 +1776,7 @@ class CrossbarViewModel @Inject constructor(
                     ) { games, tracks, books, videos, filterAndApps ->
                         val (filter, appRows, limit) = filterAndApps
 
-                        currentMusicTracks = tracks
+                        music.currentMusicTracks = tracks
                         val visibleGames = games.notHiddenAt(HideLocationType.ALL_GAMES)
                         mergeRecents(
                             games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(visibleGames.toCrossbarItems()),
@@ -1918,19 +1868,19 @@ class CrossbarViewModel @Inject constructor(
                         _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.MUSIC)) }
                     }
                     MusicNav.Root -> {
-                        clearMusicTrackCache()
-                        _uiState.update { it.copy(currentItems = musicRootItems()) }
+                        music.clearMusicTrackCache()
+                        _uiState.update { it.copy(currentItems = music.musicRootItems()) }
                     }
                     MusicNav.AllMusic -> musicRepository.observeAllTracks().collect { tracks ->
-                        setMusicTrackItems(tracks, emptyAllMusicItem())
+                        music.setMusicTrackItems(tracks, music.emptyAllMusicItem())
                     }
                     is MusicNav.Playlist -> musicRepository.observePlaylistTracks(nav.id).collect { tracks ->
-                        setMusicTrackItems(tracks, emptyPlaylistItem(), trailing = listOf(addTracksItem()))
+                        music.setMusicTrackItems(tracks, music.emptyPlaylistItem(), trailing = listOf(music.addTracksItem()))
                     }
                     MusicNav.Playlists -> {
-                        clearMusicTrackCache()
+                        music.clearMusicTrackCache()
                         musicRepository.observePlaylists().collect { playlists ->
-                            _uiState.update { it.copy(currentItems = playlistRootItems(playlists), musicPlaylists = playlists) }
+                            _uiState.update { it.copy(currentItems = music.playlistRootItems(playlists), musicPlaylists = playlists) }
                         }
                     }
                 }
@@ -2055,7 +2005,7 @@ class CrossbarViewModel @Inject constructor(
         accentColor  = artwork?.let { platformCache[it.platformId]?.accentColor },
     )
 
-    private fun libraryColumn(body: List<CrossbarItem>, scope: SearchScope): List<CrossbarItem> =
+    internal fun libraryColumn(body: List<CrossbarItem>, scope: SearchScope): List<CrossbarItem> =
         body + librarySearchItem(scope)
 
     private fun librarySearchItem(scope: SearchScope): CrossbarItem = CrossbarItem(
@@ -2086,38 +2036,15 @@ class CrossbarViewModel @Inject constructor(
         type     = CrossbarItemType.ADD_ACTION,
     )
 
-    private suspend fun refreshMusicRootPreservingCursor() {
-        val s = _uiState.value
-        val selectedId = s.currentItems.getOrNull(s.selectedItemIndex)?.id
-        clearMusicTrackCache()
-        val items = musicRootItems()
-        val restored = selectedId
-            ?.let { id -> items.indexOfFirst { it.id == id } }
-            ?.takeIf { it >= 0 }
-            ?: s.selectedItemIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0))
-        _uiState.update { it.copy(currentItems = items, selectedItemIndex = restored) }
-    }
-
-    private fun musicAddActions(): List<CrossbarItem> = buildList {
-        if (_uiState.value.musicFolders.none { it.lastScannedAt != null }) add(addMusicFolderItem())
-        add(addMusicAppsItem())
-    }
-
-    private suspend fun musicRootItems(): List<CrossbarItem> =
-        libraryColumn(
-            mediaColumn(_uiState.value.musicRootSections(), musicAppItems(), musicAddActions()),
-            SearchScope.MUSIC,
-        )
-
     private fun currentAddActions(): List<CrossbarItem> = when (currentCategory()?.id) {
-        BuiltInCategory.MUSIC   -> musicAddActions()
+        BuiltInCategory.MUSIC   -> music.musicAddActions()
         BuiltInCategory.VIDEO   -> videoAddActions()
         BuiltInCategory.PHOTO   -> photoAddActions()
         BuiltInCategory.LIBRARY -> booksAddActions()
         else -> emptyList()
     }
 
-    private fun openAddMenu() {
+    internal fun openAddMenu() {
         val actions = currentAddActions()
         if (actions.isEmpty()) return
         _uiState.update { state ->
@@ -2127,85 +2054,11 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun addMusicFolderItem(): CrossbarItem = CrossbarItem(
-        id       = ADD_MUSIC_FOLDER_ITEM_ID,
-        title    = "Add Music Folder",
-        subtitle = "Set your Music root folder in Settings to get started",
-        type     = CrossbarItemType.ADD_ACTION,
-    )
-
-    private fun playlistRootItems(playlists: List<com.echo.core.domain.model.Playlist>): List<CrossbarItem> {
-        val rows = playlists.map { pl ->
-            CrossbarItem(
-                id         = "pl_${pl.id}",
-                title      = pl.name,
-                subtitle   = countLabel(pl.trackCount, "track", "tracks"),
-                playlistId = pl.id,
-                type       = CrossbarItemType.PLAYLIST,
-            )
-        }
-        return rows + CrossbarItem(
-            id       = CREATE_PLAYLIST_ITEM_ID,
-            title    = "Create Playlist",
-            subtitle = "Start a new playlist",
-            type     = CrossbarItemType.ADD_ACTION,
-        )
-    }
-
-    private suspend fun musicAppItems(): List<CrossbarItem> {
+    internal suspend fun musicAppItems(): List<CrossbarItem> {
         val apps = appCategoryRepository.appsForCategory(MUSIC_APPS_CATEGORY_ID)
             .notHiddenAt(HideLocationType.CATEGORY, MUSIC_APPS_CATEGORY_ID)
         return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
     }
-
-    private fun addMusicAppsItem(): CrossbarItem = CrossbarItem(
-        id       = ADD_MUSIC_APPS_ITEM_ID,
-        title    = "Add Music Apps",
-        subtitle = "Pick installed apps to show here",
-        type     = CrossbarItemType.ADD_ACTION,
-    )
-
-    private fun addTracksItem(): CrossbarItem = CrossbarItem(
-        id       = ADD_TRACKS_ITEM_ID,
-        title    = "Add Tracks",
-        subtitle = "Pick songs to add to this playlist",
-        type     = CrossbarItemType.ADD_ACTION,
-    )
-
-    private fun setMusicTrackItems(
-        tracks: List<MusicTrack>,
-        emptyItem: CrossbarItem,
-        trailing: List<CrossbarItem> = emptyList(),
-    ) {
-        currentMusicTracksRaw = tracks
-        val sorted = tracks.trackSorted(_uiState.value.musicSortMode)
-        currentMusicTracks = sorted
-        val items = if (sorted.isEmpty()) listOf(emptyItem) else sorted.toMusicItems()
-        _uiState.update { it.copy(currentItems = items + trailing) }
-    }
-
-    private fun clearMusicTrackCache() {
-        currentMusicTracks = emptyList()
-        currentMusicTracksRaw = emptyList()
-    }
-
-    private fun emptyAllMusicItem(): CrossbarItem = CrossbarItem(
-        id       = EMPTY_CATEGORY_ITEM_ID,
-        title    = "No music found",
-        subtitle = "Add a music folder from the Folders row",
-        type     = CrossbarItemType.EMPTY,
-    )
-
-    private fun emptyPlaylistItem(): CrossbarItem = CrossbarItem(
-        id       = EMPTY_PLAYLIST_ITEM_ID,
-        title    = "This playlist is empty",
-        subtitle = "Add tracks below or from a song's Options menu.",
-        type     = CrossbarItemType.EMPTY,
-    )
-
-    private fun openMusicView(nav: MusicNav) = navigateRememberingCursor { it.copy(musicNav = nav) }
-
-    private fun closeMusicView() = openMusicView(MusicNav.Root)
 
     @Volatile private var hiddenKeys: Set<String> = emptySet()
 
@@ -2496,7 +2349,7 @@ class CrossbarViewModel @Inject constructor(
     private fun viewCursorKey(s: CrossbarUiState): String {
         val catId = s.categories.getOrNull(s.selectedCategoryIndex)?.id ?: "none"
         val sub = when {
-            catId == BuiltInCategory.MUSIC -> "music_${musicNavKey(s.musicNav)}"
+            catId == BuiltInCategory.MUSIC -> "music_${music.musicNavKey(s.musicNav)}"
             catId == BuiltInCategory.VIDEO -> "video_${videoNavKey(s.videoNav)}"
             catId == BuiltInCategory.PHOTO -> "photo_${photoNavKey(s.photoNav)}"
             catId == BuiltInCategory.LIBRARY -> "books_${booksNavKey(s.booksNav)}"
@@ -2507,7 +2360,7 @@ class CrossbarViewModel @Inject constructor(
         return "$catId/$sub"
     }
 
-    private fun navigateRememberingCursor(mutate: (CrossbarUiState) -> CrossbarUiState) {
+    internal fun navigateRememberingCursor(mutate: (CrossbarUiState) -> CrossbarUiState) {
         val cur = _uiState.value
         viewCursor[viewCursorKey(cur)] = cur.selectedItemIndex
         _uiState.update { state ->
@@ -2516,14 +2369,6 @@ class CrossbarViewModel @Inject constructor(
             next.copy(selectedItemIndex = remembered)
         }
         loadItemsForCategory(currentCategory())
-    }
-
-    private fun musicNavKey(nav: MusicNav): String = when (nav) {
-        MusicNav.Folders     -> "folders"
-        MusicNav.Root        -> "root"
-        MusicNav.AllMusic    -> "all"
-        MusicNav.Playlists   -> "playlists"
-        is MusicNav.Playlist -> "playlist_${nav.id}"
     }
 
     private fun videoNavKey(nav: VideoNav): String = when (nav) {
@@ -3178,134 +3023,10 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun openMusicBrowser(view: MusicBrowserView) {
-        musicBrowserJob?.cancel()
-        val title = when (view) {
-            MusicBrowserView.AllMusic    -> "Songs"
-            MusicBrowserView.Playlists   -> "Playlists"
-            MusicBrowserView.Artists     -> "Artists"
-            MusicBrowserView.Albums      -> "Albums"
-            is MusicBrowserView.Playlist -> view.name
-            is MusicBrowserView.Artist   -> view.name
-            is MusicBrowserView.Album    -> view.name
-        }
-        _uiState.update { it.copy(musicBrowser = MusicBrowserState(view = view, title = title)) }
-        musicBrowserJob = viewModelScope.launch {
-            when (view) {
-                MusicBrowserView.AllMusic -> musicRepository.observeAllTracks().collect { tracks ->
-                    browserRawTracks = tracks; rebuildBrowserTrackRows()
-                }
-                is MusicBrowserView.Playlist -> musicRepository.observePlaylistTracks(view.id).collect { tracks ->
-                    browserRawTracks = tracks; rebuildBrowserTrackRows()
-                }
-                MusicBrowserView.Playlists -> musicRepository.observePlaylists().collect { playlists ->
-                    browserRawPlaylists = playlists; rebuildBrowserPlaylistRows()
-                }
-
-                MusicBrowserView.Artists, MusicBrowserView.Albums ->
-                    musicRepository.observeAllTracks().collect { tracks ->
-                        browserRawTracks = tracks; rebuildBrowserGroupRows()
-                    }
-                is MusicBrowserView.Artist -> musicRepository.observeAllTracks().collect { tracks ->
-
-                    browserRawTracks = tracks.tracksByArtistKey(view.key)
-                    rebuildBrowserTrackRows()
-                }
-                is MusicBrowserView.Album -> musicRepository.observeAllTracks().collect { tracks ->
-                    browserRawTracks = tracks.filter { it.album.musicGroupKey() == view.key }
-                    rebuildBrowserTrackRows()
-                }
-            }
-        }
-    }
-
-    private fun MusicTrack.matchesQuery(q: String): Boolean =
-        displayTitle.lowercase().contains(q) ||
-            artist?.lowercase()?.contains(q) == true ||
-            album?.lowercase()?.contains(q) == true
-
-    private fun rebuildBrowserTrackRows() {
-        val state = _uiState.value.musicBrowser ?: return
-        val isPlaylist = state.view is MusicBrowserView.Playlist
-        val q = state.query.trim().lowercase()
-        val sorted = browserRawTracks.trackSorted(_uiState.value.musicSortMode)
-        val filtered = if (q.isBlank()) sorted else sorted.filter { it.matchesQuery(q) }
-        currentMusicTracks = filtered
-        val baseRows = when {
-            filtered.isNotEmpty() -> filtered.toMusicItems()
-            q.isNotBlank()        -> listOf(browserNoResultsItem())
-            isPlaylist            -> listOf(emptyPlaylistItem())
-            else                  -> listOf(emptyAllMusicItem())
-        }
-        val rows = if (isPlaylist) baseRows + addTracksItem() else baseRows
-
-        val label = _uiState.value.musicSortMode.label
-        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
-            rows = rows,
-            selectedIndex = state.selectedIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0)),
-            sortLabel = label,
-        )) }
-    }
-
-    private fun rebuildBrowserGroupRows() {
-        val state = _uiState.value.musicBrowser ?: return
-        val q = state.query.trim().lowercase()
-        val prefix = if (state.view == MusicBrowserView.Artists) "art" else "alb"
-        val groups = if (state.view == MusicBrowserView.Artists) browserRawTracks.artistGroups()
-                     else browserRawTracks.albumGroups()
-        val filtered = if (q.isBlank()) groups else groups.filter { it.name.lowercase().contains(q) }
-        val rows = when {
-            filtered.isNotEmpty() -> filtered.map { it.toBrowserItem(prefix) }
-            q.isNotBlank()        -> listOf(browserNoResultsItem())
-            else                  -> listOf(emptyAllMusicItem())
-        }
-        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
-            rows = rows,
-            selectedIndex = state.selectedIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0)),
-            sortLabel = null,
-        )) }
-    }
-
-    private fun MusicGroup.toBrowserItem(prefix: String): CrossbarItem = CrossbarItem(
-        id            = "mg_${prefix}_$key",
-        title         = name,
-        subtitle      = subtitle,
-        coverUri      = artUri,
-        musicGroupKey = key,
-        type          = CrossbarItemType.MUSIC_GROUP,
-    )
-
-    private fun rebuildBrowserPlaylistRows() {
-        val state = _uiState.value.musicBrowser ?: return
-        val q = state.query.trim().lowercase()
-        val filtered = if (q.isBlank()) browserRawPlaylists
-                       else browserRawPlaylists.filter { it.name.lowercase().contains(q) }
-        val rows = playlistRootItems(filtered)
-        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
-            rows = rows,
-            selectedIndex = state.selectedIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0)),
-            sortLabel = null,
-        )) }
-    }
-
-    private fun browserNoResultsItem(): CrossbarItem = CrossbarItem(
+    internal fun browserNoResultsItem(): CrossbarItem = CrossbarItem(
         id = EMPTY_CATEGORY_ITEM_ID, title = "No matches", subtitle = "Try a different search.",
         type = CrossbarItemType.EMPTY,
     )
-
-    fun onMusicBrowserQueryChange(query: String) {
-        markTouchInput()
-        val state = _uiState.value.musicBrowser ?: return
-        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
-            query = query, selectedIndex = 0,
-            scrollToTopToken = state.scrollToTopToken + 1,
-        )) }
-        when {
-            state.view is MusicBrowserView.Playlists -> rebuildBrowserPlaylistRows()
-            state.view.listsGroups -> rebuildBrowserGroupRows()
-            else -> rebuildBrowserTrackRows()
-        }
-    }
 
     private var searchGames: List<com.echo.core.domain.model.Game> = emptyList()
 
@@ -3565,192 +3286,7 @@ class CrossbarViewModel @Inject constructor(
         type = CrossbarItemType.MUSIC_TRACK,
     )
 
-    private fun moveMusicBrowser(delta: Int) {
-        val b = _uiState.value.musicBrowser ?: return
-        val next = (b.selectedIndex + delta).coerceIn(0, (b.rows.size - 1).coerceAtLeast(0))
-        if (next != b.selectedIndex) {
-            _uiState.update { it.copy(musicBrowser = b.copy(selectedIndex = next)) }
-            menuSound.play(MenuSound.SCROLL)
-        }
-    }
-
-    private fun activateMusicBrowser() {
-        val b = _uiState.value.musicBrowser ?: return
-        handleMusicBrowserRow(b.rows.getOrNull(b.selectedIndex) ?: return)
-    }
-
-    fun onMusicBrowserActivatedAt(index: Int) {
-        markTouchInput()
-        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(selectedIndex = index)) }
-        activateMusicBrowser()
-    }
-
-    private fun handleMusicBrowserRow(item: CrossbarItem) {
-        when {
-            item.type == CrossbarItemType.EMPTY -> Unit
-            item.id == CREATE_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreatePlaylist() }
-            item.id == ADD_TRACKS_ITEM_ID -> {
-                menuSound.play(MenuSound.SELECT)
-                (_uiState.value.musicBrowser?.view as? MusicBrowserView.Playlist)?.let { openMusicTrackPicker(it.id) }
-            }
-            item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
-                menuSound.play(MenuSound.SELECT)
-                openMusicBrowser(MusicBrowserView.Playlist(item.playlistId, item.title))
-            }
-            item.type == CrossbarItemType.MUSIC_GROUP && item.musicGroupKey != null -> {
-                menuSound.play(MenuSound.SELECT)
-                openMusicBrowser(
-                    if (_uiState.value.musicBrowser?.view == MusicBrowserView.Artists)
-                        MusicBrowserView.Artist(item.title, item.musicGroupKey)
-                    else MusicBrowserView.Album(item.title, item.musicGroupKey)
-                )
-            }
-            item.type == CrossbarItemType.MUSIC_TRACK -> { menuSound.play(MenuSound.SELECT); openMusicPlayerForItem(item) }
-        }
-    }
-
-    private fun openMusicBrowserContextMenu() {
-        val b = _uiState.value.musicBrowser ?: return
-        val item = b.rows.getOrNull(b.selectedIndex) ?: return
-        when {
-            item.type == CrossbarItemType.MUSIC_TRACK -> openMusicTrackContextMenu(item)
-            item.type == CrossbarItemType.PLAYLIST && item.playlistId != null ->
-                openPlaylistRowContextMenu(item.playlistId, item.title)
-        }
-    }
-
-    fun onMusicBrowserLongPressAt(index: Int) {
-        markTouchInput()
-        _uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(selectedIndex = index)) }
-        openMusicBrowserContextMenu()
-    }
-
-    fun onMusicBrowserBack() {
-        markTouchInput()
-        val b = _uiState.value.musicBrowser ?: return
-        menuSound.play(MenuSound.BACK)
-        when (b.view) {
-            is MusicBrowserView.Playlist -> openMusicBrowser(MusicBrowserView.Playlists)
-            is MusicBrowserView.Artist -> openMusicBrowser(MusicBrowserView.Artists)
-            is MusicBrowserView.Album -> openMusicBrowser(MusicBrowserView.Albums)
-            else -> closeMusicBrowser()
-        }
-    }
-
-    private fun closeMusicBrowser() {
-        musicBrowserJob?.cancel(); musicBrowserJob = null
-        val view = _uiState.value.musicBrowser?.view
-        browserRawTracks = emptyList(); browserRawPlaylists = emptyList()
-        _uiState.update { it.copy(musicBrowser = null) }
-
-        if (currentCategory()?.id == BuiltInCategory.MUSIC && _uiState.value.musicNav == MusicNav.Root) {
-            val targetId = when (view) {
-                is MusicBrowserView.Playlists, is MusicBrowserView.Playlist -> PLAYLISTS_ITEM_ID
-                is MusicBrowserView.Artists, is MusicBrowserView.Artist -> MUSIC_ARTISTS_ITEM_ID
-                is MusicBrowserView.Albums, is MusicBrowserView.Album -> MUSIC_ALBUMS_ITEM_ID
-                else -> ALL_MUSIC_ITEM_ID
-            }
-            val idx = _uiState.value.currentItems.indexOfFirst { it.id == targetId }
-            if (idx >= 0) _uiState.update { it.copy(selectedItemIndex = idx) }
-        }
-    }
-
-    fun onMusicBrowserSortTapped() {
-        markTouchInput()
-        cycleSort()
-    }
-
-    fun onMusicBrowserOptionsTapped() {
-        markTouchInput()
-        openMusicBrowserContextMenu()
-    }
-
-    private fun currentPlaylistContextId(): Long? =
-        (_uiState.value.musicBrowser?.view as? MusicBrowserView.Playlist)?.id
-            ?: (_uiState.value.musicNav as? MusicNav.Playlist)?.id
-
-    private fun handleMusicSelection(item: CrossbarItem): Boolean = when {
-        item.id == SEARCH_ITEM_ID -> { openSearch(SearchScope.MUSIC); true }
-        item.id == ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openAddMenu(); true }
-        item.type == CrossbarItemType.EMPTY -> true
-        item.id == NOW_PLAYING_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT)
-            if (_uiState.value.musicPlayback.track != null) _uiState.update { it.copy(musicPlayerVisible = true) }
-            true
-        }
-
-        item.id == PLAYLISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Playlists); true }
-        item.id == ALL_MUSIC_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.AllMusic); true }
-        item.id == MUSIC_ARTISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Artists); true }
-        item.id == MUSIC_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Albums); true }
-        item.id == ADD_MUSIC_FOLDER_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT)
-            openMediaFolders(MediaRootKind.MUSIC)
-            true
-        }
-        item.id == CREATE_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreatePlaylist(); true }
-        item.id == ADD_MUSIC_APPS_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT)
-            openAppPicker(AppPickerTarget.CategoryShortcuts(MUSIC_APPS_CATEGORY_ID), "Add Music Apps")
-            true
-        }
-        item.id == ADD_TRACKS_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT)
-            (_uiState.value.musicNav as? MusicNav.Playlist)?.let { openMusicTrackPicker(it.id) }
-            true
-        }
-        item.type == CrossbarItemType.MUSIC_TRACK -> { menuSound.play(MenuSound.SELECT); openMusicPlayerForItem(item); true }
-        item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
-            menuSound.play(MenuSound.SELECT); openMusicView(MusicNav.Playlist(item.playlistId, item.title)); true
-        }
-
-        item.packageName != null -> {
-            menuSound.play(MenuSound.LAUNCH)
-            launchAppWithDisc(item.packageName, item.shelfCoverArt)
-            true
-        }
-        else -> false
-    }
-
-    private fun openMusicPlayerForItem(item: CrossbarItem) {
-        val trackId = item.id.removePrefix("mt_")
-        val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
-        if (currentMusicTracks.isEmpty()) return
-        val track = currentMusicTracks[startIndex]
-        viewModelScope.launch {
-            awaitDiscHandOff(track.artUri)
-            musicPlayer.setQueue(currentMusicTracks, startIndex)
-            _uiState.update { it.copy(musicPlayerVisible = true) }
-        }
-    }
-
-    fun musicPlayPause() = musicPlayer.playPause()
-    fun musicNext() = musicPlayer.next()
-    fun musicPrev() = musicPlayer.prev()
-    fun musicSeekTo(ms: Int) = musicPlayer.seekTo(ms)
-    fun musicToggleShuffle() = musicPlayer.toggleShuffle()
-    fun musicCycleRepeat() = musicPlayer.cycleRepeat()
-    private fun musicSeekBy(deltaMs: Int) = musicPlayer.seekBy(deltaMs)
-
-    fun closeMusicPlayer() {
-        _uiState.update { it.copy(musicPlayerVisible = false) }
-    }
-
-    private fun stopAndCloseMusicPlayer() {
-        musicPlayer.stop()
-        _uiState.update { it.copy(musicPlayerVisible = false) }
-    }
-
-    private fun openMusicPlayerOptions() {
-        val title = musicPlayer.currentTrack()?.displayTitle ?: "Now Playing"
-        _uiState.update {
-            it.copy(
-                activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = musicPlayerMenuItems(it.musicPlayback)), musicTrackId = MUSIC_PLAYER_MENU_MARKER)
-            )
-        }
-    }
-
-    private fun openNowPlayingContextMenu() {
+    internal fun openNowPlayingContextMenu() {
         val playback = _uiState.value.musicPlayback
         if (playback.track == null) return
         _uiState.update {
@@ -3759,165 +3295,6 @@ class CrossbarViewModel @Inject constructor(
             )
         }
     }
-
-    private fun musicPlayInBackground() {
-        if (musicPlayer.currentTrack() == null) return
-        com.echo.feature.crossbar.music.MusicPlaybackService.start(context)
-        _uiState.update { it.copy(musicPlayerVisible = false) }
-    }
-
-    private fun openMusicTrackContextMenu(item: CrossbarItem) {
-        val playlistId = currentPlaylistContextId()
-
-        val trackId = item.id.removePrefix("mt_")
-        viewModelScope.launch {
-            val onShelf = runCatching { musicRepository.getTrack(trackId) }
-                .getOrNull()?.lastPlayedAt != null
-            val items = musicTrackContextMenuItems(playlistId = playlistId, hasPlayStamp = onShelf)
-            _uiState.update { it.copy(
-                activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), musicTrackId = trackId, playlistId = playlistId)
-            )}
-        }
-    }
-
-    private fun openPlaylistRowContextMenu(playlistId: Long, name: String) {
-        val items = playlistRowContextMenuItems()
-        _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = name, rows = items), playlistId = playlistId)) }
-    }
-
-    private fun openPlaylistPicker(trackId: String, selectIndex: Int? = 0) {
-        viewModelScope.launch {
-            val playlists = musicRepository.observePlaylists().first()
-            val memberOf = musicRepository.getPlaylistIdsForTrack(trackId).toSet()
-            val items = buildList {
-                playlists.forEach { pl ->
-                    add(CrossbarContextMenuItem("pl_${pl.id}", pl.name, checked = pl.id in memberOf))
-                }
-                add(CrossbarContextMenuItem("pl_new", "Create New Playlist"))
-            }
-            _uiState.update { it.copy(
-                activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Add to Playlist", rows = items, selectedIndex = selectIndex?.coerceIn(0, items.lastIndex.coerceAtLeast(0))), playlistPickerTrackId = trackId)
-            )}
-        }
-    }
-
-    private fun openMusicContextMenu(item: CrossbarItem): Boolean {
-        if (item.menuHostCategory(currentCategory()?.id) != BuiltInCategory.MUSIC) return false
-        return when {
-            item.id == NOW_PLAYING_ITEM_ID -> { openNowPlayingContextMenu(); true }
-            item.type == CrossbarItemType.MUSIC_TRACK -> { openMusicTrackContextMenu(item); true }
-            item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
-                openPlaylistRowContextMenu(item.playlistId, item.title); true
-            }
-            item.packageName != null -> {
-                openAppContextMenu(item, categoryIdOverride = MUSIC_APPS_CATEGORY_ID); true
-            }
-            else -> false
-        }
-    }
-
-    private fun promptCreatePlaylist(forTrackId: String? = null) {
-        _uiState.update { it.copy(
-            playlistNameDialog = PlaylistNameDialogState(title = "New Playlist", forTrackId = forTrackId)
-        )}
-    }
-
-    private fun promptRenamePlaylist(playlistId: Long) {
-        val name = _uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
-        _uiState.update { it.copy(
-            playlistNameDialog = PlaylistNameDialogState(
-                title = "Rename Playlist",
-                initialText = name,
-                renamePlaylistId = playlistId,
-            )
-        )}
-    }
-
-    fun onConfirmPlaylistName(name: String) {
-        val dialog = _uiState.value.playlistNameDialog ?: return
-        _uiState.update { it.copy(playlistNameDialog = null) }
-        if (name.isBlank()) return
-        viewModelScope.launch {
-            val renameId = dialog.renamePlaylistId
-            if (dialog.videoContext) {
-                if (renameId != null) {
-                    videoRepository.renamePlaylist(renameId, name)
-                } else {
-                    val id = videoRepository.createPlaylist(name)
-                    dialog.forVideoId?.let { videoRepository.addVideoToPlaylist(id, it) }
-                }
-            } else if (renameId != null) {
-                musicRepository.renamePlaylist(renameId, name)
-            } else {
-                val id = musicRepository.createPlaylist(name)
-                dialog.forTrackId?.let { musicRepository.addTrackToPlaylist(id, it) }
-            }
-        }
-    }
-
-    fun onCancelPlaylistName() {
-        _uiState.update { it.copy(playlistNameDialog = null) }
-    }
-
-    private fun openMusicTrackPicker(playlistId: Long) {
-        viewModelScope.launch {
-            val playlist = musicRepository.observePlaylists().first().firstOrNull { it.id == playlistId }
-
-            val inPlaylist = musicRepository.observePlaylistTracks(playlistId).first().map { it.id }.toSet()
-            val tracks = musicRepository.observeAllTracks().first()
-                .filterNot { it.id in inPlaylist }
-                .trackSorted(_uiState.value.musicSortMode)
-            _uiState.update { it.copy(
-                musicTrackPicker = MusicTrackPickerState(
-                    playlistId   = playlistId,
-                    playlistName = playlist?.name ?: "Playlist",
-                    tracks       = tracks,
-                )
-            )}
-        }
-    }
-
-    private fun moveMusicTrackPicker(delta: Int) {
-        val picker = _uiState.value.musicTrackPicker ?: return
-        val maxIndex = picker.tracks.size
-        val next = (picker.selectedIndex + delta).coerceIn(0, maxIndex)
-        _uiState.update { it.copy(musicTrackPicker = picker.copy(selectedIndex = next)) }
-    }
-
-    private fun activateMusicTrackPicker() {
-        val picker = _uiState.value.musicTrackPicker ?: return
-        if (picker.selectedIndex == 0) {
-            confirmMusicTrackPicker()
-        } else {
-            val track = picker.tracks.getOrNull(picker.selectedIndex - 1) ?: return
-            val selected = if (track.id in picker.selected) picker.selected - track.id
-                           else picker.selected + track.id
-            _uiState.update { it.copy(musicTrackPicker = picker.copy(selected = selected)) }
-        }
-    }
-
-    fun onMusicTrackPickerActivatedAt(index: Int) {
-        _uiState.update { it.copy(musicTrackPicker = it.musicTrackPicker?.copy(selectedIndex = index)) }
-        activateMusicTrackPicker()
-    }
-
-    fun onMusicTrackPickerConfirm() = confirmMusicTrackPicker()
-
-    fun closeMusicTrackPicker() {
-        _uiState.update { it.copy(musicTrackPicker = null) }
-    }
-
-    private fun confirmMusicTrackPicker() {
-        val picker = _uiState.value.musicTrackPicker ?: return
-        val playlistId = picker.playlistId
-        val trackIds = picker.tracks.map { it.id }.filter { it in picker.selected }
-        closeMusicTrackPicker()
-        if (trackIds.isEmpty()) return
-        viewModelScope.launch {
-            trackIds.forEach { musicRepository.addTrackToPlaylist(playlistId, it) }
-        }
-    }
-
 
     private fun mediaRootKindOf(categoryId: String?): MediaRootKind? = when (categoryId) {
         BuiltInCategory.MUSIC   -> MediaRootKind.MUSIC
@@ -3982,8 +3359,8 @@ class CrossbarViewModel @Inject constructor(
         )
     }
 
-    private fun openMediaFolders(kind: MediaRootKind) = when (kind) {
-        MediaRootKind.MUSIC -> openMusicView(MusicNav.Folders)
+    internal fun openMediaFolders(kind: MediaRootKind) = when (kind) {
+        MediaRootKind.MUSIC -> music.openMusicView(MusicNav.Folders)
         MediaRootKind.VIDEO -> openVideoView(VideoNav.Folders)
         MediaRootKind.PHOTO -> openPhotoView(PhotoNav.Folders)
         MediaRootKind.BOOK  -> openBooksView(BooksNav.Folders)
@@ -4066,7 +3443,7 @@ class CrossbarViewModel @Inject constructor(
     private suspend fun scanOneRoot(kind: MediaRootKind, treeUri: String, deep: Boolean) {
         val entryId = entryIdForRoot(kind, treeUri)
         when (kind) {
-            MediaRootKind.MUSIC -> scanMusicFolder(entryId)
+            MediaRootKind.MUSIC -> music.scanMusicFolder(entryId)
             MediaRootKind.VIDEO -> scanVideoLibrary(entryId, deep)
             MediaRootKind.PHOTO -> scanPhotoLibrary(entryId)
             MediaRootKind.BOOK  -> scanBookLibrary(entryId, deep)
@@ -4212,78 +3589,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun handleMusicFolderAction(folderId: String, itemId: String) {
-        when (itemId) {
-            "scan_folder" -> appAction { scanMusicFolder(folderId) }
-            "rename_folder" -> openMediaFolders(MediaRootKind.MUSIC)
-            "enable_folder" -> appAction { musicRepository.setFolderEnabled(folderId, true) }
-            "disable_folder" -> appAction { musicRepository.setFolderEnabled(folderId, false) }
-            "remove_folder" -> appAction { musicRepository.removeFolder(folderId) }
-        }
-    }
-
-    private fun handleMusicTrackAction(trackId: String, itemId: String, playlistId: Long?) {
-        when (itemId) {
-            "play" -> {
-                val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
-                if (currentMusicTracks.isNotEmpty()) {
-                    musicPlayer.setQueue(currentMusicTracks, startIndex)
-                    _uiState.update { it.copy(musicPlayerVisible = true) }
-                }
-            }
-
-            "play_background" -> {
-                val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
-                if (currentMusicTracks.isNotEmpty()) {
-                    musicPlayer.setQueue(currentMusicTracks, startIndex)
-                    com.echo.feature.crossbar.music.MusicPlaybackService.start(context)
-                }
-            }
-            "add_to_playlist" -> openPlaylistPicker(trackId)
-            "remove_from_playlist" -> if (playlistId != null) {
-                appAction { musicRepository.removeTrackFromPlaylist(playlistId, trackId) }
-            }
-
-            "remove_from_recent" -> appAction { musicRepository.clearTrackLastPlayed(trackId) }
-            "remove_track" -> appAction {
-                val track = musicRepository.getTrack(trackId) ?: return@appAction
-                removeSingleTrack(track.folderId, trackId)
-            }
-        }
-    }
-
-    private fun handlePlaylistRowAction(playlistId: Long, itemId: String) {
-        when (itemId) {
-            "open_playlist"   -> {
-                val name = _uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
-                openMusicView(MusicNav.Playlist(playlistId, name))
-            }
-            "add_tracks"      -> openMusicTrackPicker(playlistId)
-            "rename_playlist" -> promptRenamePlaylist(playlistId)
-            "delete_playlist" -> appAction {
-                musicRepository.deletePlaylist(playlistId)
-                if ((_uiState.value.musicNav as? MusicNav.Playlist)?.id == playlistId) closeMusicView()
-            }
-        }
-    }
-
-    private suspend fun scanMusicFolder(folderId: String) {
-        val folder = musicRepository.getFolder(folderId) ?: return
-        val taskId = "music_scan_$folderId"
-        addBackgroundTask(BackgroundTaskInfo(taskId, "Scanning ${folder.displayName}", null))
-        musicScanner.scan(folder).collect { result ->
-            when (result) {
-                is com.echo.feature.library.scanner.MusicScanResult.Progress -> Unit
-                is com.echo.feature.library.scanner.MusicScanResult.Complete -> {
-                    musicRepository.replaceTracksForFolder(result.folderId, result.tracks, System.currentTimeMillis())
-                    completeBackgroundTask(taskId, "${result.tracks.size} tracks")
-                }
-                is com.echo.feature.library.scanner.MusicScanResult.Error ->
-                    failBackgroundTask(taskId, result.message)
-            }
-        }
-    }
-
     private suspend fun scanVideoLibrary(libraryId: String, deep: Boolean = false) {
         val library = videoRepository.getLibrary(libraryId) ?: return
         val taskId = "video_scan_$libraryId"
@@ -4318,11 +3623,6 @@ class CrossbarViewModel @Inject constructor(
                     failBackgroundTask(taskId, result.message)
             }
         }
-    }
-
-    private suspend fun removeSingleTrack(folderId: String, trackId: String) {
-        val tracks = musicRepository.observeTracksByFolder(folderId).first().filterNot { it.id == trackId }
-        musicRepository.replaceTracksForFolder(folderId, tracks, System.currentTimeMillis())
     }
 
     private fun activeSortContext(): List<CrossbarSortMode>? = _uiState.value.activeSortModes()
@@ -4379,7 +3679,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
 
-    private fun cycleSort() {
+    internal fun cycleSort() {
         _uiState.value.musicBrowser?.let { browser ->
             if (browser.view is MusicBrowserView.Playlists || browser.view.listsGroups) return
             val next = MUSIC_SORTS[(MUSIC_SORTS.indexOf(_uiState.value.musicSortMode).coerceAtLeast(0) + 1) % MUSIC_SORTS.size]
@@ -4391,7 +3691,7 @@ class CrossbarViewModel @Inject constructor(
                     scrollToTopToken = browser.scrollToTopToken + 1,
                 ),
             )}
-            rebuildBrowserTrackRows()
+            music.rebuildBrowserTrackRows()
             return
         }
         val cycle = activeSortContext() ?: return
@@ -4406,9 +3706,9 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (isMusic) {
-            val trailing = if (_uiState.value.musicNav is MusicNav.Playlist) listOf(addTracksItem()) else emptyList()
-            val emptyItem = if (_uiState.value.musicNav is MusicNav.Playlist) emptyPlaylistItem() else emptyAllMusicItem()
-            setMusicTrackItems(currentMusicTracksRaw, emptyItem, trailing)
+            val trailing = if (_uiState.value.musicNav is MusicNav.Playlist) listOf(music.addTracksItem()) else emptyList()
+            val emptyItem = if (_uiState.value.musicNav is MusicNav.Playlist) music.emptyPlaylistItem() else music.emptyAllMusicItem()
+            music.setMusicTrackItems(music.currentMusicTracksRaw, emptyItem, trailing)
             _uiState.update { it.copy(sortLabel = currentSortLabel()) }
             return
         }
@@ -4476,9 +3776,6 @@ class CrossbarViewModel @Inject constructor(
     private fun photoAlbumSiblings(): List<CrossbarItem> =
         _uiState.value.photoLibraries.map { CrossbarItem(id = "plib_${it.id}", title = it.displayName, type = CrossbarItemType.PHOTO_FOLDER) }
 
-    private fun musicPlaylistSiblings(): List<CrossbarItem> =
-        _uiState.value.musicPlaylists.map { CrossbarItem(id = "pl_${it.id}", title = it.name, playlistId = it.id, type = CrossbarItemType.PLAYLIST) }
-
     private fun videoPlaylistSiblings(): List<CrossbarItem> =
         _uiState.value.videoPlaylists.map { CrossbarItem(id = "vpl_${it.id}", title = it.name, playlistId = it.id, type = CrossbarItemType.PLAYLIST) }
 
@@ -4487,7 +3784,7 @@ class CrossbarViewModel @Inject constructor(
 
         if (s.musicNav != MusicNav.Root) {
             (s.musicNav as? MusicNav.Playlist)?.let { nav ->
-                val pls = musicPlaylistSiblings()
+                val pls = music.musicPlaylistSiblings()
                 if (pls.isNotEmpty()) return pls to pls.indexOfFirst { it.playlistId == nav.id }.coerceAtLeast(0)
             }
             val sibs = _uiState.value.musicRootSections().filter {
@@ -4941,12 +4238,12 @@ class CrossbarViewModel @Inject constructor(
 
         if (state.musicTrackPicker != null) {
             when (action) {
-                GamepadAction.NAVIGATE_UP   -> moveMusicTrackPicker(-1)
-                GamepadAction.NAVIGATE_DOWN -> moveMusicTrackPicker(+1)
-                GamepadAction.SELECT        -> activateMusicTrackPicker()
-                GamepadAction.HOME          -> confirmMusicTrackPicker()
+                GamepadAction.NAVIGATE_UP   -> music.moveMusicTrackPicker(-1)
+                GamepadAction.NAVIGATE_DOWN -> music.moveMusicTrackPicker(+1)
+                GamepadAction.SELECT        -> music.activateMusicTrackPicker()
+                GamepadAction.HOME          -> music.confirmMusicTrackPicker()
                 GamepadAction.BACK,
-                GamepadAction.OPEN_CONTEXT_MENU    -> closeMusicTrackPicker()
+                GamepadAction.OPEN_CONTEXT_MENU    -> music.closeMusicTrackPicker()
                 else -> Unit
             }
             return
@@ -5040,13 +4337,13 @@ class CrossbarViewModel @Inject constructor(
 
         if (state.musicPlayerVisible) {
             when (action) {
-                GamepadAction.SELECT         -> musicPlayPause()
-                GamepadAction.NAVIGATE_LEFT  -> musicPrev()
-                GamepadAction.NAVIGATE_RIGHT -> musicNext()
-                GamepadAction.NAVIGATE_UP    -> musicSeekBy(10_000)
-                GamepadAction.NAVIGATE_DOWN  -> musicSeekBy(-10_000)
-                GamepadAction.OPEN_CONTEXT_MENU     -> openMusicPlayerOptions()
-                GamepadAction.BACK           -> closeMusicPlayer()
+                GamepadAction.SELECT         -> music.musicPlayPause()
+                GamepadAction.NAVIGATE_LEFT  -> music.musicPrev()
+                GamepadAction.NAVIGATE_RIGHT -> music.musicNext()
+                GamepadAction.NAVIGATE_UP    -> music.musicSeekBy(10_000)
+                GamepadAction.NAVIGATE_DOWN  -> music.musicSeekBy(-10_000)
+                GamepadAction.OPEN_CONTEXT_MENU     -> music.openMusicPlayerOptions()
+                GamepadAction.BACK           -> music.closeMusicPlayer()
                 else -> Unit
             }
             return
@@ -5094,8 +4391,8 @@ class CrossbarViewModel @Inject constructor(
         }
         if (state.playlistNameDialog != null) {
             when (action) {
-                GamepadAction.SELECT -> onConfirmPlaylistName(state.playlistNameDialog.text)
-                GamepadAction.BACK   -> onCancelPlaylistName()
+                GamepadAction.SELECT -> music.onConfirmPlaylistName(state.playlistNameDialog.text)
+                GamepadAction.BACK   -> music.onCancelPlaylistName()
                 else                 -> Unit
             }
             return
@@ -5148,11 +4445,11 @@ class CrossbarViewModel @Inject constructor(
 
         if (state.musicBrowser != null) {
             when (action) {
-                GamepadAction.NAVIGATE_UP    -> moveMusicBrowser(-1)
-                GamepadAction.NAVIGATE_DOWN  -> moveMusicBrowser(+1)
-                GamepadAction.SELECT         -> activateMusicBrowser()
-                GamepadAction.BACK           -> onMusicBrowserBack()
-                GamepadAction.OPEN_CONTEXT_MENU     -> openMusicBrowserContextMenu()
+                GamepadAction.NAVIGATE_UP    -> music.moveMusicBrowser(-1)
+                GamepadAction.NAVIGATE_DOWN  -> music.moveMusicBrowser(+1)
+                GamepadAction.SELECT         -> music.activateMusicBrowser()
+                GamepadAction.BACK           -> music.onMusicBrowserBack()
+                GamepadAction.OPEN_CONTEXT_MENU     -> music.openMusicBrowserContextMenu()
                 GamepadAction.CHANGE_SORT    -> cycleSort()
                 else -> Unit
             }
@@ -5731,7 +5028,7 @@ class CrossbarViewModel @Inject constructor(
         when {
             item.type == CrossbarItemType.VIDEO_FILE -> handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent")
             item.type == CrossbarItemType.LIBRARY_BOOK -> handleBookAction(item.id.removePrefix("book_"), "book_remove_recent")
-            item.type == CrossbarItemType.MUSIC_TRACK -> handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null)
+            item.type == CrossbarItemType.MUSIC_TRACK -> music.handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null)
             item.gameId != null -> {
                 val gid = item.gameId
                 appAction { gameRepository.clearLastPlayed(gid) }
@@ -5989,7 +5286,7 @@ class CrossbarViewModel @Inject constructor(
         )}
     }
 
-    private fun openAppContextMenu(item: CrossbarItem, categoryIdOverride: String? = null) {
+    internal fun openAppContextMenu(item: CrossbarItem, categoryIdOverride: String? = null) {
         val pkg = item.packageName ?: return
         val categoryId = categoryIdOverride ?: currentCategory()?.id
 
@@ -6078,14 +5375,14 @@ class CrossbarViewModel @Inject constructor(
             when {
                 itemId == "pl_new" -> {
                     closeContextMenu()
-                    promptCreatePlaylist(forTrackId = trackId)
+                    music.promptCreatePlaylist(forTrackId = trackId)
                 }
                 itemId.startsWith("pl_") -> {
                     val playlistId = itemId.removePrefix("pl_").toLongOrNull() ?: return
                     viewModelScope.launch {
                         musicRepository.toggleTrackInPlaylist(playlistId, trackId)
 
-                        openPlaylistPicker(trackId, keepIndex)
+                        music.openPlaylistPicker(trackId, keepIndex)
                     }
                 }
             }
@@ -6120,25 +5417,25 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (menu.playlistId != null && menu.musicTrackId == null) {
-            handlePlaylistRowAction(menu.playlistId, itemId)
+            music.handlePlaylistRowAction(menu.playlistId, itemId)
             return
         }
 
         when {
             menu.musicTrackId == MUSIC_PLAYER_MENU_MARKER -> when (itemId) {
-                "music_background" -> musicPlayInBackground()
-                "music_playpause"  -> musicPlayPause()
-                "music_close"      -> stopAndCloseMusicPlayer()
-                "music_shuffle"    -> musicToggleShuffle()
-                "music_repeat"     -> musicCycleRepeat()
+                "music_background" -> music.musicPlayInBackground()
+                "music_playpause"  -> music.musicPlayPause()
+                "music_close"      -> music.stopAndCloseMusicPlayer()
+                "music_shuffle"    -> music.musicToggleShuffle()
+                "music_repeat"     -> music.musicCycleRepeat()
             }
-            menu.musicTrackId != null -> handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId)
+            menu.musicTrackId != null -> music.handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId)
             menu.mediaRootKind != null && menu.mediaRootUri != null ->
                 handleMediaRootAction(menu.mediaRootKind, menu.mediaRootUri, itemId)
             menu.mediaRootKind == null && menu.mediaRootUri != null ->
                 handleRomRootAction(menu.mediaRootUri, itemId)
             menu.mediaRootKind != null -> handleMediaFoldersAction(menu.mediaRootKind, itemId)
-            menu.musicFolderId != null -> handleMusicFolderAction(menu.musicFolderId, itemId)
+            menu.musicFolderId != null -> music.handleMusicFolderAction(menu.musicFolderId, itemId)
             menu.isAllGames -> when (itemId) {
                 "library_manager" -> _uiState.update { it.withSettingsOpen("settings_library") }
                 "import_pc_games" -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
@@ -6336,7 +5633,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun appAction(block: suspend () -> Unit) {
+    internal fun appAction(block: suspend () -> Unit) {
         viewModelScope.launch { block() }
     }
 
@@ -6522,7 +5819,7 @@ class CrossbarViewModel @Inject constructor(
             item?.mediaRootUri != null -> openMediaRootContextMenu(item)
             item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
                 openMediaFoldersContextMenu(item)
-            item != null && openMusicContextMenu(item) -> Unit
+            item != null && music.openMusicContextMenu(item) -> Unit
             item != null && openVideoContextMenu(item) -> Unit
             item != null && openBookContextMenu(item) -> Unit
             item != null && openPhotoContextMenu(item) -> Unit
@@ -6657,11 +5954,11 @@ class CrossbarViewModel @Inject constructor(
             }
             RecentLaunch.TRACK -> {
                 menuSound.play(MenuSound.SELECT)
-                openMusicPlayerForItem(item)
+                music.openMusicPlayerForItem(item)
             }
             RecentLaunch.ALBUM -> item.musicGroupKey?.let {
                 menuSound.play(MenuSound.SELECT)
-                openMusicBrowser(MusicBrowserView.Album(item.title, it))
+                music.openMusicBrowser(MusicBrowserView.Album(item.title, it))
             }
             null -> Unit
         }
@@ -6914,7 +6211,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun openAppPicker(target: AppPickerTarget, title: String) {
+    internal fun openAppPicker(target: AppPickerTarget, title: String) {
         viewModelScope.launch {
             val installed = appCategoryRepository.allInstalledApps()
 
@@ -7297,7 +6594,7 @@ class CrossbarViewModel @Inject constructor(
 
     private val taskLabels = mutableMapOf<String, String>()
 
-    private fun addBackgroundTask(task: BackgroundTaskInfo) {
+    internal fun addBackgroundTask(task: BackgroundTaskInfo) {
         taskLabels[task.id] = task.label
         taskNotifier.running(task.id, task.label, task.progress)
     }
@@ -7307,12 +6604,12 @@ class CrossbarViewModel @Inject constructor(
         taskNotifier.running(id, label, progress.coerceIn(0f, 1f))
     }
 
-    private fun completeBackgroundTask(id: String, message: String? = null) {
+    internal fun completeBackgroundTask(id: String, message: String? = null) {
         val label = taskLabels.remove(id) ?: "Done"
         taskNotifier.complete(id, label, message)
     }
 
-    private fun failBackgroundTask(id: String, message: String) {
+    internal fun failBackgroundTask(id: String, message: String) {
         val label = taskLabels.remove(id) ?: "Task failed"
         taskNotifier.failed(id, label, message)
     }
@@ -7423,7 +6720,7 @@ class CrossbarViewModel @Inject constructor(
         romFolderSelection(item)?.let { return it }
         mediaRootSelection(item)?.let { return it }
         return when (item.menuHostCategory(currentCategory()?.id)) {
-            BuiltInCategory.MUSIC   -> handleMusicSelection(item)
+            BuiltInCategory.MUSIC   -> music.handleMusicSelection(item)
             BuiltInCategory.VIDEO   -> handleVideoSelection(item)
             BuiltInCategory.PHOTO   -> handlePhotoSelection(item)
             BuiltInCategory.LIBRARY -> handleBooksSelection(item)
@@ -7479,7 +6776,7 @@ class CrossbarViewModel @Inject constructor(
 
     private fun backOutOfDrill(s: CrossbarUiState): Boolean {
         when (s.drillOutStep) {
-            DrillOutStep.MUSIC -> closeMusicView()
+            DrillOutStep.MUSIC -> music.closeMusicView()
 
             DrillOutStep.VIDEO_LIBRARY -> openVideoView(VideoNav.Libraries)
             DrillOutStep.VIDEO_PLAYLIST -> openVideoView(VideoNav.Playlists)
@@ -7599,14 +6896,14 @@ class CrossbarViewModel @Inject constructor(
             }
             CrossbarItemType.MUSIC_TRACK -> {
                 menuSound.play(MenuSound.SELECT)
-                openMusicPlayerForItem(item)
+                music.openMusicPlayerForItem(item)
                 return
             }
 
             CrossbarItemType.MUSIC_GROUP -> {
                 item.musicGroupKey?.let {
                     menuSound.play(MenuSound.SELECT)
-                    openMusicBrowser(MusicBrowserView.Album(item.title, it))
+                    music.openMusicBrowser(MusicBrowserView.Album(item.title, it))
                 }
                 return
             }
@@ -7686,7 +6983,7 @@ class CrossbarViewModel @Inject constructor(
             item?.mediaRootUri != null -> openMediaRootContextMenu(item)
             item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
                 openMediaFoldersContextMenu(item)
-            item != null && openMusicContextMenu(item) -> Unit
+            item != null && music.openMusicContextMenu(item) -> Unit
             item != null && openVideoContextMenu(item) -> Unit
             item != null && openBookContextMenu(item) -> Unit
             item != null && openPhotoContextMenu(item) -> Unit
@@ -8615,12 +7912,12 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private suspend fun awaitDiscHandOff(art: Any?) = mediaLaunchGate.awaitHandOff(art)
+    internal suspend fun awaitDiscHandOff(art: Any?) = mediaLaunchGate.awaitHandOff(art)
 
     private fun selectedItemArt(): Any? =
         _uiState.value.currentItems.getOrNull(_uiState.value.selectedItemIndex)?.shelfCoverArt
 
-    private fun launchAppWithDisc(packageName: String, art: Any?) {
+    internal fun launchAppWithDisc(packageName: String, art: Any?) {
         viewModelScope.launch {
             awaitDiscHandOff(art ?: appLauncherIcon(packageName))
             appCategoryRepository.launch(packageName)
@@ -9133,7 +8430,7 @@ class CrossbarViewModel @Inject constructor(
         private const val SETUP_GAP_ITEM_ID = "setup_gap"
         private const val NO_GAMES_ITEM_ID    = "no_games"
         private const val EMPTY_FAVORITES_ITEM_ID = "empty_favorites"
-        private const val EMPTY_CATEGORY_ITEM_ID = "empty_category"
+        internal const val EMPTY_CATEGORY_ITEM_ID = "empty_category"
         private const val ALL_GAMES_ITEM_ID = "all_games"
 
         private const val RESUME_DONE_FRACTION = 0.97f
@@ -9153,7 +8450,7 @@ class CrossbarViewModel @Inject constructor(
         private const val FIND_GAMES_ITEM_ID = "find_games"
 
 
-        private const val ADD_MUSIC_FOLDER_ITEM_ID = "add_music_folder"
+        internal const val ADD_MUSIC_FOLDER_ITEM_ID = "add_music_folder"
         private const val ADD_ROM_ROOT_ITEM_ID = "add_rom_root"
         internal const val ROM_FOLDERS_ITEM_ID = "rom_folders"
         private val NON_EMULATOR_PLATFORM_IDS = setOf(ANDROID_PLATFORM_ID, WINDOWS_PLATFORM_ID)
@@ -9169,10 +8466,10 @@ class CrossbarViewModel @Inject constructor(
         internal const val PLAYLISTS_ITEM_ID = "playlists"
         internal const val MUSIC_ARTISTS_ITEM_ID = "music_artists"
         internal const val MUSIC_ALBUMS_ITEM_ID = "music_albums"
-        private const val ADD_MUSIC_APPS_ITEM_ID = "add_music_apps"
-        private const val CREATE_PLAYLIST_ITEM_ID = "create_playlist"
-        private const val ADD_TRACKS_ITEM_ID = "add_tracks"
-        private const val EMPTY_PLAYLIST_ITEM_ID = "empty_playlist"
+        internal const val ADD_MUSIC_APPS_ITEM_ID = "add_music_apps"
+        internal const val CREATE_PLAYLIST_ITEM_ID = "create_playlist"
+        internal const val ADD_TRACKS_ITEM_ID = "add_tracks"
+        internal const val EMPTY_PLAYLIST_ITEM_ID = "empty_playlist"
 
         internal const val MUSIC_APPS_CATEGORY_ID = "music"
 
@@ -9216,7 +8513,7 @@ class CrossbarViewModel @Inject constructor(
         internal const val MEMORY_CARD_ASSET_URI =
             "file:///android_asset/systems/physical-media/_default.png"
 
-        private const val MUSIC_PLAYER_MENU_MARKER = "__music_player__"
+        internal const val MUSIC_PLAYER_MENU_MARKER = "__music_player__"
 
         val FALLBACK_CATEGORIES: List<Category> =
             com.echo.core.domain.model.BUILT_IN_CATEGORIES
