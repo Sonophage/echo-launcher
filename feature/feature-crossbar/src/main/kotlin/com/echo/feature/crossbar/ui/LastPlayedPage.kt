@@ -77,6 +77,8 @@ import com.echo.feature.crossbar.viewmodel.RecentFilter
 import com.echo.feature.crossbar.viewmodel.RecentKind
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.groupRecentsByDay
+import com.echo.feature.crossbar.viewmodel.holdMsFor
+import com.echo.core.ui.components.LocalPadPrompts
 import com.echo.feature.crossbar.viewmodel.isInstalledApp
 import com.echo.feature.crossbar.viewmodel.recentKind
 import com.echo.core.common.format.playTimeLabel
@@ -99,6 +101,8 @@ fun LastPlayedPage(
     onCardTapped: (Int) -> Unit,
     onAction: (GamepadAction) -> Unit,
     modifier: Modifier = Modifier,
+
+    launchHold: String? = null,
 ) {
     val focused = items.getOrNull(selectedIndex)
     val now = System.currentTimeMillis()
@@ -108,9 +112,9 @@ fun LastPlayedPage(
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Crossfade(railVisible, animationSpec = tween(220), label = "recentRail") { rail ->
             if (rail) {
-                RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, onAction)
+                RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, onAction, launchHold)
             } else {
-                Letterbox(focused, now, empty, u, { onCardTapped(selectedIndex) }, onAction)
+                Letterbox(focused, now, empty, u, { onCardTapped(selectedIndex) }, onAction, launchHold)
             }
         }
     }
@@ -124,6 +128,7 @@ private fun Letterbox(
     u: DesignUnits,
     onArtTapped: () -> Unit,
     onAction: (GamepadAction) -> Unit,
+    launchHold: String?,
 ) {
     Box(
         Modifier
@@ -174,7 +179,7 @@ private fun Letterbox(
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                        PanelButton(GamepadAction.SELECT, primaryLabel(item), u) { onAction(GamepadAction.SELECT) }
+                        PanelButton(GamepadAction.SELECT, primaryLabel(item), u, holdMsFor(item, LocalPadPrompts.current), launchHold == item.id) { onAction(GamepadAction.SELECT) }
                         infoLabel(item)?.let { PanelButton(GamepadAction.CHANGE_SORT, it, u) { onAction(GamepadAction.CHANGE_SORT) } }
                     }
                 }
@@ -195,6 +200,7 @@ private fun RecentList(
     u: DesignUnits,
     onCardTapped: (Int) -> Unit,
     onAction: (GamepadAction) -> Unit,
+    launchHold: String?,
 ) {
     val groups = remember(items, now / 60_000L) { groupRecentsByDay(items, now) }
     val rows = remember(groups) {
@@ -271,7 +277,7 @@ private fun RecentList(
                     }
                 }
                 Row(Modifier.padding(top = u.dp(8)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                    PanelButton(GamepadAction.SELECT, primaryLabel(focused), u) { onAction(GamepadAction.SELECT) }
+                    PanelButton(GamepadAction.SELECT, primaryLabel(focused), u, holdMsFor(focused, LocalPadPrompts.current), launchHold == focused.id) { onAction(GamepadAction.SELECT) }
                     if (focused.removableFromRecent) {
                         PanelButton(GamepadAction.CHANGE_SORT, "Remove", u) { onAction(GamepadAction.CHANGE_SORT) }
                     }

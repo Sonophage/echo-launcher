@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import com.echo.core.domain.model.ControllerDisplayType
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.design.DesignUnits
+import com.echo.core.ui.design.holdProgress
+import com.echo.core.ui.design.holdRing
 import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.core.ui.design.panelDesignUnits
 
@@ -48,6 +50,10 @@ data class HintAction(
     val action: GamepadAction,
     val label: String,
     val detail: String? = null,
+
+    // over 0, A must be held this long; holding is true while the ring fills
+    val holdMs: Long = 0L,
+    val holding: Boolean = false,
 )
 
 fun primaryHint(items: List<ControllerPromptItem>, detail: String? = null): HintAction? =
@@ -169,13 +175,19 @@ private fun ActionTab(
         }
         if (pad) {
             val size = glyphFor(u, 24, 14)
+            val progress = if (primary.holdMs > 0L) holdProgress(primary.holding, primary.holdMs) else 0f
+            val ring = if (primary.holdMs > 0L) {
+                Modifier.size(size + u.dp(10)).holdRing(progress, Color.White, Color.White.copy(alpha = 0.25f), u.dp(2))
+            } else Modifier
             style.mappings.iconsFor(listOf(primary.action)).forEach { icon ->
-                if (style.family == ControllerDisplayType.GENERIC) {
-                    Box(Modifier.clip(CircleShape).background(Color.White)) {
-                        ControllerIconGlyph(icon, style.family, size = size, tint = TabInk)
+                Box(ring, contentAlignment = Alignment.Center) {
+                    if (style.family == ControllerDisplayType.GENERIC) {
+                        Box(Modifier.clip(CircleShape).background(Color.White)) {
+                            ControllerIconGlyph(icon, style.family, size = size, tint = TabInk)
+                        }
+                    } else {
+                        ControllerIconGlyph(icon, style.family, size = size)
                     }
-                } else {
-                    ControllerIconGlyph(icon, style.family, size = size)
                 }
             }
         }

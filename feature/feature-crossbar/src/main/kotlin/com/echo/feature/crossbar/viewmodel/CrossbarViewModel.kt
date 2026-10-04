@@ -507,6 +507,9 @@ data class CrossbarUiState(
 
     val waveDesign: com.echo.core.ui.wave.WaveDesign = com.echo.core.ui.wave.WaveDesign.PSP,
 
+    // the item whose launch ring is filling while A is held
+    val launchHold: String? = null,
+
     val respectBatterySaver: Boolean = true,
 
     val waveOverWallpaper: Boolean = false,
@@ -1316,6 +1319,18 @@ class CrossbarViewModel @Inject constructor(
     internal val recents = CrossbarRecents(this, _uiState, viewModelScope, menuSound)
 
     internal val gameDetail = CrossbarGameInfo(this, _uiState, viewModelScope, menuSound)
+
+    private val launchHold = LaunchHold(viewModelScope) { id -> _uiState.update { it.copy(launchHold = id) } }
+
+    // true only while a physical A press is being dispatched; a tap on screen launches at once
+    private var selectFromPad = false
+
+    // starts the launch ring when a pad A press would leave ECHO; false means act now
+    internal fun holdToLaunch(item: CrossbarItem, launch: () -> Unit): Boolean {
+        if (!selectFromPad || !item.launchesOut()) return false
+        launchHold.start(item.id, launch)
+        return true
+    }
 
     internal val panel = CrossbarPanel(this, _uiState, viewModelScope, menuSound)
 
@@ -2330,8 +2345,17 @@ class CrossbarViewModel @Inject constructor(
             gamepadInputHandler.actions.collect { action ->
                 markControllerInput()
                 onUserInteraction()
-                dispatchGamepadAction(action)
+                if (action != GamepadAction.SELECT) launchHold.release()
+                selectFromPad = action == GamepadAction.SELECT
+                try {
+                    dispatchGamepadAction(action)
+                } finally {
+                    selectFromPad = false
+                }
             }
+        }
+        viewModelScope.launch {
+            gamepadInputHandler.selectReleases.collect { launchHold.release() }
         }
         viewModelScope.launch {
             gamepadInputHandler.shoulderHolds.collect { hold ->
@@ -2750,7 +2774,13 @@ class CrossbarViewModel @Inject constructor(
             }
             GamepadAction.SELECT     -> {
                 val pill = state.activePillIndex()?.let { state.focusedPills().getOrNull(it) }
-                if (pill != null) onPillActivated(pill.id) else onItemSelected(state.selectedItemIndex)
+                val index = state.selectedItemIndex
+                val held = pill == null && !state.hasBlockingOverlay &&
+                    state.currentItems.getOrNull(index)?.let { holdToLaunch(it) { onItemSelected(index) } } == true
+                when {
+                    pill != null -> onPillActivated(pill.id)
+                    !held -> onItemSelected(index)
+                }
             }
             GamepadAction.BACK       -> {
                 menuSound.play(MenuSound.BACK)
@@ -3665,9 +3695,7 @@ class CrossbarViewModel @Inject constructor(
         val silentRow = item?.id in setOf(NO_GAMES_ITEM_ID, EMPTY_CATEGORY_ITEM_ID)
 
         val launchesGame = item?.gameId != null && item.isRealGame
-        val launches = item?.launchIntentUri != null ||
-            (item?.shortcutId != null && item.packageName != null) ||
-            item?.packageName != null
+        val launches = item?.launchesOut() == true
 
         val event = when {
             silentRow -> null

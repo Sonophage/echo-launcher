@@ -18,6 +18,10 @@ fun CrossbarHintBar(
     onAction: ((GamepadAction) -> Unit)? = null,
     accent: Color = LocalEchoColors.current.accentColor,
     leading: (@Composable () -> Unit)? = null,
+
+    // over 0, A must be held this long; holding is true while the ring fills
+    holdMs: Long = 0L,
+    holding: Boolean = false,
 ) {
     EchoHintBar(
         items = buildList {
@@ -29,7 +33,9 @@ fun CrossbarHintBar(
         accent = accent,
         leading = leading,
         primary = prompts.primary?.let { p ->
-            HintAction(p.action, p.verb, listOfNotNull(p.target, p.detail).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null })
+            val detail = if (holdMs > 0L) listOfNotNull("Hold to launch", p.target).filter { it.isNotBlank() }.joinToString(" ")
+                else listOfNotNull(p.target, p.detail).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null }
+            HintAction(p.action, p.verb, detail, holdMs, holding)
         },
     )
 }

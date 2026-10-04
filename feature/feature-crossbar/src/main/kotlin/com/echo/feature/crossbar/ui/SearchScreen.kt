@@ -298,7 +298,7 @@ private fun ColumnScope.Preview(row: CrossbarItem, icon: ImageBitmap?, u: Design
         }
     }
     Row(Modifier.padding(top = u.dp(4))) {
-        PanelButton(GamepadAction.SELECT, if (game) "Play" else "Open", u, onActivate)
+        PanelButton(GamepadAction.SELECT, if (game) "Play" else "Open", u, onClick = onActivate)
     }
 }
 

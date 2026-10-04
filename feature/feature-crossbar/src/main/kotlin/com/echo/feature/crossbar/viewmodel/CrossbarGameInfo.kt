@@ -65,8 +65,11 @@ class CrossbarGameInfo(
                 val notice = info.cursor?.let { info.notices(notices).getOrNull(it) }
                 when {
                     notice != null -> vm.panel.openAndroidNotice(notice.key)
-                    info.cursor == null -> onGameInfoAction(info.band)
-                    else -> playFromGameInfo(info.item)
+                    info.cursor == null && info.band != GameInfoAction.PLAY -> onGameInfoAction(info.band)
+                    info.cursor == null -> {
+                        if (!vm.holdToLaunch(info.item) { onGameInfoAction(GameInfoAction.PLAY) }) onGameInfoAction(GameInfoAction.PLAY)
+                    }
+                    else -> if (!vm.holdToLaunch(info.item) { playFromGameInfo(info.item) }) playFromGameInfo(info.item)
                 }
             }
             GamepadAction.OPEN_CONTEXT_MENU -> openGameInfoOptions(info)

@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.feature.crossbar.viewmodel.holdMsFor
 import androidx.compose.ui.graphics.ImageBitmap
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.core.ui.icons.rememberAppIcon
@@ -810,6 +811,7 @@ fun CrossbarShell(
                     railVisible = uiState.recentRailVisible,
                     onCardTapped = onRecentCardTap,
                     onAction = onPromptTapped,
+                    launchHold = uiState.launchHold,
                     modifier = Modifier
                         .fillMaxSize()
                         .crossbarNavGestures(
@@ -1186,6 +1188,8 @@ fun CrossbarShell(
                             ?: hintIcon?.color
                             ?: menuCursorEdge(),
                         leading = hintItem?.let { hintTile(it, hintIcon?.bitmap) },
+                        holdMs = holdMsFor(hintItem.takeIf { uiState.focusedPillIndex == null && !uiState.hasBlockingOverlay }, LocalPadPrompts.current),
+                        holding = hintItem != null && uiState.launchHold == hintItem.id,
                     )
                 }
             }
@@ -1300,6 +1304,7 @@ fun CrossbarShell(
                     onAction = onPromptTapped,
                     onCardFocused = onGameInfoCardFocused,
                     onNoticeTapped = onGameInfoNoticeTapped,
+                    launchHold = uiState.launchHold,
                     modifier = Modifier.fillMaxSize(),
                     onBandAction = onGameInfoAction,
                     onClosePanel = onGameInfoPanelClose,

@@ -19,14 +19,25 @@ import com.echo.core.ui.components.ControllerPrompt
 import com.echo.core.ui.components.LocalPadPrompts
 
 @Composable
-fun PanelButton(button: GamepadAction, label: String, u: DesignUnits, onClick: () -> Unit) {
+fun PanelButton(
+    button: GamepadAction,
+    label: String,
+    u: DesignUnits,
+
+    // over 0, A must be held this long (the launch ring); holding is true while it fills
+    holdMs: Long = 0L,
+    holding: Boolean = false,
+    onClick: () -> Unit,
+) {
     val primary = button == GamepadAction.SELECT
     val ink = if (primary) Color(0xFF0A0A0A) else Color.White
+    val progress = if (holdMs > 0L) holdProgress(holding, holdMs) else 0f
     Box(
         Modifier
             .height(u.dp(52))
             .clip(RoundedCornerShape(u.dp(26)))
             .background(if (primary) Color.White else Color.White.copy(alpha = 0.12f))
+            .holdOutline(progress, ink, u.dp(3))
             .clickable(onClick = onClick)
             .padding(horizontal = u.dp(if (primary) 26 else 22)),
         contentAlignment = Alignment.Center,

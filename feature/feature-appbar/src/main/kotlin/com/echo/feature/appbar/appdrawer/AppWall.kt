@@ -276,8 +276,8 @@ internal fun WallInfo(app: InstalledApp, u: DesignUnits, onLaunch: () -> Unit, o
             }
         }
         Row(Modifier.padding(top = u.dp(6)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-            PanelButton(GamepadAction.SELECT, actionLabel(app), u, onLaunch)
-            if (app.gameId == null) PanelButton(GamepadAction.CHANGE_SORT, "Options", u, onOptions)
+            PanelButton(GamepadAction.SELECT, actionLabel(app), u, onClick = onLaunch)
+            if (app.gameId == null) PanelButton(GamepadAction.CHANGE_SORT, "Options", u, onClick = onOptions)
         }
     }
 }

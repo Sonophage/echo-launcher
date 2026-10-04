@@ -100,6 +100,17 @@ class GamepadInputHandlerTest {
     }
 
     @Test
+    fun `A coming up ends a hold-to-launch, and only A does`() = runTest {
+        handler.selectReleases.test {
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_B, KeyEvent.ACTION_UP))
+            expectNoEvents()
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_A, KeyEvent.ACTION_UP))
+            awaitItem()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `held key repeat does not re-emit`() = runTest {
         handler.actions.test {
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.ACTION_DOWN))
