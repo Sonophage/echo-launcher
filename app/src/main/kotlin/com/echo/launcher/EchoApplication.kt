@@ -25,6 +25,7 @@ class EchoApplication : Application(), Configuration.Provider {
     @Inject lateinit var artworkImageCache: ArtworkImageCache
     @Inject lateinit var echoFolderMirror: com.echo.feature.artwork.portable.EchoFolderMirror
     @Inject lateinit var systemWallpaperFollow: com.echo.core.data.wallpaper.SystemWallpaperFollow
+    @Inject lateinit var videoPosterFetcher: com.echo.feature.artwork.api.VideoPosterFetcher
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -37,6 +38,7 @@ class EchoApplication : Application(), Configuration.Provider {
         initEmulators()
         echoFolderMirror.start(appScope)
         systemWallpaperFollow.start(appScope)
+        appScope.launch { runCatching { videoPosterFetcher.repointMoved() }.onFailure { Timber.w(it, "Poster repoint failed") } }
     }
 
     private fun initDatabase() {

@@ -235,6 +235,16 @@ open class BackupManager @Inject constructor(
             )
         }
 
+        // video posters and thumbnails are stored as file:// URIs under the backing-up app's files dir,
+        // which names its package; 2.0.0's move from com.psplauncher left posters pointing there
+        val remappedVideos = videos.map { v ->
+            v.copy(
+                thumbnailUri       = rewriteFilesPath(v.thumbnailUri, filesDirPath),
+                customThumbnailUri = rewriteFilesPath(v.customThumbnailUri, filesDirPath),
+                posterUri          = rewriteFilesPath(v.posterUri, filesDirPath),
+            )
+        }
+
         gameDao.deleteAll()
         playSessionDao.deleteAll()
 
@@ -273,7 +283,7 @@ open class BackupManager @Inject constructor(
         backupDao.insertPlaylists(playlists)
         backupDao.insertPlaylistTracks(playlistTracks)
         backupDao.insertVideoLibraries(videoLibraries)
-        backupDao.insertVideos(videos)
+        backupDao.insertVideos(remappedVideos)
         backupDao.insertVideoPlaylists(videoPlaylists)
         backupDao.insertVideoPlaylistItems(videoPlItems)
         backupDao.insertPhotoLibraries(photoLibraries)
@@ -370,13 +380,6 @@ open class BackupManager @Inject constructor(
     private inline fun <reified T> Map<String, String>.decodeList(name: String): List<T> =
         this[name]?.let { json.decodeFromString(listSerializer<T>(), it) } ?: emptyList()
 
-    private fun rewriteFilesPath(path: String?, filesDirPath: String): String? {
-        if (path.isNullOrEmpty()) return path
-        val idx = path.indexOf(FILES_MARKER)
-        if (idx < 0) return path
-        return filesDirPath.trimEnd('/') + "/" + path.substring(idx + FILES_MARKER.length)
-    }
-
     private fun SettingsSnapshot.remapWallpaper(filesDirPath: String): SettingsSnapshot {
         var entries = this.entries
 
@@ -458,7 +461,6 @@ open class BackupManager @Inject constructor(
         private const val RESTORE_STAGING_DIR = ".pfp_restore_tmp"
 
         private const val MIME_BACKUP = "application/octet-stream"
-    private const val FILES_MARKER = "/files/"
     private const val KEY_CUSTOM_WALLPAPER = "display_custom_wallpaper"
 
     private const val KEY_MOTION_WALLPAPER = "display_motion_wallpaper"
@@ -659,4 +661,16 @@ internal fun MutablePreferences.replaceWith(snapshot: ReaderSnapshot) {
     clear()
     snapshot.strings.forEach { (name, value) -> this[stringPreferencesKey(name)] = value }
     snapshot.floats.forEach { (name, value) -> this[floatPreferencesKey(name)] = value }
+}
+
+private const val FILES_MARKER = "/files/"
+private const val FILE_SCHEME = "file://"
+
+// a path under the backing-up app's files dir, moved under this app's; a file:// URI stays one
+internal fun rewriteFilesPath(path: String?, filesDirPath: String): String? {
+    if (path.isNullOrEmpty()) return path
+    val idx = path.indexOf(FILES_MARKER)
+    if (idx < 0) return path
+    val scheme = if (path.startsWith(FILE_SCHEME)) FILE_SCHEME else ""
+    return scheme + filesDirPath.trimEnd('/') + "/" + path.substring(idx + FILES_MARKER.length)
 }

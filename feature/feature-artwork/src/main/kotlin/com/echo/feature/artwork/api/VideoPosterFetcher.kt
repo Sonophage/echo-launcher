@@ -42,7 +42,7 @@ class VideoPosterFetcher @Inject constructor(
         var failed = 0
 
         for (video in videos) {
-            if (!refreshExisting && !video.posterUri.isNullOrBlank()) {
+            if (!refreshExisting && posterOnDisk(video.posterUri) { File(it).exists() }) {
                 skipped++
                 continue
             }
@@ -79,6 +79,20 @@ class VideoPosterFetcher @Inject constructor(
         VideoPosterResult(matched, skipped, failed)
     }
 
+    // points a poster back at this app's own copy when its stored path is gone: a restore from before
+    // 2.4.1, or 2.0.0's app id change, left paths naming com.psplauncher. Run on start; returns how many
+    suspend fun repointMoved(): Int = withContext(Dispatchers.IO) {
+        var moved = 0
+        for (video in videoRepository.getAllVideos()) {
+            val fixed = movedPosterUri(video.posterUri, File(posterDir, "${video.id}.jpg").absolutePath) { File(it).exists() }
+                ?: continue
+            videoRepository.setPosterUri(video.id, fixed)
+            moved++
+        }
+        if (moved > 0) Timber.i("Repointed $moved video posters to this app's folder")
+        moved
+    }
+
     suspend fun clearAll() = withContext(Dispatchers.IO) {
         videoRepository.getAllVideos().forEach { video ->
             if (!video.posterUri.isNullOrBlank()) videoRepository.setPosterUri(video.id, null)
@@ -87,3 +101,16 @@ class VideoPosterFetcher @Inject constructor(
         Unit
     }
 }
+
+// the poster URI to store instead of [stored], or null to keep it: only when the stored file is missing
+// and this app holds the poster at [ownPath]
+internal fun movedPosterUri(stored: String?, ownPath: String, exists: (String) -> Boolean): String? {
+    val path = stored?.removePrefix("file://")?.takeIf { it.isNotBlank() } ?: return null
+    if (path == ownPath || exists(path) || !exists(ownPath)) return null
+    return "file://$ownPath"
+}
+
+// whether a stored poster can be drawn; a path left by a restore on another device has no file, so
+// the next match fetches it again instead of skipping the film
+internal fun posterOnDisk(uri: String?, exists: (String) -> Boolean): Boolean =
+    uri?.removePrefix("file://")?.takeIf { it.isNotBlank() }?.let(exists) == true
