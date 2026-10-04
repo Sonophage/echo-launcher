@@ -23,6 +23,7 @@ class EchoApplication : Application(), Configuration.Provider {
     @Inject lateinit var emulatorProfileRepository: EmulatorProfileRepository
     @Inject lateinit var emulatorAutoConfigService: EmulatorAutoConfigService
     @Inject lateinit var artworkImageCache: ArtworkImageCache
+    @Inject lateinit var echoFolderMirror: com.echo.feature.artwork.portable.EchoFolderMirror
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -33,6 +34,7 @@ class EchoApplication : Application(), Configuration.Provider {
         artworkImageCache.installAsSingleton()
         initDatabase()
         initEmulators()
+        echoFolderMirror.start(appScope)
     }
 
     private fun initDatabase() {

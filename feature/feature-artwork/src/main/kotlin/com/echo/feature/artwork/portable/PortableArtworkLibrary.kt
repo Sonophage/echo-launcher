@@ -348,8 +348,30 @@ class PortableArtworkLibrary @Inject constructor(
     suspend fun ensureEchoLayout(treeUri: Uri): Boolean = withContext(Dispatchers.IO) {
         val made = ECHO_LOOK_DIRS.all { ensureDirPath(treeUri, listOf(DIR_LOOK, it)) != null }
         val root = DocumentsContract.getTreeDocumentId(treeUri)
-        val readme = findChild(treeUri, root, ECHO_README) != null || writeText(treeUri, root, ECHO_README, "text/plain", ECHO_README_TEXT)
+        val readme = writeRootText(treeUri, ECHO_README, "text/plain", ECHO_README_TEXT)
         made && readme
+    }
+
+    // writes [text] to [name] at the folder's root when it differs from what is there
+    suspend fun writeRootText(treeUri: Uri, name: String, mime: String, text: String): Boolean = withContext(Dispatchers.IO) {
+        val root = DocumentsContract.getTreeDocumentId(treeUri)
+        val current = findChild(treeUri, root, name)?.let { readTextCapped(it.uri, text.length + 1) }
+        current == text || writeText(treeUri, root, name, mime, text)
+    }
+
+    // copies [source] to [segments]/[name] unless the copy there is current or newer (EchoFolder.shouldWrite)
+    suspend fun mirrorFile(treeUri: Uri, segments: List<String>, name: String, source: java.io.File): Boolean = withContext(Dispatchers.IO) {
+        val dir = ensureDirPath(treeUri, segments) ?: return@withContext false
+        val existing = findChild(treeUri, dir, name)
+        if (!com.echo.core.data.repository.EchoFolder.shouldWrite(source.lastModified(), source.length(), existing?.lastModified, existing?.sizeBytes)) {
+            return@withContext true
+        }
+        val target = existing?.uri ?: runCatching {
+            DocumentsContract.createDocument(resolver, DocumentsContract.buildDocumentUriUsingTree(treeUri, dir), "application/octet-stream", name)
+        }.getOrNull() ?: return@withContext false
+        runCatching {
+            resolver.openOutputStream(target, "wt")?.use { out -> source.inputStream().use { it.copyTo(out) } } != null
+        }.onFailure { Timber.w(it, "Could not mirror $name") }.getOrDefault(false)
     }
 
     suspend fun copyDocument(
@@ -578,10 +600,17 @@ private val ECHO_README_TEXT = """
 
     This is ECHO's own folder. You can open and edit it with any file manager.
 
-    Artwork/   Art for each game, one folder per console. ECHO reads this.
-    Import/    Put other launchers' media here, then import it from ECHO's artwork settings.
-    Look/      ECHO's look as files: Icons, Sounds, Fonts, Boot and Wallpapers. ECHO does not
-               read this folder yet. It is kept for themes in a later version.
+    Artwork/       Art for each game, one folder per console. ECHO reads this.
+    Import/        Put other launchers' media here, then import it from ECHO's artwork settings.
+    Look/          ECHO's look as files. ECHO copies its own here: Sounds (interface sounds and menu
+                   music), Boot (boot, game boot and launch disc audio), Wallpapers and Icons. Fonts
+                   is kept for themes. A file you change here is kept: ECHO only copies over a file
+                   that is missing or older than its own.
+    settings.json  How ECHO looks and behaves: colours, wave, layout, controls and default players.
+                   ECHO writes it when a setting changes.
 
-    No passwords, API keys or account details are kept in this folder.
+    ECHO does not read Look/ or settings.json yet; a later version will, and a Reload in Settings
+    will apply them. Until then, changes to settings.json are written over.
+
+    No passwords, API keys, account details, folder paths or reading positions are kept here.
 """.trimIndent() + "\n"

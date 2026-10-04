@@ -21,7 +21,7 @@ description: Add or change a feature in ECHO — where its code goes, how it is 
 | React to touch the same way | route the touch to the same rule the button uses. A swipe calls `stepCategory`, which applies the d-pad's rail rule through `swipeRailStep`. Do not give touch a separate copy of the rule |
 | Show the footer's hints | `promptsFor` in `feature-crossbar/.../viewmodel/HintPrompts.kt` |
 | Add a settings screen | an entry in `core-domain/.../model/SettingsCatalog.kt` and a case in `SettingsNavHost.kt` |
-| Keep a file the user can edit | the ECHO folder: the artwork folder the user picked, named ECHO (`EchoFolder`, `ArtworkFolderSetup.adopt`). `Look/` holds the look as files. Never put a password, API key or account detail there |
+| Keep a file the user can edit | the ECHO folder: the artwork folder the user picked, named ECHO (`EchoFolder`, `ArtworkFolderSetup.adopt`). `EchoFolderMirror` writes `settings.json` (only the keys in `EchoSettingsExport.GROUPS`) and copies sounds, icons and the wallpaper into `Look/`, never over a newer file there. A new setting a user should carry goes in `GROUPS`; `EchoSettingsExportTest` refuses anything that looks like a key, account, path or personal record |
 | Ask for a permission | a row in `feature-settings/.../permissions/AppPermissions.kt`. Setup offers every row that is not granted at install, and `AppPermissionsTest` checks the manifest declares it |
 
 A launch that leaves ECHO is a hold (`holdMsFor`, `LaunchHold`); media that plays inside ECHO acts

@@ -27,6 +27,23 @@ object EchoFolder {
             .replaceSegment(DOCUMENT + oldId, DOCUMENT + newId)
     }
 
+    // where an ECHO file goes under Look/: the boot, game-boot and launch-disc media under Boot, any
+    // other sound or music under Sounds
+    fun lookFolderFor(fileName: String): String {
+        val name = fileName.lowercase()
+        return if (name.startsWith("boot") || name.startsWith("gameboot") || name.startsWith("launch_disc")) "Boot" else "Sounds"
+    }
+
+    // whether ECHO copies its own file over the one in the folder. A missing file is written; a file
+    // in the folder that is newer than ECHO's is the user's edit and is kept; an unchanged copy is
+    // left alone. ECHO never deletes anything in the folder.
+    fun shouldWrite(sourceModified: Long, sourceSize: Long, destModified: Long?, destSize: Long?): Boolean = when {
+        destModified == null && destSize == null -> true
+        destModified != null && destModified > sourceModified -> false
+        destSize == sourceSize && destModified != null && destModified >= sourceModified -> false
+        else -> true
+    }
+
     private fun treeDocId(treeUri: String): String? =
         treeUri.substringAfter(TREE, "").substringBefore('/').takeIf { it.isNotEmpty() }
 
