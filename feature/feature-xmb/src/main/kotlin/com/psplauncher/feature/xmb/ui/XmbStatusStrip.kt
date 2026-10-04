@@ -362,7 +362,7 @@ fun XmbPspStatusStrip(
                 tightCentre = tight.width,
                 dated = dated.width,
                 bare = bare.width,
-                dateRoom = stripDateRoom(dated.height, height),
+                dateRoom = !u.square,
             )
             val centrePlaceable = subcompose("centre") { centreSlot(!fit.labels) }.first().measure(loose)
             val statusPlaceable = subcompose("status") { statusSlot(fit.date && !compact) }.first().measure(loose)
@@ -581,8 +581,6 @@ internal fun stripFit(width: Int, left: Int, gap: Int, centre: Int, tightCentre:
         .filter { dateRoom || !it.date }
         .firstOrNull(::fits) ?: StripFit(labels = false, date = false)
 }
-
-internal fun stripDateRoom(clockHeight: Int, band: Int): Boolean = clockHeight * 5 <= band * 4
 
 internal fun sectionLabelShown(active: Boolean, hasIcon: Boolean): Boolean = active || !hasIcon
 

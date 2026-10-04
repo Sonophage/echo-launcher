@@ -13,12 +13,6 @@ class StripFitTest {
         assertEquals("the date goes first", StripFit(labels = true, date = false), fit(centre = 560))
         assertEquals("then the labels, and the date comes back if it fits", StripFit(labels = false, date = true), fit(centre = 900))
         assertEquals("a centre that never fits still drops both", StripFit(labels = false, date = false), fit(centre = 900, tightCentre = 500))
-        assertEquals("a clock with no room for the date never shows it", StripFit(labels = true, date = false), fit(centre = 380, dateRoom = false))
-    }
-
-    @Test
-    fun `the date needs breathing room in the band so the clock does not touch the top edge`() {
-        assertEquals(true, stripDateRoom(clockHeight = 36, band = 67))
-        assertEquals(false, stripDateRoom(clockHeight = 38, band = 42))
+        assertEquals("a square strip has no room for the date under the clock", StripFit(labels = true, date = false), fit(centre = 380, dateRoom = false))
     }
 }
