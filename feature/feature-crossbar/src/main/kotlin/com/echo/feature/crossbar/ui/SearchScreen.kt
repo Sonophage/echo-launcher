@@ -1,8 +1,8 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.components.chromeGutter
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.height
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.animateContentSize
 import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import androidx.compose.foundation.background
@@ -141,16 +141,22 @@ fun SearchScreen(
             modifier = Modifier.align(Alignment.TopCenter).padding(top = fieldTop).width(u.dp(380)),
         )
 
-        // owner, 2026-10-04: one centred list whether the keyboard is up or not; the highlighted result
-        // opens into a card with its info, and moving down opens the next one
+        // owner, 2026-10-04: search takes the whole screen; the highlighted result is a hero banner across
+        // the top and the results run below it, full width; moving through them changes the hero
         Column(
             Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = belowField, bottom = if (imeUp) 10.dp else HintBarHeight)
-                .width(u.dp(if (imeUp) 380 else 460))
+                .fillMaxSize()
+                .padding(start = chromeGutter(), end = chromeGutter(end = true), top = belowField, bottom = if (imeUp) 10.dp else HintBarHeight)
                 .then(if (imeUp) Modifier.imePadding() else Modifier),
+            verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
-            if (empty != null) EmptyNotice(empty, u) else ResultList(state, listState, u, compact = imeUp, onActivateAt, onFocusAt)
+            when {
+                empty != null -> EmptyNotice(empty, u)
+                focused != null -> {
+                    Hero(focused, u, short = imeUp) { onActivateAt(state.selectedIndex) }
+                    ResultList(state, listState, u, onActivateAt, onFocusAt)
+                }
+            }
         }
 
         if (!imeUp) {
@@ -178,68 +184,51 @@ private fun ResultList(
     state: SearchState,
     listState: androidx.compose.foundation.lazy.LazyListState,
     u: DesignUnits,
-    compact: Boolean,
     onActivateAt: (Int) -> Unit,
     onFocusAt: (Int) -> Unit,
 ) {
-    LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(u.dp(6)), modifier = Modifier.fillMaxSize()) {
+    LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(u.dp(4)), modifier = Modifier.fillMaxSize()) {
         itemsIndexed(state.rows, key = { _, row -> row.id }) { index, row ->
             val selected = index == state.selectedIndex
-            Box(Modifier.animateItem().animateContentSize(tween(180))) {
-                if (selected) ResultCard(row, u, compact) { onActivateAt(index) }
-                else ResultRow(row, false, u) { onFocusAt(index) }
-            }
+            ResultRow(row, selected, u) { if (selected) onActivateAt(index) else onFocusAt(index) }
         }
     }
 }
 
-// the highlighted result: its art, what it is, and its facts, in the card the kit draws
+// the highlighted result across the top: its art filling the banner, what it is, and its facts
 @Composable
-private fun ResultCard(row: CrossbarItem, u: DesignUnits, compact: Boolean, onClick: () -> Unit) {
+private fun Hero(row: CrossbarItem, u: DesignUnits, short: Boolean, onClick: () -> Unit) {
     val (kind, detail) = kindAndDetail(row)
     val icon = rememberAppIcon(row.packageName?.takeIf { row.isInstalledApp })
-    val shape = RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))
     val art = (row.backdropArt.firstOrNull() ?: row.shelfCoverArt).takeUnless { row.isInstalledApp }
-    Column(
+    val shape = RoundedCornerShape(u.dp(22))
+    Box(
         Modifier
             .fillMaxWidth()
+            .height(u.dp(if (short) 120 else 230))
             .clip(shape)
-            .background(PanelCardFocusFill)
+            // an app has no art, so its banner takes the icon's colour
+            .background(icon?.color?.copy(alpha = 0.45f) ?: Color.White.copy(alpha = 0.07f))
             .border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape)
             .clickable(onClick = onClick),
     ) {
-        if (!compact) {
-            Box(
-                Modifier.fillMaxWidth().height(u.dp(150)).background(Color.White.copy(alpha = 0.07f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (row.isInstalledApp) {
-                    AppIcon(icon?.bitmap, u.dp(84), u.dp(20))
-                } else {
-                    Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(u.dp(56)))
-                    art?.let { AsyncImage(rememberArtworkModel(it), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                }
-            }
-        }
+        art?.let { AsyncImage(rememberArtworkModel(it), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.78f), 0.65f to Color.Transparent)))
         Row(
-            Modifier.padding(u.dp(14)),
+            Modifier.align(Alignment.BottomStart).padding(u.dp(if (short) 16 else 26)),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+            horizontalArrangement = Arrangement.spacedBy(u.dp(20)),
         ) {
-            if (compact) {
-                if (row.isInstalledApp) AppIcon(icon?.bitmap, u.dp(58), u.dp(14))
-                else Art(row.shelfCoverArt, u.dp(58), u.dp(58), u.dp(14), kindGlyph(row), u)
+            when {
+                row.isInstalledApp -> AppIcon(icon?.bitmap, u.dp(if (short) 64 else 96), u.dp(if (short) 16 else 24))
+                art == null -> Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(u.dp(if (short) 48 else 72)))
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
+            Column(verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
                 Eyebrow(kind, u)
-                Headline(row.title, u.sp(if (compact) 18 else 22), 2)
-                (row.metadataLine?.takeIf { it.isNotBlank() } ?: detail).takeIf { it.isNotBlank() }?.let { Meta(it, u.sp(13), 1) }
-                val played = row.lastOpenedAt?.let { "Played ${relativeTime(System.currentTimeMillis(), it)}" }
-                val time = row.totalPlayTimeMillis.takeIf { it > 0 }?.let(::playTimeLabel)
-                if (row.gameId != null && compact && (played != null || time != null)) {
-                    Meta(listOfNotNull(played, time).joinToString(" · "), u.sp(12), 1)
-                } else if (row.gameId != null && (played != null || time != null)) {
-                    Row(Modifier.padding(top = u.dp(4)), horizontalArrangement = Arrangement.spacedBy(u.dp(28))) {
+                Headline(row.title, u.sp(if (short) 22 else 36), if (short) 1 else 2)
+                (row.metadataLine?.takeIf { it.isNotBlank() } ?: detail).takeIf { it.isNotBlank() }?.let { Meta(it, u.sp(14), 1) }
+                if (!short && row.gameId != null && (row.lastOpenedAt != null || row.totalPlayTimeMillis > 0)) {
+                    Row(Modifier.padding(top = u.dp(6)), horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
                         row.lastOpenedAt?.let { Stat("Last played", relativeTime(System.currentTimeMillis(), it), u) }
                         if (row.totalPlayTimeMillis > 0) Stat("Play time", playTimeLabel(row.totalPlayTimeMillis), u)
                     }
