@@ -1243,7 +1243,7 @@ class CrossbarViewModel @Inject constructor(
     internal val memoryCardRepository: MemoryCardRepository,
     private val categoryRepository: CategoryRepositoryImpl,
     internal val appCategoryRepository: AppCategoryRepository,
-    private val gameCategoryRepository: com.echo.core.data.repository.GameCategoryRepository,
+    internal val gameCategoryRepository: com.echo.core.data.repository.GameCategoryRepository,
     private val launcherShortcutRepository: LauncherShortcutRepository,
     private val libraryScanner: LibraryScanner,
     private val artworkRepository: ArtworkRepository,
@@ -1902,7 +1902,7 @@ class CrossbarViewModel @Inject constructor(
     private fun List<CategorizedApp>.notHiddenAt(type: HideLocationType, locationId: String = ""): List<CategorizedApp> =
         filterNot { isHiddenAt(HiddenPlacement.appKey(it.packageName), type, locationId) }
 
-    private fun persistHide(itemKey: String, itemLabel: String, type: HideLocationType, locationId: String, locationLabel: String) {
+    internal fun persistHide(itemKey: String, itemLabel: String, type: HideLocationType, locationId: String, locationLabel: String) {
         viewModelScope.launch {
             hiddenPlacementDao.upsert(
                 HiddenPlacementEntity(itemKey, itemLabel, type.name, locationId, locationLabel, System.currentTimeMillis())
@@ -3157,129 +3157,7 @@ class CrossbarViewModel @Inject constructor(
                 "hide"             -> gameActions.hideCard(menu.platformId)
                 "remove"           -> gameActions.removeCard(menu.platformId)
             }
-            menu.gameId != null -> if (itemId.startsWith("emu_pick_")) {
-                val gid = menu.gameId
-                val choice = itemId.removePrefix("emu_pick_")
-                appAction {
-                    gameRepository.setPreferredEmulator(gid, choice.takeIf { it != "default" })
-                }
-            } else if (itemId.startsWith("detail_")) {
-                val gid = menu.gameId
-                when (val what = itemId.removePrefix("detail_")) {
-                    "title" -> viewModelScope.launch {
-                        val game = gameRepository.getById(gid) ?: return@launch
-                        closeContextMenu()
-                        _uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
-                            title = "Edit Title",
-                            subtitle = "The name shown in the launcher and used when scraping artwork.",
-                            resetLabel = "Use Scanned Name",
-                            initialText = game.displayTitle,
-                            editTitleGameId = gid,
-                            placeholder = "Leave blank to use the scanned name",
-                        ))}
-                    }
-                    "note" -> viewModelScope.launch {
-                        val game = gameRepository.getById(gid) ?: return@launch
-                        closeContextMenu()
-                        _uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
-                            title = "Edit Note",
-                            subtitle = "Kept with the game. Only you see it.",
-                            initialText = game.userNote.orEmpty(),
-                            editNoteGameId = gid,
-                            placeholder = "Anything you want to remember about this game",
-                        ))}
-                    }
-                    "ARTWORK"  -> artworkTools.openArtworkStudio(gid)
-                    "MANUAL"   -> gameDetail.openManualFor(gid)
-                    "METADATA" -> artworkTools.openMetadataPreviewFor(gid)
-                    "REFRESH"  -> artworkTools.fetchArtworkFor(gid)
-                    else -> Timber.w("Details row '$what' has no handler")
-                }
-            } else if (itemId == "shelf_favorite") {
-                val onShelf = menu.items.firstOrNull { it.action == "shelf_favorite" }?.checked == true
-                gameActions.toggleGameFavorite(menu.gameId, !onShelf)
-            } else if (itemId.startsWith("pstate_")) {
-                val gid = menu.gameId
-                val choice = itemId.removePrefix("pstate_")
-                appAction {
-                    gameRepository.setPlayState(gid, PlayState.fromName(choice))
-                }
-            } else if (itemId.startsWith("disc_pick_")) {
-                val discId = itemId.removePrefix("disc_pick_").toLongOrNull()
-                if (discId != null) {
-                    menuSound.play(MenuSound.SELECT)
-                    appAction { gameRepository.setPreferredDisc(menu.gameId, discId) }
-                }
-            } else when (itemId) {
-
-                "play"                   -> launching.launchGameDirectly(menu.gameId)
-                "game_info"              -> _uiState.value.currentItems.firstOrNull { it.gameId == menu.gameId }?.let(gameDetail::onOpenGameInfo)
-                "choose_disc"             -> openDiscPickerMenu(menu.gameId)
-                "export_game"            -> exportGameFromMenu(menu.gameId)
-                "edit_app"               -> openAppDetail(menu.gameId, menu.packageName ?: return)
-                "favorite"               -> gameActions.toggleGameFavorite(menu.gameId, true)
-                "unfavorite"             -> gameActions.toggleGameFavorite(menu.gameId, false)
-
-                "remove_from_recent"     -> {
-                    val gid = menu.gameId
-                    appAction { gameRepository.clearLastPlayed(gid) }
-                }
-                "add_category"           -> menu.categoryContext?.let { openGameCategoryPicker(menu.gameId, it, "add") }
-                "move_category"          -> menu.categoryContext?.let { openGameCategoryPicker(menu.gameId, it, "move") }
-                "remove_category"        -> menu.categoryContext?.let { cat ->
-                    val gid = menu.gameId
-                    appAction {
-                        gameCategoryRepository.removeGameFromCategory(gid, cat)
-                        loadItemsForCategory(currentCategory())
-                    }
-                }
-                "pin_category"           -> menu.categoryContext?.let { cat ->
-                    val gid = menu.gameId
-                    appAction {
-                        gameCategoryRepository.pinGameInCategory(gid, cat, true)
-                        loadItemsForCategory(currentCategory())
-                    }
-                }
-                "unpin_category"         -> menu.categoryContext?.let { cat ->
-                    val gid = menu.gameId
-                    appAction {
-                        gameCategoryRepository.pinGameInCategory(gid, cat, false)
-                        loadItemsForCategory(currentCategory())
-                    }
-                }
-                "file_location"          -> showGameFileLocation(menu.gameId)
-                "change_emulator"        -> openEmulatorPickerMenu(menu.gameId)
-                "shelves"                -> openShelvesPickerMenu(menu.gameId)
-
-                "remove_game", "remove_missing" -> {
-                    val gid = menu.gameId
-                    appAction { removeGameFromLibrary(gid) }
-                }
-                "hide_here"              -> currentHideLocation()?.let { (type, id, label) ->
-                    persistHide(HiddenPlacement.gameKey(menu.gameId), menu.title, type, id, label)
-                }
-                "remove_app"             -> {
-                    val gid = menu.gameId
-                    appAction {
-                        gameRepository.delete(gid)
-                        memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
-                    }
-                }
-
-                "unmark_game"            -> {
-                    val gid = menu.gameId
-                    appAction {
-                        gameRepository.getById(gid)?.let { g ->
-                            gameRepository.upsert(g.copy(
-                                platformId  = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
-                                contentType = GameContentType.ANDROID_APP,
-                            ))
-                        }
-                        memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
-                        loadItemsForCategory(currentCategory())
-                    }
-                }
-            }
+            menu.gameId != null -> gameActions.onGameMenuItem(itemId, menu)
             menu.packageName != null -> {
                 val pkg = menu.packageName
                 if (itemId.startsWith("pick_")) {
@@ -3333,7 +3211,7 @@ class CrossbarViewModel @Inject constructor(
         viewModelScope.launch { block() }
     }
 
-    private fun openShelvesPickerMenu(gameId: Long) {
+    internal fun openShelvesPickerMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val current = PlayState.fromName(game.playState)
@@ -3374,7 +3252,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun openDiscPickerMenu(gameId: Long) {
+    internal fun openDiscPickerMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val key = game.discSetKey ?: return@launch
@@ -3394,7 +3272,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private suspend fun removeGameFromLibrary(gameId: Long) {
+    internal suspend fun removeGameFromLibrary(gameId: Long) {
         val game = gameRepository.getById(gameId) ?: return
         gameRepository.delete(gameId)
         memoryCardRepository.recountGames(game.platformId)
@@ -3443,7 +3321,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun showGameFileLocation(gameId: Long) {
+    internal fun showGameFileLocation(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val location = game.romPath
@@ -3457,7 +3335,7 @@ class CrossbarViewModel @Inject constructor(
 
     fun dismissInfoDialog() = _uiState.update { it.copy(infoDialog = null) }
 
-    private fun exportGameFromMenu(gameId: Long) {
+    internal fun exportGameFromMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val report = runCatching { pcGameExporter.exportGame(gameId) }
@@ -3698,7 +3576,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun openGameCategoryPicker(gameId: Long, fromCategoryId: String, action: String) {
+    internal fun openGameCategoryPicker(gameId: Long, fromCategoryId: String, action: String) {
         val items = buildList {
             _uiState.value.categories
                 .filter { it.isGamingCategory && it.id != fromCategoryId && it.id != BuiltInCategory.GAMES }
@@ -4128,7 +4006,7 @@ class CrossbarViewModel @Inject constructor(
 
     internal val MANUAL_MAX_SCROLL_STEPS_ = 20
 
-    private fun openAppDetail(knownGameId: Long?, packageName: String) {
+    internal fun openAppDetail(knownGameId: Long?, packageName: String) {
         if (knownGameId != null) {
             _uiState.update { it.copy(activeAppId = knownGameId) }
             return
