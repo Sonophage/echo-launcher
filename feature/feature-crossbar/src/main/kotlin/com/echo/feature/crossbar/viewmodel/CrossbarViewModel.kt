@@ -1325,6 +1325,8 @@ class CrossbarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
 
+    internal val bookshelf = CrossbarBookshelf(this, _uiState, viewModelScope, bookRepository, bookIntentResolver, bookScanner, menuSound)
+
     internal val gallery = CrossbarGallery(this, _uiState, viewModelScope, photoRepository, photoScanner, photoIntentResolver, menuSound)
 
     internal val video = CrossbarVideo(this, _uiState, viewModelScope, videoRepository, videoScanner, videoIntentResolver, menuSound)
@@ -1378,9 +1380,9 @@ class CrossbarViewModel @Inject constructor(
         music.observeMusic()
         video.observeVideo()
         gallery.observePhoto()
-        observeBooks()
+        bookshelf.observeBooks()
         observeMediaCovers()
-        observeContinueBook()
+        bookshelf.observeContinueBook()
         observeHiddenPlacements()
         observeAndroidNotices()
         observeRecentTop()
@@ -1786,7 +1788,7 @@ class CrossbarViewModel @Inject constructor(
                             games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(visibleGames.toCrossbarItems()),
 
                             music  = tracks.recentMusicRows(),
-                            books  = books.map { it.lastOpenedAt ?: 0L }.zip(bookItems(books)),
+                            books  = books.map { it.lastOpenedAt ?: 0L }.zip(bookshelf.bookItems(books)),
                             videos = videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
                             apps   = appRows,
                             filter = filter,
@@ -1940,28 +1942,28 @@ class CrossbarViewModel @Inject constructor(
                     BooksNav.Folders -> mediaRootRepository.roots(MediaRootKind.BOOK).collect {
                         _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.BOOK)) }
                     }
-                    BooksNav.Root -> _uiState.update { it.copy(currentItems = booksRootItems()) }
+                    BooksNav.Root -> _uiState.update { it.copy(currentItems = bookshelf.booksRootItems()) }
                     BooksNav.Shelves -> bookRepository.observeLibraries().collect { shelves ->
-                        _uiState.update { it.copy(bookLibraries = shelves, currentItems = bookShelfItems()) }
+                        _uiState.update { it.copy(bookLibraries = shelves, currentItems = bookshelf.bookShelfItems()) }
                     }
                     BooksNav.AllBooks -> bookRepository.observeAllBooks().collect { books ->
-                        _uiState.update { it.copy(currentItems = bookItems(books.bookSorted(it.bookSortMode)).ifEmpty { listOf(emptyBooksItem()) }) }
+                        _uiState.update { it.copy(currentItems = bookshelf.bookItems(books.bookSorted(it.bookSortMode)).ifEmpty { listOf(bookshelf.emptyBooksItem()) }) }
                     }
                     is BooksNav.Shelf -> bookRepository.observeBooksByLibrary(nav.id).collect { books ->
-                        _uiState.update { it.copy(currentItems = bookItems(books.bookSorted(it.bookSortMode)).ifEmpty { listOf(emptyBooksItem()) }) }
+                        _uiState.update { it.copy(currentItems = bookshelf.bookItems(books.bookSorted(it.bookSortMode)).ifEmpty { listOf(bookshelf.emptyBooksItem()) }) }
                     }
                     BooksNav.SeriesList -> bookRepository.observeAllBooks().collect { books ->
                         _uiState.update {
                             it.copy(
                                 bookSeries = books.seriesGroups(),
-                                currentItems = bookSeriesItems().ifEmpty { listOf(emptySeriesItem()) },
+                                currentItems = bookshelf.bookSeriesItems().ifEmpty { listOf(emptySeriesItem()) },
                             )
                         }
                     }
 
                     is BooksNav.Series -> bookRepository.observeAllBooks().collect { books ->
                         val inSeries = books.filter { it.seriesName == nav.name }.inSeriesOrder()
-                        _uiState.update { it.copy(currentItems = bookItems(inSeries).ifEmpty { listOf(emptyBooksItem()) }) }
+                        _uiState.update { it.copy(currentItems = bookshelf.bookItems(inSeries).ifEmpty { listOf(bookshelf.emptyBooksItem()) }) }
                     }
                 }
                 else -> {
@@ -2044,7 +2046,7 @@ class CrossbarViewModel @Inject constructor(
         BuiltInCategory.MUSIC   -> music.musicAddActions()
         BuiltInCategory.VIDEO   -> video.videoAddActions()
         BuiltInCategory.PHOTO   -> gallery.photoAddActions()
-        BuiltInCategory.LIBRARY -> booksAddActions()
+        BuiltInCategory.LIBRARY -> bookshelf.booksAddActions()
         else -> emptyList()
     }
 
@@ -2162,7 +2164,7 @@ class CrossbarViewModel @Inject constructor(
             catId == BuiltInCategory.MUSIC -> "music_${music.musicNavKey(s.musicNav)}"
             catId == BuiltInCategory.VIDEO -> "video_${video.videoNavKey(s.videoNav)}"
             catId == BuiltInCategory.PHOTO -> "photo_${gallery.photoNavKey(s.photoNav)}"
-            catId == BuiltInCategory.LIBRARY -> "books_${booksNavKey(s.booksNav)}"
+            catId == BuiltInCategory.LIBRARY -> "books_${bookshelf.booksNavKey(s.booksNav)}"
             catId == BuiltInCategory.SETTINGS -> "settings_root"
             s.selectedPlatformId != null   -> "plat_${s.selectedPlatformId}"
             else                           -> "root"
@@ -2181,130 +2183,11 @@ class CrossbarViewModel @Inject constructor(
         loadItemsForCategory(currentCategory())
     }
 
-    private fun observeContinueBook() {
-        viewModelScope.launch {
-            bookRepository.observeRecentlyOpenedBooks(1).collect { books ->
-                val latest = books.firstOrNull()
-                if (_uiState.value.continueBook?.id != latest?.id) {
-                    _uiState.update { it.copy(continueBook = latest) }
-                    if (currentCategory()?.id == BuiltInCategory.LIBRARY &&
-                        _uiState.value.booksNav == BooksNav.Root
-                    ) {
-                        loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun observeBooks() {
-        viewModelScope.launch {
-            bookRepository.observeLibraries().collect { libraries ->
-                _uiState.update { it.copy(bookLibraries = libraries) }
-                refreshBooksRootIfShowing()
-            }
-        }
-        viewModelScope.launch {
-            bookRepository.observeAllBooks().collect { books ->
-                _uiState.update { it.copy(bookSeries = books.seriesGroups()) }
-                refreshBooksRootIfShowing()
-            }
-        }
-        viewModelScope.launch {
-            bookRepository.observeDefaultReader().collect { reader ->
-                _uiState.update {
-                    it.copy(
-                        defaultReader = reader,
-                        defaultReaderLabel = reader?.let { pkg -> bookIntentResolver.readerLabel(pkg) },
-                    )
-                }
-                refreshBooksRootIfShowing()
-            }
-        }
-    }
-
-    private suspend fun refreshBooksRootIfShowing() {
-        if (currentCategory()?.id == BuiltInCategory.LIBRARY &&
-            _uiState.value.booksNav == BooksNav.Root
-        ) {
-            _uiState.update { it.copy(currentItems = booksRootItems()) }
-        }
-    }
-
-    private fun booksAddActions(): List<CrossbarItem> = buildList {
-        if (_uiState.value.bookLibraries.none { it.lastScannedAt != null }) {
-            add(
-                CrossbarItem(
-                    id       = ADD_BOOK_FOLDER_ITEM_ID,
-                    title    = "Add Book Folder",
-                    subtitle = "Point the Library at a folder of EPUBs",
-                    type     = CrossbarItemType.ADD_ACTION,
-                )
-            )
-        }
-        add(addBookAppsItem())
-    }
-
-    private suspend fun booksRootItems(): List<CrossbarItem> =
-        libraryColumn(
-            mediaColumn(_uiState.value.booksRootSections(), bookAppItems(), booksAddActions()),
-            SearchScope.BOOKS,
-        )
-
-    private suspend fun bookAppItems(): List<CrossbarItem> {
+    internal suspend fun bookAppItems(): List<CrossbarItem> {
         val apps = appCategoryRepository.appsForCategory(LIBRARY_APPS_CATEGORY_ID)
             .notHiddenAt(HideLocationType.CATEGORY, LIBRARY_APPS_CATEGORY_ID)
         return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
     }
-
-    private fun addBookAppsItem(): CrossbarItem = CrossbarItem(
-        id       = ADD_LIBRARY_APPS_ITEM_ID,
-        title    = "Add Book Apps",
-        subtitle = "Pick installed apps to show here",
-        type     = CrossbarItemType.ADD_ACTION,
-    )
-
-    private fun bookItems(books: List<com.echo.core.domain.model.Book>): List<CrossbarItem> =
-        books.map { book ->
-            CrossbarItem(
-                id       = "book_${book.id}",
-                title    = book.displayTitle,
-                subtitle = bookRowSubtitle(book.author, book.seriesName, book.seriesIndex),
-                coverUri = book.coverUri,
-
-                artworkUri = book.coverUri,
-                type     = CrossbarItemType.LIBRARY_BOOK,
-            )
-        }
-
-    private fun emptyBooksItem(): CrossbarItem = CrossbarItem(
-        id       = "books_empty",
-        title    = "No books yet",
-        subtitle = "Add a folder of EPUBs in Settings, then rescan",
-        type     = CrossbarItemType.EMPTY,
-    )
-
-    private fun bookShelfItems(): List<CrossbarItem> =
-        _uiState.value.bookLibraries.map {
-            CrossbarItem(
-                id       = "shelf_${it.id}",
-                title    = it.displayName,
-                subtitle = countLabel(it.bookCount, "book", "books"),
-                type     = CrossbarItemType.LIBRARY_FOLDER,
-            )
-        }
-
-    private fun bookSeriesItems(): List<CrossbarItem> =
-        _uiState.value.bookSeries.map { series ->
-            CrossbarItem(
-                id       = "series_${series.name}",
-                title    = series.name,
-                subtitle = countLabel(series.bookCount, "book", "books"),
-                coverUri = series.coverUri,
-                artworkUri = series.coverUri,
-                type     = CrossbarItemType.LIBRARY_SERIES,
-            )
-        }
 
     private fun emptySeriesItem(): CrossbarItem = CrossbarItem(
         id       = "series_empty",
@@ -2312,81 +2195,6 @@ class CrossbarViewModel @Inject constructor(
         subtitle = "No scanned book declares one. Embed series metadata, then Deep Rescan.",
         type     = CrossbarItemType.EMPTY,
     )
-
-    private fun handleBooksSelection(item: CrossbarItem): Boolean = when {
-        item.id == SEARCH_ITEM_ID -> { openSearch(SearchScope.BOOKS); true }
-        item.id == ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openAddMenu(); true }
-        item.id == OPEN_READER_ITEM_ID -> {
-            menuSound.play(MenuSound.LAUNCH)
-            val reader = _uiState.value.defaultReader
-            val error = reader?.let { bookIntentResolver.launchReader(it) }
-            if (error != null) {
-                _uiState.update { it.copy(infoDialog = InfoDialogState(title = "Library", message = error)) }
-            }
-            true
-        }
-        item.id == BOOK_SHELVES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.Shelves); true }
-        item.id == ALL_BOOKS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.AllBooks); true }
-        item.id == BOOK_SERIES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.SeriesList); true }
-        item.id == ADD_BOOK_FOLDER_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT)
-            openMediaFolders(MediaRootKind.BOOK)
-            true
-        }
-        item.type == CrossbarItemType.LIBRARY_SERIES -> {
-            menuSound.play(MenuSound.SELECT)
-            openBooksView(BooksNav.Series(item.title))
-            true
-        }
-        item.type == CrossbarItemType.LIBRARY_FOLDER -> {
-            menuSound.play(MenuSound.SELECT)
-            openBooksView(BooksNav.Shelf(item.id.removePrefix("shelf_"), item.title))
-            true
-        }
-        item.type == CrossbarItemType.LIBRARY_BOOK -> { openBook(item.id.removePrefix("book_")); true }
-        item.id == ADD_LIBRARY_APPS_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT)
-            openAppPicker(AppPickerTarget.CategoryShortcuts(LIBRARY_APPS_CATEGORY_ID), "Add Book Apps")
-            true
-        }
-
-        item.packageName != null -> {
-            menuSound.play(MenuSound.LAUNCH)
-            launchAppWithDisc(item.packageName, item.shelfCoverArt)
-            true
-        }
-        else -> false
-    }
-
-    private fun openBook(bookId: String) {
-        menuSound.play(MenuSound.LAUNCH)
-        viewModelScope.launch {
-            val book = bookRepository.getBook(bookId) ?: return@launch
-
-            awaitDiscHandOff(book.coverUri)
-            val error = bookIntentResolver.launch(book, _uiState.value.defaultReader)
-            if (error != null) {
-                _uiState.update { it.copy(infoDialog = InfoDialogState(title = book.displayTitle, message = error)) }
-                return@launch
-            }
-
-            bookRepository.markBookOpened(bookId, System.currentTimeMillis())
-        }
-    }
-
-    private fun booksNavKey(nav: BooksNav): String = when (nav) {
-        BooksNav.Folders  -> "folders"
-        BooksNav.Root     -> "root"
-        BooksNav.AllBooks -> "all"
-        BooksNav.Shelves  -> "shelves"
-        is BooksNav.Shelf -> "shelf_${nav.id}"
-        BooksNav.SeriesList -> "series"
-        is BooksNav.Series  -> "series_${nav.name}"
-    }
-
-    private fun openBooksView(nav: BooksNav) = navigateRememberingCursor { it.copy(booksNav = nav) }
-
-    private fun closeBooksView() = openBooksView(BooksNav.Root)
 
     @Suppress("QueryPermissionsNeeded")
     internal val cameraAvailable: Boolean by lazy {
@@ -2409,30 +2217,6 @@ class CrossbarViewModel @Inject constructor(
         val apps = appCategoryRepository.appsForCategory(PHOTO_APPS_CATEGORY_ID)
             .notHiddenAt(HideLocationType.CATEGORY, PHOTO_APPS_CATEGORY_ID)
         return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
-    }
-
-    private fun openBookContextMenu(item: CrossbarItem): Boolean {
-        if (item.menuHostCategory(currentCategory()?.id) != BuiltInCategory.LIBRARY) return false
-        if (item.type != CrossbarItemType.LIBRARY_BOOK || !item.id.startsWith("book_")) return false
-        val bookId = item.id.removePrefix("book_")
-        viewModelScope.launch {
-            val onShelf = runCatching { bookRepository.getBook(bookId) }
-                .getOrNull()?.lastOpenedAt != null
-            val items = bookContextMenuItems(hasOpenStamp = onShelf)
-            _uiState.update {
-                it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), bookFileId = bookId))
-            }
-        }
-        return true
-    }
-
-    private fun handleBookAction(bookId: String, itemId: String) {
-        when (itemId) {
-            "book_open" -> openBook(bookId)
-
-            "book_remove_recent" -> appAction { bookRepository.clearBookLastOpened(bookId) }
-            "book_remove" -> appAction { bookRepository.removeBook(bookId) }
-        }
     }
 
     internal fun browserNoResultsItem(): CrossbarItem = CrossbarItem(
@@ -2615,7 +2399,7 @@ class CrossbarViewModel @Inject constructor(
             CrossbarItemType.VIDEO_FILE ->
                 _uiState.update { it.copy(activeVideoId = row.id.removePrefix("vid_"), activeVideoAutoPlay = true) }
             CrossbarItemType.PHOTO_FILE -> openSearchedPhoto(row)
-            CrossbarItemType.LIBRARY_BOOK -> openBook(row.id.removePrefix("book_"))
+            CrossbarItemType.LIBRARY_BOOK -> bookshelf.openBook(row.id.removePrefix("book_"))
             CrossbarItemType.MUSIC_TRACK -> openSearchedTrack(row)
 
             else -> row.gameId?.let { id -> launchGameDirectly(id) }
@@ -2775,7 +2559,7 @@ class CrossbarViewModel @Inject constructor(
         MediaRootKind.MUSIC -> music.openMusicView(MusicNav.Folders)
         MediaRootKind.VIDEO -> video.openVideoView(VideoNav.Folders)
         MediaRootKind.PHOTO -> gallery.openPhotoView(PhotoNav.Folders)
-        MediaRootKind.BOOK  -> openBooksView(BooksNav.Folders)
+        MediaRootKind.BOOK  -> bookshelf.openBooksView(BooksNav.Folders)
     }
 
     fun requestMediaRootPick(kind: MediaRootKind, relinkFrom: String? = null) {
@@ -2858,7 +2642,7 @@ class CrossbarViewModel @Inject constructor(
             MediaRootKind.MUSIC -> music.scanMusicFolder(entryId)
             MediaRootKind.VIDEO -> video.scanVideoLibrary(entryId, deep)
             MediaRootKind.PHOTO -> gallery.scanPhotoLibrary(entryId)
-            MediaRootKind.BOOK  -> scanBookLibrary(entryId, deep)
+            MediaRootKind.BOOK  -> bookshelf.scanBookLibrary(entryId, deep)
         }
     }
 
@@ -2998,24 +2782,6 @@ class CrossbarViewModel @Inject constructor(
                 itemId.removePrefix(MEDIA_APP_PREFIX).takeIf { it != MEDIA_APP_NONE },
             )
             null -> Unit
-        }
-    }
-
-    private suspend fun scanBookLibrary(libraryId: String, deep: Boolean = false) {
-        val library = bookRepository.getLibrary(libraryId) ?: return
-        val taskId = "book_scan_$libraryId"
-        addBackgroundTask(BackgroundTaskInfo(taskId, "Scanning ${library.displayName}", null))
-        val existing = bookRepository.getBooksForLibrary(libraryId)
-        bookScanner.scan(library, deep = deep, existing = existing).collect { result ->
-            when (result) {
-                is com.echo.feature.library.scanner.BookScanResult.Progress -> Unit
-                is com.echo.feature.library.scanner.BookScanResult.Complete -> {
-                    bookRepository.replaceBooksForLibrary(result.libraryId, result.books, System.currentTimeMillis())
-                    completeBackgroundTask(taskId, "${result.books.size} books")
-                }
-                is com.echo.feature.library.scanner.BookScanResult.Error ->
-                    failBackgroundTask(taskId, result.message)
-            }
         }
     }
 
@@ -4412,7 +4178,7 @@ class CrossbarViewModel @Inject constructor(
         menuSound.play(MenuSound.SELECT)
         when {
             item.type == CrossbarItemType.VIDEO_FILE -> video.handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent")
-            item.type == CrossbarItemType.LIBRARY_BOOK -> handleBookAction(item.id.removePrefix("book_"), "book_remove_recent")
+            item.type == CrossbarItemType.LIBRARY_BOOK -> bookshelf.handleBookAction(item.id.removePrefix("book_"), "book_remove_recent")
             item.type == CrossbarItemType.MUSIC_TRACK -> music.handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null)
             item.gameId != null -> {
                 val gid = item.gameId
@@ -4781,7 +4547,7 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         if (menu.bookFileId != null) {
-            handleBookAction(menu.bookFileId, itemId)
+            bookshelf.handleBookAction(menu.bookFileId, itemId)
             return
         }
         if (menu.videoLibraryId != null) {
@@ -5206,7 +4972,7 @@ class CrossbarViewModel @Inject constructor(
                 openMediaFoldersContextMenu(item)
             item != null && music.openMusicContextMenu(item) -> Unit
             item != null && video.openVideoContextMenu(item) -> Unit
-            item != null && openBookContextMenu(item) -> Unit
+            item != null && bookshelf.openBookContextMenu(item) -> Unit
             item != null && gallery.openPhotoContextMenu(item) -> Unit
             item?.gameId != null -> openGameContextMenu(item)
             item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu()
@@ -5296,7 +5062,7 @@ class CrossbarViewModel @Inject constructor(
                 val rows = listOf(
                     visibleGames.map { it.lastPlayedAt ?: 0L }.zip(visibleGames.toCrossbarItems()),
                     tracks.recentMusicRows(),
-                    books.map { it.lastOpenedAt ?: 0L }.zip(bookItems(books)),
+                    books.map { it.lastOpenedAt ?: 0L }.zip(bookshelf.bookItems(books)),
                     videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
                     appRows,
                 )
@@ -5335,7 +5101,7 @@ class CrossbarViewModel @Inject constructor(
             }
             RecentLaunch.BOOK  -> {
                 menuSound.play(MenuSound.SELECT)
-                openBook(item.id.removePrefix("book_"))
+                bookshelf.openBook(item.id.removePrefix("book_"))
             }
             RecentLaunch.TRACK -> {
                 menuSound.play(MenuSound.SELECT)
@@ -6108,7 +5874,7 @@ class CrossbarViewModel @Inject constructor(
             BuiltInCategory.MUSIC   -> music.handleMusicSelection(item)
             BuiltInCategory.VIDEO   -> video.handleVideoSelection(item)
             BuiltInCategory.PHOTO   -> gallery.handlePhotoSelection(item)
-            BuiltInCategory.LIBRARY -> handleBooksSelection(item)
+            BuiltInCategory.LIBRARY -> bookshelf.handleBooksSelection(item)
             else -> false
         }
     }
@@ -6170,9 +5936,9 @@ class CrossbarViewModel @Inject constructor(
 
             DrillOutStep.PHOTO_LIBRARY -> gallery.openPhotoView(PhotoNav.Albums)
             DrillOutStep.PHOTO -> gallery.closePhotoView()
-            DrillOutStep.LIBRARY_SERIES -> openBooksView(BooksNav.SeriesList)
-            DrillOutStep.LIBRARY_SHELF -> openBooksView(BooksNav.Shelves)
-            DrillOutStep.LIBRARY -> closeBooksView()
+            DrillOutStep.LIBRARY_SERIES -> bookshelf.openBooksView(BooksNav.SeriesList)
+            DrillOutStep.LIBRARY_SHELF -> bookshelf.openBooksView(BooksNav.Shelves)
+            DrillOutStep.LIBRARY -> bookshelf.closeBooksView()
             DrillOutStep.ROM_FOLDERS -> closeRomFolders()
             DrillOutStep.PLATFORM_FOLDER -> closePlatformFolder()
             null -> return false
@@ -6276,7 +6042,7 @@ class CrossbarViewModel @Inject constructor(
             }
             CrossbarItemType.LIBRARY_BOOK -> {
                 menuSound.play(MenuSound.SELECT)
-                openBook(item.id.removePrefix("book_"))
+                bookshelf.openBook(item.id.removePrefix("book_"))
                 return
             }
             CrossbarItemType.MUSIC_TRACK -> {
@@ -6370,7 +6136,7 @@ class CrossbarViewModel @Inject constructor(
                 openMediaFoldersContextMenu(item)
             item != null && music.openMusicContextMenu(item) -> Unit
             item != null && video.openVideoContextMenu(item) -> Unit
-            item != null && openBookContextMenu(item) -> Unit
+            item != null && bookshelf.openBookContextMenu(item) -> Unit
             item != null && gallery.openPhotoContextMenu(item) -> Unit
             item?.gameId != null -> openGameContextMenu(item)
             item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu()
@@ -7878,8 +7644,8 @@ class CrossbarViewModel @Inject constructor(
         internal const val BOOK_SHELVES_ITEM_ID = "library_shelves"
         internal const val BOOK_SERIES_ITEM_ID = "library_series"
         internal const val ALL_BOOKS_ITEM_ID = "all_books"
-        private const val ADD_BOOK_FOLDER_ITEM_ID = "add_book_folder"
-        private const val ADD_LIBRARY_APPS_ITEM_ID = "add_library_apps"
+        internal const val ADD_BOOK_FOLDER_ITEM_ID = "add_book_folder"
+        internal const val ADD_LIBRARY_APPS_ITEM_ID = "add_library_apps"
 
         private val RECENTLY_PLAYED_LIMIT = com.echo.core.data.repository.InterfacePreferences.LAST_PLAYED_SIZES.max()
 
@@ -7891,7 +7657,7 @@ class CrossbarViewModel @Inject constructor(
         private const val SEARCH_RESULTS_PER_LIBRARY = 40
         private const val NETWORK_CATEGORY_ID = "network"
 
-        private const val LIBRARY_APPS_CATEGORY_ID = BuiltInCategory.LIBRARY
+        internal const val LIBRARY_APPS_CATEGORY_ID = BuiltInCategory.LIBRARY
         internal const val ADD_PHOTO_APPS_ITEM_ID = "add_photo_apps"
         internal const val PHOTO_APPS_CATEGORY_ID = "photos"
 
