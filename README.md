@@ -2,7 +2,7 @@
 
 # ECHO
 
-**Extensible Console Handheld Operator: a controller-first Android home screen in the style of the PSP's XrossMediaBar.**
+**Extensible Console Handheld Operator: a controller-first Android home screen inspired by the XMB.**
 
 <p align="center">
   <img src="docs/screenshots/last-played.jpg" alt="ECHO: Last Played, the home shelf, with Skyrim's art filling the screen" width="820">
@@ -14,8 +14,13 @@
   &nbsp;·&nbsp; Side-loaded APK, not on the Play Store
 </p>
 
-ECHO replaces your Android home screen with one crossbar: categories run left to right,
-their items run top to bottom. Games from the emulators you already have, Android apps, and your
+**ECHO** stands for **Extensible Console Handheld Operator**: *extensible* because its look,
+artwork and (later) behaviour live in a folder you can edit; *console* because it treats a handheld
+like a games console; *operator* because it is the home screen that runs everything else.
+
+It is inspired by the **XMB (XrossMediaBar)**, the cross-shaped menu of the PlayStation Portable and
+PlayStation 3. ECHO replaces your Android home screen with one crossbar: categories run left to
+right, their items run top to bottom. Games from the emulators you already have, Android apps, and your
 own music, video, photos and books all live on it, and all of it works from a controller.
 
 It is local-first. There is no account and no telemetry, and it only goes online when you ask it
@@ -45,108 +50,109 @@ to fetch artwork or metadata.
 
 ## A tour
 
-*Shot on 2026-10-01. Home, the crossbar, games, search and the App Drawer are from an AYANEO Pocket
-FIT Elite (1920×1080) with a real library, on a development build of 1.20.1. Music, video, photos,
-Settings and the confirm prompt are from a 2400×1504 tablet running 1.20.1, with demo files made for
-these screenshots. Game artwork, wallpaper art and app icons belong to their owners.*
+*Shot on 2026-10-04 on an AYANEO Pocket FIT Elite (1920×1080) with a real library, on ECHO 2.2.
+The music, video and photo players further down are from 1.20.1 on a tablet, with demo files.
+Game artwork, wallpaper art, book covers and app icons belong to their owners.*
 
 ### Home
 
 The first column is **Last Played**: everything you opened most recently, games, apps, music,
-video and books together, newest first. Whatever is focused fills the screen. Press LEFT to bring in
-the cover rail.
+video and books together, newest first. Whatever is focused fills the screen, with the wave behind
+it in the colour of its art. Press LEFT, or swipe right, to bring in the **Recent rail**.
 
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/last-played.jpg" width="420"> | <img src="docs/screenshots/last-played-rail.jpg" width="420"> |
-| Last Played | Its cover rail |
+| Last Played | The Recent rail |
+
+The bar along the top holds the **island** (what is playing, or the last thing you opened), the
+section icons, notifications, battery and time. The footer holds **Home** and **Back** on the left,
+the **A** action in the centre, and the screen's own actions on the right. Games and apps launch
+when you **hold A** until the ring fills, so a stray press never launches anything.
 
 ### The crossbar
 
-Each category is a column. Media columns list their own library rows, then the apps that belong
-to them (YouTube under Video, Spotify under Music), then a **Folders** row for the folders they scan.
+Each category is a column. Media columns list their own library rows, then the apps that belong to
+them (Spotify under Music, Stremio under Video), then a **Folders** row for the folders they scan.
 
 | | |
 |:---:|:---:|
-| <img src="docs/screenshots/col-game.jpg" width="420"> | <img src="docs/screenshots/col-shelves.jpg" width="420"> |
-| Emulation (the Game column, renamed): All Games, then one Memory Card per console | Shelves: Playing, Backlog, Recently Added |
-| <img src="docs/screenshots/col-music-playing.jpg" width="420"> | <img src="docs/screenshots/col-network.jpg" width="420"> |
-| Music, with what is playing at the top | Network: web search, and the apps you put there |
-| <img src="docs/screenshots/col-video.jpg" width="420"> | <img src="docs/screenshots/col-photo.jpg" width="420"> |
-| Video | Photo |
-| <img src="docs/screenshots/app-drawer.jpg" width="420"> | |
-| The App Drawer: Recently Used, Apps, Emulators, Games | |
+| <img src="docs/screenshots/col-shelves.jpg" width="420"> | <img src="docs/screenshots/col-game.jpg" width="420"> |
+| Shelves: Playing, Backlog, Completed, Favorites | Emulation: All Games, then one card per console |
+| <img src="docs/screenshots/col-music.jpg" width="420"> | <img src="docs/screenshots/col-video.jpg" width="420"> |
+| Music | Video |
+| <img src="docs/screenshots/col-photo.jpg" width="420"> | <img src="docs/screenshots/col-library.jpg" width="420"> |
+| Photo | Library: books, series and your reader |
 
 ### Games
 
-A focused game takes over the background with its own art and shows its details beside the tile.
-**Y / △** opens its menu on the right edge; anything destructive asks twice. **Metadata ▸ Artwork**
-opens the Artwork Studio.
+A focused game fills the background with its own art and shows its details beside the tile.
+**Menu (≡)** opens its options on a panel at the right edge, with the art blurred behind it;
+anything destructive asks twice. **Game Info** shows play time, platform, screenshots and video.
 
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/game-hover-panel.jpg" width="420"> | <img src="docs/screenshots/game-context-menu.jpg" width="420"> |
-| A focused game in All Games | Its menu |
-| <img src="docs/screenshots/context-menu-confirm.jpg" width="420"> | <img src="docs/screenshots/artwork-studio.jpg" width="420"> |
-| A destructive row asks a second time | The Artwork Studio: background candidates from SteamGridDB |
+| A focused game | Its options |
+| <img src="docs/screenshots/game-info.jpg" width="420"> | <img src="docs/screenshots/artwork-studio.jpg" width="420"> |
+| Game Info | The Artwork Studio (1.20.1) |
 
-### Music
+### The App Drawer and Search
 
-Songs, Artists, Albums and Playlists open a fullscreen browser. Opening a track turns it into a
-spinning disc wearing its cover, then the player. Music keeps playing in the background, and
-**Start** opens a sheet with the transport and your notifications.
-
-| | |
-|:---:|:---:|
-| <img src="docs/screenshots/music-songs.jpg" width="420"> | <img src="docs/screenshots/music-player.jpg" width="420"> |
-| The music browser | The player |
-| <img src="docs/screenshots/launch-disc-music.jpg" width="420"> | <img src="docs/screenshots/status-sheet.jpg" width="420"> |
-| The launch disc as a track opens | The Start sheet |
-
-### Video
-
-Rows show duration, resolution and size. The built-in player seeks with LEFT and RIGHT, pages
-between videos with L1 and R1, and keeps speed, subtitles, audio track and screen mode under
-**Options**. You can choose an external player instead.
+The **App Drawer** (RB) shows the focused app as a hero banner, with **Open** and **Options**, and
+every app below it in columns. Its sections (Recently Used, Apps, Emulators, Games) are icons in the
+top bar; LT and RT move between them. **Search** (Y or LB) works the same way across every library
+at once: the highlighted result is the hero, and the results run full width below it. A newly
+installed app shows up straight away.
 
 | | |
 |:---:|:---:|
-| <img src="docs/screenshots/video-browser.jpg" width="420"> | <img src="docs/screenshots/video-player-controls.jpg" width="420"> |
-| The video list | The player |
-| <img src="docs/screenshots/video-player-options.jpg" width="420"> | |
-| Its options | |
+| <img src="docs/screenshots/app-drawer.jpg" width="420"> | <img src="docs/screenshots/search.jpg" width="420"> |
+| The App Drawer | Search |
 
-### Photos
+### Music, video and photos
 
-A fullscreen viewer that zooms, pans, rotates and pages with L1 and R1. Any photo can become the
-launcher's wallpaper, with its EXIF data stripped.
-
-| | |
-|:---:|:---:|
-| <img src="docs/screenshots/photo-browser.jpg" width="420"> | <img src="docs/screenshots/photo-viewer.jpg" width="420"> |
-| The photo list | The viewer |
-| <img src="docs/screenshots/photo-viewer-options.jpg" width="420"> | |
-| Its options | |
-
-### Search
-
-**Select** searches every library at once: games, apps, music, video, photos and books. Words can
-come in any order and partial words match.
-
-<p align="center"><img src="docs/screenshots/search-results-keyboard.jpg" width="420"></p>
-
-### Settings
-
-Five sections: **Overview, Emulators, Look & Feel, System, Setup**.
+Songs, Artists, Albums and Playlists open a fullscreen browser, and music keeps playing in the
+background with its controls on the island. The built-in video player seeks with LEFT and RIGHT
+and keeps speed, subtitles, audio track and screen mode under **Options**. The photo viewer zooms,
+pans and rotates, and any photo can become the wallpaper with its EXIF data stripped.
 
 | | |
 |:---:|:---:|
-| <img src="docs/screenshots/settings-home.jpg" width="420"> | <img src="docs/screenshots/settings-overview.jpg" width="420"> |
-| Settings | Overview: library, artwork and build |
+| <img src="docs/screenshots/music-player.jpg" width="420"> | <img src="docs/screenshots/video-player-controls.jpg" width="420"> |
+| The music player (1.20.1) | The video player (1.20.1) |
+| <img src="docs/screenshots/photo-viewer.jpg" width="420"> | |
+| The photo viewer (1.20.1) | |
+
+### The top panel and Settings
+
+**Home** (the Guide or View button), or a pull down on the top bar, opens the panel: Notifications,
+Profile, Quick settings, Libraries and Settings. Settings has six sections: **Overview, Emulators,
+Look & Feel, Accounts, System, Setup**.
+
+| | |
+|:---:|:---:|
+| <img src="docs/screenshots/panel-quick-settings.jpg" width="420"> | <img src="docs/screenshots/settings-home.jpg" width="420"> |
+| Quick settings | Settings |
 | <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> | <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> |
-| Look & Feel | Colour Scheme, previewed on the live crossbar |
-| <img src="docs/screenshots/settings-system.jpg" width="420"> | <img src="docs/screenshots/setup-wizard-welcome.jpg" width="420"> |
-| System ▸ Permissions, read from Android rather than assumed | The setup wizard |
+| Look & Feel (1.20.1) | Colour Scheme, previewed on the live crossbar (1.20.1) |
+
+### First run
+
+The setup wizard asks for every permission ECHO can use, including Music, Photos and Video, then
+your folders, emulators and accounts. Each step runs the same code as its Settings screen.
+
+| | |
+|:---:|:---:|
+| <img src="docs/screenshots/setup-wizard-welcome.jpg" width="420"> | <img src="docs/screenshots/setup-wizard-permissions.jpg" width="420"> |
+| Welcome | Step 1, permissions |
+
+### The ECHO folder
+
+ECHO keeps its own folder on your storage, named **ECHO**: `Artwork/` (art for each game, one
+folder per console), `Import/` (other launchers' media to bring in) and `Look/` (icons, sounds,
+fonts, boot and wallpapers as files, kept for themes in a later version). You can open and edit it
+with any file manager. No passwords, API keys or account details are kept there.
 
 ---
 
@@ -160,15 +166,11 @@ and a 2400×1504 tablet. The same build runs on both. Phones and foldables work 
   (840 dp and up). Each group keeps its own **Adjust Crossbar Layout** tuning, so tuning the handheld
   never distorts the tablet.
 - **Touch works everywhere.** Swipe up and down to move through a column and sideways to change
-  category, tap to select and tap again to open, long-press for the options menu, and swipe in
-  from the left edge to go back. *Look & Feel ▸ Touch* sets how far a swipe travels per step and
-  whether the on-screen Back / App Drawer button shows.
+  category (on Last Played, swipe right for the Recent rail), tap to select, long-press for the
+  options menu, and press and hold the A button to launch. With touch, the footer shows a **Back**
+  button, since ECHO hides Android's own. *Look & Feel ▸ Touch* sets how far a swipe travels per
+  step.
 - **A controller is optional on a tablet** and works the same as on a handheld when one is paired.
-
-| | |
-|:---:|:---:|
-| <img src="docs/screenshots/game-hover-panel.jpg" width="420"> | <img src="docs/screenshots/tablet-game-hover.jpg" width="420"> |
-| A focused game on the handheld | The same screen on the tablet |
 
 ---
 
@@ -191,6 +193,15 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 
 ### What the fork changed
 
+- **The ECHO UI kit** (2.1): the ECHO mark, the Sora typeface, a top bar with the island and
+  section icons, a footer with Home and Back on the left and the A action in the centre, Echo Rings
+  and Echo Arcs waves in the colour of what is selected, and one rail panel for every menu.
+- **Hold to launch.** Games and apps launch only when A, or the A button on screen, is held.
+- **Hero layouts** (2.2): Search and the App Drawer show the selected item as a hero banner over a
+  full-width list or grid.
+- **Touch as a first-class input**: a Back button, swipes that follow the d-pad's rules, and holds
+  that work by touch.
+- **The ECHO folder**: one folder for artwork and the editable look.
 - **Last Played is the home shelf.** Games, apps, music, video and books together, with a cover
   rail and Remove from Recent.
 - **A PS3-style wave background**, drawn at 30 fps (20 when idle), optionally over your wallpaper.
@@ -199,7 +210,7 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 - **The crossbar takes on the focused game's art and colour**, with a hover panel in place of a
   separate details page.
 - **One context menu everywhere**, a rail on the right edge. Destructive rows ask twice.
-- **A status strip and a Start sheet** with media transport, device notifications and launcher
+- **A top bar and a top panel** with media transport, device notifications and launcher
   notices.
 - **One search page** across every library, with type-to-search.
 - **Settings rebuilt** into five sections, with an Overview of art cards, a Permissions screen, and
@@ -273,7 +284,7 @@ what is granted and opens the screen to grant the rest.
 
 - **Notifications** (Android 13+): scan and artwork progress, and confirming shortcuts that other
   apps try to add.
-- **Notification access**: your device notifications in the Start sheet.
+- **Notification access**: your device notifications in the top panel.
 - **Usage access**: the App Drawer's Recently Used tab. Android blocks this for side-loaded apps
   until you allow it under *Android Settings ▸ Apps ▸ ECHO ▸ ⋮ ▸ Allow restricted settings*.
 
@@ -286,21 +297,21 @@ access to all of your storage.
 
 | Action | Controller | Keyboard | Touch |
 |---|---|---|---|
-| Move | D-pad / left stick | Arrow keys | Tap |
-| Change category | D-pad ◀ ▶ | ◀ ▶ | Tap the category |
-| Open / launch | **A / ✕** | Enter | Tap |
-| Back | **B / ◯**, or D-pad ◀ | Esc | Back button, edge swipe, swipe left |
-| Options menu | **Y / △** | F3 | Long-press |
-| Change sort | **X / ▢** | F2 | |
-| Drawer tabs, settings sections | **L1 / R1** | Page Up / Page Down | Tap |
-| Previous / next page in the Artwork Studio | **L2 / R2** | | |
-| Search everything | **Select** | | Magnifier, bottom right |
-| Start sheet; confirm in pickers | **Start** | | |
+| Move | D-pad / left stick | Arrow keys | Swipe, or tap |
+| Open | **A** | Enter | Tap |
+| Launch a game or app | Hold **A** | Hold Enter | Hold the A button |
+| Back | **B** | Esc | The Back button in the footer |
+| Options | **Menu (≡)** | F3 | Long-press |
+| Sort, or the screen's X action | **X** | F2 | |
+| Search | **Y**, or **LB** on the crossbar | Tab | Search, in the footer |
+| App Drawer | **RB** on the crossbar, or **B** at the top level | | Apps, in the footer |
+| Categories, tabs, sections and filters | **LT / RT** | Page Up / Page Down | Tap |
+| Page or seek in lists and players | **LB / RB** | | |
+| Home: the top panel | **Guide** or **View** | | Pull down the top bar |
 
-- **B / ◯ at the top level** opens the App Drawer.
 - **D-pad ◀ backs out** of a folder, flyout or settings page wherever LEFT is not already doing
   something. Turn it off with *Look & Feel ▸ Controller ▸ Left Backs Out*.
-- *Look & Feel ▸ Controller* swaps A/B and X/Y. The bindings themselves are fixed.
+- *Look & Feel ▸ Controller* swaps A/B and X/Y.
 
 ---
 
@@ -420,7 +431,7 @@ Each column also lists its apps. Add more with its **Add** row.
 
 ### Search
 
-- **Select** (or the magnifier) searches games, apps, music, video, photos and books together.
+- **Y**, or **LB** on the crossbar, searches games, apps, music, video, photos and books together.
   Results say which library they came from, and opening one takes you to it.
 - The **Search** row at the end of Game, Video, Photo and Library searches only that library.
 - **Quick Search** in Network searches the web in your own browser, or opens an address if you
@@ -512,7 +523,7 @@ Media folders are not in Settings; they are on each column's **Folders** row.
 | Games or media went missing after a reinstall or restore | Relink the folder: **Folders ▸ △ ▸ Relink Folder** |
 | Artwork will not download | Add a key in *Emulators ▸ Scraping Sources* and check the connection |
 | Recently Used is empty | Allow restricted settings for ECHO, then grant usage access (see [Permissions](#permissions)) |
-| No notifications in the Start sheet | Grant notification access in *System ▸ Permissions* |
+| No notifications in the top panel | Grant notification access in *System ▸ Permissions* |
 | The interface is too big, small or off-centre | *Look & Feel ▸ Layout ▸ Adjust Crossbar Layout* |
 
 For a bug report, open *System ▸ Logs*, press **△** on a log and choose **Share**. Logs are
