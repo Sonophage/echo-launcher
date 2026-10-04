@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.domain.model.GamepadAction
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.preferences.core.edit
@@ -345,4 +346,27 @@ class CrossbarLook(
 
         val textColor: Long?,
     )
+
+    internal fun onCustomColorButton(action: GamepadAction, state: CrossbarUiState) {
+        when (action) {
+            GamepadAction.NAVIGATE_UP -> moveCustomColorChannel(-1)
+            GamepadAction.NAVIGATE_DOWN -> moveCustomColorChannel(1)
+            GamepadAction.NAVIGATE_LEFT -> adjustCustomColor(-0.04f)
+            GamepadAction.NAVIGATE_RIGHT -> adjustCustomColor(0.04f)
+            GamepadAction.SELECT -> confirmCustomColor()
+            GamepadAction.BACK, GamepadAction.OPEN_CONTEXT_MENU -> cancelCustomColor()
+            else -> Unit
+        }
+    }
+
+    internal fun onSchemePickerButton(action: GamepadAction, state: CrossbarUiState) {
+        when (action) {
+            GamepadAction.NAVIGATE_UP   -> moveColorSchemePicker(-1)
+            GamepadAction.NAVIGATE_DOWN -> moveColorSchemePicker(+1)
+            GamepadAction.SELECT        -> confirmColorSchemePicker()
+            GamepadAction.BACK,
+            GamepadAction.OPEN_CONTEXT_MENU    -> cancelColorSchemePicker()
+            else -> Unit
+        }
+    }
 }

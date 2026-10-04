@@ -195,4 +195,32 @@ class CrossbarAppPicker(
             else -> closeAppPicker()
         }
     }
+
+    internal fun onButton(action: GamepadAction, state: CrossbarUiState) {
+        when (action) {
+            GamepadAction.NAVIGATE_UP,
+            GamepadAction.NAVIGATE_DOWN,
+            GamepadAction.NAVIGATE_LEFT,
+            GamepadAction.NAVIGATE_RIGHT -> moveAppPicker(action)
+
+            GamepadAction.SELECT -> {
+                val picker = state.appPicker ?: return
+                if (picker.confirmingRemovals) {
+                    if (picker.confirmFocusedOption == AppPickerState.CONFIRM_REMOVE) commitAppPicker()
+                    else vm.cancelConfirm()
+                } else toggleFocusedApp()
+            }
+
+            GamepadAction.HOME -> requestApplyAppPicker()
+            GamepadAction.CHANGE_SORT -> uiState.update { s ->
+                s.copy(appPicker = s.appPicker?.let { p ->
+                    (if (p.searchActive) closeAppPickerSearch(p) else p.copy(searchActive = true)).clampFocus()
+                })
+            }
+
+            GamepadAction.BACK,
+            GamepadAction.OPEN_CONTEXT_MENU -> handleAppPickerBack()
+            else -> Unit
+        }
+    }
 }

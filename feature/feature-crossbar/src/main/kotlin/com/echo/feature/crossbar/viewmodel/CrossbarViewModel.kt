@@ -2624,44 +2624,12 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (state.appPicker != null) {
-            when (action) {
-                GamepadAction.NAVIGATE_UP,
-                GamepadAction.NAVIGATE_DOWN,
-                GamepadAction.NAVIGATE_LEFT,
-                GamepadAction.NAVIGATE_RIGHT -> appPickerSection.moveAppPicker(action)
-
-                GamepadAction.SELECT -> {
-                    val picker = state.appPicker
-                    if (picker.confirmingRemovals) {
-                        if (picker.confirmFocusedOption == AppPickerState.CONFIRM_REMOVE) appPickerSection.commitAppPicker()
-                        else cancelConfirm()
-                    } else appPickerSection.toggleFocusedApp()
-                }
-
-                GamepadAction.HOME -> appPickerSection.requestApplyAppPicker()
-                GamepadAction.CHANGE_SORT -> _uiState.update { s ->
-                    s.copy(appPicker = s.appPicker?.let { p ->
-                        (if (p.searchActive) appPickerSection.closeAppPickerSearch(p) else p.copy(searchActive = true)).clampFocus()
-                    })
-                }
-
-                GamepadAction.BACK,
-                GamepadAction.OPEN_CONTEXT_MENU -> appPickerSection.handleAppPickerBack()
-                else -> Unit
-            }
+            appPickerSection.onButton(action, state)
             return
         }
 
         if (state.musicTrackPicker != null) {
-            when (action) {
-                GamepadAction.NAVIGATE_UP   -> music.moveMusicTrackPicker(-1)
-                GamepadAction.NAVIGATE_DOWN -> music.moveMusicTrackPicker(+1)
-                GamepadAction.SELECT        -> music.activateMusicTrackPicker()
-                GamepadAction.HOME          -> music.confirmMusicTrackPicker()
-                GamepadAction.BACK,
-                GamepadAction.OPEN_CONTEXT_MENU    -> music.closeMusicTrackPicker()
-                else -> Unit
-            }
+            music.onTrackPickerButton(action, state)
             return
         }
 
@@ -2679,36 +2647,7 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (state.notificationsOpen) {
-            val onMusic = state.focusedNotice == NoticeFocus.Media &&
-                (state.mediaStage() as? PanelStage.Music)?.let { it.loaded && it.packageName == null } == true
-            when (action) {
-                GamepadAction.NAVIGATE_UP   -> panel.movePanelCursor(PanelMove.UP)
-                GamepadAction.NAVIGATE_DOWN -> panel.movePanelCursor(PanelMove.DOWN)
-                GamepadAction.NAVIGATE_LEFT  ->
-                    if (onMusic) musicPlayer.prev() else panel.movePanelCursor(PanelMove.LEFT)
-                GamepadAction.NAVIGATE_RIGHT ->
-                    if (onMusic) musicPlayer.next() else panel.movePanelCursor(PanelMove.RIGHT)
-                GamepadAction.PREV_CATEGORY -> panel.movePanelCursor(PanelMove.PREV_TAB)
-                GamepadAction.NEXT_CATEGORY -> panel.movePanelCursor(PanelMove.NEXT_TAB)
-                GamepadAction.SELECT,
-                GamepadAction.CHANGE_SORT,
-                GamepadAction.OPEN_CONTEXT_MENU -> when (state.panelTab) {
-                    PanelTab.NOTIFICATIONS -> runStageButton(action)
-                    PanelTab.PROFILE -> panel.runPanelProfile(action)
-                    PanelTab.QUICK -> if (action == GamepadAction.SELECT) toggleQuickSetting(state.panelQuick)
-                    PanelTab.LIBRARIES -> if (action == GamepadAction.SELECT) toggleQuickSetting(QuickSetting.LIBRARIES)
-                    PanelTab.SETTINGS -> if (action == GamepadAction.SELECT) panel.openPanelSetting(state.panelSetting)
-                }
-                GamepadAction.BACK,
-                GamepadAction.HOME               -> if (action == GamepadAction.BACK && state.panelTab == PanelTab.PROFILE && state.panelProfile.choosing) {
-                    menuSound.play(MenuSound.BACK)
-                    _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
-                } else {
-                    menuSound.play(MenuSound.BACK)
-                    panel.closeNotifications()
-                }
-                else -> Unit
-            }
+            panel.onButton(action, state)
             return
         }
 
@@ -2752,40 +2691,16 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (state.musicPlayerVisible) {
-            when (action) {
-                GamepadAction.SELECT         -> music.musicPlayPause()
-                GamepadAction.NAVIGATE_LEFT  -> music.musicPrev()
-                GamepadAction.NAVIGATE_RIGHT -> music.musicNext()
-                GamepadAction.NAVIGATE_UP    -> music.musicSeekBy(10_000)
-                GamepadAction.NAVIGATE_DOWN  -> music.musicSeekBy(-10_000)
-                GamepadAction.OPEN_CONTEXT_MENU     -> music.openMusicPlayerOptions()
-                GamepadAction.BACK           -> music.closeMusicPlayer()
-                else -> Unit
-            }
+            music.onPlayerButton(action, state)
             return
         }
 
         if (state.customColorPicker != null) {
-            when (action) {
-                GamepadAction.NAVIGATE_UP -> look.moveCustomColorChannel(-1)
-                GamepadAction.NAVIGATE_DOWN -> look.moveCustomColorChannel(1)
-                GamepadAction.NAVIGATE_LEFT -> look.adjustCustomColor(-0.04f)
-                GamepadAction.NAVIGATE_RIGHT -> look.adjustCustomColor(0.04f)
-                GamepadAction.SELECT -> look.confirmCustomColor()
-                GamepadAction.BACK, GamepadAction.OPEN_CONTEXT_MENU -> look.cancelCustomColor()
-                else -> Unit
-            }
+            look.onCustomColorButton(action, state)
             return
         }
         if (state.colorSchemePicker != null) {
-            when (action) {
-                GamepadAction.NAVIGATE_UP   -> look.moveColorSchemePicker(-1)
-                GamepadAction.NAVIGATE_DOWN -> look.moveColorSchemePicker(+1)
-                GamepadAction.SELECT        -> look.confirmColorSchemePicker()
-                GamepadAction.BACK,
-                GamepadAction.OPEN_CONTEXT_MENU    -> look.cancelColorSchemePicker()
-                else -> Unit
-            }
+            look.onSchemePickerButton(action, state)
             return
         }
 
@@ -2806,11 +2721,7 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         if (state.playlistNameDialog != null) {
-            when (action) {
-                GamepadAction.SELECT -> music.onConfirmPlaylistName(state.playlistNameDialog.text)
-                GamepadAction.BACK   -> music.onCancelPlaylistName()
-                else                 -> Unit
-            }
+            music.onPlaylistNameButton(action, state)
             return
         }
 
@@ -2847,42 +2758,22 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (state.search != null) {
-            when (action) {
-                GamepadAction.NAVIGATE_UP,
-                GamepadAction.NAVIGATE_DOWN,
-                GamepadAction.NAVIGATE_LEFT,
-                GamepadAction.NAVIGATE_RIGHT -> librarySearch.moveSearch(searchStep(action))
-                GamepadAction.SELECT        -> librarySearch.onSearchActivatedAt(state.search.selectedIndex)
-                GamepadAction.BACK          -> librarySearch.closeSearch()
-                else -> Unit
-            }
+            librarySearch.onButton(action, state)
             return
         }
 
         if (state.musicBrowser != null) {
-            when (action) {
-                GamepadAction.NAVIGATE_UP    -> music.moveMusicBrowser(-1)
-                GamepadAction.NAVIGATE_DOWN  -> music.moveMusicBrowser(+1)
-                GamepadAction.SELECT         -> music.activateMusicBrowser()
-                GamepadAction.BACK           -> music.onMusicBrowserBack()
-                GamepadAction.OPEN_CONTEXT_MENU     -> music.openMusicBrowserContextMenu()
-                GamepadAction.CHANGE_SORT    -> cycleSort()
-                else -> Unit
-            }
+            music.onBrowserButton(action, state)
             return
         }
 
         if (state.showBootSequence) {
-            if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
-                launching.onBootSequenceComplete()
-            }
+            launching.onBootButton(action, state)
             return
         }
 
         if (state.activeGameBoot != null) {
-            if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
-                launching.onGameBootComplete()
-            }
+            launching.onGameBootButton(action, state)
             return
         }
 

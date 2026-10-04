@@ -355,4 +355,37 @@ class CrossbarPanel(
         menuSound.play(MenuSound.SCROLL)
         uiState.update { it.copy(panelTab = PanelTab.NOTIFICATIONS, noticeCursor = index) }
     }
+
+    internal fun onButton(action: GamepadAction, state: CrossbarUiState) {
+        val onMusic = state.focusedNotice == NoticeFocus.Media &&
+            (state.mediaStage() as? PanelStage.Music)?.let { it.loaded && it.packageName == null } == true
+        when (action) {
+            GamepadAction.NAVIGATE_UP   -> movePanelCursor(PanelMove.UP)
+            GamepadAction.NAVIGATE_DOWN -> movePanelCursor(PanelMove.DOWN)
+            GamepadAction.NAVIGATE_LEFT  ->
+                if (onMusic) vm.musicPlayer.prev() else movePanelCursor(PanelMove.LEFT)
+            GamepadAction.NAVIGATE_RIGHT ->
+                if (onMusic) vm.musicPlayer.next() else movePanelCursor(PanelMove.RIGHT)
+            GamepadAction.PREV_CATEGORY -> movePanelCursor(PanelMove.PREV_TAB)
+            GamepadAction.NEXT_CATEGORY -> movePanelCursor(PanelMove.NEXT_TAB)
+            GamepadAction.SELECT,
+            GamepadAction.CHANGE_SORT,
+            GamepadAction.OPEN_CONTEXT_MENU -> when (state.panelTab) {
+                PanelTab.NOTIFICATIONS -> vm.runStageButton(action)
+                PanelTab.PROFILE -> runPanelProfile(action)
+                PanelTab.QUICK -> if (action == GamepadAction.SELECT) vm.toggleQuickSetting(state.panelQuick)
+                PanelTab.LIBRARIES -> if (action == GamepadAction.SELECT) vm.toggleQuickSetting(QuickSetting.LIBRARIES)
+                PanelTab.SETTINGS -> if (action == GamepadAction.SELECT) openPanelSetting(state.panelSetting)
+            }
+            GamepadAction.BACK,
+            GamepadAction.HOME               -> if (action == GamepadAction.BACK && state.panelTab == PanelTab.PROFILE && state.panelProfile.choosing) {
+                menuSound.play(MenuSound.BACK)
+                uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
+            } else {
+                menuSound.play(MenuSound.BACK)
+                closeNotifications()
+            }
+            else -> Unit
+        }
+    }
 }

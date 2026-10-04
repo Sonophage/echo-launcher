@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.domain.model.GamepadAction
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.domain.model.MusicTrack
@@ -728,4 +729,49 @@ class CrossbarMusic(
 
     internal fun musicPlaylistSiblings(): List<CrossbarItem> =
         uiState.value.musicPlaylists.map { CrossbarItem(id = "pl_${it.id}", title = it.name, playlistId = it.id, type = CrossbarItemType.PLAYLIST) }
+
+    internal fun onTrackPickerButton(action: GamepadAction, state: CrossbarUiState) {
+        when (action) {
+            GamepadAction.NAVIGATE_UP   -> moveMusicTrackPicker(-1)
+            GamepadAction.NAVIGATE_DOWN -> moveMusicTrackPicker(+1)
+            GamepadAction.SELECT        -> activateMusicTrackPicker()
+            GamepadAction.HOME          -> confirmMusicTrackPicker()
+            GamepadAction.BACK,
+            GamepadAction.OPEN_CONTEXT_MENU    -> closeMusicTrackPicker()
+            else -> Unit
+        }
+    }
+
+    internal fun onPlayerButton(action: GamepadAction, state: CrossbarUiState) {
+        when (action) {
+            GamepadAction.SELECT         -> musicPlayPause()
+            GamepadAction.NAVIGATE_LEFT  -> musicPrev()
+            GamepadAction.NAVIGATE_RIGHT -> musicNext()
+            GamepadAction.NAVIGATE_UP    -> musicSeekBy(10_000)
+            GamepadAction.NAVIGATE_DOWN  -> musicSeekBy(-10_000)
+            GamepadAction.OPEN_CONTEXT_MENU     -> openMusicPlayerOptions()
+            GamepadAction.BACK           -> closeMusicPlayer()
+            else -> Unit
+        }
+    }
+
+    internal fun onPlaylistNameButton(action: GamepadAction, state: CrossbarUiState) {
+        when (action) {
+            GamepadAction.SELECT -> onConfirmPlaylistName(state.playlistNameDialog?.text ?: return)
+            GamepadAction.BACK   -> onCancelPlaylistName()
+            else                 -> Unit
+        }
+    }
+
+    internal fun onBrowserButton(action: GamepadAction, state: CrossbarUiState) {
+        when (action) {
+            GamepadAction.NAVIGATE_UP    -> moveMusicBrowser(-1)
+            GamepadAction.NAVIGATE_DOWN  -> moveMusicBrowser(+1)
+            GamepadAction.SELECT         -> activateMusicBrowser()
+            GamepadAction.BACK           -> onMusicBrowserBack()
+            GamepadAction.OPEN_CONTEXT_MENU     -> openMusicBrowserContextMenu()
+            GamepadAction.CHANGE_SORT    -> vm.cycleSort()
+            else -> Unit
+        }
+    }
 }

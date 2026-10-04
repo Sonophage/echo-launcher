@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.domain.model.GamepadAction
 import android.content.Context
 import android.content.Intent
 import android.provider.MediaStore
@@ -349,5 +350,17 @@ class CrossbarLauncher(
     fun onBootSequenceComplete() {
         Timber.d("StartupSeq: boot sequence complete")
         uiState.update { it.copy(showBootSequence = false) }
+    }
+
+    internal fun onBootButton(action: GamepadAction, state: CrossbarUiState) {
+        if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
+            onBootSequenceComplete()
+        }
+    }
+
+    internal fun onGameBootButton(action: GamepadAction, state: CrossbarUiState) {
+        if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
+            onGameBootComplete()
+        }
     }
 }

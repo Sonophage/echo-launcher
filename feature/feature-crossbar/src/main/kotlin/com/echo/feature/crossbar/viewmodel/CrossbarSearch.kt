@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.domain.model.GamepadAction
 import com.echo.core.domain.model.Game
 import com.echo.core.domain.model.MusicTrack
 import com.echo.core.ui.sound.MenuSound
@@ -215,6 +216,17 @@ class CrossbarSearch(
         }
     }
 
+    internal fun onButton(action: GamepadAction, state: CrossbarUiState) {
+        when (action) {
+            GamepadAction.NAVIGATE_UP,
+            GamepadAction.NAVIGATE_DOWN,
+            GamepadAction.NAVIGATE_LEFT,
+            GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action))
+            GamepadAction.SELECT        -> onSearchActivatedAt(state.search?.selectedIndex ?: return)
+            GamepadAction.BACK          -> closeSearch()
+            else -> Unit
+        }
+    }
 }
 
 internal fun com.echo.core.domain.model.Game.toSearchRow(platformName: String?): CrossbarItem = CrossbarItem(
