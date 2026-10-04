@@ -50,8 +50,8 @@ to fetch artwork or metadata.
 
 ## A tour
 
-*Shot on 2026-10-04 on an AYANEO Pocket FIT Elite (1920×1080) with a real library, on ECHO 2.2.
-The music, video and photo players further down are from 1.20.1 on a tablet, with demo files.
+*Shot on 2026-10-04 on an AYANEO Pocket FIT Elite (1920×1080) with a real library, on ECHO 2.2 to 2.4.
+The photo viewer further down is from 1.20.1 on a tablet, with demo files.
 Game artwork, wallpaper art, book covers and app icons belong to their owners.*
 
 ### Home
@@ -72,8 +72,9 @@ when you **hold A** until the ring fills, so a stray press never launches anythi
 
 ### The crossbar
 
-Each category is a column. Media columns list their own library rows, then the apps that belong to
-them (Spotify under Music, Stremio under Video), then a **Folders** row for the folders they scan.
+Each category is a column. Media columns list the apps that belong to them first (Spotify under
+Music, Stremio under Video), then their own library rows, ending with a **Folders** row for the
+folders they scan.
 
 | | |
 |:---:|:---:|
@@ -95,7 +96,7 @@ anything destructive asks twice. **Game Info** shows play time, platform, screen
 | <img src="docs/screenshots/game-hover-panel.jpg" width="420"> | <img src="docs/screenshots/game-context-menu.jpg" width="420"> |
 | A focused game | Its options |
 | <img src="docs/screenshots/game-info.jpg" width="420"> | <img src="docs/screenshots/artwork-studio.jpg" width="420"> |
-| Game Info | The Artwork Studio (1.20.1) |
+| Game Info | The Artwork Studio: pick where the art comes from |
 
 ### The App Drawer and Search
 
@@ -107,8 +108,10 @@ installed app shows up straight away.
 
 | | |
 |:---:|:---:|
-| <img src="docs/screenshots/app-drawer.jpg" width="420"> | <img src="docs/screenshots/search.jpg" width="420"> |
-| The App Drawer | Search |
+| <img src="docs/screenshots/app-drawer.jpg" width="420"> | <img src="docs/screenshots/app-drawer-context-menu.jpg" width="420"> |
+| The App Drawer | An app's options |
+| <img src="docs/screenshots/search.jpg" width="420"> | |
+| Search | |
 
 ### Music, video and photos
 
@@ -119,8 +122,10 @@ pans and rotates, and any photo can become the wallpaper with its EXIF data stri
 
 | | |
 |:---:|:---:|
-| <img src="docs/screenshots/music-player.jpg" width="420"> | <img src="docs/screenshots/video-player-controls.jpg" width="420"> |
-| The music player (1.20.1) | The video player (1.20.1) |
+| <img src="docs/screenshots/music-songs.jpg" width="420"> | <img src="docs/screenshots/music-player.jpg" width="420"> |
+| Songs | The music player |
+| <img src="docs/screenshots/video-browser.jpg" width="420"> | <img src="docs/screenshots/video-player-controls.jpg" width="420"> |
+| Videos | The video player |
 | <img src="docs/screenshots/photo-viewer.jpg" width="420"> | |
 | The photo viewer (1.20.1) | |
 
@@ -132,10 +137,14 @@ Look & Feel, Accounts, System, Setup**.
 
 | | |
 |:---:|:---:|
-| <img src="docs/screenshots/panel-quick-settings.jpg" width="420"> | <img src="docs/screenshots/settings-home.jpg" width="420"> |
-| Quick settings | Settings |
-| <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> | <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> |
-| Look & Feel | Colour Scheme, previewed on the live crossbar (1.20.1) |
+| <img src="docs/screenshots/panel-quick-settings.jpg" width="420"> | <img src="docs/screenshots/panel-libraries.jpg" width="420"> |
+| Quick settings | Libraries: which columns are on the crossbar |
+| <img src="docs/screenshots/settings-home.jpg" width="420"> | <img src="docs/screenshots/settings-overview.jpg" width="420"> |
+| Settings | Overview: your library at a glance |
+| <img src="docs/screenshots/settings-emulators.jpg" width="420"> | <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> |
+| Emulators: the Library Manager | Look & Feel |
+| <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> | <img src="docs/screenshots/settings-system.jpg" width="420"> |
+| Colour Scheme, previewed on the live crossbar | System: About, Logs, Backup & Restore |
 
 ### First run
 
