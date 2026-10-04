@@ -3,27 +3,23 @@ package com.echo.feature.settings.viewmodel
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Immutable
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.echo.core.data.datastore.echoDataStore
+import com.echo.core.data.repository.CoreInventory
 import com.echo.core.data.repository.FolderLinkStatus
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.data.repository.MediaRootRepository
-import com.echo.core.data.repository.CoreInventory
 import com.echo.core.data.repository.RomRootRepository
-import com.echo.core.data.repository.Vita3KLibrary
 import com.echo.core.data.repository.SafGrants
+import com.echo.core.data.repository.Vita3KLibrary
 import com.echo.feature.artwork.MetadataApiKeyProvider
 import com.echo.feature.artwork.api.ArtworkImportManager
-import com.echo.feature.artwork.api.IgdbApi
-import com.echo.feature.artwork.api.ScreenScraperApi
 import com.echo.feature.artwork.api.SgdbApiKeyProvider
-import com.echo.feature.artwork.importer.DetectedImportSource
-import com.echo.feature.artwork.portable.PortableArtworkLibrary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,17 +29,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class SetupStep {
-    WELCOME, PERMISSIONS, ROM_ROOTS, MUSIC, VIDEO, PHOTO, BOOKS, ARTWORK, SERVICES,
-    VITA, RETROARCH, PERSONALIZE, FINISH,
-}
-
-@Immutable
-data class ArtworkSourceUi(val label: String, val systems: Int)
+enum class SetupStep { PERMISSIONS, STORAGE, EMULATORS, ACCOUNTS }
 
 @Immutable
 data class InitialSetupUiState(
-    val step: SetupStep = SetupStep.WELCOME,
+    val step: SetupStep = SetupStep.PERMISSIONS,
 
     val retroArchInstalled: Boolean = false,
 
@@ -58,13 +48,10 @@ data class InitialSetupUiState(
     val isHomeLauncher: Boolean = false,
 
     val artworkFolderName: String? = null,
-    val artworkSources: List<ArtworkSourceUi> = emptyList(),
 
     val hasSgdb: Boolean = false,
     val hasTmdb: Boolean = false,
     val igdbClientId: String = "",
-
-    val ssEnabled: Boolean = false,
     val ssUsername: String = "",
 
     val retroArchLinked: Boolean = false,
@@ -74,27 +61,41 @@ data class InitialSetupUiState(
     val vitaFolderName: String? = null,
     val message: String? = null,
 
-    val igdbStatus: String? = null,
-    val ssStatus: String? = null,
-
-    val autoFitCrossbarLayout: Boolean = false,
+    val suggestions: Map<StorageSlot, String> = emptyMap(),
 ) {
-    val hasIgdb: Boolean get() = igdbClientId.isNotBlank()
-
     private val reachableSteps: List<SetupStep>
-        get() = SetupStep.entries.filter {
-            (it != SetupStep.RETROARCH || retroArchInstalled) &&
-                (it != SetupStep.VITA || vita3KInstalled)
-        }
+        get() = reachableSetupSteps(retroArchInstalled, vita3KInstalled)
 
     val stepNumber: Int get() = (reachableSteps.indexOf(step) + 1).coerceAtLeast(1)
 
     val stepCount: Int get() = reachableSteps.size
-    val hasScreenScraper: Boolean get() = ssUsername.isNotBlank()
-    val anyFolderSet: Boolean get() =
-        romRoots.isNotEmpty() || musicRoots.isNotEmpty() || videoRoots.isNotEmpty() ||
-            photoRoots.isNotEmpty() || bookRoots.isNotEmpty() || artworkFolderName != null
+
+    val nextStep: SetupStep? get() = reachableSteps.getOrNull(reachableSteps.indexOf(step) + 1)
+
+    val scrapersConnected: Int get() =
+        listOf(hasSgdb, hasTmdb, igdbClientId.isNotBlank(), ssUsername.isNotBlank()).count { it }
+
+    fun rootsFor(slot: StorageSlot): List<RootFolderRow> = when (slot) {
+        StorageSlot.GAMES -> romRoots
+        StorageSlot.MUSIC -> musicRoots
+        StorageSlot.VIDEO -> videoRoots
+        StorageSlot.PHOTOS -> photoRoots
+        StorageSlot.BOOKS -> bookRoots
+        StorageSlot.ARTWORK -> emptyList()
+    }
 }
+
+internal fun reachableSetupSteps(retroArchInstalled: Boolean, vita3KInstalled: Boolean): List<SetupStep> =
+    SetupStep.entries.filter { it != SetupStep.EMULATORS || retroArchInstalled || vita3KInstalled }
+
+internal val StorageSlot.mediaKind: MediaRootKind?
+    get() = when (this) {
+        StorageSlot.MUSIC -> MediaRootKind.MUSIC
+        StorageSlot.VIDEO -> MediaRootKind.VIDEO
+        StorageSlot.PHOTOS -> MediaRootKind.PHOTO
+        StorageSlot.BOOKS -> MediaRootKind.BOOK
+        StorageSlot.GAMES, StorageSlot.ARTWORK -> null
+    }
 
 @Immutable
 private data class RootLists(
@@ -134,40 +135,35 @@ class InitialSetupViewModel @Inject constructor(
     private val vita3KLibrary: Vita3KLibrary,
     private val sgdbKeys: SgdbApiKeyProvider,
     private val metadataKeys: MetadataApiKeyProvider,
-    private val igdbApi: IgdbApi,
-    private val screenScraperApi: ScreenScraperApi,
     private val wizardMediaScanRunner: com.echo.feature.settings.media.WizardMediaScanRunner,
     private val romRootScanRunner: RomRootScanRunner,
     private val standardRomFolders: StandardRomFolders,
     private val launcherShortcuts: com.echo.feature.appbar.LauncherShortcutRepository,
     private val tmdbKeys: com.echo.feature.artwork.api.TmdbApiKeyProvider,
     private val artworkFolderSetup: ArtworkFolderSetup,
+    private val storageSuggestions: StorageSuggestions,
 ) : ViewModel() {
     private val scratch = MutableStateFlow(InitialSetupUiState())
 
-    private var detectedArtworkSources: List<DetectedImportSource> = emptyList()
-
     init {
         viewModelScope.launch {
-            val ssEnabled = screenScraperApi.isEnabled()
             scratch.update {
                 it.copy(
-                    ssEnabled = ssEnabled,
                     retroArchInstalled = isRetroArchInstalled(),
                     vita3KInstalled = isVita3KInstalled(),
                 )
             }
             readRetroArchState()
         }
+        viewModelScope.launch(Dispatchers.IO) {
+            val suggested = runCatching { storageSuggestions.suggest() }.getOrDefault(emptyMap())
+            scratch.update { it.copy(suggestions = suggested.mapValues { (_, uri) -> uri.toString() }) }
+        }
         refreshGrants()
     }
 
     fun refreshGrants() {
-        scratch.update {
-            it.copy(
-                isHomeLauncher = launcherShortcuts.isDefaultLauncher(),
-            )
-        }
+        scratch.update { it.copy(isHomeLauncher = launcherShortcuts.isDefaultLauncher()) }
     }
 
     fun homeRoleIntent(): android.content.Intent = launcherShortcuts.homeRoleRequestIntent()
@@ -262,69 +258,46 @@ class InitialSetupViewModel @Inject constructor(
             parkedForExcursion = false
             return
         }
-        doResetWizard()
-    }
-
-    private fun doResetWizard() = scratch.update {
-        it.copy(
-            step = SetupStep.WELCOME, message = null, igdbStatus = null, ssStatus = null,
-            retroArchDetecting = false,
-        )
+        scratch.update { it.copy(step = SetupStep.PERMISSIONS, message = null, retroArchDetecting = false) }
     }
 
     private fun reachableSteps(): List<SetupStep> =
-        SetupStep.entries.filter {
-            (it != SetupStep.RETROARCH || scratch.value.retroArchInstalled) &&
-                (it != SetupStep.VITA || scratch.value.vita3KInstalled)
-        }
+        reachableSetupSteps(scratch.value.retroArchInstalled, scratch.value.vita3KInstalled)
 
     fun nextStep() {
         val order = reachableSteps()
         val next = order.getOrNull(order.indexOf(scratch.value.step) + 1)
-        scratch.update {
-            it.copy(step = next ?: it.step, message = null, igdbStatus = null, ssStatus = null)
-        }
+        scratch.update { it.copy(step = next ?: it.step, message = null) }
     }
 
     fun previousStep(): Boolean {
-        if (scratch.value.step == SetupStep.WELCOME) return false
         val order = reachableSteps()
         val idx = order.indexOf(scratch.value.step)
         if (idx <= 0) return false
-        scratch.update {
-            it.copy(
-                step = order[idx - 1],
-                message = null, igdbStatus = null, ssStatus = null,
-            )
-        }
+        scratch.update { it.copy(step = order[idx - 1], message = null) }
         return true
     }
 
-    fun addRomRoot(uri: Uri) {
+    fun onStoragePicked(slot: StorageSlot, replacing: String?, uri: Uri) {
+        if (slot == StorageSlot.ARTWORK) return onArtworkFolderPicked(uri)
+        val kind = slot.mediaKind
         viewModelScope.launch {
-            romRootRepository.persist(uri, writable = true)
-            romRootRepository.add(uri.toString())
-
-            romRootScanRunner.kickoff()
+            if (kind == null) {
+                romRootRepository.persist(uri, writable = true)
+                if (replacing != null) romRootRepository.replace(replacing, uri.toString())
+                else romRootRepository.add(uri.toString())
+                romRootScanRunner.kickoff()
+            } else {
+                mediaRootRepository.persist(uri)
+                if (replacing != null) mediaRootRepository.replace(kind, replacing, uri.toString())
+                else mediaRootRepository.add(kind, uri.toString())
+                wizardMediaScanRunner.kickoff(kind)
+            }
         }
     }
-
-    fun removeRomRoot(treeUri: String) {
-        viewModelScope.launch { romRootRepository.remove(treeUri) }
-    }
-
-    fun relinkRomRoot(oldTreeUri: String, newUri: Uri) {
-        viewModelScope.launch {
-            romRootRepository.persist(newUri, writable = true)
-            romRootRepository.replace(oldTreeUri, newUri.toString())
-            romRootScanRunner.kickoff()
-        }
-    }
-
-    fun rescanRomRoots() = romRootScanRunner.kickoff()
 
     fun createStandardRomFolders() {
-        val firstRoot = scratch.value.romRoots.firstOrNull()?.treeUri ?: return
+        val firstRoot = uiState.value.romRoots.firstOrNull()?.treeUri ?: return
         viewModelScope.launch {
             val result = standardRomFolders.createUnder(firstRoot)
             scratch.update {
@@ -337,88 +310,11 @@ class InitialSetupViewModel @Inject constructor(
         }
     }
 
-    fun addMediaRoot(kind: MediaRootKind, uri: Uri) {
-        viewModelScope.launch {
-            mediaRootRepository.persist(uri)
-            mediaRootRepository.add(kind, uri.toString())
-            wizardMediaScanRunner.kickoff(kind)
-        }
-    }
-
-    fun removeMediaRoot(kind: MediaRootKind, treeUri: String) {
-        viewModelScope.launch {
-            mediaRootRepository.remove(kind, treeUri)
-
-            wizardMediaScanRunner.kickoff(kind)
-        }
-    }
-
-    fun relinkMediaRoot(kind: MediaRootKind, oldTreeUri: String, newUri: Uri) {
-        viewModelScope.launch {
-            mediaRootRepository.persist(newUri)
-            mediaRootRepository.replace(kind, oldTreeUri, newUri.toString())
-            wizardMediaScanRunner.kickoff(kind)
-        }
-    }
-
-    fun rescanMediaRoot(kind: MediaRootKind) = wizardMediaScanRunner.kickoff(kind)
-
-    fun onArtworkFolderPicked(uri: Uri) {
+    private fun onArtworkFolderPicked(uri: Uri) {
         viewModelScope.launch {
             val linked = artworkFolderSetup.link(uri)
-            if (linked == null) {
-                scratch.update { it.copy(message = ArtworkFolderSetup.COULD_NOT_LINK) }
-                return@launch
-            }
-
-            val sources = runCatching { artworkImportManager.detectSources() }.getOrDefault(emptyList())
-            detectedArtworkSources = sources
             scratch.update {
-                it.copy(
-                    message = artworkFolderSetup.describe(linked),
-                    artworkSources = sources.map { s -> ArtworkSourceUi(s.label, s.systems.size) },
-                )
-            }
-        }
-    }
-
-    fun forgetArtworkFolder() {
-        viewModelScope.launch {
-            artworkImportManager.forgetFolder()
-            detectedArtworkSources = emptyList()
-            scratch.update {
-                it.copy(
-                    artworkSources = emptyList(),
-                    message = "Artwork folder released — files on disk were not touched.",
-                )
-            }
-        }
-    }
-
-    fun importArtworkNow() {
-        val detected = detectedArtworkSources.firstOrNull()
-        val label = scratch.value.artworkSources.firstOrNull()?.label
-        if (detected == null) {
-            scratch.update {
-                it.copy(message = "Nothing to import yet — place files under the artwork folder's import/ directory.")
-            }
-            return
-        }
-        viewModelScope.launch {
-            val plan = runCatching { artworkImportManager.buildPlan(detected) }.getOrNull()
-            if (plan == null) {
-                scratch.update { it.copy(message = "Could not read that import source.") }
-                return@launch
-            }
-            if (plan.itemCount == 0) {
-                scratch.update { it.copy(message = "Nothing to import — everything is already present.") }
-                return@launch
-            }
-            artworkImportManager.startImport(plan, PortableArtworkLibrary.Transfer.COPY)
-            scratch.update {
-                it.copy(
-                    message = "Importing \"${label ?: plan.sourceLabel}\" — progress shows in notifications; details land in Settings ▸ Artwork Import.",
-                )
+                it.copy(message = linked?.let(artworkFolderSetup::describe) ?: ArtworkFolderSetup.COULD_NOT_LINK)
             }
         }
     }
@@ -431,29 +327,6 @@ class InitialSetupViewModel @Inject constructor(
                 if (outcome.keptPrevious) NO_CORES_KEPT_PREVIOUS
                 else "RetroArch linked — installed cores are now offered in Emulators.",
             )
-        }
-    }
-
-    fun redetectRetroArchCores() {
-        if (!scratch.value.retroArchLinked) return
-        viewModelScope.launch {
-            scratch.update { it.copy(retroArchDetecting = true) }
-            retroArchSetup.redetect()
-            readRetroArchState("RetroArch cores re-checked.")
-        }
-    }
-
-    fun unlinkRetroArch() {
-        viewModelScope.launch {
-            retroArchSetup.unlink()
-            scratch.update {
-                it.copy(
-                    retroArchLinked = false,
-                    retroArchCoreCount = null,
-                    retroArchDetecting = false,
-                    message = "RetroArch link removed — no RetroArch cores will be offered until you link again.",
-                )
-            }
         }
     }
 
@@ -482,86 +355,9 @@ class InitialSetupViewModel @Inject constructor(
         }
     }
 
-    fun forgetVitaFolder() {
-        viewModelScope.launch {
-            vita3KLibrary.clear()
-            scratch.update {
-                it.copy(message = "Vita3K data folder released — files on disk were not touched.")
-            }
-        }
-    }
-
-    fun connectSgdb(apiKey: String) {
-        if (apiKey.isBlank()) return
-        viewModelScope.launch {
-            val protection = sgdbKeys.saveKey(apiKey.trim())
-            val message = ServiceConnectors.unprotectedWarning("SteamGridDB key", protection) ?: "SteamGridDB connected"
-            scratch.update { it.copy(message = message) }
-        }
-    }
-
-    fun connectTmdb(apiKey: String) {
-        if (apiKey.isBlank()) return
-        viewModelScope.launch {
-            val protection = tmdbKeys.saveKey(apiKey.trim())
-            val message = ServiceConnectors.unprotectedWarning("TMDB key", protection) ?: "TMDB connected"
-            scratch.update { it.copy(message = message) }
-        }
-    }
-
-    fun connectIgdb(clientId: String, clientSecret: String) {
-        if (clientId.isBlank() || clientSecret.isBlank()) return
-        viewModelScope.launch {
-            val protection = metadataKeys.saveIgdbCredentials(clientId.trim(), clientSecret.trim())
-            val message = ServiceConnectors.unprotectedWarning("IGDB client secret", protection) ?: "IGDB connected"
-            scratch.update { it.copy(message = message, igdbStatus = null) }
-        }
-    }
-
-    fun testIgdbCredentials(clientId: String, clientSecret: String) {
-        viewModelScope.launch {
-            scratch.update { it.copy(igdbStatus = "Testing…") }
-            val status = ServiceConnectors.testIgdb(igdbApi, clientId, clientSecret)
-            scratch.update { it.copy(igdbStatus = status) }
-        }
-    }
-
-    fun dismissIgdbStatus() = scratch.update { it.copy(igdbStatus = null) }
-
-    fun testSsCredentials(username: String, password: String) {
-        viewModelScope.launch {
-            scratch.update { it.copy(ssStatus = "Testing…") }
-            val status = ServiceConnectors.testScreenScraper(screenScraperApi, username, password)
-            scratch.update { it.copy(ssStatus = status) }
-        }
-    }
-
-    fun dismissSsStatus() = scratch.update { it.copy(ssStatus = null) }
-
-    fun toggleAutoFitCrossbarLayout(enabled: Boolean) {
-        scratch.update { it.copy(autoFitCrossbarLayout = enabled) }
-    }
-
-    private suspend fun writeAutoFitPreset() {
-        val target = ClassicCrossbarLayout.forWindow(context)
-        context.echoDataStore.edit { prefs -> ClassicCrossbarLayout.write(prefs, target) }
-    }
-
     fun finishSetup() {
         viewModelScope.launch {
-            if (scratch.value.autoFitCrossbarLayout) {
-                writeAutoFitPreset()
-            }
             context.echoDataStore.edit { it[KEY_INITIAL_SETUP_SEEN] = true }
-        }
-    }
-
-    fun connectScreenScraper(username: String, password: String) {
-        if (username.isBlank() || password.isBlank()) return
-        viewModelScope.launch {
-            val protection = metadataKeys.saveSsCredentials(username.trim(), password.trim())
-            val message = ServiceConnectors.unprotectedWarning("ScreenScraper password", protection) ?: "ScreenScraper connected"
-            scratch.update { it.copy(message = message, ssStatus = null) }
         }
     }
 

@@ -539,25 +539,25 @@ class SettingsScaffoldNavigationTest {
     }
 
     @Test
-    fun `Go to your library still applies the auto-fit choice`() {
+    fun `the Accounts page offers both ways out, games first when there are games`() {
         val calls = mutableListOf<String>()
         showScreen(onBack = {}) {
-            FinishPage(
+            AccountsPage(
                 state = InitialSetupUiState(romRoots = listOf(RootFolderRow("content://roms", "ROMS", linked = true))),
-                onFinishSetup = { calls += "finishSetup" },
-                onOpenLibraryManager = { calls += "libraryManager" },
+                onOpenScreen = { calls += it },
+                onFinish = { calls += "finish" },
                 onGoToLibrary = { calls += "library" },
-                onFinish = { calls += "done" },
             )
         }
 
-        assertFocusedRow("Open Library Manager")
+        repeat(3) { press(GamepadAction.NAVIGATE_DOWN) }
+        assertFocusedRow("Go to your games")
         press(GamepadAction.SELECT)
         press(GamepadAction.NAVIGATE_DOWN)
-        assertFocusedRow("Go to your library")
+        assertFocusedRow("Finish")
         press(GamepadAction.SELECT)
 
-        assertEquals(listOf("finishSetup", "libraryManager", "finishSetup", "library"), calls)
+        assertEquals(listOf("library", "finish"), calls)
     }
 
     @Test
