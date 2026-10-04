@@ -52,6 +52,17 @@ class AppPermissionsTest {
     }
 
     @Test
+    fun `setup offers every permission the user can grant, so a new device is not left without media`() {
+        val wizard = AppPermissions.forWizard(Build.VERSION_CODES.TIRAMISU).map { it.id }
+        AppPermissions.forSdk(Build.VERSION_CODES.TIRAMISU)
+            .filter { it.route != GrantRoute.INSTALL_TIME }
+            .forEach { assertTrue("${it.id} can be granted but setup never offers it", it.id in wizard) }
+        assertTrue("read_media_audio" in wizard)
+        assertTrue("storage on old Android", "read_external_storage" in AppPermissions.forWizard(Build.VERSION_CODES.Q).map { it.id })
+        assertFalse("install-time rows have nothing to tap", "query_all_packages" in wizard)
+    }
+
+    @Test
     fun `an install-time row reads as unavailable rather than pretending it can be granted`() {
         assertEquals("Granted", permissionStateLabel(true, GrantRoute.INSTALL_TIME))
         assertEquals("Unavailable", permissionStateLabel(false, GrantRoute.INSTALL_TIME))
@@ -64,7 +75,7 @@ class AppPermissionsTest {
         val manifest = java.io.File("../../app/src/main/AndroidManifest.xml")
             .takeIf { it.exists() }
             ?: java.io.File("app/src/main/AndroidManifest.xml")
-        if (!manifest.exists()) return
+        assertTrue("the app manifest was not found from ${java.io.File(".").absolutePath}", manifest.exists())
         val text = manifest.readText()
         AppPermissions.ALL.mapNotNull { it.manifestName }.forEach {
             assertTrue("$it is on the permissions screen but not in the manifest", text.contains(it))

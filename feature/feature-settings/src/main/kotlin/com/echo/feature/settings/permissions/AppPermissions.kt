@@ -18,7 +18,6 @@ data class AppPermission(
     val manifestName: String? = null,
     val minSdk: Int = 1,
     val maxSdk: Int = Int.MAX_VALUE,
-    val inWizard: Boolean = false,
 )
 
 object AppPermissions {
@@ -31,14 +30,12 @@ object AppPermissions {
             label = "Usage access",
             why = "Sorts the app drawer by what you have opened recently",
             route = GrantRoute.SYSTEM_SCREEN,
-            inWizard = true,
         ),
         AppPermission(
             id = NOTIFICATION_LISTENER,
             label = "Notification access",
             why = "Shows notifications from other apps in the top bar",
             route = GrantRoute.SYSTEM_SCREEN,
-            inWizard = true,
         ),
         AppPermission(
             id = "post_notifications",
@@ -47,7 +44,6 @@ object AppPermissions {
             route = GrantRoute.REQUEST,
             manifestName = "android.permission.POST_NOTIFICATIONS",
             minSdk = Build.VERSION_CODES.TIRAMISU,
-            inWizard = true,
         ),
         AppPermission(
             id = "read_media_audio",
@@ -99,7 +95,9 @@ object AppPermissions {
 
     fun forSdk(sdk: Int): List<AppPermission> = ALL.filter { sdk >= it.minSdk && sdk <= it.maxSdk }
 
-    fun forWizard(sdk: Int): List<AppPermission> = forSdk(sdk).filter { it.inWizard }
+    // a new device needs every grant the user can give, so setup offers all of them; install-time
+    // rows have nothing to tap (owner, 2026-10-04: the media permissions were missing here)
+    fun forWizard(sdk: Int): List<AppPermission> = forSdk(sdk).filter { it.route != GrantRoute.INSTALL_TIME }
 }
 
 fun permissionStateLabel(granted: Boolean, route: GrantRoute): String = when {
