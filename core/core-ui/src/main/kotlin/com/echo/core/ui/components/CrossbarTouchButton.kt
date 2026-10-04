@@ -1,5 +1,6 @@
 package com.echo.core.ui.components
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,7 +22,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -63,7 +63,7 @@ fun CrossbarBackTouchButton(
             color = Color.White,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            style = TextStyle(shadow = CrossbarGlyphShadow),
+            style = EchoTextStyle.copy(shadow = CrossbarGlyphShadow),
         )
     }
 }
@@ -81,7 +81,7 @@ fun CrossbarGlyphTouchButton(
             color = Color.White,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            style = TextStyle(shadow = CrossbarGlyphShadow),
+            style = EchoTextStyle.copy(shadow = CrossbarGlyphShadow),
         )
     }
 }
@@ -115,7 +115,7 @@ fun CrossbarHeaderPill(
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                style = TextStyle(shadow = CrossbarGlyphShadow),
+                style = EchoTextStyle.copy(shadow = CrossbarGlyphShadow),
             )
             Spacer(Modifier.width(6.dp))
         }
@@ -124,7 +124,7 @@ fun CrossbarHeaderPill(
             color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
-            style = TextStyle(shadow = CrossbarGlyphShadow),
+            style = EchoTextStyle.copy(shadow = CrossbarGlyphShadow),
         )
     }
 }
@@ -151,7 +151,7 @@ fun CrossbarTouchPill(
             color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            style = TextStyle(shadow = CrossbarGlyphShadow),
+            style = EchoTextStyle.copy(shadow = CrossbarGlyphShadow),
         )
     }
 }

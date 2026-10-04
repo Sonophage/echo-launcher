@@ -1,5 +1,6 @@
 package com.echo.feature.appbar.appdrawer
 
+import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import android.os.Build
 import androidx.compose.animation.animateColorAsState
@@ -47,7 +48,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -237,7 +237,7 @@ private fun WallTile(
                     .padding(horizontal = u.dp(16), vertical = u.dp(14)),
                 verticalArrangement = Arrangement.spacedBy(u.dp(3)),
             ) {
-                eyebrow?.let { Text(it.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(10), letterSpacing = 0.16.em)) }
+                eyebrow?.let { Text(it.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(10), letterSpacing = 0.16.em)) }
                 Text(app.label, color = Color.White, fontSize = u.sp(17), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -267,7 +267,7 @@ internal fun WallInfo(app: InstalledApp, u: DesignUnits, onLaunch: () -> Unit, o
         "$kind · ${if (game) "Played" else "Used"} ${relativeTime(System.currentTimeMillis(), app.lastUsedAt).lowercase()}"
     } else kind
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(14))) {
-        Text(eyebrow.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(12), letterSpacing = 0.16.em))
+        Text(eyebrow.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(12), letterSpacing = 0.16.em))
         Text(app.label, color = Color.White, fontSize = u.sp(52), lineHeight = u.sp(54), fontWeight = FontWeight.ExtraLight,
             letterSpacing = (-0.03).em, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (app.playTimeMillis > 0L) {
@@ -309,7 +309,7 @@ internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, on
 
 @Composable
 private fun Hint(actions: List<GamepadAction>, label: String, u: DesignUnits, onClick: () -> Unit) {
-    val style = TextStyle(color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(13), fontWeight = FontWeight.Light)
+    val style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(13), fontWeight = FontWeight.Light)
     if (LocalPadPrompts.current) {
         ControllerPrompt(actions, label, Modifier.clip(RoundedCornerShape(u.dp(8))).clickable(onClick = onClick),
             labelStyle = style, glyphSize = u.dp(22), spacing = u.dp(8))

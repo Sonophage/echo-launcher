@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
 
 @Composable
 fun CreditsSettingsScreen(
@@ -124,13 +123,11 @@ fun CreditsSettingsScreen(
             Spacer(Modifier.height(16.dp))
             SettingsGroup("Typeface")
             CreditParagraph(
-                "The launcher is set in Instrument Sans, drawn by Rodrigo Fuenzalida and " +
-                    "Jordan Egstad for Instrument. It stands in for the PlayStation interface's " +
-                    "own SST, which Monotype drew for Sony and which is not licensed for " +
-                    "bundling here."
+                "The launcher is set in Sora, drawn by Jonathan Barnbrook and Julián Moncada " +
+                    "for the Sora project. It is the typeface of the ECHO UI kit."
             )
-            CreditLine("Typeface", "Instrument Sans — github.com/Instrument/instrument-sans")
-            CreditLine("Author", "The Instrument Sans Project Authors")
+            CreditLine("Typeface", "Sora — github.com/sora-xor/sora-font")
+            CreditLine("Author", "The Sora Project Authors")
             CreditLine("License", "SIL Open Font License 1.1")
 
             Spacer(Modifier.height(16.dp))

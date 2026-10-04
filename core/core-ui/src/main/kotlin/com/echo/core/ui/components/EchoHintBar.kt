@@ -1,5 +1,6 @@
 package com.echo.core.ui.components
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +33,6 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -183,14 +183,14 @@ private fun ActionTab(
             Text(
                 primary.label,
                 color = Color.White,
-                style = TextStyle(fontSize = u.sp(13), lineHeight = u.sp(13) * 1.15f, fontWeight = FontWeight.Medium),
+                style = EchoTextStyle.copy(fontSize = u.sp(13), lineHeight = u.sp(13) * 1.15f, fontWeight = FontWeight.Medium),
                 maxLines = 1,
             )
             primary.detail?.let {
                 Text(
                     it,
                     color = Color.White.copy(alpha = 0.75f),
-                    style = TextStyle(fontSize = u.sp(10), lineHeight = u.sp(10) * 1.15f, fontWeight = FontWeight.Light),
+                    style = EchoTextStyle.copy(fontSize = u.sp(10), lineHeight = u.sp(10) * 1.15f, fontWeight = FontWeight.Light),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.widthIn(max = u.dp(280)),
@@ -200,7 +200,7 @@ private fun ActionTab(
     }
 }
 
-private fun hintText(u: DesignUnits) = TextStyle(fontSize = u.sp(13), fontWeight = FontWeight.Light)
+private fun hintText(u: DesignUnits) = EchoTextStyle.copy(fontSize = u.sp(13), fontWeight = FontWeight.Light)
 
 @Composable
 private fun hintBarUnits(): DesignUnits {

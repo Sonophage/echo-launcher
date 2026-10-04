@@ -1,5 +1,6 @@
 package com.echo.core.ui.components
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -32,7 +33,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -94,7 +94,7 @@ fun EchoSearchField(
             value = field,
             onValueChange = { onQueryChange(it.text) },
             singleLine = true,
-            textStyle = TextStyle(color = colors.textPrimary, fontSize = 15.sp),
+            textStyle = EchoTextStyle.copy(color = colors.textPrimary, fontSize = 15.sp),
             cursorBrush = SolidColor(colors.searchBorder),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onDone() }, onDone = { onDone() }),

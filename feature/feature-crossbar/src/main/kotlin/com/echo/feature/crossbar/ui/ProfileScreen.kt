@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -53,7 +54,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -151,7 +151,7 @@ private fun Hint(action: GamepadAction, label: String, u: DesignUnits, onClick: 
         Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(u.dp(20))).clickable(onClick = onClick).padding(horizontal = u.dp(12)),
         contentAlignment = Alignment.Center,
     ) {
-        val style = TextStyle(fontSize = u.sp(13), fontWeight = FontWeight.Light)
+        val style = EchoTextStyle.copy(fontSize = u.sp(13), fontWeight = FontWeight.Light)
         if (LocalPadPrompts.current) {
             ControllerPrompt(action, label, labelStyle = style, glyphSize = u.dp(22), spacing = u.dp(8))
         } else {
@@ -286,7 +286,7 @@ private fun Pill(label: String, focused: Boolean, glyph: GamepadAction, u: Desig
             .clickable(onClick = onClick).padding(horizontal = u.dp(22)),
         contentAlignment = Alignment.Center,
     ) {
-        val style = TextStyle(fontSize = u.sp(15))
+        val style = EchoTextStyle.copy(fontSize = u.sp(15))
         if (LocalPadPrompts.current && (focused || glyph != GamepadAction.SELECT)) {
             ControllerPrompt(glyph, label, labelColor = Color.White, labelStyle = style, glyphSize = u.dp(20), spacing = u.dp(10))
         } else {
@@ -424,7 +424,7 @@ private fun AchievementsWall(
                     set.gameId?.let { data.platforms[it] },
                     set.lastPlayedAt?.let { "Last played ${relativeTime(now, it)}" },
                 ).joinToString(" · ")
-                Text(eyebrow.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12), letterSpacing = 0.16.em), maxLines = 1)
+                Text(eyebrow.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12), letterSpacing = 0.16.em), maxLines = 1)
                 Headline(set.title, u.sp(44), 1)
                 Row(horizontalArrangement = Arrangement.spacedBy(u.dp(18))) {
                     RarityTier.entries.forEach { tier ->
@@ -584,7 +584,7 @@ private fun DetailCard(a: Achievement, u: DesignUnits) {
 @Composable
 private fun DetailStat(label: String, value: String, u: DesignUnits) {
     Column(verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
-        Text(label.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(10), letterSpacing = 0.14.em), maxLines = 1)
+        Text(label.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(10), letterSpacing = 0.14.em), maxLines = 1)
         Text(value, color = Color.White, fontSize = u.sp(14), maxLines = 1)
     }
 }
@@ -643,7 +643,7 @@ private fun FriendsTab(
             groups.forEach { (group, friends) ->
                 val start = offset
                 item(key = group.name) {
-                    Text("${group.label} · ${friends.size}".uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(11),
+                    Text("${group.label} · ${friends.size}".uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(11),
                         letterSpacing = 0.16.em), modifier = Modifier.padding(top = u.dp(10), bottom = u.dp(4)))
                 }
                 items(friends.size, key = { "f${friends[it].id}" }) { i ->
@@ -683,7 +683,7 @@ private fun FriendRow(friend: DiscordFriend, focused: Boolean, u: DesignUnits, o
 
 @Composable
 internal fun SectionLabel(text: String, u: DesignUnits) {
-    Text(text.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(12), letterSpacing = 0.16.em),
+    Text(text.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(12), letterSpacing = 0.16.em),
         maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 

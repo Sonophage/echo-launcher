@@ -1,5 +1,6 @@
 package com.echo.feature.settings.ui
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,7 +29,6 @@ import androidx.compose.ui.text.font.FontWeight
 import com.echo.themekit.CrossbarLayoutSpec
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
@@ -139,7 +139,7 @@ fun SettingsSliderRow(
                     fontSize = if (rowSelected) CrossbarLayoutSpec.DEFAULT.itemTextSelectedSp.sp
                                else CrossbarLayoutSpec.DEFAULT.itemTextSp.sp,
                     fontWeight = if (rowSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    style = TextStyle(shadow = SettingsTextShadow),
+                    style = EchoTextStyle.copy(shadow = SettingsTextShadow),
                 )
             }
             Spacer(Modifier.width(16.dp))
@@ -147,7 +147,7 @@ fun SettingsSliderRow(
                 text = shownValue,
                 color = if (adjusting) SettingsAccent else SettingsSubtext,
                 fontSize = 13.sp,
-                style = TextStyle(shadow = SettingsTextShadow),
+                style = EchoTextStyle.copy(shadow = SettingsTextShadow),
             )
         }
         Spacer(Modifier.height(8.dp))

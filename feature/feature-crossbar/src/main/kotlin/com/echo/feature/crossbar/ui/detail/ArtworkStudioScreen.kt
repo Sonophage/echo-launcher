@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui.detail
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -67,7 +68,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -558,7 +558,7 @@ internal fun ArtworkStudioContent(
                         readOnly = !state.changeMatchEditing,
                         onValueChange = actions::onChangeMatchDraftChanged,
                         singleLine = true,
-                        textStyle = TextStyle(color = Color.White, fontSize = 15.sp),
+                        textStyle = EchoTextStyle.copy(color = Color.White, fontSize = 15.sp),
                         cursorBrush = SolidColor(accent),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(
@@ -721,7 +721,7 @@ internal fun ArtworkStudioContent(
                         value = state.queryDraft,
                         onValueChange = actions::onQueryDraftChanged,
                         singleLine = true,
-                        textStyle = TextStyle(color = Color.White, fontSize = 15.sp),
+                        textStyle = EchoTextStyle.copy(color = Color.White, fontSize = 15.sp),
                         cursorBrush = SolidColor(accent),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(

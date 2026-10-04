@@ -1,5 +1,6 @@
 package com.echo.core.ui.design
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,7 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -21,7 +21,7 @@ const val MEDIA_DESIGN_WIDTH = 1280f
 
 const val MEDIA_DESIGN_HEIGHT = 720f
 
-const val LEGIBILITY_FLOOR_PX = 28f
+const val LEGIBILITY_FLOOR_PX = 20f
 
 val MediaDefaultAccent = Color(0xFF8DB8E8)
 
@@ -34,7 +34,7 @@ class DesignUnits(val scale: Float, private val density: Density, val square: Bo
     fun dp(px: Number): Dp = (px.toFloat() * scale).dp
     fun sp(px: Number): TextUnit = with(density) { legibleTextPx(dp(px).toPx()).toSp() }
 
-    fun eyebrow(color: Color = Color.White.copy(alpha = 0.55f)) = TextStyle(
+    fun eyebrow(color: Color = Color.White.copy(alpha = 0.55f)) = EchoTextStyle.copy(
         color = color,
         fontSize = sp(12),
         fontWeight = FontWeight.SemiBold,

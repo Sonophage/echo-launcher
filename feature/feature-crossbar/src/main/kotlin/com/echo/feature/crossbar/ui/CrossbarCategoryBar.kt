@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -31,7 +32,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -195,7 +195,7 @@ private fun CrossbarCategoryItem(
             color = if (isSelected) SelectedIcon else LabelInactive,
             fontSize = if (isSelected) 15.sp else 13.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            style = if (isSelected) TextStyle(shadow = SelectedLabelShadow) else TextStyle.Default,
+            style = if (isSelected) EchoTextStyle.copy(shadow = SelectedLabelShadow) else EchoTextStyle,
             textAlign = TextAlign.Center,
             maxLines = 1,
             modifier = Modifier

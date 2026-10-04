@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -25,14 +26,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Bookmarks
-import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.ImportContacts
 import androidx.compose.material.icons.filled.CollectionsBookmark
@@ -47,7 +46,6 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Icon
@@ -594,7 +592,7 @@ private fun CrossbarVerticalListRow(
         label = "crossbarRowGlow",
     )
 
-    val subtitleStyle = if (textShadow) TextStyle(shadow = CrossbarTextShadow) else TextStyle.Default
+    val subtitleStyle = if (textShadow) EchoTextStyle.copy(shadow = CrossbarTextShadow) else EchoTextStyle
 
     val density = LocalDensity.current
     val iconCenterPx = remember(density) { with(density) { LEADING_ICON_CENTER.toPx() } }
@@ -674,7 +672,7 @@ private fun CrossbarVerticalListRow(
                             fontSize = if (isSelected) CrossbarLayoutSpec.DEFAULT.itemTextSelectedSp.sp
                             else CrossbarLayoutSpec.DEFAULT.itemTextSp.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            style = if (isSelected) TextStyle(shadow = SelectedTextShadow) else TextStyle.Default,
+                            style = if (isSelected) EchoTextStyle.copy(shadow = SelectedTextShadow) else EchoTextStyle,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false),

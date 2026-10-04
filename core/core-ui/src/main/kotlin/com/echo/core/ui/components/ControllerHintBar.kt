@@ -1,5 +1,6 @@
 package com.echo.core.ui.components
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.padding
@@ -11,7 +12,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,7 +42,7 @@ fun ControllerHintBar(
 
             .padding(horizontal = 5.dp, vertical = 2.dp),
         labelColor = Color.White,
-        labelStyle = TextStyle(
+        labelStyle = EchoTextStyle.copy(
             fontSize = 8.sp,
             fontWeight = FontWeight.SemiBold,
             shadow = Shadow(
@@ -84,7 +84,7 @@ fun EchoControllerHints(
             onAction = onAction,
             modifier = modifier,
             labelColor = if (style == ControllerHintStyle.OVERLAY) OverlayLabel else inlineLabelColor,
-            labelStyle = TextStyle(fontSize = 12.sp),
+            labelStyle = EchoTextStyle.copy(fontSize = 12.sp),
             glyphSize = 16.dp,
 
             arrangement = Arrangement.spacedBy(18.dp, androidx.compose.ui.Alignment.CenterHorizontally),

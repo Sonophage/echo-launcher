@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.video
 
+import com.echo.core.ui.theme.EchoTextStyle
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -55,7 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -285,7 +285,7 @@ fun VideoPlayerScreen(
                         actions = listOf(GamepadAction.SELECT, GamepadAction.BACK),
                         label = "Go back",
                         labelColor = Color(0xFFB0B0B0),
-                        labelStyle = TextStyle(fontSize = 13.sp),
+                        labelStyle = EchoTextStyle.copy(fontSize = 13.sp),
                         glyphSize = 18.dp,
                     )
                 }
@@ -360,12 +360,12 @@ private fun ControlsOverlay(
     Column(Modifier.align(Alignment.BottomStart).padding(start = u.dp(64), bottom = u.dp(236)).fillMaxWidth(0.62f)) {
         if (eyebrow.isNotBlank()) Text(eyebrow.uppercase(), style = u.eyebrow(Color.White.copy(alpha = 0.6f)), maxLines = 1)
         Spacer(Modifier.height(u.dp(8)))
-        Text(title, style = TextStyle(color = Color.White, fontSize = u.sp(46), fontWeight = FontWeight.Medium, shadow = TitleShadow),
+        Text(title, style = EchoTextStyle.copy(color = Color.White, fontSize = u.sp(46), fontWeight = FontWeight.Medium, shadow = TitleShadow),
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
     Row(Modifier.align(Alignment.BottomEnd).padding(end = u.dp(64), bottom = u.dp(240)), verticalAlignment = Alignment.Bottom) {
         Text(fmt(positionMs), color = Color.White, fontSize = u.sp(46), fontWeight = FontWeight.Medium,
-            style = TextStyle(fontFeatureSettings = "tnum"))
+            style = EchoTextStyle.copy(fontFeatureSettings = "tnum"))
         Spacer(Modifier.width(u.dp(10)))
         Text("/ ${fmt(durationMs)}", color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(20),
             modifier = Modifier.padding(bottom = u.dp(8)))
@@ -469,7 +469,7 @@ private fun ControlSlot(
             }
         }
         if (focused) {
-            Text(label, style = TextStyle(color = Color.White, fontSize = u.sp(16), fontWeight = FontWeight.SemiBold, shadow = TitleShadow), maxLines = 1)
+            Text(label, style = EchoTextStyle.copy(color = Color.White, fontSize = u.sp(16), fontWeight = FontWeight.SemiBold, shadow = TitleShadow), maxLines = 1)
         }
     }
 }

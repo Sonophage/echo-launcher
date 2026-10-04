@@ -1,5 +1,6 @@
 package com.echo.feature.settings.ui
 
+import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.ui.design.PANEL_CARD_RADIUS
 import com.echo.core.ui.design.PANEL_FOCUS_RING_WIDTH
 import com.echo.core.ui.design.PanelBase
@@ -93,7 +94,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -729,7 +729,7 @@ fun SettingsScaffold(
                             text = "◀",
                             color = SettingsSubtext,
                             fontSize = 18.sp,
-                            style = TextStyle(shadow = SettingsTextShadow),
+                            style = EchoTextStyle.copy(shadow = SettingsTextShadow),
                             modifier = Modifier.padding(end = 20.dp),
                         )
                         Column {
@@ -739,14 +739,14 @@ fun SettingsScaffold(
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 2.sp,
-                                style = TextStyle(shadow = SettingsTextShadow),
+                                style = EchoTextStyle.copy(shadow = SettingsTextShadow),
                             )
                             Text(
                                 text = subtitle,
                                 color = SettingsText,
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Light,
-                                style = TextStyle(shadow = SettingsTextShadow),
+                                style = EchoTextStyle.copy(shadow = SettingsTextShadow),
                             )
                         }
                     }
@@ -838,7 +838,7 @@ fun SettingsScaffold(
                                         fontSize = SETTINGS_HELP_TEXT_SP.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        style = TextStyle(shadow = SettingsTextShadow),
+                                        style = EchoTextStyle.copy(shadow = SettingsTextShadow),
                                     )
                                 }
                             },
@@ -1461,7 +1461,7 @@ fun SettingsTextFieldRow(
             text = label,
             color = SettingsSubtext,
             fontSize = 12.sp,
-            style = TextStyle(shadow = SettingsTextShadow),
+            style = EchoTextStyle.copy(shadow = SettingsTextShadow),
             modifier = Modifier.padding(bottom = 4.dp)
         )
         Box {
@@ -1521,7 +1521,7 @@ fun SettingsTextFieldRow(
                         text = helper,
                         color = SettingsSubtext.copy(alpha = 0.6f),
                         fontSize = 11.sp,
-                        style = TextStyle(shadow = SettingsTextShadow),
+                        style = EchoTextStyle.copy(shadow = SettingsTextShadow),
                     )
                 }
                 if (helperPrompt != null) {

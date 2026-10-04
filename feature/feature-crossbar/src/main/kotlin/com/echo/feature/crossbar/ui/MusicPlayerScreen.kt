@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.MEDIA_DESIGN_HEIGHT
 import com.echo.core.ui.design.MediaDesignFrame
@@ -55,7 +56,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -125,7 +125,7 @@ fun MusicPlayerScreen(
             Spacer(Modifier.height(u.dp(18)))
             Text(
                 track?.displayTitle ?: "Nothing playing",
-                style = TextStyle(color = Color.White, fontSize = u.sp(46), lineHeight = u.sp(50), fontWeight = FontWeight.Medium, shadow = TitleShadow),
+                style = EchoTextStyle.copy(color = Color.White, fontSize = u.sp(46), lineHeight = u.sp(50), fontWeight = FontWeight.Medium, shadow = TitleShadow),
                 maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             track?.primaryArtist?.let {
@@ -249,7 +249,7 @@ private fun PlayerProgress(durationMs: Int, accent: Color, u: DesignUnits, onSee
     Scrubber(positionMs.toInt(), durationMs, accent, u, onSeekTo)
     Spacer(Modifier.height(u.dp(10)))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        val times = TextStyle(color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13), fontFeatureSettings = "tnum")
+        val times = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13), fontFeatureSettings = "tnum")
         Text(formatDuration(positionMs), style = times)
         Text(formatDuration(durationMs.toLong()), style = times)
     }

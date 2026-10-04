@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui.photo
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -20,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.TextStyle
 import com.echo.core.ui.components.EchoHintBar
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.MediaDefaultAccent
@@ -47,7 +47,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -246,7 +245,7 @@ private fun androidx.compose.foundation.layout.BoxWithConstraintsScope.ViewerChr
     Column(Modifier.align(Alignment.TopStart).padding(start = u.dp(64), top = u.dp(32)), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
         val eyebrow = listOfNotNull(state.albumName, "${state.index + 1} of ${state.photos.size}").joinToString("  ·  ")
         Text(eyebrow.uppercase(), style = u.eyebrow(Color.White.copy(alpha = 0.6f)), maxLines = 1)
-        Text(photo.displayName, style = TextStyle(color = Color.White, fontSize = u.sp(30), fontWeight = FontWeight.Medium, shadow = PhotoShadow), maxLines = 1)
+        Text(photo.displayName, style = EchoTextStyle.copy(color = Color.White, fontSize = u.sp(30), fontWeight = FontWeight.Medium, shadow = PhotoShadow), maxLines = 1)
         val facts = listOfNotNull(photo.resolutionLabel, photo.sizeBytes?.let { formatByteSize(it) }).joinToString("  ·  ")
         if (facts.isNotBlank()) Text(facts, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(14))
     }
@@ -306,7 +305,7 @@ private fun androidx.compose.foundation.layout.BoxWithConstraintsScope.ViewerChr
                             drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = 0.5f), Color.Transparent)), radius = size.maxDimension)
                         } else Modifier),
                 )
-                if (focused) Text(control.label, style = TextStyle(color = Color.White, fontSize = u.sp(15), fontWeight = FontWeight.SemiBold, shadow = PhotoShadow), maxLines = 1)
+                if (focused) Text(control.label, style = EchoTextStyle.copy(color = Color.White, fontSize = u.sp(15), fontWeight = FontWeight.SemiBold, shadow = PhotoShadow), maxLines = 1)
             }
         }
     }

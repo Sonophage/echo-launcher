@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import androidx.compose.animation.core.Animatable
 import androidx.compose.material.icons.outlined.Settings
@@ -68,7 +69,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
@@ -83,7 +83,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -368,7 +367,7 @@ private fun NoticeList(
             item(key = "recent") { RecentCard(r, focus == NoticeFocus.Media, tint, u) { onRowTapped(NoticeFocus.Media) } }
         }
         item(key = "header") {
-            Text("NOTIFICATIONS  ·  ${entries.size}", style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(12),
+            Text("NOTIFICATIONS  ·  ${entries.size}", style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(12),
                 fontWeight = FontWeight.Light, letterSpacing = 0.14.em), modifier = Modifier.padding(start = u.dp(12), top = u.dp(14), bottom = u.dp(4)))
         }
         if (!androidAccessGranted) {
@@ -550,7 +549,7 @@ private fun Tile(
 
 @Composable
 internal fun Eyebrow(text: String, u: DesignUnits) {
-    Text(text.uppercase(), style = TextStyle(color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13), letterSpacing = 0.18.em))
+    Text(text.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13), letterSpacing = 0.18.em))
 }
 
 @Composable

@@ -214,7 +214,7 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 - **Artwork is one image per slot.** The Artwork Studio is down to seven tabs, Steam's store is a
   new source, and linked art is copied into app storage so the linked folder can be let go.
 - **Input and look**: analog triggers read as axes, tappable button hints, keyboard support,
-  coloured controller face buttons, Instrument Sans, and a new category icon set.
+  coloured controller face buttons, a new typeface, and a new category icon set.
 
 ### What the fork removed, for simplicity
 
@@ -596,8 +596,8 @@ of Sony's code, firmware, fonts or audio.
 The strand model and motion are theirs; the shader, colour cascade and wallpaper tinting are this
 project's. MIT, Copyright (c) 2025 Mart: [LICENSES/PlayStation-3-XMB-MIT.txt](LICENSES/PlayStation-3-XMB-MIT.txt).
 
-**Typeface.** [Instrument Sans](https://github.com/Instrument/instrument-sans), SIL Open Font
-License 1.1: [LICENSES/InstrumentSans-OFL.txt](LICENSES/InstrumentSans-OFL.txt). The reader sets
+**Typeface.** [Sora](https://github.com/sora-xor/sora-font), SIL Open Font
+License 1.1: [LICENSES/Sora-OFL.txt](LICENSES/Sora-OFL.txt). The reader sets
 books in [Literata](https://github.com/googlefonts/literata), also SIL OFL 1.1:
 [LICENSES/Literata-OFL.txt](LICENSES/Literata-OFL.txt).
 

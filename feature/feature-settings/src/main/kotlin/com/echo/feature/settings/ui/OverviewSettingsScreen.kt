@@ -1,5 +1,6 @@
 package com.echo.feature.settings.ui
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +40,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -145,7 +145,7 @@ private fun StatLine(main: String, detail: String) {
 private fun Eyebrow(text: String) {
     Text(
         text.uppercase(),
-        style = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.28.em),
+        style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.28.em),
         modifier = Modifier.padding(start = 50.dp),
     )
 }
@@ -207,8 +207,8 @@ private fun Card(cover: OverviewCover, w: Dp, h: Dp, dx: Dp, degrees: Float, fro
     )
 }
 
-private val Headline = TextStyle(color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-private val RowText = TextStyle(color = Color.White, fontSize = 17.sp)
+private val Headline = EchoTextStyle.copy(color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+private val RowText = EchoTextStyle.copy(color = Color.White, fontSize = 17.sp)
 
 private fun dash(value: Int, loading: Boolean): String = if (loading) "—" else value.toString()
 

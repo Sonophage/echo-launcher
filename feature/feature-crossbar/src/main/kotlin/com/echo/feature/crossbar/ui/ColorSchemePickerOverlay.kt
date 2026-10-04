@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,7 +32,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -91,7 +91,7 @@ fun ColorSchemePickerOverlay(
                 fontSize = 19.sp,
                 fontWeight = FontWeight.Light,
                 color = Color.White.copy(alpha = 0.92f),
-                style = TextStyle(shadow = PickerTextShadow),
+                style = EchoTextStyle.copy(shadow = PickerTextShadow),
                 modifier = Modifier.padding(bottom = 10.dp),
             )
             Box(
@@ -153,7 +153,7 @@ private fun ColorSchemeRow(
                     fontSize = if (isSelected) 16.sp else 15.sp,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                     color = if (isSelected) Color.White else Color.White.copy(alpha = 0.66f),
-                    style = TextStyle(shadow = PickerTextShadow),
+                    style = EchoTextStyle.copy(shadow = PickerTextShadow),
                 )
 
                 option.sublabel?.let { sub ->
@@ -161,7 +161,7 @@ private fun ColorSchemeRow(
                         text = sub,
                         fontSize = 11.sp,
                         color = Color.White.copy(alpha = if (isSelected) 0.78f else 0.5f),
-                        style = TextStyle(shadow = PickerTextShadow),
+                        style = EchoTextStyle.copy(shadow = PickerTextShadow),
                     )
                 }
             }

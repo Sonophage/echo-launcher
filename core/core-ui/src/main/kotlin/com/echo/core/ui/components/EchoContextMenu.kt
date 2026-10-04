@@ -1,5 +1,6 @@
 package com.echo.core.ui.components
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -31,7 +32,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -120,7 +120,7 @@ fun ContextMenuHeader(
             color = Color.White.copy(alpha = 0.92f),
             fontSize = RailTitleSize,
             fontWeight = FontWeight.Light,
-            style = TextStyle(shadow = TextDropShadow),
+            style = EchoTextStyle.copy(shadow = TextDropShadow),
             maxLines = 2,
             textAlign = textAlign,
             overflow = TextOverflow.Ellipsis,
@@ -143,7 +143,7 @@ fun ContextMenuEyebrow(
         fontSize = RailSubtitleSize,
         fontWeight = FontWeight.Medium,
         letterSpacing = 1.sp,
-        style = TextStyle(shadow = TextDropShadow),
+        style = EchoTextStyle.copy(shadow = TextDropShadow),
         maxLines = 1,
         textAlign = textAlign,
         overflow = TextOverflow.Ellipsis,

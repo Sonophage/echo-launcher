@@ -1,5 +1,6 @@
 package com.echo.core.ui.detail
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -85,7 +85,7 @@ fun EchoOverlayTitle(text: String) {
         color = DetailTextPrimary,
         fontSize = 19.sp,
         fontWeight = FontWeight.SemiBold,
-        style = TextStyle(shadow = DetailTextShadow),
+        style = EchoTextStyle.copy(shadow = DetailTextShadow),
     )
 }
 

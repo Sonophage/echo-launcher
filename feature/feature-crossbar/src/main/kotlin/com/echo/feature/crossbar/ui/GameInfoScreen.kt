@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,7 +34,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -203,7 +203,7 @@ fun GameInfoScreen(
                 .padding(horizontal = u.dp(12)),
             contentAlignment = Alignment.Center,
         ) {
-            val style = TextStyle(fontSize = u.sp(13), fontWeight = FontWeight.Light)
+            val style = EchoTextStyle.copy(fontSize = u.sp(13), fontWeight = FontWeight.Light)
             if (LocalPadPrompts.current) {
                 ControllerPrompt(GamepadAction.BACK, "Back", labelStyle = style, glyphSize = u.dp(22), spacing = u.dp(8))
             } else {
@@ -238,7 +238,7 @@ private fun BandButton(label: String, focused: Boolean, options: Boolean, u: Des
             .padding(horizontal = u.dp(if (focused) 26 else 22)),
         contentAlignment = Alignment.Center,
     ) {
-        val labelStyle = TextStyle(fontSize = u.sp(15), fontWeight = if (focused) FontWeight.Medium else FontWeight.Normal)
+        val labelStyle = EchoTextStyle.copy(fontSize = u.sp(15), fontWeight = if (focused) FontWeight.Medium else FontWeight.Normal)
         val glyph = when {
             !LocalPadPrompts.current -> null
             focused -> GamepadAction.SELECT
@@ -312,7 +312,7 @@ private fun InfoSheet(info: GameInfoState, content: DetailPanelContent, now: Lon
 private fun BandStat(stat: GameInfoStat, u: DesignUnits, button: GamepadAction? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
         Text(stat.value, color = Color.White, fontSize = u.sp(26), fontWeight = FontWeight.ExtraLight, maxLines = 1)
-        val labelStyle = TextStyle(fontSize = u.sp(12), fontWeight = FontWeight.Light)
+        val labelStyle = EchoTextStyle.copy(fontSize = u.sp(12), fontWeight = FontWeight.Light)
         if (button != null && LocalPadPrompts.current) {
             ControllerPrompt(button, stat.label, labelColor = Color.White.copy(alpha = 0.55f), labelStyle = labelStyle, glyphSize = u.dp(18), spacing = u.dp(6))
         } else {

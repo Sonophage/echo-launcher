@@ -1,5 +1,6 @@
 package com.echo.core.ui.components
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,7 +45,7 @@ fun ControllerPrompt(
     modifier: Modifier = Modifier,
     style: ControllerPromptStyle = LocalControllerPromptStyle.current,
     labelColor: Color = Color.White.copy(alpha = 0.75f),
-    labelStyle: TextStyle = TextStyle.Default,
+    labelStyle: TextStyle = EchoTextStyle,
     glyphSize: Dp = 22.dp,
     spacing: Dp = 4.dp,
 ) {
@@ -67,7 +68,7 @@ fun ControllerPrompt(
     modifier: Modifier = Modifier,
     style: ControllerPromptStyle = LocalControllerPromptStyle.current,
     labelColor: Color = Color.White.copy(alpha = 0.75f),
-    labelStyle: TextStyle = TextStyle.Default,
+    labelStyle: TextStyle = EchoTextStyle,
     glyphSize: Dp = 22.dp,
     spacing: Dp = 4.dp,
 
@@ -93,7 +94,7 @@ fun ControllerPromptGlyphs(
     modifier: Modifier = Modifier,
     family: ControllerDisplayType = LocalControllerPromptStyle.current.family,
     labelColor: Color = Color.White.copy(alpha = 0.75f),
-    labelStyle: TextStyle = TextStyle.Default,
+    labelStyle: TextStyle = EchoTextStyle,
     glyphSize: Dp = 22.dp,
     spacing: Dp = 4.dp,
     glyphSpacing: Dp = 2.dp,
@@ -148,7 +149,7 @@ internal fun ControllerPromptBar(
     modifier: Modifier = Modifier,
     style: ControllerPromptStyle = LocalControllerPromptStyle.current,
     labelColor: Color = Color.White.copy(alpha = 0.75f),
-    labelStyle: TextStyle = TextStyle.Default,
+    labelStyle: TextStyle = EchoTextStyle,
     glyphSize: Dp = 22.dp,
     arrangement: Arrangement.Horizontal = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
 

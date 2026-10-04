@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui.detail
 
+import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -26,7 +26,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -160,7 +159,7 @@ private fun StudioPickStatus(
                     label = "Apply",
                     glyphSize = 12.dp,
                     labelColor = Color.White.copy(alpha = 0.6f),
-                    labelStyle = TextStyle(fontSize = 9.5.sp, lineHeight = 12.sp),
+                    labelStyle = EchoTextStyle.copy(fontSize = 9.5.sp, lineHeight = 12.sp),
                     modifier = Modifier.clip(RoundedCornerShape(4.dp)).clickable(onClick = onApply),
                 )
             }
@@ -197,7 +196,7 @@ internal fun StudioOptionsControl(
             label = "Crop, restore, clear",
             glyphSize = 13.dp,
             labelColor = Color.White.copy(alpha = 0.6f),
-            labelStyle = TextStyle(fontSize = 9.5.sp),
+            labelStyle = EchoTextStyle.copy(fontSize = 9.5.sp),
             modifier = modifier
                 .clip(RoundedCornerShape(6.dp))
                 .clickable(onClick = onClick)
