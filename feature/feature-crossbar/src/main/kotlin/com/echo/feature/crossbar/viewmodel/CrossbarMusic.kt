@@ -410,7 +410,7 @@ class CrossbarMusic(
             ?: (uiState.value.musicNav as? MusicNav.Playlist)?.id
 
     internal fun handleMusicSelection(item: CrossbarItem): Boolean = when {
-        item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.openSearch(SearchScope.MUSIC); true }
+        item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.librarySearch.openSearch(SearchScope.MUSIC); true }
         item.id == CrossbarViewModel.ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); vm.openAddMenu(); true }
         item.type == CrossbarItemType.EMPTY -> true
         item.id == CrossbarViewModel.NOW_PLAYING_ITEM_ID -> {

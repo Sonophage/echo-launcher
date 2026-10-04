@@ -1264,11 +1264,11 @@ fun CrossbarUiState.withNamePromptText(text: String): CrossbarUiState = when {
 
 @HiltViewModel
 class CrossbarViewModel @Inject constructor(
-    private val gameRepository: GameRepository,
+    internal val gameRepository: GameRepository,
     private val platformDao: PlatformDao,
     private val memoryCardRepository: MemoryCardRepository,
     private val categoryRepository: CategoryRepositoryImpl,
-    private val appCategoryRepository: AppCategoryRepository,
+    internal val appCategoryRepository: AppCategoryRepository,
     private val gameCategoryRepository: com.echo.core.data.repository.GameCategoryRepository,
     private val launcherShortcutRepository: LauncherShortcutRepository,
     private val libraryScanner: LibraryScanner,
@@ -1279,15 +1279,15 @@ class CrossbarViewModel @Inject constructor(
     private val mappingRepository: ControllerMappingRepository,
     private val controllerLayoutRepository: com.echo.core.data.repository.ControllerLayoutRepository,
     private val menuSound: com.echo.core.ui.sound.MenuSoundPlayer,
-    private val musicRepository: com.echo.core.domain.repository.MusicRepository,
+    internal val musicRepository: com.echo.core.domain.repository.MusicRepository,
     private val musicScanner: com.echo.feature.library.scanner.MusicScanner,
-    private val musicPlayer: com.echo.feature.crossbar.music.MusicPlayerController,
+    internal val musicPlayer: com.echo.feature.crossbar.music.MusicPlayerController,
     private val emulatorProfileRepository: com.echo.feature.launcher.EmulatorProfileRepository,
     private val intentResolver: com.echo.feature.launcher.EmulatorIntentResolver,
     internal val videoRepository: com.echo.core.domain.repository.VideoRepository,
-    private val photoRepository: com.echo.core.domain.repository.PhotoRepository,
+    internal val photoRepository: com.echo.core.domain.repository.PhotoRepository,
     private val photoScanner: com.echo.feature.library.scanner.PhotoScanner,
-    private val bookRepository: com.echo.core.domain.repository.BookRepository,
+    internal val bookRepository: com.echo.core.domain.repository.BookRepository,
     private val bookIntentResolver: com.echo.core.data.book.BookIntentResolver,
     private val hiddenPlacementDao: com.echo.core.data.database.dao.HiddenPlacementDao,
     private val iconDisplayPreferences: com.echo.core.data.repository.IconDisplayPreferences,
@@ -1325,6 +1325,10 @@ class CrossbarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
 
+    internal val librarySearch = CrossbarSearch(this, _uiState, viewModelScope, menuSound)
+
+    fun typeToSearchAllowed(): Boolean = librarySearch.typeToSearchAllowed()
+
     internal val bookshelf = CrossbarBookshelf(this, _uiState, viewModelScope, bookRepository, bookIntentResolver, bookScanner, menuSound)
 
     internal val gallery = CrossbarGallery(this, _uiState, viewModelScope, photoRepository, photoScanner, photoIntentResolver, menuSound)
@@ -1339,7 +1343,7 @@ class CrossbarViewModel @Inject constructor(
 
     private var currentItemsJob: Job? = null
 
-    private var platformCache: Map<String, PlatformEntity> = emptyMap()
+    internal var platformCache: Map<String, PlatformEntity> = emptyMap()
     private var enabledCards: List<MemoryCard> = emptyList()
     private var baseThemeColors: EchoColors = DefaultEchoColors
 
@@ -1988,7 +1992,7 @@ class CrossbarViewModel @Inject constructor(
                         val combined = appItems
                         val items = if (combined.isEmpty()) listOf(emptyCategoryItem(category)) else combined
 
-                        val lead = if (category.id == NETWORK_CATEGORY_ID) listOf(quickSearchItem()) else emptyList()
+                        val lead = if (category.id == NETWORK_CATEGORY_ID) listOf(librarySearch.quickSearchItem()) else emptyList()
 
                         _uiState.update { it.copy(currentItems = lead + items + addAppsItem()) }
                     }
@@ -2012,21 +2016,7 @@ class CrossbarViewModel @Inject constructor(
     )
 
     internal fun libraryColumn(body: List<CrossbarItem>, scope: SearchScope): List<CrossbarItem> =
-        body + librarySearchItem(scope)
-
-    private fun librarySearchItem(scope: SearchScope): CrossbarItem = CrossbarItem(
-        id       = SEARCH_ITEM_ID,
-        title    = scope.label,
-        subtitle = scope.hint,
-        type     = CrossbarItemType.SEARCH,
-    )
-
-    private fun quickSearchItem(): CrossbarItem = CrossbarItem(
-        id       = QUICK_SEARCH_ITEM_ID,
-        title    = "Quick Search",
-        subtitle = "Search the web, or type an address",
-        type     = CrossbarItemType.SEARCH,
-    )
+        body + librarySearch.librarySearchItem(scope)
 
     private fun addAppsItem(): CrossbarItem = CrossbarItem(
         id       = ADD_APPS_ITEM_ID,
@@ -2224,14 +2214,6 @@ class CrossbarViewModel @Inject constructor(
         type = CrossbarItemType.EMPTY,
     )
 
-    private var searchGames: List<com.echo.core.domain.model.Game> = emptyList()
-
-    private var searchApps: List<com.echo.feature.appbar.InstalledApp> = emptyList()
-    private var searchVideos: List<com.echo.core.domain.model.Video> = emptyList()
-    private var searchPhotos: List<com.echo.core.domain.model.Photo> = emptyList()
-    private var searchBooks: List<com.echo.core.domain.model.Book> = emptyList()
-    private var searchTracks: List<com.echo.core.domain.model.MusicTrack> = emptyList()
-
     fun enterOpensAppDrawer(): Boolean = _uiState.value.enterOpensAppDrawer
 
     fun onTypedCharacter(ch: String): Boolean {
@@ -2239,8 +2221,8 @@ class CrossbarViewModel @Inject constructor(
             _uiState.update { it.copy(pendingDrawerTypedChar = ch) }
             return true
         }
-        if (!typeToSearchAllowed()) return false
-        openSearchTyping(ch)
+        if (!librarySearch.typeToSearchAllowed()) return false
+        librarySearch.openSearchTyping(ch)
         return true
     }
 
@@ -2248,239 +2230,10 @@ class CrossbarViewModel @Inject constructor(
         _uiState.update { it.copy(pendingDrawerTypedChar = null) }
     }
 
-    fun typeToSearchAllowed(): Boolean {
-        val state = _uiState.value
-        return state.search == null && state.stripShowsCrossbarContext
-    }
-
-    fun openSearchTyping(query: String) {
-        openSearch(SearchScope.ALL)
-        onSearchQueryChange(query)
-    }
-
-    fun openAppSearch(initialQuery: String) {
-        openSearch(SearchScope.APPS)
-        if (initialQuery.isNotEmpty()) onSearchQueryChange(initialQuery)
-    }
-
-    fun openSearch(scope: SearchScope) {
-        menuSound.play(MenuSound.SELECT)
-        _uiState.update { it.copy(search = SearchState(scope = scope)) }
-        viewModelScope.launch {
-            val wantsGames = scope == SearchScope.ALL || scope == SearchScope.GAMES
-            val wantsVideos = scope == SearchScope.ALL || scope == SearchScope.VIDEOS
-            val wantsPhotos = scope == SearchScope.ALL || scope == SearchScope.PHOTOS
-            val wantsBooks = scope == SearchScope.ALL || scope == SearchScope.BOOKS
-            searchGames = if (wantsGames) gameRepository.observeAllGames().first() else emptyList()
-            searchVideos = if (wantsVideos) videoRepository.observeAllVideos().first() else emptyList()
-            searchPhotos = if (wantsPhotos) photoRepository.observeAllPhotos().first() else emptyList()
-            searchBooks = if (wantsBooks) bookRepository.observeAllBooks().first() else emptyList()
-
-            val wantsTracks = scope == SearchScope.ALL || scope == SearchScope.MUSIC
-            searchTracks = if (wantsTracks) musicRepository.observeAllTracks().first() else emptyList()
-
-            val wantsApps = scope == SearchScope.ALL || scope == SearchScope.APPS
-            searchApps = if (wantsApps) appCategoryRepository.allInstalledApps() else emptyList()
-            _uiState.update { it.copy(search = it.search?.copy(loaded = true)) }
-            rebuildSearchRows()
-        }
-    }
-
-    fun onSearchQueryChange(query: String) {
-        markTouchInput()
-        val state = _uiState.value.search ?: return
-        _uiState.update { it.copy(search = it.search?.copy(
-            query = query,
-            selectedIndex = 0,
-            scrollToTopToken = state.scrollToTopToken + 1,
-        )) }
-        rebuildSearchRows()
-    }
-
-    fun closeSearch() {
-        menuSound.play(MenuSound.BACK)
-
-        searchGames = emptyList(); searchVideos = emptyList(); searchPhotos = emptyList()
-        searchApps = emptyList()
-        searchBooks = emptyList(); searchTracks = emptyList()
-        _uiState.update { it.copy(search = null) }
-    }
-
-    private fun rebuildSearchRows() {
-        val state = _uiState.value.search ?: return
-        val q = state.query
-        val rows = buildList {
-            searchApps.filter { matchesSearch(q, it.label, it.packageName) }
-                .take(SEARCH_RESULTS_PER_LIBRARY)
-                .forEach { app ->
-                    add(
-                        CrossbarItem(
-                            id = "searchapp_${app.packageName}",
-                            title = app.label,
-                            subtitle = "App",
-                            packageName = app.packageName,
-
-                            isAndroidApp = true,
-                        ),
-                    )
-                }
-
-            searchGames.filter {
-                matchesSearch(q, it.title, it.developer, it.publisher, platformCache[it.platformId]?.name)
-            }
-                .take(SEARCH_RESULTS_PER_LIBRARY)
-                .forEach { add(it.toSearchRow()) }
-            searchVideos.filter { matchesSearch(q, it.displayTitle, it.displayName) }
-                .take(SEARCH_RESULTS_PER_LIBRARY)
-                .forEach { add(it.toSearchRow()) }
-            searchPhotos.filter { matchesSearch(q, it.displayName, it.relativePath) }
-                .take(SEARCH_RESULTS_PER_LIBRARY)
-                .forEach { add(it.toSearchRow()) }
-            searchBooks.filter { matchesSearch(q, it.displayTitle, it.author, it.seriesName) }
-                .take(SEARCH_RESULTS_PER_LIBRARY)
-                .forEach { add(it.toSearchRow()) }
-            searchTracks.filter { matchesSearch(q, it.displayTitle, it.artist, it.album) }
-                .take(SEARCH_RESULTS_PER_LIBRARY)
-                .forEach { add(it.toSearchRow()) }
-        }
-
-        val anyContent = searchGames.isNotEmpty() || searchVideos.isNotEmpty() ||
-            searchPhotos.isNotEmpty() || searchBooks.isNotEmpty() || searchTracks.isNotEmpty() ||
-            searchApps.isNotEmpty()
-        val display = when {
-            rows.isNotEmpty() -> rows
-            else -> when (searchEmptyState(state.loaded, q, anyContent)) {
-                SearchEmptyState.LOADING -> searchNoticeItem("Reading your libraries", "One moment.")
-                SearchEmptyState.EMPTY_LIBRARY -> searchNoticeItem(state.scope.emptyTitle, state.scope.emptyHint)
-                SearchEmptyState.PROMPT -> searchNoticeItem("Type to search", state.scope.hint)
-                SearchEmptyState.NO_MATCHES -> searchNoticeItem("No matches", "Nothing here matches that.")
-            }.let(::listOf)
-        }
-        _uiState.update { it.copy(search = it.search?.copy(
-            rows = display,
-            selectedIndex = state.selectedIndex.coerceIn(0, (display.size - 1).coerceAtLeast(0)),
-        )) }
-    }
-
-    private fun searchNoticeItem(title: String, subtitle: String): CrossbarItem =
-        CrossbarItem(id = EMPTY_CATEGORY_ITEM_ID, title = title, subtitle = subtitle, type = CrossbarItemType.EMPTY)
-
-    fun onSearchFocusedAt(index: Int) {
-        markTouchInput()
-        moveSearch(index - (_uiState.value.search?.selectedIndex ?: return))
-    }
-
-    private fun moveSearch(delta: Int) {
-        val state = _uiState.value.search ?: return
-        if (state.rows.isEmpty()) return
-        val next = (state.selectedIndex + delta).coerceIn(0, state.rows.lastIndex)
-        if (next == state.selectedIndex) return
-        menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(search = it.search?.copy(selectedIndex = next)) }
-    }
-
-    fun onSearchActivatedAt(index: Int) {
-        val state = _uiState.value.search ?: return
-        val row = state.rows.getOrNull(index) ?: return
-        if (row.type == CrossbarItemType.EMPTY) return
-        _uiState.update { it.copy(search = it.search?.copy(selectedIndex = index)) }
-
-        val appPackage = row.packageName?.takeIf { row.isInstalledApp }
-        if (appPackage != null) {
-            closeSearch()
-            launchAppWithDisc(appPackage, row.shelfCoverArt)
-            return
-        }
-
-        val categoryId = searchRowCategory(row) ?: return
-        closeSearch()
-        selectCategoryById(categoryId)
-        when (row.type) {
-            CrossbarItemType.VIDEO_FILE ->
-                _uiState.update { it.copy(activeVideoId = row.id.removePrefix("vid_"), activeVideoAutoPlay = true) }
-            CrossbarItemType.PHOTO_FILE -> openSearchedPhoto(row)
-            CrossbarItemType.LIBRARY_BOOK -> bookshelf.openBook(row.id.removePrefix("book_"))
-            CrossbarItemType.MUSIC_TRACK -> openSearchedTrack(row)
-
-            else -> row.gameId?.let { id -> launchGameDirectly(id) }
-        }
-    }
-
-    private fun searchRowCategory(row: CrossbarItem): String? = row.owningCategory()
-
-    private fun selectCategoryById(categoryId: String) {
+    internal fun selectCategoryById(categoryId: String) {
         val index = _uiState.value.categories.indexOfFirst { it.id == categoryId }
         if (index >= 0) onCategorySelected(index)
     }
-
-    private fun openSearchedPhoto(row: CrossbarItem) {
-        val photoId = row.id.removePrefix("pho_")
-        val libraryId = searchPhotos.firstOrNull { it.id == photoId }?.libraryId ?: return
-        val name = _uiState.value.photoLibraries.firstOrNull { it.id == libraryId }?.displayName.orEmpty()
-        _uiState.update { it.copy(photoNav = PhotoNav.Library(libraryId, name)) }
-        gallery.openPhoto(photoId)
-    }
-
-    private fun openSearchedTrack(row: CrossbarItem) {
-        val trackId = row.id.removePrefix("mt_")
-        val track = searchTracks.firstOrNull { it.id == trackId } ?: return
-        viewModelScope.launch {
-            awaitDiscHandOff(track.artUri)
-            musicPlayer.setQueue(listOf(track), 0)
-            _uiState.update { it.copy(musicPlayerVisible = true) }
-        }
-    }
-
-    private fun com.echo.core.domain.model.Game.toSearchRow(): CrossbarItem = CrossbarItem(
-        id = "search_game_$id",
-        title = title,
-        subtitle = listOfNotNull("Game", platformCache[platformId]?.name).joinToString("  ·  "),
-
-        coverUri = artworkUri,
-        metadataLine = gameMetadataLine(releaseYear, genre, developer, players),
-        totalPlayTimeMillis = totalPlayTimeMillis,
-        lastOpenedAt = lastPlayedAt,
-        gameId = id,
-        platformId = platformId,
-        type = CrossbarItemType.STANDARD,
-    )
-
-    private fun com.echo.core.domain.model.Video.toSearchRow(): CrossbarItem = CrossbarItem(
-        id = "vid_$id",
-        title = displayTitle,
-        subtitle = listOfNotNull("Video", videoRowSubtitle(durationMs, resolutionLabel, sizeBytes)).joinToString("  ·  "),
-        coverUri = effectiveThumbnailUri,
-        mediaUri = uri,
-        mimeType = mimeType,
-        type = CrossbarItemType.VIDEO_FILE,
-    )
-
-    private fun com.echo.core.domain.model.Photo.toSearchRow(): CrossbarItem = CrossbarItem(
-        id = "pho_$id",
-        title = displayName,
-        subtitle = listOfNotNull("Photo", relativePath).joinToString("  ·  "),
-        coverUri = thumbnailUri ?: uri,
-        mediaUri = uri,
-        type = CrossbarItemType.PHOTO_FILE,
-    )
-
-    private fun com.echo.core.domain.model.Book.toSearchRow(): CrossbarItem = CrossbarItem(
-        id = "book_$id",
-        title = displayTitle,
-        subtitle = listOfNotNull("Book", bookRowSubtitle(author, seriesName, seriesIndex)).joinToString("  ·  "),
-        coverUri = coverUri,
-        type = CrossbarItemType.LIBRARY_BOOK,
-    )
-
-    private fun com.echo.core.domain.model.MusicTrack.toSearchRow(): CrossbarItem = CrossbarItem(
-        id = "mt_$id",
-        title = displayTitle,
-        subtitle = listOfNotNull("Music", musicRowSubtitle(artist, album, durationMs)).joinToString("  ·  "),
-        coverUri = artUri,
-        mediaUri = uri,
-        mimeType = mimeType,
-        type = CrossbarItemType.MUSIC_TRACK,
-    )
 
     internal fun openNowPlayingContextMenu() {
         val playback = _uiState.value.musicPlayback
@@ -3586,9 +3339,9 @@ class CrossbarViewModel @Inject constructor(
                 GamepadAction.NAVIGATE_UP,
                 GamepadAction.NAVIGATE_DOWN,
                 GamepadAction.NAVIGATE_LEFT,
-                GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action))
-                GamepadAction.SELECT        -> onSearchActivatedAt(state.search.selectedIndex)
-                GamepadAction.BACK          -> closeSearch()
+                GamepadAction.NAVIGATE_RIGHT -> librarySearch.moveSearch(searchStep(action))
+                GamepadAction.SELECT        -> librarySearch.onSearchActivatedAt(state.search.selectedIndex)
+                GamepadAction.BACK          -> librarySearch.closeSearch()
                 else -> Unit
             }
             return
@@ -3815,7 +3568,7 @@ class CrossbarViewModel @Inject constructor(
                     ?.let(::onOpenGameInfo)
             }
 
-            GamepadAction.OPEN_SEARCH -> openSearch(SearchScope.ALL)
+            GamepadAction.OPEN_SEARCH -> librarySearch.openSearch(SearchScope.ALL)
 
             GamepadAction.PREV_CATEGORY -> if (state.onLastPlayedHome) stepRecentFilter(-1) else stepHoverPanelPage(-1)
             GamepadAction.NEXT_CATEGORY -> if (state.onLastPlayedHome) stepRecentFilter(+1) else stepHoverPanelPage(+1)
@@ -4085,7 +3838,7 @@ class CrossbarViewModel @Inject constructor(
             ProfileSpot.RECENT -> s.profileData.recent.getOrNull(index)?.let { game ->
                 _uiState.update { it.copy(panelProfile = ProfileFocus(ProfileSpot.RECENT, index)) }
                 closeNotifications()
-                onOpenGameInfo(game.toSearchRow())
+                onOpenGameInfo(game.toSearchRow(platformCache[game.platformId]?.name))
             }
             ProfileSpot.SHOWCASE -> {
                 _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.SHOWCASE)) }
@@ -6013,7 +5766,7 @@ class CrossbarViewModel @Inject constructor(
                 return
             }
             SEARCH_ITEM_ID -> {
-                openSearch(SearchScope.GAMES)
+                librarySearch.openSearch(SearchScope.GAMES)
                 return
             }
             ADD_APPS_ITEM_ID -> {
@@ -6412,7 +6165,7 @@ class CrossbarViewModel @Inject constructor(
         launchGameDirectly(gameId)
     }
 
-    private fun launchGameDirectly(gameId: Long, discId: Long? = null) {
+    internal fun launchGameDirectly(gameId: Long, discId: Long? = null) {
         viewModelScope.launch {
             val selected = gameRepository.getById(gameId) ?: run {
                 Timber.w("Direct launch requested for missing game id=$gameId")
@@ -7654,7 +7407,7 @@ class CrossbarViewModel @Inject constructor(
         internal const val QUICK_SEARCH_ITEM_ID = "quick_search"
         internal const val SEARCH_ITEM_ID = "library_search"
 
-        private const val SEARCH_RESULTS_PER_LIBRARY = 40
+        internal const val SEARCH_RESULTS_PER_LIBRARY = 40
         private const val NETWORK_CATEGORY_ID = "network"
 
         internal const val LIBRARY_APPS_CATEGORY_ID = BuiltInCategory.LIBRARY

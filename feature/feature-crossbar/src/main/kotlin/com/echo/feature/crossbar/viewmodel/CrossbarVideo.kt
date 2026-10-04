@@ -168,7 +168,7 @@ class CrossbarVideo(
     )
 
     internal fun handleVideoSelection(item: CrossbarItem): Boolean = when {
-        item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.openSearch(SearchScope.VIDEOS); true }
+        item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.librarySearch.openSearch(SearchScope.VIDEOS); true }
         item.id == CrossbarViewModel.ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); vm.openAddMenu(); true }
         item.type == CrossbarItemType.EMPTY -> true
         item.id == CrossbarViewModel.ALL_VIDEOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.AllVideos); true }

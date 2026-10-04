@@ -140,7 +140,7 @@ class CrossbarBookshelf(
         }
 
     internal fun handleBooksSelection(item: CrossbarItem): Boolean = when {
-        item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.openSearch(SearchScope.BOOKS); true }
+        item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.librarySearch.openSearch(SearchScope.BOOKS); true }
         item.id == CrossbarViewModel.ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); vm.openAddMenu(); true }
         item.id == CrossbarViewModel.OPEN_READER_ITEM_ID -> {
             menuSound.play(MenuSound.LAUNCH)

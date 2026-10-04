@@ -131,7 +131,7 @@ class CrossbarGallery(
     )
 
     internal fun handlePhotoSelection(item: CrossbarItem): Boolean = when {
-        item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.openSearch(SearchScope.PHOTOS); true }
+        item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.librarySearch.openSearch(SearchScope.PHOTOS); true }
         item.id == CrossbarViewModel.ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); vm.openAddMenu(); true }
         item.id == CrossbarViewModel.ALL_PHOTOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.AllPhotos); true }
         item.id == CrossbarViewModel.PHOTO_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Albums); true }
