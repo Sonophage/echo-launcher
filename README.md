@@ -135,7 +135,7 @@ Look & Feel, Accounts, System, Setup**.
 | <img src="docs/screenshots/panel-quick-settings.jpg" width="420"> | <img src="docs/screenshots/settings-home.jpg" width="420"> |
 | Quick settings | Settings |
 | <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> | <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> |
-| Look & Feel (1.20.1) | Colour Scheme, previewed on the live crossbar (1.20.1) |
+| Look & Feel | Colour Scheme, previewed on the live crossbar (1.20.1) |
 
 ### First run
 
