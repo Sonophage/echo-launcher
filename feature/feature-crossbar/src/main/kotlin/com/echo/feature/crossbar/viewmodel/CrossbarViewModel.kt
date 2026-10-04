@@ -60,9 +60,6 @@ import com.echo.core.ui.icons.GameIconStyle
 import com.echo.core.ui.notification.AndroidNotice
 import com.echo.core.ui.notification.AndroidNotifications
 import com.echo.core.ui.notification.BackgroundTaskNotifier
-import com.echo.feature.artwork.match.MetadataApply
-import com.echo.feature.artwork.match.MetadataApplyPolicy
-import com.echo.feature.artwork.match.MetadataField
 import com.echo.feature.crossbar.ui.detail.ManualViewerUi
 import com.echo.feature.crossbar.ui.detail.MetadataPreviewUi
 import com.echo.feature.artwork.store.ArtworkKind
@@ -1302,6 +1299,8 @@ class CrossbarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
 
+    internal val artworkTools = CrossbarArtwork(this, _uiState, viewModelScope, artworkRepository, menuSound)
+
     internal val launching = CrossbarLauncher(this, _uiState, viewModelScope, launchDispatcher, launchResolver, intentResolver, gameBootGate, mediaLaunchGate, launcherShortcutRepository, menuSound)
 
     internal val appPickerSection = CrossbarAppPicker(this, _uiState, viewModelScope, menuSound)
@@ -1374,7 +1373,7 @@ class CrossbarViewModel @Inject constructor(
         video.observeVideo()
         gallery.observePhoto()
         bookshelf.observeBooks()
-        observeMediaCovers()
+        artworkTools.observeMediaCovers()
         bookshelf.observeContinueBook()
         observeHiddenPlacements()
         panel.observeAndroidNotices()
@@ -1407,28 +1406,6 @@ class CrossbarViewModel @Inject constructor(
         lastPlayedAt = g.lastPlayedAt,
         publisher = g.publisher,
     )
-
-    private fun observeMediaCovers() {
-        viewModelScope.launch {
-            combine(
-                musicRepository.observeNewestArtUris(MEDIA_COVER_POOL),
-                videoRepository.observeNewestArtUris(MEDIA_COVER_POOL),
-                photoRepository.observeNewestArtUris(MEDIA_COVER_POOL),
-                bookRepository.observeNewestArtUris(MEDIA_COVER_POOL),
-            ) { music, video, photo, books -> MediaCovers(music, video, photo, books) }
-                .collect { covers ->
-                    if (_uiState.value.mediaCovers == covers) return@collect
-                    _uiState.update { it.copy(mediaCovers = covers) }
-                    val id = currentCategory()?.id
-                    if (id == BuiltInCategory.MUSIC || id == BuiltInCategory.VIDEO ||
-                        id == BuiltInCategory.PHOTO || id == BuiltInCategory.LIBRARY
-                    ) {
-                        loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
-                    }
-                }
-        }
-    }
-
 
     private fun observeCategoryBar() {
         viewModelScope.launch {
@@ -2924,7 +2901,7 @@ class CrossbarViewModel @Inject constructor(
                 return
             }
             state.metadataPreview != null -> {
-                handleMetadataPreviewInput(action)
+                artworkTools.handleMetadataPreviewInput(action)
                 return
             }
             state.manualViewer != null -> {
@@ -3428,8 +3405,8 @@ class CrossbarViewModel @Inject constructor(
                 "find_games"       -> appPickerSection.openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
                 "import_pc_games"  -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
                 "scan_roms"        -> folders.scanCard(menu.platformId)
-                "scrape_missing_artwork" -> scrapeMissingArtworkForPlatform(menu.platformId)
-                "update_metadata"        -> updatePlatformMetadata(menu.platformId)
+                "scrape_missing_artwork" -> artworkTools.scrapeMissingArtworkForPlatform(menu.platformId)
+                "update_metadata"        -> artworkTools.updatePlatformMetadata(menu.platformId)
                 "pin"              -> setCardPinned(menu.platformId, true)
                 "unpin"            -> setCardPinned(menu.platformId, false)
                 "library_manager"  -> _uiState.update { it.withSettingsOpen("settings_library") }
@@ -3468,10 +3445,10 @@ class CrossbarViewModel @Inject constructor(
                             placeholder = "Anything you want to remember about this game",
                         ))}
                     }
-                    "ARTWORK"  -> openArtworkStudio(gid)
+                    "ARTWORK"  -> artworkTools.openArtworkStudio(gid)
                     "MANUAL"   -> gameDetail.openManualFor(gid)
-                    "METADATA" -> openMetadataPreviewFor(gid)
-                    "REFRESH"  -> fetchArtworkFor(gid)
+                    "METADATA" -> artworkTools.openMetadataPreviewFor(gid)
+                    "REFRESH"  -> artworkTools.fetchArtworkFor(gid)
                     else -> Timber.w("Details row '$what' has no handler")
                 }
             } else if (itemId == "shelf_favorite") {
@@ -4071,50 +4048,8 @@ class CrossbarViewModel @Inject constructor(
         _uiState.value.currentItems.getOrNull(categoryIndex)?.platformId?.let(::openPlatformContextMenu)
     }
 
-    private fun cardName(platformId: String): String =
+    internal fun cardName(platformId: String): String =
         knownPlatformName(platformId) ?: platformId.uppercase()
-
-    private fun scrapeMissingArtworkForPlatform(platformId: String) {
-        viewModelScope.launch {
-            val taskId = "scrape_missing_$platformId"
-            addBackgroundTask(BackgroundTaskInfo(id = taskId, label = "Scraping missing artwork: ${cardName(platformId)}", progress = 0f))
-            runCatching {
-                artworkRepository.scrapeMissingForPlatform(platformId) { p ->
-                    updateBackgroundTask(taskId, p.current.toFloat() / p.total.coerceAtLeast(1))
-                }
-            }.onSuccess { result ->
-                completeBackgroundTask(taskId,
-                    if (result.total == 0) "No games are missing artwork"
-                    else "${result.succeeded} of ${result.total} game(s) updated"
-                )
-                loadItemsForCategory(currentCategory())
-            }.onFailure {
-                if (it is kotlinx.coroutines.CancellationException) throw it
-                failBackgroundTask(taskId, "Artwork scrape failed")
-            }
-        }
-    }
-
-    private fun updatePlatformMetadata(platformId: String) {
-        viewModelScope.launch {
-            val taskId = "update_metadata_$platformId"
-            addBackgroundTask(BackgroundTaskInfo(id = taskId, label = "Updating metadata: ${cardName(platformId)}", progress = 0f))
-            runCatching {
-                artworkRepository.updateMetadataForPlatform(platformId) { p ->
-                    updateBackgroundTask(taskId, p.current.toFloat() / p.total.coerceAtLeast(1))
-                }
-            }.onSuccess { result ->
-                completeBackgroundTask(taskId,
-                    if (result.total == 0) "No games on this card"
-                    else "${result.succeeded} of ${result.total} game(s) updated"
-                )
-                loadItemsForCategory(currentCategory())
-            }.onFailure {
-                if (it is kotlinx.coroutines.CancellationException) throw it
-                failBackgroundTask(taskId, "Metadata update failed")
-            }
-        }
-    }
 
     private fun setCardPinned(platformId: String, pinned: Boolean) {
         viewModelScope.launch { memoryCardRepository.setPinned(platformId, pinned) }
@@ -4147,7 +4082,7 @@ class CrossbarViewModel @Inject constructor(
         taskNotifier.running(task.id, task.label, task.progress)
     }
 
-    private fun updateBackgroundTask(id: String, progress: Float) {
+    internal fun updateBackgroundTask(id: String, progress: Float) {
         val label = taskLabels[id] ?: return
         taskNotifier.running(id, label, progress.coerceIn(0f, 1f))
     }
@@ -4541,169 +4476,9 @@ class CrossbarViewModel @Inject constructor(
     }
 
 
-    fun openArtworkStudio(gameId: Long) {
-        closeContextMenu()
-        _uiState.update { it.copy(artworkStudioGameId = gameId) }
-    }
-
-    fun consumeArtworkStudioAction() =
-        _uiState.update { it.copy(pendingArtworkStudioAction = null) }
-
-    fun closeArtworkStudio() {
-        val id = _uiState.value.artworkStudioGameId
-        _uiState.update { it.copy(artworkStudioGameId = null) }
-        if (id != null) viewModelScope.launch { loadItemsForCategory(currentCategory()) }
-    }
-
-    private fun fetchArtworkFor(gameId: Long) {
-        closeContextMenu()
-        if (_uiState.value.artworkFetchTitle != null) return
-        viewModelScope.launch {
-            val before = gameRepository.getById(gameId)
-            _uiState.update { it.copy(artworkFetchTitle = before?.displayTitle ?: "this game") }
-            val result = artworkRepository.fetchArtworkForGame(gameId, before?.title.orEmpty())
-            val updated = gameRepository.getById(gameId)
-            artworkRepository.evictFromImageCache((artRefsOf(before) + artRefsOf(updated)).toSet())
-            _uiState.update { it.copy(artworkFetchTitle = null) }
-            SystemToasts.post(
-                when {
-                    result.success -> "Artwork updated"
-                    result.skipped -> "Already has artwork"
-                    else           -> result.errorMessage ?: "Artwork fetch failed"
-                },
-                null,
-                if (result.success || result.skipped) ToastKind.SUCCESS else ToastKind.ERROR,
-            )
-            loadItemsForCategory(currentCategory())
-        }
-    }
-
-    private fun artRefsOf(game: Game?): List<String> = listOfNotNull(
+    internal fun artRefsOf(game: Game?): List<String> = listOfNotNull(
         game?.artworkUri, game?.logoUri, game?.iconUri,
     )
-
-    private fun openMetadataPreviewFor(gameId: Long) {
-        closeContextMenu()
-        if (_uiState.value.metadataPreview != null) return
-        val generation = ++metadataPreviewGeneration
-        _uiState.update { it.copy(metadataPreview = MetadataPreviewUi(), metadataPreviewGameId = gameId) }
-        viewModelScope.launch {
-            val outcome = runCatching { artworkRepository.fetchMetadataPreview(gameId) }
-                .onFailure { Timber.w(it, "Metadata preview failed for game $gameId") }
-            val preview = outcome.getOrNull()
-            if (generation != metadataPreviewGeneration) return@launch
-            _uiState.update { s ->
-                if (s.metadataPreview == null) return@update s
-                if (preview == null || preview.presets.isEmpty()) {
-                    return@update s.copy(
-                        metadataPreview = MetadataPreviewUi(loading = false, failed = outcome.isFailure),
-                    )
-                }
-                s.copy(metadataPreview = MetadataPreviewUi(
-                    loading = false,
-                    current = preview.current,
-                    presets = preview.presets,
-                    chosen  = MetadataApply.changedFields(preview.current, preview.presets.first()),
-                ))
-            }
-        }
-    }
-
-    fun closeMetadataPreview() {
-        metadataPreviewGeneration++
-        _uiState.update { it.copy(metadataPreview = null, metadataPreviewGameId = null) }
-    }
-
-    fun selectMetadataPolicy(policy: MetadataApplyPolicy) = updateMetadataPreview { it.copy(policy = policy) }
-
-    private fun cycleMetadataPolicy(delta: Int) = updateMetadataPreview { p ->
-        val all = MetadataApplyPolicy.entries
-        p.copy(policy = all[(p.policy.ordinal + delta).mod(all.size)])
-    }
-
-    fun cycleMetadataSource(delta: Int) = updateMetadataPreview { p ->
-        if (p.presets.size < 2) return@updateMetadataPreview p
-        val index = (p.presetIndex + delta).mod(p.presets.size)
-        val next = p.copy(presetIndex = index, chosen = MetadataApply.changedFields(p.current, p.presets[index]))
-        next.copy(focus = next.focus.coerceIn(0, next.applyIndex))
-    }
-
-    fun toggleMetadataField(field: MetadataField) = updateMetadataPreview { p ->
-        p.copy(
-            policy = MetadataApplyPolicy.CHOOSE_FIELDS,
-            chosen = if (field in p.chosen) p.chosen - field else p.chosen + field,
-        )
-    }
-
-    private fun moveMetadataFocus(delta: Int) = updateMetadataPreview { p ->
-        p.copy(focus = (p.focus + delta).coerceIn(0, p.applyIndex))
-    }
-
-    fun applyMetadataPreview() {
-        val gameId = _uiState.value.metadataPreviewGameId ?: return
-        val p = _uiState.value.metadataPreview ?: return
-        if (p.loading || p.applying) return
-
-        val preset = p.preset ?: return closeMetadataPreview()
-        if (p.policy == MetadataApplyPolicy.KEEP_CURRENT) {
-            closeMetadataPreview()
-            SystemToasts.post("Kept current metadata", null, ToastKind.SUCCESS)
-            return
-        }
-        _uiState.update { it.copy(metadataPreview = p.copy(applying = true)) }
-        viewModelScope.launch {
-            val written = runCatching { artworkRepository.applyMetadata(gameId, preset, p.policy, p.chosen) }
-                .onFailure { Timber.w(it, "Metadata apply failed for game $gameId") }
-            metadataPreviewGeneration++
-            _uiState.update { it.copy(metadataPreview = null, metadataPreviewGameId = null) }
-            SystemToasts.post(
-                written.fold(
-                    onSuccess = { fields ->
-                        when (fields.size) {
-                            0    -> "Nothing to change"
-                            1    -> "Updated 1 field from ${preset.provider.label}"
-                            else -> "Updated ${fields.size} fields from ${preset.provider.label}"
-                        }
-                    },
-                    onFailure = { "Metadata update failed" },
-                ),
-                null,
-                if (written.isSuccess) ToastKind.SUCCESS else ToastKind.ERROR,
-            )
-            loadItemsForCategory(currentCategory())
-        }
-    }
-
-    private fun updateMetadataPreview(
-        transform: (MetadataPreviewUi) -> MetadataPreviewUi,
-    ) = _uiState.update { s ->
-        val p = s.metadataPreview ?: return@update s
-        if (p.loading || p.applying) s else s.copy(metadataPreview = transform(p))
-    }
-
-    private fun handleMetadataPreviewInput(action: GamepadAction) {
-        val p = _uiState.value.metadataPreview ?: return
-        if (p.applying) return
-        if (p.nothingFound) {
-            if (action == GamepadAction.SELECT || action == GamepadAction.BACK) closeMetadataPreview()
-            return
-        }
-        when (action) {
-            GamepadAction.BACK           -> closeMetadataPreview()
-            GamepadAction.NAVIGATE_LEFT  -> cycleMetadataPolicy(-1)
-            GamepadAction.NAVIGATE_RIGHT -> cycleMetadataPolicy(+1)
-            GamepadAction.PREV_CATEGORY  -> cycleMetadataSource(-1)
-            GamepadAction.NEXT_CATEGORY  -> cycleMetadataSource(+1)
-            GamepadAction.NAVIGATE_UP    -> moveMetadataFocus(-1)
-            GamepadAction.NAVIGATE_DOWN  -> moveMetadataFocus(+1)
-            GamepadAction.SELECT         ->
-                if (p.focus >= p.applyIndex) applyMetadataPreview()
-                else p.rows.getOrNull(p.focus)?.let { toggleMetadataField(it.field) }
-            else -> Unit
-        }
-    }
-
-    private var metadataPreviewGeneration = 0
 
     internal val MANUAL_MAX_SCROLL_STEPS_ = 20
 
