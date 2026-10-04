@@ -131,7 +131,7 @@ object CrossbarStatusIcons {
 }
 
 
-data class StripLiveActivity(val art: Any?, val title: String, val detail: String?, val stage: PanelStage? = null)
+data class StripLiveActivity(val art: Any?, val title: String, val detail: String?, val stage: PanelStage? = null, val accentArgb: Long? = null)
 
 data class StripHints(val shoulder: Boolean = false, val leftRight: Boolean = false)
 
@@ -202,7 +202,7 @@ fun CrossbarStatusStrip(
     val stage = live?.stage
     val stageIcon = rememberAppIcon(stage?.let { stagePackage(it, context.packageName) })
     val islandTint by animateColorAsState(
-        stage?.let { stageTint(it, stageIcon?.color, fallback) } ?: fallback,
+        live?.accentArgb?.let(::mediaAccent) ?: stage?.let { stageTint(it, stageIcon?.color, fallback) } ?: fallback,
         tween(500),
         label = "islandTint",
     )

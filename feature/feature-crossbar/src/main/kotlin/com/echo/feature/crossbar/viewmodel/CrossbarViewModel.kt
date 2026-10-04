@@ -702,6 +702,8 @@ data class CrossbarUiState(
     val externalPlayback: com.echo.core.ui.notification.ExternalPlayback? = null,
 
     val recentTop: CrossbarItem? = null,
+
+    val recentTopAccentArgb: Long? = null,
     val recentTopAt: Long? = null,
     val panelPage: DetailPanelPage = DetailPanelPage.LOGO,
     val panelPageGameId: Long? = null,
@@ -1360,6 +1362,7 @@ class CrossbarViewModel @Inject constructor(
         observeIconPreferences()
         observeFocusedGameVideo()
         observeFocusedItemAccent()
+        observeRecentTopAccent()
         observeBackgroundSettings()
         observeTouchNavButtonMode()
         observeWallpaper()
@@ -8874,6 +8877,18 @@ class CrossbarViewModel @Inject constructor(
                             focusedItemBackdrop = art?.uri,
                         )
                     }
+                }
+        }
+    }
+
+    private fun observeRecentTopAccent() {
+        viewModelScope.launch {
+            _uiState
+                .map { s -> s.recentTop?.takeIf { recentKind(it) != RecentKind.APP } }
+                .distinctUntilChanged { a, b -> a?.backdropIdentity() == b?.backdropIdentity() && a?.shelfCoverArt == b?.shelfCoverArt }
+                .collectLatest { top ->
+                    val accent = top?.let { artworkAccent.of(it.shelfCoverArt, *it.backdropArt.toTypedArray()) }
+                    _uiState.update { it.copy(recentTopAccentArgb = accent) }
                 }
         }
     }

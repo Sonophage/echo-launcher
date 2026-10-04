@@ -2,6 +2,8 @@ package com.echo.feature.crossbar.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.ControllerPromptItem
 import com.echo.core.ui.components.HintAction
@@ -14,6 +16,7 @@ fun CrossbarHintBar(
     prompts: CrossbarPrompts,
     modifier: Modifier = Modifier,
     onAction: ((GamepadAction) -> Unit)? = null,
+    accent: Color = LocalEchoColors.current.accentColor,
 ) {
     EchoHintBar(
         items = buildList {
@@ -22,6 +25,7 @@ fun CrossbarHintBar(
         },
         modifier = modifier,
         onAction = onAction,
+        accent = accent,
         primary = prompts.primary?.let { p ->
             HintAction(p.action, p.verb, listOfNotNull(p.target, p.detail).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null })
         },

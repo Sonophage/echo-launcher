@@ -61,6 +61,7 @@ fun EchoHintBar(
     primary: HintAction? = null,
 
     centre: (@Composable () -> Unit)? = null,
+    accent: Color = LocalEchoColors.current.accentColor,
 ) {
     if (items.isEmpty() && primary == null && centre == null) return
     val pad = LocalPadPrompts.current
@@ -85,7 +86,7 @@ fun EchoHintBar(
             contentAlignment = Alignment.Center,
         ) { centre?.invoke() }
 
-        primary?.let { ActionTab(it, u, pad, onAction, Modifier.align(Alignment.Bottom)) }
+        primary?.let { ActionTab(it, accent, u, pad, onAction, Modifier.align(Alignment.Bottom)) }
     }
 }
 
@@ -117,12 +118,12 @@ private fun Hint(item: ControllerPromptItem, u: DesignUnits, pad: Boolean, onAct
 @Composable
 private fun ActionTab(
     primary: HintAction,
+    accent: Color,
     u: DesignUnits,
     pad: Boolean,
     onAction: ((GamepadAction) -> Unit)?,
     modifier: Modifier,
 ) {
-    val accent = LocalEchoColors.current.accentColor
     val edge = lerp(accent, Color.White, 0.3f)
     val radius = u.dp(20)
     val shape = RoundedCornerShape(topStart = radius)

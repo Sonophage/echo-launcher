@@ -1,5 +1,7 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.LocalEchoColors
+import com.echo.core.ui.design.mediaAccent
 import com.echo.core.ui.notification.AndroidNotifications
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
@@ -1025,6 +1027,7 @@ fun CrossbarShell(
                     title = music.title,
                     detail = listOfNotNull(music.artist, music.app).joinToString("  ·  "),
                     stage = music,
+                    accentArgb = uiState.musicAccentArgb.takeIf { music.packageName == null },
                 )
             }
 
@@ -1039,7 +1042,7 @@ fun CrossbarShell(
                 ?: musicActivity
 
             val recentActivity = uiState.recentTop?.takeIf { uiState.interfaceChoices.islandShowsRecent }?.let { top ->
-                StripLiveActivity(art = top.shelfCoverArt, title = top.title, detail = top.subtitle, stage = uiState.recentStage())
+                StripLiveActivity(art = top.shelfCoverArt, title = top.title, detail = top.subtitle, stage = uiState.recentStage(), accentArgb = uiState.recentTopAccentArgb)
             }
 
             val islandIsRecent = foregroundActivity == null && recentActivity != null
@@ -1169,6 +1172,10 @@ fun CrossbarShell(
                     CrossbarHintBar(
                         prompts = promptsFor(uiState),
                         onAction = onPromptTapped,
+                        accent = uiState.focusedItemAccentArgb
+                            ?.takeIf { uiState.activeSettingsScreen == null }
+                            ?.let(::mediaAccent)
+                            ?: LocalEchoColors.current.accentColor,
                     )
                 }
             }
