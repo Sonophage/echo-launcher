@@ -115,4 +115,10 @@ class InitialSetupGateTest {
         )
         assertEquals(InitialSetupDecision.ALREADY_SEEN, CrossbarViewModel.initialSetupDecision(prefs, emptyList()))
     }
+
+    @Test fun `only the first-run wizard holds back the startup notifications prompt, so it is asked once`() {
+        assertTrue(CrossbarViewModel.wizardOwnsNotificationPrompt(InitialSetupDecision.OPEN_WIZARD))
+        assertFalse(CrossbarViewModel.wizardOwnsNotificationPrompt(InitialSetupDecision.ALREADY_SEEN))
+        assertFalse(CrossbarViewModel.wizardOwnsNotificationPrompt(InitialSetupDecision.SEED_AS_SEEN))
+    }
 }

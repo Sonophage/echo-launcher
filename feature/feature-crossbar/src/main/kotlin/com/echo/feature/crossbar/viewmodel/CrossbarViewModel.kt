@@ -84,6 +84,7 @@ import com.echo.feature.crossbar.gamepad.ShoulderHold
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -4316,10 +4317,17 @@ class CrossbarViewModel @Inject constructor(
         _uiState.update { it.copy(startupPermissionsSettled = true) }
     }
 
+    private val startupSetupDecision = CompletableDeferred<InitialSetupDecision>()
+
+    suspend fun firstRunWizardAsksForNotifications(): Boolean =
+        wizardOwnsNotificationPrompt(startupSetupDecision.await())
+
     private fun checkInitialSetup() {
         viewModelScope.launch {
             val prefs = context.echoDataStore.data.first()
-            when (initialSetupDecision(prefs, gameActions.existingCards())) {
+            val decision = initialSetupDecision(prefs, gameActions.existingCards())
+            startupSetupDecision.complete(decision)
+            when (decision) {
                 InitialSetupDecision.ALREADY_SEEN ->
                     Timber.d("StartupSeq: initial setup already seen")
                 InitialSetupDecision.SEED_AS_SEEN -> {
@@ -4663,6 +4671,11 @@ class CrossbarViewModel @Inject constructor(
             hasExistingSetupConfig(prefs) || cards.any { it.isUserLibrary() } -> InitialSetupDecision.SEED_AS_SEEN
             else -> InitialSetupDecision.OPEN_WIZARD
         }
+
+        // The first-run wizard offers POST_NOTIFICATIONS itself, so the startup system prompt
+        // waits until the wizard is done (owner, 2026-10-04).
+        internal fun wizardOwnsNotificationPrompt(decision: InitialSetupDecision): Boolean =
+            decision == InitialSetupDecision.OPEN_WIZARD
 
         private fun MemoryCard.isUserLibrary(): Boolean =
             platformId != ANDROID_PLATFORM_ID || gameCount > 0

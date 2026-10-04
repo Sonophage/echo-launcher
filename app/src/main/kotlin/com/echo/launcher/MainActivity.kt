@@ -90,7 +90,13 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         hideSystemBars()
-        requestNotificationPermissionIfNeeded()
+        lifecycleScope.launch {
+            if (crossbarViewModel.firstRunWizardAsksForNotifications()) {
+                crossbarViewModel.onStartupPermissionsSettled()
+            } else {
+                requestNotificationPermissionIfNeeded()
+            }
+        }
         startMenuMusicIfWanted()
         ContextCompat.registerReceiver(
             this,
