@@ -183,7 +183,7 @@ class CrossbarVideo(
         item.id == CrossbarViewModel.VIDEO_LIBRARIES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Libraries); true }
         item.id == CrossbarViewModel.ADD_VIDEOS_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            vm.openMediaFolders(MediaRootKind.VIDEO)
+            vm.folders.openMediaFolders(MediaRootKind.VIDEO)
             true
         }
         item.id == CrossbarViewModel.ADD_VIDEO_APPS_ITEM_ID -> {
@@ -335,7 +335,7 @@ class CrossbarVideo(
                 val name = uiState.value.currentItems.firstOrNull { it.id == "vlib_$libraryId" }?.title.orEmpty()
                 openVideoView(VideoNav.Library(libraryId, name))
             }
-            "video_lib_manage" -> vm.openMediaFolders(MediaRootKind.VIDEO)
+            "video_lib_manage" -> vm.folders.openMediaFolders(MediaRootKind.VIDEO)
         }
     }
 

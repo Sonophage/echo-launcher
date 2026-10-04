@@ -425,7 +425,7 @@ class CrossbarMusic(
         item.id == CrossbarViewModel.MUSIC_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Albums); true }
         item.id == CrossbarViewModel.ADD_MUSIC_FOLDER_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            vm.openMediaFolders(MediaRootKind.MUSIC)
+            vm.folders.openMediaFolders(MediaRootKind.MUSIC)
             true
         }
         item.id == CrossbarViewModel.CREATE_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreatePlaylist(); true }
@@ -652,7 +652,7 @@ class CrossbarMusic(
     internal fun handleMusicFolderAction(folderId: String, itemId: String) {
         when (itemId) {
             "scan_folder" -> vm.appAction { scanMusicFolder(folderId) }
-            "rename_folder" -> vm.openMediaFolders(MediaRootKind.MUSIC)
+            "rename_folder" -> vm.folders.openMediaFolders(MediaRootKind.MUSIC)
             "enable_folder" -> vm.appAction { musicRepository.setFolderEnabled(folderId, true) }
             "disable_folder" -> vm.appAction { musicRepository.setFolderEnabled(folderId, false) }
             "remove_folder" -> vm.appAction { musicRepository.removeFolder(folderId) }

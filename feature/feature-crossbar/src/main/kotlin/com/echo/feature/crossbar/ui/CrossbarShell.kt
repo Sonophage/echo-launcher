@@ -170,7 +170,7 @@ fun CrossbarShellContainer(
 
     val mediaRootPicker = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
-    ) { uri -> viewModel.onMediaRootPicked(uri) }
+    ) { uri -> viewModel.folders.onMediaRootPicked(uri) }
 
     val avatarPicker = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()

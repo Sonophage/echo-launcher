@@ -156,7 +156,7 @@ class CrossbarBookshelf(
         item.id == CrossbarViewModel.BOOK_SERIES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.SeriesList); true }
         item.id == CrossbarViewModel.ADD_BOOK_FOLDER_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            vm.openMediaFolders(MediaRootKind.BOOK)
+            vm.folders.openMediaFolders(MediaRootKind.BOOK)
             true
         }
         item.type == CrossbarItemType.LIBRARY_SERIES -> {

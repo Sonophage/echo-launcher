@@ -1,6 +1,5 @@
 package com.echo.feature.crossbar.viewmodel
 
-import com.echo.core.ui.components.MenuGroup
 import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.components.MenuSelect
 import com.echo.core.ui.components.MenuState
@@ -30,14 +29,7 @@ import com.echo.core.data.repository.CategoryRepositoryImpl
 import com.echo.core.data.repository.ControllerMappingRepository
 import com.echo.core.data.repository.CustomIconStore
 import com.echo.core.data.repository.MediaRootKind
-import com.echo.core.data.repository.MediaScannedEntry
-import com.echo.core.data.repository.SafGrants
 import com.echo.core.data.music.MusicIntentResolver
-import com.echo.core.data.repository.mediaRootDisplayName
-import com.echo.core.data.repository.RomFolderEntry
-import com.echo.core.data.repository.isRomDirUnder
-import com.echo.core.data.repository.mediaRootRows
-import com.echo.core.data.repository.romFolderEntries
 import com.echo.feature.launcher.PlatformEmulatorChoices
 import com.echo.feature.launcher.platformEmulatorChoices
 import com.echo.core.data.repository.MemoryCardRepository
@@ -89,8 +81,6 @@ import com.echo.feature.launcher.LaunchRecoveryAction
 import com.echo.feature.launcher.ResolvedLaunch
 import com.echo.feature.artwork.api.ArtworkRepository
 import com.echo.feature.library.scanner.LibraryScanner
-import com.echo.feature.library.scanner.ScanStatus
-import com.echo.feature.library.scanner.scanOutcomeMessage
 import com.echo.feature.crossbar.R
 import com.echo.feature.crossbar.gamepad.GamepadInputHandler
 import com.echo.core.ui.components.LetterJumpState
@@ -1258,7 +1248,7 @@ fun CrossbarUiState.withNamePromptText(text: String): CrossbarUiState = when {
 class CrossbarViewModel @Inject constructor(
     internal val gameRepository: GameRepository,
     internal val platformDao: PlatformDao,
-    private val memoryCardRepository: MemoryCardRepository,
+    internal val memoryCardRepository: MemoryCardRepository,
     private val categoryRepository: CategoryRepositoryImpl,
     internal val appCategoryRepository: AppCategoryRepository,
     private val gameCategoryRepository: com.echo.core.data.repository.GameCategoryRepository,
@@ -1317,6 +1307,8 @@ class CrossbarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
 
+    internal val folders = CrossbarFolders(this, _uiState, viewModelScope, mediaRootRepository, romRootRepository, libraryScanner, pcGameScanner, menuSound)
+
     internal val look = CrossbarLook(this, _uiState, viewModelScope, menuSound)
 
     internal val recents = CrossbarRecents(this, _uiState, viewModelScope, menuSound)
@@ -1344,7 +1336,7 @@ class CrossbarViewModel @Inject constructor(
     private var currentItemsJob: Job? = null
 
     internal var platformCache: Map<String, PlatformEntity> = emptyMap()
-    private var enabledCards: List<MemoryCard> = emptyList()
+    internal var enabledCards: List<MemoryCard> = emptyList()
     private val taskNotifier = BackgroundTaskNotifier(context)
 
     init {
@@ -1720,7 +1712,7 @@ class CrossbarViewModel @Inject constructor(
                 BuiltInCategory.GAMES -> {
                     val platformId = _uiState.value.selectedPlatformId
                     if (_uiState.value.romFoldersOpen) {
-                        _uiState.update { it.copy(currentItems = romFolderItems()) }
+                        _uiState.update { it.copy(currentItems = folders.romFolderItems()) }
                     } else if (platformId == ALL_GAMES_PLATFORM_ID) {
                         var keepCursor = keepCursorOnRow
                         gameRepository.observeAllGames().collect { games ->
@@ -1760,7 +1752,7 @@ class CrossbarViewModel @Inject constructor(
                                 games.notHiddenAt(HideLocationType.ANDROID_PLATFORM)
                             else
                                 games.notHiddenAt(HideLocationType.PLATFORM, platformId)
-                            val items = if (visible.isEmpty()) listOf(emptyFolderItem(platformId))
+                            val items = if (visible.isEmpty()) listOf(folders.emptyFolderItem(platformId))
                                         else visible.gameSorted(_uiState.value.gameSortMode).toCrossbarItems()
                             publishGameItems(items, keepCursor)
                             keepCursor = true
@@ -1776,7 +1768,7 @@ class CrossbarViewModel @Inject constructor(
                 }
                 BuiltInCategory.MUSIC -> when (val nav = _uiState.value.musicNav) {
                     MusicNav.Folders -> mediaRootRepository.roots(MediaRootKind.MUSIC).collect {
-                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.MUSIC)) }
+                        _uiState.update { s -> s.copy(currentItems = folders.mediaFolderItems(MediaRootKind.MUSIC)) }
                     }
                     MusicNav.Root -> {
                         music.clearMusicTrackCache()
@@ -1797,7 +1789,7 @@ class CrossbarViewModel @Inject constructor(
                 }
                 BuiltInCategory.VIDEO -> when (val nav = _uiState.value.videoNav) {
                     VideoNav.Folders -> mediaRootRepository.roots(MediaRootKind.VIDEO).collect {
-                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.VIDEO)) }
+                        _uiState.update { s -> s.copy(currentItems = folders.mediaFolderItems(MediaRootKind.VIDEO)) }
                     }
                     VideoNav.Root -> _uiState.update { it.copy(currentItems = video.videoRootItems()) }
                     VideoNav.Collections -> _uiState.update { it.copy(currentItems = video.videoCollectionsItems()) }
@@ -1827,7 +1819,7 @@ class CrossbarViewModel @Inject constructor(
                 }
                 BuiltInCategory.PHOTO -> when (val nav = _uiState.value.photoNav) {
                     PhotoNav.Folders -> mediaRootRepository.roots(MediaRootKind.PHOTO).collect {
-                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.PHOTO)) }
+                        _uiState.update { s -> s.copy(currentItems = folders.mediaFolderItems(MediaRootKind.PHOTO)) }
                     }
                     PhotoNav.Root -> _uiState.update { it.copy(currentItems = gallery.photoRootItems()) }
                     PhotoNav.AllPhotos -> photoRepository.observeAllPhotos().collect { photos ->
@@ -1845,7 +1837,7 @@ class CrossbarViewModel @Inject constructor(
                 }
                 BuiltInCategory.LIBRARY -> when (val nav = _uiState.value.booksNav) {
                     BooksNav.Folders -> mediaRootRepository.roots(MediaRootKind.BOOK).collect {
-                        _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.BOOK)) }
+                        _uiState.update { s -> s.copy(currentItems = folders.mediaFolderItems(MediaRootKind.BOOK)) }
                     }
                     BooksNav.Root -> _uiState.update { it.copy(currentItems = bookshelf.booksRootItems()) }
                     BooksNav.Shelves -> bookRepository.observeLibraries().collect { shelves ->
@@ -2129,120 +2121,14 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun mediaRootKindOf(categoryId: String?): MediaRootKind? = when (categoryId) {
-        BuiltInCategory.MUSIC   -> MediaRootKind.MUSIC
-        BuiltInCategory.VIDEO   -> MediaRootKind.VIDEO
-        BuiltInCategory.PHOTO   -> MediaRootKind.PHOTO
-        BuiltInCategory.LIBRARY -> MediaRootKind.BOOK
-        else -> null
-    }
-
-    private fun mediaKindNouns(kind: MediaRootKind): Pair<String, String> = when (kind) {
+    internal fun mediaKindNouns(kind: MediaRootKind): Pair<String, String> = when (kind) {
         MediaRootKind.MUSIC -> "track" to "tracks"
         MediaRootKind.VIDEO -> "video" to "videos"
         MediaRootKind.PHOTO -> "photo" to "photos"
         MediaRootKind.BOOK  -> "book" to "books"
     }
 
-    private suspend fun scannedEntriesFor(kind: MediaRootKind): List<MediaScannedEntry> = when (kind) {
-        MediaRootKind.MUSIC -> musicRepository.getFolders().map {
-            MediaScannedEntry(it.treeUri, it.displayName, it.trackCount, it.lastScannedAt)
-        }
-        MediaRootKind.VIDEO -> videoRepository.getLibraries().map {
-            MediaScannedEntry(it.treeUri, it.displayName, it.videoCount, it.lastScannedAt)
-        }
-        MediaRootKind.PHOTO -> photoRepository.getLibraries().map {
-            MediaScannedEntry(it.treeUri, it.displayName, it.photoCount, it.lastScannedAt)
-        }
-        MediaRootKind.BOOK -> bookRepository.getLibraries().map {
-            MediaScannedEntry(it.treeUri, it.displayName, it.bookCount, it.lastScannedAt)
-        }
-    }
-
-    private suspend fun mediaFolderItems(kind: MediaRootKind): List<CrossbarItem> {
-        val roots = mediaRootRepository.getAll(kind)
-        val persisted = SafGrants.persistedReadUris(context.contentResolver)
-        val rows = mediaRootRows(roots, persisted, scannedEntriesFor(kind)) { treeUri ->
-            mediaRootDisplayName(context, treeUri, mediaKindLabel(kind))
-        }
-        val (one, many) = mediaKindNouns(kind)
-
-        return rows.map { row ->
-            CrossbarItem(
-                id       = mediaRootItemId(kind, row.treeUri),
-                title    = row.name,
-                subtitle = row.itemCount.let { count ->
-                    when {
-                        !row.linked   -> "Access lost — Relink to grant it again"
-                        count == null -> "Not scanned yet"
-                        else          -> countLabel(count, one, many)
-                    }
-                },
-                type          = CrossbarItemType.MEDIA_ROOT,
-                mediaRootUri  = row.treeUri,
-                mediaRootKind = kind,
-            )
-        } + CrossbarItem(
-            id       = addMediaRootItemId(kind),
-            title    = "Add Folder",
-            subtitle = if (rows.isEmpty()) "Grant a ${mediaKindFolderWord(kind)} folder to start"
-                       else "Grant another ${mediaKindFolderWord(kind)} folder",
-            type          = CrossbarItemType.ADD_ACTION,
-            mediaRootKind = kind,
-        )
-    }
-
-    internal fun openMediaFolders(kind: MediaRootKind) = when (kind) {
-        MediaRootKind.MUSIC -> music.openMusicView(MusicNav.Folders)
-        MediaRootKind.VIDEO -> video.openVideoView(VideoNav.Folders)
-        MediaRootKind.PHOTO -> gallery.openPhotoView(PhotoNav.Folders)
-        MediaRootKind.BOOK  -> bookshelf.openBooksView(BooksNav.Folders)
-    }
-
-    fun requestMediaRootPick(kind: MediaRootKind, relinkFrom: String? = null) {
-        _uiState.update { it.copy(rootPick = RootPick(RootTarget.Media(kind), relinkFrom)) }
-    }
-
-    fun requestRomRootPick(relinkFrom: String? = null) {
-        _uiState.update { it.copy(rootPick = RootPick(RootTarget.Rom, relinkFrom)) }
-    }
-
-    fun onMediaRootPicked(uri: Uri?) {
-        val request = _uiState.value.rootPick ?: return
-        _uiState.update { it.copy(rootPick = null) }
-        if (uri == null) return
-        viewModelScope.launch {
-            when (val target = request.target) {
-                is RootTarget.Media -> {
-                    mediaRootRepository.persist(uri)
-                    if (request.relinkFrom != null) {
-                        mediaRootRepository.replace(target.kind, request.relinkFrom, uri.toString())
-                    } else {
-                        mediaRootRepository.add(target.kind, uri.toString())
-                    }
-                    rescanMediaKind(target.kind)
-                }
-                RootTarget.Rom -> {
-                    romRootRepository.persist(uri, writable = true)
-                    if (request.relinkFrom != null) {
-                        romRootRepository.replace(request.relinkFrom, uri.toString())
-                    } else {
-                        romRootRepository.add(uri.toString())
-                    }
-                    refreshRomFolders()
-                }
-            }
-        }
-    }
-
-    private fun removeMediaRoot(kind: MediaRootKind, treeUri: String) {
-        appAction {
-            mediaRootRepository.remove(kind, treeUri)
-            rescanMediaKind(kind)
-        }
-    }
-
-    private suspend fun pruneOrphanEntries(kind: MediaRootKind, roots: List<String>) {
+    internal suspend fun pruneOrphanEntries(kind: MediaRootKind, roots: List<String>) {
         when (kind) {
             MediaRootKind.MUSIC -> musicRepository.getFolders()
                 .filter { it.treeUri !in roots }.forEach { musicRepository.removeFolder(it.id) }
@@ -2255,88 +2141,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private suspend fun entryIdForRoot(kind: MediaRootKind, treeUri: String): String {
-        val name = mediaRootDisplayName(context, treeUri, mediaKindLabel(kind))
-        return when (kind) {
-            MediaRootKind.MUSIC ->
-                (musicRepository.getFolders().firstOrNull { it.treeUri == treeUri }
-                    ?: musicRepository.addFolder(name, treeUri)).id
-            MediaRootKind.VIDEO ->
-                (videoRepository.getLibraries().firstOrNull { it.treeUri == treeUri }
-                    ?: videoRepository.addLibrary(name, treeUri)).id
-            MediaRootKind.PHOTO ->
-                (photoRepository.getLibraries().firstOrNull { it.treeUri == treeUri }
-                    ?: photoRepository.addLibrary(name, treeUri)).id
-            MediaRootKind.BOOK ->
-                (bookRepository.getLibraries().firstOrNull { it.treeUri == treeUri }
-                    ?: bookRepository.addLibrary(name, treeUri)).id
-        }
-    }
-
-    private suspend fun scanOneRoot(kind: MediaRootKind, treeUri: String, deep: Boolean) {
-        val entryId = entryIdForRoot(kind, treeUri)
-        when (kind) {
-            MediaRootKind.MUSIC -> music.scanMusicFolder(entryId)
-            MediaRootKind.VIDEO -> video.scanVideoLibrary(entryId, deep)
-            MediaRootKind.PHOTO -> gallery.scanPhotoLibrary(entryId)
-            MediaRootKind.BOOK  -> bookshelf.scanBookLibrary(entryId, deep)
-        }
-    }
-
-    private fun rescanMediaRoot(kind: MediaRootKind, treeUri: String, deep: Boolean = false) {
-        viewModelScope.launch { scanOneRoot(kind, treeUri, deep) }
-    }
-
-    private fun rescanMediaKind(kind: MediaRootKind, deep: Boolean = false) {
-        viewModelScope.launch {
-            val roots = mediaRootRepository.getAll(kind)
-            pruneOrphanEntries(kind, roots)
-            roots.forEach { scanOneRoot(kind, it, deep) }
-        }
-    }
-
-    private fun openMediaRootContextMenu(item: CrossbarItem) {
-        val kind = item.mediaRootKind ?: return
-        val treeUri = item.mediaRootUri ?: return
-        val linked = item.subtitle?.startsWith("Access lost") != true
-        _uiState.update {
-            it.copy(
-                activeContextMenu = CrossbarContextMenu(
-                    state = MenuState(
-                        title = item.title,
-                        rows = mediaRootContextMenuItems(linked, kind),
-                    ),
-                    mediaRootUri = treeUri,
-                    mediaRootKind = kind,
-                ),
-            )
-        }
-    }
-
-    private fun handleMediaRootAction(kind: MediaRootKind, treeUri: String, itemId: String) {
-        when (mediaRootActionOf(itemId)) {
-            MediaRootAction.RESCAN      -> rescanMediaRoot(kind, treeUri)
-            MediaRootAction.RESCAN_DEEP -> rescanMediaRoot(kind, treeUri, deep = true)
-            MediaRootAction.RELINK      -> requestMediaRootPick(kind, relinkFrom = treeUri)
-            MediaRootAction.REMOVE      -> removeMediaRoot(kind, treeUri)
-            null -> Unit
-        }
-    }
-
-
-    private fun openMediaFoldersContextMenu(item: CrossbarItem) {
-        val kind = item.mediaRootKind ?: return
-        _uiState.update {
-            it.copy(
-                activeContextMenu = CrossbarContextMenu(
-                    state = MenuState(title = item.title, rows = mediaFoldersContextMenuItems(kind)),
-                    mediaRootKind = kind,
-                ),
-            )
-        }
-    }
-
-    private fun openDefaultMediaAppMenu(kind: MediaRootKind) {
+    internal fun openDefaultMediaAppMenu(kind: MediaRootKind) {
         viewModelScope.launch {
             val current: String? = when (kind) {
                 MediaRootKind.MUSIC -> musicRepository.observeDefaultPlayerPackage().first()
@@ -2385,7 +2190,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun setDefaultMediaApp(kind: MediaRootKind, packageName: String?) {
+    internal fun setDefaultMediaApp(kind: MediaRootKind, packageName: String?) {
         appAction {
             when (kind) {
                 MediaRootKind.MUSIC -> musicRepository.setDefaultPlayerPackage(packageName)
@@ -2396,7 +2201,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun clearMediaCache(kind: MediaRootKind) {
+    internal fun clearMediaCache(kind: MediaRootKind) {
         appAction {
             val removed = when (kind) {
                 MediaRootKind.PHOTO -> photoScanner.clearThumbnailCache()
@@ -2404,21 +2209,6 @@ class CrossbarViewModel @Inject constructor(
                 else -> return@appAction
             }
             SystemToasts.post("Cleared $removed cached file(s)", "Rescan to regenerate them.", ToastKind.SUCCESS)
-        }
-    }
-
-    private fun handleMediaFoldersAction(kind: MediaRootKind, itemId: String) {
-        when (mediaFoldersActionOf(itemId)) {
-            MediaFoldersAction.ADD_ROOT        -> requestMediaRootPick(kind)
-            MediaFoldersAction.RESCAN_ALL      -> rescanMediaKind(kind)
-            MediaFoldersAction.RESCAN_ALL_DEEP -> rescanMediaKind(kind, deep = true)
-            MediaFoldersAction.DEFAULT_APP     -> openDefaultMediaAppMenu(kind)
-            MediaFoldersAction.CLEAR_CACHE     -> clearMediaCache(kind)
-            MediaFoldersAction.PICK_APP        -> setDefaultMediaApp(
-                kind,
-                itemId.removePrefix(MEDIA_APP_PREFIX).takeIf { it != MEDIA_APP_NONE },
-            )
-            null -> Unit
         }
     }
 
@@ -2738,40 +2528,6 @@ class CrossbarViewModel @Inject constructor(
         subtitle = "Every game's file was found on the last scan.",
         type     = CrossbarItemType.EMPTY,
     )
-
-    private fun emptyFolderItem(platformId: String): CrossbarItem {
-        if (platformId == ANDROID_PLATFORM_ID) {
-            return CrossbarItem(
-                id         = FIND_GAMES_ITEM_ID,
-                title      = "Find Games",
-                subtitle   = "Pick installed apps to add to this library",
-                platformId = platformId,
-            )
-        }
-        val card = enabledCards.firstOrNull { it.platformId == platformId }
-
-        val gap = setupState.firstGap
-        if (gap != com.echo.feature.launcher.SetupGap.NONE) {
-            return CrossbarItem(
-                id         = SETUP_GAP_ITEM_ID,
-                title      = gap.message,
-                subtitle   = "Press confirm to open Settings and fix it.",
-                platformId = platformId,
-                type       = CrossbarItemType.EMPTY,
-            )
-        }
-        val subtitle = when {
-            card?.romDirectory == null -> "ROM directory not configured"
-            else                       -> "Press ▲ to scan this console"
-        }
-        return CrossbarItem(
-            id         = NO_GAMES_ITEM_ID,
-            title      = "No games found in this folder",
-            subtitle   = subtitle,
-            platformId = platformId,
-            type       = CrossbarItemType.EMPTY,
-        )
-    }
 
     private fun publishGameItems(items: List<CrossbarItem>, keepCursorOnRow: Boolean) = _uiState.update {
         if (!keepCursorOnRow) it.copy(currentItems = items)
@@ -3532,104 +3288,6 @@ class CrossbarViewModel @Inject constructor(
     }
 
 
-    private suspend fun romFolderItems(): List<CrossbarItem> {
-        val roots = romRootRepository.getAll()
-        val persisted = SafGrants.persistedReadUris(context.contentResolver)
-        val entries = romFolderEntries(
-            roots = roots,
-            persistedReadUris = persisted,
-            cards = enabledCards,
-            rawPathOfTree = { com.echo.core.data.repository.RomRootRepository.rawPathOfTree(it) },
-            fallbackName = { "ROM Root" },
-        )
-
-        return entries.map { entry ->
-            when (entry) {
-                is RomFolderEntry.Root -> CrossbarItem(
-                    id       = "romroot_${entry.treeUri}",
-                    title    = entry.name,
-                    subtitle = if (!entry.linked) "Access lost — Relink to grant it again"
-                        else countLabel(entry.consoleCount, "console", "consoles") +
-                            "  ·  " + countLabel(entry.gameCount, "game", "games"),
-                    type         = CrossbarItemType.MEDIA_ROOT,
-                    mediaRootUri = entry.treeUri,
-                )
-                is RomFolderEntry.Console -> CrossbarItem(
-                    id         = "romcard_${entry.platformId}",
-                    title      = entry.displayName,
-                    subtitle   = if (!entry.underRoot) "Not under any granted folder"
-                        else entry.romDirectory ?: countLabel(entry.gameCount, "game", "games"),
-                    platformId = entry.platformId,
-                    type       = CrossbarItemType.MEMORY_CARD,
-                )
-            }
-        } + CrossbarItem(
-            id       = ADD_ROM_ROOT_ITEM_ID,
-            title    = "Add ROM Folder",
-            subtitle = if (roots.isEmpty()) "Grant the folder your ROMs live in"
-                       else "Grant another folder — an SD card, say",
-            type     = CrossbarItemType.ADD_ACTION,
-        )
-    }
-
-    private fun openRomFolders() = navigateRememberingCursor { it.copy(romFoldersOpen = true) }
-
-    private fun closeRomFolders() = navigateRememberingCursor { it.copy(romFoldersOpen = false) }
-
-    private fun refreshRomFolders() {
-        if (!_uiState.value.romFoldersOpen) return
-        viewModelScope.launch { _uiState.update { it.copy(currentItems = romFolderItems()) } }
-    }
-
-    private fun romRootContextMenuItems(linked: Boolean): List<CrossbarContextMenuItem> = buildList {
-        if (linked) add(CrossbarContextMenuItem("rom_root_scan", "Scan This Folder"))
-        add(CrossbarContextMenuItem("rom_root_relink", "Relink Folder", group = MenuGroup.SETTINGS))
-        add(
-            CrossbarContextMenuItem(
-                "rom_root_remove", "Remove Folder",
-                isDestructive = true, group = MenuGroup.REMOVE,
-            ),
-        )
-    }
-
-    private fun openRomRootContextMenu(item: CrossbarItem) {
-        val treeUri = item.mediaRootUri ?: return
-        val linked = item.subtitle?.startsWith("Access lost") != true
-        _uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(
-                state = MenuState(title = item.title, rows = romRootContextMenuItems(linked)),
-                mediaRootUri = treeUri,
-            ),
-        )}
-    }
-
-    private fun scanCardsUnderRoot(treeUri: String) {
-        val rawPath = com.echo.core.data.repository.RomRootRepository.rawPathOfTree(treeUri)
-        if (rawPath == null) {
-            SystemToasts.post("Cannot read that folder", "Relink it and try again.", ToastKind.ERROR)
-            return
-        }
-        val under = enabledCards.filter { card ->
-            card.romDirectory?.let { isRomDirUnder(it, rawPath) } == true
-        }
-        if (under.isEmpty()) {
-            SystemToasts.post("No consoles under this folder", "Scan a console to create one.", ToastKind.ERROR)
-            return
-        }
-        under.forEach { scanCard(it.platformId) }
-    }
-
-    private fun handleRomRootAction(treeUri: String, itemId: String) {
-        when (itemId) {
-            "rom_root_scan"   -> scanCardsUnderRoot(treeUri)
-            "rom_root_relink" -> requestRomRootPick(relinkFrom = treeUri)
-            "rom_root_remove" -> appAction {
-                romRootRepository.remove(treeUri)
-                refreshRomFolders()
-            }
-        }
-    }
-
     private fun openAllGamesContextMenu() {
         _uiState.update { it.copy(
             activeContextMenu = CrossbarContextMenu(state = MenuState(title = "All Games", rows = allGamesContextMenuItems()), isAllGames = true)
@@ -3814,10 +3472,10 @@ class CrossbarViewModel @Inject constructor(
             }
             menu.musicTrackId != null -> music.handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId)
             menu.mediaRootKind != null && menu.mediaRootUri != null ->
-                handleMediaRootAction(menu.mediaRootKind, menu.mediaRootUri, itemId)
+                folders.handleMediaRootAction(menu.mediaRootKind, menu.mediaRootUri, itemId)
             menu.mediaRootKind == null && menu.mediaRootUri != null ->
-                handleRomRootAction(menu.mediaRootUri, itemId)
-            menu.mediaRootKind != null -> handleMediaFoldersAction(menu.mediaRootKind, itemId)
+                folders.handleRomRootAction(menu.mediaRootUri, itemId)
+            menu.mediaRootKind != null -> folders.handleMediaFoldersAction(menu.mediaRootKind, itemId)
             menu.musicFolderId != null -> music.handleMusicFolderAction(menu.musicFolderId, itemId)
             menu.isAllGames -> when (itemId) {
                 "library_manager" -> _uiState.update { it.withSettingsOpen("settings_library") }
@@ -3830,12 +3488,12 @@ class CrossbarViewModel @Inject constructor(
                 "emu_automatic"    -> setPlatformEmulator(menu.platformId, null)
                 "clear_emulator_overrides" -> clearPlatformEmulatorOverrides(menu.platformId)
                 "rename_card"      -> promptRenameCard(menu.platformId)
-                "card_rom_directory" -> openRomFolders()
+                "card_rom_directory" -> folders.openRomFolders()
                 "card_move_up"     -> moveCard(menu.platformId, up = true)
                 "card_move_down"   -> moveCard(menu.platformId, up = false)
                 "find_games"       -> openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
                 "import_pc_games"  -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
-                "scan_roms"        -> scanCard(menu.platformId)
+                "scan_roms"        -> folders.scanCard(menu.platformId)
                 "scrape_missing_artwork" -> scrapeMissingArtworkForPlatform(menu.platformId)
                 "update_metadata"        -> updatePlatformMetadata(menu.platformId)
                 "pin"              -> setCardPinned(menu.platformId, true)
@@ -4198,10 +3856,10 @@ class CrossbarViewModel @Inject constructor(
         val state = _uiState.value
         val item = state.currentItems.getOrNull(state.selectedItemIndex)
         when {
-            item?.mediaRootUri != null && item.mediaRootKind == null -> openRomRootContextMenu(item)
-            item?.mediaRootUri != null -> openMediaRootContextMenu(item)
+            item?.mediaRootUri != null && item.mediaRootKind == null -> folders.openRomRootContextMenu(item)
+            item?.mediaRootUri != null -> folders.openMediaRootContextMenu(item)
             item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
-                openMediaFoldersContextMenu(item)
+                folders.openMediaFoldersContextMenu(item)
             item != null && music.openMusicContextMenu(item) -> Unit
             item != null && video.openVideoContextMenu(item) -> Unit
             item != null && bookshelf.openBookContextMenu(item) -> Unit
@@ -4659,43 +4317,6 @@ class CrossbarViewModel @Inject constructor(
         _uiState.value.currentItems.getOrNull(categoryIndex)?.platformId?.let(::openPlatformContextMenu)
     }
 
-    private fun scanCard(platformId: String) {
-        viewModelScope.launch {
-            val card = memoryCardRepository.getById(platformId) ?: return@launch
-            val taskId = "scan_$platformId"
-
-            if (platformId == WINDOWS_PLATFORM_ID) {
-                addBackgroundTask(BackgroundTaskInfo(id = taskId, label = "Scanning ${card.displayName}…", progress = null))
-                val report = runCatching { pcGameScanner.scan() }
-                    .onFailure { Timber.e(it, "PC scan failed") }
-                    .getOrNull()
-                if (report == null) {
-                    failBackgroundTask(taskId, "PC scan failed")
-                } else {
-                    memoryCardRepository.recordScan(platformId, System.currentTimeMillis())
-                    completeBackgroundTask(
-                        taskId,
-                        if (report.newGames == 0) "No new PC games found" else report.message,
-                    )
-                }
-                return@launch
-            }
-
-            addBackgroundTask(BackgroundTaskInfo(id = taskId, label = "Scanning ${card.displayName}…", progress = null))
-            val outcome = libraryScanner.scanPlatform(platformId, removeMissing = true)
-            when (outcome.status) {
-                ScanStatus.COMPLETED -> completeBackgroundTask(
-                    taskId,
-                    scanOutcomeMessage(outcome, removeMissing = true),
-                )
-                else -> failBackgroundTask(
-                    taskId,
-                    scanOutcomeMessage(outcome, removeMissing = true),
-                )
-            }
-        }
-    }
-
     private fun cardName(platformId: String): String =
         knownPlatformName(platformId) ?: platformId.uppercase()
 
@@ -4883,43 +4504,14 @@ class CrossbarViewModel @Inject constructor(
     }
 
     private fun dispatchCategorySelection(item: CrossbarItem): Boolean {
-        romFolderSelection(item)?.let { return it }
-        mediaRootSelection(item)?.let { return it }
+        folders.romFolderSelection(item)?.let { return it }
+        folders.mediaRootSelection(item)?.let { return it }
         return when (item.menuHostCategory(currentCategory()?.id)) {
             BuiltInCategory.MUSIC   -> music.handleMusicSelection(item)
             BuiltInCategory.VIDEO   -> video.handleVideoSelection(item)
             BuiltInCategory.PHOTO   -> gallery.handlePhotoSelection(item)
             BuiltInCategory.LIBRARY -> bookshelf.handleBooksSelection(item)
             else -> false
-        }
-    }
-
-    private fun romFolderSelection(item: CrossbarItem): Boolean? = when {
-        item.id == ROM_FOLDERS_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT); openRomFolders(); true
-        }
-        item.id == ADD_ROM_ROOT_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT); requestRomRootPick(); true
-        }
-        item.id.startsWith("romroot_") -> {
-            menuSound.play(MenuSound.SELECT); openRomRootContextMenu(item); true
-        }
-        else -> null
-    }
-
-    private fun mediaRootSelection(item: CrossbarItem): Boolean? {
-        val kind = item.mediaRootKind ?: return null
-        return when {
-            item.id == mediaFoldersItemId(kind) -> {
-                menuSound.play(MenuSound.SELECT); openMediaFolders(kind); true
-            }
-            item.id == addMediaRootItemId(kind) -> {
-                menuSound.play(MenuSound.SELECT); requestMediaRootPick(kind); true
-            }
-            item.mediaRootUri != null -> {
-                menuSound.play(MenuSound.SELECT); openMediaRootContextMenu(item); true
-            }
-            else -> null
         }
     }
 
@@ -4954,7 +4546,7 @@ class CrossbarViewModel @Inject constructor(
             DrillOutStep.LIBRARY_SERIES -> bookshelf.openBooksView(BooksNav.SeriesList)
             DrillOutStep.LIBRARY_SHELF -> bookshelf.openBooksView(BooksNav.Shelves)
             DrillOutStep.LIBRARY -> bookshelf.closeBooksView()
-            DrillOutStep.ROM_FOLDERS -> closeRomFolders()
+            DrillOutStep.ROM_FOLDERS -> folders.closeRomFolders()
             DrillOutStep.PLATFORM_FOLDER -> closePlatformFolder()
             null -> return false
         }
@@ -5145,10 +4737,10 @@ class CrossbarViewModel @Inject constructor(
         if (_uiState.value.hasBlockingOverlay) return
         val item = _uiState.value.currentItems.getOrNull(index)
         when {
-            item?.mediaRootUri != null && item.mediaRootKind == null -> openRomRootContextMenu(item)
-            item?.mediaRootUri != null -> openMediaRootContextMenu(item)
+            item?.mediaRootUri != null && item.mediaRootKind == null -> folders.openRomRootContextMenu(item)
+            item?.mediaRootUri != null -> folders.openMediaRootContextMenu(item)
             item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
-                openMediaFoldersContextMenu(item)
+                folders.openMediaFoldersContextMenu(item)
             item != null && music.openMusicContextMenu(item) -> Unit
             item != null && video.openVideoContextMenu(item) -> Unit
             item != null && bookshelf.openBookContextMenu(item) -> Unit
@@ -5988,7 +5580,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private var setupState: com.echo.feature.launcher.SetupState =
+    internal var setupState: com.echo.feature.launcher.SetupState =
         com.echo.feature.launcher.SetupState()
 
     private fun observeSetupState() {
@@ -6303,8 +5895,8 @@ class CrossbarViewModel @Inject constructor(
         private const val SETUP_ITEM_ID = "library_setup"
         private const val NO_CONSOLES_ITEM_ID = "no_consoles"
 
-        private const val SETUP_GAP_ITEM_ID = "setup_gap"
-        private const val NO_GAMES_ITEM_ID    = "no_games"
+        internal const val SETUP_GAP_ITEM_ID = "setup_gap"
+        internal const val NO_GAMES_ITEM_ID    = "no_games"
         private const val EMPTY_FAVORITES_ITEM_ID = "empty_favorites"
         internal const val EMPTY_CATEGORY_ITEM_ID = "empty_category"
         private const val ALL_GAMES_ITEM_ID = "all_games"
@@ -6323,11 +5915,11 @@ class CrossbarViewModel @Inject constructor(
 
         internal const val RECENT_APP_ID_PREFIX = "recentapp_"
         private const val ADD_GAMES_ITEM_ID = "add_games"
-        private const val FIND_GAMES_ITEM_ID = "find_games"
+        internal const val FIND_GAMES_ITEM_ID = "find_games"
 
 
         internal const val ADD_MUSIC_FOLDER_ITEM_ID = "add_music_folder"
-        private const val ADD_ROM_ROOT_ITEM_ID = "add_rom_root"
+        internal const val ADD_ROM_ROOT_ITEM_ID = "add_rom_root"
         internal const val ROM_FOLDERS_ITEM_ID = "rom_folders"
         private val NON_EMULATOR_PLATFORM_IDS = setOf(ANDROID_PLATFORM_ID, WINDOWS_PLATFORM_ID)
         private const val PLATFORM_EMU_PREFIX = "pemu_pick_"

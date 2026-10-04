@@ -139,7 +139,7 @@ class CrossbarGallery(
         item.id == CrossbarViewModel.CAMERA_ITEM_ID -> { menuSound.play(MenuSound.LAUNCH); vm.launchCamera(); true }
         item.id == CrossbarViewModel.ADD_PHOTO_LIBRARY_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            vm.openMediaFolders(MediaRootKind.PHOTO)
+            vm.folders.openMediaFolders(MediaRootKind.PHOTO)
             true
         }
         item.id == CrossbarViewModel.ADD_PHOTO_APPS_ITEM_ID -> {
@@ -253,7 +253,7 @@ class CrossbarGallery(
                 openPhotoView(PhotoNav.Library(libraryId, name))
             }
             "photo_lib_scan" -> vm.appAction { scanPhotoLibrary(libraryId) }
-            "photo_lib_manage" -> vm.openMediaFolders(MediaRootKind.PHOTO)
+            "photo_lib_manage" -> vm.folders.openMediaFolders(MediaRootKind.PHOTO)
         }
     }
 
