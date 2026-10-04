@@ -8,7 +8,6 @@ import com.echo.core.data.repository.ArtworkFolderRepository
 import com.echo.core.data.repository.CustomIconStore
 import com.echo.core.data.repository.EchoFolder
 import com.echo.core.data.repository.EchoSettingsExport
-import com.echo.core.data.repository.EchoThemeStore
 import com.echo.core.data.repository.UiMediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -73,9 +72,9 @@ class EchoFolderMirror @Inject constructor(
             if (file.isFile && library.mirrorFile(tree, segments, name, file)) copied++
         }
         File(files, UiMediaStore.UI_MEDIA_DIR).listFiles().orEmpty().forEach { mirror(listOf(DIR_LOOK, EchoFolder.lookFolderFor(it.name)), it) }
-        listOf(CustomIconStore.CUSTOM_ICONS_DIR, EchoThemeStore.THEME_ICONS_DIR).forEach { dir ->
-            File(files, dir).listFiles().orEmpty().forEach { mirror(listOf(DIR_LOOK, "Icons"), it) }
-        }
+        // only the user's own icons: a theme's icons read back would become custom icons that
+        // outlive the theme
+        File(files, CustomIconStore.CUSTOM_ICONS_DIR).listFiles().orEmpty().forEach { mirror(listOf(DIR_LOOK, "Icons"), it) }
         // only the wallpaper in use: the folder holds what ECHO shows, not every one it has kept
         val current = context.echoDataStore.data.first()
         // one name for the wallpaper in use, so the folder does not collect a copy per change
@@ -89,6 +88,6 @@ class EchoFolderMirror @Inject constructor(
     private companion object {
         const val SETTLE_MS = 2_000L
         val WALLPAPER_KEYS = listOf("display_custom_wallpaper", "display_motion_wallpaper")
-        val LOOK_TRIGGERS = WALLPAPER_KEYS + listOf("ui_media_stamp", "custom_icons_stamp", "theme_icons_stamp")
+        val LOOK_TRIGGERS = WALLPAPER_KEYS + listOf("ui_media_stamp", "custom_icons_stamp")
     }
 }

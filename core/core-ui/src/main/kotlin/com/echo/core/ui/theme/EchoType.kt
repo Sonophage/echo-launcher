@@ -24,25 +24,43 @@ private fun soraWeight(weight: FontWeight, axis: Int): Font = Font(
     variationSettings = FontVariation.Settings(FontVariation.weight(axis)),
 )
 
-val EchoTextStyle = androidx.compose.ui.text.TextStyle(fontFamily = SoraFontFamily)
+// the font ECHO draws with: Sora, or a font file from the ECHO folder's Look/Fonts (owner, 2026-10-04).
+// It is Compose state, so every text that reads EchoTextStyle redraws when it changes.
+object EchoFonts {
+    private val custom = androidx.compose.runtime.mutableStateOf<FontFamily?>(null)
+
+    val family: FontFamily get() = custom.value ?: SoraFontFamily
+
+    // uses [file] when Android can build a typeface from it; anything else falls back to Sora, so a
+    // broken file never reaches text drawing. Returns whether the file is in use.
+    fun use(file: java.io.File?): Boolean {
+        val typeface = file?.takeIf { it.isFile }?.let { runCatching { android.graphics.Typeface.Builder(it).build() }.getOrNull() }
+        custom.value = typeface?.let { FontFamily(it) }
+        return typeface != null
+    }
+}
+
+val EchoTextStyle: androidx.compose.ui.text.TextStyle
+    get() = androidx.compose.ui.text.TextStyle(fontFamily = EchoFonts.family)
 
 internal fun echoTypography(): Typography {
     val base = Typography()
+    val family = EchoFonts.family
     return Typography(
-        displayLarge = base.displayLarge.copy(fontFamily = SoraFontFamily),
-        displayMedium = base.displayMedium.copy(fontFamily = SoraFontFamily),
-        displaySmall = base.displaySmall.copy(fontFamily = SoraFontFamily),
-        headlineLarge = base.headlineLarge.copy(fontFamily = SoraFontFamily),
-        headlineMedium = base.headlineMedium.copy(fontFamily = SoraFontFamily),
-        headlineSmall = base.headlineSmall.copy(fontFamily = SoraFontFamily),
-        titleLarge = base.titleLarge.copy(fontFamily = SoraFontFamily),
-        titleMedium = base.titleMedium.copy(fontFamily = SoraFontFamily),
-        titleSmall = base.titleSmall.copy(fontFamily = SoraFontFamily),
-        bodyLarge = base.bodyLarge.copy(fontFamily = SoraFontFamily),
-        bodyMedium = base.bodyMedium.copy(fontFamily = SoraFontFamily),
-        bodySmall = base.bodySmall.copy(fontFamily = SoraFontFamily),
-        labelLarge = base.labelLarge.copy(fontFamily = SoraFontFamily),
-        labelMedium = base.labelMedium.copy(fontFamily = SoraFontFamily),
-        labelSmall = base.labelSmall.copy(fontFamily = SoraFontFamily),
+        displayLarge = base.displayLarge.copy(fontFamily = family),
+        displayMedium = base.displayMedium.copy(fontFamily = family),
+        displaySmall = base.displaySmall.copy(fontFamily = family),
+        headlineLarge = base.headlineLarge.copy(fontFamily = family),
+        headlineMedium = base.headlineMedium.copy(fontFamily = family),
+        headlineSmall = base.headlineSmall.copy(fontFamily = family),
+        titleLarge = base.titleLarge.copy(fontFamily = family),
+        titleMedium = base.titleMedium.copy(fontFamily = family),
+        titleSmall = base.titleSmall.copy(fontFamily = family),
+        bodyLarge = base.bodyLarge.copy(fontFamily = family),
+        bodyMedium = base.bodyMedium.copy(fontFamily = family),
+        bodySmall = base.bodySmall.copy(fontFamily = family),
+        labelLarge = base.labelLarge.copy(fontFamily = family),
+        labelMedium = base.labelMedium.copy(fontFamily = family),
+        labelSmall = base.labelSmall.copy(fontFamily = family),
     )
 }

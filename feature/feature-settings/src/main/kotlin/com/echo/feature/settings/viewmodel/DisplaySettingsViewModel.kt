@@ -2,9 +2,6 @@ package com.echo.feature.settings.viewmodel
 
 import com.echo.core.ui.wave.WaveDesign
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -16,9 +13,7 @@ import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.data.repository.ControllerLayoutRepository
 import com.echo.core.data.repository.GameBootPreferences
 import com.echo.core.data.repository.UiMediaStore
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.clearWallpaperLuma
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.setWallpaperLuma
 import com.echo.core.data.wallpaper.StillWallpaper
 import com.echo.core.domain.model.ControllerHintPolicy
 import com.echo.core.domain.model.UiMediaKind
@@ -187,6 +182,7 @@ class DisplaySettingsViewModel @Inject constructor(
     private val menuSound: com.echo.core.ui.sound.MenuSoundPlayer,
     private val controllerLayout: ControllerLayoutRepository,
     private val stillWallpaper: StillWallpaper,
+    private val motionWallpaper: com.echo.core.data.wallpaper.MotionWallpaper,
 
     @com.echo.feature.settings.di.SettingsIoDispatcher
     private val io: CoroutineDispatcher = Dispatchers.IO,
@@ -383,120 +379,10 @@ class DisplaySettingsViewModel @Inject constructor(
     }
 
     private suspend fun importMotionWallpaper(uri: Uri, mime: String) {
-        val dir = wallpaperDir()
-        val stamp = System.currentTimeMillis()
-
-        val motionExt = when (mime) {
-            "video/webm" -> "webm"
-            "image/gif" -> "gif"
-            "image/webp" -> "webp"
-            else -> "mp4"
-        }
-        val motionDest = File(dir, "wallpaper_$stamp.$motionExt")
-        val posterDest = File(dir, "wallpaper_$stamp.jpg")
-
-        val knownSize = runCatching {
-            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length }
-        }.getOrNull()?.takeIf { it > 0 }
-        if (knownSize != null && knownSize > MotionLimits.MAX_BYTES) {
-            _wallpaperMessage.value = MotionLimits.MSG_TOO_LARGE_BYTES
-            return
-        }
-
-        val copied = runCatching {
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                motionDest.outputStream().use { out -> input.copyTo(out) }
-            } != null
-        }.getOrDefault(false)
-        if (!copied) {
-            runCatching { motionDest.delete() }
-            _wallpaperMessage.value = MotionLimits.MSG_UNDECODABLE
-            return
-        }
-
-        val probe = probeMotionFile(motionDest, mime)
-        val rejection = probe?.let { MotionLimits.validate(it) }
-        if (probe == null || rejection != null) {
-            runCatching { motionDest.delete() }
-            _wallpaperMessage.value = rejection ?: MotionLimits.MSG_UNDECODABLE
-            return
-        }
-
-        val poster = extractPoster(motionDest, mime)
-        if (poster == null) {
-            runCatching { motionDest.delete() }
-            _wallpaperMessage.value = MotionLimits.MSG_UNDECODABLE
-            return
-        }
-        val posterOk = runCatching {
-            posterDest.outputStream().use { poster.compress(Bitmap.CompressFormat.JPEG, 92, it) }
-            true
-        }.getOrDefault(false)
-        poster.recycle()
-        if (!posterOk) {
-            runCatching { motionDest.delete() }
-            _wallpaperMessage.value = MotionLimits.MSG_UNDECODABLE
-            return
-        }
-
-        val luma = withContext(io) {
-            WallpaperLuminanceProbe.survey(posterDest.absolutePath)
-        }
-
-        val saved = saveThenPrune(
-            save = {
-                context.echoDataStore.edit {
-                    it[KEY_CUSTOM_WALLPAPER] = posterDest.absolutePath
-                    it[KEY_MOTION_WALLPAPER] = motionDest.absolutePath
-                    it.setWallpaperLuma(luma)
-                }
-            },
-            prune = { pruneWallpaperDir(keep = listOf(motionDest, posterDest)) },
-        )
-        _wallpaperMessage.value = if (saved) "Motion wallpaper applied" else WALLPAPER_SAVE_FAILED
+        val knownSize = runCatching { context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } }.getOrNull()?.takeIf { it > 0 }
+        val result = motionWallpaper.apply(mime, knownSize) { context.contentResolver.openInputStream(uri) }
+        _wallpaperMessage.value = result.message ?: "Motion wallpaper applied"
     }
-
-    private fun probeMotionFile(file: File, mime: String): MotionLimits.Probe? = runCatching {
-        if (mime == "image/gif" || mime == "image/webp") {
-            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            android.graphics.BitmapFactory.decodeFile(file.absolutePath, bounds)
-            MotionLimits.Probe(
-                mime = mime,
-                width = bounds.outWidth,
-                height = bounds.outHeight,
-                durationMs = 0L,
-                bytes = file.length(),
-            )
-        } else {
-            MediaMetadataRetriever().use { retriever ->
-                retriever.setDataSource(file.absolutePath)
-                MotionLimits.Probe(
-                    mime = mime,
-                    width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0,
-                    height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0,
-                    durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L,
-                    bytes = file.length(),
-                )
-            }
-        }
-    }.getOrNull()
-
-    private fun extractPoster(motionFile: File, mime: String): Bitmap? = runCatching {
-        if (mime == "image/gif" || mime == "image/webp") {
-            val source = ImageDecoder.createSource(motionFile)
-            ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-                decoder.setTargetSampleSize(
-                    maxOf(1, maxOf(info.size.width, info.size.height) / MotionLimits.MAX_HEIGHT),
-                )
-            }
-        } else {
-            MediaMetadataRetriever().use { retriever ->
-                retriever.setDataSource(motionFile.absolutePath)
-                retriever.getFrameAtTime(1_000_000L)
-                    ?: retriever.getFrameAtTime(0L)
-            }
-        }
-    }.getOrNull()
 
     private fun wallpaperDir(): File = stillWallpaper.dir
 

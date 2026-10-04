@@ -159,8 +159,8 @@ manager:
 
 ECHO keeps the folder current as you change things. To use your own changes, edit the files, then
 choose **Reload ECHO Folder** in the artwork folder settings: ECHO applies `settings.json`, any sound
-named after its slot (`sound_back.mp3`, `boot_audio.mp3`, ...), and the newest picture in
-`Look/Wallpapers`. A file you edit is never written over by ECHO. ECHO's background is also set as
+or icon named after its slot (`sound_back.mp3`, `boot_audio.mp3`, ...), a `.ttf` or `.otf` font in
+`Look/Fonts`, and the newest picture or video in `Look/Wallpapers`. A file you edit is never written over by ECHO. ECHO's background is also set as
 Android's home and lock wallpaper. No passwords, API keys, account details or folder paths are kept
 in the folder.
 

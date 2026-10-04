@@ -57,6 +57,7 @@ class DisplaySettingsViewModelWallpaperTest {
             },
 
             com.echo.core.data.wallpaper.StillWallpaper(context),
+            com.echo.core.data.wallpaper.MotionWallpaper(context, com.echo.core.data.wallpaper.StillWallpaper(context)),
 
             io = dispatcher,
         )

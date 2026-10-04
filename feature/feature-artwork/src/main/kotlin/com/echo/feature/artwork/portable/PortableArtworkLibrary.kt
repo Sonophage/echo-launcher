@@ -630,18 +630,20 @@ private val ECHO_README_TEXT = """
     Artwork/       Art for each game, one folder per console. ECHO reads this.
     Import/        Put other launchers' media here, then import it from ECHO's artwork settings.
     Look/          ECHO's look as files. ECHO copies its own here: Sounds (interface sounds and menu
-                   music), Boot (boot, game boot and launch disc audio), Wallpapers and Icons. Fonts
-                   is kept for themes. A file you change here is kept: ECHO only copies over a file
-                   that is missing or older than its own.
+                   music), Boot (boot, game boot and launch disc audio, boot animations), Wallpapers
+                   and Icons (your custom icons). Put a .ttf or .otf font in Fonts to change ECHO's
+                   font. A file you change here is kept: ECHO only copies over a file that is
+                   missing or older than its own.
     settings.json  How ECHO looks and behaves: colours, wave, layout, controls and default players.
                    ECHO writes it when a setting changes.
 
     To use your changes, edit the files here, then choose Reload ECHO Folder in ECHO's artwork folder
-    settings. ECHO applies settings.json, a sound in Look/Sounds or Look/Boot that is named after its
-    slot (sound_back.mp3, boot_audio.mp3 and so on), and the newest picture in Look/Wallpapers. A file
-    is applied only when it is newer than ECHO's own and different from it. When ECHO starts it also
-    applies a settings.json that was changed while it was closed. Fonts and Icons are not read yet.
-    ECHO's background also becomes Android's home and lock wallpaper.
+    settings. ECHO applies settings.json; a sound in Look/Sounds or Look/Boot named after its slot
+    (sound_back.mp3, boot_audio.mp3 and so on); an icon in Look/Icons named after its slot; the first
+    font in Look/Fonts (remove it to go back to ECHO's own); and the newest picture or video (mp4,
+    webm, gif) in Look/Wallpapers. A file is applied only when it is newer than ECHO's own and
+    different from it; a file ECHO cannot use is named in the result. When ECHO starts it also applies
+    what changed while it was closed. ECHO's background also becomes Android's home and lock wallpaper.
 
     No passwords, API keys, account details, folder paths or reading positions are kept here.
 """.trimIndent() + "\n"
