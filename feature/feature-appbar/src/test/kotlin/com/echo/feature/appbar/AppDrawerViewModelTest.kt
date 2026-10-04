@@ -159,6 +159,20 @@ class AppDrawerViewModelTest {
         verify { repository.openUsageAccessSettings() }
     }
 
+    // the footer said Menu = Search while the hero said X = Options; Menu is Options everywhere (owner)
+    @Test
+    fun `X does not open the options menu, Menu does`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.setFilter(AppFilter.EMULATORS)
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.handleGamepadAction(GamepadAction.CHANGE_SORT)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(null, viewModel.uiState.value.menuApp)
+        viewModel.handleGamepadAction(GamepadAction.OPEN_CONTEXT_MENU)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals("Dolphin", viewModel.uiState.value.menuApp?.label)
+    }
+
     @Test
     fun `back on the open options menu closes just the menu`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
@@ -166,7 +180,7 @@ class AppDrawerViewModelTest {
         viewModel.setFilter(AppFilter.EMULATORS)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.handleGamepadAction(GamepadAction.CHANGE_SORT)
+        viewModel.handleGamepadAction(GamepadAction.OPEN_CONTEXT_MENU)
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {
             val state = awaitItem()
@@ -255,7 +269,7 @@ class AppDrawerViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.setFilter(AppFilter.EMULATORS)
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.handleGamepadAction(GamepadAction.CHANGE_SORT)
+        viewModel.handleGamepadAction(GamepadAction.OPEN_CONTEXT_MENU)
         testDispatcher.scheduler.advanceUntilIdle()
         val app = viewModel.uiState.value.menuApp!!.packageName
         assertEquals(AppMenuAction.ADD_TO_CROSS_BAR, viewModel.uiState.value.appMenu!!.rows[0].action)
@@ -316,7 +330,7 @@ class AppDrawerViewModelTest {
     }
 
     private fun openUninstallPrompt() {
-        viewModel.handleGamepadAction(GamepadAction.CHANGE_SORT)
+        viewModel.handleGamepadAction(GamepadAction.OPEN_CONTEXT_MENU)
         testDispatcher.scheduler.advanceUntilIdle()
         val actions = viewModel.uiState.value.menuActions
         val target = actions.indexOf(AppMenuAction.UNINSTALL)

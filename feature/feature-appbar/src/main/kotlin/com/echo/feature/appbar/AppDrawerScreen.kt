@@ -114,7 +114,7 @@ fun AppDrawerScreen(
 
                 pendingGamepadAction == GamepadAction.BACK ->
                     if (state.letterFilter != null) viewModel.clearLetterFilter() else closeDrawer()
-                pendingGamepadAction == GamepadAction.OPEN_CONTEXT_MENU -> onOpenAppSearch("")
+                pendingGamepadAction == GamepadAction.OPEN_SEARCH -> onOpenAppSearch("")
                 // LB/RB walk the Games tab's system filters; elsewhere LB searches and RB (Apps) shuts the drawer
                 (pendingGamepadAction == GamepadAction.PREV_PAGE || pendingGamepadAction == GamepadAction.NEXT_PAGE) &&
                     viewModel.stepSystemChip(if (pendingGamepadAction == GamepadAction.NEXT_PAGE) 1 else -1) -> Unit

@@ -519,7 +519,8 @@ class AppDrawerViewModel @Inject constructor(
         if (state.usingTouch) _uiState.update { it.copy(usingTouch = false) }
         val cur = state.selectedIndex
         when (action) {
-            GamepadAction.CHANGE_SORT -> openAppMenuForSelected()
+            // Menu is Options everywhere; the drawer has nothing to sort, so X does nothing (owner, 2026-10-04)
+            GamepadAction.OPEN_CONTEXT_MENU -> openAppMenuForSelected()
             GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT,
             GamepadAction.NAVIGATE_UP, GamepadAction.NAVIGATE_DOWN -> {
                 val cells = wallLayout(size)

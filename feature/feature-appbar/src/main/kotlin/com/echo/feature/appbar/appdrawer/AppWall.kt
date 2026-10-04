@@ -280,7 +280,7 @@ internal fun WallInfo(
         }
         Row(Modifier.padding(top = u.dp(6)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
             PanelButton(GamepadAction.SELECT, actionLabel(app), u, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onClick = onLaunch)
-            if (app.gameId == null) PanelButton(GamepadAction.CHANGE_SORT, "Options", u, onClick = onOptions)
+            if (app.gameId == null) PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = onOptions)
         }
     }
 }
@@ -306,7 +306,7 @@ internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, fi
         if (pad && action != null) Hint(listOf(GamepadAction.SELECT), action, u, onAction)
         // the tab row already shows LT/RT; the footer names what the bumpers do here
         if (pad && filters) Hint(listOf(GamepadAction.PREV_PAGE, GamepadAction.NEXT_PAGE), "Filter", u, onNextFilter)
-        Hint(listOf(GamepadAction.OPEN_CONTEXT_MENU), "Search", u, onSearch)
+        Hint(listOf(GamepadAction.OPEN_SEARCH), "Search", u, onSearch)
         Hint(listOf(GamepadAction.BACK), "Back", u, onBack)
     }
 }
