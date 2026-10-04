@@ -1,7 +1,6 @@
 package com.echo.studio
 
 import com.echo.studio.io.ImageCodecs
-import com.echo.themekit.BmpImage
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
@@ -12,20 +11,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ImageCodecsTest {
-    @Test
-    fun `bmp image pixels survive the png round trip`() {
-        val bmp = BmpImage(4, 2, intArrayOf(
-            0xFFFF0000.toInt(), 0xFF00FF00.toInt(), 0xFF0000FF.toInt(), 0xFFFFFFFF.toInt(),
-            0xFF000000.toInt(), 0xFF808080.toInt(), 0xFF123456.toInt(), 0xFFFEDCBA.toInt(),
-        ))
-        val png = ImageCodecs.toPngBytes(ImageCodecs.bmpToBufferedImage(bmp))
-        val decoded = assertNotNull(ImageIO.read(png.inputStream()))
-        assertEquals(4, decoded.width)
-        assertEquals(2, decoded.height)
-        assertEquals(0xFFFF0000.toInt(), decoded.getRGB(0, 0))
-        assertEquals(0xFF123456.toInt(), decoded.getRGB(2, 1))
-    }
-
     @Test
     fun `toBmpImage bounds huge images for accent sampling`() {
         val big = BufferedImage(2000, 1000, BufferedImage.TYPE_INT_ARGB)

@@ -35,9 +35,8 @@ import com.echo.studio.IconColorChoice
 import com.echo.studio.TextColorChoice
 import com.echo.studio.StudioState
 import com.echo.studio.StudioViewModel
-import com.echo.studio.io.PtfConversion
+import com.echo.studio.io.ColorHex
 import com.echo.themekit.EchoThemeManifest
-import com.echo.themekit.EchoThemeSource
 
 @Composable
 fun InspectorPanel(
@@ -218,19 +217,6 @@ fun InspectorPanel(
         }
         HintText("Detect finds the dark band PSP wallpapers bake in and seats the crossbar on it.")
 
-        val source = state.source
-        if (source != null && source.type == EchoThemeSource.TYPE_PTF_IMPORT) {
-            HorizontalDivider()
-            Text(
-                buildString {
-                    append("Imported from ${source.file ?: "a PSP theme"}")
-                    source.firmware?.let { append(" — firmware $it") }
-                },
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
         Spacer(Modifier.height(8.dp))
     }
 }
@@ -282,14 +268,14 @@ private fun SwatchGrid(selected: Int, onPick: (Int) -> Unit) {
 
 @Composable
 private fun HexField(label: String, argb: Int, onValid: (Int) -> Unit) {
-    var text by remember(argb) { mutableStateOf(PtfConversion.toHexRgb(argb)) }
-    val parsed = PtfConversion.parseHexRgb(text)
+    var text by remember(argb) { mutableStateOf(ColorHex.toHexRgb(argb)) }
+    val parsed = ColorHex.parseHexRgb(text)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
             value = text,
             onValueChange = {
                 text = it
-                PtfConversion.parseHexRgb(it)?.let(onValid)
+                ColorHex.parseHexRgb(it)?.let(onValid)
             },
             label = { Text(label) },
             singleLine = true,

@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.use
 import com.echo.studio.StudioState
 import com.echo.studio.io.ImageCodecs
-import com.echo.studio.io.PtfConversion
+import com.echo.studio.io.ColorHex
 import com.echo.themekit.EchoThemeBundle
 import java.awt.EventQueue
 import kotlinx.coroutines.Dispatchers
@@ -43,8 +43,8 @@ object PreviewRenderer {
     fun renderPreviewPng(bundle: EchoThemeBundle): ByteArray {
         val state = StudioState(
             name = bundle.manifest.name,
-            accentArgb = PtfConversion.parseHexRgb(bundle.manifest.accentColor)
-                ?: PtfConversion.DEFAULT_ACCENT,
+            accentArgb = ColorHex.parseHexRgb(bundle.manifest.accentColor)
+                ?: ColorHex.DEFAULT_ACCENT,
             wallpaperPng = bundle.wallpaper,
             wallpaperBitmap = bundle.wallpaper?.let(ImageCodecs::toImageBitmap),
             waveStyle = bundle.manifest.waveStyle,

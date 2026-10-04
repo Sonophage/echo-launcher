@@ -25,11 +25,6 @@ object ImageCodecs {
         }
     }
 
-    fun bmpToBufferedImage(bmp: BmpImage): BufferedImage =
-        BufferedImage(bmp.width, bmp.height, BufferedImage.TYPE_INT_ARGB).also {
-            it.setRGB(0, 0, bmp.width, bmp.height, bmp.argb, 0, bmp.width)
-        }
-
     fun toPngBytes(image: BufferedImage): ByteArray =
         ByteArrayOutputStream().also { ImageIO.write(image, "png", it) }.toByteArray()
 

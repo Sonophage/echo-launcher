@@ -1,9 +1,8 @@
 package com.echo.studio
 
 import androidx.compose.ui.graphics.ImageBitmap
-import com.echo.studio.io.ConvertOutcome
 import com.echo.studio.io.ImageCodecs
-import com.echo.studio.io.PtfConversion
+import com.echo.studio.io.ColorHex
 import com.echo.studio.io.VideoCodecs
 import com.echo.themekit.IconGifSupport
 import com.echo.themekit.IconSlots
@@ -56,16 +55,14 @@ data class PendingWallpaper(
 )
 
 sealed interface StudioDialog {
-    data object CxmbRejected : StudioDialog
     data class Error(val message: String) : StudioDialog
 
     data class Notice(val title: String, val message: String) : StudioDialog
-    data class BatchDone(val summary: com.echo.studio.io.BatchSummary) : StudioDialog
 }
 
 data class StudioState(
     val name: String = "Untitled Theme",
-    val accentArgb: Int = PtfConversion.DEFAULT_ACCENT,
+    val accentArgb: Int = ColorHex.DEFAULT_ACCENT,
     val iconColor: IconColorChoice = IconColorChoice.Auto,
     val textColor: TextColorChoice = TextColorChoice.Auto,
     val waveStyle: String = EchoThemeManifest.WAVE_ANIMATED,
@@ -95,7 +92,6 @@ data class StudioState(
     val statusMessage: String? = null,
     val dialog: StudioDialog? = null,
 
-    val batchProgress: com.echo.studio.io.BatchProgress? = null,
 ) {
 }
 
@@ -171,29 +167,8 @@ class StudioViewModel(private val scope: CoroutineScope) {
 
     fun openFile(file: File) {
         when (file.extension.lowercase()) {
-            "ptf", "ctf" -> openPtf(file)
             EchoThemeCodec.FILE_EXTENSION -> openEchoTheme(file)
             else -> _state.update { it.copy(dialog = StudioDialog.Error("Unsupported file type: .${file.extension}")) }
-        }
-    }
-
-    private fun openPtf(file: File) = runBusy {
-        val bytes = com.echo.studio.io.SafeIo.readBytesCapped(file)
-        if (bytes == null) {
-            _state.update { it.copy(dialog = StudioDialog.Error("${file.name} is too large to be a theme file")) }
-            return@runBusy
-        }
-        when (val outcome = PtfConversion.convert(bytes, file.name)) {
-            is ConvertOutcome.Converted -> {
-                hydrate(outcome.bundle, "Imported ${file.name}")
-                outcome.warning?.let { warning ->
-                    _state.update { it.copy(dialog = StudioDialog.Notice("Imported with a caveat", warning)) }
-                }
-            }
-            ConvertOutcome.Cxmb -> _state.update { it.copy(dialog = StudioDialog.CxmbRejected) }
-            is ConvertOutcome.Failed -> _state.update {
-                it.copy(dialog = StudioDialog.Error("${file.name}: ${outcome.reason}"))
-            }
         }
     }
 
@@ -230,15 +205,15 @@ class StudioViewModel(private val scope: CoroutineScope) {
         _state.update {
             StudioState(
                 name = manifest.name,
-                accentArgb = PtfConversion.parseHexRgb(manifest.accentColor) ?: PtfConversion.DEFAULT_ACCENT,
+                accentArgb = ColorHex.parseHexRgb(manifest.accentColor) ?: ColorHex.DEFAULT_ACCENT,
                 iconColor = manifest.iconColor
                     .takeIf { c -> c != EchoThemeManifest.ICON_COLOR_AUTO }
-                    ?.let { c -> PtfConversion.parseHexRgb(c) }
+                    ?.let { c -> ColorHex.parseHexRgb(c) }
                     ?.let { argb -> IconColorChoice.Custom(argb) }
                     ?: IconColorChoice.Auto,
                 textColor = manifest.textColor
                     .takeIf { c -> c != EchoThemeManifest.ICON_COLOR_AUTO }
-                    ?.let { c -> PtfConversion.parseHexRgb(c) }
+                    ?.let { c -> ColorHex.parseHexRgb(c) }
                     ?.let { argb -> TextColorChoice.Custom(argb) }
                     ?: TextColorChoice.Auto,
                 waveStyle = manifest.waveStyle,
@@ -442,14 +417,14 @@ class StudioViewModel(private val scope: CoroutineScope) {
     fun buildManifest(state: StudioState = _state.value, today: LocalDate = LocalDate.now()): EchoThemeManifest =
         EchoThemeManifest(
             name = state.name.ifBlank { "Untitled Theme" },
-            accentColor = PtfConversion.toHexRgb(state.accentArgb),
+            accentColor = ColorHex.toHexRgb(state.accentArgb),
             iconColor = when (val c = state.iconColor) {
                 IconColorChoice.Auto -> EchoThemeManifest.ICON_COLOR_AUTO
-                is IconColorChoice.Custom -> PtfConversion.toHexRgb(c.argb)
+                is IconColorChoice.Custom -> ColorHex.toHexRgb(c.argb)
             },
             textColor = when (val c = state.textColor) {
                 TextColorChoice.Auto -> EchoThemeManifest.ICON_COLOR_AUTO
-                is TextColorChoice.Custom -> PtfConversion.toHexRgb(c.argb)
+                is TextColorChoice.Custom -> ColorHex.toHexRgb(c.argb)
             },
             waveStyle = state.waveStyle,
 
@@ -480,56 +455,6 @@ class StudioViewModel(private val scope: CoroutineScope) {
         runCatching { file.outputStream().use { EchoThemeCodec.write(bundle, it) } }
             .onSuccess { _state.update { it.copy(statusMessage = "Exported ${file.name}") } }
             .onFailure { e -> _state.update { it.copy(dialog = StudioDialog.Error("Export failed: ${e.message}")) } }
-    }
-
-    fun unpackPtf(file: File, outDir: File) = runBusy {
-        val bytes = com.echo.studio.io.SafeIo.readBytesCapped(file)
-        if (bytes == null) {
-            _state.update { it.copy(dialog = StudioDialog.Error("${file.name} is too large to be a theme file")) }
-            return@runBusy
-        }
-        if (com.echo.themekit.PtfParser.detect(bytes) == com.echo.themekit.PtfParser.Kind.CXMB) {
-            _state.update { it.copy(dialog = StudioDialog.CxmbRejected) }
-            return@runBusy
-        }
-        val dump = com.echo.themekit.PtfUnpacker.unpack(bytes)
-        if (dump == null) {
-            _state.update { it.copy(dialog = StudioDialog.Error("${file.name} is not a PSP theme file")) }
-            return@runBusy
-        }
-        val summary = runCatching { com.echo.studio.io.PtfUnpackWriter.write(dump, outDir) }
-            .getOrElse { e ->
-                _state.update { it.copy(dialog = StudioDialog.Error("Unpack failed: ${e.message}")) }
-                return@runBusy
-            }
-        _state.update {
-            it.copy(
-                dialog = StudioDialog.Notice(
-                    "Theme unpacked",
-                    buildString {
-                        append("${summary.images} images")
-                        if (summary.other > 0) append(" and ${summary.other} data files")
-                        append(" written to ${outDir.name} (see report.txt).")
-                        if (summary.failed > 0) append(" ${summary.failed} resources could not be decompressed.")
-                    },
-                ),
-                statusMessage = "Unpacked ${file.name}: ${summary.images} images",
-            )
-        }
-    }
-
-    fun batchConvert(
-        inputDir: File,
-        outputDir: File,
-        renderPreview: (com.echo.themekit.EchoThemeBundle) -> ByteArray?,
-    ) = runBusy {
-        val summary = com.echo.studio.io.BatchConverter.convertFolder(
-            input = inputDir,
-            output = outputDir,
-            renderPreview = renderPreview,
-            onProgress = { progress -> _state.update { it.copy(batchProgress = progress) } },
-        )
-        _state.update { it.copy(batchProgress = null, dialog = StudioDialog.BatchDone(summary)) }
     }
 
     fun exportIconTemplates(dir: File, rasterize: (key: String, sizePx: Int) -> ByteArray) = runBusy {

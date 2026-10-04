@@ -40,7 +40,6 @@ data class EchoThemeSource(
     val firmware: String? = null,
 ) {
     companion object {
-        const val TYPE_PTF_IMPORT = "ptf-import"
         const val TYPE_USER_CREATED = "user-created"
     }
 }

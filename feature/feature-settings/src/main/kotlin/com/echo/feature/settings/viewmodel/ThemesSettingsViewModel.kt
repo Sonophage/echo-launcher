@@ -10,7 +10,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.data.repository.EchoThemeStore
-import com.echo.core.data.repository.PtfThemeImporter
 import com.echo.core.data.wallpaper.ThemeAccent
 import com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE
 import com.echo.core.data.wallpaper.ThemeAccent.followWallpaperAccent
@@ -49,7 +48,6 @@ data class ThemesSettingsUiState(
 @HiltViewModel
 class ThemesSettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val ptfImporter: PtfThemeImporter,
     private val themeStore: EchoThemeStore,
 ) : ViewModel() {
     private val _extra = MutableStateFlow(ThemesSettingsUiState())
@@ -70,22 +68,6 @@ class ThemesSettingsViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemesSettingsUiState())
 
     fun dismissMessage() = _extra.update { it.copy(installMessage = null) }
-
-    fun importPtfTheme(uri: Uri) {
-        viewModelScope.launch {
-            _extra.update { it.copy(isInstalling = true, installMessage = null) }
-            val message = when (val result = ptfImporter.import(uri)) {
-                is PtfThemeImporter.Result.Success ->
-                    "Imported \"${result.themeName}\" — wallpaper applied" +
-                        if (result.accentArgb != null) " with its color" else ""
-                PtfThemeImporter.Result.CxmbNotSupported ->
-                    "CXMB (.ctf) themes aren't supported — only official .ptf themes"
-                is PtfThemeImporter.Result.Failed -> result.reason
-            }
-            Timber.i("PTF import: %s", message)
-            _extra.update { it.copy(isInstalling = false, installMessage = message) }
-        }
-    }
 
     fun setIconColor(argb: Long?) {
         viewModelScope.launch {

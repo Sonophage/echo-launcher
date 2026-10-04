@@ -429,8 +429,8 @@ Each column also lists its apps. Add more with its **Add** row.
 ### Look & Feel
 
 - **Theme**: 13 colour schemes previewed live, one icon tint across every crossbar glyph (8
-  swatches or a custom colour), **Color from Wallpaper**, PSP theme import (`.ptf`), and your saved
-  themes as shareable `.pfptheme` files.
+  swatches or a custom colour), **Color from Wallpaper**, and your saved themes
+  as shareable `.pfptheme` files.
 - **Wallpaper & Text**: a still or motion wallpaper, the wave and whether it draws over the
   wallpaper, Last Played size, and the status strip.
 - **Layout**: **Adjust Crossbar Layout** scales and shifts the crossbar over the live screen, kept
@@ -561,8 +561,8 @@ Features depend on core, never the other way; `app` wires everything with Hilt.
 app/                 MainActivity (the HOME activity), application, Hilt module
 studio/              Theme Studio, desktop companion (Windows / Linux / macOS)
 core/
-  theme-kit/         pure-JVM theme core shared with Theme Studio: PSP theme parsers,
-                     .pfptheme codec, colour cascade, icon slots, layout, media limits
+  theme-kit/         pure-JVM theme core shared with Theme Studio: the .pfptheme codec,
+                     colour cascade, icon slots, layout, media limits
   core-archive/      bounded ZIP reading for themes, backups and the codec
   core-common/       shared utilities
   core-domain/       models and repository interfaces

@@ -13,7 +13,8 @@ class EchoThemeCodecTest {
         name = "Classy Pink",
         accentColor = "#FF72B1",
         layout = CrossbarLayoutSpec(barTopFraction = 0.11f),
-        source = EchoThemeSource(type = EchoThemeSource.TYPE_PTF_IMPORT, file = "classypink.ptf", firmware = "5.00"),
+        // a source type this build no longer writes: themes saved by older builds must still read
+        source = EchoThemeSource(type = "ptf-import", file = "classypink.ptf", firmware = "5.00"),
         created = "2026-07-06",
     )
 

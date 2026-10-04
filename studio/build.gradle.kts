@@ -33,7 +33,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(testFixtures(project(":core:theme-kit")))
 }
 
 compose.desktop {

@@ -4,8 +4,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
-    // Exposes TestFixtures (synthetic PTF/BMP builders) to :studio's tests.
-    `java-test-fixtures`
 }
 
 java {

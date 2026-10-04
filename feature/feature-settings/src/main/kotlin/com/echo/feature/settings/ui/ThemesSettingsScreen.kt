@@ -76,7 +76,6 @@ fun ThemesSettingsScreen(
         state = state,
         onBack = onBack,
         onOpenColorSchemePicker = onOpenColorSchemePicker,
-        onImportPtfTheme = { viewModel.importPtfTheme(it) },
         onSetAccentFromWallpaper = { viewModel.setAccentFromWallpaper(it) },
         onImportEchoTheme = { viewModel.importEchoTheme(it) },
         onApplySavedTheme = { viewModel.applySavedTheme(it) },
@@ -96,7 +95,6 @@ private fun ThemesSettingsContent(
     state: ThemesSettingsUiState,
     onBack: () -> Unit,
     onOpenColorSchemePicker: () -> Unit,
-    onImportPtfTheme: (Uri) -> Unit,
     onSetAccentFromWallpaper: (Boolean) -> Unit,
     onImportEchoTheme: (Uri) -> Unit,
     onApplySavedTheme: (String) -> Unit,
@@ -109,7 +107,6 @@ private fun ThemesSettingsContent(
     onSaveCurrentLook: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val ptfPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { onImportPtfTheme(it) } }
     val echoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { onImportEchoTheme(it) } }
 
     var showSaveNameDialog by remember { mutableStateOf(false) }
@@ -327,11 +324,6 @@ private fun ThemesSettingsContent(
                     onClick  = { showSaveNameDialog = true },
                 )
                 SettingsRow(
-                    label    = "Import PSP Theme (.ptf)",
-                    sublabel = "Uses the theme's wallpaper and color — icons stay ours",
-                    onClick  = if (state.isInstalling) null else ({ ptfPicker.launch(arrayOf("*/*")) }),
-                )
-                SettingsRow(
                     label    = "Import Theme (.pfptheme)",
                     sublabel = "A theme shared from PlayFieldPortal",
                     onClick  = if (state.isInstalling) null else ({ echoPicker.launch(arrayOf("*/*")) }),
@@ -506,7 +498,6 @@ fun ThemesSettingsScreenPreview() {
             state = mockState,
             onBack = {},
             onOpenColorSchemePicker = {},
-            onImportPtfTheme = {},
             onSetAccentFromWallpaper = {},
             onImportEchoTheme = {},
             onApplySavedTheme = {},

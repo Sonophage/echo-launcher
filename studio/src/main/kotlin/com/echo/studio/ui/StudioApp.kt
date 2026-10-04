@@ -53,7 +53,7 @@ fun StudioApp(viewModel: StudioViewModel, window: Frame) {
                 ) {
                     OutlinedButton(onClick = viewModel::newTheme) { Text("New") }
                     OutlinedButton(onClick = {
-                        FileDialogs.openFile(window, "Open theme", setOf("ptf", "ctf", EchoThemeCodec.FILE_EXTENSION))
+                        FileDialogs.openFile(window, "Open theme", setOf(EchoThemeCodec.FILE_EXTENSION))
                             ?.let(viewModel::openFile)
                     }) { Text("Open…") }
                     OutlinedButton(onClick = {
@@ -67,19 +67,6 @@ fun StudioApp(viewModel: StudioViewModel, window: Frame) {
                             extension = EchoThemeCodec.FILE_EXTENSION,
                         )?.let { file -> viewModel.exportTo(file) { s -> PreviewRenderer.renderPreviewPng(s) } }
                     }) { Text("Export…") }
-                    OutlinedButton(onClick = {
-                        val input = FileDialogs.pickDirectory("Folder with .ptf files") ?: return@OutlinedButton
-                        val output = FileDialogs.pickDirectory("Output folder for .pfptheme files") ?: return@OutlinedButton
-                        viewModel.batchConvert(input, output) { bundle ->
-                            runCatching { PreviewRenderer.renderPreviewPng(bundle) }.getOrNull()
-                        }
-                    }) { Text("Batch convert…") }
-                    OutlinedButton(onClick = {
-                        val ptf = FileDialogs.openFile(window, "PSP theme to unpack", setOf("ptf", "ctf"))
-                            ?: return@OutlinedButton
-                        val output = FileDialogs.pickDirectory("Folder for unpacked assets") ?: return@OutlinedButton
-                        viewModel.unpackPtf(ptf, output)
-                    }) { Text("Unpack PTF…") }
 
                     Box(Modifier.weight(1f))
                     if (state.busy) {
@@ -151,8 +138,7 @@ fun StudioApp(viewModel: StudioViewModel, window: Frame) {
                 HorizontalDivider()
 
                 Text(
-                    text = state.batchProgress?.let { "Converting ${it.current}  (${it.done}/${it.total})" }
-                        ?: state.statusMessage
+                    text = state.statusMessage
                         ?: "",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -189,18 +175,6 @@ private fun StudioDialogs(viewModel: StudioViewModel) {
     val state by viewModel.state.collectAsState()
     when (val dialog = state.dialog) {
         null -> Unit
-        StudioDialog.CxmbRejected -> AlertDialog(
-            onDismissRequest = viewModel::dismissDialog,
-            confirmButton = { Button(onClick = viewModel::dismissDialog) { Text("OK") } },
-            title = { Text("CXMB theme") },
-            text = {
-                Text(
-                    "This file is a CXMB custom firmware theme (.ctf). Those replace PSP system " +
-                        "files rather than describing wallpaper and colors, so they can't be " +
-                        "converted. Official PSP themes (.ptf) open fine.",
-                )
-            },
-        )
         is StudioDialog.Error -> AlertDialog(
             onDismissRequest = viewModel::dismissDialog,
             confirmButton = { Button(onClick = viewModel::dismissDialog) { Text("OK") } },
@@ -212,28 +186,6 @@ private fun StudioDialogs(viewModel: StudioViewModel) {
             confirmButton = { Button(onClick = viewModel::dismissDialog) { Text("OK") } },
             title = { Text(dialog.title) },
             text = { Text(dialog.message) },
-        )
-        is StudioDialog.BatchDone -> AlertDialog(
-            onDismissRequest = viewModel::dismissDialog,
-            confirmButton = { Button(onClick = viewModel::dismissDialog) { Text("OK") } },
-            title = { Text("Batch conversion finished") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val s = dialog.summary
-                    Text("Converted: ${s.converted.size}")
-                    if (s.warnings.isNotEmpty()) {
-                        Text("Converted with caveats: ${s.warnings.size}")
-                        s.warnings.forEach { (name, reason) -> Text("  • $name — $reason", fontSize = 12.sp) }
-                    }
-                    if (s.skippedCxmb.isNotEmpty()) {
-                        Text("Skipped (CXMB): ${s.skippedCxmb.size} — ${s.skippedCxmb.joinToString()}")
-                    }
-                    if (s.failed.isNotEmpty()) {
-                        Text("Failed: ${s.failed.size}")
-                        s.failed.forEach { (name, reason) -> Text("  • $name — $reason", fontSize = 12.sp) }
-                    }
-                }
-            },
         )
     }
 }

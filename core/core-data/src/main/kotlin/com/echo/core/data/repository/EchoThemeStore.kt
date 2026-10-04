@@ -71,18 +71,6 @@ class EchoThemeStore @Inject constructor(
         ).also { if (scaled !== bitmap) bitmap.recycle() }
     }
 
-    suspend fun createFromPtf(name: String, wallpaper: BmpImage, accentArgb: Long?, sourceFile: String?, firmware: String?): SavedTheme? =
-        withContext(Dispatchers.IO) {
-            val bitmap = Bitmap.createBitmap(wallpaper.width, wallpaper.height, Bitmap.Config.ARGB_8888)
-            bitmap.setPixels(wallpaper.argb, 0, wallpaper.width, 0, 0, wallpaper.width, wallpaper.height)
-            save(
-                name = name,
-                wallpaper = bitmap,
-                accentArgb = accentArgb,
-                source = EchoThemeSource(type = EchoThemeSource.TYPE_PTF_IMPORT, file = sourceFile, firmware = firmware),
-            )
-        }
-
     suspend fun apply(id: String): Boolean = withContext(Dispatchers.IO) {
         val wallpaperSidecar = File(dir, "$id.wallpaper.jpg")
 
