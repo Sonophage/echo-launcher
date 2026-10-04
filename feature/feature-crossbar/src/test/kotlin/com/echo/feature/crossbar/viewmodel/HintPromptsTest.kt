@@ -97,9 +97,9 @@ class HintPromptsTest {
     }
 
     @Test
-    fun `Sort and Filter are one button and never both`() {
+    fun `the footer never repeats Sort or Filter, which the top bar already shows with their buttons`() {
         val right = promptsFor(state()).right.map { it.verb }
-        assertTrue("Sort and Filter both offered: $right", right.count { it == "Sort" || it == "Filter" } <= 1)
+        assertTrue("Sort or Filter repeated in the footer: $right", right.none { it == "Sort" || it == "Filter" })
     }
 
     @Test

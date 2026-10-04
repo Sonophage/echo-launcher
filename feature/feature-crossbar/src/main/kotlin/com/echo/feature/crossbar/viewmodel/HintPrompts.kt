@@ -83,14 +83,12 @@ fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
     }
 
     val resumable = state.resumableFocus()
+    // owner, 2026-10-04: the top bar shows the filter row with its triggers and the sort row with X,
+    // so the footer does not repeat Filter or Sort
     val right = buildList {
-        when {
-            state.canFilterRecents -> add(CrossbarPrompt(GamepadAction.PREV_CATEGORY, "Filter", pairedWith = GamepadAction.NEXT_CATEGORY))
-            state.canSortCurrentList -> add(CrossbarPrompt(GamepadAction.CHANGE_SORT, "Sort"))
-        }
         if (state.onLastPlayedHome) focused?.let { recentInfoPrompt(state, it) }?.let(::add)
         if (state.focusedItemHasContextMenu) add(CrossbarPrompt(GamepadAction.OPEN_CONTEXT_MENU, "Options"))
-        if (!state.isInSubItem && resumable == null) add(CrossbarPrompt(GamepadAction.OPEN_SEARCH, "Search"))
+        if (!state.isInSubItem) add(CrossbarPrompt(GamepadAction.PREV_PAGE, "Search"))
     }
 
     return CrossbarPrompts(

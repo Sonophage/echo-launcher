@@ -1093,6 +1093,9 @@ internal fun canonicalCrossbarCategories(
     return (builtIns + customCategories).sortedBy { it.position }
 }
 
+// the XMB top bar's sort row: the modes this list can take and the one it is in
+fun CrossbarUiState.sortRow(): Pair<List<CrossbarSortMode>, CrossbarSortMode>? = activeSortModes()?.let { it to sortModeFor(it) }
+
 internal fun CrossbarUiState.sortModeFor(cycle: List<CrossbarSortMode>): CrossbarSortMode = when {
     cycle === MUSIC_SORTS -> musicSortMode
     cycle === VIDEO_SORTS -> videoSortMode
@@ -2057,9 +2060,20 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         val cycle = activeSortContext() ?: return
-        val isMusic = cycle === MUSIC_SORTS
         val current = _uiState.value.sortModeFor(cycle)
-        val next = cycle[(cycle.indexOf(current).coerceAtLeast(0) + 1) % cycle.size]
+        applySort(cycle, cycle[(cycle.indexOf(current).coerceAtLeast(0) + 1) % cycle.size])
+    }
+
+    // a tap on the XMB's sort row picks that mode outright
+    fun onSortPicked(mode: CrossbarSortMode) {
+        markTouchInput()
+        val cycle = activeSortContext() ?: return
+        if (_uiState.value.sortModeFor(cycle) == mode) return
+        applySort(cycle, mode)
+    }
+
+    private fun applySort(cycle: List<CrossbarSortMode>, next: CrossbarSortMode) {
+        val isMusic = cycle === MUSIC_SORTS
         menuSound.play(MenuSound.SYSTEM_BROWSE)
 
         _uiState.update {

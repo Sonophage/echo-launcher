@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.feature.crossbar.viewmodel.sortRow
 import com.echo.feature.crossbar.viewmodel.OrbKind
 import com.echo.feature.crossbar.viewmodel.orbKind
 import com.echo.feature.crossbar.viewmodel.holdMsFor
@@ -215,6 +216,7 @@ fun CrossbarShellContainer(
         onDrawerTypedCharConsumed = viewModel::onDrawerTypedCharConsumed,
         onNotificationsToggled = viewModel.panel::toggleNotifications,
         onLaunchRecentTop = viewModel.recents::launchRecentTop,
+        onSortPicked = viewModel::onSortPicked,
         onOrbTapped = viewModel::onOrbTapped,
         onOrbTransport = viewModel::onOrbTransport,
         onNotificationsDismissed = viewModel.panel::closeNotifications,
@@ -389,6 +391,7 @@ fun CrossbarShell(
     onDrawerTypedCharConsumed: () -> Unit = {},
     onNotificationsToggled: () -> Unit = {},
     onLaunchRecentTop: () -> Unit = {},
+    onSortPicked: (com.echo.feature.crossbar.viewmodel.CrossbarSortMode) -> Unit = {},
     onOrbTapped: () -> Unit = {},
     onOrbTransport: (com.echo.feature.crossbar.viewmodel.StageCommand) -> Unit = {},
     onNotificationsDismissed: () -> Unit = {},
@@ -1062,9 +1065,9 @@ fun CrossbarShell(
             val panelPull = rememberPanelPull(notificationsOpen)
             CompositionLocalProvider(LocalDensity provides baseDensity) {
             CrossbarStatusStrip(
-                sortLabel = uiState.sortLabel.takeIf { crossbarContext },
-                showSortButton = uiState.resolvedShowTouchButton && crossbarContext,
-                onSortTapped = onCrossbarSortTapped,
+                sortRow = uiState.sortRow()?.takeIf { crossbarContext && !uiState.onLastPlayedHome }
+                    ?.let { (modes, active) -> modes.map { it.label } to modes.indexOf(active) },
+                onSortPicked = { i -> uiState.sortRow()?.first?.getOrNull(i)?.let(onSortPicked) },
                 live = liveActivity.takeIf { !notificationsOpen && uiState.activeSettingsScreen == null },
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,

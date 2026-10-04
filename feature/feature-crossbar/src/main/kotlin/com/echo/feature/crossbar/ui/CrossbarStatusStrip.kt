@@ -146,10 +146,9 @@ data class StripHints(val shoulder: Boolean = false, val leftRight: Boolean = fa
 
 @Composable
 fun CrossbarStatusStrip(
-    sortLabel: String? = null,
-
-    showSortButton: Boolean = false,
-    onSortTapped: () -> Unit = {},
+    // the XMB's sort as a Recent-style row (owner, 2026-10-04): the mode labels and the active one
+    sortRow: Pair<List<String>, Int>? = null,
+    onSortPicked: (Int) -> Unit = {},
 
     live: StripLiveActivity? = null,
 
@@ -275,19 +274,11 @@ fun CrossbarStatusStrip(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(u.dp(18)),
                     ) {
-                        sortLabel?.let { label ->
-                            Text(
-                                "⇅ $label",
-                                color = StripPrimary,
-                                fontSize = u.sp(10),
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(u.dp(9)))
-                                    .border(1.5.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(u.dp(9)))
-                                    .then(if (showSortButton) Modifier.clickable(onClick = onSortTapped) else Modifier)
-                                    .padding(horizontal = u.dp(9), vertical = u.dp(4)),
-                            )
+                        sortRow?.let { (labels, active) ->
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
+                                if (LocalPadPrompts.current) ControllerPrompt(GamepadAction.CHANGE_SORT, "", glyphSize = u.dp(22), spacing = 0.dp)
+                                StripSections(labels = labels, selected = active, onTapped = onSortPicked, u = u, shoulders = false)
+                            }
                         }
                         if (hints.shoulder) StripHint("LB  RB", u)
                         if (hints.leftRight) StripHint("◀  ▶", u)
