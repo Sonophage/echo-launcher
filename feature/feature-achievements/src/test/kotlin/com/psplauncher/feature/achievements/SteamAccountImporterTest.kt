@@ -6,7 +6,6 @@ import com.psplauncher.core.data.database.dao.ProviderGameLinkDao
 import com.psplauncher.core.data.database.dao.SteamOwnedGamesDao
 import com.psplauncher.core.data.database.entity.SteamOwnedGameEntity
 import com.psplauncher.core.domain.achievement.AchievementProvider
-import com.psplauncher.core.domain.achievement.ShibaTier
 import com.psplauncher.feature.achievements.api.ProviderSyncResult
 import com.psplauncher.feature.achievements.api.SyncedCoin
 import com.psplauncher.feature.achievements.provider.steam.SteamOwnedEntry
@@ -37,8 +36,8 @@ class SteamAccountImporterTest {
     )
 
     private fun coin(earned: Boolean) = SyncedCoin(
-        "c", "c", "", ShibaTier.BRONZE, 10.0, null,
-        isHidden = false, isEarned = earned, earnedHardcore = earned, earnedAt = null,
+        "c", "c", "", 10.0, null,
+        isHidden = false, isEarned = earned, earnedAt = null,
     )
 
     private fun success(vararg earned: Boolean) =

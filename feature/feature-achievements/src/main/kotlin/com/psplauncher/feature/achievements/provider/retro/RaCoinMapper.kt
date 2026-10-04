@@ -1,6 +1,5 @@
 package com.psplauncher.feature.achievements.provider.retro
 
-import com.psplauncher.core.domain.achievement.ShibaTier
 import com.psplauncher.feature.achievements.api.ProviderSyncResult
 import com.psplauncher.feature.achievements.api.SyncedCoin
 import org.retroachivements.api.data.pojo.game.GetGameInfoAndUserProgress
@@ -25,14 +24,10 @@ internal object RaCoinMapper {
                 providerAchievementId = a.id,
                 title = a.title,
                 description = a.description,
-
-                tier = ShibaTier.forRaPoints(a.points.toInt()),
                 globalRarity = percent,
                 iconUrl = a.badgeName.takeIf { it.isNotBlank() }?.let { "$BADGE_BASE/$it.png" },
                 isHidden = false,
                 isEarned = earnedAt != null,
-
-                earnedHardcore = a.dateEarnedHardcore != null,
                 earnedAt = earnedAt,
                 points = a.points.toInt(),
             )

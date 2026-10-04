@@ -1,19 +1,14 @@
 package com.psplauncher.feature.achievements.api
 
-import com.psplauncher.core.domain.achievement.ShibaTier
-
 data class SyncedCoin(
     val providerAchievementId: String,
     val title: String,
     val description: String,
 
-    val tier: ShibaTier,
     val globalRarity: Double,
     val iconUrl: String?,
     val isHidden: Boolean,
     val isEarned: Boolean,
-
-    val earnedHardcore: Boolean,
     val earnedAt: Long?,
     val points: Int? = null,
 ) {

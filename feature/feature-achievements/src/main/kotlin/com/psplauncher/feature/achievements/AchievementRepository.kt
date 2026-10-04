@@ -13,7 +13,6 @@ import com.psplauncher.core.domain.achievement.Achievement
 import com.psplauncher.core.domain.achievement.AchievementProvider
 import com.psplauncher.core.domain.achievement.AchievementSet
 import com.psplauncher.core.domain.achievement.AchievementTotals
-import com.psplauncher.core.domain.achievement.ShibaTier
 import com.psplauncher.core.domain.repository.GameRepository
 import com.psplauncher.feature.achievements.api.ProviderSyncResult
 import com.psplauncher.feature.achievements.api.SyncedCoin
@@ -216,7 +215,7 @@ private fun SyncedCoin.toEntity(provider: AchievementProvider, providerGameId: S
     providerAchievementId = providerAchievementId,
     title = title,
     description = description,
-    tier = tier.name,
+    tier = "",
     globalRarity = globalRarity,
     iconUrl = iconUrl,
     isHidden = isHidden,
@@ -230,24 +229,11 @@ private fun summaryOf(
     providerGameId: String,
     coins: List<SyncedCoin>,
     now: Long,
-): AccountAchievementSetEntity {
-    fun count(tier: ShibaTier, earnedOnly: Boolean) =
-        coins.count { it.tier == tier && (!earnedOnly || it.isEarned) }
-
-    val platinumCoins = coins.filter { it.tier == ShibaTier.PLATINUM }
-    val mastered = if (platinumCoins.isNotEmpty()) platinumCoins.any { it.earnedHardcore }
-                   else coins.isNotEmpty() && coins.all { it.earnedHardcore }
-    return AccountAchievementSetEntity(
+): AccountAchievementSetEntity =
+    AccountAchievementSetEntity(
         provider = provider.name,
         providerGameId = providerGameId,
         title = "",
-        bronzeTotal = count(ShibaTier.BRONZE, earnedOnly = false),
-        silverTotal = count(ShibaTier.SILVER, earnedOnly = false),
-        goldTotal = count(ShibaTier.GOLD, earnedOnly = false),
-        bronzeEarned = count(ShibaTier.BRONZE, earnedOnly = true),
-        silverEarned = count(ShibaTier.SILVER, earnedOnly = true),
-        goldEarned = count(ShibaTier.GOLD, earnedOnly = true),
-        mastered = mastered,
+        mastered = coins.isNotEmpty() && coins.all { it.isEarned },
         lastSyncedAt = now,
     )
-}
