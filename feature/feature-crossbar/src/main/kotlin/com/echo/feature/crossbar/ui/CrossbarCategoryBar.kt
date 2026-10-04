@@ -150,13 +150,13 @@ private fun CrossbarCategoryItem(
             else -> FlatUnfocusedIconAlpha
         },
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
-        label = "xmbCategoryAlpha",
+        label = "crossbarCategoryAlpha",
     )
 
     val labelAlpha by animateFloatAsState(
         targetValue = if (isSelected) 1f else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
-        label = "xmbCategoryLabelAlpha",
+        label = "crossbarCategoryLabelAlpha",
     )
 
     Column(

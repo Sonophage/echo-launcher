@@ -46,8 +46,8 @@ class RecentTapLaunchesTest {
     }
 
     // Guards the page's contract only. Whether that tap LAUNCHES is decided by
-    // onRecentCardTap in XMBViewModel, which no test can reach: nothing in this
-    // repo constructs XMBViewModel. That half is verified on hardware.
+    // onRecentCardTap in CrossbarRecents, which no test can reach: nothing in this
+    // repo constructs CrossbarViewModel. That half is verified on hardware.
     @Test
     fun `a tapped card carries its own index, not the focused one`() {
         val tapped = mutableListOf<Int>()

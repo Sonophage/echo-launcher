@@ -543,12 +543,12 @@ fun CrossbarShell(
     val crossbarWave by androidx.compose.animation.animateColorAsState(
         targetValue = itemColor ?: themeWave,
         animationSpec = tween(durationMillis = 420),
-        label = "xmbItemWave",
+        label = "crossbarItemWave",
     )
     val crossbarGameAccent by androidx.compose.animation.animateColorAsState(
         targetValue = itemColor ?: themeAccent,
         animationSpec = tween(durationMillis = 420),
-        label = "xmbItemAccent",
+        label = "crossbarItemAccent",
     )
 
     val crossbarColors = remember(uiState.themeColors, crossbarWave, crossbarGameAccent) {
@@ -662,7 +662,7 @@ fun CrossbarShell(
                     it.gameId == selectedItem?.gameId
             }
 
-            Crossfade(targetState = backdrop, animationSpec = tween(CROSSBAR_BACKDROP_FADE_MS), label = "xmbGameBackground") { bg ->
+            Crossfade(targetState = backdrop, animationSpec = tween(CROSSBAR_BACKDROP_FADE_MS), label = "crossbarGameBackground") { bg ->
                 if (bg != null || backgroundSnap != null) {
                     Box(Modifier.fillMaxSize()) {
                         if (backgroundSnap != null) {
@@ -719,13 +719,13 @@ fun CrossbarShell(
                     else -> 1f
                 },
                 animationSpec = tween(900),
-                label = "xmbWaveSpeed",
+                label = "crossbarWaveSpeed",
             )
 
             val waveGlow by animateFloatAsState(
                 targetValue = if (launching) 1.7f else 1f,
                 animationSpec = tween(if (launching) 260 else 1200),
-                label = "xmbWaveGlow",
+                label = "crossbarWaveGlow",
             )
             if (waveVisible(uiState.customWallpaperPath != null, uiState.waveOverWallpaper, effectiveWaveStyle)) {
                 WaveOverlay(
@@ -969,7 +969,7 @@ fun CrossbarShell(
                                     .togetherWith(fadeOut(tween(110)) + slideOutVertically(tween(140)) { -it / 10 })
                                     .using(SizeTransform(clip = false))
                             },
-                            label = "xmbCategoryItems",
+                            label = "crossbarCategoryItems",
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .fillMaxSize()

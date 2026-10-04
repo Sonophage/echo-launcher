@@ -8,7 +8,7 @@ import org.junit.Test
 /**
  * The app backdrop replaced a 24px icon upscaled to fill the screen. It is now
  * a gradient mixed from the app's own icon colour, and it is the only scrim
- * under that backdrop -- XMBShell skips its own for the AppIcon case. So this
+ * under that backdrop -- CrossbarShell skips its own for the AppIcon case. So this
  * gradient alone has to keep the XMB's white text readable.
  *
  * AccentDeriver forces its result to saturation >= 0.55 and value >= 0.85, so

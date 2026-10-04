@@ -148,7 +148,7 @@ class EchoThemeStoreV3Test {
     }
 
     @Test
-    fun `saveCurrentLook excludes the device-specific XmbLayoutAdjust`() = runTest {
+    fun `saveCurrentLook excludes the device-specific CrossbarLayoutAdjust`() = runTest {
         val store = EchoThemeStore(context)
         context.echoDataStore.edit {
             it[stringPreferencesKey("display_xmb_layout_adjust")] = """{"gameTopFraction":0.5}"""

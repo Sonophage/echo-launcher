@@ -38,7 +38,7 @@ class RowArtSlotsTest {
     }
 
     /**
-     * toXmbItems fills artworkUri, iconUri and logoUri and never coverUri, so this is the
+     * toCrossbarItems fills artworkUri, iconUri and logoUri and never coverUri, so this is the
      * shape a real recently played game arrives in. The test above states that the card
      * prefers a portrait cover -- but it says so using a coverUri no game ever carries, so
      * it passed while the recents card drew ArtworkKind.BACKGROUND, a 16:9 image, inside a

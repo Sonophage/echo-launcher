@@ -60,7 +60,7 @@ fun EchoSearchField(
     val edge by animateColorAsState(
         targetValue = if (active) colors.searchBorder else colors.searchBorder.copy(alpha = 0.35f),
         animationSpec = tween(160),
-        label = "pfpSearchFieldEdge",
+        label = "echoSearchFieldEdge",
     )
 
     Row(

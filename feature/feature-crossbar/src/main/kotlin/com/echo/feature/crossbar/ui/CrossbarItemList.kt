@@ -573,7 +573,7 @@ private fun CrossbarVerticalListRow(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessHigh,
         ),
-        label = "xmbListRowScale",
+        label = "crossbarListRowScale",
     )
     val rowAlpha by animateFloatAsState(
         targetValue = when {
@@ -585,13 +585,13 @@ private fun CrossbarVerticalListRow(
             else -> FlatUnfocusedRowAlpha
         },
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
-        label = "xmbListRowAlpha",
+        label = "crossbarListRowAlpha",
     )
 
     val glow by animateFloatAsState(
         targetValue = if (isSelected) 1f else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
-        label = "xmbRowGlow",
+        label = "crossbarRowGlow",
     )
 
     val subtitleStyle = if (textShadow) TextStyle(shadow = CrossbarTextShadow) else TextStyle.Default
@@ -657,7 +657,7 @@ private fun CrossbarVerticalListRow(
             val labelAlpha by animateFloatAsState(
                 targetValue = if (panelHidesLabel) 0f else 1f,
                 animationSpec = tween(220),
-                label = "xmbRowLabelFade",
+                label = "crossbarRowLabelFade",
             )
             if (showText && showGameText && labelAlpha > 0f) {
                 Column(

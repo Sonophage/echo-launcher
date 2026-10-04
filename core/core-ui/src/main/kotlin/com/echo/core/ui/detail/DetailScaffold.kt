@@ -210,7 +210,7 @@ fun EchoDetailHelperFooter(
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
         animationSpec = tween(200),
-        label = "pfpDetailHelperFooter",
+        label = "echoDetailHelperFooter",
     )
 
     Box(

@@ -7,7 +7,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * The studio's three menus are drawn by PspContextMenuOverlay, which sorts rows
+ * The studio's three menus are drawn by EchoContextMenuOverlay, which sorts rows
  * through foldedIntoGroups() -- destructive rows move to the end. Activation
  * indexes the source list. So the source list must already be in drawn order,
  * or a tap runs the row next to the one the finger landed on.

@@ -4207,7 +4207,7 @@ class CrossbarViewModel @Inject constructor(
                 .collect { (settled, boot, screen) ->
                     Timber.v(
                         "StartupSeq: permissionsSettled=$settled showBootSequence=$boot " +
-                            "activeSettingsScreen=$screen xmbForegroundVisible=${!boot && screen == null}"
+                            "activeSettingsScreen=$screen crossbarForegroundVisible=${!boot && screen == null}"
                     )
                 }
         }
