@@ -80,7 +80,7 @@ fun LogsSettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState),
         ) {
-            SettingsGroup("Log Files   —   Ⓐ open externally · Ⓨ options")
+            SettingsGroup("Log Files   —   Ⓐ open externally · ≡ options")
 
             if (state.logFiles.isEmpty()) {
                 SettingsRow(

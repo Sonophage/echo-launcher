@@ -95,7 +95,7 @@ class CrossbarGames(
     internal fun emptyFavoritesItem(): CrossbarItem = CrossbarItem(
         id       = CrossbarViewModel.EMPTY_FAVORITES_ITEM_ID,
         title    = "No favorites yet",
-        subtitle = "Mark a game as a favorite from its options (△) menu.",
+        subtitle = "Mark a game as a favorite from its options (≡) menu.",
         type     = CrossbarItemType.EMPTY,
     )
 
