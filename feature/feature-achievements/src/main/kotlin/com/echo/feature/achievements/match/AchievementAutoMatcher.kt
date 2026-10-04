@@ -10,7 +10,7 @@ import com.echo.feature.achievements.AchievementController
 import com.echo.feature.achievements.provider.retro.RaHashLookup
 import com.echo.feature.achievements.provider.retro.RaHashResolver
 import com.echo.feature.achievements.provider.steam.SteamShortcut
-import com.echo.feature.artwork.api.SteamGridDbApi
+import com.echo.core.data.steamgriddb.SteamGridDbApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import timber.log.Timber

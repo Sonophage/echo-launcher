@@ -6,10 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.echo.core.domain.model.Game
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.domain.repository.GameRepository
-import com.echo.feature.artwork.api.SgdbApiKeyProvider
-import com.echo.feature.artwork.api.SgdbArtType
+import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
+import com.echo.core.data.steamgriddb.SgdbArtType
 import com.echo.feature.artwork.api.SsCachedMedia
-import com.echo.feature.artwork.api.SteamGridDbApi
+import com.echo.core.data.steamgriddb.SteamGridDbApi
 import com.echo.feature.artwork.match.CachingMatchEvidence
 import com.echo.feature.artwork.match.GameCandidate
 import com.echo.feature.artwork.match.GameMatch

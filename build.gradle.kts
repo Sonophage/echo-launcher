@@ -60,10 +60,7 @@ tasks.register("checkStructure") {
 
         // 3. a feature depends only on core; the two hosts embed other features' screens
         val hosts = setOf(":feature:feature-crossbar", ":feature:feature-settings")
-        val allowed = mapOf(
-            ":feature:feature-achievements -> :feature:feature-artwork" to
-                "AchievementAutoMatcher uses SteamGridDbApi; drop this when the SteamGridDB client moves to core-data",
-        )
+        val allowed = mapOf<String, String>()
         val featureDep = Regex("""project\("(:feature:[^"]+)"\)""")
         val edges = modules.filter { it.startsWith(":feature:") }.flatMap { m ->
             featureDep.findAll(dirOf(m).resolve("build.gradle.kts").readText()).map { "$m -> ${it.groupValues[1]}" }.toList()

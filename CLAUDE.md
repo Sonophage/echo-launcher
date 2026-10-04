@@ -52,14 +52,14 @@ changing `CLAUDE.md` or a skill. Other build edits, such as a version bump, pass
 | `:core:core-archive` | Pure JVM. Bounded ZIP reading for themes and backups. |
 | `:core:core-common` | Small shared utilities: formatting, logging, keystore secrets. |
 | `:core:core-domain` | Models and repository interfaces. |
-| `:core:core-data` | Room database, DataStore, repositories, scanners' storage, permissions helpers. |
+| `:core:core-data` | Room database, DataStore, repositories, scanners' storage, permissions helpers, the SteamGridDB client and its key. |
 | `:core:core-ui` | The UI kit: footer (`EchoHintBar`), context menus, panels, waves, holds, design units, theme. |
 | `:core:core-navigation` | Pure JVM navigation logic. |
 | `:discord:discord-native` | Discord rich presence through the native SDK. Needs the SDK aar (`tools/fetch-discord-sdk.sh`). |
 | `:feature:feature-crossbar` | Host. The crossbar shell, Last Played, the status strip and island, search, music, game info, app detail. |
 | `:feature:feature-library` | ROM and media scanners. |
 | `:feature:feature-launcher` | Emulator detection and launching. |
-| `:feature:feature-artwork` | Scrapers, the artwork folder, ES-DE import and export, the Artwork Studio. |
+| `:feature:feature-artwork` | Scrapers (SteamGridDB's client lives in core-data), the artwork folder, ES-DE import and export, the Artwork Studio. |
 | `:feature:feature-themes` | Theme loading and built-in themes. |
 | `:feature:feature-settings` | Host. Settings screens, the setup wizard, the permissions catalogue. |
 | `:feature:feature-appbar` | The app drawer and app classification. |

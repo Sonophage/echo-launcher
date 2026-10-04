@@ -16,7 +16,7 @@ import com.echo.core.data.repository.SafGrants
 import com.echo.core.data.repository.Vita3KLibrary
 import com.echo.feature.artwork.MetadataApiKeyProvider
 import com.echo.feature.artwork.api.ArtworkImportManager
-import com.echo.feature.artwork.api.SgdbApiKeyProvider
+import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers

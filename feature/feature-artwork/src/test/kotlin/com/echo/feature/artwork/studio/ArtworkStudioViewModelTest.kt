@@ -6,11 +6,11 @@ import com.echo.core.domain.model.GamepadAction
 import com.echo.core.domain.repository.GameRepository
 import com.echo.feature.artwork.api.IgdbApi
 import com.echo.feature.artwork.api.IgdbGameInfo
-import com.echo.feature.artwork.api.SgdbApiKeyProvider
-import com.echo.feature.artwork.api.SgdbArtItem
-import com.echo.feature.artwork.api.SgdbArtType
+import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
+import com.echo.core.data.steamgriddb.SgdbArtItem
+import com.echo.core.data.steamgriddb.SgdbArtType
 import com.echo.feature.artwork.api.SsMediaCatalog
-import com.echo.feature.artwork.api.SteamGridDbApi
+import com.echo.core.data.steamgriddb.SteamGridDbApi
 import com.echo.feature.artwork.store.ArtworkKind
 import com.echo.feature.artwork.store.ArtworkStore
 import com.echo.feature.artwork.store.RoutingArtworkStore

@@ -8,7 +8,7 @@ import com.echo.feature.artwork.api.ArtworkStatus
 import com.echo.feature.artwork.api.IgdbApi
 import com.echo.feature.artwork.api.ScrapeOptions
 import com.echo.feature.artwork.api.MetadataScrapeWorker
-import com.echo.feature.artwork.api.SgdbApiKeyProvider
+import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

@@ -4,7 +4,7 @@ import com.echo.feature.artwork.api.steamAppIdOf
 import com.echo.feature.artwork.api.IgdbApi
 import com.echo.feature.artwork.api.ScreenScraperApi
 import com.echo.feature.artwork.api.SsSearchHit
-import com.echo.feature.artwork.api.SteamGridDbApi
+import com.echo.core.data.steamgriddb.SteamGridDbApi
 import com.echo.feature.artwork.rom.RomIdentity
 import timber.log.Timber
 import javax.inject.Inject

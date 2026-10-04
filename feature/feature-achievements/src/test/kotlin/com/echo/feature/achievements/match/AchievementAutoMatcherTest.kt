@@ -24,7 +24,7 @@ class AchievementAutoMatcherTest {
     private val repository = mockk<AchievementController>(relaxed = true)
     private val romReader = mockk<RomBytesReader>()
     private val discOpener = mockk<DiscImageOpener>(relaxed = true)
-    private val steamGridDb = mockk<com.echo.feature.artwork.api.SteamGridDbApi>(relaxed = true)
+    private val steamGridDb = mockk<com.echo.core.data.steamgriddb.SteamGridDbApi>(relaxed = true)
 
     private val matcher = AchievementAutoMatcher(
         gameRepository, linkDao, matchNoteDao, raHashResolver, repository, romReader, discOpener,

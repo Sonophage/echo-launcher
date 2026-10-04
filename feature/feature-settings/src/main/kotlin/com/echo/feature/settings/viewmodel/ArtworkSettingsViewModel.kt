@@ -10,7 +10,7 @@ import com.echo.feature.artwork.api.ArtworkStatus
 import com.echo.feature.artwork.api.IgdbApi
 import com.echo.feature.artwork.api.MetadataScrapeWorker
 import com.echo.feature.artwork.api.ScreenScraperApi
-import com.echo.feature.artwork.api.SgdbApiKeyProvider
+import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

@@ -1,6 +1,6 @@
 package com.echo.feature.artwork.studio
 
-import com.echo.feature.artwork.api.SgdbArtType
+import com.echo.core.data.steamgriddb.SgdbArtType
 import com.echo.feature.artwork.store.ArtworkKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

@@ -11,8 +11,8 @@ import com.echo.feature.artwork.api.SsLookupDiagnostics
 import com.echo.feature.artwork.rom.RomHasher
 import com.echo.feature.artwork.rom.RomIdentity
 import com.echo.feature.artwork.api.ScreenScraperApi
-import com.echo.feature.artwork.api.SgdbApiKeyProvider
-import com.echo.feature.artwork.api.SteamGridDbApi
+import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
+import com.echo.core.data.steamgriddb.SteamGridDbApi
 import com.echo.feature.artwork.store.ArtworkStore
 import io.mockk.coEvery
 import io.mockk.coVerify

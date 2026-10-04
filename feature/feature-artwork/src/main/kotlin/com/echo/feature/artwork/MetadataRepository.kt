@@ -17,9 +17,9 @@ import com.echo.feature.artwork.api.SteamAppDetails
 import com.echo.feature.artwork.api.SteamStoreApi
 import com.echo.feature.artwork.api.steamAppArt
 import com.echo.feature.artwork.api.steamAppIdOf
-import com.echo.feature.artwork.api.SgdbApiKeyProvider
+import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
 import com.echo.feature.artwork.api.SsGameInfo
-import com.echo.feature.artwork.api.SteamGridDbApi
+import com.echo.core.data.steamgriddb.SteamGridDbApi
 import com.echo.feature.artwork.rom.RomHasher
 import com.echo.feature.artwork.rom.RomIdentity
 import com.echo.feature.artwork.store.ArtworkKind

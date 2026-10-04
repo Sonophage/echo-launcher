@@ -11,7 +11,7 @@ import com.echo.core.data.repository.RomRootRepository
 import com.echo.core.data.repository.Vita3KLibrary
 import com.echo.feature.artwork.MetadataApiKeyProvider
 import com.echo.feature.artwork.api.ArtworkImportManager
-import com.echo.feature.artwork.api.SgdbApiKeyProvider
+import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
 import com.echo.feature.launcher.EmulatorAutoConfigService
 import io.mockk.coEvery
 import io.mockk.coVerify

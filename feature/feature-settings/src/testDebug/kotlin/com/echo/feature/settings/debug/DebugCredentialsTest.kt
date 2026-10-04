@@ -2,7 +2,7 @@ package com.echo.feature.settings.debug
 
 import com.echo.core.common.security.SecretProtection
 import com.echo.feature.artwork.MetadataApiKeyProvider
-import com.echo.feature.artwork.api.SgdbApiKeyProvider
+import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

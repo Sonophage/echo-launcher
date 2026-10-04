@@ -1,4 +1,4 @@
-package com.echo.feature.artwork.api
+package com.echo.core.data.steamgriddb
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit

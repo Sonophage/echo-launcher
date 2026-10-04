@@ -1,4 +1,4 @@
-package com.echo.feature.artwork.api
+package com.echo.core.data.steamgriddb
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
