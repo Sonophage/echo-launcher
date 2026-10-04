@@ -101,7 +101,11 @@ import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.feature.crossbar.viewmodel.GRID_COVER_COUNT
 import com.echo.core.domain.model.PlayState
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.echo.feature.crossbar.viewmodel.pillHoldMs
 import com.echo.feature.crossbar.viewmodel.pillsFor
+import com.echo.core.ui.design.holdOutline
+import com.echo.core.ui.design.holdProgress
+import com.echo.core.ui.design.pressAndHold
 import com.echo.feature.crossbar.viewmodel.shelfCardFor
 import com.echo.feature.crossbar.viewmodel.ShelfCard
 import androidx.compose.material.icons.filled.CheckCircle
@@ -721,6 +725,7 @@ private fun CrossbarVerticalListRow(
                                     CrossbarActionPill(
                                         label = pill.label,
                                         focused = index == focusedPillIndex,
+                                        holdMs = pillHoldMs(item, pill),
                                         onClick = { onPillActivated(pill.id) },
                                     )
                                 }
@@ -1213,14 +1218,17 @@ private fun AppListIcon(
 }
 
 @Composable
-private fun CrossbarActionPill(label: String, focused: Boolean, onClick: () -> Unit) {
+private fun CrossbarActionPill(label: String, focused: Boolean, holdMs: Long, onClick: () -> Unit) {
+    var pressing by remember { mutableStateOf(false) }
+    val progress = if (holdMs > 0L) holdProgress(pressing, holdMs) else 0f
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .height(PillHeight)
             .clip(RoundedCornerShape(PillHeight / 2))
             .background(if (focused) Color.White else Color.White.copy(alpha = 0.14f))
-            .clickable(onClick = onClick)
+            .holdOutline(progress, if (focused) PillFocusedText else Color.White, 2.dp)
+            .then(if (holdMs > 0L) Modifier.pressAndHold(holdMs, label, { pressing = it }, onClick) else Modifier.clickable(onClick = onClick))
             .padding(horizontal = PillPadH),
     ) {
         Text(

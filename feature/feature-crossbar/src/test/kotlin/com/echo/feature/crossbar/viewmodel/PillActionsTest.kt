@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.echo.core.ui.design.LAUNCH_HOLD_MS
 import com.echo.core.ui.components.MenuGroup
 import com.echo.core.ui.components.MenuState
 import com.echo.core.ui.components.rowsShown
@@ -132,5 +133,16 @@ class PillActionsTest {
         listOf(platformCard, settingsRow, track).forEach {
             assertEquals("${'$'}{it.id} must draw no pill row", emptyList<CrossbarPill>(), pillsFor(it))
         }
+    }
+
+    // A on the Launch pill opened Spotify at once on 2026-10-04; every launch is a hold (owner)
+    @Test
+    fun `the pills that leave ECHO take the launch hold, the others act at once`() {
+        val app = CrossbarItem(id = "a1", title = "Spotify", packageName = "com.spotify.music")
+        val held = pillsFor(app).associate { it.id to pillHoldMs(app, it) }
+        assertEquals(mapOf("launch" to LAUNCH_HOLD_MS, "edit_app" to 0L, "favorite" to 0L), held)
+        val game = CrossbarItem(id = "g1", title = "Crisis Core", gameId = 1L, platformId = "psp", isRealGame = true)
+        assertEquals(LAUNCH_HOLD_MS, pillHoldMs(game, pillsFor(game).first { it.id == "play" }))
+        assertEquals(0L, pillHoldMs(game, pillsFor(game).first { it.id == "shelves" }))
     }
 }

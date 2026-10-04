@@ -24,8 +24,8 @@ description: Add or change a feature in ECHO — where its code goes, how it is 
 | Keep a file the user can edit | the ECHO folder: the artwork folder the user picked, named ECHO (`EchoFolder`, `ArtworkFolderSetup.adopt`). `EchoFolderMirror` writes `settings.json` (only the keys in `EchoSettingsExport.GROUPS`, each with its `Kind`) and copies sounds, icons and the wallpaper into `Look/`, never over a newer file there; `EchoFolderReader` applies them back on start and on Reload, only when newer and different (`EchoFolder.shouldRead`). A new setting a user should carry goes in `GROUPS`; `EchoSettingsExportTest` refuses anything that looks like a key, account, path or personal record |
 | Ask for a permission | a row in `feature-settings/.../permissions/AppPermissions.kt`. Setup offers every row that is not granted at install, and `AppPermissionsTest` checks the manifest declares it |
 
-A launch that leaves ECHO is a hold (`holdMsFor`, `LaunchHold`); media that plays inside ECHO acts
-at once. Owner decisions about controls are in the handoff; do not re-ask them.
+A launch that leaves ECHO is a hold (`holdMsFor`, `LaunchHold`), and so is any button or pill that
+launches the same item (`pillHoldMs`); media that plays inside ECHO acts at once. Owner decisions about controls are in the handoff; do not re-ask them.
 
 ## Tests
 

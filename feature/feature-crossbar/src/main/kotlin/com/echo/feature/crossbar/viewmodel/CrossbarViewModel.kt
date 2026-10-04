@@ -2831,11 +2831,14 @@ class CrossbarViewModel @Inject constructor(
             GamepadAction.SELECT     -> {
                 val pill = state.activePillIndex()?.let { state.focusedPills().getOrNull(it) }
                 val index = state.selectedItemIndex
-                val held = pill == null && !state.hasBlockingOverlay &&
-                    state.currentItems.getOrNull(index)?.let { holdToLaunch(it) { onItemSelected(index) } } == true
+                val item = state.currentItems.getOrNull(index)
+                val held = item != null && !state.hasBlockingOverlay &&
+                    (pill == null || pillHoldMs(item, pill) > 0L) &&
+                    holdToLaunch(item) { if (pill != null) onPillActivated(pill.id) else onItemSelected(index) }
                 when {
+                    held -> Unit
                     pill != null -> onPillActivated(pill.id)
-                    !held -> onItemSelected(index)
+                    else -> onItemSelected(index)
                 }
             }
             GamepadAction.BACK       -> {

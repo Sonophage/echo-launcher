@@ -21,6 +21,11 @@ internal fun pillsFor(item: CrossbarItem): List<CrossbarPill> = when {
     else -> emptyList()
 }
 
+// how long A or a finger must hold this pill: Launch and Play leave ECHO, so they take the item's
+// launch hold like A on the row; the other pills act at once (owner, 2026-10-04)
+internal fun pillHoldMs(item: CrossbarItem, pill: CrossbarPill): Long =
+    if (pill.id == "launch" || pill.id == "play") holdMsFor(item) else 0L
+
 internal sealed interface PillNav {
     data class Move(val index: Int) : PillNav
 
