@@ -44,7 +44,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -622,7 +621,6 @@ internal fun StripSections(
     u: DesignUnits,
     shoulders: Boolean,
     modifier: Modifier = Modifier,
-    onSearch: (() -> Unit)? = null,
     icon: (@Composable (index: Int, tint: Color, modifier: Modifier) -> Unit)? = null,
 ) {
     val pad = shoulders && LocalPadPrompts.current
@@ -652,19 +650,6 @@ internal fun StripSections(
                 }
                 EchoDot(on, u)
             }
-        }
-        if (onSearch != null) {
-            Box(Modifier.width(1.dp).height(u.dp(20)).background(Color.White.copy(alpha = 0.25f)))
-            Icon(
-                Icons.Outlined.Search,
-                contentDescription = "Search",
-                tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(u.dp(8)))
-                    .clickable(onClick = onSearch)
-                    .padding(u.dp(6))
-                    .size(u.dp(22)),
-            )
         }
         if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(22), spacing = 0.dp)
     }

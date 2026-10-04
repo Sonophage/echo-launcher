@@ -325,7 +325,6 @@ fun CrossbarShellContainer(
         onSearchActivatedAt = viewModel.librarySearch::onSearchActivatedAt,
         onSearchBack = viewModel.librarySearch::closeSearch,
         onSearchFocusedAt = viewModel.librarySearch::onSearchFocusedAt,
-        onOpenSearch = { viewModel.librarySearch.openSearch(com.echo.feature.crossbar.viewmodel.SearchScope.ALL) },
         onMusicBrowserQueryChange = viewModel.music::onMusicBrowserQueryChange,
         onMusicBrowserActivatedAt = viewModel.music::onMusicBrowserActivatedAt,
         onMusicBrowserLongPressAt = viewModel.music::onMusicBrowserLongPressAt,
@@ -512,7 +511,6 @@ fun CrossbarShell(
     onSearchBack: () -> Unit = {},
 
     onSearchFocusedAt: (Int) -> Unit = {},
-    onOpenSearch: () -> Unit = {},
     onMusicBrowserQueryChange: (String) -> Unit = {},
     onMusicBrowserActivatedAt: (Int) -> Unit = {},
     onMusicBrowserLongPressAt: (Int) -> Unit = {},
@@ -1104,7 +1102,6 @@ fun CrossbarShell(
                             modifier = Modifier.align(Alignment.Center),
                             onFilterTapped = onRecentFilterTapped,
                             includeApps = uiState.recentsIncludeApps,
-                            onSearch = onOpenSearch,
                         )
                     }
                 } else null,

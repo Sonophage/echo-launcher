@@ -90,7 +90,7 @@ fun EchoHintBar(
 ) {
     if (items.isEmpty() && primary == null && centre == null) return
     val pad = LocalPadPrompts.current
-    val row = hintBarRow(items, primary, pad)
+    val (always, contextual) = hintBarSides(hintBarRow(items, primary, pad))
     val u = hintBarUnits()
 
     Row(
@@ -100,18 +100,28 @@ fun EchoHintBar(
             .height(BarHeight)
 
             .background(Brush.verticalGradient(0f to Color.Transparent, 1f to ChromeScrim))
-            .padding(start = chromeGutter(), end = if (primary == null) chromeGutter(end = true) else 0.dp),
+            .padding(start = chromeGutter(), end = chromeGutter(end = true)),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(28))) {
-            row.forEach { Hint(it, u, pad, onAction) }
+        // owner, 2026-10-04: the hints that are always there on the left, the card in the centre,
+        // what this screen adds on the right
+        Row(
+            Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(u.dp(28)),
+        ) {
+            always.forEach { Hint(it, u, pad, onAction) }
+            centre?.let { Box(Modifier.weight(1f, fill = false)) { it() } }
         }
 
-        Box(
-            modifier = Modifier.weight(1f).padding(horizontal = u.dp(28)),
-            contentAlignment = Alignment.Center,
-        ) { centre?.invoke() }
-
         primary?.let { ActionTab(it, accent, leading, u, pad, onAction, Modifier.align(Alignment.Bottom), secondary) }
+
+        Row(
+            Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(u.dp(28), Alignment.End),
+        ) {
+            contextual.forEach { Hint(it, u, pad, onAction) }
+        }
     }
 }
 
@@ -156,7 +166,7 @@ private fun ActionTab(
     var pressing by remember { mutableStateOf(false) }
     val progress = if (primary.holdMs > 0L) holdProgress(primary.holding || pressing, primary.holdMs) else 0f
     val radius = u.dp(20)
-    val shape = RoundedCornerShape(topStart = radius)
+    val shape = RoundedCornerShape(topStart = radius, topEnd = radius)
     val style = LocalControllerPromptStyle.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -179,7 +189,9 @@ private fun ActionTab(
                     moveTo(w / 2, size.height)
                     lineTo(w / 2, r)
                     arcTo(Rect(w / 2, w / 2, 2 * r - w / 2, 2 * r - w / 2), 180f, 90f, false)
-                    lineTo(size.width, w / 2)
+                    lineTo(size.width - r, w / 2)
+                    arcTo(Rect(size.width - 2 * r + w / 2, w / 2, size.width - w / 2, 2 * r - w / 2), 270f, 90f, false)
+                    lineTo(size.width - w / 2, size.height)
                 }
                 val line = Stroke(width = w)
                 val measure = PathMeasure().apply { setPath(path, false) }
@@ -199,7 +211,7 @@ private fun ActionTab(
                     Modifier.clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
                 }
             )
-            .padding(start = u.dp(20), end = maxOf(u.dp(20), chromeGutter(end = true)), top = u.dp(6), bottom = u.dp(14)),
+            .padding(start = u.dp(20), end = u.dp(20), top = u.dp(6), bottom = u.dp(14)),
     ) {
         secondary?.let { second ->
             Row(
@@ -279,7 +291,7 @@ private fun RestOrb(
     var presses by remember { mutableIntStateOf(0) }
     Row(
         modifier
-            .padding(end = maxOf(u.dp(28), chromeGutter(end = true)), bottom = u.dp(16))
+            .padding(bottom = u.dp(16))
             .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label, indication = null, interactionSource = null) {
                 presses++
                 onAction?.invoke(primary.action)
@@ -331,6 +343,10 @@ private fun hintBarUnits(): DesignUnits {
 @Composable
 private fun glyphFor(u: DesignUnits, glyphPx: Int, textPx: Int): Dp =
     maxOf(u.dp(glyphPx), with(LocalDensity.current) { u.sp(textPx).toDp() } * glyphPx / textPx)
+
+// Home and Back are on every screen; everything else belongs to the screen it is on
+internal fun hintBarSides(row: List<ControllerPromptItem>): Pair<List<ControllerPromptItem>, List<ControllerPromptItem>> =
+    row.partition { it.tappableAction() == GamepadAction.HOME || it.tappableAction() == GamepadAction.BACK }
 
 internal fun hintBarRow(
     items: List<ControllerPromptItem>,

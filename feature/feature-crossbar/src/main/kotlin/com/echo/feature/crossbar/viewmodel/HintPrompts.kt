@@ -61,7 +61,8 @@ fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
         return CrossbarPrompts(
             primary = null,
             back = CrossbarPrompt(GamepadAction.BACK, "Close"),
-            right = listOf(CrossbarPrompt(GamepadAction.PREV_CATEGORY, "Switch tab", pairedWith = GamepadAction.NEXT_CATEGORY)),
+            // the panel's tab row already shows its shoulder buttons; the footer does not repeat them
+            right = emptyList(),
         )
     }
 

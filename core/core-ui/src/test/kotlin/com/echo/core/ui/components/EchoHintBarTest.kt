@@ -48,4 +48,12 @@ class EchoHintBarTest {
         val range = ControllerPromptItem(listOf(GamepadAction.SELECT, GamepadAction.BACK), "Seek")
         assertNull(primaryHint(listOf(dpad, range, back)))
     }
+
+    @Test
+    fun `Home and Back sit on the left on every screen, what the screen adds goes right of the card`() {
+        val home = ControllerPromptItem(listOf(GamepadAction.HOME), "Home")
+        val (left, right) = hintBarSides(listOf(home, options, search, back))
+        assertEquals(listOf(home, back), left)
+        assertEquals(listOf(options, search), right)
+    }
 }

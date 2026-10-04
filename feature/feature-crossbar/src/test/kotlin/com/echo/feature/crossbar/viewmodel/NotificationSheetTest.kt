@@ -142,12 +142,12 @@ class NotificationSheetTest {
     }
 
     @Test
-    fun `the bar keeps only Close and Switch tab, since the stage carries the rest`() {
+    fun `the bar keeps only Close, since the stage carries the rest and the tab row shows its own shoulders`() {
         val prompts = promptsFor(state(notices = listOf(notice("a"))))
         assertNull(prompts.primary)
         assertEquals(GamepadAction.BACK, prompts.back.action)
         assertEquals("Close", prompts.back.verb)
-        assertEquals(listOf(GamepadAction.PREV_CATEGORY to GamepadAction.NEXT_CATEGORY), prompts.right.map { it.action to it.pairedWith })
+        assertTrue("the tab row's shoulders are not repeated in the footer", prompts.right.isEmpty())
     }
 
     @Test
