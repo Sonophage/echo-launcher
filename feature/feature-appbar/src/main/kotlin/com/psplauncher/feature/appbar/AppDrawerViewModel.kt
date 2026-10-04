@@ -25,7 +25,6 @@ import com.psplauncher.core.ui.components.MenuGroup
 import com.psplauncher.core.ui.components.initialOf
 import com.psplauncher.core.ui.components.letterMenuFor
 
-private const val APP_SHORTCUT_PLATFORM_ID = "app_shortcut"
 
 private const val ROM_KEY_PREFIX = "rom:"
 
@@ -322,7 +321,7 @@ class AppDrawerViewModel @Inject constructor(
                 }
             } else if (existing != null) {
                 gameRepository.upsert(existing.copy(
-                    platformId  = APP_SHORTCUT_PLATFORM_ID,
+                    platformId  = com.psplauncher.core.domain.model.PlatformIds.APP_SHORTCUT,
                     contentType = com.psplauncher.core.domain.model.GameContentType.ANDROID_APP,
                 ))
             }

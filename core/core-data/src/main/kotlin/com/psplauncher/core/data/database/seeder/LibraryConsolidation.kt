@@ -19,7 +19,6 @@ import javax.inject.Singleton
 
 private val KEY_LIBRARY_CONSOLIDATED_V22 = booleanPreferencesKey("library_consolidated_v22")
 
-private const val APP_SHORTCUT_PLATFORM_ID = "app_shortcut"
 
 private val SPOOF_PACKAGES = setOf(
     "com.antutu.ABenchMark",
@@ -63,7 +62,7 @@ class LibraryConsolidation @Inject constructor(
         if (launcherSpoofs.isEmpty()) return
 
         var rehomed = 0
-        val candidates = gameDao.getByPlatformOnce(APP_SHORTCUT_PLATFORM_ID) +
+        val candidates = gameDao.getByPlatformOnce(com.psplauncher.core.domain.model.PlatformIds.APP_SHORTCUT) +
             gameDao.getByPlatformOnce(WINDOWS_PLATFORM_ID)
         for (g in candidates) {
             val isPcEntry = g.packageName in launcherSpoofs &&

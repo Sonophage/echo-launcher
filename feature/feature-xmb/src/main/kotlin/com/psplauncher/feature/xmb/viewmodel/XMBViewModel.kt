@@ -772,7 +772,7 @@ data class XMBUiState(
         get() = hoverPanelItem?.let { item ->
             detailPanelContentFor(
                 item = item,
-                platformName = item.platformId?.uppercase().orEmpty(),
+                platformName = item.platformId?.let { com.psplauncher.core.domain.model.platformLabel(it, null) }.orEmpty(),
                 videoUri = focusedGameVideo?.takeIf { it.gameId == item.gameId }?.uri,
             )
         }
@@ -5386,7 +5386,7 @@ class XMBViewModel @Inject constructor(
     private suspend fun loadGameInfo(info: GameInfoState): GameInfoState {
         val gid = info.item.gameId ?: return info
         val game = runCatching { gameRepository.getById(gid) }.getOrNull() ?: return info
-        val platform = runCatching { platformDao.getById(game.platformId)?.name }.getOrNull() ?: game.platformId.uppercase()
+        val platform = com.psplauncher.core.domain.model.platformLabel(game.platformId, runCatching { platformDao.getById(game.platformId)?.name }.getOrNull())
         val media = (artworkStore.findAll(gid, ArtworkKind.SCREENSHOT) + listOfNotNull(artworkStore.find(gid, ArtworkKind.TITLESCREEN)))
             .map { com.psplauncher.feature.xmb.ui.detail.DetailMedia(it, isVideo = false) }
         val video = if (videoSnapsAllowed()) artworkStore.find(gid, ArtworkKind.ICON1) ?: artworkStore.find(gid, ArtworkKind.VIDEO) else null
@@ -6277,7 +6277,7 @@ class XMBViewModel @Inject constructor(
                     appAction {
                         gameRepository.getById(gid)?.let { g ->
                             gameRepository.upsert(g.copy(
-                                platformId  = APP_SHORTCUT_PLATFORM_ID,
+                                platformId  = com.psplauncher.core.domain.model.PlatformIds.APP_SHORTCUT,
                                 contentType = GameContentType.ANDROID_APP,
                             ))
                         }
@@ -8076,7 +8076,7 @@ class XMBViewModel @Inject constructor(
             Game(
                 title         = label,
 
-                platformId    = APP_SHORTCUT_PLATFORM_ID,
+                platformId    = com.psplauncher.core.domain.model.PlatformIds.APP_SHORTCUT,
                 packageName   = packageName,
                 isManualEntry = true,
                 contentType   = GameContentType.ANDROID_APP,
@@ -9145,7 +9145,6 @@ class XMBViewModel @Inject constructor(
         private const val ADD_GAMES_ITEM_ID = "add_games"
         private const val FIND_GAMES_ITEM_ID = "find_games"
 
-        private const val APP_SHORTCUT_PLATFORM_ID = "app_shortcut"
 
         private const val ADD_MUSIC_FOLDER_ITEM_ID = "add_music_folder"
         private const val ADD_ROM_ROOT_ITEM_ID = "add_rom_root"

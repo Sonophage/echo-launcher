@@ -16,4 +16,12 @@ object PlatformIds {
     const val WINDOWS = "windows"
 
     const val ANDROID = "android"
+
+    const val APP_SHORTCUT = "app_shortcut"
+}
+
+fun platformLabel(platformId: String, storedName: String?): String = when {
+    platformId == PlatformIds.APP_SHORTCUT -> "Android app"
+    !storedName.isNullOrBlank() -> storedName
+    else -> platformId.uppercase()
 }
