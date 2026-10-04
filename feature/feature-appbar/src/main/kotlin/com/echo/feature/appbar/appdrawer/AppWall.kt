@@ -87,7 +87,7 @@ internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits)
 }
 
 @Composable
-internal fun WallHero(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits, modifier: Modifier = Modifier) {
+internal fun WallHero(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits, modifier: Modifier = Modifier, glyphLift: Dp = u.dp(180)) {
     Box(
         modifier
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
@@ -103,7 +103,7 @@ internal fun WallHero(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits, mod
             else -> {
                 val tint = icon?.color ?: NeutralTint
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.6f), tint.copy(alpha = 0.12f)))))
-                TileGlyph(icon, app, 150, u, Modifier.align(Alignment.Center).padding(bottom = u.dp(180)))
+                TileGlyph(icon, app, 150, u, Modifier.align(Alignment.Center).padding(bottom = glyphLift))
             }
         }
     }
@@ -128,9 +128,7 @@ internal fun AppWall(
     modifier: Modifier = Modifier,
 ) {
     val cells = remember(apps.size) { wallLayout(apps.size) }
-    val lines = remember(cells) {
-        cells.indices.groupBy { i -> if (cells[i].row < 2) 0 else cells[i].row }.values.toList()
-    }
+    val lines = remember(cells) { cells.indices.groupBy { cells[it].row }.values.toList() }
     val listState = rememberLazyListState()
 
     LaunchedEffect(selectedIndex, usingTouch, lines) {
@@ -147,15 +145,15 @@ internal fun AppWall(
         val gap = u.dp(14)
         val cell = (maxWidth - gap * (WALL_COLUMNS - 1)) / WALL_COLUMNS
         val rowHeight = u.dp(112)
-        val tile: @Composable (Int, Boolean) -> Unit = { index, big ->
+        val tile: @Composable (Int) -> Unit = { index ->
             val app = apps[index]
             WallTile(
                 app = app,
                 focused = index == selectedIndex,
-                eyebrow = if (big && filter == AppFilter.RECENT) "Last opened" else null,
-                width = if (big) cell * 2 + gap else cell,
-                height = if (big) rowHeight * 2 + gap else rowHeight,
-                big = big,
+                eyebrow = null,
+                width = cell,
+                height = rowHeight,
+                big = false,
                 u = u,
                 // a tap only picks the app; it opens by holding the launch button (owner, 2026-10-04)
                 onClick = { onAppTapped(index) },
@@ -168,20 +166,9 @@ internal fun AppWall(
             contentPadding = PaddingValues(vertical = u.dp(10)),
             modifier = Modifier.fillMaxSize(),
         ) {
-            lines.forEachIndexed { line, indices ->
+            lines.forEach { indices ->
                 item(key = indices.first()) {
-                    if (line == 0) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                            tile(0, true)
-                            Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-                                indices.drop(1).groupBy { cells[it].row }.values.forEach { row ->
-                                    Row(horizontalArrangement = Arrangement.spacedBy(gap)) { row.forEach { tile(it, false) } }
-                                }
-                            }
-                        }
-                    } else {
-                        Row(horizontalArrangement = Arrangement.spacedBy(gap)) { indices.forEach { tile(it, false) } }
-                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(gap)) { indices.forEach { tile(it) } }
                 }
             }
         }
@@ -263,6 +250,8 @@ internal fun WallInfo(
     modifier: Modifier = Modifier,
     holding: Boolean = false,
     details: com.echo.feature.appbar.GameDetails? = null,
+    // inside the hero banner: a smaller title and a shorter description
+    compact: Boolean = false,
 ) {
     val game = app.isGame || app.gameId != null
     val kind = when {
@@ -273,16 +262,16 @@ internal fun WallInfo(
     val eyebrow = if (app.lastUsedAt > 0L) {
         "$kind · ${if (game) "Played" else "Used"} ${relativeTime(System.currentTimeMillis(), app.lastUsedAt).lowercase()}"
     } else kind
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(14))) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(if (compact) 8 else 14))) {
         Text(eyebrow.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(12), letterSpacing = 0.16.em))
-        Text(app.label, color = Color.White, fontSize = u.sp(52), lineHeight = u.sp(54), fontWeight = FontWeight.ExtraLight,
-            letterSpacing = (-0.03).em, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(app.label, color = Color.White, fontSize = u.sp(if (compact) 34 else 52), lineHeight = u.sp(if (compact) 36 else 54),
+            fontWeight = FontWeight.ExtraLight, letterSpacing = (-0.03).em, maxLines = if (compact) 1 else 2, overflow = TextOverflow.Ellipsis)
         details?.facts?.let {
             Text(it, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(15), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         details?.description?.let {
             Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13), fontWeight = FontWeight.Light, lineHeight = u.sp(18),
-                maxLines = 4, overflow = TextOverflow.Ellipsis)
+                maxLines = if (compact) 1 else 4, overflow = TextOverflow.Ellipsis)
         }
         if (app.playTimeMillis > 0L) {
             Row(horizontalArrangement = Arrangement.spacedBy(u.dp(32))) {

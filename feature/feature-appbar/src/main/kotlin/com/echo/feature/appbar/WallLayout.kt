@@ -2,7 +2,8 @@ package com.echo.feature.appbar
 
 import com.echo.core.domain.model.GamepadAction
 
-const val WALL_COLUMNS = 3
+// owner, 2026-10-04: the focused app is the hero banner, so the wall below it is a plain grid in columns
+const val WALL_COLUMNS = 6
 
 data class WallCell(val row: Int, val col: Int, val span: Int = 1) {
     fun onRow(r: Int): Boolean = r in row until row + span
@@ -13,16 +14,8 @@ data class WallCell(val row: Int, val col: Int, val span: Int = 1) {
     }
 }
 
-fun wallLayout(total: Int, columns: Int = WALL_COLUMNS): List<WallCell> {
-    val beside = columns - 2
-    val cells = ArrayList<WallCell>(total)
-    if (total > 0) cells += WallCell(0, 0, span = 2)
-    for (slot in 0 until total - 1) {
-        cells += if (slot < 2 * beside) WallCell(slot / beside, 2 + slot % beside)
-        else (slot - 2 * beside).let { WallCell(2 + it / columns, it % columns) }
-    }
-    return cells
-}
+fun wallLayout(total: Int, columns: Int = WALL_COLUMNS): List<WallCell> =
+    List(total) { WallCell(it / columns, it % columns) }
 
 fun wallMove(action: GamepadAction, index: Int, cells: List<WallCell>): Int {
     if (cells.isEmpty()) return 0

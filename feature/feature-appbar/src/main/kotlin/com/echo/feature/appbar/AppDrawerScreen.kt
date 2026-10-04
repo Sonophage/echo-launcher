@@ -1,13 +1,12 @@
 package com.echo.feature.appbar
 
+import androidx.compose.ui.graphics.Brush
 import com.echo.core.ui.components.EchoTrio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -225,7 +224,6 @@ internal fun AppDrawerContent(
         val focused = state.visibleApps.getOrNull(state.selectedIndex)
         val focusedIcon = rememberAppIcon(focused?.packageName?.takeIf { focused.gameId == null })
         WallBackdrop(focused, focusedIcon, u)
-        WallHero(focused, focusedIcon, u, Modifier.fillMaxSize().padding(start = u.dp(660)))
         WallShade()
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -237,20 +235,41 @@ internal fun AppDrawerContent(
                 modifier = Modifier.padding(start = u.dp(74), top = StatusStripHeight),
             )
 
-            Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                Column(modifier = Modifier.padding(start = u.dp(80), top = u.dp(14)).width(u.dp(560)).fillMaxHeight()) {
-                    if (state.showSystemChips) {
-                        SystemChipRow(
-                            chips = state.systemChips,
-                            selected = state.systemFilter,
-                            focused = state.chipFocus,
-                            u = u,
-                            onChip = onSystemChip,
-                            modifier = Modifier.fillMaxWidth().padding(bottom = u.dp(10)),
-                        )
-                    }
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        val tabMessage = @Composable {
+            // owner, 2026-10-04: the drawer looks like search: the focused app is a hero banner across the
+            // top with its Open and Options buttons, and the apps run below it in columns
+            focused?.let { app ->
+                val shape = RoundedCornerShape(u.dp(22))
+                Box(
+                    Modifier
+                        .padding(start = u.dp(80), end = u.dp(80), top = u.dp(12))
+                        .fillMaxWidth()
+                        .height(u.dp(250))
+                        .clip(shape)
+                        .background(focusedIcon?.color?.copy(alpha = 0.35f) ?: Color.White.copy(alpha = 0.06f)),
+                ) {
+                    WallHero(app, focusedIcon, u, Modifier.fillMaxSize().padding(start = u.dp(380)), glyphLift = 0.dp)
+                    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to PanelBase.copy(alpha = 0.85f), 0.55f to Color.Transparent)))
+                    WallInfo(app, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) }, holding = state.holdingPackage == app.packageName,
+                        details = state.gameDetails?.takeIf { it.gameId == app.gameId }, compact = true,
+                        modifier = Modifier.align(Alignment.BottomStart).padding(u.dp(26)).width(u.dp(560)))
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(start = u.dp(80), end = u.dp(80), top = u.dp(12))) {
+                if (state.showSystemChips) {
+                    SystemChipRow(
+                        chips = state.systemChips,
+                        selected = state.systemFilter,
+                        focused = state.chipFocus,
+                        u = u,
+                        onChip = onSystemChip,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = u.dp(10)),
+                    )
+                }
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    when {
+                        state.isLoading -> EchoTrio(color = Color.White, modifier = Modifier.align(Alignment.Center))
+                        state.visibleApps.isEmpty() -> Box(Modifier.align(Alignment.Center)) {
                             EmptyDrawerMessage(
                                 filter = state.activeFilter,
                                 hasUsageAccess = state.hasUsageAccess,
@@ -258,39 +277,16 @@ internal fun AppDrawerContent(
                                 u = u,
                             )
                         }
-                        when {
-                            state.isLoading -> {
-                                EchoTrio(
-                                    color = Color.White,
-                                    modifier = Modifier.align(Alignment.Center),
-                                )
-                            }
-
-                            state.visibleApps.isEmpty() -> Box(Modifier.align(Alignment.Center)) { tabMessage() }
-
-                            else -> {
-                                AppWall(
-                                    apps = state.visibleApps,
-                                    filter = state.activeFilter,
-                                    selectedIndex = if (state.chipFocus) -1 else state.selectedIndex,
-                                    usingTouch = state.usingTouch,
-                                    u = u,
-                                    onAppTapped = onAppTapped,
-                                    onAppMenu = onAppMenu,
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            }
-                        }
-                    }
-                }
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxHeight()
-                        .padding(start = u.dp(80), end = u.dp(80), bottom = u.dp(32)),
-                ) {
-                    focused?.let { app ->
-                        WallInfo(app, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) }, holding = state.holdingPackage == app.packageName,
-                            details = state.gameDetails?.takeIf { it.gameId == app.gameId },
-                            modifier = Modifier.align(Alignment.BottomStart))
+                        else -> AppWall(
+                            apps = state.visibleApps,
+                            filter = state.activeFilter,
+                            selectedIndex = if (state.chipFocus) -1 else state.selectedIndex,
+                            usingTouch = state.usingTouch,
+                            u = u,
+                            onAppTapped = onAppTapped,
+                            onAppMenu = onAppMenu,
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     }
                 }
             }
