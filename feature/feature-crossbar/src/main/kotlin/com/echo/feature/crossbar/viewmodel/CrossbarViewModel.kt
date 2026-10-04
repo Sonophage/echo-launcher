@@ -113,8 +113,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -1291,7 +1289,7 @@ class CrossbarViewModel @Inject constructor(
     private val hiddenPlacementDao: com.echo.core.data.database.dao.HiddenPlacementDao,
     private val iconDisplayPreferences: com.echo.core.data.repository.IconDisplayPreferences,
     internal val artworkStore: com.echo.feature.artwork.store.ArtworkStore,
-    private val artworkAccent: com.echo.core.data.repository.ArtworkAccent,
+    internal val artworkAccent: com.echo.core.data.repository.ArtworkAccent,
     private val windowsLibrarySetup: com.echo.core.data.repository.WindowsLibrarySetup,
     private val pcShortcutImporter: com.echo.feature.launcher.PcShortcutImporter,
     private val pcGameScanner: com.echo.feature.settings.pc.PcGameScanner,
@@ -1323,6 +1321,8 @@ class CrossbarViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
+
+    internal val recents = CrossbarRecents(this, _uiState, viewModelScope, menuSound)
 
     internal val gameDetail = CrossbarGameInfo(this, _uiState, viewModelScope, menuSound)
 
@@ -1365,7 +1365,7 @@ class CrossbarViewModel @Inject constructor(
         observeIconPreferences()
         observeFocusedGameVideo()
         observeFocusedItemAccent()
-        observeRecentTopAccent()
+        recents.observeRecentTopAccent()
         observeBackgroundSettings()
         observeTouchNavButtonMode()
         observeWallpaper()
@@ -1392,8 +1392,8 @@ class CrossbarViewModel @Inject constructor(
         bookshelf.observeContinueBook()
         observeHiddenPlacements()
         panel.observeAndroidNotices()
-        observeRecentTop()
-        observeShelfCounts()
+        recents.observeRecentTop()
+        recents.observeShelfCounts()
         collectGamepadActions()
         consumeWindowsSetupPrompt()
         observeLaunchRecoveryRequests()
@@ -1785,7 +1785,7 @@ class CrossbarViewModel @Inject constructor(
                         bookRepository.observeRecentlyOpenedBooks(RECENTLY_PLAYED_LIMIT),
                         videoRepository.observeRecentlyWatched(),
 
-                        recentFilterAndApps(),
+                        recents.recentFilterAndApps(),
                     ) { games, tracks, books, videos, filterAndApps ->
                         val (filter, appRows, limit) = filterAndApps
 
@@ -1908,7 +1908,7 @@ class CrossbarViewModel @Inject constructor(
                     }
                     VideoNav.RecentlyWatched -> videoRepository.observeRecentlyWatched().collect { videos ->
 
-                        video.setVideoItems(videos, emptyRecentItem(), sortable = false)
+                        video.setVideoItems(videos, recents.emptyRecentItem(), sortable = false)
                     }
                     VideoNav.Favorites -> videoRepository.observeFavorites().collect { videos ->
                         video.setVideoItems(videos, video.emptyFavoriteVideosItem())
@@ -2071,11 +2071,11 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun isHiddenAt(itemKey: String, type: HideLocationType, locationId: String = ""): Boolean =
+    internal fun isHiddenAt(itemKey: String, type: HideLocationType, locationId: String = ""): Boolean =
         hiddenKeys.contains("$itemKey|${type.name}|$locationId")
 
     @JvmName("gamesNotHiddenAt")
-    private fun List<Game>.notHiddenAt(type: HideLocationType, locationId: String = ""): List<Game> =
+    internal fun List<Game>.notHiddenAt(type: HideLocationType, locationId: String = ""): List<Game> =
         filterNot { isHiddenAt(HiddenPlacement.gameKey(it.id), type, locationId) }
 
     @JvmName("appsNotHiddenAt")
@@ -2095,16 +2095,6 @@ class CrossbarViewModel @Inject constructor(
      * persistHide: hiding is permanent until undone in Settings, and these are two
      * different things that used to be one.
      */
-    private fun dismissAppFromRecents(packageName: String) {
-        viewModelScope.launch {
-            context.echoDataStore.edit { prefs ->
-                prefs[KEY_RECENT_APP_DISMISSALS] = withRecentDismissal(
-                    prefs[KEY_RECENT_APP_DISMISSALS].orEmpty(), packageName, System.currentTimeMillis(),
-                )
-            }
-        }
-    }
-
     private fun categoryDisplayName(id: String): String = _uiState.value.categoryDisplayNameOf(id)
 
     private fun knownPlatformName(platformId: String): String? =
@@ -2141,13 +2131,6 @@ class CrossbarViewModel @Inject constructor(
             .notHiddenAt(HideLocationType.CATEGORY, VIDEO_APPS_CATEGORY_ID)
         return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
     }
-
-    private fun emptyRecentItem(): CrossbarItem = CrossbarItem(
-        id       = EMPTY_CATEGORY_ITEM_ID,
-        title    = "Nothing watched yet",
-        subtitle = "Videos you play show up here",
-        type     = CrossbarItemType.EMPTY,
-    )
 
     private val viewCursor = mutableMapOf<String, Int>()
 
@@ -2548,53 +2531,6 @@ class CrossbarViewModel @Inject constructor(
         cycleSort()
     }
 
-    private fun recentFilterAndApps(): Flow<Triple<RecentFilter, List<Pair<Long, CrossbarItem>>, Int>> =
-        combine(
-            _uiState.map { it.recentFilter }.distinctUntilChanged(),
-            recentAppRows(),
-            _uiState.map { it.interfaceChoices.lastPlayedSize }.distinctUntilChanged(),
-        ) { filter, rows, limit -> Triple(filter, rows, limit) }
-
-    private fun recentAppRows(): Flow<List<Pair<Long, CrossbarItem>>> =
-        combine(
-            _uiState.map { it.recentsIncludeApps }.distinctUntilChanged(),
-            appCategoryRepository.changes().onStart { emit(Unit) },
-            context.echoDataStore.data
-                .map { it[KEY_RECENT_APP_DISMISSALS].orEmpty() }
-                .distinctUntilChanged(),
-        ) { includeApps, _, dismissals -> includeApps to dismissals }
-            .map { (includeApps, dismissals) ->
-                if (!includeApps) return@map emptyList()
-                val dismissedAt = parseRecentDismissals(dismissals)
-                appCategoryRepository.allInstalledApps()
-                    .filter { it.lastUsedAt > 0L }
-
-                    .filterNot { dismissedFromRecents(it.lastUsedAt, dismissedAt[it.packageName]) }
-
-                    .filterNot { isHiddenAt(HiddenPlacement.appKey(it.packageName), HideLocationType.RECENTS) }
-                    .sortedByDescending { it.lastUsedAt }
-                    .take(RECENTLY_PLAYED_LIMIT)
-                    .map { app ->
-                        app.lastUsedAt to CrossbarItem(
-                            id = "$RECENT_APP_ID_PREFIX${app.packageName}",
-                            title = app.label,
-                            subtitle = "App",
-                            packageName = app.packageName,
-
-                            isAndroidApp = true,
-                        )
-                    }
-            }
-
-    private fun stepRecentFilter(delta: Int) =
-        setRecentFilter(_uiState.value.let { it.recentFilter.step(delta, it.recentsIncludeApps) })
-
-    fun setRecentFilter(filter: RecentFilter) {
-        menuSound.play(MenuSound.SYSTEM_BROWSE)
-        _uiState.update { it.copy(recentFilter = filter, selectedItemIndex = 0) }
-    }
-
-
     internal fun cycleSort() {
         _uiState.value.musicBrowser?.let { browser ->
             if (browser.view is MusicBrowserView.Playlists || browser.view.listsGroups) return
@@ -2947,7 +2883,7 @@ class CrossbarViewModel @Inject constructor(
         )
     }
 
-    private fun List<com.echo.core.domain.model.Game>.toCrossbarItems() = map { g ->
+    internal fun List<com.echo.core.domain.model.Game>.toCrossbarItems() = map { g ->
         CrossbarItem(
             id           = g.id.toString(),
             title        = g.displayTitle,
@@ -3566,15 +3502,15 @@ class CrossbarViewModel @Inject constructor(
 
             GamepadAction.CHANGE_SORT -> when {
                 !state.onLastPlayedHome -> cycleSort()
-                state.recentRailVisible -> state.focusedItem?.let(::removeFromRecent)
+                state.recentRailVisible -> state.focusedItem?.let(recents::removeFromRecent)
                 else -> state.focusedItem?.takeIf { recentKind(it) == RecentKind.GAME || recentKind(it) == RecentKind.APP }
                     ?.let(gameDetail::onOpenGameInfo)
             }
 
             GamepadAction.OPEN_SEARCH -> librarySearch.openSearch(SearchScope.ALL)
 
-            GamepadAction.PREV_CATEGORY -> if (state.onLastPlayedHome) stepRecentFilter(-1) else stepHoverPanelPage(-1)
-            GamepadAction.NEXT_CATEGORY -> if (state.onLastPlayedHome) stepRecentFilter(+1) else stepHoverPanelPage(+1)
+            GamepadAction.PREV_CATEGORY -> if (state.onLastPlayedHome) recents.stepRecentFilter(-1) else stepHoverPanelPage(-1)
+            GamepadAction.NEXT_CATEGORY -> if (state.onLastPlayedHome) recents.stepRecentFilter(+1) else stepHoverPanelPage(+1)
         }
     }
 
@@ -3588,21 +3524,6 @@ class CrossbarViewModel @Inject constructor(
             stats.appBytes + stats.dataBytes
         }.getOrNull() else null
         return info.copy(appVersion = version, appStorageBytes = storage)
-    }
-
-    private fun removeFromRecent(item: CrossbarItem) {
-        if (!item.removableFromRecent) return
-        menuSound.play(MenuSound.SELECT)
-        when {
-            item.type == CrossbarItemType.VIDEO_FILE -> video.handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent")
-            item.type == CrossbarItemType.LIBRARY_BOOK -> bookshelf.handleBookAction(item.id.removePrefix("book_"), "book_remove_recent")
-            item.type == CrossbarItemType.MUSIC_TRACK -> music.handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null)
-            item.gameId != null -> {
-                val gid = item.gameId
-                appAction { gameRepository.clearLastPlayed(gid) }
-            }
-            item.packageName != null -> dismissAppFromRecents(item.packageName)
-        }
     }
 
     private fun stepHoverPanelPage(delta: Int) = _uiState.update { s ->
@@ -4187,7 +4108,7 @@ class CrossbarViewModel @Inject constructor(
                         persistHide(HiddenPlacement.appKey(pkg), menu.title, HideLocationType.CATEGORY, cat, categoryDisplayName(cat))
                     }
 
-                    "remove_from_recent" -> dismissAppFromRecents(pkg)
+                    "remove_from_recent" -> recents.dismissAppFromRecents(pkg)
                     "hide_everywhere" -> appAction { appCategoryRepository.setHidden(pkg, true) }
                     "rename"    -> _uiState.update {
                         it.copy(renameAppTarget = pkg, renameAppCurrent = menu.title, renameAppText = menu.title)
@@ -4411,102 +4332,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun observeShelfCounts() {
-        viewModelScope.launch {
-            val marks = PlayState.entries
-
-            combine(
-                marks.map { gameRepository.observeByPlayState(it) } +
-                    gameRepository.observeRecentlyAdded() +
-                    gameRepository.observeFavorites(),
-            ) { lists ->
-                val byState = marks.mapIndexed { i, state -> state to lists[i] }.toMap()
-                Triple(byState, lists[marks.size], lists[marks.size + 1])
-            }.collect { (byState, recentlyAdded, favorites) ->
-                _uiState.update { state ->
-                    state.copy(
-                        playStateCounts = byState.mapValues { (_, games) -> games.size },
-                        recentlyAddedCount = recentlyAdded.size,
-
-                        shelfFanCovers = buildMap {
-                            put(SHELF_FAVORITES_ID, fanCoversOf(favorites))
-                            put(SHELF_RECENT_ID, fanCoversOf(recentlyAdded))
-                            byState.forEach { (mark, games) ->
-                                put("$SHELF_MARKED_PREFIX${mark.name}", fanCoversOf(games))
-                            }
-                        },
-                    )
-                }
-            }
-        }
-    }
-
-    private fun observeRecentTop() {
-        viewModelScope.launch {
-            combine(
-                gameRepository.observeRecentlyPlayed(RECENTLY_PLAYED_LIMIT),
-                musicRepository.observeRecentlyPlayedTracks(RECENTLY_PLAYED_LIMIT),
-                bookRepository.observeRecentlyOpenedBooks(RECENTLY_PLAYED_LIMIT),
-                videoRepository.observeRecentlyWatched(),
-                recentAppRows(),
-            ) { games, tracks, books, videos, appRows ->
-                val visibleGames = games.notHiddenAt(HideLocationType.ALL_GAMES)
-                val rows = listOf(
-                    visibleGames.map { it.lastPlayedAt ?: 0L }.zip(visibleGames.toCrossbarItems()),
-                    tracks.recentMusicRows(),
-                    books.map { it.lastOpenedAt ?: 0L }.zip(bookshelf.bookItems(books)),
-                    videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
-                    appRows,
-                )
-                val top = mergeRecents(
-                    games  = rows[0],
-                    music  = rows[1],
-                    books  = rows[2],
-                    videos = rows[3],
-                    apps   = rows[4],
-                    filter = RecentFilter.ALL,
-                    limit  = RECENTLY_PLAYED_LIMIT,
-                ).firstOrNull { recentLaunchFor(it) != null }
-                top to top?.let { t -> rows.flatten().firstOrNull { it.second.id == t.id }?.first?.takeIf { it > 0L } }
-            }.collect { (top, at) ->
-                _uiState.update { it.copy(recentTop = top, recentTopAt = at) }
-            }
-        }
-    }
-
-    fun launchRecentTop() {
-        val item = _uiState.value.recentTop ?: return
-        _uiState.update { it.copy(activeAppDrawerFilter = null, pendingDrawerAction = null) }
-
-        when (recentLaunchFor(item)) {
-            RecentLaunch.GAME  -> item.gameId?.let { launchGameDirectly(it) }
-            RecentLaunch.STORED_INTENT -> item.launchIntentUri?.let { launchStoredIntent(it, item.title) }
-            RecentLaunch.SHORTCUT -> {
-                val pkg = item.packageName ?: return
-                val shortcut = item.shortcutId ?: return
-                launchHarvestedShortcut(pkg, shortcut)
-            }
-            RecentLaunch.APP   -> item.packageName?.let { launchAppWithDisc(it, item.shelfCoverArt) }
-            RecentLaunch.VIDEO -> {
-                menuSound.play(MenuSound.SELECT)
-                _uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
-            }
-            RecentLaunch.BOOK  -> {
-                menuSound.play(MenuSound.SELECT)
-                bookshelf.openBook(item.id.removePrefix("book_"))
-            }
-            RecentLaunch.TRACK -> {
-                menuSound.play(MenuSound.SELECT)
-                music.openMusicPlayerForItem(item)
-            }
-            RecentLaunch.ALBUM -> item.musicGroupKey?.let {
-                menuSound.play(MenuSound.SELECT)
-                music.openMusicBrowser(MusicBrowserView.Album(item.title, it))
-            }
-            null -> Unit
-        }
-    }
-
     fun toggleQuickSetting(setting: QuickSetting, chip: Int = _uiState.value.panelChip) {
         menuSound.play(MenuSound.SELECT)
         val s = _uiState.value
@@ -4590,7 +4415,7 @@ class CrossbarViewModel @Inject constructor(
             }
             StageCommand.LAUNCH_RECENT -> {
                 panel.closeNotifications()
-                launchRecentTop()
+                recents.launchRecentTop()
             }
             StageCommand.OPEN_NOTICE -> {
                 val key = (focus as? NoticeFocus.Notice)?.key ?: return
@@ -5122,13 +4947,6 @@ class CrossbarViewModel @Inject constructor(
         moveItemCursor(steps)
     }
 
-    fun onRecentCardTap(index: Int) {
-        markTouchInput()
-        val s = _uiState.value
-        if (s.hasBlockingOverlay || index !in s.currentItems.indices) return
-        onItemSelected(index)
-    }
-
     fun onItemTap(index: Int) {
         markTouchInput()
         val s = _uiState.value
@@ -5293,7 +5111,7 @@ class CrossbarViewModel @Inject constructor(
             }
 
             in SHELF_CARD_IDS -> {
-                item?.id?.let { openShelf(it) }
+                item?.id?.let { recents.openShelf(it) }
                 return
             }
             MISSING_ITEM_ID -> {
@@ -5461,12 +5279,6 @@ class CrossbarViewModel @Inject constructor(
                 selectedCategoryIndex = gamesCategoryIndex.takeIf { index -> index >= 0 } ?: it.selectedCategoryIndex,
                 selectedPlatformId = ALL_GAMES_PLATFORM_ID,
             )
-        }
-    }
-
-    private fun openShelf(cardId: String) {
-        navigateRememberingCursor {
-            it.copy(selectedPlatformId = cardId)
         }
     }
 
@@ -5793,7 +5605,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
 
-    private fun launchHarvestedShortcut(hostPackage: String?, shortcutId: String?) {
+    internal fun launchHarvestedShortcut(hostPackage: String?, shortcutId: String?) {
         if (hostPackage == null || shortcutId == null) return
         launcherShortcutRepository.launch(hostPackage, shortcutId).onFailure { e ->
             Timber.e(e, "Failed to launch shortcut $hostPackage/$shortcutId")
@@ -5801,7 +5613,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun launchStoredIntent(intentUri: String, label: String) {
+    internal fun launchStoredIntent(intentUri: String, label: String) {
         runCatching {
             val parsed = android.content.Intent.parseUri(intentUri, android.content.Intent.URI_INTENT_SCHEME)
 
@@ -6573,21 +6385,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun observeRecentTopAccent() {
-        viewModelScope.launch {
-            _uiState
-                .map { s -> s.recentTop?.takeIf { recentKind(it) != RecentKind.APP } }
-                .distinctUntilChanged { a, b -> a?.backdropIdentity() == b?.backdropIdentity() && a?.shelfCoverArt == b?.shelfCoverArt }
-                .collectLatest { top ->
-                    val accent = top?.let { artworkAccent.of(it.shelfCoverArt, *it.backdropArt.toTypedArray()) }
-                    _uiState.update { it.copy(recentTopAccentArgb = accent) }
-                }
-        }
-    }
-
-    private fun CrossbarItem.backdropIdentity() =
-        Triple(id, backdropArt, backdropArt.map { com.echo.core.ui.image.ArtworkRevisions.of(it) })
-
     private fun observeFocusedGameVideo() {
         viewModelScope.launch {
             _uiState
@@ -6891,9 +6688,9 @@ class CrossbarViewModel @Inject constructor(
         internal const val ADD_BOOK_FOLDER_ITEM_ID = "add_book_folder"
         internal const val ADD_LIBRARY_APPS_ITEM_ID = "add_library_apps"
 
-        private val RECENTLY_PLAYED_LIMIT = com.echo.core.data.repository.InterfacePreferences.LAST_PLAYED_SIZES.max()
+        internal val RECENTLY_PLAYED_LIMIT = com.echo.core.data.repository.InterfacePreferences.LAST_PLAYED_SIZES.max()
 
-        private val KEY_RECENT_APP_DISMISSALS = stringSetPreferencesKey("recent_app_dismissals")
+        internal val KEY_RECENT_APP_DISMISSALS = stringSetPreferencesKey("recent_app_dismissals")
         internal const val ADD_MENU_ITEM_ID = "add_menu"
         internal const val QUICK_SEARCH_ITEM_ID = "quick_search"
         internal const val SEARCH_ITEM_ID = "library_search"
@@ -6945,3 +6742,6 @@ class CrossbarViewModel @Inject constructor(
                 .takeIf { it >= 0 }
             ?: 0
 }
+
+internal fun CrossbarItem.backdropIdentity() =
+    Triple(id, backdropArt, backdropArt.map { com.echo.core.ui.image.ArtworkRevisions.of(it) })
