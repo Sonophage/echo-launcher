@@ -1,5 +1,8 @@
 package com.echo.feature.appbar
 
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import com.echo.core.domain.model.PlatformIds.ANDROID as ANDROID_PLATFORM_ID
 
 import androidx.lifecycle.ViewModel
@@ -56,11 +59,21 @@ enum class AppMenuAction(val label: String, val group: MenuGroup) {
     UNINSTALL("Uninstall", MenuGroup.REMOVE),
 }
 
+data class GameDetails(val gameId: Long, val facts: String?, val description: String?)
+
+// the line under a game's title: year, genre, developer, players, as many as are known
+fun gameFacts(game: com.echo.core.domain.model.Game): String? =
+    listOfNotNull(game.releaseDate?.take(4), game.genre, game.developer, game.players?.let { if (it.trim() == "1") "1 player" else "$it players" })
+        .filter { it.isNotBlank() }.joinToString(" · ").ifBlank { null }
+
 data class AppDrawerUiState(
     val allApps: List<InstalledApp> = emptyList(),
 
     // the app whose launch ring is filling while A is held
     val holdingPackage: String? = null,
+
+    // the focused game's details for the info band: year, genre, developer and its description
+    val gameDetails: GameDetails? = null,
 
     val visibleApps: List<InstalledApp> = emptyList(),
 
@@ -189,6 +202,16 @@ class AppDrawerViewModel @Inject constructor(
         if (id != _uiState.value.systemFilter) menuSound.play(MenuSound.SYSTEM_BROWSE)
         _uiState.update { it.copy(systemFilter = id, selectedIndex = 0) }
         applyFilter()
+    }
+
+    // owner, 2026-10-04: LB/RB walk the Games tab's system filters
+    fun stepSystemChip(delta: Int): Boolean {
+        val state = _uiState.value
+        if (!state.showSystemChips) return false
+        val chips = state.systemChips
+        val at = chips.indexOfFirst { it.id == state.systemFilter }.coerceAtLeast(0)
+        selectSystem(chips[(at + delta).mod(chips.size)].id)
+        return true
     }
 
     fun onSystemChipTapped(id: String?) {
@@ -398,6 +421,19 @@ class AppDrawerViewModel @Inject constructor(
     private var filterAtGestureStart: Char? = null
 
     private var launchHold: kotlinx.coroutines.Job? = null
+
+    init {
+        viewModelScope.launch {
+            _uiState.map { it.visibleApps.getOrNull(it.selectedIndex)?.gameId }
+                .distinctUntilChanged()
+                .collectLatest { gameId ->
+                    val game = gameId?.let { runCatching { gameRepository.getById(it) }.getOrNull() }
+                    _uiState.update {
+                        it.copy(gameDetails = game?.let { g -> GameDetails(g.id, gameFacts(g), g.description?.takeIf { d -> d.isNotBlank() }) })
+                    }
+                }
+        }
+    }
 
     // A must be held before an app opens, as everywhere in ECHO; the crossbar reports A coming up
     fun onSelectReleased() = cancelLaunchHold()

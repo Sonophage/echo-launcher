@@ -259,6 +259,7 @@ internal fun WallInfo(
     onOptions: () -> Unit,
     modifier: Modifier = Modifier,
     holding: Boolean = false,
+    details: com.echo.feature.appbar.GameDetails? = null,
 ) {
     val game = app.isGame || app.gameId != null
     val kind = when {
@@ -273,6 +274,13 @@ internal fun WallInfo(
         Text(eyebrow.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(12), letterSpacing = 0.16.em))
         Text(app.label, color = Color.White, fontSize = u.sp(52), lineHeight = u.sp(54), fontWeight = FontWeight.ExtraLight,
             letterSpacing = (-0.03).em, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        details?.facts?.let {
+            Text(it, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(15), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        details?.description?.let {
+            Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13), fontWeight = FontWeight.Light, lineHeight = u.sp(18),
+                maxLines = 4, overflow = TextOverflow.Ellipsis)
+        }
         if (app.playTimeMillis > 0L) {
             Row(horizontalArrangement = Arrangement.spacedBy(u.dp(32))) {
                 Stat(playTimeLabel(app.playTimeMillis), "Played", u)
@@ -296,7 +304,7 @@ private fun Stat(value: String, label: String, u: DesignUnits) {
 internal fun actionLabel(app: InstalledApp): String = if (app.isGame || app.gameId != null) "Play" else "Open"
 
 @Composable
-internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, onNextTab: () -> Unit, onSearch: () -> Unit, onBack: () -> Unit) {
+internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, filters: Boolean, onNextFilter: () -> Unit, onSearch: () -> Unit, onBack: () -> Unit) {
     val pad = LocalPadPrompts.current
     Row(
         Modifier.fillMaxWidth().height(u.dp(72)),
@@ -304,7 +312,8 @@ internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, on
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (pad && action != null) Hint(listOf(GamepadAction.SELECT), action, u, onAction)
-        if (pad) Hint(listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY), "Tabs", u, onNextTab)
+        // the tab row already shows LT/RT; the footer names what the bumpers do here
+        if (pad && filters) Hint(listOf(GamepadAction.PREV_PAGE, GamepadAction.NEXT_PAGE), "Filter", u, onNextFilter)
         Hint(listOf(GamepadAction.OPEN_CONTEXT_MENU), "Search", u, onSearch)
         Hint(listOf(GamepadAction.BACK), "Back", u, onBack)
     }

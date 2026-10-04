@@ -103,7 +103,9 @@ fun AppDrawerScreen(
                 pendingGamepadAction == GamepadAction.BACK ->
                     if (state.letterFilter != null) viewModel.clearLetterFilter() else closeDrawer()
                 pendingGamepadAction == GamepadAction.OPEN_CONTEXT_MENU -> onOpenAppSearch("")
-                // the crossbar's bumpers: LB searches, RB (Apps) toggles the drawer shut
+                // LB/RB walk the Games tab's system filters; elsewhere LB searches and RB (Apps) shuts the drawer
+                (pendingGamepadAction == GamepadAction.PREV_PAGE || pendingGamepadAction == GamepadAction.NEXT_PAGE) &&
+                    viewModel.stepSystemChip(if (pendingGamepadAction == GamepadAction.NEXT_PAGE) 1 else -1) -> Unit
                 pendingGamepadAction == GamepadAction.PREV_PAGE -> onOpenAppSearch("")
                 pendingGamepadAction == GamepadAction.NEXT_PAGE -> closeDrawer()
                 else -> viewModel.handleGamepadAction(pendingGamepadAction)
@@ -181,6 +183,7 @@ fun AppDrawerScreen(
         onMenuRowActivated = viewModel::onMenuRowActivated,
         onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
+        onNextSystemFilter = { viewModel.stepSystemChip(1) },
         onSystemChip = { id ->
             onTouchInteraction()
             viewModel.onSystemChipTapped(id)
@@ -211,6 +214,7 @@ internal fun AppDrawerContent(
     onBandLaunch: (InstalledApp) -> Unit = { onAppLaunched(it.packageName) },
     onBandOptions: (InstalledApp) -> Unit = onAppMenu,
     onMenuRowActivated: (Int) -> Unit = {},
+    onNextSystemFilter: () -> Unit = {},
 
     onLetterRailTouch: (Int) -> Unit = {},
     onLetterRailReleased: () -> Unit = {},
@@ -285,6 +289,7 @@ internal fun AppDrawerContent(
                 ) {
                     focused?.let { app ->
                         WallInfo(app, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) }, holding = state.holdingPackage == app.packageName,
+                            details = state.gameDetails?.takeIf { it.gameId == app.gameId },
                             modifier = Modifier.align(Alignment.BottomStart))
                     }
                 }
@@ -296,7 +301,8 @@ internal fun AppDrawerContent(
                     u = u,
                     action = focused?.let(::actionLabel),
                     onAction = { focused?.let(onBandLaunch) },
-                    onNextTab = { onFilterSelected(state.activeFilter.stepped(1)) },
+                    filters = state.showSystemChips,
+                    onNextFilter = onNextSystemFilter,
                     onSearch = onOpenSearch,
                     onBack = onBack,
                 )
