@@ -117,7 +117,7 @@ import com.echo.feature.appbar.AppFilter
 import com.echo.feature.settings.ui.SettingsNavHost
 import com.echo.feature.crossbar.preview.PreviewData
 import com.echo.feature.crossbar.ui.app.AppDetailScreen
-import com.echo.feature.crossbar.ui.detail.ArtworkStudioScreen
+import com.echo.feature.artwork.studio.ArtworkStudioScreen
 import com.echo.feature.crossbar.ui.detail.ManualViewerOverlay
 import com.echo.feature.crossbar.ui.detail.MetadataPreviewPanel
 import com.echo.feature.crossbar.ui.detail.VideoDetailScreen

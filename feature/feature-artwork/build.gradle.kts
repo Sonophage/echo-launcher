@@ -130,6 +130,7 @@ android {
 dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose)
+    implementation(libs.material.icons.extended)
     implementation(libs.bundles.lifecycle)
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)

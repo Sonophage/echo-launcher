@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.detail
+package com.echo.feature.artwork.studio
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview

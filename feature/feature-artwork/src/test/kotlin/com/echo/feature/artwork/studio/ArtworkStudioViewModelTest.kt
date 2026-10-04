@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.detail
+package com.echo.feature.artwork.studio
 
 import android.content.Context
 import com.echo.core.domain.model.Game

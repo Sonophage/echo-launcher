@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.detail
+package com.echo.feature.artwork.studio
 
 import com.echo.feature.artwork.store.ArtworkKind
 import org.junit.Assert.assertEquals

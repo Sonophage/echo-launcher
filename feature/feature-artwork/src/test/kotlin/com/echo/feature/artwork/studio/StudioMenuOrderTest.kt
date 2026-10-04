@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.detail
+package com.echo.feature.artwork.studio
 
 import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.components.MenuState

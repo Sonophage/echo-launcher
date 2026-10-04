@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.detail
+package com.echo.feature.artwork.studio
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background

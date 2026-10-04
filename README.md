@@ -570,10 +570,10 @@ core/
   core-navigation/   pure navigation logic
   core-ui/           theme, wave, icons, motion wallpaper, menu sounds
 feature/
-  feature-crossbar/  the crossbar, hover panel, players, Artwork Studio, boot
+  feature-crossbar/  the crossbar, hover panel, players, boot
   feature-library/   ROM and media scanners
   feature-launcher/  emulator detection and launching
-  feature-artwork/   scrapers, artwork folder, ES-DE import and export
+  feature-artwork/   scrapers, Artwork Studio, artwork folder, ES-DE import and export
   feature-themes/    theme loading and built-in themes
   feature-settings/  Settings screens
   feature-appbar/    App Drawer and app classification
