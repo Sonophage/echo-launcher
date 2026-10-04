@@ -124,8 +124,8 @@ import com.echo.core.ui.components.contextMenuInk
 
 val LocalSettingsScreenId = compositionLocalOf<String?> { null }
 
-// set, rows draw as the kit's rail rows in these units: slim, a white fill on focus (owner, 2026-10-04,
-// the first-run wizard); unset, rows keep the settings plate
+// the units the kit's rail rows are drawn in: slim, a white fill on focus (owner, 2026-10-04). Every
+// settings page sets it; unset (a row drawn outside a settings page), rows keep the settings plate
 val LocalSettingsRailUnits = compositionLocalOf<DesignUnits?> { null }
 
 val LocalSettingsOpenScreen = compositionLocalOf<(String) -> Unit> { {} }
@@ -809,7 +809,12 @@ fun SettingsScaffold(
                 ) {
                     Row(Modifier.fillMaxSize()) {
                         Box(modifier = Modifier.widthIn(max = SETTINGS_COLUMN_MAX_WIDTH)) {
-                            CompositionLocalProvider(LocalSettingsFocusInfo provides focusInfo.takeIf { paneShown }) {
+                            // every settings page draws its rows as the kit's rail rows (owner, 2026-10-04),
+                            // as the first-run wizard does
+                            CompositionLocalProvider(
+                                LocalSettingsFocusInfo provides focusInfo.takeIf { paneShown },
+                                LocalSettingsRailUnits provides (LocalSettingsRailUnits.current ?: u),
+                            ) {
                                 content()
                             }
                         }
