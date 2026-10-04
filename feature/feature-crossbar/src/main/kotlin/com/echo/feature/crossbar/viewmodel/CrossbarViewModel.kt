@@ -3633,11 +3633,8 @@ class CrossbarViewModel @Inject constructor(
         val next = (s.selectedItemIndex + delta).coerceIn(0, max)
         if (next == s.selectedItemIndex) return false
         _uiState.update {
-            it.copy(
-                selectedItemIndex = next,
-                inColumn = true,
-                recentRailVisible = it.recentRailVisible || it.onLastPlayedHome,
-            )
+            // owner, 2026-10-04: on Last Played, up and down change the stage; only LEFT opens the rail
+            it.copy(selectedItemIndex = next, inColumn = true)
         }
         menuSound.play(MenuSound.SCROLL)
         return true
