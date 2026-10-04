@@ -61,6 +61,7 @@ import com.echo.core.ui.components.HintAction
 import com.echo.core.ui.components.HintBarHeight
 import com.echo.core.ui.components.EchoHintBar
 import com.echo.core.ui.components.EchoSearchField
+import com.echo.core.ui.components.SearchFieldHeight
 import com.echo.core.ui.components.StatusStripHeight
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.PANEL_CARD_RADIUS
@@ -124,52 +125,55 @@ fun SearchScreen(
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
         }
 
-        Column(
-            Modifier
-                .fillMaxHeight()
-                .padding(start = u.dp(64), top = StatusStripHeight + u.dp(12), bottom = if (imeUp) 10.dp else HintBarHeight)
-                .width(u.dp(400))
-                .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(u.dp(16)),
-        ) {
-            EchoSearchField(
-                query = state.query,
-                active = true,
-                focusRequester = focusRequester,
-                placeholder = state.scope.label,
-                onActivate = {},
-                onQueryChange = onQueryChange,
-                onDone = {},
-                colors = deriveStorefrontColors(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (empty != null && imeUp) {
-                EmptyNotice(empty, u)
-            } else if (empty == null) {
-                LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(u.dp(4)), modifier = Modifier.fillMaxSize()) {
-                    itemsIndexed(state.rows, key = { _, row -> row.id }) { index, row ->
-                        val selected = index == state.selectedIndex
-                        ResultRow(row, selected, u) { if (selected) onActivateAt(index) else onFocusAt(index) }
-                    }
-                }
-            }
-        }
+        val fieldTop = StatusStripHeight + u.dp(12)
+        val belowField = fieldTop + SearchFieldHeight + u.dp(16)
+        EchoSearchField(
+            query = state.query,
+            active = true,
+            focusRequester = focusRequester,
+            placeholder = state.scope.label,
+            onActivate = {},
+            onQueryChange = onQueryChange,
+            onDone = {},
+            colors = deriveStorefrontColors().copy(
+                searchField = Color.White.copy(alpha = 0.10f),
+                searchBorder = Color.White.copy(alpha = 0.14f),
+                textPrimary = Color.White,
+                textSecondary = Color.White,
+            ),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = fieldTop).width(u.dp(380)),
+        )
 
-        Column(
-            Modifier
-                .fillMaxHeight()
-                .padding(
-                    start = u.dp(520),
-                    end = u.dp(80),
-                    top = if (imeUp) StatusStripHeight + u.dp(12) else u.dp(96),
-                    bottom = if (imeUp) 10.dp else HintBarHeight,
-                )
-                .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(u.dp(if (imeUp) 12 else 20)),
-        ) {
-            when {
-                empty != null && !imeUp -> Box(Modifier.padding(top = u.dp(200))) { EmptyNotice(empty, u) }
-                focused != null -> Preview(focused, icon?.bitmap, u, compact = imeUp) { onActivateAt(state.selectedIndex) }
+        if (imeUp) {
+            Column(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = belowField, bottom = 10.dp)
+                    .width(u.dp(380))
+                    .imePadding(),
+            ) {
+                if (empty != null) EmptyNotice(empty, u) else ResultList(state, listState, u, onActivateAt, onFocusAt)
+            }
+        } else {
+            Column(
+                Modifier
+                    .fillMaxHeight()
+                    .padding(start = u.dp(64), top = belowField, bottom = HintBarHeight)
+                    .width(u.dp(400)),
+            ) {
+                if (empty == null) ResultList(state, listState, u, onActivateAt, onFocusAt)
+            }
+
+            Column(
+                Modifier
+                    .fillMaxHeight()
+                    .padding(start = u.dp(520), end = u.dp(80), top = belowField, bottom = HintBarHeight),
+                verticalArrangement = Arrangement.spacedBy(u.dp(20)),
+            ) {
+                when {
+                    empty != null -> Box(Modifier.padding(top = u.dp(120))) { EmptyNotice(empty, u) }
+                    focused != null -> Preview(focused, icon?.bitmap, u) { onActivateAt(state.selectedIndex) }
+                }
             }
         }
 
@@ -189,6 +193,22 @@ fun SearchScreen(
                     }
                 },
             )
+        }
+    }
+}
+
+@Composable
+private fun ResultList(
+    state: SearchState,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    u: DesignUnits,
+    onActivateAt: (Int) -> Unit,
+    onFocusAt: (Int) -> Unit,
+) {
+    LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(u.dp(4)), modifier = Modifier.fillMaxSize()) {
+        itemsIndexed(state.rows, key = { _, row -> row.id }) { index, row ->
+            val selected = index == state.selectedIndex
+            ResultRow(row, selected, u) { if (selected) onActivateAt(index) else onFocusAt(index) }
         }
     }
 }
@@ -244,7 +264,7 @@ private fun ResultRow(row: CrossbarItem, focused: Boolean, u: DesignUnits, onCli
 }
 
 @Composable
-private fun ColumnScope.Preview(row: CrossbarItem, icon: ImageBitmap?, u: DesignUnits, compact: Boolean, onActivate: () -> Unit) {
+private fun ColumnScope.Preview(row: CrossbarItem, icon: ImageBitmap?, u: DesignUnits, onActivate: () -> Unit) {
     val (kind, detail) = kindAndDetail(row)
     val game = row.gameId != null
     Box(
@@ -267,10 +287,10 @@ private fun ColumnScope.Preview(row: CrossbarItem, icon: ImageBitmap?, u: Design
     }
     Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
         Eyebrow(kind, u)
-        Headline(row.title, u.sp(if (compact) 32 else 46), if (compact) 1 else 2)
+        Headline(row.title, u.sp(46), 2)
         Meta(row.metadataLine?.takeIf { it.isNotBlank() } ?: detail, u.sp(15))
     }
-    if (!compact && game && (row.lastOpenedAt != null || row.totalPlayTimeMillis > 0 || detail.isNotBlank())) {
+    if (game && (row.lastOpenedAt != null || row.totalPlayTimeMillis > 0 || detail.isNotBlank())) {
         Row(horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
             row.lastOpenedAt?.let { Stat("Last played", relativeTime(System.currentTimeMillis(), it), u) }
             if (row.totalPlayTimeMillis > 0) Stat("Play time", playTimeLabel(row.totalPlayTimeMillis), u)

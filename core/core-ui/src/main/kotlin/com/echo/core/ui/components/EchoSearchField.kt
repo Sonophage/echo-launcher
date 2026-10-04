@@ -39,7 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.echo.core.ui.theme.StorefrontColors
 
-private val FIELD_HEIGHT = 40.dp
+val SearchFieldHeight = 40.dp
+private val FIELD_HEIGHT = SearchFieldHeight
 private val FIELD_CORNER = FIELD_HEIGHT / 2
 private val FIELD_BORDER = 1.dp
 

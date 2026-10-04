@@ -392,6 +392,8 @@ fun RecentFilterRow(
     onFilterTapped: (RecentFilter) -> Unit = {},
 
     includeApps: Boolean = false,
+
+    onSearch: (() -> Unit)? = null,
 ) {
     val filters = RecentFilter.visible(includeApps)
     StripSections(
@@ -401,6 +403,7 @@ fun RecentFilterRow(
         u = u,
         shoulders = true,
         modifier = modifier,
+        onSearch = onSearch,
     ) { i, tint, m -> Icon(filterGlyph(filters[i]), null, m, tint = tint) }
 }
 

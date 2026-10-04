@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -59,7 +61,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -86,7 +87,6 @@ import com.echo.core.ui.design.LEGIBILITY_FLOOR_PX
 import com.echo.core.ui.design.mediaAccent
 import com.echo.core.ui.icons.CategoryIconGlyph
 import com.echo.core.ui.icons.rememberAppIcon
-import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.core.ui.theme.menuCursorEdge
 import com.echo.feature.crossbar.R
 import com.echo.feature.crossbar.viewmodel.PanelStage
@@ -154,6 +154,8 @@ fun CrossbarStatusStrip(
     sections: List<Category> = emptyList(),
     selectedSection: Int = 0,
     onSectionTapped: (Int) -> Unit = {},
+
+    onSearchTapped: (() -> Unit)? = null,
 
     compact: Boolean = false,
 
@@ -253,7 +255,8 @@ fun CrossbarStatusStrip(
                                 onTapped = onSectionTapped,
                                 u = u,
                                 shoulders = false,
-                            ) { i, _, m -> CategoryIconGlyph(sections[i].iconKey, sections[i].name, m) }
+                                onSearch = onSearchTapped,
+                            ) { i, tint, m -> CategoryIconGlyph(sections[i].iconKey, sections[i].name, m.alpha(tint.alpha)) }
                         }
                         sortLabel?.let { label ->
                             Text(
@@ -539,25 +542,26 @@ internal fun StripSections(
     u: DesignUnits,
     shoulders: Boolean,
     modifier: Modifier = Modifier,
+    onSearch: (() -> Unit)? = null,
     icon: (@Composable (index: Int, tint: Color, modifier: Modifier) -> Unit)? = null,
 ) {
-    val accent = mediaAccent(LocalEchoColors.current.accentColor.toArgb().toLong())
     val pad = shoulders && LocalPadPrompts.current
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(if (icon != null) 18 else 10))) {
         if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = u.dp(22), spacing = 0.dp)
         labels.forEachIndexed { i, label ->
             val on = i == selected
-            val tint = if (on) accent else Color.White.copy(alpha = 0.5f)
-            Row(
+            val tint = Color.White.copy(alpha = if (on) 1f else 0.5f)
+            Column(
                 Modifier
                     .clip(RoundedCornerShape(u.dp(8)))
                     .clickable { onTapped(i) }
-                    .padding(horizontal = u.dp(6), vertical = u.dp(8)),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(u.dp(8)),
+                    .padding(horizontal = u.dp(6), vertical = u.dp(4))
+                    .semantics { contentDescription = label },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(u.dp(if (icon != null) 9 else 6)),
             ) {
-                icon?.invoke(i, tint, Modifier.size(u.dp(if (on) 20 else 18)).alpha(if (on) 1f else 0.5f))
-                if (sectionLabelShown(on, icon != null)) {
+                icon?.invoke(i, tint, Modifier.size(u.dp(22)))
+                if (sectionLabelShown(icon != null)) {
                     Text(
                         label,
                         color = tint,
@@ -566,10 +570,39 @@ internal fun StripSections(
                         maxLines = 1,
                     )
                 }
+                EchoDot(on, u)
             }
+        }
+        if (onSearch != null) {
+            Box(Modifier.width(1.dp).height(u.dp(20)).background(Color.White.copy(alpha = 0.25f)))
+            Icon(
+                Icons.Outlined.Search,
+                contentDescription = "Search",
+                tint = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(u.dp(8)))
+                    .clickable(onClick = onSearch)
+                    .padding(u.dp(6))
+                    .size(u.dp(22)),
+            )
         }
         if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(22), spacing = 0.dp)
     }
+}
+
+@Composable
+private fun EchoDot(on: Boolean, u: DesignUnits) {
+    Box(
+        Modifier
+            .size(u.dp(5))
+            .then(
+                if (on) Modifier.drawBehind {
+                    val glow = size.minDimension * 1.8f
+                    drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.45f), Color.Transparent), center, glow), glow)
+                    drawCircle(Color.White)
+                } else Modifier
+            ),
+    )
 }
 
 internal data class StripFit(val labels: Boolean, val date: Boolean)
@@ -582,7 +615,7 @@ internal fun stripFit(width: Int, left: Int, gap: Int, centre: Int, tightCentre:
         .firstOrNull(::fits) ?: StripFit(labels = false, date = false)
 }
 
-internal fun sectionLabelShown(active: Boolean, hasIcon: Boolean): Boolean = active || !hasIcon
+internal fun sectionLabelShown(hasIcon: Boolean): Boolean = !hasIcon
 
 @Composable
 private fun BatteryLine(level: Int, charging: Boolean, glint: Boolean, modifier: Modifier = Modifier) {

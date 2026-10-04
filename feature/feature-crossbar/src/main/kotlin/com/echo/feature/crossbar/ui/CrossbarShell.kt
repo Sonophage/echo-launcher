@@ -1078,6 +1078,7 @@ fun CrossbarShell(
                 sections = if (crossbarContext) barCategories else emptyList(),
                 selectedSection = barSelected,
                 onSectionTapped = onBarCategory,
+                onSearchTapped = onOpenSearch,
 
                 compact = !crossbarContext,
                 ambient = uiState.waveShown,
@@ -1094,6 +1095,7 @@ fun CrossbarShell(
                             modifier = Modifier.align(Alignment.Center),
                             onFilterTapped = onRecentFilterTapped,
                             includeApps = uiState.recentsIncludeApps,
+                            onSearch = onOpenSearch,
                         )
                     }
                 } else null,
