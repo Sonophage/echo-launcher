@@ -36,8 +36,9 @@ Run this before a commit that changes code. It is the full check.
 4. The module map below lists every module and only those. When you add, remove or rename a
    module, change the map in the same commit.
 
-The pre-commit hook (`.githooks/pre-commit`) stops a commit that changes `settings.gradle.kts` or a
-`build.gradle.kts` without also changing `CLAUDE.md` or a skill. Turn it on once per clone with
+The pre-commit hook (`.githooks/pre-commit`) stops a commit that adds or removes an `include(...)`
+in `settings.gradle.kts` or a `project(...)` dependency in a `build.gradle.kts` without also
+changing `CLAUDE.md` or a skill. Other build edits, such as a version bump, pass. Turn it on once per clone with
 `git config core.hooksPath .githooks`.
 
 ## Module map
