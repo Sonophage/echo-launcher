@@ -5,7 +5,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,16 +32,23 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 // how long A, Y or a finger must stay down before anything launches (owner: every launch holds;
 // kit: "Hold A; the ring fills, then launches")
-const val LAUNCH_HOLD_MS = 600L
+// owner, 2026-10-04: long enough to read the card that rises with the hold
+const val LAUNCH_HOLD_MS = 1000L
 
-// fills over holdMs while A is held; empties quickly when A comes up early
+// fills over holdMs while A is held; empties quickly when A comes up early. It always starts empty, even
+// when first composed mid-hold (the footer's card appears only once the hold starts)
 @Composable
-fun holdProgress(holding: Boolean, holdMs: Long): Float =
-    animateFloatAsState(
-        targetValue = if (holding) 1f else 0f,
-        animationSpec = tween(if (holding) holdMs.toInt() else 120, easing = LinearEasing),
-        label = "holdProgress",
-    ).value
+fun holdProgress(holding: Boolean, holdMs: Long): Float {
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(holding, holdMs) {
+        if (holding) {
+            progress.animateTo(1f, tween(((1f - progress.value) * holdMs).toInt(), easing = LinearEasing))
+        } else {
+            progress.animateTo(0f, tween(120, easing = LinearEasing))
+        }
+    }
+    return progress.value
+}
 
 // the kit's progress ring, drawn round a circular glyph
 fun Modifier.holdRing(progress: Float, color: Color, track: Color, stroke: Dp): Modifier = drawBehind {
