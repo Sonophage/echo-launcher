@@ -12,6 +12,8 @@ import com.echo.feature.library.scanner.RomScanner
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class RetroArchLinkOutcome(val inventory: CoreInventory, val keptPrevious: Boolean)
+
 @Singleton
 class RetroArchSetup @Inject constructor(
     private val retroArchLink: RetroArchLink,
@@ -19,9 +21,15 @@ class RetroArchSetup @Inject constructor(
 ) {
     suspend fun inventory(): CoreInventory = retroArchLink.inventory()
 
-    suspend fun link(treeUri: Uri): CoreInventory {
+    suspend fun link(treeUri: Uri): RetroArchLinkOutcome {
+        val previous = retroArchLink.linkedTreeUri()
         retroArchLink.save(treeUri)
-        return redetect()
+        val inventory = redetect()
+        if (inventory !is CoreInventory.EmptyTree || previous == null || previous == treeUri.toString()) {
+            return RetroArchLinkOutcome(inventory, keptPrevious = false)
+        }
+        retroArchLink.restore(previous)
+        return RetroArchLinkOutcome(redetect(), keptPrevious = true)
     }
 
     suspend fun redetect(): CoreInventory {

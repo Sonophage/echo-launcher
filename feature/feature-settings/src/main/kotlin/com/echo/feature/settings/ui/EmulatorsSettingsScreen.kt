@@ -1,5 +1,6 @@
 package com.echo.feature.settings.ui
 
+import com.echo.feature.settings.viewmodel.NO_CORES_KEPT_PREVIOUS
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -193,6 +194,8 @@ fun EmulatorsSettingsScreen(
                 when {
                     state.isDetectingCores ->
                         "Scanning RetroArch for installed cores…"
+
+                    state.retroArchKeptPrevious -> NO_CORES_KEPT_PREVIOUS
 
                     state.retroArchTreeHasNoCores ->
                         "Linked, but there are no cores under the folder you picked. That is almost " +

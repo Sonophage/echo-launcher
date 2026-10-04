@@ -119,6 +119,9 @@ private val KEY_INITIAL_SETUP_SEEN = com.echo.core.data.repository.InitialSetupF
 
 private const val RETROARCH_FAMILY = "com.retroarch"
 
+internal const val NO_CORES_KEPT_PREVIOUS =
+    "That folder has no RetroArch cores, so your previous link was kept. Pick RetroArch itself in the picker."
+
 private val VITA3K_PACKAGES = listOf("org.vita3k.emulator", "org.vita3k.emulator.ikhoeyZX")
 
 @HiltViewModel
@@ -423,8 +426,11 @@ class InitialSetupViewModel @Inject constructor(
     fun linkRetroArch(uri: Uri) {
         viewModelScope.launch {
             scratch.update { it.copy(retroArchDetecting = true) }
-            retroArchSetup.link(uri)
-            readRetroArchState("RetroArch linked — installed cores are now offered in Emulators.")
+            val outcome = retroArchSetup.link(uri)
+            readRetroArchState(
+                if (outcome.keptPrevious) NO_CORES_KEPT_PREVIOUS
+                else "RetroArch linked — installed cores are now offered in Emulators.",
+            )
         }
     }
 

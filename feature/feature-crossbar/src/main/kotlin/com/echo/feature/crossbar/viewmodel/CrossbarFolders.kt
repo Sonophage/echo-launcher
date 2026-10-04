@@ -122,6 +122,7 @@ class CrossbarFolders(
                         mediaRootRepository.add(target.kind, uri.toString())
                     }
                     rescanMediaKind(target.kind)
+                    vm.loadItemsForCategory(vm.currentCategory(), keepCursorOnRow = true)
                 }
                 RootTarget.Rom -> {
                     romRootRepository.persist(uri, writable = true)

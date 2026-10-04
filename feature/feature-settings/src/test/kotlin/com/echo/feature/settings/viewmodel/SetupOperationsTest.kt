@@ -51,4 +51,32 @@ class SetupOperationsTest {
             link.inventory()
         }
     }
+
+    @Test
+    fun `a folder with no cores never replaces a working RetroArch link`() = runTest {
+        val link = mockk<RetroArchLink>(relaxed = true)
+        val autoConfig = mockk<EmulatorAutoConfigService>(relaxed = true)
+        val working = "content://com.retroarch.aarch64.documents/tree/%2Fdata%2Fuser%2F0%2Fcom.retroarch.aarch64"
+        coEvery { link.linkedTreeUri() } returns working
+        coEvery { link.inventory() } returnsMany listOf(CoreInventory.EmptyTree, CoreInventory.Verified(setOf("mgba_libretro_android.so")))
+        val wrong = mockk<Uri> { every { this@mockk.toString() } returns "content://com.android.externalstorage.documents/tree/primary%3ARetroArch" }
+
+        val outcome = RetroArchSetup(link, autoConfig).link(wrong)
+
+        assertEquals(true, outcome.keptPrevious)
+        io.mockk.coVerify { link.restore(working) }
+    }
+
+    @Test
+    fun `the first link is kept even when it has no cores, so the screen can say why`() = runTest {
+        val link = mockk<RetroArchLink>(relaxed = true)
+        val autoConfig = mockk<EmulatorAutoConfigService>(relaxed = true)
+        coEvery { link.linkedTreeUri() } returns null
+        coEvery { link.inventory() } returns CoreInventory.EmptyTree
+
+        val outcome = RetroArchSetup(link, autoConfig).link(mockk(relaxed = true))
+
+        assertEquals(false, outcome.keptPrevious)
+        assertEquals(CoreInventory.EmptyTree, outcome.inventory)
+    }
 }

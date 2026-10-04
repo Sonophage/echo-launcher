@@ -28,6 +28,10 @@ class RetroArchLink @Inject constructor(
         Timber.i("RetroArch linked: $treeUri")
     }
 
+    suspend fun restore(treeUri: String) {
+        context.echoDataStore.edit { it[KEY] = treeUri }
+    }
+
     suspend fun clear() {
         context.echoDataStore.edit {
             it.remove(KEY)

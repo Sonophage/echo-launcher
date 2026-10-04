@@ -121,6 +121,8 @@ data class EmulatorsSettingsUiState(
     val retroArchCoreCount: Int? = null,
 
     val retroArchTreeHasNoCores: Boolean = false,
+
+    val retroArchKeptPrevious: Boolean = false,
     val retroArchCores: List<String> = emptyList(),
     val isDetectingCores: Boolean = false,
 
@@ -171,8 +173,9 @@ class EmulatorsSettingsViewModel @Inject constructor(
     fun linkRetroArch(treeUri: Uri) {
         _uiState.update { it.copy(isDetectingCores = true) }
         viewModelScope.launch {
-            retroArchSetup.link(treeUri)
+            val outcome = retroArchSetup.link(treeUri)
             readRetroArchState()
+            _uiState.update { it.copy(retroArchKeptPrevious = outcome.keptPrevious) }
         }
     }
 
