@@ -55,6 +55,10 @@ import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Waves
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -122,7 +126,7 @@ data class QuickSettingsState(
 )
 
 @Composable
-fun PanelTabsRow(tab: PanelTab, onTabTapped: (PanelTab) -> Unit, u: DesignUnits, modifier: Modifier = Modifier) {
+fun PanelTabsRow(tab: PanelTab, onTabTapped: (PanelTab) -> Unit, u: DesignUnits, tight: Boolean, modifier: Modifier = Modifier) {
     StripSections(
         labels = PanelTab.entries.map { it.label },
         selected = tab.ordinal,
@@ -130,7 +134,16 @@ fun PanelTabsRow(tab: PanelTab, onTabTapped: (PanelTab) -> Unit, u: DesignUnits,
         u = u,
         shoulders = true,
         modifier = modifier,
+        icon = if (tight) { i, tint, m -> Icon(panelTabGlyph(PanelTab.entries[i]), null, m, tint = tint) } else null,
     )
+}
+
+private fun panelTabGlyph(tab: PanelTab): ImageVector = when (tab) {
+    PanelTab.NOTIFICATIONS -> Icons.Outlined.Notifications
+    PanelTab.PROFILE -> Icons.Outlined.Person
+    PanelTab.QUICK -> Icons.Outlined.Tune
+    PanelTab.LIBRARIES -> Icons.Outlined.VideoLibrary
+    PanelTab.SETTINGS -> Icons.Outlined.Settings
 }
 
 @Composable

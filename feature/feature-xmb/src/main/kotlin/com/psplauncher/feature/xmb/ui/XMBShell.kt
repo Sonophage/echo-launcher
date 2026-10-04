@@ -1074,11 +1074,11 @@ fun XMBShell(
                 ambient = uiState.waveShown,
 
                 centre = if (notificationsOpen) {
-                    { u ->
-                        PanelTabsRow(uiState.panelTab, onPanelTabTapped, u, Modifier.align(Alignment.Center))
+                    { u, tight ->
+                        PanelTabsRow(uiState.panelTab, onPanelTabTapped, u, tight, Modifier.align(Alignment.Center))
                     }
                 } else if (uiState.onLastPlayedHome && xmbContext) {
-                    { u ->
+                    { u, _ ->
                         RecentFilterRow(
                             filter = uiState.recentFilter,
                             u = u,
