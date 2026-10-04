@@ -202,6 +202,10 @@ fun CrossbarStatusStrip(
 
     compact: Boolean = false,
 
+    // the island rests as its small orb, so the bar has room for a screen's own row (owner, 2026-10-04:
+    // the app drawer's sections); a tap on it does nothing, since the card's tap is a held launch
+    minimized: Boolean = false,
+
     modifier: Modifier = Modifier,
 
     battery: BatteryReading = rememberBatteryReading(),
@@ -253,6 +257,7 @@ fun CrossbarStatusStrip(
         if (live != null) shownLive = live
         val islandMode = when {
             live == null -> IslandMode.NONE
+            minimized -> IslandMode.ORB
             orbLevel == 0 && !compact -> IslandMode.ORB
             else -> IslandMode.CARD
         }
@@ -275,7 +280,7 @@ fun CrossbarStatusStrip(
                     glow = islandGlow,
                     u = u,
                     stageIcon = stageIcon?.bitmap,
-                    onTapped = onOrbTapped,
+                    onTapped = if (minimized) ({}) else onOrbTapped,
                     modifier = Modifier.padding(start = chromeGutter(), top = u.dp(10)),
                 )
             } else {
@@ -353,7 +358,7 @@ fun CrossbarStatusStrip(
 
         val islandWidth = when {
             live == null -> 0.dp
-            orbLevel == 0 && !compact -> u.dp(44) + chromeGutter()
+            minimized || (orbLevel == 0 && !compact) -> u.dp(44) + chromeGutter()
             else -> u.dp(264) + chromeGutter() + 5.dp
         }
         SubcomposeLayout(

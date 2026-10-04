@@ -1093,6 +1093,8 @@ fun CrossbarShell(
 
             val crossbarContext = uiState.stripShowsCrossbarContext
 
+            var drawerTabs by remember { mutableStateOf<AppFilter?>(null) }
+            var drawerTabPick by remember { mutableStateOf<AppFilter?>(null) }
             val panelPull = rememberPanelPull(notificationsOpen)
             val battery = rememberBatteryReading()
             CompositionLocalProvider(LocalDensity provides baseDensity) {
@@ -1123,11 +1125,16 @@ fun CrossbarShell(
                 // category's own filter (Last Played's, through centre) or its sort
 
                 compact = !crossbarContext,
+                minimized = uiState.activeAppDrawerFilter != null,
                 battery = battery,
 
                 centre = if (notificationsOpen) {
                     { u, tight ->
                         PanelTabsRow(uiState.panelTab, onPanelTabTapped, u, tight, Modifier.align(Alignment.Center))
+                    }
+                } else if (uiState.activeAppDrawerFilter != null && drawerTabs != null) {
+                    { u, _ ->
+                        DrawerSectionRow(drawerTabs!!, u, Modifier.align(Alignment.Center)) { drawerTabPick = it }
                     }
                 } else if (uiState.onLastPlayedHome && crossbarContext) {
                     { u, _ ->
@@ -1306,6 +1313,9 @@ fun CrossbarShell(
                         onAddToCrossBar = onAddAppToOpenCategory,
                         onLaunchRom = onLaunchRomFromDrawer,
                         onOpenAppSearch = onOpenAppSearch,
+                        onTabsShown = { active, _ -> drawerTabs = active },
+                        tabPick = drawerTabPick,
+                        onTabPickConsumed = { drawerTabPick = null },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

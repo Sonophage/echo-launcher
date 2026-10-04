@@ -1,5 +1,7 @@
 package com.echo.feature.crossbar.ui
 
+import androidx.compose.material.icons.outlined.VideogameAsset
+import com.echo.feature.appbar.AppFilter
 import com.echo.core.ui.design.RailPanelFill
 import com.echo.core.ui.design.RAIL_PANEL_WIDTH
 import androidx.compose.foundation.border
@@ -376,6 +378,27 @@ fun RecentFilterRow(
         shoulders = true,
         modifier = modifier,
     ) { i, tint, m -> Icon(filterGlyph(filters[i]), null, m, tint = tint) }
+}
+
+// the app drawer's sections as icons in the top bar, LT and RT at the ends (owner, 2026-10-04)
+@Composable
+fun DrawerSectionRow(active: AppFilter, u: DesignUnits, modifier: Modifier = Modifier, onTapped: (AppFilter) -> Unit) {
+    val sections = AppFilter.entries
+    StripSections(
+        labels = sections.map { it.label },
+        selected = sections.indexOf(active),
+        onTapped = { onTapped(sections[it]) },
+        u = u,
+        shoulders = true,
+        modifier = modifier,
+    ) { i, tint, m -> Icon(drawerGlyph(sections[i]), null, m, tint = tint) }
+}
+
+private fun drawerGlyph(section: AppFilter): ImageVector = when (section) {
+    AppFilter.RECENT -> Icons.Outlined.History
+    AppFilter.APPS -> Icons.Outlined.Apps
+    AppFilter.EMULATORS -> Icons.Outlined.VideogameAsset
+    AppFilter.GAMES -> Icons.Outlined.Games
 }
 
 private fun filterGlyph(filter: RecentFilter): ImageVector = when (filter) {

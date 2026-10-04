@@ -46,7 +46,6 @@ import com.echo.core.ui.design.PanelBase
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.preview.CombinedPreviews
 import com.echo.core.ui.preview.EchoPreview
-import com.echo.feature.appbar.appdrawer.AppDrawerCategoryTabs
 import com.echo.feature.appbar.appdrawer.AppWall
 import com.echo.feature.appbar.appdrawer.UninstallConfirmDialog
 import com.echo.feature.appbar.appdrawer.WallBackdrop
@@ -83,9 +82,23 @@ fun AppDrawerScreen(
 
     onOpenAppSearch: (String) -> Unit = {},
 
+    // the sections live in the top bar (owner, 2026-10-04): the drawer reports the active one and the
+    // counts, and a section tapped there arrives here
+    onTabsShown: (AppFilter, Map<AppFilter, Int>) -> Unit = { _, _ -> },
+    tabPick: AppFilter? = null,
+    onTabPickConsumed: () -> Unit = {},
+
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(state.activeFilter, state.filterCounts) { onTabsShown(state.activeFilter, state.filterCounts) }
+    LaunchedEffect(tabPick) {
+        tabPick?.let {
+            onTouchInteraction()
+            viewModel.setFilter(it)
+            onTabPickConsumed()
+        }
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val closeDrawer = { onBack() }
@@ -227,13 +240,7 @@ internal fun AppDrawerContent(
         WallShade()
 
         Column(modifier = Modifier.fillMaxSize()) {
-            AppDrawerCategoryTabs(
-                activeFilter = state.activeFilter,
-                filterCounts = state.filterCounts,
-                onFilterSelected = onFilterSelected,
-                u = u,
-                modifier = Modifier.padding(start = u.dp(74), top = StatusStripHeight),
-            )
+            Spacer(Modifier.height(StatusStripHeight))
 
             // owner, 2026-10-04: the drawer looks like search: the focused app is a hero banner across the
             // top with its Open and Options buttons, and the apps run below it in columns
