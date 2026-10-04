@@ -49,6 +49,9 @@ data class InitialSetupUiState(
 
     val artworkFolderName: String? = null,
 
+    // the ECHO folder to confirm in the picker, after it was renamed or made
+    val artworkPickAgain: String? = null,
+
     val hasSgdb: Boolean = false,
     val hasTmdb: Boolean = false,
     val igdbClientId: String = "",
@@ -312,12 +315,19 @@ class InitialSetupViewModel @Inject constructor(
 
     private fun onArtworkFolderPicked(uri: Uri) {
         viewModelScope.launch {
-            val linked = artworkFolderSetup.link(uri)
-            scratch.update {
-                it.copy(message = linked?.let(artworkFolderSetup::describe) ?: ArtworkFolderSetup.COULD_NOT_LINK)
+            val message = when (val adopted = artworkFolderSetup.adopt(uri)) {
+                is EchoAdopt.Linked -> listOfNotNull(artworkFolderSetup.describe(adopted.linked), adopted.note).joinToString(" ")
+                is EchoAdopt.PickEcho -> {
+                    scratch.update { it.copy(artworkPickAgain = adopted.start.toString()) }
+                    adopted.message
+                }
+                EchoAdopt.Failed -> ArtworkFolderSetup.COULD_NOT_LINK
             }
+            scratch.update { it.copy(message = message) }
         }
     }
+
+    fun artworkPickAgainLaunched() = scratch.update { it.copy(artworkPickAgain = null) }
 
     fun linkRetroArch(uri: Uri) {
         viewModelScope.launch {

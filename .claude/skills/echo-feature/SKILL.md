@@ -21,6 +21,7 @@ description: Add or change a feature in ECHO — where its code goes, how it is 
 | React to touch the same way | route the touch to the same rule the button uses. A swipe calls `stepCategory`, which applies the d-pad's rail rule through `swipeRailStep`. Do not give touch a separate copy of the rule |
 | Show the footer's hints | `promptsFor` in `feature-crossbar/.../viewmodel/HintPrompts.kt` |
 | Add a settings screen | an entry in `core-domain/.../model/SettingsCatalog.kt` and a case in `SettingsNavHost.kt` |
+| Keep a file the user can edit | the ECHO folder: the artwork folder the user picked, named ECHO (`EchoFolder`, `ArtworkFolderSetup.adopt`). `Look/` holds the look as files. Never put a password, API key or account detail there |
 | Ask for a permission | a row in `feature-settings/.../permissions/AppPermissions.kt`. Setup offers every row that is not granted at install, and `AppPermissionsTest` checks the manifest declares it |
 
 A launch that leaves ECHO is a hold (`holdMsFor`, `LaunchHold`); media that plays inside ECHO acts
@@ -46,3 +47,11 @@ name as `-s`; the IP and port change.
 
 Usage access and notification access can need granting again after an install. Record what you
 check (see `echo-ui`), and say in the commit what was and was not seen on the device.
+
+## Data safety
+
+An operation that rewrites artwork links or the artwork folder can lose the owner's library. First
+pull the database from the device (`run-as com.echo.launcher.debug cat databases/pfp_database`,
+with `-wal` and `-shm`), run `pragma integrity_check` on the copy, and record the counts to compare
+after. Rewrite links deterministically (`ArtworkLinkRepoint`); do not rescan to repair them, and
+never run `ArtworkLinkRepair` while the folder grant is lost: it clears links it cannot read.

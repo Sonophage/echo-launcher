@@ -42,6 +42,7 @@ class PortableArtworkCountTest {
         artworkStore = mockk(relaxed = true),
         internalStore = mockk(relaxed = true),
         identityRecorder = mockk(relaxed = true),
+        linkRepoint = mockk(relaxed = true),
     )
 
     @Test

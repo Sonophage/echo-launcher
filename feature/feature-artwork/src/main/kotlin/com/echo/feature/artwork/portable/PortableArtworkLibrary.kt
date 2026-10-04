@@ -343,6 +343,15 @@ class PortableArtworkLibrary @Inject constructor(
         parent
     }
 
+    // the ECHO folder beside the artwork (owner, 2026-10-04): Look/ for the look as files, and a README
+    // that says what ECHO reads. Creates what is missing and never removes anything.
+    suspend fun ensureEchoLayout(treeUri: Uri): Boolean = withContext(Dispatchers.IO) {
+        val made = ECHO_LOOK_DIRS.all { ensureDirPath(treeUri, listOf(DIR_LOOK, it)) != null }
+        val root = DocumentsContract.getTreeDocumentId(treeUri)
+        val readme = findChild(treeUri, root, ECHO_README) != null || writeText(treeUri, root, ECHO_README, "text/plain", ECHO_README_TEXT)
+        made && readme
+    }
+
     suspend fun copyDocument(
         sourceUri: Uri,
         destTreeUri: Uri,
@@ -559,3 +568,20 @@ class PortableArtworkLibrary @Inject constructor(
         }.onFailure { Timber.w(it, "Could not write $name") }.getOrDefault(false)
     }
 }
+
+const val DIR_LOOK = "Look"
+val ECHO_LOOK_DIRS = listOf("Icons", "Sounds", "Fonts", "Boot", "Wallpapers")
+const val ECHO_README = "README.txt"
+
+private val ECHO_README_TEXT = """
+    ECHO
+
+    This is ECHO's own folder. You can open and edit it with any file manager.
+
+    Artwork/   Art for each game, one folder per console. ECHO reads this.
+    Import/    Put other launchers' media here, then import it from ECHO's artwork settings.
+    Look/      ECHO's look as files: Icons, Sounds, Fonts, Boot and Wallpapers. ECHO does not
+               read this folder yet. It is kept for themes in a later version.
+
+    No passwords, API keys or account details are kept in this folder.
+""".trimIndent() + "\n"

@@ -1,6 +1,7 @@
 package com.echo.feature.settings.viewmodel
 
 import android.net.Uri
+import com.echo.core.data.repository.EchoFolder
 import com.echo.core.data.platform.PlatformFolderHintResolver
 import com.echo.core.data.repository.CoreInventory
 import com.echo.core.data.repository.MemoryCardRepository
@@ -58,6 +59,15 @@ class StandardRomFolders @Inject constructor(
         romScanner.createSubfolders(rootTreeUri, names())
 }
 
+sealed interface EchoAdopt {
+    data class Linked(val linked: ArtworkFolderLinked, val note: String? = null) : EchoAdopt
+
+    // the ECHO folder is ready; the picker opens at [start] for the user to confirm it
+    data class PickEcho(val start: Uri, val message: String) : EchoAdopt
+
+    data object Failed : EchoAdopt
+}
+
 data class ArtworkFolderLinked(
     val existingLibrary: Boolean,
     val gamesLinked: Int,
@@ -87,7 +97,30 @@ class ArtworkFolderSetup @Inject constructor(
         }
     }
 
+    // owner, 2026-10-04: the artwork folder is ECHO's own folder, named ECHO. A folder already named
+    // ECHO is linked; a folder holding an ECHO library is renamed; any other folder gets an ECHO folder
+    // made inside it, so a general folder is never renamed. Android ties folder access to the name,
+    // so after a rename or a new folder the user picks it once more.
+    suspend fun adopt(picked: Uri): EchoAdopt = when {
+        EchoFolder.isEchoTree(picked.toString()) -> link(picked)?.let { EchoAdopt.Linked(it) } ?: EchoAdopt.Failed
+        importManager.holdsLibrary(picked) -> {
+            val linked = link(picked)
+            if (linked == null) EchoAdopt.Failed else renameLinked() ?: EchoAdopt.Linked(linked, RENAME_FAILED)
+        }
+        else -> importManager.echoFolderInside(picked)?.let { EchoAdopt.PickEcho(importManager.pickerStart(it), CREATED) }
+            ?: EchoAdopt.Failed
+    }
+
+    // renames the linked folder to ECHO; null when it could not
+    suspend fun renameLinked(): EchoAdopt.PickEcho? =
+        importManager.renameFolderToEcho()?.let { EchoAdopt.PickEcho(importManager.pickerStart(it), RENAMED) }
+
+    suspend fun folderIsEcho(): Boolean = importManager.folderIsEcho()
+
     companion object {
         const val COULD_NOT_LINK = "Could not set up an artwork library in that folder. Pick a writable folder."
+        const val RENAMED = "Your artwork folder is now named ECHO. Tap Use this folder so ECHO keeps access to it."
+        const val CREATED = "ECHO made a folder named ECHO there. Tap Use this folder to use it."
+        const val RENAME_FAILED = "Linked, but the folder could not be renamed to ECHO. It keeps its name."
     }
 }

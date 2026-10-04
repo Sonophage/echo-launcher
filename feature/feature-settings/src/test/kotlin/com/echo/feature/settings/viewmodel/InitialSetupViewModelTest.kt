@@ -247,7 +247,8 @@ class InitialSetupViewModelTest {
     }
 
     @Test fun `an artwork folder that cannot hold a library says so`() = runTest(dispatcher) {
-        val uri = mockk<Uri>()
+        // already named ECHO, so the wizard goes straight to linking it
+        val uri = mockk<Uri> { every { this@mockk.toString() } returns "content://com.android.externalstorage.documents/tree/primary%3AECHO" }
         coEvery { artworkImport.linkFolder(uri) } returns null
         val job = collectState()
 

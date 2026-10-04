@@ -1,5 +1,6 @@
 package com.echo.feature.settings.ui
 
+import androidx.core.net.toUri
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -39,6 +41,11 @@ fun ArtworkImportScreen(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? -> uri?.let { viewModel.startExport(it) } }
 
+    // after a rename or a new ECHO folder, Android needs the user to pick it once
+    LaunchedEffect(state.pickAgain) {
+        state.pickAgain?.let { folderPicker.launch(it.toUri()); viewModel.pickAgainLaunched() }
+    }
+
     SettingsPageScaffold(
         subtitle = "Artwork Folder & Import",
         onBack   = onBack,
@@ -60,8 +67,17 @@ fun ArtworkImportScreen(
                     !state.grantAlive   -> "${state.folderDisplay}  —  access lost, tap to re-link"
                     else                -> "${state.folderDisplay}  (tap to change)"
                 },
-                onClick  = { folderPicker.launch(null) },
+                onClick  = { folderPicker.launch(if (state.grantAlive) null else state.folderStart?.toUri()) },
             )
+
+            if (state.folderLinked && state.grantAlive && !state.folderIsEcho) {
+                SettingsRow(
+                    label    = "Rename Folder to ECHO",
+                    sublabel = "Makes this ECHO's own folder, with Look/ for icons, sounds, fonts and more. " +
+                        "Every artwork link moves with it. You confirm the folder once afterwards.",
+                    onClick  = { viewModel.renameFolderToEcho() },
+                )
+            }
 
             if (state.folderLinked) {
                 SettingsRow(

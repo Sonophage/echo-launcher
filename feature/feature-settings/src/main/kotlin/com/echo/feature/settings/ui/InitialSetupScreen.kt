@@ -1,5 +1,6 @@
 package com.echo.feature.settings.ui
 
+import androidx.core.net.toUri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import android.net.Uri
@@ -7,6 +8,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
@@ -61,6 +63,15 @@ fun InitialSetupScreen(
         val (slot, replacing) = pending ?: return@rememberLauncherForActivityResult
         pending = null
         if (uri != null) viewModel.onStoragePicked(slot, replacing, uri)
+    }
+
+    // after a rename or a new ECHO folder, Android needs the user to pick it once
+    LaunchedEffect(state.artworkPickAgain) {
+        state.artworkPickAgain?.let {
+            pending = StorageSlot.ARTWORK to null
+            storagePicker.launch(it.toUri())
+            viewModel.artworkPickAgainLaunched()
+        }
     }
 
     val retroPicker = rememberLauncherForActivityResult(
@@ -245,8 +256,11 @@ private fun storageRow(state: InitialSetupUiState, slot: StorageSlot): StorageRo
         val name = state.artworkFolderName
         return StorageRowUi(
             value = name ?: "Not set",
-            sublabel = if (name == null) suggestedName?.let { "Tap to use $it" } ?: "Pick a writable folder for artwork"
-                       else "Tap to change",
+            sublabel = when {
+                name == null -> "Pick where ECHO keeps its own folder, named ECHO: artwork, and its look as files"
+                !name.equals(com.echo.core.data.repository.EchoFolder.NAME, ignoreCase = true) -> "Tap to make it ECHO's folder"
+                else -> "Tap to change"
+            },
             replacing = null,
             start = suggestion,
         )

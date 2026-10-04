@@ -65,6 +65,9 @@ interface ArtworkRecordDao {
     @Query("DELETE FROM artwork_records WHERE game_id = :gameId AND artwork_type = :type AND sort_order = :sortOrder")
     suspend fun deleteAt(gameId: Long, type: String, sortOrder: Int)
 
+    @Query("UPDATE artwork_records SET document_uri = :uri WHERE id = :id")
+    suspend fun setDocumentUri(id: Long, uri: String)
+
     @Query("UPDATE artwork_records SET sort_order = :sortOrder, updated_at = :updatedAt WHERE id = :id")
     suspend fun setSortOrder(id: Long, sortOrder: Int, updatedAt: Long)
 

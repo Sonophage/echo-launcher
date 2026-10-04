@@ -2,6 +2,8 @@ package com.echo.feature.artwork.api
 
 import android.content.Context
 import android.net.Uri
+import com.echo.core.data.repository.EchoFolder
+import android.provider.DocumentsContract
 import com.echo.core.data.database.dao.ArtworkImportReportDao
 import com.echo.core.data.database.dao.ArtworkRecordDao
 import com.echo.core.data.database.dao.GameDao
@@ -51,6 +53,7 @@ class ArtworkImportManager @Inject constructor(
     private val artworkStore: ArtworkStore,
     private val internalStore: com.echo.feature.artwork.store.InternalArtworkStore,
     private val identityRecorder: ArtworkIdentityRecorder,
+    private val linkRepoint: com.echo.core.data.repository.ArtworkLinkRepoint,
 ) {
     data class LinkResult(
         val manifest: ArtworkLibraryManifest,
@@ -79,7 +82,51 @@ class ArtworkImportManager @Inject constructor(
         folderRepository.setStorageMode(ArtworkStorageMode.PORTABLE)
         folderRepository.setLibraryUuid(manifest.libraryUuid)
         library.clearDirCache()
+        if (!library.ensureEchoLayout(treeUri)) Timber.w("Could not lay out the ECHO folder at $treeUri")
         return LinkResult(manifest, existingLibrary = existing != null)
+    }
+
+    suspend fun holdsLibrary(treeUri: Uri): Boolean = library.readManifest(treeUri) != null
+
+    // the folder named ECHO inside [parentTree], made if it is not there; the parent is never renamed
+    suspend fun echoFolderInside(parentTree: Uri): Uri? = withContext(Dispatchers.IO) {
+        val parentDoc = DocumentsContract.getTreeDocumentId(parentTree)
+        val existing = library.listChildren(parentTree, parentDoc)
+            .firstOrNull { it.isDirectory && it.name.equals(EchoFolder.NAME, ignoreCase = true) }?.documentId
+        val docId = existing ?: runCatching {
+            DocumentsContract.createDocument(
+                context.contentResolver,
+                DocumentsContract.buildDocumentUriUsingTree(parentTree, parentDoc),
+                DocumentsContract.Document.MIME_TYPE_DIR,
+                EchoFolder.NAME,
+            )?.let(DocumentsContract::getDocumentId)
+        }.onFailure { Timber.w(it, "Could not make ${EchoFolder.NAME} in $parentTree") }.getOrNull()
+        docId?.let { DocumentsContract.buildTreeDocumentUri(parentTree.authority, it) }
+    }
+
+    // where the folder picker should open to show [tree]
+    fun pickerStart(tree: Uri): Uri =
+        DocumentsContract.buildDocumentUri(tree.authority, DocumentsContract.getTreeDocumentId(tree))
+
+    // whether the linked folder is already named ECHO
+    suspend fun folderIsEcho(): Boolean = linkedTree()?.let { EchoFolder.isEchoTree(it.toString()) } ?: false
+
+    // renames the linked folder to ECHO in place and points every stored link at the new name. Android
+    // does not move the folder grant with the name, so the caller must ask the user to pick the
+    // returned folder; linkFolder then adopts it by its manifest. Null when it could not rename.
+    suspend fun renameFolderToEcho(): Uri? = withContext(Dispatchers.IO) {
+        val tree = linkedTree() ?: return@withContext null
+        if (!folderRepository.hasLiveGrant()) return@withContext null
+        if (EchoFolder.isEchoTree(tree.toString())) return@withContext tree
+        val rootDocId = DocumentsContract.getTreeDocumentId(tree)
+        val renamed = runCatching {
+            DocumentsContract.renameDocument(context.contentResolver, DocumentsContract.buildDocumentUriUsingTree(tree, rootDocId), EchoFolder.NAME)
+        }.onFailure { Timber.w(it, "Could not rename $tree to ${EchoFolder.NAME}") }.getOrNull() ?: return@withContext null
+        val newTree = DocumentsContract.buildTreeDocumentUri(tree.authority, DocumentsContract.getDocumentId(renamed))
+        linkRepoint.run(tree.toString(), newTree.toString())
+        folderRepository.setTreeUri(newTree.toString())
+        library.clearDirCache()
+        newTree
     }
 
     suspend fun forgetFolder() = folderRepository.forget()

@@ -1,7 +1,9 @@
 package com.echo.feature.settings.viewmodel
 
+import androidx.core.net.toUri
 import android.content.Context
 import android.net.Uri
+import com.echo.core.data.repository.EchoFolder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -40,6 +42,15 @@ data class ArtworkImportUiState(
 
     val folderDisplay: String? = null,
     val folderLinked: Boolean = false,
+
+    // false while the linked folder has another name than ECHO
+    val folderIsEcho: Boolean = true,
+
+    // the ECHO folder to confirm in the picker, after it was renamed or made
+    val pickAgain: String? = null,
+
+    // where the picker opens to show the stored folder, so a lost grant is one tap to restore
+    val folderStart: String? = null,
     val grantAlive: Boolean = true,
     val confirmForget: Boolean = false,
 
@@ -100,6 +111,8 @@ class ArtworkImportViewModel @Inject constructor(
                     folderDisplay = uri?.let { RomRootRepository.rawPathOfTree(it) ?: it },
                     folderLinked = uri != null,
                     grantAlive = alive,
+                    folderIsEcho = uri == null || EchoFolder.isEchoTree(uri),
+                    folderStart = uri?.let { runCatching { importManager.pickerStart(it.toUri()).toString() }.getOrNull() },
                 )
                 if (uri != null && alive) rescan()
             }
@@ -129,7 +142,12 @@ class ArtworkImportViewModel @Inject constructor(
 
     fun onFolderPicked(uri: Uri) {
         viewModelScope.launch {
-            val linked = artworkFolderSetup.link(uri)
+            val adopted = artworkFolderSetup.adopt(uri)
+            if (adopted is EchoAdopt.PickEcho) {
+                _uiState.value = _uiState.value.copy(notice = adopted.message, pickAgain = adopted.start.toString())
+                return@launch
+            }
+            val linked = (adopted as? EchoAdopt.Linked)?.linked
             if (linked == null) {
                 _uiState.value = _uiState.value.copy(error = ArtworkFolderSetup.COULD_NOT_LINK)
                 return@launch
@@ -139,6 +157,7 @@ class ArtworkImportViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 notice = buildString {
                     append(artworkFolderSetup.describe(linked))
+                    (adopted as EchoAdopt.Linked).note?.let { append(" $it") }
                     if (_uiState.value.internalFiles > 0) {
                         append(" ${_uiState.value.internalFiles} artwork files are still in app storage — see Move Into Folder below.")
                     }
@@ -146,6 +165,19 @@ class ArtworkImportViewModel @Inject constructor(
                 plan = null,
             )
         }
+    }
+
+    // an existing folder by another name becomes ECHO (owner, 2026-10-04)
+    fun renameFolderToEcho() {
+        viewModelScope.launch {
+            val step = artworkFolderSetup.renameLinked()
+            _uiState.value = if (step != null) _uiState.value.copy(notice = step.message, pickAgain = step.start.toString())
+                else _uiState.value.copy(error = ArtworkFolderSetup.RENAME_FAILED)
+        }
+    }
+
+    fun pickAgainLaunched() {
+        _uiState.value = _uiState.value.copy(pickAgain = null)
     }
 
     fun forgetFolder() {
