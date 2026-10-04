@@ -205,7 +205,8 @@ class CrossbarRecents(
         vm.markTouchInput()
         val s = uiState.value
         if (s.hasBlockingOverlay || index !in s.currentItems.indices) return
-        vm.onItemSelected(index)
+        // a game or app launches only by holding the launch button; tapping its card just picks it
+        if (s.currentItems[index].launchesOut()) uiState.update { it.copy(selectedItemIndex = index) } else vm.onItemSelected(index)
     }
 
     internal fun openShelf(cardId: String) {

@@ -1,5 +1,9 @@
 package com.echo.feature.crossbar.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import com.echo.core.ui.design.pressAndHold
 import com.echo.feature.crossbar.viewmodel.holdMsFor
 import com.echo.core.ui.design.holdProgress
 import com.echo.core.ui.design.holdOutline
@@ -171,7 +175,7 @@ fun GameInfoScreen(
                     GameInfoAction.OPTIONS -> "⋯"
                 }
                 val focused = info.cursor == null && info.band == action
-                val holdMs = if (focused && action == GameInfoAction.PLAY) holdMsFor(item, LocalPadPrompts.current) else 0L
+                val holdMs = if (focused && action == GameInfoAction.PLAY) holdMsFor(item) else 0L
                 BandButton(label, focused, action == GameInfoAction.OPTIONS, u, holdMs, launchHold == item.id) { onBandAction(action) }
             }
         }
@@ -244,14 +248,15 @@ private fun BandButton(
     onClick: () -> Unit,
 ) {
     val ink = if (focused) Color(0xFF0A0A0A) else Color.White
-    val progress = if (holdMs > 0L) holdProgress(holding, holdMs) else 0f
+    var pressing by remember { mutableStateOf(false) }
+    val progress = if (holdMs > 0L) holdProgress(holding || pressing, holdMs) else 0f
     Box(
         Modifier
             .height(u.dp(52))
             .clip(RoundedCornerShape(u.dp(26)))
             .background(if (focused) Color.White else Color.White.copy(alpha = 0.12f))
             .holdOutline(progress, ink, u.dp(3))
-            .clickable(onClick = onClick)
+            .then(if (holdMs > 0L) Modifier.pressAndHold(holdMs, label, { pressing = it }, onClick) else Modifier.clickable(onClick = onClick))
             .padding(horizontal = u.dp(if (focused) 26 else 22)),
         contentAlignment = Alignment.Center,
     ) {

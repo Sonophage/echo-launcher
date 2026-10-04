@@ -78,7 +78,6 @@ import com.echo.feature.crossbar.viewmodel.RecentKind
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.groupRecentsByDay
 import com.echo.feature.crossbar.viewmodel.holdMsFor
-import com.echo.core.ui.components.LocalPadPrompts
 import com.echo.feature.crossbar.viewmodel.isInstalledApp
 import com.echo.feature.crossbar.viewmodel.recentKind
 import com.echo.core.common.format.playTimeLabel
@@ -179,7 +178,7 @@ private fun Letterbox(
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                        PanelButton(GamepadAction.SELECT, primaryLabel(item), u, holdMsFor(item, LocalPadPrompts.current), launchHold == item.id) { onAction(GamepadAction.SELECT) }
+                        PanelButton(GamepadAction.SELECT, primaryLabel(item), u, holdMsFor(item), launchHold == item.id) { onAction(GamepadAction.SELECT) }
                         infoLabel(item)?.let { PanelButton(GamepadAction.CHANGE_SORT, it, u) { onAction(GamepadAction.CHANGE_SORT) } }
                     }
                 }
@@ -277,7 +276,7 @@ private fun RecentList(
                     }
                 }
                 Row(Modifier.padding(top = u.dp(8)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                    PanelButton(GamepadAction.SELECT, primaryLabel(focused), u, holdMsFor(focused, LocalPadPrompts.current), launchHold == focused.id) { onAction(GamepadAction.SELECT) }
+                    PanelButton(GamepadAction.SELECT, primaryLabel(focused), u, holdMsFor(focused), launchHold == focused.id) { onAction(GamepadAction.SELECT) }
                     if (focused.removableFromRecent) {
                         PanelButton(GamepadAction.CHANGE_SORT, "Remove", u) { onAction(GamepadAction.CHANGE_SORT) }
                     }

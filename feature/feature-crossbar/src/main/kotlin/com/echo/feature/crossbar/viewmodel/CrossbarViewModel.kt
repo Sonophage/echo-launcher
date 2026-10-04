@@ -3594,7 +3594,8 @@ class CrossbarViewModel @Inject constructor(
         val s = _uiState.value
         if (s.hasBlockingOverlay) return
         if (index == s.selectedItemIndex) {
-            activateSelected()
+            // a game or app launches only by holding the launch button
+            if (s.currentItems.getOrNull(index)?.launchesOut() != true) activateSelected()
         } else {
             val clamped = index.coerceIn(0, (s.currentItems.size - 1).coerceAtLeast(0))
             if (clamped != s.selectedItemIndex) {

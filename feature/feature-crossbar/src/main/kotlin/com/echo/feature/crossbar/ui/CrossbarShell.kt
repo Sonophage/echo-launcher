@@ -1188,7 +1188,7 @@ fun CrossbarShell(
                             ?: hintIcon?.color
                             ?: menuCursorEdge(),
                         leading = hintItem?.let { hintTile(it, hintIcon?.bitmap) },
-                        holdMs = holdMsFor(hintItem.takeIf { uiState.focusedPillIndex == null && !uiState.hasBlockingOverlay }, LocalPadPrompts.current),
+                        holdMs = holdMsFor(hintItem.takeIf { uiState.focusedPillIndex == null && !uiState.hasBlockingOverlay }),
                         holding = hintItem != null && uiState.launchHold == hintItem.id,
                     )
                 }

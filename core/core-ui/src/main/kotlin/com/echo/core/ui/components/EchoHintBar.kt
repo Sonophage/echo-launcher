@@ -1,5 +1,11 @@
 package com.echo.core.ui.components
 
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.PathMeasure
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,6 +48,7 @@ import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.holdProgress
 import com.echo.core.ui.design.holdRing
+import com.echo.core.ui.design.pressAndHold
 import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.core.ui.design.panelDesignUnits
 
@@ -134,6 +141,8 @@ private fun ActionTab(
     modifier: Modifier,
 ) {
     val edge = lerp(accent, Color.White, 0.3f)
+    var pressing by remember { mutableStateOf(false) }
+    val progress = if (primary.holdMs > 0L) holdProgress(primary.holding || pressing, primary.holdMs) else 0f
     val radius = u.dp(20)
     val shape = RoundedCornerShape(topStart = radius)
     val style = LocalControllerPromptStyle.current
@@ -161,13 +170,23 @@ private fun ActionTab(
                     lineTo(size.width, w / 2)
                 }
                 val line = Stroke(width = w)
+                val measure = PathMeasure().apply { setPath(path, false) }
+                // touch has no A glyph to ring, so the hold traces the tab's edge instead
+                val trace = Path().also { if (!pad) measure.getSegment(0f, measure.length * progress, it, true) }
                 onDrawWithContent {
                     drawRect(fill)
                     drawContent()
                     drawPath(path, edge.copy(alpha = 0.22f), style = line)
+                    drawPath(trace, Color.White, style = Stroke(width = w * 1.5f, cap = StrokeCap.Round))
                 }
             }
-            .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
+            .then(
+                if (primary.holdMs > 0L && onAction != null) {
+                    Modifier.pressAndHold(primary.holdMs, primary.label, { pressing = it }) { onAction(primary.action) }
+                } else {
+                    Modifier.clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
+                }
+            )
             .padding(start = u.dp(20), end = maxOf(u.dp(20), chromeGutter(end = true)), top = u.dp(6), bottom = u.dp(14)),
     ) {
         leading?.let { tile ->
@@ -175,7 +194,6 @@ private fun ActionTab(
         }
         if (pad) {
             val size = glyphFor(u, 24, 14)
-            val progress = if (primary.holdMs > 0L) holdProgress(primary.holding, primary.holdMs) else 0f
             val ring = if (primary.holdMs > 0L) {
                 Modifier.size(size + u.dp(10)).holdRing(progress, Color.White, Color.White.copy(alpha = 0.25f), u.dp(2))
             } else Modifier

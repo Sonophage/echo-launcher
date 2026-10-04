@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,14 +35,15 @@ fun PanelButton(
 ) {
     val primary = button == GamepadAction.SELECT
     val ink = if (primary) Color(0xFF0A0A0A) else Color.White
-    val progress = if (holdMs > 0L) holdProgress(holding, holdMs) else 0f
+    var pressing by remember { mutableStateOf(false) }
+    val progress = if (holdMs > 0L) holdProgress(holding || pressing, holdMs) else 0f
     Box(
         Modifier
             .height(u.dp(52))
             .clip(RoundedCornerShape(u.dp(26)))
             .background(if (primary) Color.White else Color.White.copy(alpha = 0.12f))
             .holdOutline(progress, ink, u.dp(3))
-            .clickable(onClick = onClick)
+            .then(if (holdMs > 0L) Modifier.pressAndHold(holdMs, label, { pressing = it }, onClick) else Modifier.clickable(onClick = onClick))
             .padding(horizontal = u.dp(if (primary) 26 else 22)),
         contentAlignment = Alignment.Center,
     ) {

@@ -4,6 +4,8 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -17,6 +19,13 @@ import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import kotlinx.coroutines.withTimeoutOrNull
 
 // fills over holdMs while A is held; empties quickly when A comes up early
 @Composable
@@ -47,4 +56,22 @@ fun Modifier.holdOutline(progress: Float, color: Color, stroke: Dp): Modifier = 
     val measure = PathMeasure().apply { setPath(pill, false) }
     val trace = Path().also { measure.getSegment(0f, measure.length * progress, it, true) }
     drawPath(trace, color, style = Stroke(w, cap = StrokeCap.Round))
+}
+
+// touch's hold-to-launch: a press shorter than holdMs does nothing; pressing reports the finger down so the ring can fill
+@Composable
+fun Modifier.pressAndHold(holdMs: Long, label: String, onPressing: (Boolean) -> Unit, onHeld: () -> Unit): Modifier {
+    val pressing by rememberUpdatedState(onPressing)
+    val held by rememberUpdatedState(onHeld)
+    return semantics {
+        role = Role.Button
+        onClick(label) { held(); true }
+    }.pointerInput(holdMs) {
+        detectTapGestures(onPress = {
+            pressing(true)
+            val released = withTimeoutOrNull(holdMs) { tryAwaitRelease() }
+            pressing(false)
+            if (released == null) held()
+        })
+    }
 }

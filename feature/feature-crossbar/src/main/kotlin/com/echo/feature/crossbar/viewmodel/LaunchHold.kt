@@ -12,9 +12,8 @@ const val LAUNCH_HOLD_MS = 600L
 internal fun CrossbarItem.launchesOut(): Boolean =
     (gameId != null && isRealGame) || launchIntentUri != null || packageName != null
 
-// how long a pad A press on this item must be held; 0 when it acts at once
-internal fun holdMsFor(item: CrossbarItem?, pad: Boolean): Long =
-    if (pad && item?.launchesOut() == true) LAUNCH_HOLD_MS else 0L
+// how long A, or a finger on the launch button, must be held for this item; 0 when it acts at once
+internal fun holdMsFor(item: CrossbarItem?): Long = if (item?.launchesOut() == true) LAUNCH_HOLD_MS else 0L
 
 // one hold at a time; onChange carries the held item's id, or null when nothing is held
 internal class LaunchHold(private val scope: CoroutineScope, private val onChange: (String?) -> Unit) {
