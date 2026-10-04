@@ -86,7 +86,6 @@ import com.echo.core.ui.design.PanelButton
 import com.echo.feature.crossbar.viewmodel.removableFromRecent
 import com.echo.core.ui.design.panelDesignUnits
 
-private const val LETTERBOX_RATIO = 2.39f
 private const val SQUARE_FOOT = 64
 
 @Composable
@@ -112,9 +111,7 @@ fun LastPlayedPage(
             if (rail) {
                 RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, onAction)
             } else {
-                val stripTop = maxOf(u.dp(80), StripHeight + 8.dp)
-                val stripHeight = minOf(maxWidth / LETTERBOX_RATIO, maxHeight - stripTop - u.dp(180))
-                Letterbox(focused, stripTop, stripHeight, now, empty, u, { onCardTapped(selectedIndex) }, onAction)
+                Letterbox(focused, now, empty, u, { onCardTapped(selectedIndex) }, onAction)
             }
         }
     }
@@ -123,24 +120,26 @@ fun LastPlayedPage(
 @Composable
 private fun Letterbox(
     item: CrossbarItem?,
-    stripTop: Dp,
-    stripHeight: Dp,
     now: Long,
     empty: String,
     u: DesignUnits,
     onArtTapped: () -> Unit,
     onAction: (GamepadAction) -> Unit,
 ) {
-    Column(Modifier.fillMaxSize().padding(top = stripTop)) {
-        Box(
+    Box(
+        Modifier
+            .fillMaxSize()
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onArtTapped),
+    ) {
+        ItemArt(item, u.dp(150), BiasAlignment(0f, -0.2f))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.92f))))
+        Column(
             Modifier
+                .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .then(if (u.square) Modifier.weight(1f) else Modifier.height(stripHeight))
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onArtTapped),
+                .padding(bottom = HintBarHeight + u.dp(if (u.square) SQUARE_FOOT else 40)),
         ) {
-            ItemArt(item, u.dp(150), BiasAlignment(0f, -0.2f))
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.65f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
-            Box(Modifier.align(Alignment.BottomStart).padding(start = u.dp(80), end = u.dp(80), bottom = u.dp(14))) {
+            Box(Modifier.padding(start = u.dp(80), end = u.dp(80), bottom = u.dp(14))) {
                 val logo = item?.logoUri?.takeIf { item.hasVisibleLogo }
                 if (logo != null) {
                     AsyncImage(
@@ -154,35 +153,34 @@ private fun Letterbox(
                     Headline(item?.title ?: empty, if (item != null) u.sp(64) else u.sp(40), 2)
                 }
             }
-        }
-        Box(Modifier.padding(start = u.dp(80), end = u.dp(80)).fillMaxWidth().height(u.dp(3))) {
-            item?.progressFraction?.let { p ->
-                Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.15f))) {
-                    Box(Modifier.fillMaxWidth(p.coerceIn(0f, 1f)).fillMaxHeight().background(Color.White))
-                }
-            }
-        }
-        if (item != null) {
-            Row(
-                Modifier.padding(top = u.dp(25), start = u.dp(80), end = u.dp(80)).fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(u.dp(30)),
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-                    Text(detailLine(item, now), color = Color.White, fontSize = u.sp(20), fontWeight = FontWeight.Light,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    subLine(item)?.let {
-                        Text(it, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(13), fontWeight = FontWeight.Light,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Box(Modifier.padding(start = u.dp(80), end = u.dp(80)).fillMaxWidth().height(u.dp(3))) {
+                item?.progressFraction?.let { p ->
+                    Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.15f))) {
+                        Box(Modifier.fillMaxWidth(p.coerceIn(0f, 1f)).fillMaxHeight().background(Color.White))
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                    PanelButton(GamepadAction.SELECT, primaryLabel(item), u) { onAction(GamepadAction.SELECT) }
-                    infoLabel(item)?.let { PanelButton(GamepadAction.CHANGE_SORT, it, u) { onAction(GamepadAction.CHANGE_SORT) } }
+            }
+            if (item != null) {
+                Row(
+                    Modifier.padding(top = u.dp(25), start = u.dp(80), end = u.dp(80)).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(u.dp(30)),
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                        Text(detailLine(item, now), color = Color.White, fontSize = u.sp(20), fontWeight = FontWeight.Light,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        subLine(item)?.let {
+                            Text(it, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(13), fontWeight = FontWeight.Light,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
+                        PanelButton(GamepadAction.SELECT, primaryLabel(item), u) { onAction(GamepadAction.SELECT) }
+                        infoLabel(item)?.let { PanelButton(GamepadAction.CHANGE_SORT, it, u) { onAction(GamepadAction.CHANGE_SORT) } }
+                    }
                 }
             }
         }
-        if (u.square) Spacer(Modifier.height(HintBarHeight + u.dp(SQUARE_FOOT)))
     }
 }
 
