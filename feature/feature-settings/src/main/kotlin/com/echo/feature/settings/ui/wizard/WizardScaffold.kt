@@ -28,7 +28,7 @@ import com.echo.feature.settings.ui.LocalSettingsRailUnits
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.theme.LocalEchoColors
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalDensity
 
 
@@ -59,8 +59,9 @@ fun WizardScaffold(
 ) {
     val menuSounds = LocalMenuSounds.current
     val skip by rememberUpdatedState(onSkip)
-    val config = LocalConfiguration.current
-    val railUnits = panelDesignUnits(config.screenWidthDp.toFloat(), config.screenHeightDp.toFloat(), LocalDensity.current)
+    val window = LocalWindowInfo.current.containerSize
+    val density = LocalDensity.current
+    val railUnits = with(density) { panelDesignUnits(window.width.toDp().value, window.height.toDp().value, density) }
     val step = if (stepNumber != null && stepCount > 0) "$title · Step $stepNumber of $stepCount" else title
     SettingsScaffold(
         title = title,
