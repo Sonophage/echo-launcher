@@ -289,7 +289,7 @@ matching Settings screen. Run it again any time from **Settings ▸ Setup ▸ Se
 
 ### Permissions
 
-ECHO asks only when a feature needs something. **Settings ▸ System ▸ Permissions** shows
+ECHO asks only when a feature needs something. **Settings ▸ Accounts ▸ Permissions** shows
 what is granted and opens the screen to grant the rest.
 
 - **Notifications** (Android 13+): scan and artwork progress, and confirming shortcuts that other
@@ -327,6 +327,9 @@ access to all of your storage.
 
 ## Guide
 
+In the menu paths below, **≡** is the **Menu** button, which opens a thing's options. On touch,
+long-press instead.
+
 ### Categories
 
 The default order is **Last Played, Shelves, Game, Music, Video, Photo, Library, Network,
@@ -340,13 +343,13 @@ one **Memory Card** per console, **Folders** (your ROM roots) and **Search**.
 
 - **Add a console by hand**: *Emulators ▸ Library Manager ▸ Add Console*, choose the platform,
   assign an emulator, scan. The folder is found under your ROM root automatically.
-- **Manage a card** from its **△** menu or Library Manager: rename, change emulator, hide, scan,
+- **Manage a card** from its **≡** menu or Library Manager: rename, change emulator, hide, scan,
   update metadata, scrape missing artwork, or remove. ROM files are never deleted.
 - **Rescanning**: there is no file watcher. Rescan a card, use Library Manager's **Scan All
   Consoles** or **Re-Scan All (Remove Missing)**, or turn on *Look & Feel ▸ Performance ▸ Rescan On
   Return*, which checks for new and missing games when you come back, at most every five minutes.
   A console whose folder cannot be read is skipped, so an unmounted SD card never empties a library.
-- **Android games**: **Find Games** on the Android card's menu, or **△ ▸ Mark as Game** on an app.
+- **Android games**: **Find Games** on the Android card's menu, or **≡ ▸ Mark as Game** on an app.
 - **PC games**: the Windows card's **Import PC Games**.
 
 ### Emulators
@@ -369,7 +372,7 @@ Installed emulators are detected from a built-in catalog, plus one profile per i
 | Xbox 360 | X360 Mobile (`.iso`) |
 | Anything with a libretro core | RetroArch |
 
-A game launches with, in order: its own override (**△ ▸ Settings ▸ Change Emulator**), then its
+A game launches with, in order: its own override (**≡ ▸ Settings ▸ Change Emulator**), then its
 card's emulator, then the platform default, then the recommended one. If a launch fails you get a
 recovery sheet to retry, change the emulator, or copy a diagnostic. For anything not in the
 catalog, *Emulators ▸ Custom Emulators ▸ Add Custom Emulator* detects an app's launch settings and
@@ -378,11 +381,11 @@ lets you test-launch a ROM before saving.
 ### Last Played and Shelves
 
 **Last Played** keeps its order, newest first, and is never sorted.
-*Look & Feel ▸ Wallpaper & Text ▸ Last Played Size* sets how many it holds, and **△ ▸ Remove from
+*Look & Feel ▸ Wallpaper & Text ▸ Last Played Size* sets how many it holds, and **≡ ▸ Remove from
 Recent** takes one off.
 
 **Shelves** gathers **Favorites**, the play states **Playing**, **Completed** and **Backlog**, and
-**Recently Added**. A shelf only shows when it has a game. Set them from a game's **△ ▸ Shelves**.
+**Recently Added**. A shelf only shows when it has a game. Set them from a game's **≡ ▸ Shelves**.
 
 ### Artwork
 
@@ -398,9 +401,9 @@ Art and metadata are fetched only when you ask. Sources are set up in
 *Emulators ▸ Artwork* scrapes everything or only what is missing, sets video snap placement and
 delay, toggles **Animated Icons**, and clears the cache.
 
-The **Artwork Studio** (**△ ▸ Metadata ▸ Artwork**) has seven tabs: Tile, Tile Video, Background,
+The **Artwork Studio** (**≡ ▸ Metadata ▸ Artwork**) has seven tabs: Tile, Tile Video, Background,
 Screenshot, Manual, Preview Video and Logo. Each pulls from ScreenScraper, SteamGridDB, IGDB or a
-local file. Preview a candidate, then press **Start** to apply. **△** on a slot crops or
+local file. Preview a candidate, then press **Home** (Guide or View) to apply. **≡** on a slot crops or
 repositions it, restores the previous image, or clears it. Crops keep the untouched original, so
 you can re-crop without loss.
 
@@ -443,7 +446,7 @@ Each column also lists its apps. Add more with its **Add** row.
 
 - **Y**, or **LB** on the crossbar, searches games, apps, music, video, photos and books together.
   Results say which library they came from, and opening one takes you to it.
-- The **Search** row at the end of Game, Video, Photo and Library searches only that library.
+- The **Search** row at the end of Game, Music, Video, Photo and Library searches only that library.
 - **Quick Search** in Network searches the web in your own browser, or opens an address if you
   type one.
 
@@ -465,7 +468,7 @@ Each column also lists its apps. Add more with its **Add** row.
 
 **Custom icons** can be PNG, JPG, WebP, BMP, HEIC or animated GIF, up to 8 MB (GIFs up to 512 px,
 120 frames, 10 s). Animated icons only play on the row you are on. Your picks stay on top when you
-change theme; clear one with **△**.
+change theme; clear one with **≡**.
 
 **Motion wallpapers** can be MP4, WebM or animated GIF, up to 1080p, 60 seconds and 60 MB. They
 pause during video, behind fullscreen overlays, and on battery saver.
@@ -493,7 +496,7 @@ finished in time never holds the game back.
 
 *System ▸ Backup & Restore* writes your library and settings to a `.pfpbackup` file in a folder you
 choose. Android's own cloud backup is off, so this is how you move to a new device. Android does not
-carry folder access across, so after a restore relink each folder from its column's **Folders ▸ △ ▸
+carry folder access across, so after a restore relink each folder from its column's **Folders ▸ ≡ ▸
 Relink Folder**.
 
 ### Settings map
@@ -503,7 +506,8 @@ Relink Folder**.
 | **Overview** | Library, artwork and build cards |
 | **Emulators** | Library Manager · Artwork · Scraping Sources · Hidden Items · Installed · Custom Emulators · RetroArch |
 | **Look & Feel** | Theme · Wallpaper & Text · Layout · Boot · Sound · Categories · Controller · Touch · Performance |
-| **System** | Permissions · About · Logs · Backup & Restore · Credits |
+| **Accounts** | Permissions · Accounts (RetroAchievements and Steam) · Discord |
+| **System** | About · Logs · Backup & Restore · Credits |
 | **Setup** | Setup Wizard |
 
 Media folders are not in Settings; they are on each column's **Folders** row.
@@ -528,15 +532,15 @@ Media folders are not in Settings; they are on each column's **Folders** row.
 | Problem | Fix |
 |---|---|
 | Home does not open ECHO | *Android Settings ▸ Apps ▸ Default apps ▸ Home app* |
-| A console shows no new games | **△ ▸ Scan This Console**, or turn on *Rescan On Return* |
-| A game will not launch | Check the emulator is installed, then **△ ▸ Settings ▸ Change Emulator** and the card's **Default Emulator** |
-| Games or media went missing after a reinstall or restore | Relink the folder: **Folders ▸ △ ▸ Relink Folder** |
+| A console shows no new games | **≡ ▸ Scan This Console**, or turn on *Rescan On Return* |
+| A game will not launch | Check the emulator is installed, then **≡ ▸ Settings ▸ Change Emulator** and the card's **Default Emulator** |
+| Games or media went missing after a reinstall or restore | Relink the folder: **Folders ▸ ≡ ▸ Relink Folder** |
 | Artwork will not download | Add a key in *Emulators ▸ Scraping Sources* and check the connection |
 | Recently Used is empty | Allow restricted settings for ECHO, then grant usage access (see [Permissions](#permissions)) |
-| No notifications in the top panel | Grant notification access in *System ▸ Permissions* |
+| No notifications in the top panel | Grant notification access in *Accounts ▸ Permissions* |
 | The interface is too big, small or off-centre | *Look & Feel ▸ Layout ▸ Adjust Crossbar Layout* |
 
-For a bug report, open *System ▸ Logs*, press **△** on a log and choose **Share**. Logs are
+For a bug report, open *System ▸ Logs*, press **≡** on a log and choose **Share**. Logs are
 redacted.
 
 ---
