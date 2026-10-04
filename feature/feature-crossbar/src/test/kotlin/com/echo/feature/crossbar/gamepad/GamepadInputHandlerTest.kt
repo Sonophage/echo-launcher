@@ -100,12 +100,14 @@ class GamepadInputHandlerTest {
     }
 
     @Test
-    fun `A coming up ends a hold-to-launch, and only A does`() = runTest {
-        handler.selectReleases.test {
+    fun `A or Y coming up ends a hold, and says which, and no other button does`() = runTest {
+        handler.holdReleases.test {
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_B, KeyEvent.ACTION_UP))
             expectNoEvents()
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_A, KeyEvent.ACTION_UP))
-            awaitItem()
+            assertEquals(GamepadAction.SELECT, awaitItem())
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_Y, KeyEvent.ACTION_UP))
+            assertEquals(GamepadAction.OPEN_SEARCH, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }

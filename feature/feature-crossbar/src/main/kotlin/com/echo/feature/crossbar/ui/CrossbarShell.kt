@@ -1,5 +1,7 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.feature.crossbar.viewmodel.resumeHoldId
+import com.echo.feature.crossbar.viewmodel.resumableFocus
 import com.echo.feature.crossbar.viewmodel.sortRow
 import com.echo.feature.crossbar.viewmodel.OrbKind
 import com.echo.feature.crossbar.viewmodel.orbKind
@@ -1197,6 +1199,7 @@ fun CrossbarShell(
                         leading = hintItem?.let { hintTile(it, hintIcon?.bitmap) },
                         holdMs = holdMsFor(hintItem.takeIf { uiState.focusedPillIndex == null && !uiState.hasBlockingOverlay }),
                         holding = hintItem != null && uiState.launchHold == hintItem.id,
+                        resumeHolding = uiState.resumableFocus()?.let { uiState.launchHold == resumeHoldId(it.id) } == true,
                     )
                 }
             }

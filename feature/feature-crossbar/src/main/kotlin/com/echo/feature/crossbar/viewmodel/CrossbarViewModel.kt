@@ -1332,12 +1332,23 @@ class CrossbarViewModel @Inject constructor(
     private val launchHold = LaunchHold(viewModelScope) { id -> _uiState.update { it.copy(launchHold = id) } }
 
     // true only while a physical A press is being dispatched; a tap on screen launches at once
-    private var selectFromPad = false
+    // the pad button being dispatched right now, A or Y; a tap on screen acts at once
+    private var heldFromPad: GamepadAction? = null
+    private var holdButton: GamepadAction? = null
 
     // starts the launch ring when a pad A press would leave ECHO; false means act now
     internal fun holdToLaunch(item: CrossbarItem, launch: () -> Unit): Boolean {
-        if (!selectFromPad || !item.launchesOut()) return false
+        if (heldFromPad != GamepadAction.SELECT || !item.launchesOut()) return false
+        holdButton = GamepadAction.SELECT
         launchHold.start(item.id, launch)
+        return true
+    }
+
+    // Y Resume is a launch too, so it takes the same hold, on Y
+    private fun holdToResume(item: CrossbarItem, resume: () -> Unit): Boolean {
+        if (heldFromPad != GamepadAction.OPEN_SEARCH) return false
+        holdButton = GamepadAction.OPEN_SEARCH
+        launchHold.start(resumeHoldId(item.id), resume)
         return true
     }
 
@@ -2365,17 +2376,17 @@ class CrossbarViewModel @Inject constructor(
             gamepadInputHandler.actions.collect { action ->
                 markControllerInput()
                 onUserInteraction()
-                if (action != GamepadAction.SELECT) launchHold.release()
-                selectFromPad = action == GamepadAction.SELECT
+                if (action != holdButton) launchHold.release()
+                heldFromPad = action.takeIf { it == GamepadAction.SELECT || it == GamepadAction.OPEN_SEARCH }
                 try {
                     dispatchGamepadAction(action)
                 } finally {
-                    selectFromPad = false
+                    heldFromPad = null
                 }
             }
         }
         viewModelScope.launch {
-            gamepadInputHandler.selectReleases.collect { launchHold.release() }
+            gamepadInputHandler.holdReleases.collect { if (it == holdButton) launchHold.release() }
         }
         viewModelScope.launch {
             gamepadInputHandler.shoulderHolds.collect { hold ->
@@ -2841,8 +2852,10 @@ class CrossbarViewModel @Inject constructor(
                     ?.let(gameDetail::onOpenGameInfo)
             }
 
-            GamepadAction.OPEN_SEARCH -> state.resumableFocus()?.gameId?.let(launching::resumeGame)
-                ?: librarySearch.openSearch(SearchScope.ALL)
+            GamepadAction.OPEN_SEARCH -> state.resumableFocus()?.let { item ->
+                val resume = { item.gameId?.let(launching::resumeGame); Unit }
+                if (!holdToResume(item, resume)) resume()
+            } ?: librarySearch.openSearch(SearchScope.ALL)
 
             GamepadAction.PREV_CATEGORY -> if (state.onLastPlayedHome) recents.stepRecentFilter(-1) else stepHoverPanelPage(-1)
             GamepadAction.NEXT_CATEGORY -> if (state.onLastPlayedHome) recents.stepRecentFilter(+1) else stepHoverPanelPage(+1)

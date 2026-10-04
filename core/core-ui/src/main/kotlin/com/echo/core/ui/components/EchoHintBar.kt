@@ -1,5 +1,6 @@
 package com.echo.core.ui.components
 
+import com.echo.core.ui.design.holdOutline
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.alpha
 import com.echo.core.ui.design.echoPulse
@@ -214,16 +215,29 @@ private fun ActionTab(
             .padding(start = u.dp(20), end = u.dp(20), top = u.dp(6), bottom = u.dp(14)),
     ) {
         secondary?.let { second ->
+            var secondPressing by remember { mutableStateOf(false) }
+            val secondProgress = if (second.holdMs > 0L) holdProgress(second.holding || secondPressing, second.holdMs) else 0f
             Row(
                 Modifier
                     .clip(RoundedCornerShape(u.dp(10)))
-                    .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = second.label) { onAction?.invoke(second.action) }
+                    .then(
+                        if (second.holdMs > 0L && onAction != null) {
+                            Modifier.pressAndHold(second.holdMs, second.label, { secondPressing = it }) { onAction(second.action) }
+                        } else {
+                            Modifier.clickable(enabled = onAction != null, role = Role.Button, onClickLabel = second.label) { onAction?.invoke(second.action) }
+                        }
+                    )
+                    .then(if (!pad && second.holdMs > 0L) Modifier.holdOutline(secondProgress, Color.White, u.dp(2)) else Modifier)
                     .alpha(0.9f),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(u.dp(10)),
             ) {
                 if (pad) style.mappings.iconsFor(listOf(second.action)).firstOrNull()?.let {
-                    ControllerIconGlyph(it, style.family, size = glyphFor(u, 22, 13))
+                    val size = glyphFor(u, 22, 13)
+                    val ring = if (second.holdMs > 0L) {
+                        Modifier.size(size + u.dp(10)).holdRing(secondProgress, Color.White, Color.White.copy(alpha = 0.25f), u.dp(2))
+                    } else Modifier
+                    Box(ring, contentAlignment = Alignment.Center) { ControllerIconGlyph(it, style.family, size = size) }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(u.dp(1))) {
                     Text(second.label, color = Color.White, style = EchoTextStyle.copy(fontSize = u.sp(13), fontWeight = FontWeight.Normal), maxLines = 1)

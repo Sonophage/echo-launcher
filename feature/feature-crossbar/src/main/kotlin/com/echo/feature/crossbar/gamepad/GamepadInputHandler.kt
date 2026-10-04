@@ -66,9 +66,9 @@ class GamepadInputHandler @Inject constructor(
     private val _shoulderHolds = MutableSharedFlow<ShoulderHold>(extraBufferCapacity = 8)
     val shoulderHolds: SharedFlow<ShoulderHold> = _shoulderHolds.asSharedFlow()
 
-    // A coming up; ends a hold-to-launch
-    private val _selectReleases = MutableSharedFlow<Unit>(extraBufferCapacity = 4)
-    val selectReleases: SharedFlow<Unit> = _selectReleases.asSharedFlow()
+    // A or Y coming up; ends a hold-to-launch (A) or a hold-to-resume (Y)
+    private val _holdReleases = MutableSharedFlow<GamepadAction>(extraBufferCapacity = 4)
+    val holdReleases: SharedFlow<GamepadAction> = _holdReleases.asSharedFlow()
 
     private var shoulderJob: Job? = null
     private var shoulderHeld: GamepadAction? = null
@@ -139,7 +139,7 @@ class GamepadInputHandler @Inject constructor(
             KeyEvent.ACTION_UP -> {
                 if (action.isDirectional()) cancelRepeat()
                 if (action.isShoulder()) tabRelease(action, TabSource.KEY)
-                if (action == GamepadAction.SELECT) _selectReleases.tryEmit(Unit)
+                if (action == GamepadAction.SELECT || action == GamepadAction.OPEN_SEARCH) _holdReleases.tryEmit(action)
                 true
             }
             else -> false

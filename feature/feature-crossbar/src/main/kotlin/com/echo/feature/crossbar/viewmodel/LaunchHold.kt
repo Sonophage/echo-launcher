@@ -15,6 +15,9 @@ internal fun CrossbarItem.launchesOut(): Boolean =
 // how long A, or a finger on the launch button, must be held for this item; 0 when it acts at once
 internal fun holdMsFor(item: CrossbarItem?): Long = if (item?.launchesOut() == true) LAUNCH_HOLD_MS else 0L
 
+// the hold id for Y Resume, so its ring is told apart from A Play's on the same game
+internal fun resumeHoldId(itemId: String): String = "resume:$itemId"
+
 // one hold at a time; onChange carries the held item's id, or null when nothing is held
 internal class LaunchHold(private val scope: CoroutineScope, private val onChange: (String?) -> Unit) {
     private var job: Job? = null

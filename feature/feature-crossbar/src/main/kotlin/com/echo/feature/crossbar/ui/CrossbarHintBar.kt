@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.feature.crossbar.viewmodel.LAUNCH_HOLD_MS
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,6 +23,7 @@ fun CrossbarHintBar(
     // over 0, A must be held this long; holding is true while the ring fills
     holdMs: Long = 0L,
     holding: Boolean = false,
+    resumeHolding: Boolean = false,
 ) {
     EchoHintBar(
         items = buildList {
@@ -40,7 +42,7 @@ fun CrossbarHintBar(
                 else listOfNotNull(p.target, p.detail).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null }
             HintAction(p.action, p.verb, detail, holdMs, holding)
         },
-        secondary = prompts.resume?.let { HintAction(it.action, it.verb, it.target) },
+        secondary = prompts.resume?.let { HintAction(it.action, it.verb, it.target, LAUNCH_HOLD_MS, resumeHolding) },
     )
 }
 
