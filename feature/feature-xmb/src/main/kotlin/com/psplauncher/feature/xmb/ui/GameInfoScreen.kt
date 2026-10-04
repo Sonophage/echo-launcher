@@ -59,6 +59,7 @@ import com.psplauncher.feature.xmb.viewmodel.GameInfoStat
 import com.psplauncher.feature.xmb.viewmodel.gameInfoActions
 import com.psplauncher.feature.xmb.viewmodel.gameInfoStats
 import com.psplauncher.feature.xmb.viewmodel.notices
+import com.psplauncher.core.ui.design.PANEL_DESIGN_HEIGHT
 import com.psplauncher.core.ui.design.panelDesignUnits
 
 
@@ -87,7 +88,8 @@ fun GameInfoScreen(
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
     ) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
-        Box(Modifier.fillMaxWidth().height(u.dp(430))) {
+        val drop = if (u.square) (maxHeight - u.dp(PANEL_DESIGN_HEIGHT)) / 2 else 0.dp
+        Box(Modifier.fillMaxWidth().height(u.dp(430) + drop)) {
             val art = item.backdropArt.firstOrNull()
             when {
                 info.isApp -> Box(
@@ -108,7 +110,7 @@ fun GameInfoScreen(
         }
 
         Row(
-            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(280)).fillMaxWidth().height(u.dp(130)),
+            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(280) + drop).fillMaxWidth().height(u.dp(130)),
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(u.dp(48)),
         ) {
@@ -148,7 +150,7 @@ fun GameInfoScreen(
         }
 
         Row(
-            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(426)),
+            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(426) + drop),
             horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
             gameInfoActions(info).forEach { action ->
@@ -168,7 +170,7 @@ fun GameInfoScreen(
         }
 
         Column(
-            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(498)).fillMaxWidth(),
+            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(498) + drop).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
             val media = info.content?.media.orEmpty()

@@ -49,7 +49,7 @@ fun MediaDesignFrame(
 ) {
     val density = LocalDensity.current
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val units = DesignUnits(mediaDesignScale(maxWidth.value, maxHeight.value), density)
+        val units = DesignUnits(mediaDesignScale(maxWidth.value, maxHeight.value), density, panelIsSquare(maxWidth.value, maxHeight.value))
         content(units)
     }
 }

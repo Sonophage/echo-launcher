@@ -1,6 +1,7 @@
 package com.psplauncher.feature.xmb.ui
 
 import com.psplauncher.core.ui.design.DesignUnits
+import com.psplauncher.core.ui.design.MEDIA_DESIGN_HEIGHT
 import com.psplauncher.core.ui.design.MediaDesignFrame
 import com.psplauncher.core.ui.design.mediaAccent
 import com.psplauncher.core.ui.design.mediaGlow
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -58,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.domain.model.primaryArtist
@@ -96,7 +99,8 @@ fun MusicPlayerScreen(
             radius = constraints.maxWidth * 0.7f,
         )))
 
-        Box(Modifier.align(Alignment.TopStart).offset(u.dp(96), u.dp(130)).size(u.dp(400))) {
+        val drop = if (u.square) (maxHeight - u.dp(MEDIA_DESIGN_HEIGHT)) / 2 else 0.dp
+        Box(Modifier.align(Alignment.TopStart).offset(u.dp(96), u.dp(130) + drop).size(u.dp(400))) {
             Record(track?.artUri, u)
             Box(
                 Modifier
@@ -115,7 +119,7 @@ fun MusicPlayerScreen(
             }
         }
 
-        Column(Modifier.align(Alignment.TopStart).offset(u.dp(600), u.dp(128)).width(u.dp(584))) {
+        Column(Modifier.align(Alignment.TopStart).offset(u.dp(600), u.dp(128) + drop).width(u.dp(584))) {
             val position = if (state.queueSize > 1) "  ·  ${state.index + 1} of ${state.queueSize}" else ""
             Text("NOW PLAYING$position".uppercase(), style = u.eyebrow(), maxLines = 1)
             Spacer(Modifier.height(u.dp(18)))
@@ -192,7 +196,7 @@ fun MusicPlayerScreen(
                         }
                         next.durationMs?.let {
                             Text(formatDuration(it), color = Color.White.copy(alpha = 0.45f * fade), fontSize = u.sp(13),
-                                modifier = Modifier.width(u.dp(48)))
+                                maxLines = 1, modifier = Modifier.widthIn(min = u.dp(48)))
                         }
                     }
                 }

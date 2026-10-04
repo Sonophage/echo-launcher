@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -58,6 +59,7 @@ import com.psplauncher.core.domain.model.GamepadAction
 import com.psplauncher.core.ui.components.ContextMenuEyebrow
 import com.psplauncher.core.ui.components.ContextMenuHeader
 import com.psplauncher.core.ui.components.ContextMenuRowLabel
+import com.psplauncher.core.ui.components.HintBarHeight
 import com.psplauncher.core.ui.components.RailCorner
 import com.psplauncher.core.ui.components.RailEdgeGap
 import com.psplauncher.core.ui.components.RailGap
@@ -85,6 +87,7 @@ import com.psplauncher.feature.xmb.viewmodel.removableFromRecent
 import com.psplauncher.core.ui.design.panelDesignUnits
 
 private const val LETTERBOX_RATIO = 2.39f
+private const val SQUARE_FOOT = 64
 
 @Composable
 fun LastPlayedPage(
@@ -128,12 +131,11 @@ private fun Letterbox(
     onArtTapped: () -> Unit,
     onAction: (GamepadAction) -> Unit,
 ) {
-    Box(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().padding(top = stripTop)) {
         Box(
             Modifier
-                .padding(top = stripTop)
                 .fillMaxWidth()
-                .height(stripHeight)
+                .then(if (u.square) Modifier.weight(1f) else Modifier.height(stripHeight))
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onArtTapped),
         ) {
             ItemArt(item, u.dp(150), BiasAlignment(0f, -0.2f))
@@ -153,17 +155,16 @@ private fun Letterbox(
                 }
             }
         }
-        item?.progressFraction?.let { p ->
-            Box(
-                Modifier.padding(top = stripTop + stripHeight, start = u.dp(80), end = u.dp(80))
-                    .fillMaxWidth().height(u.dp(3)).background(Color.White.copy(alpha = 0.15f)),
-            ) {
-                Box(Modifier.fillMaxWidth(p.coerceIn(0f, 1f)).fillMaxHeight().background(Color.White))
+        Box(Modifier.padding(start = u.dp(80), end = u.dp(80)).fillMaxWidth().height(u.dp(3))) {
+            item?.progressFraction?.let { p ->
+                Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.15f))) {
+                    Box(Modifier.fillMaxWidth(p.coerceIn(0f, 1f)).fillMaxHeight().background(Color.White))
+                }
             }
         }
         if (item != null) {
             Row(
-                Modifier.padding(top = stripTop + stripHeight + u.dp(28), start = u.dp(80), end = u.dp(80)).fillMaxWidth(),
+                Modifier.padding(top = u.dp(25), start = u.dp(80), end = u.dp(80)).fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(u.dp(30)),
             ) {
@@ -181,6 +182,7 @@ private fun Letterbox(
                 }
             }
         }
+        if (u.square) Spacer(Modifier.height(HintBarHeight + u.dp(SQUARE_FOOT)))
     }
 }
 
@@ -224,7 +226,7 @@ private fun RecentList(
 
         Column(
             Modifier
-                .padding(start = RailEdgeGap, top = stripBandHeight(rememberStripUnits()) + 8.dp, bottom = u.dp(70))
+                .padding(start = RailEdgeGap, top = stripBandHeight(rememberStripUnits()) + 8.dp + if (u.square) StripHeight else 0.dp, bottom = u.dp(70))
                 .width(u.dp(380))
                 .fillMaxHeight(),
         ) {
