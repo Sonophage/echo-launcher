@@ -1325,6 +1325,8 @@ class CrossbarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
 
+    internal val gallery = CrossbarGallery(this, _uiState, viewModelScope, photoRepository, photoScanner, photoIntentResolver, menuSound)
+
     internal val video = CrossbarVideo(this, _uiState, viewModelScope, videoRepository, videoScanner, videoIntentResolver, menuSound)
 
     internal val music = CrossbarMusic(this, _uiState, viewModelScope, musicRepository, musicPlayer, musicScanner, menuSound, artworkAccent)
@@ -1375,7 +1377,7 @@ class CrossbarViewModel @Inject constructor(
         observeMediaLaunch()
         music.observeMusic()
         video.observeVideo()
-        observePhoto()
+        gallery.observePhoto()
         observeBooks()
         observeMediaCovers()
         observeContinueBook()
@@ -1920,18 +1922,18 @@ class CrossbarViewModel @Inject constructor(
                     PhotoNav.Folders -> mediaRootRepository.roots(MediaRootKind.PHOTO).collect {
                         _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.PHOTO)) }
                     }
-                    PhotoNav.Root -> _uiState.update { it.copy(currentItems = photoRootItems()) }
+                    PhotoNav.Root -> _uiState.update { it.copy(currentItems = gallery.photoRootItems()) }
                     PhotoNav.AllPhotos -> photoRepository.observeAllPhotos().collect { photos ->
-                        setPhotoItems(photos, emptyAllPhotosItem())
+                        gallery.setPhotoItems(photos, gallery.emptyAllPhotosItem())
                     }
                     PhotoNav.Favorites -> photoRepository.observeFavorites().collect { photos ->
-                        setPhotoItems(photos, emptyFavoritePhotosItem())
+                        gallery.setPhotoItems(photos, gallery.emptyFavoritePhotosItem())
                     }
                     PhotoNav.Albums -> photoRepository.observeLibraries().collect { libs ->
-                        _uiState.update { it.copy(currentItems = photoAlbumItems(libs)) }
+                        _uiState.update { it.copy(currentItems = gallery.photoAlbumItems(libs)) }
                     }
                     is PhotoNav.Library -> photoRepository.observePhotosByLibrary(nav.id).collect { photos ->
-                        setPhotoItems(photos, emptyLibraryPhotosItem())
+                        gallery.setPhotoItems(photos, gallery.emptyLibraryPhotosItem())
                     }
                 }
                 BuiltInCategory.LIBRARY -> when (val nav = _uiState.value.booksNav) {
@@ -2041,7 +2043,7 @@ class CrossbarViewModel @Inject constructor(
     private fun currentAddActions(): List<CrossbarItem> = when (currentCategory()?.id) {
         BuiltInCategory.MUSIC   -> music.musicAddActions()
         BuiltInCategory.VIDEO   -> video.videoAddActions()
-        BuiltInCategory.PHOTO   -> photoAddActions()
+        BuiltInCategory.PHOTO   -> gallery.photoAddActions()
         BuiltInCategory.LIBRARY -> booksAddActions()
         else -> emptyList()
     }
@@ -2159,7 +2161,7 @@ class CrossbarViewModel @Inject constructor(
         val sub = when {
             catId == BuiltInCategory.MUSIC -> "music_${music.musicNavKey(s.musicNav)}"
             catId == BuiltInCategory.VIDEO -> "video_${video.videoNavKey(s.videoNav)}"
-            catId == BuiltInCategory.PHOTO -> "photo_${photoNavKey(s.photoNav)}"
+            catId == BuiltInCategory.PHOTO -> "photo_${gallery.photoNavKey(s.photoNav)}"
             catId == BuiltInCategory.LIBRARY -> "books_${booksNavKey(s.booksNav)}"
             catId == BuiltInCategory.SETTINGS -> "settings_root"
             s.selectedPlatformId != null   -> "plat_${s.selectedPlatformId}"
@@ -2386,36 +2388,15 @@ class CrossbarViewModel @Inject constructor(
 
     private fun closeBooksView() = openBooksView(BooksNav.Root)
 
-    private fun observePhoto() {
-        viewModelScope.launch {
-            photoRepository.observeFavorites().collect { favorites ->
-                _uiState.update { it.copy(photoFavoriteCount = favorites.size) }
-                if (currentCategory()?.id == BuiltInCategory.PHOTO && _uiState.value.photoNav == PhotoNav.Root) {
-                    _uiState.update { it.copy(currentItems = photoRootItems()) }
-                }
-            }
-        }
-        viewModelScope.launch {
-            photoRepository.observeLibraries().collect { libraries ->
-                _uiState.update { it.copy(photoLibraries = libraries) }
-                if (currentCategory()?.id == BuiltInCategory.PHOTO &&
-                    _uiState.value.photoNav == PhotoNav.Root
-                ) {
-                    _uiState.update { it.copy(currentItems = photoRootItems()) }
-                }
-            }
-        }
-    }
-
     @Suppress("QueryPermissionsNeeded")
-    private val cameraAvailable: Boolean by lazy {
+    internal val cameraAvailable: Boolean by lazy {
         runCatching {
             Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
                 .resolveActivity(context.packageManager) != null
         }.getOrDefault(false)
     }
 
-    private fun launchCamera() {
+    internal fun launchCamera() {
         runCatching {
             context.startActivity(
                 Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
@@ -2424,179 +2405,10 @@ class CrossbarViewModel @Inject constructor(
         }.onFailure { Timber.w(it, "Could not launch a camera app") }
     }
 
-    private fun photoAddActions(): List<CrossbarItem> = buildList {
-        if (_uiState.value.photoLibraries.none { it.lastScannedAt != null }) add(addPhotoLibraryItem())
-        add(addPhotoAppsItem())
-    }
-
-    private suspend fun photoRootItems(): List<CrossbarItem> =
-        libraryColumn(
-            mediaColumn(_uiState.value.photoRootSections(cameraAvailable), photoAppItems(), photoAddActions()),
-            SearchScope.PHOTOS,
-        )
-
-    private fun addPhotoLibraryItem(): CrossbarItem = CrossbarItem(
-        id       = ADD_PHOTO_LIBRARY_ITEM_ID,
-        title    = "Add Photo Library",
-        subtitle = "Set your Photo root folder in Settings to get started",
-        type     = CrossbarItemType.ADD_ACTION,
-    )
-
-    private suspend fun photoAppItems(): List<CrossbarItem> {
+    internal suspend fun photoAppItems(): List<CrossbarItem> {
         val apps = appCategoryRepository.appsForCategory(PHOTO_APPS_CATEGORY_ID)
             .notHiddenAt(HideLocationType.CATEGORY, PHOTO_APPS_CATEGORY_ID)
         return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
-    }
-
-    private fun addPhotoAppsItem(): CrossbarItem = CrossbarItem(
-        id       = ADD_PHOTO_APPS_ITEM_ID,
-        title    = "Add Photo Apps",
-        subtitle = "Pick installed apps to show here",
-        type     = CrossbarItemType.ADD_ACTION,
-    )
-
-    private fun photoAlbumItems(libraries: List<com.echo.core.domain.model.PhotoLibrary>): List<CrossbarItem> {
-        val rows = libraries.map { lib ->
-            CrossbarItem(
-                id       = "plib_${lib.id}",
-                title    = lib.displayName,
-                subtitle = countLabel(lib.photoCount, "photo", "photos"),
-                type     = CrossbarItemType.PHOTO_FOLDER,
-            )
-        }
-        return rows.ifEmpty {
-            listOf(
-                CrossbarItem(
-                    id = EMPTY_CATEGORY_ITEM_ID,
-                    title = "No albums yet",
-                    subtitle = "Add a folder from the Folders row",
-                    type = CrossbarItemType.EMPTY,
-                ),
-            )
-        }
-    }
-
-    private fun List<com.echo.core.domain.model.Photo>.toPhotoItems(): List<CrossbarItem> =
-        map { photo ->
-            CrossbarItem(
-                id       = "pho_${photo.id}",
-                title    = photo.displayName,
-                subtitle = photoRowSubtitle(photo.displayDateMs, photo.resolutionLabel, photo.sizeBytes),
-                type     = CrossbarItemType.PHOTO_FILE,
-                mediaUri = photo.uri,
-                mimeType = photo.mimeType,
-                coverUri = photo.thumbnailUri,
-            )
-        }
-
-    private fun setPhotoItems(
-        photos: List<com.echo.core.domain.model.Photo>,
-        emptyItem: CrossbarItem,
-    ) {
-        val items = if (photos.isEmpty()) listOf(emptyItem) else photos.toPhotoItems()
-        _uiState.update { it.copy(currentItems = items) }
-    }
-
-    private fun emptyFavoritePhotosItem(): CrossbarItem = CrossbarItem(
-        id       = EMPTY_CATEGORY_ITEM_ID,
-        title    = "No favourites yet",
-        subtitle = "Add one from a photo's info panel",
-        type     = CrossbarItemType.EMPTY,
-    )
-
-    private fun emptyAllPhotosItem(): CrossbarItem = CrossbarItem(
-        id       = EMPTY_CATEGORY_ITEM_ID,
-        title    = "No photos found",
-        subtitle = "Add a photo library and scan it",
-        type     = CrossbarItemType.EMPTY,
-    )
-
-    private fun emptyLibraryPhotosItem(): CrossbarItem = CrossbarItem(
-        id       = EMPTY_CATEGORY_ITEM_ID,
-        title    = "No photos in this album",
-        subtitle = "Scan it from its ⚙ Options menu",
-        type     = CrossbarItemType.EMPTY,
-    )
-
-    private fun handlePhotoSelection(item: CrossbarItem): Boolean = when {
-        item.id == SEARCH_ITEM_ID -> { openSearch(SearchScope.PHOTOS); true }
-        item.id == ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openAddMenu(); true }
-        item.id == ALL_PHOTOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.AllPhotos); true }
-        item.id == PHOTO_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Albums); true }
-        item.id == PHOTO_FAVORITES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openPhotoView(PhotoNav.Favorites); true }
-        item.id == CAMERA_ITEM_ID -> { menuSound.play(MenuSound.LAUNCH); launchCamera(); true }
-        item.id == ADD_PHOTO_LIBRARY_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT)
-            openMediaFolders(MediaRootKind.PHOTO)
-            true
-        }
-        item.id == ADD_PHOTO_APPS_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT)
-            openAppPicker(AppPickerTarget.CategoryShortcuts(PHOTO_APPS_CATEGORY_ID), "Add Photo Apps")
-            true
-        }
-
-        item.packageName != null -> {
-            menuSound.play(MenuSound.LAUNCH)
-            launchAppWithDisc(item.packageName, item.shelfCoverArt)
-            true
-        }
-        item.type == CrossbarItemType.PHOTO_FOLDER && item.id.startsWith("plib_") -> {
-            menuSound.play(MenuSound.SELECT)
-            openPhotoView(PhotoNav.Library(item.id.removePrefix("plib_"), item.title))
-            true
-        }
-        item.type == CrossbarItemType.PHOTO_FILE && item.id.startsWith("pho_") -> {
-            menuSound.play(MenuSound.SELECT)
-            openPhoto(item.id.removePrefix("pho_"))
-            true
-        }
-        else -> false
-    }
-
-    private fun photoNavKey(nav: PhotoNav): String = when (nav) {
-        PhotoNav.Folders    -> "folders"
-        PhotoNav.Root       -> "root"
-        PhotoNav.AllPhotos  -> "all"
-        PhotoNav.Albums     -> "albums"
-        PhotoNav.Favorites  -> "favorites"
-        is PhotoNav.Library -> "library_${nav.id}"
-    }
-
-    private fun openPhotoView(nav: PhotoNav) = navigateRememberingCursor { it.copy(photoNav = nav) }
-
-    private fun closePhotoView() = openPhotoView(PhotoNav.Root)
-
-    private fun openPhoto(photoId: String) {
-        viewModelScope.launch {
-            val open = photoOpenFor(photoRepository.observeDefaultViewer().first())
-            val photo = if (open == PhotoOpen.BuiltIn) null else photoRepository.getPhoto(photoId)
-            if (photo == null) {
-                openPhotoViewer(photoId)
-                return@launch
-            }
-            val error = photoIntentResolver.launch(photo, (open as? PhotoOpen.App)?.packageName)
-            if (error != null) {
-                _uiState.update { it.copy(infoDialog = InfoDialogState(title = photo.displayName, message = error)) }
-            }
-        }
-    }
-
-    private fun openPhotoViewer(photoId: String, wallpaperPreview: Boolean = false) {
-        val nav = _uiState.value.photoNav
-        val libraryId = (nav as? PhotoNav.Library)?.id
-        _uiState.update {
-            it.copy(activePhotoViewer = PhotoViewerRequest(photoId, libraryId, openWallpaperPreview = wallpaperPreview,
-                favoritesOnly = nav == PhotoNav.Favorites))
-        }
-    }
-
-    fun onClosePhotoViewer() {
-        _uiState.update { it.copy(activePhotoViewer = null, pendingPhotoViewerAction = null) }
-    }
-
-    fun consumePhotoViewerAction() {
-        _uiState.update { it.copy(pendingPhotoViewerAction = null) }
     }
 
     private fun openBookContextMenu(item: CrossbarItem): Boolean {
@@ -2620,72 +2432,6 @@ class CrossbarViewModel @Inject constructor(
 
             "book_remove_recent" -> appAction { bookRepository.clearBookLastOpened(bookId) }
             "book_remove" -> appAction { bookRepository.removeBook(bookId) }
-        }
-    }
-
-    private fun openPhotoContextMenu(item: CrossbarItem): Boolean {
-        if (item.menuHostCategory(currentCategory()?.id) != BuiltInCategory.PHOTO) return false
-        return when {
-            item.type == CrossbarItemType.PHOTO_FILE && item.id.startsWith("pho_") -> {
-                openPhotoFileContextMenu(item.id.removePrefix("pho_"), item.title); true
-            }
-            item.type == CrossbarItemType.PHOTO_FOLDER && item.id.startsWith("plib_") -> {
-                openPhotoLibraryContextMenu(item.id.removePrefix("plib_"), item.title); true
-            }
-            item.packageName != null -> {
-                openAppContextMenu(item, categoryIdOverride = PHOTO_APPS_CATEGORY_ID); true
-            }
-            else -> false
-        }
-    }
-
-    private fun openPhotoFileContextMenu(photoId: String, title: String) {
-        val items = photoFileContextMenuItems()
-        _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = items), photoFileId = photoId)) }
-    }
-
-    private fun handlePhotoFileAction(photoId: String, itemId: String) {
-        when (itemId) {
-            "photo_open"          -> openPhoto(photoId)
-
-            "photo_set_wallpaper" -> openPhotoViewer(photoId, wallpaperPreview = true)
-            "photo_remove"        -> appAction { photoRepository.removePhoto(photoId) }
-        }
-    }
-
-    private fun openPhotoLibraryContextMenu(libraryId: String, name: String) {
-        val items = photoLibraryContextMenuItems()
-        _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = name, rows = items), photoLibraryId = libraryId)) }
-    }
-
-    private fun handlePhotoLibraryAction(libraryId: String, itemId: String) {
-        when (itemId) {
-            "photo_lib_open" -> {
-                val name = _uiState.value.photoLibraries.firstOrNull { it.id == libraryId }?.displayName.orEmpty()
-                openPhotoView(PhotoNav.Library(libraryId, name))
-            }
-            "photo_lib_scan" -> appAction { scanPhotoLibrary(libraryId) }
-            "photo_lib_manage" -> openMediaFolders(MediaRootKind.PHOTO)
-        }
-    }
-
-    private suspend fun scanPhotoLibrary(libraryId: String) {
-        val library = photoRepository.getLibrary(libraryId) ?: return
-        val taskId = "photo_scan_${library.id}"
-        val notifier = BackgroundTaskNotifier(context)
-        notifier.running(taskId, "Scanning ${library.displayName}", null)
-        val existing = photoRepository.getPhotosForLibrary(library.id)
-        photoScanner.scan(library, deep = false, existing = existing).collect { result ->
-            when (result) {
-                is com.echo.feature.library.scanner.PhotoScanResult.Progress ->
-                    notifier.running(taskId, "Scanning ${result.libraryName}", null)
-                is com.echo.feature.library.scanner.PhotoScanResult.Complete -> {
-                    photoRepository.replacePhotosForLibrary(result.libraryId, result.photos, System.currentTimeMillis())
-                    notifier.complete(taskId, "Scanned ${library.displayName}", "${result.photos.size} photos")
-                }
-                is com.echo.feature.library.scanner.PhotoScanResult.Error ->
-                    notifier.failed(taskId, "Scan failed: ${library.displayName}", result.message)
-            }
         }
     }
 
@@ -2888,7 +2634,7 @@ class CrossbarViewModel @Inject constructor(
         val libraryId = searchPhotos.firstOrNull { it.id == photoId }?.libraryId ?: return
         val name = _uiState.value.photoLibraries.firstOrNull { it.id == libraryId }?.displayName.orEmpty()
         _uiState.update { it.copy(photoNav = PhotoNav.Library(libraryId, name)) }
-        openPhoto(photoId)
+        gallery.openPhoto(photoId)
     }
 
     private fun openSearchedTrack(row: CrossbarItem) {
@@ -3028,7 +2774,7 @@ class CrossbarViewModel @Inject constructor(
     internal fun openMediaFolders(kind: MediaRootKind) = when (kind) {
         MediaRootKind.MUSIC -> music.openMusicView(MusicNav.Folders)
         MediaRootKind.VIDEO -> video.openVideoView(VideoNav.Folders)
-        MediaRootKind.PHOTO -> openPhotoView(PhotoNav.Folders)
+        MediaRootKind.PHOTO -> gallery.openPhotoView(PhotoNav.Folders)
         MediaRootKind.BOOK  -> openBooksView(BooksNav.Folders)
     }
 
@@ -3111,7 +2857,7 @@ class CrossbarViewModel @Inject constructor(
         when (kind) {
             MediaRootKind.MUSIC -> music.scanMusicFolder(entryId)
             MediaRootKind.VIDEO -> video.scanVideoLibrary(entryId, deep)
-            MediaRootKind.PHOTO -> scanPhotoLibrary(entryId)
+            MediaRootKind.PHOTO -> gallery.scanPhotoLibrary(entryId)
             MediaRootKind.BOOK  -> scanBookLibrary(entryId, deep)
         }
     }
@@ -3418,9 +3164,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun photoAlbumSiblings(): List<CrossbarItem> =
-        _uiState.value.photoLibraries.map { CrossbarItem(id = "plib_${it.id}", title = it.displayName, type = CrossbarItemType.PHOTO_FOLDER) }
-
     private fun computeDrillSiblings(category: Category?): Pair<List<CrossbarItem>, Int> {
         val s = _uiState.value
 
@@ -3479,7 +3222,7 @@ class CrossbarViewModel @Inject constructor(
 
         if (s.photoNav != PhotoNav.Root) {
             (s.photoNav as? PhotoNav.Library)?.let { nav ->
-                val albums = photoAlbumSiblings()
+                val albums = gallery.photoAlbumSiblings()
                 if (albums.isNotEmpty()) return albums to albums.indexOfFirst { it.id == "plib_${nav.id}" }.coerceAtLeast(0)
             }
             val sibs = _uiState.value.photoRootSections(cameraAvailable).filter {
@@ -5046,11 +4789,11 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         if (menu.photoFileId != null) {
-            handlePhotoFileAction(menu.photoFileId, itemId)
+            gallery.handlePhotoFileAction(menu.photoFileId, itemId)
             return
         }
         if (menu.photoLibraryId != null) {
-            handlePhotoLibraryAction(menu.photoLibraryId, itemId)
+            gallery.handlePhotoLibraryAction(menu.photoLibraryId, itemId)
             return
         }
         if (menu.videoPlaylistId != null) {
@@ -5464,7 +5207,7 @@ class CrossbarViewModel @Inject constructor(
             item != null && music.openMusicContextMenu(item) -> Unit
             item != null && video.openVideoContextMenu(item) -> Unit
             item != null && openBookContextMenu(item) -> Unit
-            item != null && openPhotoContextMenu(item) -> Unit
+            item != null && gallery.openPhotoContextMenu(item) -> Unit
             item?.gameId != null -> openGameContextMenu(item)
             item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu()
             item?.platformId != null -> openPlatformContextMenu(item.platformId)
@@ -6364,7 +6107,7 @@ class CrossbarViewModel @Inject constructor(
         return when (item.menuHostCategory(currentCategory()?.id)) {
             BuiltInCategory.MUSIC   -> music.handleMusicSelection(item)
             BuiltInCategory.VIDEO   -> video.handleVideoSelection(item)
-            BuiltInCategory.PHOTO   -> handlePhotoSelection(item)
+            BuiltInCategory.PHOTO   -> gallery.handlePhotoSelection(item)
             BuiltInCategory.LIBRARY -> handleBooksSelection(item)
             else -> false
         }
@@ -6425,8 +6168,8 @@ class CrossbarViewModel @Inject constructor(
             DrillOutStep.VIDEO_COLLECTION_CHILD -> video.openVideoView(VideoNav.Collections)
             DrillOutStep.VIDEO -> video.closeVideoView()
 
-            DrillOutStep.PHOTO_LIBRARY -> openPhotoView(PhotoNav.Albums)
-            DrillOutStep.PHOTO -> closePhotoView()
+            DrillOutStep.PHOTO_LIBRARY -> gallery.openPhotoView(PhotoNav.Albums)
+            DrillOutStep.PHOTO -> gallery.closePhotoView()
             DrillOutStep.LIBRARY_SERIES -> openBooksView(BooksNav.SeriesList)
             DrillOutStep.LIBRARY_SHELF -> openBooksView(BooksNav.Shelves)
             DrillOutStep.LIBRARY -> closeBooksView()
@@ -6628,7 +6371,7 @@ class CrossbarViewModel @Inject constructor(
             item != null && music.openMusicContextMenu(item) -> Unit
             item != null && video.openVideoContextMenu(item) -> Unit
             item != null && openBookContextMenu(item) -> Unit
-            item != null && openPhotoContextMenu(item) -> Unit
+            item != null && gallery.openPhotoContextMenu(item) -> Unit
             item?.gameId != null -> openGameContextMenu(item)
             item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu()
             item?.platformId != null -> openPlatformContextMenu(item.platformId)
@@ -8128,7 +7871,7 @@ class CrossbarViewModel @Inject constructor(
 
         internal const val ALL_PHOTOS_ITEM_ID = "all_photos"
         internal const val CAMERA_ITEM_ID = "photo_camera"
-        private const val ADD_PHOTO_LIBRARY_ITEM_ID = "add_photo_library"
+        internal const val ADD_PHOTO_LIBRARY_ITEM_ID = "add_photo_library"
         internal const val PHOTO_ALBUMS_ITEM_ID = "photo_albums"
         internal const val PHOTO_FAVORITES_ITEM_ID = "photo_favorites"
         internal const val OPEN_READER_ITEM_ID = "library_open_reader"
@@ -8149,8 +7892,8 @@ class CrossbarViewModel @Inject constructor(
         private const val NETWORK_CATEGORY_ID = "network"
 
         private const val LIBRARY_APPS_CATEGORY_ID = BuiltInCategory.LIBRARY
-        private const val ADD_PHOTO_APPS_ITEM_ID = "add_photo_apps"
-        private const val PHOTO_APPS_CATEGORY_ID = "photos"
+        internal const val ADD_PHOTO_APPS_ITEM_ID = "add_photo_apps"
+        internal const val PHOTO_APPS_CATEGORY_ID = "photos"
 
         internal const val MEMORY_CARD_ASSET_URI =
             "file:///android_asset/systems/physical-media/_default.png"
