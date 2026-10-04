@@ -238,6 +238,12 @@ fun DisplaySettingsScreen(
 
                 if (state.customWallpaperPath == null || state.waveOverWallpaper) {
                     SettingsPickerRow(
+                        label    = "Wave Design",
+                        options  = com.echo.core.ui.wave.WaveDesign.entries.map { SettingsPickerOption(it.label) },
+                        selectedIndex = state.waveDesign.ordinal,
+                        onPick   = { viewModel.setWaveDesign(com.echo.core.ui.wave.WaveDesign.entries[it]) },
+                    )
+                    SettingsPickerRow(
                         label    = "Wave Style",
                         options  = viewModel.waveStyleOptions.map { SettingsPickerOption(it.second) },
                         selectedIndex = viewModel.waveStyleOptions.indexOfFirst { it.first == state.waveStyle },

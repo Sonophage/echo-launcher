@@ -195,7 +195,10 @@ fun CrossbarShellContainer(
 
     Box(Modifier.fillMaxSize()) {
     val playbackPositions = remember(viewModel) { PlaybackPositions(viewModel.musicPositionMs, viewModel.externalPositionMs) }
-    CompositionLocalProvider(LocalPlaybackPositions provides playbackPositions) {
+    CompositionLocalProvider(
+        LocalPlaybackPositions provides playbackPositions,
+        com.echo.core.ui.wave.LocalWaveDesign provides uiState.waveDesign,
+    ) {
     CrossbarShell(
         uiState = uiState,
         onCategorySelected = viewModel::onCategoryTapped,

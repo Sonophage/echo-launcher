@@ -505,6 +505,8 @@ data class CrossbarUiState(
 
     val waveStyle: WaveStyle = WaveStyle.ANIMATED,
 
+    val waveDesign: com.echo.core.ui.wave.WaveDesign = com.echo.core.ui.wave.WaveDesign.PSP,
+
     val respectBatterySaver: Boolean = true,
 
     val waveOverWallpaper: Boolean = false,
@@ -4444,9 +4446,13 @@ class CrossbarViewModel @Inject constructor(
                 val style = runCatching {
                     WaveStyle.valueOf(prefs[KEY_WAVE_STYLE] ?: WaveStyle.ANIMATED.name)
                 }.getOrDefault(WaveStyle.ANIMATED)
+                val design = runCatching {
+                    com.echo.core.ui.wave.WaveDesign.valueOf(prefs[KEY_WAVE_DESIGN] ?: com.echo.core.ui.wave.WaveDesign.PSP.name)
+                }.getOrDefault(com.echo.core.ui.wave.WaveDesign.PSP)
                 _uiState.update {
                     it.copy(
                         waveStyle            = style,
+                        waveDesign           = design,
                         respectBatterySaver  = prefs[KEY_RESPECT_BATTERY] ?: true,
                         waveOverWallpaper    = prefs[KEY_WAVE_OVER_WALLPAPER] ?: false,
                         thermalThrottleAware = prefs[KEY_THERMAL_AWARE] ?: true,
@@ -4458,6 +4464,7 @@ class CrossbarViewModel @Inject constructor(
 
     companion object {
         private val KEY_WAVE_STYLE        = stringPreferencesKey("display_wave_style")
+        private val KEY_WAVE_DESIGN       = stringPreferencesKey("display_wave_design")
 
         private val KEY_RESPECT_BATTERY   = booleanPreferencesKey("display_battery_saver")
 

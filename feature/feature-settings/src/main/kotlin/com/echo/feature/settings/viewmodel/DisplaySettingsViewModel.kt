@@ -1,5 +1,6 @@
 package com.echo.feature.settings.viewmodel
 
+import com.echo.core.ui.wave.WaveDesign
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
@@ -47,6 +48,7 @@ import java.io.File
 import javax.inject.Inject
 
 private val KEY_WAVE_STYLE         = stringPreferencesKey("display_wave_style")
+private val KEY_WAVE_DESIGN        = stringPreferencesKey("display_wave_design")
 private val KEY_SHOW_BOOT          = booleanPreferencesKey("display_show_boot")
 private val KEY_BOOT_ON_RESUME     = booleanPreferencesKey("display_boot_on_resume")
 private val KEY_THERMAL_AWARE      = booleanPreferencesKey("display_thermal_aware")
@@ -111,6 +113,8 @@ private data class Transient(
 
 data class DisplaySettingsUiState(
     val waveStyle: WaveStyle = WaveStyle.ANIMATED,
+
+    val waveDesign: WaveDesign = WaveDesign.PSP,
     val showBootSequence: Boolean = true,
     val showBootOnResume: Boolean = false,
     val thermalThrottleAware: Boolean = true,
@@ -218,6 +222,9 @@ class DisplaySettingsViewModel @Inject constructor(
             waveStyle            = runCatching {
                 WaveStyle.valueOf(prefs[KEY_WAVE_STYLE] ?: WaveStyle.ANIMATED.name)
             }.getOrDefault(WaveStyle.ANIMATED),
+            waveDesign           = runCatching {
+                WaveDesign.valueOf(prefs[KEY_WAVE_DESIGN] ?: WaveDesign.PSP.name)
+            }.getOrDefault(WaveDesign.PSP),
             showBootSequence     = prefs[KEY_SHOW_BOOT]       ?: true,
             showBootOnResume     = prefs[KEY_BOOT_ON_RESUME]  ?: false,
             thermalThrottleAware = prefs[KEY_THERMAL_AWARE]   ?: true,
@@ -303,6 +310,8 @@ class DisplaySettingsViewModel @Inject constructor(
         else UiMediaLimits.AUDIO_MIME.toTypedArray()
 
     fun setWaveStyle(style: WaveStyle) = save { it[KEY_WAVE_STYLE] = style.name }
+
+    fun setWaveDesign(design: WaveDesign) = save { it[KEY_WAVE_DESIGN] = design.name }
 
     val waveStyleOptions: List<Pair<WaveStyle, String>> =
         WaveStyle.entries.map { it to (WAVE_STYLE_LABELS[it] ?: it.name) }

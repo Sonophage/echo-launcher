@@ -477,6 +477,7 @@ open class BackupManager @Inject constructor(
     private val BACKED_UP_STRING_KEYS = listOf(
 
         stringPreferencesKey("display_wave_style"),
+        stringPreferencesKey("display_wave_design"),
 
         stringPreferencesKey("display_gameboot_mode"),
         stringPreferencesKey("display_color_scheme"),

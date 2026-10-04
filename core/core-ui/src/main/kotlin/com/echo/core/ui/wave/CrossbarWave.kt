@@ -77,6 +77,12 @@ fun WaveLayers(
         }
     }
 
+    val ripples = LocalWaveDesign.current.rippleSpec()
+    if (ripples != null) {
+        EchoWave(ripples, { time.value }, alphaScale, ampScale, tint)
+        return
+    }
+
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         ShaderWave({ time.value }, alphaScale, ampScale, tint)
     } else {
