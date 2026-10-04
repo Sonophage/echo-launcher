@@ -9,7 +9,6 @@ import com.psplauncher.core.data.database.entity.AccountAchievementEntity
 import com.psplauncher.core.data.database.entity.AccountAchievementSetEntity
 import com.psplauncher.core.data.database.entity.ProviderGameLinkEntity
 import com.psplauncher.core.domain.achievement.AchievementProvider
-import com.psplauncher.core.domain.achievement.ShibaTier
 import com.psplauncher.feature.achievements.api.ProviderSyncResult
 import com.psplauncher.feature.achievements.provider.steam.SteamAppListResolver
 import com.psplauncher.feature.achievements.api.SyncedCoin
@@ -53,23 +52,19 @@ class AchievementRepositoryTest {
         coEvery { setDao.getAllSets() } returns emptyList()
     }
 
-    private fun coin(id: String, tier: ShibaTier, earned: Boolean) =
+    private fun coin(id: String, earned: Boolean) =
         SyncedCoin(
-            id, id, "", tier, 0.0, null,
-            isHidden = false, isEarned = earned, earnedHardcore = earned,
+            id, id, "", 0.0, null,
+            isHidden = false, isEarned = earned,
             earnedAt = if (earned) 1L else null,
         )
 
     private fun setEntity(
         provider: String,
         providerGameId: String,
-        bronzeEarned: Int = 0, silverEarned: Int = 0, goldEarned: Int = 0,
-        bronzeTotal: Int = 0, silverTotal: Int = 0, goldTotal: Int = 0,
         lastSyncedAt: Long? = null,
     ) = AccountAchievementSetEntity(
         provider = provider, providerGameId = providerGameId, title = "Some Game",
-        bronzeTotal = bronzeTotal, silverTotal = silverTotal, goldTotal = goldTotal,
-        bronzeEarned = bronzeEarned, silverEarned = silverEarned, goldEarned = goldEarned,
         lastSyncedAt = lastSyncedAt,
     )
 
@@ -96,7 +91,7 @@ class AchievementRepositoryTest {
     fun `one query feeds every set its own achievements, even sets sharing a game id across providers`() = runTest {
         fun row(provider: String, gameId: String, id: String) = AccountAchievementEntity(
             provider = provider, providerGameId = gameId, providerAchievementId = id,
-            title = id, description = "", tier = "BRONZE", globalRarity = 0.0,
+            title = id, description = "", tier = "", globalRarity = 0.0,
         )
         every { coinDao.observeAll() } returns flowOf(
             listOf(row("STEAM", "440", "s1"), row("RETRO_ACHIEVEMENTS", "440", "r1"), row("STEAM", "440", "s2"), row("STEAM", "620", "p1")),
@@ -115,12 +110,12 @@ class AchievementRepositoryTest {
             listOf(
                 AccountAchievementEntity(
                     provider = "STEAM", providerGameId = "440", providerAchievementId = "a",
-                    title = "A", description = "", tier = "BRONZE",
+                    title = "A", description = "", tier = "",
                     globalRarity = SyncedCoin.RARITY_UNAVAILABLE,
                 ),
                 AccountAchievementEntity(
                     provider = "STEAM", providerGameId = "440", providerAchievementId = "b",
-                    title = "B", description = "", tier = "GOLD", globalRarity = 0.0,
+                    title = "B", description = "", tier = "", globalRarity = 0.0,
                     isEarned = true, earnedAt = 7L,
                 ),
             ),
@@ -138,7 +133,7 @@ class AchievementRepositoryTest {
     fun `a sync stores each achievement's RetroAchievements points`() = runTest {
         coEvery { retroSource.fetch("319") } returns ProviderSyncResult.Success(
             "319",
-            listOf(coin("1", ShibaTier.SILVER, earned = true).copy(points = 25)),
+            listOf(coin("1", earned = true).copy(points = 25)),
         )
         val coinsSlot = slot<List<AccountAchievementEntity>>()
         coEvery { coinDao.replaceSet(any(), capture(coinsSlot)) } just Runs
@@ -149,17 +144,18 @@ class AchievementRepositoryTest {
     }
 
     @Test
-    fun `syncGame writes coins and a summary with per-tier counts`() = runTest {
+    fun `syncGame stores every achievement's unlock state and a summary that is not mastered while one is locked`() = runTest {
         coEvery { steamSource.fetch("440") } returns ProviderSyncResult.Success(
             "440",
             listOf(
-                coin("g1", ShibaTier.GOLD, earned = true),
-                coin("b1", ShibaTier.BRONZE, earned = false),
-                coin("b2", ShibaTier.BRONZE, earned = true),
+                coin("g1", earned = true).copy(globalRarity = 4.5, iconUrl = "g1.png", isHidden = true),
+                coin("b1", earned = false),
+                coin("b2", earned = true),
             ),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
-        coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
+        val coinsSlot = slot<List<AccountAchievementEntity>>()
+        coEvery { coinDao.replaceSet(capture(setSlot), capture(coinsSlot)) } just Runs
 
         val result = repo.syncGame(1L, AchievementProvider.STEAM, "440")
 
@@ -169,11 +165,15 @@ class AchievementRepositoryTest {
 
         val summary = setSlot.captured
         assertEquals("440", summary.providerGameId)
-        assertEquals(2, summary.bronzeTotal)
-        assertEquals(1, summary.bronzeEarned)
-        assertEquals(1, summary.goldTotal)
-        assertEquals(1, summary.goldEarned)
         assertFalse(summary.mastered)
+
+        val byId = coinsSlot.captured.associateBy { it.providerAchievementId }
+        assertEquals(listOf(true, false, true), listOf("g1", "b1", "b2").map { byId.getValue(it).isEarned })
+        assertEquals(1L, byId.getValue("g1").earnedAt)
+        assertNull(byId.getValue("b1").earnedAt)
+        assertEquals(4.5, byId.getValue("g1").globalRarity, 0.0)
+        assertEquals("g1.png", byId.getValue("g1").iconUrl)
+        assertTrue(byId.getValue("g1").isHidden)
     }
 
     @Test
@@ -182,7 +182,7 @@ class AchievementRepositoryTest {
             com.psplauncher.core.domain.model.Game(id = 1, title = "Team Fortress 2", platformId = "windows")
         coEvery { steamSource.fetch("440") } returns ProviderSyncResult.Success(
             "440",
-            listOf(coin("b1", ShibaTier.BRONZE, earned = true)),
+            listOf(coin("b1", earned = true)),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
         coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
@@ -200,7 +200,7 @@ class AchievementRepositoryTest {
         )
         coEvery { retroSource.fetch("319") } returns ProviderSyncResult.Success(
             "319",
-            listOf(coin("b1", ShibaTier.BRONZE, earned = true)),
+            listOf(coin("b1", earned = true)),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
         coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
@@ -216,7 +216,7 @@ class AchievementRepositoryTest {
         coEvery { setDao.getSet("STEAM", "440") } returns setEntity(provider = "STEAM", providerGameId = "440")
         coEvery { steamSource.fetch("440") } returns ProviderSyncResult.Success(
             "440",
-            listOf(coin("b1", ShibaTier.BRONZE, earned = true)),
+            listOf(coin("b1", earned = true)),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
         coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
@@ -227,10 +227,10 @@ class AchievementRepositoryTest {
     }
 
     @Test
-    fun `syncGame marks mastered when every coin is earned`() = runTest {
+    fun `syncGame marks mastered when every achievement is earned`() = runTest {
         coEvery { steamSource.fetch("440") } returns ProviderSyncResult.Success(
             "440",
-            listOf(coin("g1", ShibaTier.GOLD, earned = true), coin("b1", ShibaTier.BRONZE, earned = true)),
+            listOf(coin("g1", earned = true), coin("b1", earned = true)),
         )
         val setSlot = slot<AccountAchievementSetEntity>()
         coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
@@ -238,43 +238,6 @@ class AchievementRepositoryTest {
         repo.syncGame(1L, AchievementProvider.STEAM, "440")
 
         assertTrue(setSlot.captured.mastered)
-    }
-
-    @Test
-    fun `a provider Platinum coin is the crown and stays out of the tier tallies`() = runTest {
-        coEvery { steamSource.fetch("440") } returns ProviderSyncResult.Success(
-            "440",
-            listOf(
-                coin("p1", ShibaTier.PLATINUM, earned = true),
-                coin("b1", ShibaTier.BRONZE, earned = false),
-            ),
-        )
-        val setSlot = slot<AccountAchievementSetEntity>()
-        coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
-
-        repo.syncGame(1L, AchievementProvider.STEAM, "440")
-
-        val summary = setSlot.captured
-        assertTrue(summary.mastered)
-        assertEquals(1, summary.bronzeTotal)
-        assertEquals(0, summary.goldTotal)
-    }
-
-    @Test
-    fun `an unearned provider Platinum keeps the crown dark even at 100 percent of the rest`() = runTest {
-        coEvery { steamSource.fetch("440") } returns ProviderSyncResult.Success(
-            "440",
-            listOf(
-                coin("p1", ShibaTier.PLATINUM, earned = false),
-                coin("b1", ShibaTier.BRONZE, earned = true),
-            ),
-        )
-        val setSlot = slot<AccountAchievementSetEntity>()
-        coEvery { coinDao.replaceSet(capture(setSlot), any()) } just Runs
-
-        repo.syncGame(1L, AchievementProvider.STEAM, "440")
-
-        assertFalse(setSlot.captured.mastered)
     }
 
     @Test
@@ -292,7 +255,7 @@ class AchievementRepositoryTest {
         coEvery { linkDao.getForGame(1L) } returns ProviderGameLinkEntity(1L, "STEAM", "440", "MANUAL", 0L)
         coEvery { steamSource.fetch("440") } returns ProviderSyncResult.Success(
             "440",
-            listOf(coin("b1", ShibaTier.BRONZE, earned = true)),
+            listOf(coin("b1", earned = true)),
         )
 
         val result = repo.syncGameById(1L)
@@ -314,7 +277,7 @@ class AchievementRepositoryTest {
             ProviderGameLinkEntity(2L, "RETRO_ACHIEVEMENTS", "14402", "MANUAL", 0L),
             ProviderGameLinkEntity(3L, "STEAM", "999", "MANUAL", 0L),
         )
-        coEvery { steamSource.fetch("440") } returns ProviderSyncResult.Success("440", listOf(coin("b1", ShibaTier.BRONZE, earned = true)))
+        coEvery { steamSource.fetch("440") } returns ProviderSyncResult.Success("440", listOf(coin("b1", earned = true)))
         coEvery { retroSource.fetch("14402") } returns ProviderSyncResult.NotFound
         coEvery { steamSource.fetch("999") } returns ProviderSyncResult.Failed("network error")
 

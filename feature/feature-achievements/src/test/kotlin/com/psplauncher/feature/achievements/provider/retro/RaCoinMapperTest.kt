@@ -1,6 +1,5 @@
 package com.psplauncher.feature.achievements.provider.retro
 
-import com.psplauncher.core.domain.achievement.ShibaTier
 import com.psplauncher.feature.achievements.api.ProviderSyncResult
 import com.psplauncher.feature.achievements.api.SyncedCoin
 import org.junit.Assert.assertEquals
@@ -12,7 +11,7 @@ import org.retroachivements.api.data.pojo.game.GetGameInfoAndUserProgress
 
 class RaCoinMapperTest {
     @Test
-    fun `maps achievements to tiered coins with earned state and badge url`() {
+    fun `maps achievements with rarity, earned state, unlock time and badge url`() {
         val gold = achievement(
             id = "10", points = 50, numAwarded = 5, badgeName = "12345",
             dateEarnedHardcore = "2024-01-02 03:04:05",
@@ -28,22 +27,20 @@ class RaCoinMapperTest {
         val byId = result.coins.associateBy { it.providerAchievementId }
 
         val g = byId.getValue("10")
-        assertEquals(ShibaTier.GOLD, g.tier)
         assertEquals(5.0, g.globalRarity, 1e-6)
         assertTrue(g.isEarned)
-        assertTrue(g.earnedHardcore)
+        assertEquals(1_704_164_645_000L, g.earnedAt)
+        assertEquals(50, g.points)
         assertEquals("https://media.retroachievements.org/Badge/12345.png", g.iconUrl)
 
         val b = byId.getValue("11")
-        assertEquals(ShibaTier.BRONZE, b.tier)
         assertEquals(90.0, b.globalRarity, 1e-6)
         assertFalse(b.isEarned)
-        assertFalse(b.earnedHardcore)
         assertNull(b.earnedAt)
     }
 
     @Test
-    fun `softcore-only unlock earns the coin but not the crown`() {
+    fun `a softcore-only unlock still counts as unlocked, at its softcore time`() {
         val soft = achievement(
             id = "20", points = 25, numAwarded = 10, badgeName = "1",
             dateEarned = "2024-05-06 07:08:09",
@@ -51,9 +48,8 @@ class RaCoinMapperTest {
         val game = response(casualPlayers = 50, achievements = linkedMapOf("20" to soft))
 
         val coin = (RaCoinMapper.map(game, "1") as ProviderSyncResult.Success).coins.single()
-        assertEquals(ShibaTier.SILVER, coin.tier)
         assertTrue(coin.isEarned)
-        assertFalse(coin.earnedHardcore)
+        assertEquals(1_714_979_289_000L, coin.earnedAt)
     }
 
     @Test

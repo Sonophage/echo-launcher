@@ -114,7 +114,7 @@ class SteamRemoteDataSource @Inject constructor(
         }
 
         val earnedByName = stats?.achievements?.associateBy { it.apiname }.orEmpty()
-        val coins = SteamCoinMapper.map(appId, schemaCoins, percentByName, earnedByName)
+        val coins = SteamCoinMapper.map(schemaCoins, percentByName, earnedByName)
         return ProviderSyncResult.Success(appId, enrichHiddenDescriptions(appId, steamId, coins))
     }
 
