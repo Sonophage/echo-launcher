@@ -356,20 +356,33 @@ class CrossbarPanel(
         uiState.update { it.copy(panelTab = PanelTab.NOTIFICATIONS, noticeCursor = index) }
     }
 
+    // kit 11: LB/RB step the notifications chips (All, Messages, System)
+    fun stepNoticeChip(delta: Int) {
+        val chips = NoticeChip.entries
+        uiState.update { s -> s.copy(noticeChip = chips[(s.noticeChip.ordinal + delta).mod(chips.size)], noticeCursor = 0) }
+        menuSound.play(MenuSound.SCROLL)
+    }
+
+    fun onNoticeChipTapped(chip: NoticeChip) {
+        vm.markTouchInput()
+        if (uiState.value.noticeChip == chip) return
+        uiState.update { it.copy(noticeChip = chip, noticeCursor = 0) }
+        menuSound.play(MenuSound.SCROLL)
+    }
+
     internal fun onButton(action: GamepadAction, state: CrossbarUiState) {
-        val onMusic = state.focusedNotice == NoticeFocus.Media &&
-            (state.mediaStage() as? PanelStage.Music)?.let { it.loaded && it.packageName == null } == true
         when (action) {
             GamepadAction.NAVIGATE_UP   -> movePanelCursor(PanelMove.UP)
             GamepadAction.NAVIGATE_DOWN -> movePanelCursor(PanelMove.DOWN)
-            GamepadAction.NAVIGATE_LEFT  ->
-                if (onMusic) vm.musicPlayer.prev() else movePanelCursor(PanelMove.LEFT)
-            GamepadAction.NAVIGATE_RIGHT ->
-                if (onMusic) vm.musicPlayer.next() else movePanelCursor(PanelMove.RIGHT)
+            GamepadAction.NAVIGATE_LEFT  -> movePanelCursor(PanelMove.LEFT)
+            GamepadAction.NAVIGATE_RIGHT -> movePanelCursor(PanelMove.RIGHT)
             GamepadAction.PREV_CATEGORY -> movePanelCursor(PanelMove.PREV_TAB)
             GamepadAction.NEXT_CATEGORY -> movePanelCursor(PanelMove.NEXT_TAB)
+            GamepadAction.PREV_PAGE,
+            GamepadAction.NEXT_PAGE -> if (state.panelTab == PanelTab.NOTIFICATIONS) stepNoticeChip(if (action == GamepadAction.NEXT_PAGE) 1 else -1)
             GamepadAction.SELECT,
             GamepadAction.CHANGE_SORT,
+            GamepadAction.OPEN_SEARCH,
             GamepadAction.OPEN_CONTEXT_MENU -> when (state.panelTab) {
                 PanelTab.NOTIFICATIONS -> vm.runStageButton(action)
                 PanelTab.PROFILE -> runPanelProfile(action)

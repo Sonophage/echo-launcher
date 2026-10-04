@@ -58,11 +58,15 @@ fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
     val focused = state.currentItems.getOrNull(state.selectedItemIndex)
 
     if (state.notificationsOpen) {
+        // kit 11: the focused notice's actions are the footer's: A on the card, X Dismiss, Y Clear all.
+        // The tab row already shows its shoulder buttons, so the footer does not repeat them
+        val stage = state.panelStage()
+        val actions = if (state.panelTab == PanelTab.NOTIFICATIONS) stageActions(stage, state.clearableNoticeCount) else emptyList()
+        val target = (stage as? PanelStage.Android)?.notice?.appLabel ?: (stage as? PanelStage.Launcher)?.let { "Launcher" }
         return CrossbarPrompts(
-            primary = null,
+            primary = actions.firstOrNull { it.button == GamepadAction.SELECT }?.let { CrossbarPrompt(it.button, it.label, target) },
             back = CrossbarPrompt(GamepadAction.BACK, "Close"),
-            // the panel's tab row already shows its shoulder buttons; the footer does not repeat them
-            right = emptyList(),
+            right = actions.filter { it.button != GamepadAction.SELECT }.map { CrossbarPrompt(it.button, it.label) },
         )
     }
 

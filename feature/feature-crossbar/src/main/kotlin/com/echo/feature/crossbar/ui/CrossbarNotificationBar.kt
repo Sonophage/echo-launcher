@@ -1,5 +1,9 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.domain.model.GamepadAction
+import com.echo.core.ui.components.ControllerPrompt
+import com.echo.core.ui.components.LocalPadPrompts
+import com.echo.feature.crossbar.viewmodel.NoticeChip
 import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import androidx.compose.animation.core.Animatable
@@ -91,12 +95,7 @@ import androidx.compose.ui.unit.em
 import coil3.compose.AsyncImage
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.PANEL_CARD_RADIUS
-import com.echo.core.ui.design.PANEL_FOCUS_RING_WIDTH
-import com.echo.core.ui.design.PANEL_UNFOCUSED_ALPHA
-import com.echo.core.ui.design.PanelButton
 import com.echo.core.ui.design.PanelCardFill
-import com.echo.core.ui.design.PanelCardFocusFill
-import com.echo.core.ui.design.PanelFocusRing
 import com.echo.core.ui.design.panelBackdrop
 import com.echo.core.ui.design.panelSectionTint
 import com.echo.feature.settings.ui.icon
@@ -111,9 +110,6 @@ import com.echo.feature.crossbar.viewmodel.ProfileData
 import com.echo.feature.crossbar.viewmodel.ProfileFocus
 import com.echo.feature.crossbar.viewmodel.ProfileSpot
 import com.echo.feature.crossbar.viewmodel.QuickSetting
-import com.echo.feature.crossbar.viewmodel.StageAction
-import com.echo.feature.crossbar.viewmodel.StageCommand
-import com.echo.feature.crossbar.viewmodel.formatDuration
 import com.echo.core.common.format.relativeTime
 import com.echo.core.ui.design.panelDesignUnits
 
@@ -151,16 +147,16 @@ fun CrossbarNotificationBar(
     tab: PanelTab,
     entries: List<PanelEntry>,
     stage: PanelStage,
-    actions: List<StageAction>,
-    recent: PanelStage?,
     focus: NoticeFocus?,
+    chip: NoticeChip,
+    allCount: Int,
+    onChipTapped: (NoticeChip) -> Unit,
     androidAccessGranted: Boolean,
     quick: QuickSettingsState?,
     quickFocus: QuickSetting,
     chipFocus: Int,
     accent: Color,
     onRowTapped: (NoticeFocus) -> Unit,
-    onActionTapped: (StageCommand) -> Unit,
     settingFocus: Int,
     onQuickTapped: (QuickSetting, Int) -> Unit,
     onSettingTapped: (Int) -> Unit,
@@ -194,29 +190,21 @@ fun CrossbarNotificationBar(
         ) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
             when (tab) {
-                PanelTab.NOTIFICATIONS -> if (u.square) {
-                    Column(Modifier.fillMaxSize().padding(top = u.dp(96), bottom = u.dp(70))) {
-                        Box(Modifier.fillMaxWidth().weight(1f).padding(start = u.dp(80), end = u.dp(80)), contentAlignment = Alignment.CenterStart) {
-                            Stage(stage, actions, stageIcon?.bitmap, u, onActionTapped)
+                // kit 11: chips, the focused notice large on the left, the rest on the right
+                PanelTab.NOTIFICATIONS -> Column(Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(56), top = u.dp(96), bottom = u.dp(80))) {
+                    NoticeChips(chip, allCount, u, onChipTapped)
+                    val others = entries.filter { it.focus != focus }
+                    if (u.square) {
+                        Column(Modifier.fillMaxSize().padding(top = u.dp(24)), verticalArrangement = Arrangement.spacedBy(u.dp(20))) {
+                            Box(Modifier.fillMaxWidth().weight(1f)) { FocusedNotice(stage, stageIcon?.bitmap, tint, u) }
+                            NoticeList(others, androidAccessGranted, u, onRowTapped, onGrantAndroidAccess, Modifier.fillMaxWidth().weight(1f))
                         }
-                        NoticeList(
-                            entries, recent, focus, androidAccessGranted, tint, u, onRowTapped, onGrantAndroidAccess,
-                            Modifier.fillMaxWidth().weight(1.2f).padding(start = u.dp(72), end = u.dp(72), top = u.dp(24)),
-                        )
+                    } else {
+                        Row(Modifier.fillMaxSize().padding(top = u.dp(24)), horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
+                            Box(Modifier.weight(1.15f).fillMaxHeight()) { FocusedNotice(stage, stageIcon?.bitmap, tint, u) }
+                            NoticeList(others, androidAccessGranted, u, onRowTapped, onGrantAndroidAccess, Modifier.weight(1f).fillMaxHeight())
+                        }
                     }
-                } else {
-                    Box(
-                        Modifier.align(Alignment.CenterStart).fillMaxHeight()
-                            .padding(start = u.dp(80), top = u.dp(96), bottom = u.dp(70)).width(u.dp(600)),
-                        contentAlignment = Alignment.CenterStart,
-                    ) {
-                        Stage(stage, actions, stageIcon?.bitmap, u, onActionTapped)
-                    }
-                    NoticeList(
-                        entries, recent, focus, androidAccessGranted, tint, u, onRowTapped, onGrantAndroidAccess,
-                        Modifier.align(Alignment.TopEnd).fillMaxHeight()
-                            .padding(end = u.dp(56), top = u.dp(118), bottom = u.dp(70)).width(u.dp(430)),
-                    )
                 }
                 PanelTab.PROFILE -> ProfilePanel(profile, profileName, profileAvatar, profileFocus, u, onProfileTapped)
                 PanelTab.QUICK -> quick?.let {
@@ -233,143 +221,78 @@ fun CrossbarNotificationBar(
 }
 
 @Composable
-private fun LiveMusicProgress(stage: PanelStage.Music, u: DesignUnits) {
-    val positionMs = stage.livePositionMs()
-    Progress(positionMs.toFloat() / stage.durationMs, formatDuration(positionMs), formatDuration(stage.durationMs), u)
+private fun NoticeChips(chip: NoticeChip, allCount: Int, u: DesignUnits, onTapped: (NoticeChip) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
+        if (LocalPadPrompts.current) ControllerPrompt(GamepadAction.PREV_PAGE, "", glyphSize = u.dp(22), spacing = 0.dp)
+        NoticeChip.entries.forEach { c ->
+            val on = c == chip
+            Text(
+                if (c == NoticeChip.ALL) "${c.label} · $allCount" else c.label,
+                color = if (on) Color(0xFF0A0A0A) else Color.White,
+                fontSize = u.sp(15),
+                fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (on) Color.White else Color.White.copy(alpha = 0.10f))
+                    .clickable { onTapped(c) }
+                    .padding(horizontal = u.dp(18), vertical = u.dp(8)),
+            )
+        }
+        if (LocalPadPrompts.current) ControllerPrompt(GamepadAction.NEXT_PAGE, "", glyphSize = u.dp(22), spacing = 0.dp)
+    }
 }
 
+// the focused notice shown large, as a card tinted by its app
 @Composable
-private fun Stage(stage: PanelStage, actions: List<StageAction>, icon: ImageBitmap?, u: DesignUnits, onAction: (StageCommand) -> Unit) {
+private fun FocusedNotice(stage: PanelStage, icon: ImageBitmap?, tint: Color, u: DesignUnits) {
     val now = System.currentTimeMillis()
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(20))) {
-        when (stage) {
-            is PanelStage.Music -> {
-                Eyebrow(if (stage.loaded) "Now playing" else "From Recent · Music", u)
-                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(28)), verticalAlignment = Alignment.Bottom) {
-                    Art(stage.art, u.dp(220), u.dp(220), u.dp(18), Icons.Outlined.MusicNote, u)
-                    Column(Modifier.weight(1f).padding(bottom = u.dp(6)), verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
-                        if (stage.loaded) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(8))) {
-                                Box(Modifier.size(u.dp(7)).clip(CircleShape).background(Color.White.copy(alpha = if (stage.playing) 1f else 0.5f)))
-                                Text(if (stage.playing) "Playing" else "Paused", color = Faint, fontSize = u.sp(13), fontWeight = FontWeight.Light)
-                            }
-                        }
-                        Headline(stage.title, u.sp(52), 3)
-                        Meta(listOfNotNull(stage.artist, stage.album, stage.app).joinToString("  ·  "), u.sp(17))
-                    }
-                }
-                if (stage.loaded && stage.durationMs > 0) LiveMusicProgress(stage, u)
-            }
-            is PanelStage.Video -> {
-                Eyebrow("From Recent · Video", u)
-                Box(Modifier.width(u.dp(440)).height(u.dp(248)).clip(RoundedCornerShape(u.dp(16)))) {
-                    Art(stage.art, u.dp(440), u.dp(248), u.dp(0), Icons.Outlined.Movie, u)
-                    stage.progress?.let { p ->
-                        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(u.dp(4)).background(Color.White.copy(alpha = 0.25f))) {
-                            Box(Modifier.fillMaxWidth(p.coerceIn(0f, 1f)).fillMaxHeight().background(Color.White))
-                        }
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-                    Headline(stage.title, u.sp(48), 2)
-                    stage.detail?.let { Meta(it, u.sp(17)) }
-                    stage.progressLabel?.let { Text(it, color = Faint, fontSize = u.sp(13), fontWeight = FontWeight.Light) }
-                }
-            }
-            is PanelStage.Book -> {
-                Eyebrow("From Recent · Book", u)
-                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(30)), verticalAlignment = Alignment.Bottom) {
-                    Art(stage.cover, u.dp(170), u.dp(256), u.dp(6), Icons.AutoMirrored.Outlined.MenuBook, u)
-                    Column(Modifier.weight(1f).padding(bottom = u.dp(4)), verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
-                        Headline(stage.title, u.sp(50), 3)
-                        stage.detail?.let { Meta(it, u.sp(17)) }
-                    }
-                }
-            }
-            is PanelStage.Game -> {
-                stage.art?.let { Art(it, u.dp(580), u.dp(186), u.dp(18), Icons.Outlined.Games, u) }
-                Eyebrow("From Recent · Game", u)
-                Headline(stage.title, u.sp(if (stage.art != null) 64 else 84), 2)
-                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(28))) {
-                    stage.lastPlayedAt?.let { Stat("Last played", relativeTime(now, it), u) }
-                    if (stage.playTimeMs > 0) Stat("Play time", playTimeLabel(stage.playTimeMs), u)
-                }
-            }
-            is PanelStage.App -> {
-                Eyebrow("From Recent", u)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(22))) {
-                    AppIcon(icon, u.dp(80), u.dp(21))
-                    Headline(stage.title, u.sp(80), 1)
-                }
-                Meta(listOfNotNull("App", stage.lastUsedAt?.let { "Last used ${relativeTime(now, it)}" }).joinToString("  ·  "), u.sp(17))
-            }
-            is PanelStage.Android -> NoticeStage(icon, stage.notice.appLabel, relativeTime(now, stage.notice.postedAt),
-                stage.notice.title ?: stage.notice.appLabel, stage.notice.text, u)
-            is PanelStage.Launcher -> NoticeStage(icon, "Launcher", relativeTime(now, stage.toast.postedAt), stage.toast.title, stage.toast.message, u)
-            PanelStage.Empty -> Text("You're all caught up", color = Color.White, fontSize = u.sp(40), fontWeight = FontWeight.ExtraLight)
+    val (app, sub, title, text) = when (stage) {
+        is PanelStage.Android -> NoticeCardText(stage.notice.appLabel, relativeTime(now, stage.notice.postedAt), stage.notice.title ?: stage.notice.appLabel, stage.notice.text)
+        is PanelStage.Launcher -> NoticeCardText("Launcher", relativeTime(now, stage.toast.postedAt), stage.toast.title, stage.toast.message)
+        else -> {
+            Text("You're all caught up", color = Color.White, fontSize = u.sp(40), fontWeight = FontWeight.ExtraLight,
+                modifier = Modifier.padding(top = u.dp(40)))
+            return
         }
-        if (actions.isNotEmpty()) {
-            Row(Modifier.padding(top = u.dp(8)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-                actions.forEach { PanelButton(it.button, it.label, u) { onAction(it.command) } }
+    }
+    val shape = RoundedCornerShape(u.dp(24))
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.55f), tint.copy(alpha = 0.25f))))
+            .border(u.dp(2), Color.White, shape)
+            .padding(u.dp(30)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(18)),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(14))) {
+            AppIcon(icon, u.dp(52), u.dp(14))
+            Column(verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+                Text(app, color = Color.White, fontSize = u.sp(17), fontWeight = FontWeight.Medium, maxLines = 1)
+                Text(sub, color = Faint, fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1)
             }
         }
+        Text(title, color = Color.White, fontSize = u.sp(32), fontWeight = FontWeight.Light, lineHeight = u.sp(38),
+            maxLines = 3, overflow = TextOverflow.Ellipsis)
+        text?.takeIf { it.isNotBlank() }?.let { Meta("\u201C$it\u201D", u.sp(16), maxLines = 3) }
     }
 }
 
-@Composable
-private fun NoticeStage(icon: ImageBitmap?, app: String, `when`: String, title: String, text: String?, u: DesignUnits) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(16))) {
-        AppIcon(icon, u.dp(64), u.dp(16))
-        Column(verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
-            Text(app, color = Color.White, fontSize = u.sp(15))
-            Text(`when`, color = Faint, fontSize = u.sp(13), fontWeight = FontWeight.Light)
-        }
-    }
-    Text(title, color = Color.White, fontSize = u.sp(46), fontWeight = FontWeight.Light, lineHeight = u.sp(52),
-        maxLines = 3, overflow = TextOverflow.Ellipsis)
-    text?.takeIf { it.isNotBlank() }?.let { Meta(it, u.sp(17), maxLines = 4) }
-}
+private data class NoticeCardText(val app: String, val sub: String, val title: String, val text: String?)
 
 @Composable
 private fun NoticeList(
     entries: List<PanelEntry>,
-    recent: PanelStage?,
-    focus: NoticeFocus?,
     androidAccessGranted: Boolean,
-    tint: Color,
     u: DesignUnits,
     onRowTapped: (NoticeFocus) -> Unit,
     onGrantAndroidAccess: () -> Unit,
     modifier: Modifier,
 ) {
-    val state = rememberLazyListState()
-    val lead = (if (recent != null) 1 else 0) + 1 + (if (androidAccessGranted) 0 else 1)
-    LaunchedEffect(focus, entries.size) {
-        val at = when (focus) {
-            NoticeFocus.Media -> 0
-            null -> return@LaunchedEffect
-            else -> entries.indexOfFirst { it.focus == focus }.takeIf { it >= 0 }?.plus(lead) ?: return@LaunchedEffect
-        }
-        state.animateScrollToItem((at - 1).coerceAtLeast(0))
-    }
     LazyColumn(
-        state = state,
-        modifier = modifier
-            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-            .drawWithContent {
-                drawContent()
-                drawRect(Brush.verticalGradient(0f to Color.Transparent, 0.04f to Color.Black, 0.88f to Color.Black, 1f to Color.Transparent), blendMode = BlendMode.DstIn)
-            },
-        verticalArrangement = Arrangement.spacedBy(u.dp(6)),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = u.dp(8), vertical = u.dp(12)),
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(u.dp(10)),
     ) {
-        recent?.let { r ->
-            item(key = "recent") { RecentCard(r, focus == NoticeFocus.Media, tint, u) { onRowTapped(NoticeFocus.Media) } }
-        }
-        item(key = "header") {
-            Text("NOTIFICATIONS  ·  ${entries.size}", style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.5f), fontSize = u.sp(12),
-                fontWeight = FontWeight.Light, letterSpacing = 0.14.em), modifier = Modifier.padding(start = u.dp(12), top = u.dp(14), bottom = u.dp(4)))
-        }
         if (!androidAccessGranted) {
             item(key = "grant") {
                 Text("Turn on Notification access to see other apps here", color = Faint, fontSize = u.sp(14),
@@ -377,49 +300,13 @@ private fun NoticeList(
             }
         }
         items(entries, key = { it.focus.toString() }) { entry ->
-            NoticeRow(entry, entry.focus == focus, u) { onRowTapped(entry.focus) }
+            NoticeRow(entry, u) { onRowTapped(entry.focus) }
         }
     }
 }
 
 @Composable
-private fun RecentCard(stage: PanelStage, focused: Boolean, tint: Color, u: DesignUnits, onClick: () -> Unit) {
-    val now = System.currentTimeMillis()
-    val (title, detail) = when (stage) {
-        is PanelStage.Music -> stage.title to listOfNotNull(if (stage.loaded) "Now playing" else "From Recent", stage.artist, stage.app).joinToString("  ·  ")
-        is PanelStage.Video -> stage.title to listOfNotNull("From Recent", stage.progressLabel ?: stage.detail).joinToString("  ·  ")
-        is PanelStage.Book -> stage.title to listOfNotNull("From Recent", stage.detail).joinToString("  ·  ")
-        is PanelStage.Game -> stage.title to listOfNotNull("From Recent", stage.lastPlayedAt?.let { "Last played ${relativeTime(now, it)}" }).joinToString("  ·  ")
-        is PanelStage.App -> stage.title to "From Recent"
-        else -> return
-    }
-    val shape = RoundedCornerShape(u.dp(16))
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(Brush.linearGradient(listOf(tint.copy(alpha = 0.6f), tint.copy(alpha = 0.2f))))
-            .border(if (focused) u.dp(2.5f) else u.dp(1), Color.White.copy(alpha = if (focused) 1f else 0.1f), shape)
-            .clickable(onClick = onClick)
-            .padding(start = u.dp(14), end = u.dp(16), top = u.dp(14), bottom = u.dp(14)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
-    ) {
-        val icon = rememberAppIcon((stage as? PanelStage.App)?.packageName)
-        when {
-            stage is PanelStage.App -> AppIcon(icon?.bitmap, u.dp(44), u.dp(12))
-            else -> Art(stageArt(stage), u.dp(44), u.dp(44), u.dp(12), stageGlyph(stage), u)
-        }
-        Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = u.sp(15), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(detail, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Icon(Icons.Filled.PlayArrow, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(u.dp(14)))
-    }
-}
-
-@Composable
-private fun NoticeRow(entry: PanelEntry, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
+private fun NoticeRow(entry: PanelEntry, u: DesignUnits, onClick: () -> Unit) {
     val context = LocalContext.current
     val (pkg, title, app, postedAt) = when (entry) {
         is PanelEntry.Android -> RowText(entry.notice.packageName, entry.notice.title ?: entry.notice.appLabel, entry.notice.appLabel, entry.notice.postedAt)
@@ -430,22 +317,20 @@ private fun NoticeRow(entry: PanelEntry, focused: Boolean, u: DesignUnits, onCli
     Row(
         Modifier
             .fillMaxWidth()
-            .graphicsLayer(alpha = if (focused) 1f else PANEL_UNFOCUSED_ALPHA)
             .clip(shape)
-            .background(if (focused) PanelCardFocusFill else PanelCardFill)
-            .then(if (focused) Modifier.border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape) else Modifier)
+            .background(PanelCardFill)
+            .border(u.dp(1), Color.White.copy(alpha = 0.08f), shape)
             .clickable(onClick = onClick)
-            .padding(start = u.dp(12), end = u.dp(16), top = u.dp(12), bottom = u.dp(12)),
+            .padding(start = u.dp(16), end = u.dp(16), top = u.dp(14), bottom = u.dp(14)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
     ) {
         AppIcon(icon?.bitmap, u.dp(38), u.dp(10))
-        Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = u.sp(14.5f), lineHeight = u.sp(19), maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(app, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+            Text("$app · ${relativeTime(System.currentTimeMillis(), postedAt)}", color = Color.White.copy(alpha = 0.6f),
+                fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1)
+            Text(title, color = Color.White, fontSize = u.sp(15), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(relativeTime(System.currentTimeMillis(), postedAt), color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12),
-            fontWeight = FontWeight.Light, maxLines = 1)
     }
 }
 
@@ -572,18 +457,6 @@ internal fun Stat(label: String, value: String, u: DesignUnits) {
     }
 }
 
-@Composable
-private fun Progress(fraction: Float, left: String, right: String, u: DesignUnits) {
-    Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
-        Box(Modifier.fillMaxWidth().height(u.dp(4)).clip(RoundedCornerShape(u.dp(2))).background(Color.White.copy(alpha = 0.18f))) {
-            Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().clip(RoundedCornerShape(u.dp(2))).background(Color.White))
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(left, color = Faint, fontSize = u.sp(12), fontWeight = FontWeight.Light)
-            Text(right, color = Faint, fontSize = u.sp(12), fontWeight = FontWeight.Light)
-        }
-    }
-}
 
 @Composable
 internal fun Art(uri: Any?, width: Dp, height: Dp, radius: Dp, fallback: ImageVector, u: DesignUnits) {
@@ -621,13 +494,6 @@ internal fun stageTint(stage: PanelStage, iconColor: Color?, accent: Color): Col
     PanelStage.Empty -> EmptyTint
 }
 
-private fun stageArt(stage: PanelStage): Any? = when (stage) {
-    is PanelStage.Music -> stage.art
-    is PanelStage.Video -> stage.art
-    is PanelStage.Book -> stage.cover
-    is PanelStage.Game -> stage.art
-    else -> null
-}
 
 internal fun stageGlyph(stage: PanelStage): ImageVector = when (stage) {
     is PanelStage.Music -> Icons.Outlined.MusicNote

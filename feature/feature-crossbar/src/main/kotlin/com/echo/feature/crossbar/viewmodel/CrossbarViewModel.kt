@@ -513,6 +513,9 @@ data class CrossbarUiState(
     // the top-left orb: 0 at rest, 1 focused, 2 expanded
     val orbLevel: Int = 0,
 
+    // the notifications tab's chip (kit 11)
+    val noticeChip: NoticeChip = NoticeChip.ALL,
+
     // the game ECHO last sent away, which Y can resume while ECHO is still running
     val resumeGameId: Long? = null,
 
@@ -786,11 +789,12 @@ data class CrossbarUiState(
     val overlayKeepsChrome: Boolean
         get() = (activeContextMenu != null || notificationsOpen) && !otherBlockingOverlay
 
+    // the notifications under the current chip; what is playing or was last played lives on the orb
+    val noticeEntries: List<PanelEntry>
+        get() = panelEntries(androidNotices, launcherNotices).filter { noticeChip in it.chips() }
+
     val noticeFocusables: List<NoticeFocus>
-        get() = buildList {
-            if (musicPlayback.track != null || externalPlayback != null || recentTop != null) add(NoticeFocus.Media)
-            panelEntries(androidNotices, launcherNotices).forEach { add(it.focus) }
-        }
+        get() = noticeEntries.map { it.focus }
 
     val focusedNotice: NoticeFocus?
         get() = if (panelTab != PanelTab.NOTIFICATIONS) null else noticeFocusables.let { rows ->
@@ -3407,8 +3411,6 @@ class CrossbarViewModel @Inject constructor(
             .firstOrNull { it.button == button }
             ?.let { runStageCommand(it.command) }
     }
-
-    fun onStageActionTapped(command: StageCommand) = runStageCommand(command)
 
     // the one place a transport press reaches a player: ECHO's own, or the external app's media session
     private fun transport(command: StageCommand, external: String?) {

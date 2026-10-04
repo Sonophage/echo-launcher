@@ -69,12 +69,4 @@ class IslandStageTest {
         assertEquals("a paused loaded track still beats a paused app", "Blue Monday", nowPlaying(ownPlaying = false, external = stremio(playing = false))?.title)
         assertEquals("an app session beats the recent item", "Hotel Del Luna", nowPlaying(ownPlaying = null, external = stremio(playing = false))?.title)
     }
-
-    @Test
-    fun `an app session's stage drives that app, and Y opens the app rather than the launcher's player`() {
-        val stage = nowPlaying(ownPlaying = null, external = stremio(playing = true))!!
-        val actions = stageActions(stage, clearable = 0)
-        assertEquals(listOf(StageCommand.PLAY_PAUSE, StageCommand.NEXT_TRACK, StageCommand.OPEN_APP), actions.map { it.command })
-        assertEquals("Open Stremio", actions.first { it.button == GamepadAction.OPEN_CONTEXT_MENU }.label)
-    }
 }

@@ -52,9 +52,9 @@ class NotificationSheetTest {
     private fun labels(s: CrossbarUiState) = stageActions(s.panelStage(), s.clearableNoticeCount).map { it.label }
 
     @Test
-    fun `the recent row leads the list when something is playing or was played`() {
-        assertEquals(listOf(NoticeFocus.Media), state(playing = true).noticeFocusables)
-        assertEquals(listOf(NoticeFocus.Media), state(recent = game).noticeFocusables)
+    fun `what is playing or was last played stays on the orb, not in the notifications list`() {
+        assertTrue(state(playing = true).noticeFocusables.isEmpty())
+        assertTrue(state(recent = game).noticeFocusables.isEmpty())
         assertTrue(state().noticeFocusables.isEmpty())
         assertEquals(PanelStage.Empty, state().panelStage())
     }
@@ -105,24 +105,6 @@ class NotificationSheetTest {
     }
 
     @Test
-    fun `the playing track gets transport, a track from Recent gets Play`() {
-        assertEquals(listOf("Pause", "Next track", "Open Music"), labels(state(playing = true)))
-        val fromRecent = CrossbarItem(id = "m1", title = "Blue Monday", type = CrossbarItemType.MUSIC_TRACK)
-        assertEquals(listOf("Play"), labels(state(recent = fromRecent)))
-        assertEquals(RecentKind.MUSIC, recentKind(CrossbarItem(id = "mg", title = "Album", type = CrossbarItemType.MUSIC_GROUP)))
-    }
-
-    @Test
-    fun `each Recent type gets its own verb`() {
-        assertEquals(listOf("Continue"), labels(state(recent = game)))
-        assertEquals(listOf("Return to app"), labels(state(recent = CrossbarItem(id = "app_x", title = "Spotify", packageName = "com.spotify", isAndroidApp = true))))
-        assertEquals(listOf("Continue reading"), labels(state(recent = CrossbarItem(id = "book_1", title = "Dune", type = CrossbarItemType.LIBRARY_BOOK))))
-        val video = CrossbarItem(id = "vid_1", title = "Northline", type = CrossbarItemType.VIDEO_FILE)
-        assertEquals(listOf("Play"), labels(state(recent = video)))
-        assertEquals("a video with a resume point is resumed", listOf("Resume"), labels(state(recent = video.copy(progressFraction = 0.6f))))
-    }
-
-    @Test
     fun `no stage puts two commands on one button`() {
         val stages = listOf(
             state(playing = true), state(recent = game), state(notices = listOf(notice("a"))),
@@ -136,18 +118,9 @@ class NotificationSheetTest {
 
     @Test
     fun `the game stage carries when it was played and for how long`() {
-        val stage = state(recent = game).copy(recentTopAt = 99L).panelStage() as PanelStage.Game
+        val stage = state(recent = game).copy(recentTopAt = 99L).recentStage() as PanelStage.Game
         assertEquals(99L, stage.lastPlayedAt)
         assertEquals(7_200_000L, stage.playTimeMs)
-    }
-
-    @Test
-    fun `the bar keeps only Close, since the stage carries the rest and the tab row shows its own shoulders`() {
-        val prompts = promptsFor(state(notices = listOf(notice("a"))))
-        assertNull(prompts.primary)
-        assertEquals(GamepadAction.BACK, prompts.back.action)
-        assertEquals("Close", prompts.back.verb)
-        assertTrue("the tab row's shoulders are not repeated in the footer", prompts.right.isEmpty())
     }
 
     @Test
@@ -164,5 +137,29 @@ class NotificationSheetTest {
         val open = state(playing = true)
         assertTrue(open.hasBlockingOverlay)
         assertTrue(open.overlayKeepsChrome)
+    }
+
+    @Test
+    fun `the chips sort messages from the device's own notices, and All keeps everything`() {
+        val chat = notice("chat").copy(category = "msg")
+        val update = notice("sys").copy(packageName = "com.android.vending", category = null)
+        val reminder = notice("cal").copy(packageName = "com.google.android.calendar", category = "reminder")
+        val s = state(notices = listOf(chat, update, reminder), toasts = listOf(toast(1, at = 5)))
+        assertEquals(4, s.noticeFocusables.size)
+        assertEquals(listOf(NoticeFocus.Notice("chat")), s.copy(noticeChip = NoticeChip.MESSAGES).noticeFocusables)
+        assertEquals(
+            "Android's own notices and ECHO's toasts are System; a reminder is in neither",
+            setOf(NoticeFocus.Notice("sys"), NoticeFocus.Launcher(1)),
+            s.copy(noticeChip = NoticeChip.SYSTEM).noticeFocusables.toSet(),
+        )
+    }
+
+    @Test
+    fun `the footer carries the focused notice's actions, Y clearing all`() {
+        val s = state(notices = listOf(notice("a").copy(canOpen = true, canDismiss = true))).copy(notificationsOpen = true)
+        val prompts = promptsFor(s)
+        assertEquals(GamepadAction.SELECT, prompts.primary?.action)
+        assertTrue(prompts.right.any { it.action == GamepadAction.CHANGE_SORT && it.verb == "Dismiss" })
+        assertTrue(prompts.right.any { it.action == GamepadAction.OPEN_SEARCH && it.verb.startsWith("Clear all") })
     }
 }

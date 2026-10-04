@@ -158,6 +158,7 @@ class EchoNotificationListener : NotificationListenerService(), AndroidNotificat
             canDismiss = isClearable,
             packageName = packageName,
             mediaPlayback = isMediaPlayback(),
+            category = n.category,
         )
     }
 

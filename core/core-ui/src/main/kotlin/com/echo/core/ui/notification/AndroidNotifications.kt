@@ -21,6 +21,9 @@ data class AndroidNotice(
     val canDismiss: Boolean = false,
 
     val packageName: String = "",
+
+    // Notification.category ("msg", "email", "sys"...), which sorts the panel's Messages and System chips
+    val category: String? = null,
 )
 
 data class NoticeExtras(
@@ -59,6 +62,7 @@ fun noticeOf(
     canDismiss: Boolean = false,
     packageName: String = "",
     mediaPlayback: Boolean = false,
+    category: String? = null,
 ): AndroidNotice? {
     if (isGroupSummary || mediaPlayback) return null
     return AndroidNotice(
@@ -70,6 +74,7 @@ fun noticeOf(
         canOpen = canOpen,
         canDismiss = canDismiss,
         packageName = packageName,
+        category = category,
     )
 }
 

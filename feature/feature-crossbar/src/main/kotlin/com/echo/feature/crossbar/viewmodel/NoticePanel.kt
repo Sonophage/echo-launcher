@@ -86,8 +86,6 @@ private fun gridMove(at: Int, move: PanelMove, columns: Int, count: Int): Int {
 }
 
 sealed interface NoticeFocus {
-    data object Media : NoticeFocus
-
     data class Notice(val key: String) : NoticeFocus
 
     data class Launcher(val id: Long) : NoticeFocus
@@ -105,6 +103,25 @@ sealed interface PanelEntry {
     data class Launcher(val toast: SystemToast) : PanelEntry {
         override val postedAt get() = toast.postedAt
         override val focus get() = NoticeFocus.Launcher(toast.id)
+    }
+}
+
+// kit 11's chips, switched with LB/RB
+enum class NoticeChip(val label: String) { ALL("All"), MESSAGES("Messages"), SYSTEM("System") }
+
+// Notification.category values: what a person sent, and what the device itself reports
+private val MESSAGE_CATEGORIES = setOf("msg", "email", "call", "social")
+private val SYSTEM_CATEGORIES = setOf("sys", "status", "progress", "err", "service")
+
+// ECHO's own notices and Android's are System; messages, mail, calls and social posts are Messages;
+// anything else (a calendar reminder, a store update) shows under All only
+fun PanelEntry.chips(): Set<NoticeChip> = when (this) {
+    is PanelEntry.Launcher -> setOf(NoticeChip.ALL, NoticeChip.SYSTEM)
+    is PanelEntry.Android -> when {
+        notice.category in MESSAGE_CATEGORIES -> setOf(NoticeChip.ALL, NoticeChip.MESSAGES)
+        notice.category in SYSTEM_CATEGORIES || notice.packageName == "android" || notice.packageName.startsWith("com.android.") ->
+            setOf(NoticeChip.ALL, NoticeChip.SYSTEM)
+        else -> setOf(NoticeChip.ALL)
     }
 }
 
@@ -201,7 +218,6 @@ fun PanelStage.islandProgress(positionMs: Long): Float? = when (this) {
 }
 
 fun CrossbarUiState.panelStage(): PanelStage = when (val focus = focusedNotice) {
-    NoticeFocus.Media -> mediaStage()
     is NoticeFocus.Notice -> androidNotices.firstOrNull { it.key == focus.key }?.let { PanelStage.Android(it) }
     is NoticeFocus.Launcher -> launcherNotices.firstOrNull { it.id == focus.id }?.let { PanelStage.Launcher(it) }
     null -> null
@@ -217,20 +233,10 @@ data class StageAction(val button: GamepadAction, val label: String, val command
 fun stageActions(stage: PanelStage, clearable: Int): List<StageAction> = buildList {
     fun a(label: String, command: StageCommand) = add(StageAction(GamepadAction.SELECT, label, command))
     fun x(label: String, command: StageCommand) = add(StageAction(GamepadAction.CHANGE_SORT, label, command))
-    fun y(label: String, command: StageCommand) = add(StageAction(GamepadAction.OPEN_CONTEXT_MENU, label, command))
+    fun y(label: String, command: StageCommand) = add(StageAction(GamepadAction.OPEN_SEARCH, label, command))
     val clearAll = { if (clearable > 0) y("Clear all $clearable", StageCommand.CLEAR_ALL) }
+    // the panel shows notices only; what is playing or was last played is on the orb
     when (stage) {
-        is PanelStage.Music -> if (stage.loaded) {
-            a(if (stage.playing) "Pause" else "Play", StageCommand.PLAY_PAUSE)
-            x("Next track", StageCommand.NEXT_TRACK)
-            if (stage.packageName != null) y("Open ${stage.app ?: "app"}", StageCommand.OPEN_APP) else y("Open Music", StageCommand.OPEN_MUSIC)
-        } else {
-            a("Play", StageCommand.LAUNCH_RECENT)
-        }
-        is PanelStage.Video -> a(if (stage.progress != null) "Resume" else "Play", StageCommand.LAUNCH_RECENT)
-        is PanelStage.Book -> a("Continue reading", StageCommand.LAUNCH_RECENT)
-        is PanelStage.Game -> a("Continue", StageCommand.LAUNCH_RECENT)
-        is PanelStage.App -> a("Return to app", StageCommand.LAUNCH_RECENT)
         is PanelStage.Android -> {
             if (stage.notice.canOpen) a("Open", StageCommand.OPEN_NOTICE)
             if (stage.notice.canDismiss) x("Dismiss", StageCommand.DISMISS)
@@ -240,6 +246,6 @@ fun stageActions(stage: PanelStage, clearable: Int): List<StageAction> = buildLi
             x("Dismiss", StageCommand.DISMISS)
             clearAll()
         }
-        PanelStage.Empty -> Unit
+        else -> Unit
     }
 }
