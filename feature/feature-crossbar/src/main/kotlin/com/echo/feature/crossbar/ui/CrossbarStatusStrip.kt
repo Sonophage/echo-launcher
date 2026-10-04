@@ -189,7 +189,6 @@ fun CrossbarStatusStrip(
     val context = LocalContext.current
     var batteryLevel   by remember { mutableIntStateOf(0) }
     var isCharging     by remember { mutableStateOf(false) }
-    var dateString     by remember { mutableStateOf(currentDateString()) }
     var timeString     by remember { mutableStateOf(currentTimeString(context)) }
 
     DisposableEffect(Unit) {
@@ -209,7 +208,6 @@ fun CrossbarStatusStrip(
 
     LaunchedEffect(Unit) {
         while (true) {
-            dateString = currentDateString()
             timeString = currentTimeString(context)
 
             delay(60_000L - (System.currentTimeMillis() % 60_000L))
@@ -317,7 +315,6 @@ fun CrossbarStatusStrip(
             }
         }
 
-        val sys = rememberSystemStatus()
         val endGutter = chromeGutter(end = true)
         val statusSlot: @Composable (Boolean) -> Unit = { date ->
             Row(
@@ -325,60 +322,33 @@ fun CrossbarStatusStrip(
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(u.dp(22)),
             ) {
-                NoticeBell(noticeCount, islandGlow, u, onNoticeCountTapped)
+                if (noticeCount > 0) NoticeBell(noticeCount, islandGlow, u, onNoticeCountTapped)
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
-                    modifier = Modifier.alpha(0.85f),
-                ) {
-                    if (sys.controllerConnected) {
-                        Icon(
-                            imageVector        = Icons.Filled.SportsEsports,
-                            contentDescription = "Controller connected",
-                            tint               = StripPrimary,
-                            modifier           = Modifier.size(u.dp(17)),
-                        )
-                    }
-                    if (sys.bluetoothOn) {
-                        StatusIcon(
-                            CrossbarStatusIcons.bluetooth, "Bluetooth",
-                            Modifier.size(width = u.dp(11), height = u.dp(15)),
-                            tint = StripPrimary,
-                            slotKey = "status_bluetooth",
-                        )
-                    }
-                    sys.wifiLevel?.let { level ->
-                        WifiMeter(level, Modifier.size(width = u.dp(18), height = u.dp(15)))
-                    }
-                    sys.cellularLevel?.let { level ->
-                        SignalBars(level, Modifier.size(width = u.dp(16), height = u.dp(15)))
-                    }
-                }
-
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+                // kit status corner: battery and time, nothing else
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(14))) {
                     Text(
-                        text       = timeString,
-                        color      = StripPrimary,
-                        fontSize   = u.sp(18),
-                        lineHeight = u.sp(18),
+                        text       = "$batteryLevel%",
+                        color      = StripPrimary.copy(alpha = 0.7f),
+                        fontSize   = u.sp(13),
                         fontWeight = FontWeight.Light,
                         maxLines   = 1,
                     )
-                    if (date) {
-                        Text(
-                            text       = dateString,
-                            color      = StripPrimary.copy(alpha = 0.6f),
-                            fontSize   = u.sp(10),
-                            fontWeight = FontWeight.Light,
-                            maxLines   = 1,
-                        )
-                    }
+                    Text(
+                        text       = timeString,
+                        color      = StripPrimary,
+                        fontSize   = u.sp(13),
+                        fontWeight = FontWeight.Light,
+                        maxLines   = 1,
+                    )
                 }
             }
         }
 
-        val islandWidth = if (live != null) u.dp(264) + chromeGutter() + 5.dp else 0.dp
+        val islandWidth = when {
+            live == null -> 0.dp
+            orbLevel == 0 && !compact -> u.dp(44) + chromeGutter()
+            else -> u.dp(264) + chromeGutter() + 5.dp
+        }
         SubcomposeLayout(
             Modifier
                 .align(Alignment.TopCenter)
@@ -798,81 +768,6 @@ private const val GLINT_PERIOD_MS = 2400L
 private val MeterActive   = StripPrimary
 private val MeterInactive = Color(0x40EEEEEE)
 
-@Composable
-private fun SignalBars(level: Int, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val bars = 4
-        val gap = size.width * 0.14f
-        val barWidth = (size.width - gap * (bars - 1)) / bars
-        for (i in 0 until bars) {
-            val barHeight = size.height * (0.35f + 0.65f * (i + 1) / bars)
-            val x = i * (barWidth + gap)
-            val top = size.height - barHeight
-            drawRect(
-                color = if (i < level) MeterActive else MeterInactive,
-                topLeft = Offset(x, top),
-                size = Size(barWidth, barHeight),
-            )
-        }
-    }
-}
-
-@Composable
-private fun WifiMeter(level: Int, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val cx = size.width / 2f
-        val cy = size.height * 0.92f
-        val maxR = size.height * 0.9f
-        val stroke = size.height * 0.11f
-
-        fun color(threshold: Int) = if (level >= threshold) MeterActive else MeterInactive
-
-        drawCircle(color = color(1), radius = stroke * 1.1f, center = Offset(cx, cy))
-
-        for (i in 1..3) {
-            val r = maxR * i / 3f
-            drawArc(
-                color = color(i + 1),
-                startAngle = 225f,
-                sweepAngle = 90f,
-                useCenter = false,
-                topLeft = Offset(cx - r, cy - r),
-                size = Size(r * 2, r * 2),
-                style = Stroke(width = stroke),
-            )
-        }
-    }
-}
-
-@Composable
-private fun StatusIcon(
-    @DrawableRes res: Int,
-    description: String,
-    modifier: Modifier = Modifier,
-    tint: Color = StripMuted,
-
-    slotKey: String? = null,
-) {
-    val override = slotKey?.let { key ->
-        com.echo.core.ui.icons.LocalCustomIcons.current[key]
-            ?: com.echo.core.ui.icons.LocalCrossbarIconOverrides.current[key]
-    }
-    if (override != null) {
-        com.echo.core.ui.icons.CustomIconSurface(
-            icon = override,
-            contentDescription = description,
-            modifier = modifier,
-        )
-        return
-    }
-    Image(
-        painter            = painterResource(res),
-        contentDescription = description,
-        colorFilter        = ColorFilter.tint(tint),
-        modifier           = modifier,
-    )
-}
-
 internal val StripHeight   = StatusStripHeight
 
 private val BadgeInk = Color(0xFF1A0D05)
@@ -881,11 +776,6 @@ private val LowBatteryTint = Color(0xFFFF6B6B)
 
 private fun currentTimeString(context: Context): String =
     android.text.format.DateFormat.getTimeFormat(context).format(Date())
-
-private fun currentDateString(): String {
-    val locale = Locale.getDefault()
-    return SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEEMMMd"), locale).format(Date())
-}
 
 @Composable
 internal fun rememberStripUnits(): DesignUnits {
