@@ -1,4 +1,5 @@
 @echo off
+for %%I in ("%~dp0..\..") do set "ROOT=%%~fI\"
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM ============================================================
@@ -17,7 +18,7 @@ REM     --clean   Wipe :studio build output before compiling
 REM     --tests   Run :studio unit tests first; abort if they fail
 REM ============================================================
 
-pushd "%~dp0"
+pushd "%ROOT%"
 
 REM Exit code used by :usage -- 0 when help was asked for, 1 on a bad option.
 set "_RC=1"
@@ -50,8 +51,8 @@ shift
 goto :parse_args
 :args_done
 
-if not exist "%~dp0gradlew.bat" (
-    echo ERROR: gradlew.bat not found next to this script. 1>&2
+if not exist "%ROOT%gradlew.bat" (
+    echo ERROR: gradlew.bat not found in the repo root. 1>&2
     echo Run this from the repository root. 1>&2
     popd
     exit /b 1
@@ -66,7 +67,7 @@ echo.
 REM -- Optional clean -------------------------------------------
 if "%_CLEAN%"=="1" (
     echo Cleaning :studio build output...
-    call "%~dp0gradlew.bat" --console=plain -Dorg.gradle.problems.report=false :studio:clean
+    call "%ROOT%gradlew.bat" --console=plain -Dorg.gradle.problems.report=false :studio:clean
     if errorlevel 1 (
         echo. 1>&2
         echo ERROR: clean failed. 1>&2
@@ -81,7 +82,7 @@ REM  Deliberately a gate, not a warning: launching a Studio whose
 REM  round-trip tests are red wastes the run.
 if "%_TESTS%"=="1" (
     echo Running :studio unit tests...
-    call "%~dp0gradlew.bat" --console=plain -Dorg.gradle.problems.report=false :studio:test
+    call "%ROOT%gradlew.bat" --console=plain -Dorg.gradle.problems.report=false :studio:test
     if errorlevel 1 (
         echo. 1>&2
         echo ========================================  1>&2
@@ -101,7 +102,7 @@ echo Compiling and launching Theme Studio...
 echo Close the Studio window to return to this prompt.
 echo.
 
-call "%~dp0gradlew.bat" --console=plain -Dorg.gradle.problems.report=false :studio:run
+call "%ROOT%gradlew.bat" --console=plain -Dorg.gradle.problems.report=false :studio:run
 
 if errorlevel 1 (
     echo.

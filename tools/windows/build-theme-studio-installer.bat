@@ -1,4 +1,5 @@
 @echo off
+for %%I in ("%~dp0..\..") do set "ROOT=%%~fI\"
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM ============================================================
@@ -24,12 +25,12 @@ REM     --msi     Also build the .msi (managed/silent deployment)
 REM     --clean   Wipe :studio build output first
 REM ============================================================
 
-pushd "%~dp0"
+pushd "%ROOT%"
 
 REM Exit code used by :usage -- 0 when help was asked for, 1 on a bad option.
 set "_RC=1"
 
-set "LOG=%~dp0build-theme-studio.log"
+set "LOG=%ROOT%build-theme-studio.log"
 set "_ALSO_MSI=0"
 set "_CLEAN=0"
 
@@ -87,7 +88,7 @@ if "%_WIX_OK%"=="0" (
     echo Or, with no admin rights, extract wix314-binaries.zip from 1>&2
     echo https://github.com/wixtoolset/wix3/releases into: 1>&2
     echo. 1>&2
-    echo   %~dp0tools\wix3 1>&2
+    echo   %ROOT%tools\wix3 1>&2
     echo. 1>&2
     echo This script prefers that folder and needs no PATH changes for it. 1>&2
     popd
@@ -114,7 +115,7 @@ REM  Only used to predict the output filename for verification and
 REM  the summary. Gradle owns the actual naming. The leading space
 REM  in the pattern keeps msiPackageVersion/exePackageVersion out.
 set "_VERSION="
-for /f "tokens=2 delims==" %%v in ('findstr /r /c:" packageVersion *=" "%~dp0studio\build.gradle.kts"') do (
+for /f "tokens=2 delims==" %%v in ('findstr /r /c:" packageVersion *=" "%ROOT%studio\build.gradle.kts"') do (
     set "_RAW=%%v"
     set "_RAW=!_RAW: =!"
     set _RAW=!_RAW:"=!
@@ -145,7 +146,7 @@ echo Build started %DATE% %TIME% > "%LOG%"
 echo Command: gradlew.bat --console=plain -Dorg.gradle.problems.report=false%_TASKS% >> "%LOG%"
 echo. >> "%LOG%"
 
-call "%~dp0gradlew.bat" --console=plain -Dorg.gradle.problems.report=false%_TASKS% >> "%LOG%" 2>&1
+call "%ROOT%gradlew.bat" --console=plain -Dorg.gradle.problems.report=false%_TASKS% >> "%LOG%" 2>&1
 
 if errorlevel 1 (
     echo.
@@ -167,9 +168,9 @@ echo ========================================
 echo BUILD SUCCESS
 echo ========================================
 echo.
-echo Artifacts in %~dp0dist:
+echo Artifacts in %ROOT%dist:
 
-set "_EXE=%~dp0dist\PlayField-Theme-Studio-%_VERSION%.exe"
+set "_EXE=%ROOT%dist\PlayField-Theme-Studio-%_VERSION%.exe"
 if exist "%_EXE%" (
     for %%A in ("%_EXE%") do echo   %%~nxA   ^(%%~zA bytes^)
 ) else (
@@ -178,7 +179,7 @@ if exist "%_EXE%" (
 )
 
 if "%_ALSO_MSI%"=="1" (
-    set "_MSI=%~dp0dist\PlayField-Theme-Studio-%_VERSION%.msi"
+    set "_MSI=%ROOT%dist\PlayField-Theme-Studio-%_VERSION%.msi"
     if exist "!_MSI!" (
         for %%A in ("!_MSI!") do echo   %%~nxA   ^(%%~zA bytes^)
     ) else (
@@ -225,8 +226,8 @@ REM  1) Repo-local portable copy. Preferred: it needs no admin install, and it
 REM     pins the WiX version the installer is built with instead of inheriting
 REM     whatever happens to be on the machine. Populate it by extracting
 REM     wix314-binaries.zip (wixtoolset/wix3 releases) into tools\wix3.
-if exist "%~dp0tools\wix3\candle.exe" (
-    set "PATH=%~dp0tools\wix3;%PATH%"
+if exist "%ROOT%tools\wix3\candle.exe" (
+    set "PATH=%ROOT%tools\wix3;%PATH%"
     set "_WIX_OK=1"
     exit /b 0
 )

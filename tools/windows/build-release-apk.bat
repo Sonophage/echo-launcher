@@ -1,4 +1,5 @@
 @echo off
+for %%I in ("%~dp0..\..") do set "ROOT=%%~fI\"
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM ============================================================
@@ -11,9 +12,9 @@ REM
 REM  Usage: build-release-apk.bat
 REM ============================================================
 
-pushd "%~dp0"
+pushd "%ROOT%"
 
-set "LOG=%~dp0build-release.log"
+set "LOG=%ROOT%build-release.log"
 
 echo.
 echo ========================================
@@ -21,7 +22,7 @@ echo Play Field Portal - Release APK Builder
 echo ========================================
 
 REM -- Signing preflight ---------------------------------------
-if not exist "%~dp0keystore.properties" (
+if not exist "%ROOT%keystore.properties" (
     echo.
     echo WARNING: keystore.properties not found.
     echo The release build will be UNSIGNED and cannot be installed on a device.
@@ -31,7 +32,7 @@ REM -- Read versionName from app/build.gradle.kts --------------
 REM  Only used to predict the output filename for verification and
 REM  the summary. Gradle owns the actual naming.
 set "_VERSION="
-for /f "tokens=2 delims==" %%v in ('findstr /r /c:"versionName *=" "%~dp0app\build.gradle.kts"') do (
+for /f "tokens=2 delims==" %%v in ('findstr /r /c:"versionName *=" "%ROOT%app\build.gradle.kts"') do (
     set "_RAW=%%v"
     set "_RAW=!_RAW: =!"
     set _RAW=!_RAW:"=!
@@ -57,7 +58,7 @@ echo Build started %DATE% %TIME% > "%LOG%"
 echo Command: gradlew.bat --console=plain -Dorg.gradle.problems.report=false%_TASKS% >> "%LOG%"
 echo. >> "%LOG%"
 
-call "%~dp0gradlew.bat" --console=plain -Dorg.gradle.problems.report=false%_TASKS% >> "%LOG%" 2>&1
+call "%ROOT%gradlew.bat" --console=plain -Dorg.gradle.problems.report=false%_TASKS% >> "%LOG%" 2>&1
 
 if errorlevel 1 (
     echo.
@@ -78,8 +79,8 @@ echo ========================================
 echo BUILD SUCCESS
 echo ========================================
 echo.
-echo Artifacts in %~dp0dist:
-set "_APK=%~dp0dist\ECHO-%_VERSION%.apk"
+echo Artifacts in %ROOT%dist:
+set "_APK=%ROOT%dist\ECHO-%_VERSION%.apk"
 if exist "!_APK!" (
     for %%A in ("!_APK!") do echo   %%~nxA   ^(%%~zA bytes^)
 ) else (

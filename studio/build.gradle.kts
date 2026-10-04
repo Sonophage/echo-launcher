@@ -46,7 +46,7 @@ compose.desktop {
             isEnabled.set(false)
         }
         nativeDistributions {
-            // Exe is the Windows default we ship (build-theme-studio-installer.bat drives it);
+            // Exe is the Windows default we ship (tools/windows/build-theme-studio-installer.bat drives it);
             // Msi stays for managed/silent deployment. Both come out of the same jpackage run
             // and both need the WiX Toolset on PATH.
             targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Msi, TargetFormat.Deb)

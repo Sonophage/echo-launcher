@@ -1,4 +1,5 @@
 @echo off
+for %%I in ("%~dp0..\..") do set "ROOT=%%~fI\"
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM ============================================================
@@ -9,7 +10,7 @@ REM
 REM  Usage: install-apk.bat ["path\to\some.apk"]
 REM ============================================================
 
-pushd "%~dp0"
+pushd "%ROOT%"
 
 echo.
 echo ========================================
@@ -45,12 +46,12 @@ if not defined _APK (
     set "_N=0"
     echo.
     echo Available APKs:
-    for %%f in ("%~dp0dist\*.apk") do (
+    for %%f in ("%ROOT%dist\*.apk") do (
         set /a _N+=1
         set "_APKLIST[!_N!]=%%~ff"
         echo   !_N!. %%~nxf   [dist]
     )
-    for %%f in ("%~dp0debug\*.apk") do (
+    for %%f in ("%ROOT%debug\*.apk") do (
         set /a _N+=1
         set "_APKLIST[!_N!]=%%~ff"
         echo   !_N!. %%~nxf   [debug]
