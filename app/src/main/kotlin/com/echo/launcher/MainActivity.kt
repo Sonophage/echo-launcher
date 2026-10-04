@@ -151,6 +151,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        holdRootFocus()
+    }
+
+    // Android spends the first d-pad press after a touch on leaving touch mode, dropping it, whenever
+    // leaving moves focus onto a view. The Compose root keeps focus even in touch mode, so nothing has
+    // to move and the press reaches the crossbar
+    private fun holdRootFocus() {
+        findViewById<android.view.ViewGroup>(android.R.id.content)?.getChildAt(0)?.let { root ->
+            root.isFocusableInTouchMode = true
+            if (!root.hasFocus()) root.requestFocus()
+        }
     }
 
     private fun rebindNotificationListenerIfDetached() {
@@ -174,6 +185,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         hideSystemBars()
+        holdRootFocus()
 
         launchDispatcher.onHostResumed()
         discordBootstrap.onResume()
