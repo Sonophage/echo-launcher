@@ -2763,7 +2763,10 @@ class CrossbarViewModel @Inject constructor(
                     }
                 }
             }
-            GamepadAction.NAVIGATE_DOWN -> when (
+            // Last Played's stage has no column to enter, so down steps to the next recent at once
+            GamepadAction.NAVIGATE_DOWN -> if (state.onLastPlayedHome && state.activePillIndex() == null) {
+                if (!moveItemCursor(+1)) gamepadInputHandler.cancelRepeat()
+            } else when (
                 downStep(
                     inPillRow = state.activePillIndex() != null,
                     pillRowVisible = state.pillRowVisible,

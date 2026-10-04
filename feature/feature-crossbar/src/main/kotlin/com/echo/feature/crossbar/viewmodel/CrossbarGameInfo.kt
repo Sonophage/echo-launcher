@@ -49,7 +49,19 @@ class CrossbarGameInfo(
         )
     }
 
+    // LT/RT walk the screenshots, the info sheet and the video; a tap on the section row jumps there
+    fun openGameInfoSection(section: GameInfoAction?) {
+        val info = uiState.value.gameInfo ?: return
+        if (info.open == section) return
+        menuSound.play(MenuSound.SCROLL)
+        uiState.update { it.copy(gameInfo = it.gameInfo?.copy(open = section, infoScroll = 0, cursor = null)) }
+    }
+
     internal fun handleGameInfoInput(info: GameInfoState, notices: List<com.echo.core.ui.notification.AndroidNotice>, action: GamepadAction) {
+        if (!info.isApp && (action == GamepadAction.PREV_CATEGORY || action == GamepadAction.NEXT_CATEGORY)) {
+            openGameInfoSection(stepGameInfoSection(info, if (action == GamepadAction.NEXT_CATEGORY) 1 else -1))
+            return
+        }
         if (info.open != null) {
             when (action) {
                 GamepadAction.BACK -> closeGameInfoPanel()

@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import androidx.compose.ui.graphics.toArgb
 import com.echo.feature.crossbar.viewmodel.resumeHoldId
 import com.echo.feature.crossbar.viewmodel.resumableFocus
 import com.echo.feature.crossbar.viewmodel.sortRow
@@ -218,6 +219,7 @@ fun CrossbarShellContainer(
         onDrawerTypedCharConsumed = viewModel::onDrawerTypedCharConsumed,
         onNotificationsToggled = viewModel.panel::toggleNotifications,
         onLaunchRecentTop = viewModel.recents::launchRecentTop,
+        onGameInfoSectionPicked = viewModel.gameDetail::openGameInfoSection,
         onNoticeChipTapped = viewModel.panel::onNoticeChipTapped,
         onSortPicked = viewModel::onSortPicked,
         onOrbTapped = viewModel::onOrbTapped,
@@ -393,6 +395,7 @@ fun CrossbarShell(
     onDrawerTypedCharConsumed: () -> Unit = {},
     onNotificationsToggled: () -> Unit = {},
     onLaunchRecentTop: () -> Unit = {},
+    onGameInfoSectionPicked: (com.echo.feature.crossbar.viewmodel.GameInfoAction?) -> Unit = {},
     onNoticeChipTapped: (com.echo.feature.crossbar.viewmodel.NoticeChip) -> Unit = {},
     onSortPicked: (com.echo.feature.crossbar.viewmodel.CrossbarSortMode) -> Unit = {},
     onOrbTapped: () -> Unit = {},
@@ -738,15 +741,26 @@ fun CrossbarShell(
                 animationSpec = tween(if (launching) 260 else 1200),
                 label = "crossbarWaveGlow",
             )
+            // owner, 2026-10-04: the wave takes the colour of whatever is selected; an installed app has no
+            // art file, so its icon gives the colour
+            val focusedAppIcon = rememberAppIcon(uiState.focusedItem?.packageName?.takeIf { uiState.focusedItemAccentArgb == null })
+            val waveAccent = uiState.focusedItemAccentArgb
+                ?: focusedAppIcon?.color?.toArgb()?.toLong()?.and(0xFFFFFFFFL)
+                ?: uiState.wallpaperAccent
             if (waveVisible(uiState.customWallpaperPath != null, uiState.waveOverWallpaper, effectiveWaveStyle)) {
                 WaveOverlay(
                     waveStyle = effectiveWaveStyle,
-                    accentArgb = uiState.focusedItemAccentArgb ?: uiState.wallpaperAccent,
+                    accentArgb = waveAccent,
                     modifier = Modifier.fillMaxSize(),
                     speedScale = { waveSpeed },
                     glowScale = { waveGlow },
                 )
             }
+            // Last Played draws its own art over the background, so it draws the wave itself, above the art
+            val homeWaveStyle = if (powerThrottled) uiState.waveStyle.frozen else uiState.waveStyle
+            val homeWave: (@Composable () -> Unit)? = if (homeWaveStyle.drawsWave) {
+                { WaveOverlay(homeWaveStyle, waveAccent, Modifier.fillMaxSize(), speedScale = { waveSpeed }, glowScale = { waveGlow }) }
+            } else null
 
             val chromeFade by animateFloatAsState(
                 if (uiState.activeContextMenu != null) 0f else 1f,
@@ -817,6 +831,7 @@ fun CrossbarShell(
                     filter = uiState.recentFilter,
                     railVisible = uiState.recentRailVisible,
                     onCardTapped = onRecentCardTap,
+                    wave = homeWave,
                     modifier = Modifier
                         .fillMaxSize()
                         .crossbarNavGestures(
@@ -1316,6 +1331,7 @@ fun CrossbarShell(
                     onCardFocused = onGameInfoCardFocused,
                     onNoticeTapped = onGameInfoNoticeTapped,
                     launchHold = uiState.launchHold,
+                    onSectionPicked = onGameInfoSectionPicked,
                     modifier = Modifier.fillMaxSize(),
                     onClosePanel = onGameInfoPanelClose,
                     onScrollMax = onGameInfoScrollMax,

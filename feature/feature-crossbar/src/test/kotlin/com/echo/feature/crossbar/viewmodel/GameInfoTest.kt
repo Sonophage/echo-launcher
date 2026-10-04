@@ -66,4 +66,18 @@ class GameInfoTest {
         assertEquals(1, pastEnd.scrolledBy(-1).infoScroll)
         assertEquals(0, sheet.scrolledBy(-1).infoScroll)
     }
+
+    @Test
+    fun `LT and RT walk screenshots, info and video, skipping what the game lacks, and wrap`() {
+        val full = GameInfoState(CrossbarItem(id = "g", title = "Ico", gameId = 1L),
+            content = DetailPanelContent(title = "Ico", platformName = "PS2"), videoUri = "/v.mp4", manualPath = "/m.pdf")
+        assertEquals(GameInfoAction.INFO, stepGameInfoSection(full, +1))
+        assertEquals(GameInfoAction.VIDEO, stepGameInfoSection(full.copy(open = GameInfoAction.INFO), +1))
+        assertEquals("RT past the last wraps to the screenshots", null, stepGameInfoSection(full.copy(open = GameInfoAction.VIDEO), +1))
+        assertEquals("LT from the screenshots wraps to the last", GameInfoAction.VIDEO, stepGameInfoSection(full, -1))
+        assertEquals("the manual opens its own viewer, so it is not a section", 3, gameInfoSections(full).size)
+
+        val noVideo = full.copy(videoUri = null)
+        assertEquals(null, stepGameInfoSection(noVideo.copy(open = GameInfoAction.INFO), +1))
+    }
 }

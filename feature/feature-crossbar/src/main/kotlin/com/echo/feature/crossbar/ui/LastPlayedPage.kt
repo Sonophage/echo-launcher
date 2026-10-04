@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import androidx.compose.foundation.border
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -54,19 +55,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import coil3.compose.AsyncImage
 import kotlin.math.abs
-import com.echo.core.ui.components.ContextMenuEyebrow
-import com.echo.core.ui.components.ContextMenuHeader
-import com.echo.core.ui.components.ContextMenuRowLabel
 import com.echo.core.ui.components.HintBarHeight
-import com.echo.core.ui.components.RailCorner
 import com.echo.core.ui.components.RailEdgeGap
-import com.echo.core.ui.components.RailGap
-import com.echo.core.ui.components.RailIcon
 import com.echo.core.ui.components.RailRowGap
-import com.echo.core.ui.components.RailSubtitleSize
 import com.echo.core.ui.components.contextMenuDim
-import com.echo.core.ui.components.contextMenuInk
-import com.echo.core.ui.components.contextMenuRow
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.PanelBase
 import com.echo.core.ui.image.rememberArtworkModel
@@ -95,6 +87,9 @@ fun LastPlayedPage(
     railVisible: Boolean,
     onCardTapped: (Int) -> Unit,
     modifier: Modifier = Modifier,
+
+    // the crossbar wave, drawn over the art and under the words (owner, 2026-10-04)
+    wave: (@Composable () -> Unit)? = null,
 ) {
     val focused = items.getOrNull(selectedIndex)
     val now = System.currentTimeMillis()
@@ -104,9 +99,9 @@ fun LastPlayedPage(
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Crossfade(railVisible, animationSpec = tween(220), label = "recentRail") { rail ->
             if (rail) {
-                RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped)
+                RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, wave)
             } else {
-                Letterbox(focused, now, empty, u) { onCardTapped(selectedIndex) }
+                Letterbox(focused, now, empty, u, wave) { onCardTapped(selectedIndex) }
             }
         }
     }
@@ -118,6 +113,7 @@ private fun Letterbox(
     now: Long,
     empty: String,
     u: DesignUnits,
+    wave: (@Composable () -> Unit)?,
     onArtTapped: () -> Unit,
 ) {
     Box(
@@ -127,11 +123,12 @@ private fun Letterbox(
     ) {
         val kind = item?.let(::recentKind)
         if (item != null && (kind == RecentKind.MUSIC || kind == RecentKind.VIDEO || kind == RecentKind.BOOK)) {
-            MediaStage(item, kind, now, u)
+            MediaStage(item, kind, now, u, wave)
             return@Box
         }
         ItemArt(item, u.dp(150), BiasAlignment(0f, -0.2f))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.92f))))
+        wave?.invoke()
         Column(
             Modifier
                 .align(Alignment.BottomStart)
@@ -188,6 +185,7 @@ private fun RecentList(
     empty: String,
     u: DesignUnits,
     onCardTapped: (Int) -> Unit,
+    wave: (@Composable () -> Unit)?,
 ) {
     val groups = remember(items, now / 60_000L) { groupRecentsByDay(items, now) }
     val rows = remember(groups) {
@@ -212,6 +210,7 @@ private fun RecentList(
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to PanelBase.copy(alpha = 0.85f), 0.3f to Color.Transparent)))
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to PanelBase.copy(alpha = 0.92f))))
         }
+        wave?.invoke()
         Box(Modifier.fillMaxHeight().width(u.dp(480)).background(Color.Black.copy(alpha = 0.45f)))
 
         Column(
@@ -220,7 +219,12 @@ private fun RecentList(
                 .width(u.dp(380))
                 .fillMaxHeight(),
         ) {
-            ContextMenuHeader("Recently opened", filter.label.uppercase(), textAlign = TextAlign.Start)
+            // kit 06: a small label, then slim rows, so the rail stays a list and not a wall
+            Text(
+                "Recent · ${filter.label}".uppercase(),
+                style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(11), letterSpacing = 0.18.em),
+                modifier = Modifier.padding(start = u.dp(4), bottom = u.dp(10)),
+            )
             LazyColumn(
                 state = listState,
                 verticalArrangement = Arrangement.spacedBy(RailRowGap),
@@ -230,9 +234,13 @@ private fun RecentList(
                     val entry = row.item
                     if (entry != null) {
                         val dim = contextMenuDim(abs(entry.index - selectedIndex), items.lastIndex)
-                        RecentRow(entry.value, entry.index == selectedIndex, dim, now) { onCardTapped(entry.index) }
+                        RecentRow(entry.value, entry.index == selectedIndex, dim, now, u) { onCardTapped(entry.index) }
                     } else {
-                        ContextMenuEyebrow(row.day.label.uppercase(), textAlign = TextAlign.Start)
+                        Text(
+                            row.day.label.uppercase(),
+                            style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.4f), fontSize = u.sp(10), letterSpacing = 0.18.em),
+                            modifier = Modifier.padding(start = u.dp(14), top = u.dp(8)),
+                        )
                     }
                 }
             }
@@ -272,41 +280,29 @@ private fun RecentList(
 private class RailRow(val day: RecentDay, val item: IndexedValue<CrossbarItem>?)
 
 @Composable
-private fun RecentRow(item: CrossbarItem, focused: Boolean, dim: Float, now: Long, onClick: () -> Unit) {
-    val ink = contextMenuInk(focused)
-    Row(
-        Modifier.fillMaxWidth().contextMenuRow(focused, dim, onClick),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(RailGap),
+private fun RecentRow(item: CrossbarItem, focused: Boolean, dim: Float, now: Long, u: DesignUnits, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(u.dp(12))
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .graphicsLayer(alpha = if (focused) 1f else dim.coerceAtLeast(0.55f))
+            .clip(shape)
+            .then(if (focused) Modifier.background(Color.White.copy(alpha = 0.10f)).border(u.dp(2), Color.White, shape) else Modifier)
+            .clickable(onClick = onClick)
+            .padding(horizontal = u.dp(14), vertical = u.dp(10)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(6)),
     ) {
-        Column(Modifier.weight(1f)) {
-            ContextMenuRowLabel(item.title, focused)
-            Text(
-                listOfNotNull(kindLabel(item), item.lastOpenedAt?.let { relativeTime(now, it) }).joinToString(" · "),
-                color = ink.copy(alpha = 0.62f), fontSize = RailSubtitleSize, lineHeight = RailSubtitleSize * 1.2f, maxLines = 1,
-            )
-            item.progressFraction?.let { ProgressBar(it, 2.dp, Modifier.fillMaxWidth().padding(top = 2.dp), ink) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(item.title, color = Color.White, fontSize = u.sp(15), fontWeight = if (focused) FontWeight.Medium else FontWeight.Normal,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(listOfNotNull(kindLabel(item), item.lastOpenedAt?.let { relativeTime(now, it) }).joinToString(" · "),
+                color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(11), fontWeight = FontWeight.Light, maxLines = 1,
+                modifier = Modifier.padding(start = u.dp(10)))
         }
-        Thumb(item, RailIcon, RailCorner)
+        item.progressFraction?.let { ProgressBar(it, u.dp(3), Modifier.fillMaxWidth()) }
     }
 }
 
-@Composable
-private fun Thumb(item: CrossbarItem, size: Dp, radius: Dp) {
-    if (item.isInstalledApp) {
-        AndroidAppIcon(packageName = item.packageName, title = item.title, size = size)
-        return
-    }
-    Box(
-        Modifier.size(size).clip(RoundedCornerShape(radius)).background(Color.White.copy(alpha = 0.12f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(kindGlyph(item), null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(size * 0.45f))
-        item.tileArt?.let {
-            AsyncImage(rememberArtworkModel(it), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        }
-    }
-}
 
 @Composable
 private fun ItemArt(item: CrossbarItem?, iconSize: Dp, alignment: Alignment) {
@@ -400,7 +396,7 @@ private fun Eyebrow(item: CrossbarItem, u: DesignUnits) {
 
 // kit 07-09: the art takes the shape of its kind (square record, wide frame, portrait cover) with the details beside it
 @Composable
-private fun MediaStage(item: CrossbarItem, kind: RecentKind, now: Long, u: DesignUnits) {
+private fun MediaStage(item: CrossbarItem, kind: RecentKind, now: Long, u: DesignUnits, wave: (@Composable () -> Unit)?) {
     val art = item.shelfCoverArt ?: item.tileArt ?: item.backdropArt.firstOrNull()
     art?.let {
         AsyncImage(
@@ -411,6 +407,7 @@ private fun MediaStage(item: CrossbarItem, kind: RecentKind, now: Long, u: Desig
         )
     }
     Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.2f), 1f to Color.Black.copy(alpha = 0.8f))))
+    wave?.invoke()
     val (w, h) = when (kind) {
         RecentKind.MUSIC -> 375 to 375
         RecentKind.VIDEO -> 560 to 315

@@ -36,6 +36,23 @@ fun gameInfoActions(info: GameInfoState): List<GameInfoAction> = listOfNotNull(
 )
 
 
+// owner, 2026-10-04: LT/RT walk Game Info's views; null is the screenshots page itself.
+// The manual opens its own viewer, so it stays in Options
+fun gameInfoSections(info: GameInfoState): List<GameInfoAction?> =
+    listOf<GameInfoAction?>(null) + gameInfoActions(info).filter { it == GameInfoAction.INFO || it == GameInfoAction.VIDEO }
+
+fun stepGameInfoSection(info: GameInfoState, delta: Int): GameInfoAction? {
+    val sections = gameInfoSections(info)
+    return sections[(sections.indexOf(info.open).coerceAtLeast(0) + delta).mod(sections.size)]
+}
+
+fun gameInfoSectionLabel(section: GameInfoAction?): String = when (section) {
+    null -> "Screenshots"
+    GameInfoAction.INFO -> "Info"
+    GameInfoAction.VIDEO -> "Video"
+    else -> section.name.lowercase().replaceFirstChar { it.uppercase() }
+}
+
 data class GameInfoStat(val label: String, val value: String)
 
 fun GameInfoState.notices(all: List<AndroidNotice>): List<AndroidNotice> =

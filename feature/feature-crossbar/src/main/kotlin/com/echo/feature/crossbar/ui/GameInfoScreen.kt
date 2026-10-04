@@ -1,5 +1,9 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.components.StatusStripHeight
+import androidx.compose.ui.zIndex
+import com.echo.feature.crossbar.viewmodel.gameInfoSectionLabel
+import com.echo.feature.crossbar.viewmodel.gameInfoSections
 import com.echo.core.ui.components.ControllerPromptItem
 import com.echo.core.ui.components.HintAction
 import com.echo.core.ui.components.EchoHintBar
@@ -78,6 +82,7 @@ fun GameInfoScreen(
     onScrollMax: (Int) -> Unit = {},
 
     launchHold: String? = null,
+    onSectionPicked: (GameInfoAction?) -> Unit = {},
 ) {
     val item = info.item
     val now = System.currentTimeMillis()
@@ -201,6 +206,19 @@ fun GameInfoScreen(
                 holding = launchHold == item.id,
             ),
         )
+
+        // the views LT/RT walk, shown the way Recent shows its filters
+        val sections = gameInfoSections(info)
+        if (!info.isApp && sections.size > 1) {
+            StripSections(
+                labels = sections.map(::gameInfoSectionLabel),
+                selected = sections.indexOf(info.open).coerceAtLeast(0),
+                onTapped = { onSectionPicked(sections[it]) },
+                u = u,
+                shoulders = true,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = StatusStripHeight + u.dp(8)).zIndex(2f),
+            )
+        }
 
         when (info.open) {
             GameInfoAction.INFO -> info.content?.let { InfoSheet(info, it, now, u, onClosePanel, onScrollMax) }
