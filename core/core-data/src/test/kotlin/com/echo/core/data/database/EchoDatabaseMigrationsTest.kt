@@ -43,19 +43,19 @@ class EchoDatabaseMigrationsTest {
         val byStart = registered.associateBy { it.startVersion }
         val lowest = registered.minOf { it.startVersion }
         var v = lowest
-        while (v < Echo_DATABASE_VERSION) {
+        while (v < ECHO_DATABASE_VERSION) {
             val step = byStart[v]
             assertTrue(step != null, "no migration starts at version $v — the chain breaks there")
             assertEquals(v + 1, step.endVersion, "migration from $v must land on ${v + 1}")
             v = step.endVersion
         }
-        assertEquals(Echo_DATABASE_VERSION, v)
+        assertEquals(ECHO_DATABASE_VERSION, v)
     }
 
     @Test
     fun `the chain reaches the version the database declares`() {
         assertEquals(
-            Echo_DATABASE_VERSION,
+            ECHO_DATABASE_VERSION,
             registered.maxOf { it.endVersion },
             "the newest migration does not arrive at the database's declared version",
         )

@@ -13,9 +13,9 @@ object CrossbarLayoutPreset {
 
     private const val COLUMN_BASE_INSET_DP = 137.0f
 
-    private const val Crossbar_BASELINE_HEIGHT_DP = 468f
-    private const val Crossbar_BASELINE_WIDTH_DP = 832f
-    private const val Crossbar_MAX_SCALE = 2.5f
+    private const val CROSSBAR_BASELINE_HEIGHT_DP = 468f
+    private const val CROSSBAR_BASELINE_WIDTH_DP = 832f
+    private const val CROSSBAR_MAX_SCALE = 2.5f
 
     fun computeForWindowDp(widthDp: Float, heightDp: Float, density: Float): CrossbarLayoutAdjust =
         computeForWindow(
@@ -29,8 +29,8 @@ object CrossbarLayoutPreset {
         val W_dp = widthPx / d
         val H_dp = heightPx / d
 
-        val uiScale = minOf(H_dp / Crossbar_BASELINE_HEIGHT_DP, W_dp / Crossbar_BASELINE_WIDTH_DP)
-            .coerceIn(1f, Crossbar_MAX_SCALE)
+        val uiScale = minOf(H_dp / CROSSBAR_BASELINE_HEIGHT_DP, W_dp / CROSSBAR_BASELINE_WIDTH_DP)
+            .coerceIn(1f, CROSSBAR_MAX_SCALE)
 
         val rawScale = (H_dp / PSP_CANVAS_HEIGHT_DP) / uiScale
         val scale = rawScale.coerceIn(CrossbarLayoutAdjust.SCALE_MIN, CrossbarLayoutAdjust.SCALE_MAX)
@@ -57,8 +57,8 @@ object CrossbarLayoutPreset {
         val W_dp = widthPx / d
         val H_dp = heightPx / d
 
-        val uiScale = minOf(H_dp / Crossbar_BASELINE_HEIGHT_DP, W_dp / Crossbar_BASELINE_WIDTH_DP)
-            .coerceIn(1f, Crossbar_MAX_SCALE)
+        val uiScale = minOf(H_dp / CROSSBAR_BASELINE_HEIGHT_DP, W_dp / CROSSBAR_BASELINE_WIDTH_DP)
+            .coerceIn(1f, CROSSBAR_MAX_SCALE)
 
         val rawScale = (H_dp / PSP_CANVAS_HEIGHT_DP) / uiScale
         val scale = rawScale.coerceIn(CrossbarLayoutAdjust.SCALE_MIN, CrossbarLayoutAdjust.SCALE_MAX)

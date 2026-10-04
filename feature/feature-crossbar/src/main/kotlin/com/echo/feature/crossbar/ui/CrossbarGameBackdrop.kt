@@ -14,14 +14,14 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import com.echo.core.ui.wave.steppedFrameMs
 
-const val Crossbar_STILL_SOLID_END = 0.40f
+const val CROSSBAR_STILL_SOLID_END = 0.40f
 
-const val Crossbar_STILL_FADE_END = 0.68f
+const val CROSSBAR_STILL_FADE_END = 0.68f
 
 fun crossbarStillOverVideoStops(): Array<Pair<Float, Color>> = arrayOf(
     0f to Color.Black,
-    Crossbar_STILL_SOLID_END to Color.Black,
-    Crossbar_STILL_FADE_END to Color.Transparent,
+    CROSSBAR_STILL_SOLID_END to Color.Black,
+    CROSSBAR_STILL_FADE_END to Color.Transparent,
     1f to Color.Transparent,
 )
 
@@ -35,7 +35,7 @@ fun Modifier.crossbarStillOverVideo(): Modifier = this
         )
     }
 
-const val Crossbar_BACKDROP_FADE_MS = 700
+const val CROSSBAR_BACKDROP_FADE_MS = 700
 
 const val KEN_BURNS_MS = 24_000L
 

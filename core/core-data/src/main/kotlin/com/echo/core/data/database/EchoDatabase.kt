@@ -73,7 +73,7 @@ import com.echo.core.data.database.entity.VideoLibraryEntity
 import com.echo.core.data.database.entity.VideoPlaylistEntity
 import com.echo.core.data.database.entity.VideoPlaylistItemEntity
 
-const val Echo_DATABASE_VERSION = 56
+const val ECHO_DATABASE_VERSION = 56
 
 @Database(
     entities = [
@@ -113,7 +113,7 @@ const val Echo_DATABASE_VERSION = 56
         SteamOwnedGameEntity::class,
         SteamNoAchievementsEntity::class,
     ],
-    version = Echo_DATABASE_VERSION,
+    version = ECHO_DATABASE_VERSION,
     exportSchema = true,
 )
 @TypeConverters(EchoTypeConverters::class)
