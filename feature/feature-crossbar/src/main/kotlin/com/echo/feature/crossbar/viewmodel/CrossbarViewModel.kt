@@ -14,8 +14,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
 import android.provider.MediaStore
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -45,7 +43,6 @@ import com.echo.feature.launcher.platformEmulatorChoices
 import com.echo.core.data.repository.MemoryCardRepository
 import com.echo.core.data.repository.EchoThemeStore
 import com.echo.core.ui.icons.CustomIcon
-import com.echo.core.ui.icons.GifFrameProbe
 import com.echo.core.ui.media.resolveGameBootAudio
 import com.echo.themekit.CustomizableIcons
 import com.echo.core.domain.model.BuiltInCategory
@@ -66,8 +63,6 @@ import com.echo.core.domain.model.MemoryCard
 import com.echo.core.domain.model.MusicTrack
 import com.echo.core.domain.model.CrossbarColorScheme
 import com.echo.core.domain.model.CrossbarPalette
-import com.echo.core.ui.theme.withWaveTint
-import com.echo.core.domain.model.displayLabel
 import com.echo.core.domain.model.resolve
 import com.echo.core.domain.repository.GameRepository
 import com.echo.core.ui.icons.GameIconStyle
@@ -124,7 +119,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
-private fun CrossbarPalette.toEchoColors() = EchoColors(
+internal fun CrossbarPalette.toEchoColors() = EchoColors(
     waveColor         = androidx.compose.ui.graphics.Color(waveColor),
     accentColor       = androidx.compose.ui.graphics.Color(accentColor),
     textPrimary       = androidx.compose.ui.graphics.Color(textColor),
@@ -1297,8 +1292,8 @@ class CrossbarViewModel @Inject constructor(
     private val launchDispatcher: com.echo.feature.launcher.LaunchDispatcher,
     private val launchResolver: com.echo.feature.launcher.GameLaunchResolver,
     private val setupStateProvider: com.echo.feature.launcher.SetupStateProvider,
-    private val customIconStore: CustomIconStore,
-    private val echoThemeStore: EchoThemeStore,
+    internal val customIconStore: CustomIconStore,
+    internal val echoThemeStore: EchoThemeStore,
     private val uiMediaStore: com.echo.core.data.repository.UiMediaStore,
     private val gameBootGate: com.echo.feature.launcher.GameBootGate,
     private val mediaLaunchGate: com.echo.core.data.launch.MediaLaunchGate,
@@ -1321,6 +1316,8 @@ class CrossbarViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
+
+    internal val look = CrossbarLook(this, _uiState, viewModelScope, menuSound)
 
     internal val recents = CrossbarRecents(this, _uiState, viewModelScope, menuSound)
 
@@ -1348,8 +1345,6 @@ class CrossbarViewModel @Inject constructor(
 
     internal var platformCache: Map<String, PlatformEntity> = emptyMap()
     private var enabledCards: List<MemoryCard> = emptyList()
-    private var baseThemeColors: EchoColors = DefaultEchoColors
-
     private val taskNotifier = BackgroundTaskNotifier(context)
 
     init {
@@ -1368,11 +1363,11 @@ class CrossbarViewModel @Inject constructor(
         recents.observeRecentTopAccent()
         observeBackgroundSettings()
         observeTouchNavButtonMode()
-        observeWallpaper()
+        look.observeWallpaper()
         observeLibrarySetupState()
         checkInitialSetup()
         logStartupSequence()
-        observeColorScheme()
+        look.observeColorScheme()
         observeCategoryBar()
         observeLibraryChips()
         panel.observeProfilePrefs()
@@ -1491,103 +1486,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private data class SchemePrefs(
-        val schemeName: String,
-        val accentOverride: Long?,
-        val iconColor: Long?,
-        val iconsStamp: Long?,
-        val layoutJson: String?,
-
-        val layoutAdjustJson: String?,
-
-        val customIconsStamp: Long?,
-
-        val textColor: Long?,
-    )
-
-    private fun observeColorScheme() {
-        viewModelScope.launch {
-            context.echoDataStore.data
-                .map { prefs ->
-                    SchemePrefs(
-                        schemeName = prefs[KEY_COLOR_SCHEME] ?: CrossbarColorScheme.CLASSIC_BLUE.name,
-                        accentOverride = prefs[KEY_ACCENT_OVERRIDE],
-                        iconColor = prefs[KEY_ICON_COLOR],
-                        iconsStamp = prefs[com.echo.core.data.repository.EchoThemeStore.KEY_THEME_ICONS_STAMP],
-                        layoutJson = prefs[com.echo.core.data.repository.EchoThemeStore.KEY_THEME_LAYOUT],
-                        layoutAdjustJson = prefs[KEY_CROSSBAR_LAYOUT_ADJUST],
-                        customIconsStamp = prefs[CustomIconStore.KEY_CUSTOM_ICONS_STAMP],
-                        textColor = prefs[KEY_TEXT_COLOR],
-                    )
-                }
-                .distinctUntilChanged()
-                .collect { (name, accentOverride, iconColorArgb, iconsStamp, layoutJson, layoutAdjustJson, customIconsStamp, textColorArgb) ->
-                    val base = if (accentOverride != null) {
-                        DefaultEchoColors.withWaveTint(
-                            androidx.compose.ui.graphics.Color(accentOverride and 0xFFFFFFFFL),
-                        )
-                    } else {
-                        val scheme = runCatching { CrossbarColorScheme.valueOf(name) }
-                            .getOrDefault(CrossbarColorScheme.CLASSIC_BLUE)
-                        val month = java.time.LocalDate.now().monthValue
-                        scheme.resolve(month).toEchoColors()
-                    }
-
-                    val textColor = textColorArgb
-                        ?.let { androidx.compose.ui.graphics.Color(it and 0xFFFFFFFFL) }
-                        ?: base.textPrimary
-                    baseThemeColors = base.copy(
-                        iconColor = iconColorArgb
-                            ?.let { androidx.compose.ui.graphics.Color(it and 0xFFFFFFFFL) }
-                            ?: androidx.compose.ui.graphics.Color.White,
-                        textPrimary = textColor,
-                        textSecondary = textColor.copy(alpha = 0.7f),
-                    )
-
-                    val iconOverrides = if (iconsStamp != null) loadThemeIconOverrides() else emptyMap()
-                    val customIcons =
-                        if (customIconsStamp != null) customIconStore.load() else emptyMap()
-
-                    val themeSpec = com.echo.themekit.CrossbarLayoutSpecCodec.decode(layoutJson)
-                        ?: com.echo.themekit.CrossbarLayoutSpec.DEFAULT
-
-                    val adjustMap = com.echo.themekit.CrossbarLayoutAdjustCodec.decode(layoutAdjustJson)
-                    _uiState.update {
-                        it.copy(
-                            themeColors = baseThemeColors,
-                            iconOverrides = iconOverrides,
-                            customIcons = customIcons,
-                            layoutSpec = themeSpec,
-                            crossbarLayoutAdjustMap = adjustMap,
-                        )
-                    }
-                }
-        }
-    }
-
-    private suspend fun loadThemeIconOverrides(): Map<String, CustomIcon> =
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val iconsDir = java.io.File(context.filesDir, EchoThemeStore.THEME_ICONS_DIR)
-            iconsDir.listFiles { f -> f.isFile }.orEmpty().mapNotNull { file ->
-                val key = file.nameWithoutExtension
-                if (!CustomizableIcons.isValidKey(key)) return@mapNotNull null
-                val ext = file.extension.lowercase()
-
-                val bitmap = com.echo.core.data.repository.SafeMedia
-                    .decodeFileCapped(file.absolutePath, maxDimension = 2048, targetDimension = 2048)
-                    ?: return@mapNotNull null
-                val firstFrame = bitmap.asImageBitmap()
-                if (ext == "gif") {
-                    if (GifFrameProbe.countFrames(file) > 1) {
-                        key to CustomIcon.Animated(path = file.absolutePath, firstFrame = firstFrame)
-                    } else {
-                        key to CustomIcon.Still(firstFrame)
-                    }
-                } else {
-                    key to CustomIcon.Still(firstFrame)
-                }
-            }.toMap()
-        }
 
     private fun observeCategoryBar() {
         viewModelScope.launch {
@@ -2909,7 +2807,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
     private fun tintWaveForCategory(category: Category?) {
-        _uiState.update { it.copy(themeColors = baseThemeColors) }
+        _uiState.update { it.copy(themeColors = look.baseThemeColors) }
     }
 
     private fun observeGamepadMappings() {
@@ -3194,23 +3092,23 @@ class CrossbarViewModel @Inject constructor(
 
         if (state.customColorPicker != null) {
             when (action) {
-                GamepadAction.NAVIGATE_UP -> moveCustomColorChannel(-1)
-                GamepadAction.NAVIGATE_DOWN -> moveCustomColorChannel(1)
-                GamepadAction.NAVIGATE_LEFT -> adjustCustomColor(-0.04f)
-                GamepadAction.NAVIGATE_RIGHT -> adjustCustomColor(0.04f)
-                GamepadAction.SELECT -> confirmCustomColor()
-                GamepadAction.BACK, GamepadAction.OPEN_CONTEXT_MENU -> cancelCustomColor()
+                GamepadAction.NAVIGATE_UP -> look.moveCustomColorChannel(-1)
+                GamepadAction.NAVIGATE_DOWN -> look.moveCustomColorChannel(1)
+                GamepadAction.NAVIGATE_LEFT -> look.adjustCustomColor(-0.04f)
+                GamepadAction.NAVIGATE_RIGHT -> look.adjustCustomColor(0.04f)
+                GamepadAction.SELECT -> look.confirmCustomColor()
+                GamepadAction.BACK, GamepadAction.OPEN_CONTEXT_MENU -> look.cancelCustomColor()
                 else -> Unit
             }
             return
         }
         if (state.colorSchemePicker != null) {
             when (action) {
-                GamepadAction.NAVIGATE_UP   -> moveColorSchemePicker(-1)
-                GamepadAction.NAVIGATE_DOWN -> moveColorSchemePicker(+1)
-                GamepadAction.SELECT        -> confirmColorSchemePicker()
+                GamepadAction.NAVIGATE_UP   -> look.moveColorSchemePicker(-1)
+                GamepadAction.NAVIGATE_DOWN -> look.moveColorSchemePicker(+1)
+                GamepadAction.SELECT        -> look.confirmColorSchemePicker()
                 GamepadAction.BACK,
-                GamepadAction.OPEN_CONTEXT_MENU    -> cancelColorSchemePicker()
+                GamepadAction.OPEN_CONTEXT_MENU    -> look.cancelColorSchemePicker()
                 else -> Unit
             }
             return
@@ -3369,8 +3267,8 @@ class CrossbarViewModel @Inject constructor(
             }
             state.saveThemeNameDialog != null -> {
                 when (action) {
-                    GamepadAction.SELECT -> confirmSaveCurrentLookAsTheme(state.saveThemeNameDialog.text)
-                    GamepadAction.BACK   -> dismissSaveThemeNameDialog()
+                    GamepadAction.SELECT -> look.confirmSaveCurrentLookAsTheme(state.saveThemeNameDialog.text)
+                    GamepadAction.BACK   -> look.dismissSaveThemeNameDialog()
                     else                 -> Unit
                 }
                 return
@@ -5733,159 +5631,6 @@ class CrossbarViewModel @Inject constructor(
         _uiState.update { it.copy(pendingDrawerAction = null) }
     }
 
-    private var colorSchemeOriginal: CrossbarColorScheme? = null
-
-    private var accentOverrideOriginal: Long? = null
-
-    fun openColorSchemePicker() {
-        viewModelScope.launch {
-            val prefs = context.echoDataStore.data.first()
-            val current = runCatching {
-                CrossbarColorScheme.valueOf(prefs[KEY_COLOR_SCHEME] ?: CrossbarColorScheme.CLASSIC_BLUE.name)
-            }.getOrDefault(CrossbarColorScheme.CLASSIC_BLUE)
-            colorSchemeOriginal = current
-            accentOverrideOriginal = prefs[KEY_ACCENT_OVERRIDE]
-
-            val month = java.time.LocalDate.now().monthValue
-            val options = CrossbarColorScheme.values().map { scheme ->
-                ColorSchemeOption(
-                    scheme   = scheme,
-                    label    = scheme.displayLabel(),
-
-                    sublabel = if (scheme == CrossbarColorScheme.ORIGINAL) "Changes with the month" else null,
-                    swatch   = scheme.resolve(month).waveColor,
-                )
-            }
-            val custom = prefs[KEY_ACCENT_OVERRIDE]
-            val pickerOptions = options + ColorSchemeOption(
-                scheme = null,
-                label = "Custom",
-                sublabel = "Choose a custom accent color",
-                swatch = custom ?: 0xFF888888L,
-                isCustom = true,
-            )
-            val index = if (custom != null) pickerOptions.lastIndex else options.indexOfFirst { it.scheme == current }.coerceAtLeast(0)
-            _uiState.update { it.copy(colorSchemePicker = ColorSchemePickerState(pickerOptions, index)) }
-        }
-    }
-
-    private fun moveColorSchemePicker(delta: Int) {
-        val picker = _uiState.value.colorSchemePicker ?: return
-        val next = (picker.selectedIndex + delta).coerceIn(0, picker.options.lastIndex)
-        if (next == picker.selectedIndex) { gamepadInputHandler.cancelRepeat(); return }
-        _uiState.update { it.copy(colorSchemePicker = picker.copy(selectedIndex = next)) }
-        picker.options[next].scheme?.let(::previewColorScheme)
-    }
-
-    fun onColorSchemeHighlightedAt(index: Int) {
-        val picker = _uiState.value.colorSchemePicker ?: return
-        if (index !in picker.options.indices || index == picker.selectedIndex) return
-        _uiState.update { it.copy(colorSchemePicker = picker.copy(selectedIndex = index)) }
-        picker.options[index].scheme?.let(::previewColorScheme)
-    }
-
-    private fun previewColorScheme(scheme: CrossbarColorScheme) {
-        viewModelScope.launch {
-            context.echoDataStore.edit {
-                it[KEY_COLOR_SCHEME] = scheme.name
-
-                it.remove(KEY_ACCENT_OVERRIDE)
-            }
-        }
-    }
-
-    fun confirmColorSchemePicker() {
-        val picker = _uiState.value.colorSchemePicker ?: return
-        val selected = picker.options.getOrNull(picker.selectedIndex)
-        val chosen = selected?.scheme
-        if (selected?.isCustom == true) {
-            openCustomColorPicker()
-            return
-        }
-        viewModelScope.launch {
-            if (chosen != null) {
-                context.echoDataStore.edit {
-                    it[KEY_COLOR_SCHEME] = chosen.name
-
-                    it.remove(KEY_ACCENT_OVERRIDE)
-                    it.remove(com.echo.core.data.repository.EchoThemeStore.KEY_THEME_ICONS_STAMP)
-                    it.remove(com.echo.core.data.repository.EchoThemeStore.KEY_THEME_LAYOUT)
-                }
-            }
-            colorSchemeOriginal = null
-            accentOverrideOriginal = null
-            _uiState.update { it.copy(colorSchemePicker = null) }
-        }
-    }
-
-    private fun openCustomColorPicker() {
-        val argb = _uiState.value.themeColors.accentColor.toArgb().toLong() and 0xFFFFFFFFL
-        val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV((argb and 0xFFFFFFFFL).toInt(), hsv)
-        _uiState.update { state ->
-            return@update state.copy(customColorPicker = CustomColorPickerState(hsv[0], hsv[1], hsv[2]))
-        }
-    }
-
-    fun updateCustomColor(channel: Int, fraction: Float) {
-        _uiState.update { state ->
-            val picker = state.customColorPicker ?: return@update state
-            val clamped = fraction.coerceIn(0f, 1f)
-            return@update state.copy(customColorPicker = picker.copy(
-                hue = if (channel == 0) clamped * 360f else picker.hue,
-                saturation = if (channel == 1) clamped else picker.saturation,
-                brightness = if (channel == 2) clamped else picker.brightness,
-                selectedChannel = channel,
-            ))
-        }
-    }
-
-    fun moveCustomColorChannel(delta: Int) {
-        _uiState.update { state ->
-            val picker = state.customColorPicker ?: return@update state
-            state.copy(customColorPicker = picker.copy(selectedChannel = (picker.selectedChannel + delta + 3) % 3))
-        }
-    }
-
-    fun adjustCustomColor(delta: Float) {
-        val picker = _uiState.value.customColorPicker ?: return
-        val value = when (picker.selectedChannel) {
-            0 -> ((picker.hue / 360f) + delta).mod(1f)
-            1 -> picker.saturation + delta
-            else -> picker.brightness + delta
-        }
-        updateCustomColor(picker.selectedChannel, value)
-    }
-
-    fun confirmCustomColor() {
-        val picker = _uiState.value.customColorPicker ?: return
-        viewModelScope.launch {
-            context.echoDataStore.edit { it[KEY_ACCENT_OVERRIDE] = android.graphics.Color.HSVToColor(floatArrayOf(picker.hue, picker.saturation, picker.brightness)).toLong() and 0xFFFFFFFFL }
-            _uiState.update { it.copy(customColorPicker = null, colorSchemePicker = null) }
-        }
-    }
-
-    fun cancelCustomColor() {
-        _uiState.update { it.copy(customColorPicker = null) }
-    }
-
-    fun cancelColorSchemePicker() {
-        val original = colorSchemeOriginal
-        val accentOriginal = accentOverrideOriginal
-        viewModelScope.launch {
-            if (original != null) {
-                context.echoDataStore.edit {
-                    it[KEY_COLOR_SCHEME] = original.name
-
-                    if (accentOriginal != null) it[KEY_ACCENT_OVERRIDE] = accentOriginal
-                }
-            }
-            colorSchemeOriginal = null
-            accentOverrideOriginal = null
-            _uiState.update { it.copy(colorSchemePicker = null) }
-        }
-    }
-
     fun openCrossbarLayoutAdjust() {
         val swDp = context.resources.configuration.smallestScreenWidthDp
         val bucket = com.echo.themekit.CrossbarFormFactor.forSmallestWidthDp(swDp).key
@@ -6025,46 +5770,8 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    fun onThemeShareConsumed() {
-        _uiState.update { it.copy(pendingThemeShareFile = null) }
-    }
-
-    fun requestSaveCurrentLookAsTheme() {
-        _uiState.update {
-            it.copy(saveThemeNameDialog = PlaylistNameDialogState(title = "Save Current Look as Theme"))
-        }
-    }
-
-    fun confirmSaveCurrentLookAsTheme(name: String) {
-        _uiState.update { it.copy(saveThemeNameDialog = null) }
-        menuSound.play(MenuSound.CONFIRM)
-        saveCurrentLookAsTheme(name)
-    }
-
-    fun dismissSaveThemeNameDialog() {
-        _uiState.update { it.copy(saveThemeNameDialog = null) }
-    }
-
     fun onCustomIconsActionConsumed() {
         _uiState.update { it.copy(pendingCustomIconsAction = null) }
-    }
-
-    fun saveCurrentLookAsTheme(name: String) {
-        viewModelScope.launch {
-            val saved = echoThemeStore.saveCurrentLook(name)
-            val message = when {
-                saved == null -> "Couldn't save the theme"
-                else -> "Theme saved — ${saved.name}"
-            }
-            val shareFile = saved?.let { echoThemeStore.exportForShare(it.id) }
-            _uiState.update {
-                val s = it.customIconSession ?: return@update it
-                it.copy(
-                    customIconSession = s.copy(message = message, revision = s.revision + 1),
-                    pendingThemeShareFile = shareFile,
-                )
-            }
-        }
     }
 
     @Volatile
@@ -6497,29 +6204,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun observeWallpaper() {
-        viewModelScope.launch {
-            context.echoDataStore.data.collect { prefs ->
-                val path = prefs[KEY_CUSTOM_WALLPAPER]
-
-                val validPath = if (path != null && java.io.File(path).exists()) path else null
-
-                val motionPath = prefs[KEY_MOTION_WALLPAPER]
-                    ?.takeIf { validPath != null && java.io.File(it).exists() }
-
-                val accent = prefs[com.echo.core.data.wallpaper.WallpaperLuminanceProbe.KEY_WALLPAPER_ACCENT]
-                    ?.takeIf { validPath != null }
-                _uiState.update {
-                    it.copy(
-                        customWallpaperPath = validPath,
-                        motionWallpaperPath = motionPath,
-                        wallpaperAccent = accent,
-                    )
-                }
-            }
-        }
-    }
-
     companion object {
         private val KEY_WAVE_STYLE        = stringPreferencesKey("display_wave_style")
 
@@ -6527,19 +6211,19 @@ class CrossbarViewModel @Inject constructor(
 
         private val KEY_WAVE_OVER_WALLPAPER = booleanPreferencesKey("display_wave_over_wallpaper")
         private val KEY_THERMAL_AWARE     = booleanPreferencesKey("display_thermal_aware")
-        private val KEY_COLOR_SCHEME      = stringPreferencesKey("display_color_scheme")
+        internal val KEY_COLOR_SCHEME      = stringPreferencesKey("display_color_scheme")
 
-        private val KEY_ACCENT_OVERRIDE   = longPreferencesKey("theme_accent_override")
+        internal val KEY_ACCENT_OVERRIDE   = longPreferencesKey("theme_accent_override")
 
-        private val KEY_ICON_COLOR        = longPreferencesKey("theme_icon_color")
+        internal val KEY_ICON_COLOR        = longPreferencesKey("theme_icon_color")
 
-        private val KEY_TEXT_COLOR        = longPreferencesKey("display_text_color")
+        internal val KEY_TEXT_COLOR        = longPreferencesKey("display_text_color")
 
 
         internal const val WAVE_IDLE_MS = 12_000L
 
         internal const val IDLE_HINT_POLL_MS  = 500L
-        private val KEY_CROSSBAR_LAYOUT_ADJUST = stringPreferencesKey("display_xmb_layout_adjust")
+        internal val KEY_CROSSBAR_LAYOUT_ADJUST = stringPreferencesKey("display_xmb_layout_adjust")
         private val KEY_SETUP_COMPLETE    = booleanPreferencesKey("library_setup_complete")
 
         private val KEY_INITIAL_SETUP_SEEN = com.echo.core.data.repository.InitialSetupFlag.KEY_SEEN
@@ -6586,9 +6270,9 @@ class CrossbarViewModel @Inject constructor(
 
         private fun MemoryCard.isUserLibrary(): Boolean =
             platformId != ANDROID_PLATFORM_ID || gameCount > 0
-        private val KEY_CUSTOM_WALLPAPER  = stringPreferencesKey("display_custom_wallpaper")
+        internal val KEY_CUSTOM_WALLPAPER  = stringPreferencesKey("display_custom_wallpaper")
 
-        private val KEY_MOTION_WALLPAPER = stringPreferencesKey("display_motion_wallpaper")
+        internal val KEY_MOTION_WALLPAPER = stringPreferencesKey("display_motion_wallpaper")
 
         private val KEY_SHOW_BOOT       = booleanPreferencesKey("display_show_boot")
         private val KEY_BOOT_ON_RESUME  = booleanPreferencesKey("display_boot_on_resume")

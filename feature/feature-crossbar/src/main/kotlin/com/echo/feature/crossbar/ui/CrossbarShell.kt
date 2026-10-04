@@ -165,7 +165,7 @@ fun CrossbarShellContainer(
                     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
             )
         }
-        viewModel.onThemeShareConsumed()
+        viewModel.look.onThemeShareConsumed()
     }
 
     val mediaRootPicker = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -240,10 +240,10 @@ fun CrossbarShellContainer(
         onCustomIconPicked = viewModel::onIconPicked,
         onCustomResetSlot = viewModel::onResetSlot,
         onCustomResetAll = viewModel::onResetAll,
-        onSaveAsThemeRequested = viewModel::requestSaveCurrentLookAsTheme,
-        onConfirmSaveAsTheme = viewModel::confirmSaveCurrentLookAsTheme,
-        onDismissSaveAsTheme = viewModel::dismissSaveThemeNameDialog,
-        onThemeShareConsumed = viewModel::onThemeShareConsumed,
+        onSaveAsThemeRequested = viewModel.look::requestSaveCurrentLookAsTheme,
+        onConfirmSaveAsTheme = viewModel.look::confirmSaveCurrentLookAsTheme,
+        onDismissSaveAsTheme = viewModel.look::dismissSaveThemeNameDialog,
+        onThemeShareConsumed = viewModel.look::onThemeShareConsumed,
         onSettingsActionConsumed = viewModel::consumeSettingsAction,
         onPromptTapped = viewModel::onPromptTapped,
         onPillActivated = viewModel::onPillActivated,
@@ -288,15 +288,15 @@ fun CrossbarShellContainer(
         onAppDetailActionConsumed = viewModel::consumeAppDetailAction,
         onContextMenuItemActivated = viewModel::onContextMenuItemActivatedAt,
         onContextMenuDismiss = viewModel::closeContextMenu,
-        onOpenColorSchemePicker = viewModel::openColorSchemePicker,
-        onColorSchemeHighlightedAt = viewModel::onColorSchemeHighlightedAt,
-        onColorSchemeConfirm = viewModel::confirmColorSchemePicker,
-        onColorSchemeCancel = viewModel::cancelColorSchemePicker,
-        onCustomColorUpdate = viewModel::updateCustomColor,
-        onCustomColorChannelMove = viewModel::moveCustomColorChannel,
-        onCustomColorAdjust = viewModel::adjustCustomColor,
-        onCustomColorConfirm = viewModel::confirmCustomColor,
-        onCustomColorCancel = viewModel::cancelCustomColor,
+        onOpenColorSchemePicker = viewModel.look::openColorSchemePicker,
+        onColorSchemeHighlightedAt = viewModel.look::onColorSchemeHighlightedAt,
+        onColorSchemeConfirm = viewModel.look::confirmColorSchemePicker,
+        onColorSchemeCancel = viewModel.look::cancelColorSchemePicker,
+        onCustomColorUpdate = viewModel.look::updateCustomColor,
+        onCustomColorChannelMove = viewModel.look::moveCustomColorChannel,
+        onCustomColorAdjust = viewModel.look::adjustCustomColor,
+        onCustomColorConfirm = viewModel.look::confirmCustomColor,
+        onCustomColorCancel = viewModel.look::cancelCustomColor,
         onCrossbarLayoutScale = viewModel::setCrossbarLayoutScale,
         onCrossbarLayoutHorizontal = viewModel::setCrossbarLayoutHorizontal,
         onCrossbarLayoutVertical = viewModel::setCrossbarLayoutVertical,
