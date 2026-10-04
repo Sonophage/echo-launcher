@@ -3656,6 +3656,14 @@ class CrossbarViewModel @Inject constructor(
         if (s.hasBlockingOverlay) return
 
         if (s.isInSubItem) return
+        when (swipeRailStep(direction, s.onLastPlayedHome, s.recentRailVisible)) {
+            RailStep.Open, RailStep.Close -> {
+                menuSound.play(MenuSound.SYSTEM_BROWSE)
+                _uiState.update { it.copy(recentRailVisible = !s.recentRailVisible) }
+                return
+            }
+            RailStep.Pass -> Unit
+        }
         val next = (s.selectedCategoryIndex + direction)
             .coerceIn(0, (s.categories.size - 1).coerceAtLeast(0))
         if (next != s.selectedCategoryIndex) onCategorySelected(next)

@@ -18,4 +18,12 @@ class RecentRailStepTest {
         assertEquals(RailStep.Pass, recentRailStep(GamepadAction.NAVIGATE_LEFT, onLastPlayedHome = true, railVisible = true))
         assertEquals(RailStep.Pass, recentRailStep(GamepadAction.NAVIGATE_RIGHT, onLastPlayedHome = false, railVisible = true))
     }
+
+    @Test
+    fun `a swipe toward the left opens the rail on Last Played and back toward the right closes it, as the d-pad does`() {
+        assertEquals(RailStep.Open, swipeRailStep(-1, onLastPlayedHome = true, railVisible = false))
+        assertEquals(RailStep.Close, swipeRailStep(+1, onLastPlayedHome = true, railVisible = true))
+        assertEquals(RailStep.Pass, swipeRailStep(+1, onLastPlayedHome = true, railVisible = false))
+        assertEquals("off Last Played a swipe only changes category", RailStep.Pass, swipeRailStep(-1, onLastPlayedHome = false, railVisible = false))
+    }
 }

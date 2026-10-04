@@ -32,6 +32,11 @@ internal fun recentRailStep(action: GamepadAction, onLastPlayedHome: Boolean, ra
     else -> RailStep.Pass
 }
 
+// a horizontal swipe takes the rail step its d-pad direction would (owner, 2026-10-04: swiping on
+// Last Played changed category, so touch could never open the Recent rail); a negative step is LEFT
+internal fun swipeRailStep(direction: Int, onLastPlayedHome: Boolean, railVisible: Boolean): RailStep =
+    recentRailStep(if (direction < 0) GamepadAction.NAVIGATE_LEFT else GamepadAction.NAVIGATE_RIGHT, onLastPlayedHome, railVisible)
+
 internal enum class RecentLaunch { GAME, STORED_INTENT, SHORTCUT, APP, VIDEO, BOOK, TRACK, ALBUM }
 
 internal fun recentLaunchFor(item: CrossbarItem): RecentLaunch? = when {
