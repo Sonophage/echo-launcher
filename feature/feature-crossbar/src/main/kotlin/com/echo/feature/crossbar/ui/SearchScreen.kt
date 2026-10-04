@@ -1,5 +1,8 @@
 package com.echo.feature.crossbar.ui
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateContentSize
 import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import androidx.compose.foundation.background
@@ -10,11 +13,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -45,7 +44,6 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -80,7 +78,6 @@ import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import com.echo.feature.crossbar.viewmodel.isInstalledApp
 import com.echo.feature.crossbar.viewmodel.primaryVerbFor
 import com.echo.core.common.format.relativeTime
-import com.echo.core.ui.design.PanelButton
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.design.panelDesignUnits
 
@@ -144,37 +141,16 @@ fun SearchScreen(
             modifier = Modifier.align(Alignment.TopCenter).padding(top = fieldTop).width(u.dp(380)),
         )
 
-        if (imeUp) {
-            Column(
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = belowField, bottom = 10.dp)
-                    .width(u.dp(380))
-                    .imePadding(),
-            ) {
-                if (empty != null) EmptyNotice(empty, u) else ResultList(state, listState, u, onActivateAt, onFocusAt)
-            }
-        } else {
-            Column(
-                Modifier
-                    .fillMaxHeight()
-                    .padding(start = u.dp(64), top = belowField, bottom = HintBarHeight)
-                    .width(u.dp(400)),
-            ) {
-                if (empty == null) ResultList(state, listState, u, onActivateAt, onFocusAt)
-            }
-
-            Column(
-                Modifier
-                    .fillMaxHeight()
-                    .padding(start = u.dp(520), end = u.dp(80), top = belowField, bottom = HintBarHeight),
-                verticalArrangement = Arrangement.spacedBy(u.dp(20)),
-            ) {
-                when {
-                    empty != null -> Box(Modifier.padding(top = u.dp(120))) { EmptyNotice(empty, u) }
-                    focused != null -> Preview(focused, icon?.bitmap, u) { onActivateAt(state.selectedIndex) }
-                }
-            }
+        // owner, 2026-10-04: one centred list whether the keyboard is up or not; the highlighted result
+        // opens into a card with its info, and moving down opens the next one
+        Column(
+            Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = belowField, bottom = if (imeUp) 10.dp else HintBarHeight)
+                .width(u.dp(if (imeUp) 380 else 460))
+                .then(if (imeUp) Modifier.imePadding() else Modifier),
+        ) {
+            if (empty != null) EmptyNotice(empty, u) else ResultList(state, listState, u, compact = imeUp, onActivateAt, onFocusAt)
         }
 
         if (!imeUp) {
@@ -202,13 +178,73 @@ private fun ResultList(
     state: SearchState,
     listState: androidx.compose.foundation.lazy.LazyListState,
     u: DesignUnits,
+    compact: Boolean,
     onActivateAt: (Int) -> Unit,
     onFocusAt: (Int) -> Unit,
 ) {
-    LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(u.dp(4)), modifier = Modifier.fillMaxSize()) {
+    LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(u.dp(6)), modifier = Modifier.fillMaxSize()) {
         itemsIndexed(state.rows, key = { _, row -> row.id }) { index, row ->
             val selected = index == state.selectedIndex
-            ResultRow(row, selected, u) { if (selected) onActivateAt(index) else onFocusAt(index) }
+            Box(Modifier.animateItem().animateContentSize(tween(180))) {
+                if (selected) ResultCard(row, u, compact) { onActivateAt(index) }
+                else ResultRow(row, false, u) { onFocusAt(index) }
+            }
+        }
+    }
+}
+
+// the highlighted result: its art, what it is, and its facts, in the card the kit draws
+@Composable
+private fun ResultCard(row: CrossbarItem, u: DesignUnits, compact: Boolean, onClick: () -> Unit) {
+    val (kind, detail) = kindAndDetail(row)
+    val icon = rememberAppIcon(row.packageName?.takeIf { row.isInstalledApp })
+    val shape = RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))
+    val art = (row.backdropArt.firstOrNull() ?: row.shelfCoverArt).takeUnless { row.isInstalledApp }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(PanelCardFocusFill)
+            .border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape)
+            .clickable(onClick = onClick),
+    ) {
+        if (!compact) {
+            Box(
+                Modifier.fillMaxWidth().height(u.dp(150)).background(Color.White.copy(alpha = 0.07f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (row.isInstalledApp) {
+                    AppIcon(icon?.bitmap, u.dp(84), u.dp(20))
+                } else {
+                    Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(u.dp(56)))
+                    art?.let { AsyncImage(rememberArtworkModel(it), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                }
+            }
+        }
+        Row(
+            Modifier.padding(u.dp(14)),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+        ) {
+            if (compact) {
+                if (row.isInstalledApp) AppIcon(icon?.bitmap, u.dp(58), u.dp(14))
+                else Art(row.shelfCoverArt, u.dp(58), u.dp(58), u.dp(14), kindGlyph(row), u)
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
+                Eyebrow(kind, u)
+                Headline(row.title, u.sp(if (compact) 18 else 22), 2)
+                (row.metadataLine?.takeIf { it.isNotBlank() } ?: detail).takeIf { it.isNotBlank() }?.let { Meta(it, u.sp(13), 1) }
+                val played = row.lastOpenedAt?.let { "Played ${relativeTime(System.currentTimeMillis(), it)}" }
+                val time = row.totalPlayTimeMillis.takeIf { it > 0 }?.let(::playTimeLabel)
+                if (row.gameId != null && compact && (played != null || time != null)) {
+                    Meta(listOfNotNull(played, time).joinToString(" · "), u.sp(12), 1)
+                } else if (row.gameId != null && (played != null || time != null)) {
+                    Row(Modifier.padding(top = u.dp(4)), horizontalArrangement = Arrangement.spacedBy(u.dp(28))) {
+                        row.lastOpenedAt?.let { Stat("Last played", relativeTime(System.currentTimeMillis(), it), u) }
+                        if (row.totalPlayTimeMillis > 0) Stat("Play time", playTimeLabel(row.totalPlayTimeMillis), u)
+                    }
+                }
+            }
         }
     }
 }
@@ -260,45 +296,6 @@ private fun ResultRow(row: CrossbarItem, focused: Boolean, u: DesignUnits, onCli
                     fontWeight = FontWeight.Light, maxLines = 1)
             }
         }
-    }
-}
-
-@Composable
-private fun ColumnScope.Preview(row: CrossbarItem, icon: ImageBitmap?, u: DesignUnits, onActivate: () -> Unit) {
-    val (kind, detail) = kindAndDetail(row)
-    val game = row.gameId != null
-    Box(
-        Modifier
-            .weight(1f, fill = false)
-            .widthIn(max = u.dp(480))
-            .aspectRatio(16f / 9f, matchHeightConstraintsFirst = true)
-            .clip(RoundedCornerShape(u.dp(22)))
-            .background(Color.White.copy(alpha = 0.07f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (row.isInstalledApp) {
-            AppIcon(icon, u.dp(120), u.dp(30))
-        } else {
-            Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(u.dp(96)))
-            (row.backdropArt.firstOrNull() ?: row.shelfCoverArt)?.let {
-                AsyncImage(rememberArtworkModel(it), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            }
-        }
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
-        Eyebrow(kind, u)
-        Headline(row.title, u.sp(46), 2)
-        Meta(row.metadataLine?.takeIf { it.isNotBlank() } ?: detail, u.sp(15))
-    }
-    if (game && (row.lastOpenedAt != null || row.totalPlayTimeMillis > 0 || detail.isNotBlank())) {
-        Row(horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
-            row.lastOpenedAt?.let { Stat("Last played", relativeTime(System.currentTimeMillis(), it), u) }
-            if (row.totalPlayTimeMillis > 0) Stat("Play time", playTimeLabel(row.totalPlayTimeMillis), u)
-            if (detail.isNotBlank()) Stat("Platform", detail, u)
-        }
-    }
-    Row(Modifier.padding(top = u.dp(4))) {
-        PanelButton(GamepadAction.SELECT, if (game) "Play" else "Open", u, onClick = onActivate)
     }
 }
 
