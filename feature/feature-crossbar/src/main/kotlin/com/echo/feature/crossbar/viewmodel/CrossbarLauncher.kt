@@ -41,6 +41,20 @@ class CrossbarLauncher(
                 uiState.update { it.copy(launchRecovery = request) }
             }
         }
+        scope.launch {
+            launchDispatcher.lastLaunch.collect { last -> uiState.update { it.copy(resumeGameId = last?.gameId) } }
+        }
+    }
+
+    // Y Resume (kit 06, level 2): back into the game as it was left
+    internal fun resumeGame(gameId: Long) {
+        scope.launch {
+            val game = vm.gameRepository.getById(gameId) ?: return@launch
+            menuSound.play(com.echo.core.ui.sound.MenuSound.LAUNCH)
+            if (!launchDispatcher.resume(game)) {
+                com.echo.core.ui.notification.SystemToasts.post("Couldn't resume ${game.displayTitle}. Hold A to play it.", null, com.echo.core.ui.notification.ToastKind.ERROR)
+            }
+        }
     }
 
     fun onLaunchRecoveryAction(action: LaunchRecoveryAction) {

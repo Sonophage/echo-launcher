@@ -33,12 +33,14 @@ fun CrossbarHintBar(
         modifier = modifier,
         onAction = onAction,
         accent = accent,
-        leading = leading,
+        leading = leading.takeIf { prompts.resume == null },
         primary = prompts.primary?.let { p ->
-            val detail = if (holdMs > 0L) listOfNotNull("Hold to launch", p.target).filter { it.isNotBlank() }.joinToString(" ")
+            val detail = if (prompts.resume != null) p.target
+                else if (holdMs > 0L) listOfNotNull("Hold to launch", p.target).filter { it.isNotBlank() }.joinToString(" ")
                 else listOfNotNull(p.target, p.detail).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null }
             HintAction(p.action, p.verb, detail, holdMs, holding)
         },
+        secondary = prompts.resume?.let { HintAction(it.action, it.verb, it.target) },
     )
 }
 

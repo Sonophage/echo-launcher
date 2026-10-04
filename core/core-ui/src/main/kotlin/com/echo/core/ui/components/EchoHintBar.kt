@@ -1,5 +1,7 @@
 package com.echo.core.ui.components
 
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.alpha
 import com.echo.core.ui.design.echoPulse
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.Canvas
@@ -82,6 +84,9 @@ fun EchoHintBar(
     centre: (@Composable () -> Unit)? = null,
     accent: Color = LocalEchoColors.current.accentColor,
     leading: (@Composable () -> Unit)? = null,
+
+    // the action orb's level 2 (kit 06): a second action, Resume on Y, left of the primary
+    secondary: HintAction? = null,
 ) {
     if (items.isEmpty() && primary == null && centre == null) return
     val pad = LocalPadPrompts.current
@@ -106,7 +111,7 @@ fun EchoHintBar(
             contentAlignment = Alignment.Center,
         ) { centre?.invoke() }
 
-        primary?.let { ActionTab(it, accent, leading, u, pad, onAction, Modifier.align(Alignment.Bottom)) }
+        primary?.let { ActionTab(it, accent, leading, u, pad, onAction, Modifier.align(Alignment.Bottom), secondary) }
     }
 }
 
@@ -144,8 +149,9 @@ private fun ActionTab(
     pad: Boolean,
     onAction: ((GamepadAction) -> Unit)?,
     modifier: Modifier,
+    secondary: HintAction? = null,
 ) {
-    if (primary.holdMs == 0L) return RestOrb(primary, accent, u, pad, onAction, modifier)
+    if (primary.holdMs == 0L && secondary == null) return RestOrb(primary, accent, u, pad, onAction, modifier)
     val edge = lerp(accent, Color.White, 0.3f)
     var pressing by remember { mutableStateOf(false) }
     val progress = if (primary.holdMs > 0L) holdProgress(primary.holding || pressing, primary.holdMs) else 0f
@@ -195,6 +201,28 @@ private fun ActionTab(
             )
             .padding(start = u.dp(20), end = maxOf(u.dp(20), chromeGutter(end = true)), top = u.dp(6), bottom = u.dp(14)),
     ) {
+        secondary?.let { second ->
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(u.dp(10)))
+                    .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = second.label) { onAction?.invoke(second.action) }
+                    .alpha(0.9f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(u.dp(10)),
+            ) {
+                if (pad) style.mappings.iconsFor(listOf(second.action)).firstOrNull()?.let {
+                    ControllerIconGlyph(it, style.family, size = glyphFor(u, 22, 13))
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(u.dp(1))) {
+                    Text(second.label, color = Color.White, style = EchoTextStyle.copy(fontSize = u.sp(13), fontWeight = FontWeight.Normal), maxLines = 1)
+                    second.detail?.let {
+                        Text(it, color = Color.White.copy(alpha = 0.7f), style = EchoTextStyle.copy(fontSize = u.sp(10), fontWeight = FontWeight.Light),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = u.dp(180)))
+                    }
+                }
+            }
+            Box(Modifier.width(1.dp).height(u.dp(34)).background(Color.White.copy(alpha = 0.22f)))
+        }
         leading?.let { tile ->
             Box(Modifier.size(u.dp(34)).clip(RoundedCornerShape(u.dp(10))).background(accent), contentAlignment = Alignment.Center) { tile() }
         }

@@ -143,4 +143,17 @@ class LastPlayedPromptsTest {
         val app = CrossbarItem(id = "a", title = "Discord", packageName = "com.discord")
         assertTrue(promptsFor(home(app)).right.any { it.verb == "App info" })
     }
+
+    @Test
+    fun `the game ECHO just sent away splits the orb into Y Resume and A Play, a new session`() {
+        val back = promptsFor(home(skyrim).copy(resumeGameId = 1L))
+        assertEquals("Resume", back.resume?.verb)
+        assertEquals(GamepadAction.OPEN_SEARCH, back.resume?.action)
+        assertEquals("Play", back.primary?.verb)
+        assertEquals("New session", back.primary?.target)
+        assertTrue("Y cannot be Search and Resume at once", back.right.none { it.action == GamepadAction.OPEN_SEARCH })
+
+        val other = promptsFor(home(skyrim).copy(resumeGameId = 2L))
+        assertNull("another game's session is not this one's to resume", other.resume)
+    }
 }

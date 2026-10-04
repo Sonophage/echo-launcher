@@ -513,6 +513,9 @@ data class CrossbarUiState(
     // the top-left orb: 0 at rest, 1 focused, 2 expanded
     val orbLevel: Int = 0,
 
+    // the game ECHO last sent away, which Y can resume while ECHO is still running
+    val resumeGameId: Long? = null,
+
     val respectBatterySaver: Boolean = true,
 
     val waveOverWallpaper: Boolean = false,
@@ -2824,7 +2827,8 @@ class CrossbarViewModel @Inject constructor(
                     ?.let(gameDetail::onOpenGameInfo)
             }
 
-            GamepadAction.OPEN_SEARCH -> librarySearch.openSearch(SearchScope.ALL)
+            GamepadAction.OPEN_SEARCH -> state.resumableFocus()?.gameId?.let(launching::resumeGame)
+                ?: librarySearch.openSearch(SearchScope.ALL)
 
             GamepadAction.PREV_CATEGORY -> if (state.onLastPlayedHome) recents.stepRecentFilter(-1) else stepHoverPanelPage(-1)
             GamepadAction.NEXT_CATEGORY -> if (state.onLastPlayedHome) recents.stepRecentFilter(+1) else stepHoverPanelPage(+1)

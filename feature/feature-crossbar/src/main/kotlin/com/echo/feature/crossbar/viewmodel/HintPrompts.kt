@@ -14,7 +14,14 @@ data class CrossbarPrompts(
     val primary: CrossbarPrompt?,
     val back: CrossbarPrompt,
     val right: List<CrossbarPrompt>,
+
+    // the action orb's level 2 (kit 06): Y Resume beside A Play
+    val resume: CrossbarPrompt? = null,
 )
+
+// the focused game is the one ECHO just sent away, so Y can take you back into it
+internal fun CrossbarUiState.resumableFocus(): CrossbarItem? =
+    currentItems.getOrNull(selectedItemIndex)?.takeIf { it.gameId != null && it.isRealGame && it.gameId == resumeGameId }
 
 internal fun primaryVerbFor(item: CrossbarItem?): String? = when {
     item == null || item.type == CrossbarItemType.EMPTY -> null
@@ -74,6 +81,7 @@ fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
         )
     }
 
+    val resumable = state.resumableFocus()
     val right = buildList {
         when {
             state.canFilterRecents -> add(CrossbarPrompt(GamepadAction.PREV_CATEGORY, "Filter", pairedWith = GamepadAction.NEXT_CATEGORY))
@@ -81,13 +89,17 @@ fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
         }
         if (state.onLastPlayedHome) focused?.let { recentInfoPrompt(state, it) }?.let(::add)
         if (state.focusedItemHasContextMenu) add(CrossbarPrompt(GamepadAction.OPEN_CONTEXT_MENU, "Options"))
-        if (!state.isInSubItem) add(CrossbarPrompt(GamepadAction.OPEN_SEARCH, "Search"))
+        if (!state.isInSubItem && resumable == null) add(CrossbarPrompt(GamepadAction.OPEN_SEARCH, "Search"))
     }
 
     return CrossbarPrompts(
-        primary = (if (state.onLastPlayedHome) focused?.takeIf { it.type != CrossbarItemType.EMPTY }?.let(::recentVerbFor) else primaryVerbFor(focused))?.let {
-            CrossbarPrompt(GamepadAction.SELECT, it, focused?.title, detail = focused?.subtitle)
+        primary = when {
+            resumable != null -> CrossbarPrompt(GamepadAction.SELECT, "Play", "New session")
+            else -> (if (state.onLastPlayedHome) focused?.takeIf { it.type != CrossbarItemType.EMPTY }?.let(::recentVerbFor) else primaryVerbFor(focused))?.let {
+                CrossbarPrompt(GamepadAction.SELECT, it, focused?.title, detail = focused?.subtitle)
+            }
         },
+        resume = resumable?.let { CrossbarPrompt(GamepadAction.OPEN_SEARCH, "Resume", it.title) },
         back = CrossbarPrompt(GamepadAction.BACK, if (state.isInSubItem || (state.onLastPlayedHome && state.recentRailVisible)) "Back" else "Apps"),
         right = right,
     )

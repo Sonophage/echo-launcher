@@ -59,6 +59,12 @@ class LaunchDispatcher @Inject constructor(
 
     val recoveryRequests: StateFlow<LaunchRecoveryRequest?> = _recoveryRequests.asStateFlow()
 
+    // the last game ECHO sent away and the package it went to. Memory only: a restarted ECHO offers no
+    // Resume, which is also when the emulator is least likely to still hold the game
+    private val _lastLaunch = MutableStateFlow<OpenSession?>(null)
+
+    val lastLaunch: StateFlow<OpenSession?> = _lastLaunch.asStateFlow()
+
     private var pending: PendingLaunch? = null
     private var hostStopped = false
     private var watchdog: Job? = null
@@ -99,6 +105,7 @@ class LaunchDispatcher @Inject constructor(
             )
             runCatching { ledger.open(OpenSession(game.id, game.platformId, packageName, dispatchedAtWall)) }
                 .onFailure { Timber.w(it, "Could not note the open session for gameId=${game.id}") }
+            if (packageName != null) _lastLaunch.value = OpenSession(game.id, game.platformId, packageName, dispatchedAtWall)
             LaunchDispatchResult.Accepted
         } catch (e: android.content.ActivityNotFoundException) {
             Timber.w(e, "Launch startActivity failed: emulator activity not found (gameId=${game.id})")
@@ -109,6 +116,29 @@ class LaunchDispatcher @Inject constructor(
         } catch (e: Exception) {
             Timber.w(e, "Launch startActivity failed (gameId=${game.id})")
             settleImmediateFailure(game, resolved, "Could not open emulator: ${e.message}")
+        }
+    }
+
+    // brings the last launch's package back as it was left. The launch itself clears the emulator's task
+    // (CLEAR_TASK in the profiles), so this is the only way back into a running game. If Android has since
+    // closed the emulator, its own start screen opens instead.
+    suspend fun resume(game: Game): Boolean {
+        val last = _lastLaunch.value?.takeIf { it.gameId == game.id } ?: return false
+        val pkg = last.packageName ?: return false
+        val intent = context.packageManager.getLaunchIntentForPackage(pkg) ?: return false
+        return try {
+            context.startActivity(
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED).withoutTransition(),
+                LaunchTransition.options(context),
+            )
+            val at = clock.now()
+            val atWall = wallClock.now()
+            acceptPending(PendingLaunch(game, null, intent.toUri(Intent.URI_INTENT_SCHEME), at, atWall, pkg))
+            runCatching { ledger.open(OpenSession(game.id, game.platformId, pkg, atWall)) }
+            true
+        } catch (e: Exception) {
+            Timber.w(e, "Resume failed for gameId=${game.id} ($pkg)")
+            false
         }
     }
 
