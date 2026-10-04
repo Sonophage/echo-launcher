@@ -103,7 +103,10 @@ fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
             }
         },
         resume = resumable?.let { CrossbarPrompt(GamepadAction.OPEN_SEARCH, "Resume", it.title) },
-        back = CrossbarPrompt(GamepadAction.BACK, if (state.isInSubItem || (state.onLastPlayedHome && state.recentRailVisible)) "Back" else "Apps"),
+        // at the root there is nothing to go back to: Apps is RB, so a touch back arrow never opens the drawer
+        // (owner, 2026-10-04); B there still opens Apps
+        back = if (state.isInSubItem || (state.onLastPlayedHome && state.recentRailVisible)) CrossbarPrompt(GamepadAction.BACK, "Back")
+            else CrossbarPrompt(GamepadAction.NEXT_PAGE, "Apps"),
         right = right,
     )
 }

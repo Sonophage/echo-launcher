@@ -149,6 +149,9 @@ fun EchoHintBar(
 @Composable
 private fun Hint(item: ControllerPromptItem, u: DesignUnits, pad: Boolean, onAction: ((GamepadAction) -> Unit)?) {
     val tap = item.tappableAction()?.takeIf { onAction != null }
+    // touch has no B button and the system bars are hidden, so Back is a real button (owner, 2026-10-04);
+    // a controller keeps its glyph hint
+    if (!pad && tap == GamepadAction.BACK) return BackButton(item.label, u) { onAction?.invoke(tap) }
     val style = LocalControllerPromptStyle.current
     val modifier = if (tap == null) Modifier else Modifier
         .then(if (pad) Modifier else Modifier.heightIn(min = 48.dp))
@@ -168,6 +171,33 @@ private fun Hint(item: ControllerPromptItem, u: DesignUnits, pad: Boolean, onAct
         )
     } else {
         Box(modifier, contentAlignment = Alignment.Center) { Text(item.label, color = HintLabel, style = hintText(u), maxLines = 1) }
+    }
+}
+
+@Composable
+private fun BackButton(label: String, u: DesignUnits, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(u.dp(22)))
+            .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
+            .padding(end = u.dp(10)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(10)),
+    ) {
+        Box(
+            Modifier.size(u.dp(36)).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).border(1.5.dp, HintLabel, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(Modifier.size(u.dp(14))) {
+                val w = 2.dp.toPx()
+                val mid = size.height / 2
+                drawLine(HintLabel, Offset(size.width, mid), Offset(0f, mid), w, StrokeCap.Round)
+                drawLine(HintLabel, Offset(0f, mid), Offset(size.width * 0.45f, 0f), w, StrokeCap.Round)
+                drawLine(HintLabel, Offset(0f, mid), Offset(size.width * 0.45f, size.height), w, StrokeCap.Round)
+            }
+        }
+        Text(label, color = HintLabel, style = hintText(u), maxLines = 1)
     }
 }
 

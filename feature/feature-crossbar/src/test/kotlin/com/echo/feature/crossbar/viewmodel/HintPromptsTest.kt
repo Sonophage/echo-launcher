@@ -72,9 +72,11 @@ class HintPromptsTest {
     }
 
     @Test
-    fun `back is named after what it DOES, which at the root is opening the drawer`() {
+    fun `the root offers Apps on RB, not on BACK, so a touch back arrow only ever goes back`() {
         assertEquals("Apps", promptsFor(state()).back.verb)
+        assertEquals(GamepadAction.NEXT_PAGE, promptsFor(state()).back.action)
         assertEquals("Back", promptsFor(state(drilled = "psp")).back.verb)
+        assertEquals(GamepadAction.BACK, promptsFor(state(drilled = "psp")).back.action)
     }
 
     @Test
