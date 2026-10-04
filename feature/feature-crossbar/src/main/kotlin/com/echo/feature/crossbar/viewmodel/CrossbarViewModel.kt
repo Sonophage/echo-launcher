@@ -1290,7 +1290,7 @@ class CrossbarViewModel @Inject constructor(
     private val bookIntentResolver: com.echo.core.data.book.BookIntentResolver,
     private val hiddenPlacementDao: com.echo.core.data.database.dao.HiddenPlacementDao,
     private val iconDisplayPreferences: com.echo.core.data.repository.IconDisplayPreferences,
-    private val artworkStore: com.echo.feature.artwork.store.ArtworkStore,
+    internal val artworkStore: com.echo.feature.artwork.store.ArtworkStore,
     private val artworkAccent: com.echo.core.data.repository.ArtworkAccent,
     private val windowsLibrarySetup: com.echo.core.data.repository.WindowsLibrarySetup,
     private val pcShortcutImporter: com.echo.feature.launcher.PcShortcutImporter,
@@ -1323,6 +1323,8 @@ class CrossbarViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
+
+    internal val gameDetail = CrossbarGameInfo(this, _uiState, viewModelScope, menuSound)
 
     internal val panel = CrossbarPanel(this, _uiState, viewModelScope, menuSound)
 
@@ -3394,7 +3396,7 @@ class CrossbarViewModel @Inject constructor(
                 return
             }
             state.manualViewer != null -> {
-                handleManualViewerInput(action)
+                gameDetail.handleManualViewerInput(action)
                 return
             }
             state.artworkStudioGameId != null -> {
@@ -3455,7 +3457,7 @@ class CrossbarViewModel @Inject constructor(
                 return
             }
             state.gameInfo != null -> {
-                handleGameInfoInput(state.gameInfo, state.androidNotices, action)
+                gameDetail.handleGameInfoInput(state.gameInfo, state.androidNotices, action)
                 return
             }
         }
@@ -3566,7 +3568,7 @@ class CrossbarViewModel @Inject constructor(
                 !state.onLastPlayedHome -> cycleSort()
                 state.recentRailVisible -> state.focusedItem?.let(::removeFromRecent)
                 else -> state.focusedItem?.takeIf { recentKind(it) == RecentKind.GAME || recentKind(it) == RecentKind.APP }
-                    ?.let(::onOpenGameInfo)
+                    ?.let(gameDetail::onOpenGameInfo)
             }
 
             GamepadAction.OPEN_SEARCH -> librarySearch.openSearch(SearchScope.ALL)
@@ -3576,33 +3578,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    fun onOpenGameInfo(item: CrossbarItem) {
-        menuSound.play(MenuSound.SELECT)
-        val info = GameInfoState(item)
-        _uiState.update { it.withGameInfoOpen(info) }
-        viewModelScope.launch {
-            val loaded = withContext(Dispatchers.IO) { if (info.isApp) loadAppInfo(info) else loadGameInfo(info) }
-            _uiState.update { s -> if (s.gameInfo?.item?.id == item.id) s.copy(gameInfo = loaded.copy(cursor = s.gameInfo.cursor, band = s.gameInfo.band, open = s.gameInfo.open)) else s }
-        }
-    }
-
-    private suspend fun loadGameInfo(info: GameInfoState): GameInfoState {
-        val gid = info.item.gameId ?: return info
-        val game = runCatching { gameRepository.getById(gid) }.getOrNull() ?: return info
-        val platform = com.echo.core.domain.model.platformLabel(game.platformId, runCatching { platformDao.getById(game.platformId)?.name }.getOrNull())
-        val media = (artworkStore.findAll(gid, ArtworkKind.SCREENSHOT) + listOfNotNull(artworkStore.find(gid, ArtworkKind.TITLESCREEN)))
-            .map { com.echo.feature.crossbar.ui.detail.DetailMedia(it, isVideo = false) }
-        val video = if (videoSnapsAllowed()) artworkStore.find(gid, ArtworkKind.ICON1) ?: artworkStore.find(gid, ArtworkKind.VIDEO) else null
-        val set = runCatching { achievementController.observeSetForGame(gid).first() }.getOrNull()
-        return info.copy(
-            content = detailPanelContentFor(game, platform, media, video),
-            achievementsStat = set?.takeIf { it.total > 0 }?.let { "${it.unlocked}/${it.total}" },
-            videoUri = artworkStore.find(gid, ArtworkKind.VIDEO) ?: artworkStore.find(gid, ArtworkKind.ICON1),
-            manualPath = artworkStore.find(gid, ArtworkKind.MANUAL),
-        )
-    }
-
-    private fun loadAppInfo(info: GameInfoState): GameInfoState {
+    internal fun loadAppInfo(info: GameInfoState): GameInfoState {
         val pkg = info.item.packageName ?: return info
         val pm = context.packageManager
         val version = runCatching { pm.getPackageInfo(pkg, 0).versionName }.getOrNull()
@@ -3612,107 +3588,6 @@ class CrossbarViewModel @Inject constructor(
             stats.appBytes + stats.dataBytes
         }.getOrNull() else null
         return info.copy(appVersion = version, appStorageBytes = storage)
-    }
-
-    private fun handleGameInfoInput(info: GameInfoState, notices: List<com.echo.core.ui.notification.AndroidNotice>, action: GamepadAction) {
-        if (info.open != null) {
-            when (action) {
-                GamepadAction.BACK -> closeGameInfoPanel()
-                GamepadAction.NAVIGATE_UP -> scrollGameInfo(-1)
-                GamepadAction.NAVIGATE_DOWN -> scrollGameInfo(+1)
-                else -> Unit
-            }
-            return
-        }
-        when (action) {
-            GamepadAction.BACK -> closeGameInfo()
-            GamepadAction.SELECT -> {
-                val notice = info.cursor?.let { info.notices(notices).getOrNull(it) }
-                when {
-                    notice != null -> panel.openAndroidNotice(notice.key)
-                    info.cursor == null -> onGameInfoAction(info.band)
-                    else -> playFromGameInfo(info.item)
-                }
-            }
-            GamepadAction.OPEN_CONTEXT_MENU -> openGameInfoOptions(info)
-            GamepadAction.CHANGE_SORT -> if (info.achievementsStat != null) panel.openProfile(ProfileTab.ACHIEVEMENTS, info.item.gameId)
-            GamepadAction.NAVIGATE_LEFT,
-            GamepadAction.NAVIGATE_RIGHT -> if (info.cursor == null) {
-                onGameInfoBand(stepGameInfoBand(info.band, gameInfoActions(info), if (action == GamepadAction.NAVIGATE_LEFT) -1 else +1))
-            } else {
-                onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
-            }
-            GamepadAction.NAVIGATE_UP,
-            GamepadAction.NAVIGATE_DOWN -> onGameInfoCursor(stepGameInfoCursor(info.cursor, info.cardCount(notices), action))
-            else -> Unit
-        }
-    }
-
-    fun onGameInfoBand(action: GameInfoAction) {
-        val info = _uiState.value.gameInfo ?: return
-        if (action == info.band && info.cursor == null) return
-        menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(band = action, cursor = null)) }
-    }
-
-    fun onGameInfoAction(action: GameInfoAction) {
-        val info = _uiState.value.gameInfo ?: return
-        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(band = action, cursor = null)) }
-        when (action) {
-            GameInfoAction.PLAY -> playFromGameInfo(info.item)
-            GameInfoAction.OPTIONS -> openGameInfoOptions(info)
-            GameInfoAction.MANUAL -> info.item.gameId?.let {
-                menuSound.play(MenuSound.SELECT)
-                openManualFor(it)
-            }
-            GameInfoAction.INFO, GameInfoAction.VIDEO -> {
-                menuSound.play(MenuSound.SELECT)
-                _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(open = action, infoScroll = 0)) }
-            }
-        }
-    }
-
-    fun closeGameInfoPanel() {
-        if (_uiState.value.gameInfo?.open == null) return
-        menuSound.play(MenuSound.BACK)
-        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(open = null)) }
-    }
-
-    private fun scrollGameInfo(delta: Int) = _uiState.update { s ->
-        val info = s.gameInfo?.takeIf { it.open == GameInfoAction.INFO } ?: return@update s
-        s.copy(gameInfo = info.scrolledBy(delta))
-    }
-
-    fun onGameInfoScrollMax(max: Int) = _uiState.update { s ->
-        s.gameInfo?.let { s.copy(gameInfo = it.copy(infoScrollMax = max)) } ?: s
-    }
-
-    fun onGameInfoCursor(cursor: Int?) {
-        val info = _uiState.value.gameInfo ?: return
-        if (cursor == info.cursor) return
-        menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(cursor = cursor)) }
-    }
-
-    fun onGameInfoNoticeTapped(key: String) = panel.openAndroidNotice(key)
-
-    fun closeGameInfo() {
-        if (_uiState.value.gameInfo == null) return
-        menuSound.play(MenuSound.BACK)
-        _uiState.update { it.copy(gameInfo = null) }
-    }
-
-    private fun openGameInfoOptions(info: GameInfoState) {
-        if (info.isApp) openAppContextMenu(info.item) else openGameContextMenu(info.item)
-    }
-
-    private fun playFromGameInfo(item: CrossbarItem) {
-        _uiState.update { it.copy(gameInfo = null) }
-        val index = _uiState.value.currentItems.indexOfFirst { it.id == item.id }
-        when {
-            index >= 0 -> onItemSelected(index)
-            item.gameId != null -> launchGameDirectly(item.gameId)
-        }
     }
 
     private fun removeFromRecent(item: CrossbarItem) {
@@ -3942,7 +3817,7 @@ class CrossbarViewModel @Inject constructor(
         )}
     }
 
-    private fun openGameContextMenu(item: CrossbarItem) {
+    internal fun openGameContextMenu(item: CrossbarItem) {
         val gameId = item.gameId
         if (gameId == null) {
             openGameContextMenuCore(item, discCount = 0)
@@ -4183,7 +4058,7 @@ class CrossbarViewModel @Inject constructor(
                         ))}
                     }
                     "ARTWORK"  -> openArtworkStudio(gid)
-                    "MANUAL"   -> openManualFor(gid)
+                    "MANUAL"   -> gameDetail.openManualFor(gid)
                     "METADATA" -> openMetadataPreviewFor(gid)
                     "REFRESH"  -> fetchArtworkFor(gid)
                     else -> Timber.w("Details row '$what' has no handler")
@@ -4206,7 +4081,7 @@ class CrossbarViewModel @Inject constructor(
             } else when (itemId) {
 
                 "play"                   -> launchGameDirectly(menu.gameId)
-                "game_info"              -> _uiState.value.currentItems.firstOrNull { it.gameId == menu.gameId }?.let(::onOpenGameInfo)
+                "game_info"              -> _uiState.value.currentItems.firstOrNull { it.gameId == menu.gameId }?.let(gameDetail::onOpenGameInfo)
                 "choose_disc"             -> openDiscPickerMenu(menu.gameId)
                 "export_game"            -> exportGameFromMenu(menu.gameId)
                 "edit_app"               -> openAppDetail(menu.gameId, menu.packageName ?: return)
@@ -5624,61 +5499,6 @@ class CrossbarViewModel @Inject constructor(
         if (id != null) viewModelScope.launch { loadItemsForCategory(currentCategory()) }
     }
 
-    private fun openManualFor(gameId: Long) {
-        closeContextMenu()
-        viewModelScope.launch {
-            val game = gameRepository.getById(gameId) ?: return@launch
-            val path = artworkStore.find(gameId, ArtworkKind.MANUAL)
-            if (path == null) {
-                SystemToasts.post("No manual available for this game", null, ToastKind.ERROR)
-                return@launch
-            }
-            _uiState.update {
-                it.copy(manualViewer = ManualViewerUi(uri = path, title = game.displayTitle))
-            }
-        }
-    }
-
-    fun closeManualViewer() {
-        if (_uiState.value.manualViewer == null) return
-        menuSound.play(MenuSound.BACK)
-        _uiState.update { it.copy(manualViewer = null) }
-    }
-
-    fun setManualPageCount(count: Int) = _uiState.update { s ->
-        val m = s.manualViewer ?: return@update s
-        s.copy(manualViewer = m.copy(pageCount = count, page = m.page.coerceIn(0, (count - 1).coerceAtLeast(0))))
-    }
-
-    fun manualPrevPage() = _uiState.update { s ->
-        val m = s.manualViewer ?: return@update s
-        s.copy(manualViewer = m.copy(page = (m.page - 1).coerceAtLeast(0), scrollSteps = 0))
-    }
-
-    fun manualNextPage() = _uiState.update { s ->
-        val m = s.manualViewer ?: return@update s
-        s.copy(manualViewer = m.copy(
-            page = (m.page + 1).coerceAtMost((m.pageCount - 1).coerceAtLeast(0)),
-            scrollSteps = 0,
-        ))
-    }
-
-    private fun scrollManual(delta: Int) = _uiState.update { s ->
-        val m = s.manualViewer ?: return@update s
-        s.copy(manualViewer = m.copy(scrollSteps = (m.scrollSteps + delta).coerceIn(0, MANUAL_MAX_SCROLL_STEPS_)))
-    }
-
-    private fun handleManualViewerInput(action: GamepadAction) {
-        when (action) {
-            GamepadAction.NAVIGATE_LEFT  -> manualPrevPage()
-            GamepadAction.NAVIGATE_RIGHT -> manualNextPage()
-            GamepadAction.NAVIGATE_DOWN  -> scrollManual(+1)
-            GamepadAction.NAVIGATE_UP    -> scrollManual(-1)
-            GamepadAction.BACK           -> closeManualViewer()
-            else -> Unit
-        }
-    }
-
     private fun fetchArtworkFor(gameId: Long) {
         closeContextMenu()
         if (_uiState.value.artworkFetchTitle != null) return
@@ -5829,7 +5649,7 @@ class CrossbarViewModel @Inject constructor(
 
     private var metadataPreviewGeneration = 0
 
-    private val MANUAL_MAX_SCROLL_STEPS_ = 20
+    internal val MANUAL_MAX_SCROLL_STEPS_ = 20
 
     fun launchGameFromDrawer(gameId: Long) {
         _uiState.update { it.copy(activeAppDrawerFilter = null, pendingDrawerAction = null) }
@@ -6814,7 +6634,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun videoSnapsAllowed(): Boolean {
+    internal fun videoSnapsAllowed(): Boolean {
         if (!animatedIconsEnabled) return false
         val pm = context.getSystemService(android.os.PowerManager::class.java)
         if (pm?.isPowerSaveMode == true) return false

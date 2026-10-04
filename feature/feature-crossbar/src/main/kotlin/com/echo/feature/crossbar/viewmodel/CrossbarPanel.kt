@@ -163,7 +163,7 @@ class CrossbarPanel(
             ProfileSpot.RECENT -> s.profileData.recent.getOrNull(index)?.let { game ->
                 uiState.update { it.copy(panelProfile = ProfileFocus(ProfileSpot.RECENT, index)) }
                 closeNotifications()
-                vm.onOpenGameInfo(game.toSearchRow(vm.platformCache[game.platformId]?.name))
+                vm.gameDetail.onOpenGameInfo(game.toSearchRow(vm.platformCache[game.platformId]?.name))
             }
             ProfileSpot.SHOWCASE -> {
                 uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.SHOWCASE)) }
