@@ -2,6 +2,7 @@ package com.echo.feature.crossbar.ui
 
 import com.echo.core.ui.design.LocalBackdropWave
 import com.echo.core.ui.design.LocalMenuBackdropArt
+import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import androidx.compose.ui.graphics.toArgb
 import com.echo.feature.crossbar.viewmodel.resumeHoldId
 import com.echo.feature.crossbar.viewmodel.resumableFocus
@@ -1078,7 +1079,13 @@ fun CrossbarShell(
                 ?: musicActivity
 
             val recentActivity = uiState.recentTop?.takeIf { uiState.interfaceChoices.islandShowsRecent }?.let { top ->
-                StripLiveActivity(art = top.shelfCoverArt, title = top.title, detail = top.subtitle, stage = uiState.recentStage(), accentArgb = uiState.recentTopAccentArgb)
+                StripLiveActivity(
+                    art = top.shelfCoverArt,
+                    title = top.title,
+                    // a book adds how far it has been read (owner, 2026-10-04)
+                    detail = listOfNotNull(top.subtitle?.takeIf { it.isNotBlank() }, top.progressLabel.takeIf { top.type == CrossbarItemType.LIBRARY_BOOK })
+                        .joinToString("  ·  ").ifEmpty { null },
+                    stage = uiState.recentStage(), accentArgb = uiState.recentTopAccentArgb)
             }
 
             val islandIsRecent = foregroundActivity == null && recentActivity != null

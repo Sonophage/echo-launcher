@@ -6,7 +6,11 @@ import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.ui.components.MenuState
 import com.echo.core.ui.components.at
 import com.echo.core.ui.sound.MenuSound
+import com.echo.core.data.datastore.readerDataStore
+import com.echo.core.data.datastore.readerProgress
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -98,8 +102,12 @@ class CrossbarBookshelf(
         type     = CrossbarItemType.ADD_ACTION,
     )
 
-    internal fun bookItems(books: List<com.echo.core.domain.model.Book>): List<CrossbarItem> =
+    internal fun bookItems(
+        books: List<com.echo.core.domain.model.Book>,
+        progress: (bookId: String) -> Float? = { null },
+    ): List<CrossbarItem> =
         books.map { book ->
+            val read = progress(book.id)
             CrossbarItem(
                 id       = "book_${book.id}",
                 title    = book.displayTitle,
@@ -108,7 +116,15 @@ class CrossbarBookshelf(
 
                 artworkUri = book.coverUri,
                 type     = CrossbarItemType.LIBRARY_BOOK,
+                progressFraction = read,
+                progressLabel    = bookProgressLabel(read),
             )
+        }
+
+    // the recent books, each with when it was opened and how far the built-in reader has got
+    internal fun observeRecentBookRows(limit: Int): Flow<List<Pair<Long, CrossbarItem>>> =
+        combine(bookRepository.observeRecentlyOpenedBooks(limit), vm.context.readerDataStore.data) { books, reader ->
+            books.map { it.lastOpenedAt ?: 0L }.zip(bookItems(books) { readerProgress(reader, it) })
         }
 
     internal fun emptyBooksItem(): CrossbarItem = CrossbarItem(

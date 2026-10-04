@@ -107,3 +107,5 @@ internal fun videoProgressLabel(resumePositionMs: Long, durationMs: Long?): Stri
         }
     }
 }
+
+internal fun bookProgressLabel(fraction: Float?): String? = fraction?.let { "${(it * 100).toInt()}% read" }

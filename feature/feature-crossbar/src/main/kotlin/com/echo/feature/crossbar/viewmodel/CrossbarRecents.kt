@@ -140,7 +140,7 @@ class CrossbarRecents(
             combine(
                 vm.gameRepository.observeRecentlyPlayed(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
                 vm.musicRepository.observeRecentlyPlayedTracks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
-                vm.bookRepository.observeRecentlyOpenedBooks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
+                vm.bookshelf.observeRecentBookRows(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
                 vm.videoRepository.observeRecentlyWatched(),
                 recentAppRows(),
             ) { games, tracks, books, videos, appRows ->
@@ -148,7 +148,7 @@ class CrossbarRecents(
                 val rows = listOf(
                     visibleGames.map { it.lastPlayedAt ?: 0L }.zip(with(vm) { visibleGames.toCrossbarItems() }),
                     tracks.recentMusicRows(),
-                    books.map { it.lastOpenedAt ?: 0L }.zip(vm.bookshelf.bookItems(books)),
+                    books,
                     videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
                     appRows,
                 )
@@ -231,7 +231,7 @@ class CrossbarRecents(
         combine(
             vm.gameRepository.observeRecentlyPlayed(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
             vm.musicRepository.observeRecentlyPlayedTracks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
-            vm.bookRepository.observeRecentlyOpenedBooks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
+            vm.bookshelf.observeRecentBookRows(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
             vm.videoRepository.observeRecentlyWatched(),
 
             recentFilterAndApps(),
@@ -244,7 +244,7 @@ class CrossbarRecents(
                 games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(with(vm) { visibleGames.toCrossbarItems() }),
 
                 music  = tracks.recentMusicRows(),
-                books  = books.map { it.lastOpenedAt ?: 0L }.zip(vm.bookshelf.bookItems(books)),
+                books  = books,
                 videos = videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
                 apps   = appRows,
                 filter = filter,

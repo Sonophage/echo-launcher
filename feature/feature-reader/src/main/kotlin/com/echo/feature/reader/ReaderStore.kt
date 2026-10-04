@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.echo.core.data.datastore.readerDataStore
+import com.echo.core.data.datastore.readerPositionKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -63,10 +64,10 @@ class ReaderStore(private val context: Context) {
         }
     }
 
-    suspend fun position(bookId: String): String? = context.readerDataStore.data.first()[positionKey(bookId)]
+    suspend fun position(bookId: String): String? = context.readerDataStore.data.first()[readerPositionKey(bookId)]
 
     suspend fun savePosition(bookId: String, locatorJson: String) {
-        context.readerDataStore.edit { it[positionKey(bookId)] = locatorJson }
+        context.readerDataStore.edit { it[readerPositionKey(bookId)] = locatorJson }
     }
 
     fun bookmarks(bookId: String): Flow<List<StoredBookmark>> = context.readerDataStore.data.map { p ->
@@ -83,7 +84,6 @@ class ReaderStore(private val context: Context) {
         val KEY_PAGE = stringPreferencesKey("display_page")
         val KEY_LAYOUT = stringPreferencesKey("display_layout")
 
-        fun positionKey(bookId: String) = stringPreferencesKey("position_$bookId")
         fun bookmarksKey(bookId: String) = stringPreferencesKey("bookmarks_$bookId")
 
         inline fun <reified E : Enum<E>> enumOr(name: String?, fallback: E): E =

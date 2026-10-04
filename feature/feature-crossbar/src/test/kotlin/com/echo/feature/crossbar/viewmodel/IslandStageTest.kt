@@ -36,6 +36,19 @@ class IslandStageTest {
     }
 
     @Test
+    fun `a recent book traces how far it has been read and says it`() {
+        val book = CrossbarItem(
+            id = "book_b1", title = "Fahrenheit 451", type = CrossbarItemType.LIBRARY_BOOK,
+            progressFraction = 0.42f, progressLabel = bookProgressLabel(0.42f),
+        )
+        val stage = CrossbarUiState(showBootSequence = false, recentTop = book).recentStage()
+        assertTrue(stage is PanelStage.Book)
+        assertEquals(0.42f, stage!!.islandProgress(0)!!, 0.001f)
+        assertEquals("42% read", book.progressLabel)
+        assertNull("a book never opened in the reader says nothing", bookProgressLabel(null))
+    }
+
+    @Test
     fun `the island shows a time only for a loaded track, and an app session only once it reports a length`() {
         assertEquals("0:01 / 0:04", PanelStage.Music("a", null, null, null, true, true, 4_000).timeLabel(1_000))
         assertNull("a recent track has no position", PanelStage.Music("a", null, null, null, false, false, 0).timeLabel(0))

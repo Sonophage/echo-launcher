@@ -157,7 +157,7 @@ sealed interface PanelStage {
 
     data class Video(val title: String, val detail: String?, val art: String?, val progress: Float?, val progressLabel: String?) : PanelStage
 
-    data class Book(val title: String, val detail: String?, val cover: String?) : PanelStage
+    data class Book(val title: String, val detail: String?, val cover: String?, val progress: Float? = null) : PanelStage
 
     data class Game(val title: String, val art: String?, val lastPlayedAt: Long?, val playTimeMs: Long) : PanelStage
 
@@ -198,7 +198,7 @@ fun CrossbarUiState.recentStage(): PanelStage? {
     return when (recentKind(top)) {
         RecentKind.MUSIC -> PanelStage.Music(top.title, top.subtitle, null, top.shelfCoverArt, false, false, 0)
         RecentKind.VIDEO -> PanelStage.Video(top.title, top.subtitle, top.shelfCoverArt, top.progressFraction, top.progressLabel)
-        RecentKind.BOOK -> PanelStage.Book(top.title, top.subtitle, top.shelfCoverArt)
+        RecentKind.BOOK -> PanelStage.Book(top.title, top.subtitle, top.shelfCoverArt, top.progressFraction)
         RecentKind.GAME -> PanelStage.Game(top.title, top.backdropArt.firstOrNull(), recentTopAt, top.totalPlayTimeMillis)
         RecentKind.APP -> PanelStage.App(top.title, top.packageName, top.shelfCoverArt, recentTopAt)
     }
@@ -214,6 +214,7 @@ fun PanelStage.Music.timeLabel(positionMs: Long): String? =
 fun PanelStage.islandProgress(positionMs: Long): Float? = when (this) {
     is PanelStage.Music -> playbackFraction(positionMs, durationMs)
     is PanelStage.Video -> progress
+    is PanelStage.Book -> progress
     else -> null
 }
 
