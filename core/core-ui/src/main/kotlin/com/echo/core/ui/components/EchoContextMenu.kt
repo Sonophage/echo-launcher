@@ -1,6 +1,16 @@
 package com.echo.core.ui.components
 
 import com.echo.core.ui.design.RailPanelFill
+import com.echo.core.ui.design.DesignUnits
+import com.echo.core.ui.design.LocalBackdropWave
+import com.echo.core.ui.design.PanelBase
+import com.echo.core.ui.image.rememberBlurSourceModel
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import com.echo.core.ui.design.RAIL_PANEL_WIDTH
 import com.echo.core.ui.design.panelDesignUnits
 import androidx.compose.ui.platform.LocalDensity
@@ -61,6 +71,7 @@ fun <T> EchoContextMenuOverlay(
     onRowActivated: (index: Int) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    backdropArt: String? = null,
 ) {
     val title = state.title
     val subtitle = state.subtitle
@@ -77,7 +88,21 @@ fun <T> EchoContextMenuOverlay(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Box(Modifier.fillMaxSize().clickable(onClick = onDismiss))
-        Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(u.dp(RAIL_PANEL_WIDTH)).background(RailPanelFill))
+        val panelWidth = u.dp(RAIL_PANEL_WIDTH)
+        if (backdropArt != null) {
+            // the Recent rail's backing (owner, 2026-10-04): the art behind, blurred, under the wave and the fill
+            Box(Modifier.fillMaxSize().drawWithContent { clipRect(left = size.width - panelWidth.toPx()) { this@drawWithContent.drawContent() } }) {
+                Box(Modifier.fillMaxSize().background(PanelBase))
+                AsyncImage(
+                    model = rememberBlurSourceModel(backdropArt),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().blur(u.dp(24)).graphicsLayer(alpha = 0.4f),
+                )
+                LocalBackdropWave.current?.invoke()
+            }
+        }
+        Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(panelWidth).background(RailPanelFill))
 
         Column(
             horizontalAlignment = Alignment.End,
@@ -86,7 +111,7 @@ fun <T> EchoContextMenuOverlay(
                 .width(u.dp(RAIL_PANEL_WIDTH))
                 .padding(top = StatusStripHeight, bottom = HintBarHeight, end = RailEdgeGap),
         ) {
-            ContextMenuHeader(title, subtitle)
+            ContextMenuHeader(title, subtitle, u)
 
             LazyColumn(
                 state = listState,
@@ -104,6 +129,7 @@ fun <T> EchoContextMenuOverlay(
                         checked = row.checked,
                         opensSubmenu = row.opensSubmenu,
                         dim = dim,
+                        u = u,
                         onClick = { onRowActivated(index) },
                     )
                 }
@@ -116,6 +142,7 @@ fun <T> EchoContextMenuOverlay(
 fun ContextMenuHeader(
     title: String,
     subtitle: String?,
+    u: DesignUnits,
     modifier: Modifier = Modifier,
     textAlign: TextAlign = TextAlign.End,
 ) {
@@ -123,36 +150,37 @@ fun ContextMenuHeader(
         Text(
             text = title,
             color = Color.White.copy(alpha = 0.92f),
-            fontSize = RailTitleSize,
+            fontSize = u.sp(20),
             fontWeight = FontWeight.Light,
             style = EchoTextStyle.copy(shadow = TextDropShadow),
             maxLines = 2,
             textAlign = textAlign,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = RailMaxText),
+            modifier = Modifier.widthIn(max = u.dp(RAIL_MAX_TEXT)),
         )
-        ContextMenuEyebrow(subtitle.orEmpty(), textAlign = textAlign)
-        Spacer(Modifier.height(RailTitleGap))
+        ContextMenuEyebrow(subtitle.orEmpty(), u, textAlign = textAlign)
+        Spacer(Modifier.height(u.dp(22)))
     }
 }
 
 @Composable
 fun ContextMenuEyebrow(
     text: String,
+    u: DesignUnits,
     modifier: Modifier = Modifier,
     textAlign: TextAlign = TextAlign.End,
 ) {
     Text(
         text = text,
         color = Color.White.copy(alpha = 0.62f),
-        fontSize = RailSubtitleSize,
+        fontSize = u.sp(11),
         fontWeight = FontWeight.Medium,
         letterSpacing = 1.sp,
         style = EchoTextStyle.copy(shadow = TextDropShadow),
         maxLines = 1,
         textAlign = textAlign,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier.widthIn(max = RailMaxText),
+        modifier = modifier.widthIn(max = u.dp(RAIL_MAX_TEXT)),
     )
 }
 
@@ -162,12 +190,12 @@ fun contextMenuDim(distance: Int, span: Int): Float {
     return dim
 }
 
-fun Modifier.contextMenuRow(focused: Boolean, dim: Float, onClick: () -> Unit): Modifier = this
+fun Modifier.contextMenuRow(focused: Boolean, dim: Float, u: DesignUnits, onClick: () -> Unit): Modifier = this
     .alpha(if (focused) 1f else dim)
-    .clip(RoundedCornerShape(RailCorner))
+    .clip(RoundedCornerShape(u.dp(12)))
     .then(if (focused) Modifier.background(Color.White) else Modifier)
     .clickable(onClick = onClick)
-    .padding(start = RailPadStart, end = RailPadEnd, top = RailPadV, bottom = RailPadV)
+    .padding(start = u.dp(14), end = u.dp(6), top = u.dp(6), bottom = u.dp(6))
 
 fun contextMenuInk(focused: Boolean): Color = if (focused) RailInk else Color.White
 
@@ -175,13 +203,14 @@ fun contextMenuInk(focused: Boolean): Color = if (focused) RailInk else Color.Wh
 fun ContextMenuRowLabel(
     text: String,
     focused: Boolean,
+    u: DesignUnits,
     modifier: Modifier = Modifier,
     color: Color = contextMenuInk(focused),
 ) {
     Text(
         text = text,
         color = color,
-        fontSize = RailTextSize,
+        fontSize = u.sp(15),
         fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
@@ -197,35 +226,38 @@ private fun CrossbarRailRow(
     checked: Boolean,
     opensSubmenu: Boolean,
     dim: Float,
+    u: DesignUnits,
     onClick: () -> Unit,
 ) {
     val tint = if (destructive) RailDestructive else null
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.contextMenuRow(focused, dim, onClick),
+        modifier = Modifier.contextMenuRow(focused, dim, u, onClick),
     ) {
         ContextMenuRowLabel(
             text = label,
             focused = focused,
+            u = u,
             color = if (destructive) RailDestructive else contextMenuInk(focused),
-            modifier = Modifier.widthIn(max = RailMaxText),
+            modifier = Modifier.widthIn(max = u.dp(RAIL_MAX_TEXT)),
         )
         if (checked) {
-            Spacer(Modifier.width(RailGap))
+            Spacer(Modifier.width(u.dp(12)))
             EchoCheckMark(
                 contextMenuInk(focused),
-                size = 15.dp,
+                size = u.dp(18),
                 shadow = TextDropShadow.color,
             )
         }
-        Spacer(Modifier.width(RailGap))
-        CrossbarRailBadge(label = label, filled = focused, opensSubmenu = opensSubmenu, tint = tint)
+        Spacer(Modifier.width(u.dp(12)))
+        CrossbarRailBadge(label = label, u = u, filled = focused, opensSubmenu = opensSubmenu, tint = tint)
     }
 }
 
 @Composable
 private fun CrossbarRailBadge(
     label: String,
+    u: DesignUnits,
     filled: Boolean,
     opensSubmenu: Boolean = false,
     tint: Color? = null,
@@ -233,8 +265,8 @@ private fun CrossbarRailBadge(
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(RailIcon)
-            .clip(RoundedCornerShape(RailCorner))
+            .size(u.dp(32))
+            .clip(RoundedCornerShape(u.dp(8)))
             .background(
                 when {
                     filled -> tint ?: RailInk
@@ -251,7 +283,7 @@ private fun CrossbarRailBadge(
                 opensSubmenu -> RailInk
                 else -> Color.White.copy(alpha = 0.85f)
             },
-            fontSize = RailGlyphSize,
+            fontSize = u.sp(14),
             fontWeight = FontWeight.Bold,
         )
     }
@@ -262,16 +294,8 @@ val RailCorner = 7.dp
 val RailEdgeGap = 24.dp
 val RailRowGap = 13.dp
 private const val DimFadeMs = 160
-private val RailGlyphSize = 13.sp
-private val RailTextSize = 13.sp
-private val RailTitleSize = 26.sp
-val RailSubtitleSize = 12.sp
-private val RailTitleGap = 22.dp
-private val RailPadStart = 14.dp
-private val RailPadEnd = 4.dp
-private val RailPadV = 4.dp
-val RailGap = 10.dp
-private val RailMaxText = 300.dp
+// the menu's sizes are panel design units, as the Recent rail's are, so the two read alike
+private const val RAIL_MAX_TEXT = 380
 internal val RailInk = Color(0xFF1A0C03)
 private val RailDestructive = Color(0xFFE2606A)
 

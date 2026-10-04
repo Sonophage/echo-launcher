@@ -1363,11 +1363,14 @@ fun CrossbarShell(
 
             uiState.activeContextMenu?.let { menu ->
 
-                EchoContextMenuOverlay(
-                    state = uiState.menuWithPills() ?: menu.state,
-                    onRowActivated = onContextMenuItemActivated,
-                    onDismiss = onContextMenuDismiss,
-                )
+                CompositionLocalProvider(LocalBackdropWave provides homeWave) {
+                    EchoContextMenuOverlay(
+                        state = uiState.menuWithPills() ?: menu.state,
+                        onRowActivated = onContextMenuItemActivated,
+                        onDismiss = onContextMenuDismiss,
+                        backdropArt = if (uiState.onLastPlayedHome) selectedItem?.backdropArt?.firstOrNull() else selectedBg,
+                    )
+                }
             }
 
             uiState.colorSchemePicker?.let { picker ->
