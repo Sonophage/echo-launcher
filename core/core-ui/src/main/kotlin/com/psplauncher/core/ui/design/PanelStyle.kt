@@ -21,10 +21,13 @@ const val PANEL_FOCUS_RING_WIDTH = 2
 const val PANEL_UNFOCUSED_ALPHA = 0.55f
 
 private const val PANEL_DESIGN_WIDTH = 1200f
-private const val PANEL_DESIGN_HEIGHT = 752f
+const val PANEL_DESIGN_HEIGHT = 752f
+private const val SQUARE_ASPECT = 1.4f
 
 fun panelDesignUnits(widthDp: Float, heightDp: Float, density: Density): DesignUnits =
-    DesignUnits(minOf(widthDp / PANEL_DESIGN_WIDTH, heightDp / PANEL_DESIGN_HEIGHT), density)
+    DesignUnits(minOf(widthDp / PANEL_DESIGN_WIDTH, heightDp / PANEL_DESIGN_HEIGHT), density, panelIsSquare(widthDp, heightDp))
+
+fun panelIsSquare(widthDp: Float, heightDp: Float): Boolean = widthDp < heightDp * SQUARE_ASPECT
 
 fun Modifier.panelBackdrop(tint: Color): Modifier = this
     .background(PanelBase)
