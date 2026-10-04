@@ -1325,6 +1325,8 @@ class CrossbarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
 
+    internal val video = CrossbarVideo(this, _uiState, viewModelScope, videoRepository, videoScanner, videoIntentResolver, menuSound)
+
     internal val music = CrossbarMusic(this, _uiState, viewModelScope, musicRepository, musicPlayer, musicScanner, menuSound, artworkAccent)
 
     val musicPositionMs: StateFlow<Int> get() = musicPlayer.positionMs
@@ -1372,7 +1374,7 @@ class CrossbarViewModel @Inject constructor(
         observeGameBoot()
         observeMediaLaunch()
         music.observeMusic()
-        observeVideo()
+        video.observeVideo()
         observePhoto()
         observeBooks()
         observeMediaCovers()
@@ -1888,30 +1890,30 @@ class CrossbarViewModel @Inject constructor(
                     VideoNav.Folders -> mediaRootRepository.roots(MediaRootKind.VIDEO).collect {
                         _uiState.update { s -> s.copy(currentItems = mediaFolderItems(MediaRootKind.VIDEO)) }
                     }
-                    VideoNav.Root -> _uiState.update { it.copy(currentItems = videoRootItems()) }
-                    VideoNav.Collections -> _uiState.update { it.copy(currentItems = videoCollectionsItems()) }
+                    VideoNav.Root -> _uiState.update { it.copy(currentItems = video.videoRootItems()) }
+                    VideoNav.Collections -> _uiState.update { it.copy(currentItems = video.videoCollectionsItems()) }
                     VideoNav.AllVideos -> videoRepository.observeAllVideos().collect { videos ->
-                        setVideoItems(videos, emptyAllVideosItem())
+                        video.setVideoItems(videos, video.emptyAllVideosItem())
                     }
                     VideoNav.RecentlyWatched -> videoRepository.observeRecentlyWatched().collect { videos ->
 
-                        setVideoItems(videos, emptyRecentItem(), sortable = false)
+                        video.setVideoItems(videos, emptyRecentItem(), sortable = false)
                     }
                     VideoNav.Favorites -> videoRepository.observeFavorites().collect { videos ->
-                        setVideoItems(videos, emptyFavoriteVideosItem())
+                        video.setVideoItems(videos, video.emptyFavoriteVideosItem())
                     }
                     VideoNav.Playlists -> videoRepository.observePlaylists().collect { playlists ->
-                        _uiState.update { it.copy(currentItems = videoPlaylistItems(playlists), videoPlaylists = playlists) }
+                        _uiState.update { it.copy(currentItems = video.videoPlaylistItems(playlists), videoPlaylists = playlists) }
                     }
                     is VideoNav.Playlist -> videoRepository.observePlaylistVideos(nav.id).collect { videos ->
 
-                        setVideoItems(videos, emptyPlaylistVideosItem(), sortable = false)
+                        video.setVideoItems(videos, video.emptyPlaylistVideosItem(), sortable = false)
                     }
                     VideoNav.Libraries -> videoRepository.observeLibraries().collect { libs ->
-                        _uiState.update { it.copy(currentItems = videoLibraryItems(libs)) }
+                        _uiState.update { it.copy(currentItems = video.videoLibraryItems(libs)) }
                     }
                     is VideoNav.Library -> videoRepository.observeVideosByLibrary(nav.id).collect { videos ->
-                        setVideoItems(videos, emptyAllVideosItem())
+                        video.setVideoItems(videos, video.emptyAllVideosItem())
                     }
                 }
                 BuiltInCategory.PHOTO -> when (val nav = _uiState.value.photoNav) {
@@ -2038,7 +2040,7 @@ class CrossbarViewModel @Inject constructor(
 
     private fun currentAddActions(): List<CrossbarItem> = when (currentCategory()?.id) {
         BuiltInCategory.MUSIC   -> music.musicAddActions()
-        BuiltInCategory.VIDEO   -> videoAddActions()
+        BuiltInCategory.VIDEO   -> video.videoAddActions()
         BuiltInCategory.PHOTO   -> photoAddActions()
         BuiltInCategory.LIBRARY -> booksAddActions()
         else -> emptyList()
@@ -2137,147 +2139,11 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun observeVideo() {
-        viewModelScope.launch {
-            videoRepository.observeRecentlyWatched().collect { videos ->
-                val resumable = videos.firstOrNull { v ->
-                    val total = v.durationMs ?: 0L
-                    total > 0L && v.resumePositionMs > 0L &&
-                        v.resumePositionMs.toFloat() / total < RESUME_DONE_FRACTION
-                }
-                if (_uiState.value.resumeVideo?.id != resumable?.id) {
-                    _uiState.update { it.copy(resumeVideo = resumable) }
-                    if (currentCategory()?.id == BuiltInCategory.VIDEO &&
-                        _uiState.value.videoNav == VideoNav.Root
-                    ) {
-                        loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
-                    }
-                }
-            }
-        }
-        viewModelScope.launch {
-            videoRepository.observeLibraries().collect { libraries ->
-                _uiState.update { it.copy(videoLibraries = libraries) }
-                if (currentCategory()?.id == BuiltInCategory.VIDEO &&
-                    _uiState.value.videoNav == VideoNav.Root
-                ) {
-                    loadItemsForCategory(currentCategory())
-                }
-            }
-        }
-    }
-
-    private fun videoAddActions(): List<CrossbarItem> = buildList {
-        if (_uiState.value.videoLibraries.none { it.lastScannedAt != null }) add(addVideosItem())
-        add(addVideoAppsItem())
-    }
-
-    private suspend fun videoRootItems(): List<CrossbarItem> =
-        libraryColumn(
-            mediaColumn(_uiState.value.videoRootSections(), videoAppItems(), videoAddActions()),
-            SearchScope.VIDEOS,
-        )
-
-    private fun addVideosItem(): CrossbarItem = CrossbarItem(
-        id       = ADD_VIDEOS_ITEM_ID,
-        title    = "Add Videos",
-        subtitle = "Set your Video root folder in Settings to get started",
-        type     = CrossbarItemType.ADD_ACTION,
-    )
-
-    private fun videoCollectionsItems(): List<CrossbarItem> = listOf(
-        CrossbarItem(
-            id       = RECENTLY_WATCHED_ITEM_ID,
-            title    = "Recently Watched",
-            subtitle = "Pick up where you left off",
-            type     = CrossbarItemType.VIDEO_RECENT,
-        ),
-        CrossbarItem(
-            id       = FAVORITE_VIDEOS_ITEM_ID,
-            title    = "Favorites",
-            subtitle = "Your starred videos",
-            type     = CrossbarItemType.VIDEO_FAVORITES,
-        ),
-        CrossbarItem(
-            id       = VIDEO_PLAYLISTS_ITEM_ID,
-            title    = "Playlists",
-            subtitle = "Build and play your own lists",
-            type     = CrossbarItemType.PLAYLIST,
-        ),
-    )
-
-    private fun videoLibraryItems(libraries: List<com.echo.core.domain.model.VideoLibrary>): List<CrossbarItem> {
-        val rows = libraries.map { lib ->
-            CrossbarItem(
-                id       = "vlib_${lib.id}",
-                title    = lib.displayName,
-                subtitle = countLabel(lib.videoCount, "video", "videos"),
-                coverUri = lib.artworkUri,
-                type     = CrossbarItemType.VIDEO_FOLDER,
-            )
-        }
-        return rows.ifEmpty {
-            listOf(
-                CrossbarItem(
-                    id = EMPTY_CATEGORY_ITEM_ID,
-                    title = "No video libraries yet",
-                    subtitle = "Add a folder from the Folders row",
-                    type = CrossbarItemType.EMPTY,
-                ),
-            )
-        }
-    }
-
-    private suspend fun videoAppItems(): List<CrossbarItem> {
+    internal suspend fun videoAppItems(): List<CrossbarItem> {
         val apps = appCategoryRepository.appsForCategory(VIDEO_APPS_CATEGORY_ID)
             .notHiddenAt(HideLocationType.CATEGORY, VIDEO_APPS_CATEGORY_ID)
         return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
     }
-
-    private fun addVideoAppsItem(): CrossbarItem = CrossbarItem(
-        id       = ADD_VIDEO_APPS_ITEM_ID,
-        title    = "Add Video Apps",
-        subtitle = "Pick installed apps to show here",
-        type     = CrossbarItemType.ADD_ACTION,
-    )
-
-    private fun List<com.echo.core.domain.model.Video>.toVideoItems(): List<CrossbarItem> =
-        map { it.toCrossbarRow() }
-
-    private fun setVideoItems(
-        videos: List<com.echo.core.domain.model.Video>,
-        emptyItem: CrossbarItem,
-        sortable: Boolean = true,
-    ) {
-        val ordered = if (sortable) videos.videoSorted(_uiState.value.videoSortMode) else videos
-        val items = if (ordered.isEmpty()) listOf(emptyItem) else ordered.toVideoItems()
-        _uiState.update { it.copy(currentItems = items) }
-    }
-
-    private fun videoPlaylistItems(playlists: List<com.echo.core.domain.model.VideoPlaylist>): List<CrossbarItem> {
-        val rows = playlists.map { pl ->
-            CrossbarItem(
-                id         = "vpl_${pl.id}",
-                title      = pl.name,
-                subtitle   = countLabel(pl.videoCount, "video", "videos"),
-                playlistId = pl.id,
-                type       = CrossbarItemType.PLAYLIST,
-            )
-        }
-        return rows + CrossbarItem(
-            id       = CREATE_VIDEO_PLAYLIST_ITEM_ID,
-            title    = "Create Playlist",
-            subtitle = "Start a new video playlist",
-            type     = CrossbarItemType.ADD_ACTION,
-        )
-    }
-
-    private fun emptyAllVideosItem(): CrossbarItem = CrossbarItem(
-        id       = EMPTY_CATEGORY_ITEM_ID,
-        title    = "No videos found",
-        subtitle = "Add a video folder from the Folders row",
-        type     = CrossbarItemType.EMPTY,
-    )
 
     private fun emptyRecentItem(): CrossbarItem = CrossbarItem(
         id       = EMPTY_CATEGORY_ITEM_ID,
@@ -2286,71 +2152,13 @@ class CrossbarViewModel @Inject constructor(
         type     = CrossbarItemType.EMPTY,
     )
 
-    private fun emptyFavoriteVideosItem(): CrossbarItem = CrossbarItem(
-        id       = EMPTY_CATEGORY_ITEM_ID,
-        title    = "No favorites yet",
-        subtitle = "Star a video from its ⚙ Options menu",
-        type     = CrossbarItemType.EMPTY,
-    )
-
-    private fun emptyPlaylistVideosItem(): CrossbarItem = CrossbarItem(
-        id       = EMPTY_PLAYLIST_ITEM_ID,
-        title    = "This playlist is empty",
-        subtitle = "Add videos from a video's ⚙ Options menu",
-        type     = CrossbarItemType.EMPTY,
-    )
-
-    private fun handleVideoSelection(item: CrossbarItem): Boolean = when {
-        item.id == SEARCH_ITEM_ID -> { openSearch(SearchScope.VIDEOS); true }
-        item.id == ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openAddMenu(); true }
-        item.type == CrossbarItemType.EMPTY -> true
-        item.id == ALL_VIDEOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.AllVideos); true }
-        item.id == VIDEO_COLLECTIONS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Collections); true }
-        item.id == RECENTLY_WATCHED_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.RecentlyWatched); true }
-        item.id == FAVORITE_VIDEOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Favorites); true }
-        item.id == VIDEO_PLAYLISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Playlists); true }
-        item.id == CREATE_VIDEO_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreateVideoPlaylist(); true }
-        item.id.startsWith("vpl_") && item.playlistId != null -> {
-            menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Playlist(item.playlistId, item.title)); true
-        }
-        item.id == VIDEO_LIBRARIES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Libraries); true }
-        item.id == ADD_VIDEOS_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT)
-            openMediaFolders(MediaRootKind.VIDEO)
-            true
-        }
-        item.id == ADD_VIDEO_APPS_ITEM_ID -> {
-            menuSound.play(MenuSound.SELECT)
-            openAppPicker(AppPickerTarget.CategoryShortcuts(VIDEO_APPS_CATEGORY_ID), "Add Video Apps")
-            true
-        }
-        item.id.startsWith("vlib_") -> {
-            menuSound.play(MenuSound.SELECT)
-            val libId = item.id.removePrefix("vlib_")
-            openVideoView(VideoNav.Library(libId, item.title))
-            true
-        }
-        item.type == CrossbarItemType.VIDEO_FILE -> {
-            menuSound.play(MenuSound.SELECT)
-            _uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
-            true
-        }
-
-        item.packageName != null -> {
-            menuSound.play(MenuSound.LAUNCH)
-            launchAppWithDisc(item.packageName, item.shelfCoverArt)
-            true
-        }
-        else -> false
-    }
-
     private val viewCursor = mutableMapOf<String, Int>()
 
     private fun viewCursorKey(s: CrossbarUiState): String {
         val catId = s.categories.getOrNull(s.selectedCategoryIndex)?.id ?: "none"
         val sub = when {
             catId == BuiltInCategory.MUSIC -> "music_${music.musicNavKey(s.musicNav)}"
-            catId == BuiltInCategory.VIDEO -> "video_${videoNavKey(s.videoNav)}"
+            catId == BuiltInCategory.VIDEO -> "video_${video.videoNavKey(s.videoNav)}"
             catId == BuiltInCategory.PHOTO -> "photo_${photoNavKey(s.photoNav)}"
             catId == BuiltInCategory.LIBRARY -> "books_${booksNavKey(s.booksNav)}"
             catId == BuiltInCategory.SETTINGS -> "settings_root"
@@ -2369,148 +2177,6 @@ class CrossbarViewModel @Inject constructor(
             next.copy(selectedItemIndex = remembered)
         }
         loadItemsForCategory(currentCategory())
-    }
-
-    private fun videoNavKey(nav: VideoNav): String = when (nav) {
-        VideoNav.Folders         -> "folders"
-        VideoNav.Root            -> "root"
-        VideoNav.AllVideos       -> "all"
-        VideoNav.Collections     -> "collections"
-        VideoNav.RecentlyWatched -> "recent"
-        VideoNav.Favorites       -> "favorites"
-        VideoNav.Playlists       -> "playlists"
-        is VideoNav.Playlist     -> "playlist_${nav.id}"
-        VideoNav.Libraries       -> "libraries"
-        is VideoNav.Library      -> "library_${nav.id}"
-    }
-
-    private fun openVideoView(nav: VideoNav) = navigateRememberingCursor { it.copy(videoNav = nav) }
-
-    private fun closeVideoView() = openVideoView(VideoNav.Root)
-
-    fun onCloseVideoDetail() {
-        _uiState.update { it.copy(activeVideoId = null, activeVideoAutoPlay = false, pendingVideoDetailAction = null) }
-    }
-
-    fun consumeVideoDetailAction() {
-        _uiState.update { it.copy(pendingVideoDetailAction = null) }
-    }
-
-    private fun promptCreateVideoPlaylist(forVideoId: String? = null) {
-        _uiState.update { it.copy(
-            playlistNameDialog = PlaylistNameDialogState(title = "New Video Playlist", videoContext = true, forVideoId = forVideoId)
-        )}
-    }
-
-    private fun promptRenameVideoPlaylist(playlistId: Long) {
-        val name = _uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
-        _uiState.update { it.copy(
-            playlistNameDialog = PlaylistNameDialogState(
-                title = "Rename Playlist",
-                initialText = name,
-                renamePlaylistId = playlistId,
-                videoContext = true,
-            )
-        )}
-    }
-
-    private fun openVideoPlaylistContextMenu(playlistId: Long, name: String) {
-        val items = videoPlaylistContextMenuItems()
-        _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = name, rows = items), videoPlaylistId = playlistId)) }
-    }
-
-    private fun openVideoContextMenu(item: CrossbarItem): Boolean {
-        if (item.menuHostCategory(currentCategory()?.id) != BuiltInCategory.VIDEO) return false
-        return when {
-            item.type == CrossbarItemType.VIDEO_FILE && item.id.startsWith("vid_") -> {
-                openVideoFileContextMenu(item.id.removePrefix("vid_"), item.title); true
-            }
-            item.type == CrossbarItemType.VIDEO_FOLDER && item.id.startsWith("vlib_") -> {
-                openVideoLibraryContextMenu(item.id.removePrefix("vlib_"), item.title); true
-            }
-            item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
-                openVideoPlaylistContextMenu(item.playlistId, item.title); true
-            }
-            item.packageName != null -> {
-                openAppContextMenu(item, categoryIdOverride = VIDEO_APPS_CATEGORY_ID); true
-            }
-            else -> false
-        }
-    }
-
-    private fun openVideoFileContextMenu(videoId: String, title: String) {
-        viewModelScope.launch {
-            val video = videoRepository.getVideo(videoId) ?: return@launch
-            val inPlaylist = _uiState.value.videoNav is VideoNav.Playlist
-            val items = videoFileContextMenuItems(
-                isFavorite = video.isFavorite,
-                resumePositionMs = video.resumePositionMs,
-                hasWatchStamp = video.lastWatchedAt != null,
-                inPlaylist = inPlaylist,
-            )
-            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = items), videoFileId = videoId)) }
-        }
-    }
-
-    private fun handleVideoFileAction(videoId: String, itemId: String) {
-        when (itemId) {
-            "video_play", "video_resume", "video_details" ->
-                _uiState.update { it.copy(activeVideoId = videoId) }
-            "video_favorite" -> appAction {
-                val v = videoRepository.getVideo(videoId) ?: return@appAction
-                videoRepository.setFavorite(videoId, !v.isFavorite)
-            }
-            "video_add_playlist" -> openVideoPlaylistPicker(videoId)
-            "video_remove_playlist" -> (_uiState.value.videoNav as? VideoNav.Playlist)?.let { nav ->
-                appAction { videoRepository.removeVideoFromPlaylist(nav.id, videoId) }
-            }
-
-            "video_remove_recent" -> appAction { videoRepository.clearLastWatched(videoId) }
-            "video_remove" -> appAction { videoRepository.removeVideo(videoId) }
-        }
-    }
-
-    private fun openVideoPlaylistPicker(videoId: String, selectIndex: Int? = 0) {
-        viewModelScope.launch {
-            val playlists = videoRepository.observePlaylists().first()
-            val memberOf = videoRepository.getPlaylistIdsForVideo(videoId).toSet()
-            val items = buildList {
-                playlists.forEach { pl -> add(CrossbarContextMenuItem("vpl_${pl.id}", pl.name, checked = pl.id in memberOf)) }
-                add(CrossbarContextMenuItem("vpl_new", "Create New Playlist"))
-            }
-            _uiState.update { it.copy(
-                activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Add to Playlist", rows = items, selectedIndex = selectIndex?.coerceIn(0, items.lastIndex.coerceAtLeast(0))), videoPlaylistPickerVideoId = videoId)
-            )}
-        }
-    }
-
-    private fun openVideoLibraryContextMenu(libraryId: String, name: String) {
-        val items = videoLibraryContextMenuItems()
-        _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = name, rows = items), videoLibraryId = libraryId)) }
-    }
-
-    private fun handleVideoLibraryAction(libraryId: String, itemId: String) {
-        when (itemId) {
-            "video_lib_open" -> {
-                val name = _uiState.value.currentItems.firstOrNull { it.id == "vlib_$libraryId" }?.title.orEmpty()
-                openVideoView(VideoNav.Library(libraryId, name))
-            }
-            "video_lib_manage" -> openMediaFolders(MediaRootKind.VIDEO)
-        }
-    }
-
-    private fun handleVideoPlaylistRowAction(playlistId: Long, itemId: String) {
-        when (itemId) {
-            "open_video_playlist" -> {
-                val name = _uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
-                openVideoView(VideoNav.Playlist(playlistId, name))
-            }
-            "rename_video_playlist" -> promptRenameVideoPlaylist(playlistId)
-            "delete_video_playlist" -> appAction {
-                videoRepository.deletePlaylist(playlistId)
-                if ((_uiState.value.videoNav as? VideoNav.Playlist)?.id == playlistId) openVideoView(VideoNav.Playlists)
-            }
-        }
     }
 
     private fun observeContinueBook() {
@@ -3361,7 +3027,7 @@ class CrossbarViewModel @Inject constructor(
 
     internal fun openMediaFolders(kind: MediaRootKind) = when (kind) {
         MediaRootKind.MUSIC -> music.openMusicView(MusicNav.Folders)
-        MediaRootKind.VIDEO -> openVideoView(VideoNav.Folders)
+        MediaRootKind.VIDEO -> video.openVideoView(VideoNav.Folders)
         MediaRootKind.PHOTO -> openPhotoView(PhotoNav.Folders)
         MediaRootKind.BOOK  -> openBooksView(BooksNav.Folders)
     }
@@ -3444,7 +3110,7 @@ class CrossbarViewModel @Inject constructor(
         val entryId = entryIdForRoot(kind, treeUri)
         when (kind) {
             MediaRootKind.MUSIC -> music.scanMusicFolder(entryId)
-            MediaRootKind.VIDEO -> scanVideoLibrary(entryId, deep)
+            MediaRootKind.VIDEO -> video.scanVideoLibrary(entryId, deep)
             MediaRootKind.PHOTO -> scanPhotoLibrary(entryId)
             MediaRootKind.BOOK  -> scanBookLibrary(entryId, deep)
         }
@@ -3586,24 +3252,6 @@ class CrossbarViewModel @Inject constructor(
                 itemId.removePrefix(MEDIA_APP_PREFIX).takeIf { it != MEDIA_APP_NONE },
             )
             null -> Unit
-        }
-    }
-
-    private suspend fun scanVideoLibrary(libraryId: String, deep: Boolean = false) {
-        val library = videoRepository.getLibrary(libraryId) ?: return
-        val taskId = "video_scan_$libraryId"
-        addBackgroundTask(BackgroundTaskInfo(taskId, "Scanning ${library.displayName}", null))
-        val existing = videoRepository.getVideosForLibrary(libraryId)
-        videoScanner.scan(library, deep = deep, existing = existing).collect { result ->
-            when (result) {
-                is com.echo.feature.library.scanner.VideoScanResult.Progress -> Unit
-                is com.echo.feature.library.scanner.VideoScanResult.Complete -> {
-                    videoRepository.replaceVideosForLibrary(result.libraryId, result.videos, System.currentTimeMillis())
-                    completeBackgroundTask(taskId, "${result.videos.size} videos")
-                }
-                is com.echo.feature.library.scanner.VideoScanResult.Error ->
-                    failBackgroundTask(taskId, result.message)
-            }
         }
     }
 
@@ -3770,14 +3418,8 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun videoLibrarySiblings(): List<CrossbarItem> =
-        _uiState.value.videoLibraries.map { CrossbarItem(id = "vlib_${it.id}", title = it.displayName, type = CrossbarItemType.VIDEO_FOLDER) }
-
     private fun photoAlbumSiblings(): List<CrossbarItem> =
         _uiState.value.photoLibraries.map { CrossbarItem(id = "plib_${it.id}", title = it.displayName, type = CrossbarItemType.PHOTO_FOLDER) }
-
-    private fun videoPlaylistSiblings(): List<CrossbarItem> =
-        _uiState.value.videoPlaylists.map { CrossbarItem(id = "vpl_${it.id}", title = it.name, playlistId = it.id, type = CrossbarItemType.PLAYLIST) }
 
     private fun computeDrillSiblings(category: Category?): Pair<List<CrossbarItem>, Int> {
         val s = _uiState.value
@@ -3801,16 +3443,16 @@ class CrossbarViewModel @Inject constructor(
 
         if (s.videoNav != VideoNav.Root) {
             (s.videoNav as? VideoNav.Library)?.let { nav ->
-                val libs = videoLibrarySiblings()
+                val libs = video.videoLibrarySiblings()
                 if (libs.isNotEmpty()) return libs to libs.indexOfFirst { it.id == "vlib_${nav.id}" }.coerceAtLeast(0)
             }
             (s.videoNav as? VideoNav.Playlist)?.let { nav ->
-                val pls = videoPlaylistSiblings()
+                val pls = video.videoPlaylistSiblings()
                 if (pls.isNotEmpty()) return pls to pls.indexOfFirst { it.playlistId == nav.id }.coerceAtLeast(0)
             }
 
             if (s.videoNav.isVideoCollectionChild || s.videoNav is VideoNav.Playlist) {
-                val sibs = videoCollectionsItems()
+                val sibs = video.videoCollectionsItems()
                 val idx = sibs.indexOfFirst { sib ->
                     when (s.videoNav) {
                         VideoNav.RecentlyWatched -> sib.type == CrossbarItemType.VIDEO_RECENT
@@ -5026,7 +4668,7 @@ class CrossbarViewModel @Inject constructor(
         if (!item.removableFromRecent) return
         menuSound.play(MenuSound.SELECT)
         when {
-            item.type == CrossbarItemType.VIDEO_FILE -> handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent")
+            item.type == CrossbarItemType.VIDEO_FILE -> video.handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent")
             item.type == CrossbarItemType.LIBRARY_BOOK -> handleBookAction(item.id.removePrefix("book_"), "book_remove_recent")
             item.type == CrossbarItemType.MUSIC_TRACK -> music.handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null)
             item.gameId != null -> {
@@ -5356,13 +4998,13 @@ class CrossbarViewModel @Inject constructor(
             when {
                 itemId == "vpl_new" -> {
                     closeContextMenu()
-                    promptCreateVideoPlaylist(forVideoId = videoId)
+                    video.promptCreateVideoPlaylist(forVideoId = videoId)
                 }
                 itemId.startsWith("vpl_") -> {
                     val playlistId = itemId.removePrefix("vpl_").toLongOrNull() ?: return
                     viewModelScope.launch {
                         videoRepository.toggleVideoInPlaylist(playlistId, videoId)
-                        openVideoPlaylistPicker(videoId, keepIndex)
+                        video.openVideoPlaylistPicker(videoId, keepIndex)
                     }
                 }
             }
@@ -5392,7 +5034,7 @@ class CrossbarViewModel @Inject constructor(
         closeContextMenu()
 
         if (menu.videoFileId != null) {
-            handleVideoFileAction(menu.videoFileId, itemId)
+            video.handleVideoFileAction(menu.videoFileId, itemId)
             return
         }
         if (menu.bookFileId != null) {
@@ -5400,7 +5042,7 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         if (menu.videoLibraryId != null) {
-            handleVideoLibraryAction(menu.videoLibraryId, itemId)
+            video.handleVideoLibraryAction(menu.videoLibraryId, itemId)
             return
         }
         if (menu.photoFileId != null) {
@@ -5412,7 +5054,7 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         if (menu.videoPlaylistId != null) {
-            handleVideoPlaylistRowAction(menu.videoPlaylistId, itemId)
+            video.handleVideoPlaylistRowAction(menu.videoPlaylistId, itemId)
             return
         }
 
@@ -5820,7 +5462,7 @@ class CrossbarViewModel @Inject constructor(
             item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
                 openMediaFoldersContextMenu(item)
             item != null && music.openMusicContextMenu(item) -> Unit
-            item != null && openVideoContextMenu(item) -> Unit
+            item != null && video.openVideoContextMenu(item) -> Unit
             item != null && openBookContextMenu(item) -> Unit
             item != null && openPhotoContextMenu(item) -> Unit
             item?.gameId != null -> openGameContextMenu(item)
@@ -6721,7 +6363,7 @@ class CrossbarViewModel @Inject constructor(
         mediaRootSelection(item)?.let { return it }
         return when (item.menuHostCategory(currentCategory()?.id)) {
             BuiltInCategory.MUSIC   -> music.handleMusicSelection(item)
-            BuiltInCategory.VIDEO   -> handleVideoSelection(item)
+            BuiltInCategory.VIDEO   -> video.handleVideoSelection(item)
             BuiltInCategory.PHOTO   -> handlePhotoSelection(item)
             BuiltInCategory.LIBRARY -> handleBooksSelection(item)
             else -> false
@@ -6778,10 +6420,10 @@ class CrossbarViewModel @Inject constructor(
         when (s.drillOutStep) {
             DrillOutStep.MUSIC -> music.closeMusicView()
 
-            DrillOutStep.VIDEO_LIBRARY -> openVideoView(VideoNav.Libraries)
-            DrillOutStep.VIDEO_PLAYLIST -> openVideoView(VideoNav.Playlists)
-            DrillOutStep.VIDEO_COLLECTION_CHILD -> openVideoView(VideoNav.Collections)
-            DrillOutStep.VIDEO -> closeVideoView()
+            DrillOutStep.VIDEO_LIBRARY -> video.openVideoView(VideoNav.Libraries)
+            DrillOutStep.VIDEO_PLAYLIST -> video.openVideoView(VideoNav.Playlists)
+            DrillOutStep.VIDEO_COLLECTION_CHILD -> video.openVideoView(VideoNav.Collections)
+            DrillOutStep.VIDEO -> video.closeVideoView()
 
             DrillOutStep.PHOTO_LIBRARY -> openPhotoView(PhotoNav.Albums)
             DrillOutStep.PHOTO -> closePhotoView()
@@ -6984,7 +6626,7 @@ class CrossbarViewModel @Inject constructor(
             item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
                 openMediaFoldersContextMenu(item)
             item != null && music.openMusicContextMenu(item) -> Unit
-            item != null && openVideoContextMenu(item) -> Unit
+            item != null && video.openVideoContextMenu(item) -> Unit
             item != null && openBookContextMenu(item) -> Unit
             item != null && openPhotoContextMenu(item) -> Unit
             item?.gameId != null -> openGameContextMenu(item)
@@ -8433,7 +8075,7 @@ class CrossbarViewModel @Inject constructor(
         internal const val EMPTY_CATEGORY_ITEM_ID = "empty_category"
         private const val ALL_GAMES_ITEM_ID = "all_games"
 
-        private const val RESUME_DONE_FRACTION = 0.97f
+        internal const val RESUME_DONE_FRACTION = 0.97f
         private const val ALL_GAMES_PLATFORM_ID = "__all_games__"
         private const val FAVORITES_ITEM_ID = "favorites_folder"
 
@@ -8475,13 +8117,13 @@ class CrossbarViewModel @Inject constructor(
 
         internal const val ALL_VIDEOS_ITEM_ID = "all_videos"
         internal const val VIDEO_COLLECTIONS_ITEM_ID = "video_collections"
-        private const val RECENTLY_WATCHED_ITEM_ID = "recently_watched"
-        private const val FAVORITE_VIDEOS_ITEM_ID = "favorite_videos"
-        private const val VIDEO_PLAYLISTS_ITEM_ID = "video_playlists"
-        private const val CREATE_VIDEO_PLAYLIST_ITEM_ID = "create_video_playlist"
+        internal const val RECENTLY_WATCHED_ITEM_ID = "recently_watched"
+        internal const val FAVORITE_VIDEOS_ITEM_ID = "favorite_videos"
+        internal const val VIDEO_PLAYLISTS_ITEM_ID = "video_playlists"
+        internal const val CREATE_VIDEO_PLAYLIST_ITEM_ID = "create_video_playlist"
         internal const val VIDEO_LIBRARIES_ITEM_ID = "video_libraries"
-        private const val ADD_VIDEOS_ITEM_ID = "add_videos"
-        private const val ADD_VIDEO_APPS_ITEM_ID = "add_video_apps"
+        internal const val ADD_VIDEOS_ITEM_ID = "add_videos"
+        internal const val ADD_VIDEO_APPS_ITEM_ID = "add_video_apps"
         internal const val VIDEO_APPS_CATEGORY_ID = "videos"
 
         internal const val ALL_PHOTOS_ITEM_ID = "all_photos"
