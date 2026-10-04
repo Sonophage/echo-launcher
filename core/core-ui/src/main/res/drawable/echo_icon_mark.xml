@@ -5,8 +5,11 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group android:pivotX="54" android:pivotY="54" android:scaleX="1.25" android:scaleY="1.25">
-        <path android:fillColor="#FFFFFFFF" android:pathData="M29.25,54 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" />
-        <path android:strokeColor="#FFFFFFFF" android:strokeWidth="3.5" android:pathData="M46,54 a9.25,9.25 0 1,0 18.5,0 a9.25,9.25 0 1,0 -18.5,0" />
-        <path android:strokeColor="#FFFFFFFF" android:strokeWidth="2" android:pathData="M60.75,54 a8.5,8.5 0 1,0 17,0 a8.5,8.5 0 1,0 -17,0" />
+        <group android:translateY="-4.6">
+            <path android:fillColor="#FFFFFFFF" android:pathData="M29.25,54 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" />
+            <path android:strokeColor="#FFFFFFFF" android:strokeWidth="3.5" android:pathData="M46,54 a9.25,9.25 0 1,0 18.5,0 a9.25,9.25 0 1,0 -18.5,0" />
+            <path android:fillColor="#FFFFFFFF" android:pathData="M60.75,54 a8.5,8.5 0 1,0 17,0 a8.5,8.5 0 1,0 -17,0" />
+            <path android:fillColor="#FFFFFFFF" android:pathData="M52.25,70.25 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+        </group>
     </group>
 </vector>
