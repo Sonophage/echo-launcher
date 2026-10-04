@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,6 +63,7 @@ fun EchoHintBar(
 
     centre: (@Composable () -> Unit)? = null,
     accent: Color = LocalEchoColors.current.accentColor,
+    leading: (@Composable () -> Unit)? = null,
 ) {
     if (items.isEmpty() && primary == null && centre == null) return
     val pad = LocalPadPrompts.current
@@ -86,7 +88,7 @@ fun EchoHintBar(
             contentAlignment = Alignment.Center,
         ) { centre?.invoke() }
 
-        primary?.let { ActionTab(it, accent, u, pad, onAction, Modifier.align(Alignment.Bottom)) }
+        primary?.let { ActionTab(it, accent, leading, u, pad, onAction, Modifier.align(Alignment.Bottom)) }
     }
 }
 
@@ -119,6 +121,7 @@ private fun Hint(item: ControllerPromptItem, u: DesignUnits, pad: Boolean, onAct
 private fun ActionTab(
     primary: HintAction,
     accent: Color,
+    leading: (@Composable () -> Unit)?,
     u: DesignUnits,
     pad: Boolean,
     onAction: ((GamepadAction) -> Unit)?,
@@ -139,11 +142,11 @@ private fun ActionTab(
             .drawWithCache {
                 val fill = Brush.linearGradient(
                     0f to accent.copy(alpha = 0.62f),
-                    1f to lerp(accent, Color.Black, 0.38f).copy(alpha = 0.5f),
+                    1f to lerp(accent, Color.Black, 0.4f).copy(alpha = 0.5f),
                     start = Offset.Zero,
                     end = Offset(size.width, size.height),
                 )
-                val w = TabEdge.toPx()
+                val w = u.dp(2).toPx()
                 val r = radius.toPx()
                 val path = Path().apply {
                     moveTo(w / 2, size.height)
@@ -151,18 +154,19 @@ private fun ActionTab(
                     arcTo(Rect(w / 2, w / 2, 2 * r - w / 2, 2 * r - w / 2), 180f, 90f, false)
                     lineTo(size.width, w / 2)
                 }
-                val glow = Stroke(width = w * 4)
                 val line = Stroke(width = w)
                 onDrawWithContent {
                     drawRect(fill)
                     drawContent()
-                    drawPath(path, edge.copy(alpha = 0.35f), style = glow)
-                    drawPath(path, edge, style = line)
+                    drawPath(path, edge.copy(alpha = 0.22f), style = line)
                 }
             }
             .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
             .padding(start = u.dp(20), end = maxOf(u.dp(20), chromeGutter(end = true)), top = u.dp(6), bottom = u.dp(14)),
     ) {
+        leading?.let { tile ->
+            Box(Modifier.size(u.dp(34)).clip(RoundedCornerShape(u.dp(10))).background(accent), contentAlignment = Alignment.Center) { tile() }
+        }
         if (pad) {
             val size = glyphFor(u, 24, 14)
             style.mappings.iconsFor(listOf(primary.action)).forEach { icon ->
@@ -179,7 +183,7 @@ private fun ActionTab(
             Text(
                 primary.label,
                 color = Color.White,
-                style = TextStyle(fontSize = u.sp(14), lineHeight = u.sp(14) * 1.15f, fontWeight = FontWeight.Medium),
+                style = TextStyle(fontSize = u.sp(13), lineHeight = u.sp(13) * 1.15f, fontWeight = FontWeight.Medium),
                 maxLines = 1,
             )
             primary.detail?.let {
@@ -224,4 +228,3 @@ internal fun hintBarRow(
 private val BarHeight = HintBarHeight
 private val HintLabel = Color.White.copy(alpha = 0.85f)
 private val TabInk = Color(0xFF1A0D05)
-private val TabEdge = 2.dp

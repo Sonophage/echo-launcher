@@ -1,5 +1,8 @@
 package com.echo.feature.crossbar.ui
 
+import androidx.compose.ui.graphics.ImageBitmap
+import com.echo.feature.crossbar.viewmodel.CrossbarItem
+import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.core.ui.design.mediaAccent
 import com.echo.core.ui.notification.AndroidNotifications
@@ -1169,13 +1172,15 @@ fun CrossbarShell(
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(aboveContextRail),
             ) {
                 CompositionLocalProvider(LocalDensity provides baseDensity) {
+                    val hintItem = uiState.focusedItem?.takeIf { uiState.activeSettingsScreen == null }
+                    val hintIcon = rememberAppIcon(hintItem?.packageName)
                     CrossbarHintBar(
                         prompts = promptsFor(uiState),
                         onAction = onPromptTapped,
-                        accent = uiState.focusedItemAccentArgb
-                            ?.takeIf { uiState.activeSettingsScreen == null }
-                            ?.let(::mediaAccent)
-                            ?: LocalEchoColors.current.accentColor,
+                        accent = uiState.focusedItemAccentArgb?.takeIf { hintItem != null }?.let(::mediaAccent)
+                            ?: hintIcon?.color
+                            ?: menuCursorEdge(),
+                        leading = hintItem?.let { hintTile(it, hintIcon?.bitmap) },
                     )
                 }
             }
@@ -1732,5 +1737,16 @@ private fun Modifier.markTouches(onTouch: () -> Unit): Modifier = pointerInput(o
             val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
             if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press) onTouch()
         }
+    }
+}
+
+private fun hintTile(item: CrossbarItem, icon: ImageBitmap?): (@Composable () -> Unit)? {
+    val art = item.coverUri ?: item.iconUri
+    return when {
+        art != null -> { ->
+            AsyncImage(rememberArtworkModel(art), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        }
+        icon != null -> { -> androidx.compose.foundation.Image(icon, null, Modifier.fillMaxSize()) }
+        else -> null
     }
 }

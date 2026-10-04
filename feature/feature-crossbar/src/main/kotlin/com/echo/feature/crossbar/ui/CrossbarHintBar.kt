@@ -17,6 +17,7 @@ fun CrossbarHintBar(
     modifier: Modifier = Modifier,
     onAction: ((GamepadAction) -> Unit)? = null,
     accent: Color = LocalEchoColors.current.accentColor,
+    leading: (@Composable () -> Unit)? = null,
 ) {
     EchoHintBar(
         items = buildList {
@@ -26,6 +27,7 @@ fun CrossbarHintBar(
         modifier = modifier,
         onAction = onAction,
         accent = accent,
+        leading = leading,
         primary = prompts.primary?.let { p ->
             HintAction(p.action, p.verb, listOfNotNull(p.target, p.detail).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null })
         },
