@@ -188,7 +188,7 @@ class CrossbarVideo(
         }
         item.id == CrossbarViewModel.ADD_VIDEO_APPS_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            vm.openAppPicker(AppPickerTarget.CategoryShortcuts(CrossbarViewModel.VIDEO_APPS_CATEGORY_ID), "Add Video Apps")
+            vm.appPickerSection.openAppPicker(AppPickerTarget.CategoryShortcuts(CrossbarViewModel.VIDEO_APPS_CATEGORY_ID), "Add Video Apps")
             true
         }
         item.id.startsWith("vlib_") -> {

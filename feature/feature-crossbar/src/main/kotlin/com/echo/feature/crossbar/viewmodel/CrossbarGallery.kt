@@ -144,7 +144,7 @@ class CrossbarGallery(
         }
         item.id == CrossbarViewModel.ADD_PHOTO_APPS_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            vm.openAppPicker(AppPickerTarget.CategoryShortcuts(CrossbarViewModel.PHOTO_APPS_CATEGORY_ID), "Add Photo Apps")
+            vm.appPickerSection.openAppPicker(AppPickerTarget.CategoryShortcuts(CrossbarViewModel.PHOTO_APPS_CATEGORY_ID), "Add Photo Apps")
             true
         }
 

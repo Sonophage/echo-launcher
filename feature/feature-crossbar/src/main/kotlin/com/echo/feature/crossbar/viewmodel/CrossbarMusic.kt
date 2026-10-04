@@ -431,7 +431,7 @@ class CrossbarMusic(
         item.id == CrossbarViewModel.CREATE_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreatePlaylist(); true }
         item.id == CrossbarViewModel.ADD_MUSIC_APPS_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            vm.openAppPicker(AppPickerTarget.CategoryShortcuts(CrossbarViewModel.MUSIC_APPS_CATEGORY_ID), "Add Music Apps")
+            vm.appPickerSection.openAppPicker(AppPickerTarget.CategoryShortcuts(CrossbarViewModel.MUSIC_APPS_CATEGORY_ID), "Add Music Apps")
             true
         }
         item.id == CrossbarViewModel.ADD_TRACKS_ITEM_ID -> {

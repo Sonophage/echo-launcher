@@ -172,7 +172,7 @@ class CrossbarBookshelf(
         item.type == CrossbarItemType.LIBRARY_BOOK -> { openBook(item.id.removePrefix("book_")); true }
         item.id == CrossbarViewModel.ADD_LIBRARY_APPS_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            vm.openAppPicker(AppPickerTarget.CategoryShortcuts(CrossbarViewModel.LIBRARY_APPS_CATEGORY_ID), "Add Book Apps")
+            vm.appPickerSection.openAppPicker(AppPickerTarget.CategoryShortcuts(CrossbarViewModel.LIBRARY_APPS_CATEGORY_ID), "Add Book Apps")
             true
         }
 

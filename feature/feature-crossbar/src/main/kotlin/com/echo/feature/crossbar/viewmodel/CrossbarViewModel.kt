@@ -1307,6 +1307,8 @@ class CrossbarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
 
+    internal val appPickerSection = CrossbarAppPicker(this, _uiState, viewModelScope, menuSound)
+
     internal val folders = CrossbarFolders(this, _uiState, viewModelScope, mediaRootRepository, romRootRepository, libraryScanner, pcGameScanner, menuSound)
 
     internal val look = CrossbarLook(this, _uiState, viewModelScope, menuSound)
@@ -2709,25 +2711,25 @@ class CrossbarViewModel @Inject constructor(
                 GamepadAction.NAVIGATE_UP,
                 GamepadAction.NAVIGATE_DOWN,
                 GamepadAction.NAVIGATE_LEFT,
-                GamepadAction.NAVIGATE_RIGHT -> moveAppPicker(action)
+                GamepadAction.NAVIGATE_RIGHT -> appPickerSection.moveAppPicker(action)
 
                 GamepadAction.SELECT -> {
                     val picker = state.appPicker
                     if (picker.confirmingRemovals) {
-                        if (picker.confirmFocusedOption == AppPickerState.CONFIRM_REMOVE) commitAppPicker()
+                        if (picker.confirmFocusedOption == AppPickerState.CONFIRM_REMOVE) appPickerSection.commitAppPicker()
                         else cancelConfirm()
-                    } else toggleFocusedApp()
+                    } else appPickerSection.toggleFocusedApp()
                 }
 
-                GamepadAction.HOME -> requestApplyAppPicker()
+                GamepadAction.HOME -> appPickerSection.requestApplyAppPicker()
                 GamepadAction.CHANGE_SORT -> _uiState.update { s ->
                     s.copy(appPicker = s.appPicker?.let { p ->
-                        (if (p.searchActive) closeAppPickerSearch(p) else p.copy(searchActive = true)).clampFocus()
+                        (if (p.searchActive) appPickerSection.closeAppPickerSearch(p) else p.copy(searchActive = true)).clampFocus()
                     })
                 }
 
                 GamepadAction.BACK,
-                GamepadAction.OPEN_CONTEXT_MENU -> handleAppPickerBack()
+                GamepadAction.OPEN_CONTEXT_MENU -> appPickerSection.handleAppPickerBack()
                 else -> Unit
             }
             return
@@ -3491,7 +3493,7 @@ class CrossbarViewModel @Inject constructor(
                 "card_rom_directory" -> folders.openRomFolders()
                 "card_move_up"     -> moveCard(menu.platformId, up = true)
                 "card_move_down"   -> moveCard(menu.platformId, up = false)
-                "find_games"       -> openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
+                "find_games"       -> appPickerSection.openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
                 "import_pc_games"  -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
                 "scan_roms"        -> folders.scanCard(menu.platformId)
                 "scrape_missing_artwork" -> scrapeMissingArtworkForPlatform(menu.platformId)
@@ -4042,200 +4044,20 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    internal fun openAppPicker(target: AppPickerTarget, title: String) {
-        viewModelScope.launch {
-            val installed = appCategoryRepository.allInstalledApps()
-
-            val entries = installed.map {
-                AppPickerEntry(packageName = it.packageName, label = it.label)
-            }
-            val membership: Set<String> = when (target) {
-                is AppPickerTarget.AndroidGames ->
-                    gameRepository.observeByPlatform(target.platformId).first()
-                        .mapNotNull { it.packageName }
-                        .toSet()
-                is AppPickerTarget.CategoryShortcuts ->
-                    appCategoryRepository.packagesIn(target.categoryId)
-            }
-            _uiState.update {
-                it.copy(appPicker = AppPickerState(
-                    title           = title,
-                    target          = target,
-                    apps            = entries,
-                    selected        = membership,
-                    initialSelected = membership,
-                ))
-            }
-        }
-    }
-
-    fun onAppPickerColumnsMeasured(columns: Int) {
-        if (columns <= 0) return
-        _uiState.update {
-            val picker = it.appPicker ?: return@update it
-            if (picker.columns == columns) it else it.copy(appPicker = picker.copy(columns = columns))
-        }
-    }
-
-    fun onAppPickerTileTapped(index: Int) {
-        markTouchInput()
-
-        if (_uiState.value.appPicker?.confirmingRemovals == true) return
-        _uiState.update {
-            val picker = it.appPicker ?: return@update it
-            val visible = picker.visibleApps()
-            val app = visible.getOrNull(index) ?: return@update it
-            it.copy(appPicker = picker.copy(focusedIndex = index, usingTouch = true)
-                .toggle(app.packageName))
-        }
-    }
-
-    fun onAppPickerTouchBrowse(index: Int) {
-        markTouchInput()
-        if (_uiState.value.appPicker?.confirmingRemovals == true) return
-        _uiState.update {
-            val picker = it.appPicker ?: return@update it
-            val lastIndex = (picker.visibleApps().size - 1).coerceAtLeast(0)
-            it.copy(appPicker = picker.copy(
-                focusedIndex = index.coerceIn(0, lastIndex),
-                usingTouch = true,
-            ))
-        }
-    }
-
-    fun onAppPickerHeaderBack() {
-        markTouchInput()
-        handleAppPickerBack()
-    }
-
-    fun onAppPickerConfirmRemoval() {
-        markTouchInput()
-        commitAppPicker()
-    }
-
-    fun onAppPickerCancelRemoval() {
-        markTouchInput()
-        cancelConfirm()
-    }
-
-    fun onAppPickerApply() {
-        markTouchInput()
-        requestApplyAppPicker()
-    }
-
-    fun onAppPickerSearchToggle(active: Boolean) {
-        markTouchInput()
-        _uiState.update {
-            val picker = it.appPicker ?: return@update it
-            it.copy(appPicker = (if (active) picker.copy(searchActive = true) else closeAppPickerSearch(picker)).clampFocus())
-        }
-    }
-
-    fun onAppPickerQueryChange(query: String) {
-        _uiState.update {
-            val picker = it.appPicker ?: return@update it
-
-            it.copy(appPicker = picker.copy(query = query).clampFocus())
-        }
-    }
-
-    private fun closeAppPickerSearch(picker: AppPickerState): AppPickerState =
-        picker.copy(searchActive = false, query = "")
-
-    fun onAppPickerSearchDone() {
-    }
-
-    private fun moveAppPicker(action: GamepadAction) {
-        _uiState.update { state ->
-            val picker = state.appPicker ?: return@update state
-
-            state.copy(appPicker = if (picker.confirmingRemovals) picker.moveConfirm(action) else picker.move(action))
-        }
-    }
-
-    private fun toggleFocusedApp() {
-        _uiState.update {
-            val picker = it.appPicker ?: return@update it
-            val app = picker.visibleApps().getOrNull(picker.focusedIndex) ?: return@update it
-            it.copy(appPicker = picker.toggle(app.packageName))
-        }
-    }
-
-    private fun cancelConfirm() {
+    internal fun cancelConfirm() {
         _uiState.update {
             val picker = it.appPicker ?: return@update it
             it.copy(appPicker = picker.cancelConfirm())
         }
     }
 
-    fun closeAppPicker() {
-        _uiState.update { it.copy(appPicker = null) }
-    }
-
-    private fun requestApplyAppPicker() {
-        val picker = _uiState.value.appPicker ?: return
-        val adds = picker.pendingAdds()
-        val removals = picker.pendingRemovals()
-        if (adds.isEmpty() && removals.isEmpty()) {
-            closeAppPicker()
-            return
-        }
-        if (removals.isNotEmpty() && !picker.confirmingRemovals) {
-            _uiState.update { state ->
-                state.copy(appPicker = state.appPicker?.openConfirm())
-            }
-            return
-        }
-        commitAppPicker()
-    }
-
-    private fun commitAppPicker() {
-        val picker = _uiState.value.appPicker ?: return
-        val adds = picker.pendingAdds()
-        val removals = picker.pendingRemovals()
-        if (adds.isEmpty() && removals.isEmpty()) {
-            closeAppPicker()
-            return
-        }
-
-        menuSound.play(MenuSound.CONFIRM)
-        val target = picker.target
-        closeAppPicker()
-
-        viewModelScope.launch {
-            when (target) {
-                is AppPickerTarget.AndroidGames -> {
-                    if (adds.isNotEmpty()) importAndroidGames(target.platformId, adds)
-                    if (removals.isNotEmpty()) removeAndroidGames(target.platformId, removals)
-
-                    memoryCardRepository.recountGames(target.platformId)
-                }
-                is AppPickerTarget.CategoryShortcuts -> {
-                    adds.forEach { pkg -> appCategoryRepository.addToCategory(pkg, target.categoryId) }
-                    removals.forEach { pkg -> appCategoryRepository.removeFromCategory(pkg, target.categoryId) }
-                }
-            }
-        }
-    }
-
-    private suspend fun removeAndroidGames(platformId: String, packages: Set<String>) {
+    internal suspend fun removeAndroidGames(platformId: String, packages: Set<String>) {
         packages.forEach { pkg ->
             val entry = gameRepository.getAppEntry(pkg) ?: return@forEach
             if (entry.platformId != platformId) return@forEach
             gameRepository.delete(entry.id)
         }
         Timber.i("Android library removal: ${packages.size} app(s) removed from $platformId")
-    }
-
-    private fun handleAppPickerBack() {
-        val picker = _uiState.value.appPicker ?: return
-        when {
-            picker.searchActive -> _uiState.update { state ->
-                state.copy(appPicker = state.appPicker?.let(::closeAppPickerSearch)?.clampFocus())
-            }
-            picker.confirmingRemovals -> cancelConfirm()
-            else -> closeAppPicker()
-        }
     }
 
     fun openGamePicker(categoryId: String) {
@@ -4283,7 +4105,7 @@ class CrossbarViewModel @Inject constructor(
         )}
     }
 
-    private suspend fun importAndroidGames(platformId: String, packages: Set<String>) {
+    internal suspend fun importAndroidGames(platformId: String, packages: Set<String>) {
         val labels = appCategoryRepository.allInstalledApps().associateBy { it.packageName }
 
         packages.forEach { pkg ->
@@ -4624,7 +4446,7 @@ class CrossbarViewModel @Inject constructor(
                 return
             }
             ADD_APPS_ITEM_ID -> {
-                category?.id?.let { openAppPicker(AppPickerTarget.CategoryShortcuts(it), "Add Apps") }
+                category?.id?.let { appPickerSection.openAppPicker(AppPickerTarget.CategoryShortcuts(it), "Add Apps") }
                 return
             }
             ADD_GAMES_ITEM_ID -> {
@@ -4633,7 +4455,7 @@ class CrossbarViewModel @Inject constructor(
             }
             FIND_GAMES_ITEM_ID -> {
                 (item.platformId ?: _uiState.value.selectedPlatformId)?.let {
-                    openAppPicker(AppPickerTarget.AndroidGames(it), "Find Games")
+                    appPickerSection.openAppPicker(AppPickerTarget.AndroidGames(it), "Find Games")
                 }
                 return
             }
@@ -5192,7 +5014,7 @@ class CrossbarViewModel @Inject constructor(
 
     fun openAndroidLibraryPicker() {
         _uiState.update { it.withSettingsClosed() }
-        openAppPicker(AppPickerTarget.AndroidGames(ANDROID_PLATFORM_ID), "Add Android Apps")
+        appPickerSection.openAppPicker(AppPickerTarget.AndroidGames(ANDROID_PLATFORM_ID), "Add Android Apps")
     }
 
     fun consumeSettingsAction() {
