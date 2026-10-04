@@ -15,6 +15,10 @@ class KitButtonsMigrationTest {
             GamepadBinding(optionsKey, GamepadAction.OPEN_CONTEXT_MENU),
             GamepadBinding(KeyEvent.KEYCODE_BUTTON_START, GamepadAction.HOME),
             GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.OPEN_SEARCH),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_L1, GamepadAction.PREV_CATEGORY),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_R1, GamepadAction.NEXT_CATEGORY),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_L2, GamepadAction.PREV_PAGE),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_R2, GamepadAction.NEXT_PAGE),
         ) + extra,
     )
 
@@ -44,5 +48,15 @@ class KitButtonsMigrationTest {
         val current = GamepadMappings()
         assertSame(current, current.withKitButtons())
         assertEquals(gamepadMappingsFor(ConfirmBackLayout.STANDARD, XYLayout.STANDARD).bindings, GamepadMappings().bindings)
+    }
+
+    @Test
+    fun `a saved mapping moves its tabs to the triggers and its paging to the bumpers`() {
+        val m = oldSaved(KeyEvent.KEYCODE_BUTTON_Y, KeyEvent.KEYCODE_BUTTON_X).withKitButtons()
+        assertEquals(GamepadAction.PREV_CATEGORY, m.actionFor(KeyEvent.KEYCODE_BUTTON_L2))
+        assertEquals(GamepadAction.NEXT_CATEGORY, m.actionFor(KeyEvent.KEYCODE_BUTTON_R2))
+        assertEquals(GamepadAction.PREV_PAGE, m.actionFor(KeyEvent.KEYCODE_BUTTON_L1))
+        assertEquals(GamepadAction.NEXT_PAGE, m.actionFor(KeyEvent.KEYCODE_BUTTON_R1))
+        assertEquals("migrating twice changes nothing", m.bindings, m.withKitButtons().bindings)
     }
 }

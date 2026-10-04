@@ -35,10 +35,12 @@ val DEFAULT_BINDINGS = listOf(
     GamepadBinding(KeyEvent.KEYCODE_DPAD_DOWN,     GamepadAction.NAVIGATE_DOWN),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_LEFT,     GamepadAction.NAVIGATE_LEFT),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_RIGHT,    GamepadAction.NAVIGATE_RIGHT),
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_L1,     GamepadAction.PREV_CATEGORY),
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_R1,     GamepadAction.NEXT_CATEGORY),
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_L2,     GamepadAction.PREV_PAGE),
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_R2,     GamepadAction.NEXT_PAGE),
+    // owner, 2026-10-04: tabs and filters on the triggers; the bumpers take what the triggers did
+    // (paging, seeking), and at the crossbar LB is Search and RB is Apps
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_L2,     GamepadAction.PREV_CATEGORY),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_R2,     GamepadAction.NEXT_CATEGORY),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_L1,     GamepadAction.PREV_PAGE),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_R1,     GamepadAction.NEXT_PAGE),
     // the kit's buttons (owner, 2026-10-04): the guide button is Home, the menu button Options, Y search.
     // MODE comes before SELECT so the hint draws Home with the guide glyph, the Echo mark.
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_MODE,   GamepadAction.HOME),
@@ -94,7 +96,22 @@ fun gamepadMappingsFor(
 // mappings saved before the kit's buttons have Options on a face button and Home on Start. Moves
 // those three roles to where DEFAULT_BINDINGS has them and keeps every other choice (A/B and X/Y swaps,
 // remapped keys). A mapping that already binds the guide button is taken as current.
-fun GamepadMappings.withKitButtons(): GamepadMappings {
+fun GamepadMappings.withKitButtons(): GamepadMappings = withKitFaceButtons().withTriggerTabs()
+
+// mappings saved before the triggers took the tabs: the bumpers and triggers trade places
+private fun GamepadMappings.withTriggerTabs(): GamepadMappings {
+    val l1 = actionFor(KeyEvent.KEYCODE_BUTTON_L1)
+    if (l1 != GamepadAction.PREV_CATEGORY) return this
+    val swap = mapOf(
+        KeyEvent.KEYCODE_BUTTON_L1 to KeyEvent.KEYCODE_BUTTON_L2,
+        KeyEvent.KEYCODE_BUTTON_R1 to KeyEvent.KEYCODE_BUTTON_R2,
+        KeyEvent.KEYCODE_BUTTON_L2 to KeyEvent.KEYCODE_BUTTON_L1,
+        KeyEvent.KEYCODE_BUTTON_R2 to KeyEvent.KEYCODE_BUTTON_R1,
+    )
+    return GamepadMappings(bindings.map { b -> swap[b.keyCode]?.let { b.copy(keyCode = it) } ?: b })
+}
+
+private fun GamepadMappings.withKitFaceButtons(): GamepadMappings {
     if (bindings.any { it.keyCode == KeyEvent.KEYCODE_BUTTON_MODE }) return this
     val moved = bindings.map { b ->
         when {
@@ -118,10 +135,10 @@ fun GamepadAction.displayLabel(): String = when (this) {
     GamepadAction.OPEN_CONTEXT_MENU -> "Options / Context Menu"
     GamepadAction.CHANGE_SORT       -> "Change Sort Order"
     GamepadAction.OPEN_SEARCH       -> "Search Your Libraries"
-    GamepadAction.PREV_CATEGORY     -> "Previous Tab (App Drawer)"
-    GamepadAction.NEXT_CATEGORY     -> "Next Tab (App Drawer)"
-    GamepadAction.PREV_PAGE         -> "Previous Page"
-    GamepadAction.NEXT_PAGE         -> "Next Page"
+    GamepadAction.PREV_CATEGORY     -> "Previous Tab / Filter"
+    GamepadAction.NEXT_CATEGORY     -> "Next Tab / Filter"
+    GamepadAction.PREV_PAGE         -> "Previous Page (Search on the crossbar)"
+    GamepadAction.NEXT_PAGE         -> "Next Page (Apps on the crossbar)"
     GamepadAction.HOME              -> "Home (Confirm in pickers)"
 }
 

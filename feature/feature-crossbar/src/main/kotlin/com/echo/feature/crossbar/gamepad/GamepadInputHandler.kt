@@ -46,6 +46,8 @@ internal fun ScrollSpeed.tuning(): RepeatTuning = when (this) {
     ScrollSpeed.FAST     -> RepeatTuning(initialDelayMs = 180, baseIntervalMs = 90,  fastIntervalMs = 35, rampSteps = 4)
 }
 
+private enum class TabSource { KEY, LEFT_AXIS, RIGHT_AXIS }
+
 sealed interface ShoulderHold {
     val action: GamepadAction
     data class Start(override val action: GamepadAction) : ShoulderHold
@@ -90,6 +92,7 @@ class GamepadInputHandler @Inject constructor(
 
     private var leftTriggerDown = false
     private var rightTriggerDown = false
+    private val tabOwner = mutableMapOf<GamepadAction, TabSource>()
     private val lastPageEmitAt = mutableMapOf<GamepadAction, Long>()
     private var lastStickAction: GamepadAction? = null
 
@@ -126,7 +129,7 @@ class GamepadInputHandler @Inject constructor(
                     }
 
                     if (action.isShoulder()) {
-                        armShoulderHold(action)
+                        tabPress(action, TabSource.KEY)
                         return true
                     }
                     emit(action, physical = true)
@@ -135,7 +138,7 @@ class GamepadInputHandler @Inject constructor(
             }
             KeyEvent.ACTION_UP -> {
                 if (action.isDirectional()) cancelRepeat()
-                if (action.isShoulder()) releaseShoulder(action)
+                if (action.isShoulder()) tabRelease(action, TabSource.KEY)
                 if (action == GamepadAction.SELECT) _selectReleases.tryEmit(Unit)
                 true
             }
@@ -185,13 +188,35 @@ class GamepadInputHandler @Inject constructor(
         val leftNow = triggerDown(leftTriggerDown, left, triggerSensitivity)
         val rightNow = triggerDown(rightTriggerDown, right, triggerSensitivity)
 
+        // an analog trigger does what its key is bound to, holds included
         var fired = false
-        if (leftNow && !leftTriggerDown) fired = emit(GamepadAction.PREV_PAGE, physical = true) || fired
-        if (rightNow && !rightTriggerDown) fired = emit(GamepadAction.NEXT_PAGE, physical = true) || fired
+        currentMappings.actionFor(KeyEvent.KEYCODE_BUTTON_L2)?.let { fired = triggerEdge(it, leftTriggerDown, leftNow, TabSource.LEFT_AXIS) || fired }
+        currentMappings.actionFor(KeyEvent.KEYCODE_BUTTON_R2)?.let { fired = triggerEdge(it, rightTriggerDown, rightNow, TabSource.RIGHT_AXIS) || fired }
 
         leftTriggerDown = leftNow
         rightTriggerDown = rightNow
         return fired
+    }
+
+    private fun triggerEdge(action: GamepadAction, was: Boolean, now: Boolean, source: TabSource): Boolean = when {
+        now && !was -> if (action.isShoulder()) { tabPress(action, source); true } else emit(action, physical = true)
+        was && !now && action.isShoulder() -> { tabRelease(action, source); true }
+        else -> false
+    }
+
+    // a pad may report one trigger as a key and an axis at once. Whichever path pressed it owns the
+    // press: the other path's press and release are ignored until then, so one pull is one step,
+    // and either path works again as soon as the press ends
+    private fun tabPress(action: GamepadAction, source: TabSource) {
+        if (tabOwner.containsKey(action)) return
+        tabOwner[action] = source
+        armShoulderHold(action)
+    }
+
+    private fun tabRelease(action: GamepadAction, source: TabSource) {
+        if (tabOwner[action] != source) return
+        tabOwner.remove(action)
+        releaseShoulder(action)
     }
 
 

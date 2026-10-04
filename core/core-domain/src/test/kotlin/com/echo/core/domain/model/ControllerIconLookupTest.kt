@@ -94,12 +94,14 @@ class ControllerIconLookupTest {
     }
 
     @Test
-    fun `category shoulders are fixed regardless of layout`() {
+    fun `tabs and filters sit on the triggers, and the bumpers page, regardless of layout`() {
         for (confirmBack in ConfirmBackLayout.entries) {
             for (xy in XYLayout.entries) {
                 val m = mappings(confirmBack, xy)
-                assertEquals(ControllerIcon.BUMPER_LEFT, m.iconFor(GamepadAction.PREV_CATEGORY))
-                assertEquals(ControllerIcon.BUMPER_RIGHT, m.iconFor(GamepadAction.NEXT_CATEGORY))
+                assertEquals(ControllerIcon.TRIGGER_LEFT, m.iconFor(GamepadAction.PREV_CATEGORY))
+                assertEquals(ControllerIcon.TRIGGER_RIGHT, m.iconFor(GamepadAction.NEXT_CATEGORY))
+                assertEquals(ControllerIcon.BUMPER_LEFT, m.iconFor(GamepadAction.PREV_PAGE))
+                assertEquals(ControllerIcon.BUMPER_RIGHT, m.iconFor(GamepadAction.NEXT_PAGE))
             }
         }
     }
@@ -185,7 +187,7 @@ class ControllerIconLookupTest {
             standard.bindings.filterNot { it.action == GamepadAction.NEXT_CATEGORY },
         )
         assertEquals(
-            listOf(ControllerIcon.BUMPER_LEFT),
+            listOf(ControllerIcon.TRIGGER_LEFT),
             stripped.iconsFor(listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY)),
         )
     }

@@ -2815,9 +2815,9 @@ class CrossbarViewModel @Inject constructor(
 
             GamepadAction.OPEN_CONTEXT_MENU -> openContextMenuForFocusedItem()
 
-            // the crossbar does not page; the triggers are the Artwork Studio's
-            GamepadAction.PREV_PAGE,
-            GamepadAction.NEXT_PAGE     -> Unit
+            // the crossbar does not page, so its bumpers open Search (LB) and Apps (RB)
+            GamepadAction.PREV_PAGE     -> librarySearch.openSearch(SearchScope.ALL)
+            GamepadAction.NEXT_PAGE     -> onOpenAppDrawer()
             GamepadAction.HOME          -> panel.toggleNotifications()
 
             GamepadAction.CHANGE_SORT -> when {

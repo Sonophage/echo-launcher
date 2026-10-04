@@ -321,63 +321,67 @@ class GamepadInputHandlerTest {
     }
 
     @Test
-    fun `the axes keep paging after a key event, because the pad must not latch off`() = runTest {
-        var now = 0L
-        handler.clock = { now }
+    fun `the axes keep switching tabs after a key event, because the pad must not latch off`() = runTest {
         handler.actions.test {
             handler.onMotionEvent(motionEvent(rTrigger = 1f))
-            assertEquals(GamepadAction.NEXT_PAGE, awaitItem())
             handler.onMotionEvent(motionEvent(rTrigger = 0f))
-            now += 1_000L
+            assertEquals(GamepadAction.NEXT_CATEGORY, awaitItem())
 
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_R2, KeyEvent.ACTION_DOWN))
-            assertEquals(GamepadAction.NEXT_PAGE, awaitItem())
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_R2, KeyEvent.ACTION_UP))
+            assertEquals(GamepadAction.NEXT_CATEGORY, awaitItem())
 
-            now += 1_000L
             handler.onMotionEvent(motionEvent(rTrigger = 1f))
-            assertEquals(
-                "the axes must still page after a key event",
-                GamepadAction.NEXT_PAGE,
-                awaitItem(),
-            )
+            handler.onMotionEvent(motionEvent(rTrigger = 0f))
+            assertEquals("the axes must still switch after a key event", GamepadAction.NEXT_CATEGORY, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun `a pad that sends a trigger as key AND axis turns one page, not two`() = runTest {
-        var now = 0L
-        handler.clock = { now }
+    fun `a pad that sends a trigger as key AND axis turns one tab, not two`() = runTest {
         handler.actions.test {
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.ACTION_DOWN))
             handler.onMotionEvent(motionEvent(lTrigger = 1f))
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.ACTION_UP))
+            handler.onMotionEvent(motionEvent(lTrigger = 0f))
 
-            assertEquals(GamepadAction.PREV_PAGE, awaitItem())
+            assertEquals(GamepadAction.PREV_CATEGORY, awaitItem())
             expectNoEvents()
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun `an axis press is dropped when the same page just came from a key`() = runTest {
-        var now = 0L
-        handler.clock = { now }
+    fun `an axis release does not end a press the key still holds`() = runTest {
         handler.actions.test {
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_R2, KeyEvent.ACTION_DOWN))
-            assertEquals(GamepadAction.NEXT_PAGE, awaitItem())
-
             handler.onMotionEvent(motionEvent(rTrigger = 1f))
+            handler.onMotionEvent(motionEvent(rTrigger = 0f))
             expectNoEvents()
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_R2, KeyEvent.ACTION_UP))
+            assertEquals(GamepadAction.NEXT_CATEGORY, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun `the left trigger pages the other way`() = runTest {
+    fun `the left trigger switches the other way`() = runTest {
         handler.actions.test {
             handler.onMotionEvent(motionEvent(lTrigger = 1f))
+            handler.onMotionEvent(motionEvent(lTrigger = 0f))
+            assertEquals(GamepadAction.PREV_CATEGORY, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the bumpers take the paging the triggers gave up, LB being Search at the crossbar`() = runTest {
+        handler.actions.test {
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_L1, KeyEvent.ACTION_DOWN))
             assertEquals(GamepadAction.PREV_PAGE, awaitItem())
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_R1, KeyEvent.ACTION_DOWN))
+            assertEquals(GamepadAction.NEXT_PAGE, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }

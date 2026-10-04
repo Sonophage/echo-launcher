@@ -98,6 +98,9 @@ fun AppDrawerScreen(
                 pendingGamepadAction == GamepadAction.BACK ->
                     if (state.letterFilter != null) viewModel.clearLetterFilter() else closeDrawer()
                 pendingGamepadAction == GamepadAction.OPEN_CONTEXT_MENU -> onOpenAppSearch("")
+                // the crossbar's bumpers: LB searches, RB (Apps) toggles the drawer shut
+                pendingGamepadAction == GamepadAction.PREV_PAGE -> onOpenAppSearch("")
+                pendingGamepadAction == GamepadAction.NEXT_PAGE -> closeDrawer()
                 else -> viewModel.handleGamepadAction(pendingGamepadAction)
             }
             onGamepadActionConsumed()

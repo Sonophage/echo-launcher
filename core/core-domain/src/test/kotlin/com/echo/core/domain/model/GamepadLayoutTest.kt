@@ -135,8 +135,10 @@ class GamepadLayoutTest {
             KeyEvent.KEYCODE_DPAD_CENTER to GamepadAction.SELECT,
             KeyEvent.KEYCODE_BACK to GamepadAction.BACK,
             KeyEvent.KEYCODE_DPAD_UP to GamepadAction.NAVIGATE_UP,
-            KeyEvent.KEYCODE_BUTTON_L1 to GamepadAction.PREV_CATEGORY,
-            KeyEvent.KEYCODE_BUTTON_R1 to GamepadAction.NEXT_CATEGORY,
+            KeyEvent.KEYCODE_BUTTON_L2 to GamepadAction.PREV_CATEGORY,
+            KeyEvent.KEYCODE_BUTTON_R2 to GamepadAction.NEXT_CATEGORY,
+            KeyEvent.KEYCODE_BUTTON_L1 to GamepadAction.PREV_PAGE,
+            KeyEvent.KEYCODE_BUTTON_R1 to GamepadAction.NEXT_PAGE,
         )
         for (confirmBack in ConfirmBackLayout.entries) {
             for (xy in XYLayout.entries) {
