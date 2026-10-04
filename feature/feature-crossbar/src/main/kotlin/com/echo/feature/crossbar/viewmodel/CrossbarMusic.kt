@@ -774,4 +774,22 @@ class CrossbarMusic(
             else -> Unit
         }
     }
+    internal fun onPlaylistPickerItem(itemId: String, menu: CrossbarContextMenu) {
+        val trackId = menu.playlistPickerTrackId ?: return
+        val keepIndex = menu.selectedIndex
+        when {
+            itemId == "pl_new" -> {
+                vm.closeContextMenu()
+                promptCreatePlaylist(forTrackId = trackId)
+            }
+            itemId.startsWith("pl_") -> {
+                val playlistId = itemId.removePrefix("pl_").toLongOrNull() ?: return
+                scope.launch {
+                    musicRepository.toggleTrackInPlaylist(playlistId, trackId)
+
+                    openPlaylistPicker(trackId, keepIndex)
+                }
+            }
+        }
+    }
 }

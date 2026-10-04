@@ -3194,41 +3194,12 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (menu.videoPlaylistPickerVideoId != null) {
-            val videoId = menu.videoPlaylistPickerVideoId
-            val keepIndex = menu.selectedIndex
-            when {
-                itemId == "vpl_new" -> {
-                    closeContextMenu()
-                    video.promptCreateVideoPlaylist(forVideoId = videoId)
-                }
-                itemId.startsWith("vpl_") -> {
-                    val playlistId = itemId.removePrefix("vpl_").toLongOrNull() ?: return
-                    viewModelScope.launch {
-                        videoRepository.toggleVideoInPlaylist(playlistId, videoId)
-                        video.openVideoPlaylistPicker(videoId, keepIndex)
-                    }
-                }
-            }
+            video.onPlaylistPickerItem(itemId, menu)
             return
         }
 
         if (menu.playlistPickerTrackId != null) {
-            val trackId = menu.playlistPickerTrackId
-            val keepIndex = menu.selectedIndex
-            when {
-                itemId == "pl_new" -> {
-                    closeContextMenu()
-                    music.promptCreatePlaylist(forTrackId = trackId)
-                }
-                itemId.startsWith("pl_") -> {
-                    val playlistId = itemId.removePrefix("pl_").toLongOrNull() ?: return
-                    viewModelScope.launch {
-                        musicRepository.toggleTrackInPlaylist(playlistId, trackId)
-
-                        music.openPlaylistPicker(trackId, keepIndex)
-                    }
-                }
-            }
+            music.onPlaylistPickerItem(itemId, menu)
             return
         }
 

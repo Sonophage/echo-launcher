@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.domain.model.GamepadAction
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.ui.components.MenuState
@@ -376,6 +377,23 @@ class CrossbarVideo(
 
     internal fun videoPlaylistSiblings(): List<CrossbarItem> =
         uiState.value.videoPlaylists.map { CrossbarItem(id = "vpl_${it.id}", title = it.name, playlistId = it.id, type = CrossbarItemType.PLAYLIST) }
+    internal fun onPlaylistPickerItem(itemId: String, menu: CrossbarContextMenu) {
+        val videoId = menu.videoPlaylistPickerVideoId ?: return
+        val keepIndex = menu.selectedIndex
+        when {
+            itemId == "vpl_new" -> {
+                vm.closeContextMenu()
+                promptCreateVideoPlaylist(forVideoId = videoId)
+            }
+            itemId.startsWith("vpl_") -> {
+                val playlistId = itemId.removePrefix("vpl_").toLongOrNull() ?: return
+                scope.launch {
+                    videoRepository.toggleVideoInPlaylist(playlistId, videoId)
+                    openVideoPlaylistPicker(videoId, keepIndex)
+                }
+            }
+        }
+    }
 }
 
 internal fun List<com.echo.core.domain.model.Video>.toVideoItems(): List<CrossbarItem> =
