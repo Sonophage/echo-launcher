@@ -1,5 +1,6 @@
 package com.echo.feature.backup
 
+import com.echo.core.data.repository.EchoSettingsExport
 import java.io.File
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -153,6 +154,19 @@ class BackupKeyDriftTest {
             emptyList(),
             types.filterNot { it == "string" || it == "float" },
             "ReaderSnapshot carries strings and floats only; a backup of any other type fails",
+        )
+    }
+
+    @Test
+    fun `a backup carries every setting the ECHO folder carries`() {
+        val folderKeys = EchoSettingsExport.GROUPS.values.flatMap { it.keys }
+        assertTrue(folderKeys.size >= 40, "only found ${folderKeys.size} folder settings; the read is broken")
+        val missing = folderKeys.filterNot { it in BackupManager.BACKED_UP_KEY_NAMES }.sorted()
+        assertEquals(
+            emptyList(),
+            missing,
+            "the ECHO folder's settings.json carries these settings but a backup does not, so a " +
+                "backup and restore loses them. Add each to BackupManager's typed list for its Kind: $missing",
         )
     }
 
