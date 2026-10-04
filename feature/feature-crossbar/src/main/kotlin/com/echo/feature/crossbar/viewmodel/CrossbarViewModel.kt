@@ -118,7 +118,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.update
@@ -1265,7 +1264,7 @@ fun CrossbarUiState.withNamePromptText(text: String): CrossbarUiState = when {
 @HiltViewModel
 class CrossbarViewModel @Inject constructor(
     internal val gameRepository: GameRepository,
-    private val platformDao: PlatformDao,
+    internal val platformDao: PlatformDao,
     private val memoryCardRepository: MemoryCardRepository,
     private val categoryRepository: CategoryRepositoryImpl,
     internal val appCategoryRepository: AppCategoryRepository,
@@ -1274,7 +1273,7 @@ class CrossbarViewModel @Inject constructor(
     private val libraryScanner: LibraryScanner,
     private val artworkRepository: ArtworkRepository,
     @ApplicationContext internal val context: Context,
-    private val gamepadInputHandler: GamepadInputHandler,
+    internal val gamepadInputHandler: GamepadInputHandler,
     private val remapCoordinator: com.echo.core.data.repository.RemapCoordinator,
     private val mappingRepository: ControllerMappingRepository,
     private val controllerLayoutRepository: com.echo.core.data.repository.ControllerLayoutRepository,
@@ -1315,15 +1314,17 @@ class CrossbarViewModel @Inject constructor(
     private val photoIntentResolver: com.echo.core.data.photo.PhotoIntentResolver,
     private val autoCoreMemory: com.echo.feature.launcher.AutoCoreMemory,
     private val romRootRepository: com.echo.core.data.repository.RomRootRepository,
-    private val achievementController: com.echo.feature.achievements.AchievementController,
-    private val achievementCredentials: com.echo.core.data.achievement.AchievementCredentialsProvider,
-    private val discordSocial: com.echo.core.data.discord.DiscordSocialRepository,
+    internal val achievementController: com.echo.feature.achievements.AchievementController,
+    internal val achievementCredentials: com.echo.core.data.achievement.AchievementCredentialsProvider,
+    internal val discordSocial: com.echo.core.data.discord.DiscordSocialRepository,
 ) : ViewModel() {
     @Volatile
     private var lastInteractionMs: Long = 0L
 
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
+
+    internal val panel = CrossbarPanel(this, _uiState, viewModelScope, menuSound)
 
     internal val librarySearch = CrossbarSearch(this, _uiState, viewModelScope, menuSound)
 
@@ -1372,8 +1373,8 @@ class CrossbarViewModel @Inject constructor(
         observeColorScheme()
         observeCategoryBar()
         observeLibraryChips()
-        observeProfilePrefs()
-        observeProfileData()
+        panel.observeProfilePrefs()
+        panel.observeProfileData()
         observeCategories()
         observeMissingGames()
         observeAppChanges()
@@ -1388,7 +1389,7 @@ class CrossbarViewModel @Inject constructor(
         observeMediaCovers()
         bookshelf.observeContinueBook()
         observeHiddenPlacements()
-        observeAndroidNotices()
+        panel.observeAndroidNotices()
         observeRecentTop()
         observeShelfCounts()
         collectGamepadActions()
@@ -3170,22 +3171,22 @@ class CrossbarViewModel @Inject constructor(
             val onMusic = state.focusedNotice == NoticeFocus.Media &&
                 (state.mediaStage() as? PanelStage.Music)?.let { it.loaded && it.packageName == null } == true
             when (action) {
-                GamepadAction.NAVIGATE_UP   -> movePanelCursor(PanelMove.UP)
-                GamepadAction.NAVIGATE_DOWN -> movePanelCursor(PanelMove.DOWN)
+                GamepadAction.NAVIGATE_UP   -> panel.movePanelCursor(PanelMove.UP)
+                GamepadAction.NAVIGATE_DOWN -> panel.movePanelCursor(PanelMove.DOWN)
                 GamepadAction.NAVIGATE_LEFT  ->
-                    if (onMusic) musicPlayer.prev() else movePanelCursor(PanelMove.LEFT)
+                    if (onMusic) musicPlayer.prev() else panel.movePanelCursor(PanelMove.LEFT)
                 GamepadAction.NAVIGATE_RIGHT ->
-                    if (onMusic) musicPlayer.next() else movePanelCursor(PanelMove.RIGHT)
-                GamepadAction.PREV_CATEGORY -> movePanelCursor(PanelMove.PREV_TAB)
-                GamepadAction.NEXT_CATEGORY -> movePanelCursor(PanelMove.NEXT_TAB)
+                    if (onMusic) musicPlayer.next() else panel.movePanelCursor(PanelMove.RIGHT)
+                GamepadAction.PREV_CATEGORY -> panel.movePanelCursor(PanelMove.PREV_TAB)
+                GamepadAction.NEXT_CATEGORY -> panel.movePanelCursor(PanelMove.NEXT_TAB)
                 GamepadAction.SELECT,
                 GamepadAction.CHANGE_SORT,
                 GamepadAction.OPEN_CONTEXT_MENU -> when (state.panelTab) {
                     PanelTab.NOTIFICATIONS -> runStageButton(action)
-                    PanelTab.PROFILE -> runPanelProfile(action)
+                    PanelTab.PROFILE -> panel.runPanelProfile(action)
                     PanelTab.QUICK -> if (action == GamepadAction.SELECT) toggleQuickSetting(state.panelQuick)
                     PanelTab.LIBRARIES -> if (action == GamepadAction.SELECT) toggleQuickSetting(QuickSetting.LIBRARIES)
-                    PanelTab.SETTINGS -> if (action == GamepadAction.SELECT) openPanelSetting(state.panelSetting)
+                    PanelTab.SETTINGS -> if (action == GamepadAction.SELECT) panel.openPanelSetting(state.panelSetting)
                 }
                 GamepadAction.BACK,
                 GamepadAction.HOME               -> if (action == GamepadAction.BACK && state.panelTab == PanelTab.PROFILE && state.panelProfile.choosing) {
@@ -3193,7 +3194,7 @@ class CrossbarViewModel @Inject constructor(
                     _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
                 } else {
                     menuSound.play(MenuSound.BACK)
-                    closeNotifications()
+                    panel.closeNotifications()
                 }
                 else -> Unit
             }
@@ -3375,7 +3376,7 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (action == GamepadAction.HOME && state.statusStripVisible) {
-            toggleNotifications()
+            panel.toggleNotifications()
             return
         }
 
@@ -3450,7 +3451,7 @@ class CrossbarViewModel @Inject constructor(
                 return
             }
             state.profile != null -> {
-                handleProfileInput(state.profile, action)
+                panel.handleProfileInput(state.profile, action)
                 return
             }
             state.gameInfo != null -> {
@@ -3559,7 +3560,7 @@ class CrossbarViewModel @Inject constructor(
             // the crossbar does not page; the triggers are the Artwork Studio's
             GamepadAction.PREV_PAGE,
             GamepadAction.NEXT_PAGE     -> Unit
-            GamepadAction.HOME          -> toggleNotifications()
+            GamepadAction.HOME          -> panel.toggleNotifications()
 
             GamepadAction.CHANGE_SORT -> when {
                 !state.onLastPlayedHome -> cycleSort()
@@ -3628,13 +3629,13 @@ class CrossbarViewModel @Inject constructor(
             GamepadAction.SELECT -> {
                 val notice = info.cursor?.let { info.notices(notices).getOrNull(it) }
                 when {
-                    notice != null -> openAndroidNotice(notice.key)
+                    notice != null -> panel.openAndroidNotice(notice.key)
                     info.cursor == null -> onGameInfoAction(info.band)
                     else -> playFromGameInfo(info.item)
                 }
             }
             GamepadAction.OPEN_CONTEXT_MENU -> openGameInfoOptions(info)
-            GamepadAction.CHANGE_SORT -> if (info.achievementsStat != null) openProfile(ProfileTab.ACHIEVEMENTS, info.item.gameId)
+            GamepadAction.CHANGE_SORT -> if (info.achievementsStat != null) panel.openProfile(ProfileTab.ACHIEVEMENTS, info.item.gameId)
             GamepadAction.NAVIGATE_LEFT,
             GamepadAction.NAVIGATE_RIGHT -> if (info.cursor == null) {
                 onGameInfoBand(stepGameInfoBand(info.band, gameInfoActions(info), if (action == GamepadAction.NAVIGATE_LEFT) -1 else +1))
@@ -3693,219 +3694,12 @@ class CrossbarViewModel @Inject constructor(
         _uiState.update { it.copy(gameInfo = it.gameInfo?.copy(cursor = cursor)) }
     }
 
-    fun onGameInfoNoticeTapped(key: String) = openAndroidNotice(key)
+    fun onGameInfoNoticeTapped(key: String) = panel.openAndroidNotice(key)
 
     fun closeGameInfo() {
         if (_uiState.value.gameInfo == null) return
         menuSound.play(MenuSound.BACK)
         _uiState.update { it.copy(gameInfo = null) }
-    }
-
-    fun openProfile(tab: ProfileTab, gameId: Long? = null, set: Int = 0, fromPanel: Boolean = false) {
-        menuSound.play(MenuSound.SELECT)
-        _uiState.update {
-            it.copy(
-                notificationsOpen = if (fromPanel) false else it.notificationsOpen,
-                profile = ProfileState(tab = tab, set = set, openOnGameId = gameId, returnToPanel = fromPanel).withData(it.profileData),
-            )
-        }
-    }
-
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private fun observeProfileData() {
-        viewModelScope.launch {
-            _uiState.map { it.notificationsOpen || it.profile != null }.distinctUntilChanged()
-                .flatMapLatest { shown -> if (shown) profileData() else kotlinx.coroutines.flow.emptyFlow() }
-                .collect { data -> _uiState.update { s -> s.copy(profileData = data, profile = s.profile?.withData(data)) } }
-        }
-    }
-
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private fun profileData(): Flow<ProfileData> {
-        val achievements = combine(achievementController.observeSets(), achievementController.observeAllAchievements()) { sets, all ->
-            sets to sets.associate { set -> setKey(set) to all[set.provider to set.providerGameId].orEmpty() }
-        }
-        val accounts = combine(
-            achievementCredentials.raUsernameFlow,
-            achievementCredentials.steamId64Flow,
-            discordSocial.signedIn,
-            discordSocial.user,
-            discordSocial.friends,
-        ) { ra, steam, signedIn, user, friends ->
-            ProfileData(
-                raLinked = !ra.isNullOrBlank(),
-                steamLinked = !steam.isNullOrBlank(),
-                discordSignedIn = signedIn,
-                discordUser = user,
-                friends = friends,
-            )
-        }
-        val library = combine(
-            gameRepository.observeGamesOnlyStats(),
-            gameRepository.observeRecentGamesOnly(RECENTLY_PLAYED_COUNT * 8),
-        ) { stats, recent -> stats to recentlyPlayed(recent) }
-        return combine(
-            library,
-            achievements,
-            achievementController.observeTotals(),
-            accounts,
-            platformDao.observeAll(),
-        ) { (stats, recent), (sets, badges), totals, acc, platforms ->
-            val platformOf = platforms.associate { it.id to it.shortName }
-            acc.copy(
-                games = stats.games,
-                playTimeMs = stats.playTimeMs,
-                recent = recent,
-                totals = totals,
-                sets = sets,
-                badges = badges,
-                platforms = sets.mapNotNull { set -> set.gameId?.let { id -> platformOf[set.platformId]?.let { id to it } } }.toMap(),
-            )
-        }
-    }
-
-    private fun handleProfileInput(p: ProfileState, action: GamepadAction) {
-        when {
-            action == GamepadAction.BACK -> closeProfile()
-            p.tab == ProfileTab.ACHIEVEMENTS && p.data.sets.isEmpty() && action == GamepadAction.SELECT ->
-                openSettingsFromProfile("settings_accounts")
-            p.tab == ProfileTab.FRIENDS && !p.data.discordSignedIn && action == GamepadAction.SELECT ->
-                openSettingsFromProfile("settings_discord")
-            else -> setProfile(stepProfile(p, action))
-        }
-    }
-
-    private fun setProfile(next: ProfileState) {
-        val current = _uiState.value.profile ?: return
-        if (next == current) {
-            gamepadInputHandler.cancelRepeat()
-            return
-        }
-        menuSound.play(MenuSound.SCROLL)
-        _uiState.update { s -> s.copy(profile = s.profile?.let { next.copy(data = it.data) }) }
-    }
-
-    fun onProfileSetTapped(index: Int) {
-        _uiState.value.profile?.let { setProfile(it.copy(set = index, inGrid = false, badge = 0)) }
-    }
-
-    fun onProfileBadgeTapped(index: Int) {
-        _uiState.value.profile?.let { setProfile(it.copy(inGrid = true, badge = index)) }
-    }
-
-    fun onProfileFilterTapped(filter: BadgeFilter) {
-        _uiState.value.profile?.let { setProfile(it.copy(filter = filter, inGrid = false, badge = 0)) }
-    }
-
-    fun onProfileFriendTapped(index: Int) {
-        _uiState.value.profile?.let { setProfile(it.copy(friend = index)) }
-    }
-
-    fun closeProfile() {
-        val profile = _uiState.value.profile ?: return
-        menuSound.play(MenuSound.BACK)
-        _uiState.update {
-            if (profile.returnToPanel) it.copy(profile = null, notificationsOpen = true, panelTab = PanelTab.PROFILE) else it.copy(profile = null)
-        }
-    }
-
-    private fun runPanelProfile(action: GamepadAction) {
-        val s = _uiState.value
-        val focus = s.panelProfile
-        when (action) {
-            GamepadAction.CHANGE_SORT -> onPanelProfileTapped(ProfileSpot.EDIT, 0)
-            GamepadAction.SELECT -> onPanelProfileTapped(focus.spot, if (focus.spot == ProfileSpot.SHOWCASE) showcaseSet(s.profileData) else focus.recent)
-            else -> Unit
-        }
-    }
-
-    fun onPanelProfileTapped(spot: ProfileSpot, index: Int) {
-        val s = _uiState.value
-        when (spot) {
-            ProfileSpot.EDIT -> {
-                menuSound.play(MenuSound.SELECT)
-                _uiState.update { it.copy(panelTab = PanelTab.PROFILE, panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT_NAME)) }
-            }
-            ProfileSpot.EDIT_NAME -> {
-                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
-                closeNotifications()
-                editProfileName()
-            }
-            ProfileSpot.EDIT_PICTURE -> {
-                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
-                pickProfileAvatar()
-            }
-            ProfileSpot.RECENT -> s.profileData.recent.getOrNull(index)?.let { game ->
-                _uiState.update { it.copy(panelProfile = ProfileFocus(ProfileSpot.RECENT, index)) }
-                closeNotifications()
-                onOpenGameInfo(game.toSearchRow(platformCache[game.platformId]?.name))
-            }
-            ProfileSpot.SHOWCASE -> {
-                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.SHOWCASE)) }
-                openProfile(ProfileTab.ACHIEVEMENTS, set = index, fromPanel = true)
-            }
-            ProfileSpot.FRIENDS -> {
-                _uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.FRIENDS)) }
-                openProfile(ProfileTab.FRIENDS, fromPanel = true)
-            }
-        }
-    }
-
-    private fun openSettingsFromProfile(screenId: String) {
-        menuSound.play(MenuSound.SELECT)
-        _uiState.update {
-            it.withSettingsOpen(screenId).copy(settingsReturnTo = null, settingsFromPanel = false)
-        }
-    }
-
-    fun editProfileName() {
-        menuSound.play(MenuSound.SELECT)
-        _uiState.update {
-            it.copy(collectionNameDialog = CollectionNameDialogState(
-                title = "Profile name",
-                subtitle = "The name your profile shows. It stays on this device.",
-                initialText = it.profileName,
-                renameProfile = true,
-                placeholder = DEFAULT_PROFILE_NAME,
-            ))
-        }
-    }
-
-    fun pickProfileAvatar() {
-        menuSound.play(MenuSound.SELECT)
-        _uiState.update { it.copy(profileAvatarPick = true) }
-    }
-
-    fun onProfileAvatarPicked(uri: android.net.Uri?) {
-        _uiState.update { it.copy(profileAvatarPick = false) }
-        if (uri == null) return
-        viewModelScope.launch(Dispatchers.IO) {
-            val dir = java.io.File(context.filesDir, "profile").apply { mkdirs() }
-            val dest = java.io.File(dir, "avatar_${System.currentTimeMillis()}.jpg")
-            val ok = runCatching {
-                context.contentResolver.openInputStream(uri)?.use { input -> dest.outputStream().use { input.copyTo(it) } } != null &&
-                    android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                        .also { android.graphics.BitmapFactory.decodeFile(dest.absolutePath, it) }.outWidth > 0
-            }.getOrDefault(false)
-            if (!ok) {
-                dest.delete()
-                Timber.w("Profile picture %s could not be read", uri)
-                return@launch
-            }
-            context.echoDataStore.edit { it[KEY_PROFILE_AVATAR] = dest.absolutePath }
-            dir.listFiles()?.filter { it != dest }?.forEach { it.delete() }
-        }
-    }
-
-    private fun observeProfilePrefs() {
-        viewModelScope.launch {
-            context.echoDataStore.data.collect { prefs ->
-                val avatar = prefs[KEY_PROFILE_AVATAR]?.takeIf { java.io.File(it).exists() }
-                _uiState.update {
-                    it.copy(profileName = prefs[KEY_PROFILE_NAME]?.ifBlank { null } ?: DEFAULT_PROFILE_NAME, profileAvatar = avatar)
-                }
-            }
-        }
     }
 
     private fun openGameInfoOptions(info: GameInfoState) {
@@ -3921,11 +3715,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun openAndroidNotice(key: String) {
-        menuSound.play(MenuSound.SELECT)
-        if (!AndroidNotifications.open(key)) Timber.i("Notification $key had nothing to open")
-    }
-
     private fun removeFromRecent(item: CrossbarItem) {
         if (!item.removableFromRecent) return
         menuSound.play(MenuSound.SELECT)
@@ -3939,10 +3728,6 @@ class CrossbarViewModel @Inject constructor(
             }
             item.packageName != null -> dismissAppFromRecents(item.packageName)
         }
-    }
-
-    fun onPanelPageTapped(page: DetailPanelPage) = _uiState.update {
-        it.copy(panelPage = page, panelPageGameId = it.hoverPanelItem?.gameId)
     }
 
     private fun stepHoverPanelPage(delta: Int) = _uiState.update { s ->
@@ -4751,27 +4536,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun observeAndroidNotices() {
-        viewModelScope.launch {
-            combine(
-                AndroidNotifications.active,
-                _uiState.map { it.interfaceChoices.showDeviceNotifications }.distinctUntilChanged(),
-            ) { notices, show -> if (show) notices else emptyList() }
-                .collect { notices ->
-                    _uiState.update { it.copy(androidNotices = notices) }
-                }
-        }
-        viewModelScope.launch {
-            combine(
-                AndroidNotifications.playback,
-                _uiState.map { it.interfaceChoices.showDeviceNotifications }.distinctUntilChanged(),
-            ) { playback, show -> playback?.takeIf { show } }
-                .collect { playback ->
-                    _uiState.update { it.copy(externalPlayback = playback) }
-                }
-        }
-    }
-
     private fun observeShelfCounts() {
         viewModelScope.launch {
             val marks = PlayState.entries
@@ -4868,83 +4632,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    fun toggleNotifications() {
-        menuSound.play(if (_uiState.value.notificationsOpen) MenuSound.BACK else MenuSound.SYSTEM_BROWSE)
-        _uiState.update {
-            it.copy(
-                notificationsOpen = !it.notificationsOpen,
-                panelTab = PanelTab.NOTIFICATIONS,
-                noticeCursor = 0,
-                panelQuick = QuickSetting.WAVE,
-                panelProfile = ProfileFocus(),
-                panelChip = 0,
-                panelSetting = 0,
-            )
-        }
-    }
-
-    fun onNotificationsSwipedOpen() {
-        if (!_uiState.value.notificationsOpen) toggleNotifications()
-    }
-
-    fun onNotificationsSwipedClosed() {
-        if (_uiState.value.notificationsOpen) toggleNotifications()
-    }
-
-    private fun movePanelCursor(move: PanelMove) {
-        val s = _uiState.value
-        val before = PanelCursor(s.panelTab, s.noticeCursor, PANEL_QUICK_SETTINGS.indexOf(s.panelQuick).coerceAtLeast(0), s.panelChip, s.panelSetting, s.panelProfile)
-        val after = movePanel(
-            before, move,
-            rows = s.noticeFocusables.size,
-            quicks = PANEL_QUICK_SETTINGS.size,
-            chips = s.libraryChips.size,
-            recents = s.profileData.recent.size,
-        )
-        if (after == before) {
-            gamepadInputHandler.cancelRepeat()
-            return
-        }
-        menuSound.play(MenuSound.SCROLL)
-        _uiState.update {
-            it.copy(
-                panelTab = after.tab,
-                noticeCursor = after.notice,
-                panelQuick = PANEL_QUICK_SETTINGS[after.quick],
-                panelChip = after.chip,
-                panelSetting = after.setting,
-                panelProfile = after.profile,
-            )
-        }
-    }
-
-    fun onPanelSettingTapped(index: Int) {
-        _uiState.update { it.copy(panelTab = PanelTab.SETTINGS, panelSetting = index) }
-        openPanelSetting(index)
-    }
-
-    private fun openPanelSetting(index: Int) {
-        val screenId = panelSettingScreen(index) ?: return
-        menuSound.play(MenuSound.SELECT)
-        _uiState.update {
-            it.withSettingsOpen(screenId).copy(
-                notificationsOpen = false,
-                settingsReturnTo = null,
-                settingsFromPanel = true,
-            )
-        }
-    }
-
-    private fun returnToPanelSettings() {
-        _uiState.update { it.withSettingsClosed().copy(notificationsOpen = true, panelTab = PanelTab.SETTINGS) }
-    }
-
-    fun onPanelTabTapped(tab: PanelTab) {
-        if (_uiState.value.panelTab == tab) return
-        menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(panelTab = tab) }
-    }
-
     fun toggleQuickSetting(setting: QuickSetting, chip: Int = _uiState.value.panelChip) {
         menuSound.play(MenuSound.SELECT)
         val s = _uiState.value
@@ -4958,7 +4645,7 @@ class CrossbarViewModel @Inject constructor(
                 QuickSetting.RECENT_APPS -> context.echoDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
                 QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
                 QuickSetting.ANDROID_SETTINGS -> {
-                    closeNotifications()
+                    panel.closeNotifications()
                     runCatching {
                         context.startActivity(
                             android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
@@ -4999,11 +4686,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    fun closeNotifications() {
-        _uiState.update { it.copy(notificationsOpen = false) }
-    }
-
-    private fun runStageButton(button: GamepadAction) {
+    internal fun runStageButton(button: GamepadAction) {
         val s = _uiState.value
         stageActions(s.panelStage(), s.clearableNoticeCount)
             .firstOrNull { it.button == button }
@@ -5011,18 +4694,6 @@ class CrossbarViewModel @Inject constructor(
     }
 
     fun onStageActionTapped(command: StageCommand) = runStageCommand(command)
-
-    fun onPanelRowTapped(focus: NoticeFocus) {
-        val s = _uiState.value
-        val index = s.noticeFocusables.indexOf(focus)
-        if (index < 0) return
-        if (s.panelTab == PanelTab.NOTIFICATIONS && s.focusedNotice == focus) {
-            runStageButton(GamepadAction.SELECT)
-            return
-        }
-        menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(panelTab = PanelTab.NOTIFICATIONS, noticeCursor = index) }
-    }
 
     private fun runStageCommand(command: StageCommand) {
         val s = _uiState.value
@@ -5034,22 +4705,22 @@ class CrossbarViewModel @Inject constructor(
             StageCommand.OPEN_APP -> {
                 val pkg = external ?: return
                 menuSound.play(MenuSound.SELECT)
-                closeNotifications()
+                panel.closeNotifications()
                 launchAppWithDisc(pkg, (s.panelStage() as? PanelStage.Music)?.art)
             }
             StageCommand.OPEN_MUSIC -> {
                 menuSound.play(MenuSound.SELECT)
-                closeNotifications()
+                panel.closeNotifications()
                 if (s.musicPlayback.track != null) _uiState.update { it.copy(musicPlayerVisible = true) }
             }
             StageCommand.LAUNCH_RECENT -> {
-                closeNotifications()
+                panel.closeNotifications()
                 launchRecentTop()
             }
             StageCommand.OPEN_NOTICE -> {
                 val key = (focus as? NoticeFocus.Notice)?.key ?: return
-                openAndroidNotice(key)
-                closeNotifications()
+                panel.openAndroidNotice(key)
+                panel.closeNotifications()
             }
             StageCommand.DISMISS -> {
                 menuSound.play(MenuSound.BACK)
@@ -6356,7 +6027,7 @@ class CrossbarViewModel @Inject constructor(
 
     fun onSettingsBack() {
         if (_uiState.value.settingsFromPanel && _uiState.value.settingsReturnTo == null) {
-            returnToPanelSettings()
+            panel.returnToPanelSettings()
             return
         }
         _uiState.value.settingsReturnTo?.let { returnTo ->
@@ -6391,7 +6062,7 @@ class CrossbarViewModel @Inject constructor(
             markInitialSetupSeen()
         }
         if (_uiState.value.settingsFromPanel) {
-            returnToPanelSettings()
+            panel.returnToPanelSettings()
             return
         }
         _uiState.update { it.withSettingsClosed() }
@@ -7323,9 +6994,9 @@ class CrossbarViewModel @Inject constructor(
 
         private val KEY_TEXT_SHADOW = booleanPreferencesKey("display_text_shadow")
 
-        private val KEY_PROFILE_NAME = stringPreferencesKey("profile_name")
+        internal val KEY_PROFILE_NAME = stringPreferencesKey("profile_name")
 
-        private val KEY_PROFILE_AVATAR = stringPreferencesKey("profile_avatar_uri")
+        internal val KEY_PROFILE_AVATAR = stringPreferencesKey("profile_avatar_uri")
 
         private const val ICON1_LINGER_MS = 1_500L
         private const val SETUP_ITEM_ID = "library_setup"

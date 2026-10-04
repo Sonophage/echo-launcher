@@ -174,7 +174,7 @@ fun CrossbarShellContainer(
 
     val avatarPicker = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
-    ) { uri -> viewModel.onProfileAvatarPicked(uri) }
+    ) { uri -> viewModel.panel.onProfileAvatarPicked(uri) }
 
     androidx.compose.runtime.LaunchedEffect(uiState.profileAvatarPick) {
         if (uiState.profileAvatarPick) {
@@ -204,18 +204,18 @@ fun CrossbarShellContainer(
         onTouchBack = viewModel::onHomeBack,
         onTouchInput = viewModel::markTouchInput,
         onCrossbarSortTapped = viewModel::onSortLabelTapped,
-        onPanelPageTapped = viewModel::onPanelPageTapped,
+        onPanelPageTapped = viewModel.panel::onPanelPageTapped,
         onRecentFilterTapped = viewModel::setRecentFilter,
         onDrawerTypedCharConsumed = viewModel::onDrawerTypedCharConsumed,
-        onNotificationsToggled = viewModel::toggleNotifications,
+        onNotificationsToggled = viewModel.panel::toggleNotifications,
         onLaunchRecentTop = viewModel::launchRecentTop,
-        onNotificationsDismissed = viewModel::closeNotifications,
-        onPanelRowTapped = viewModel::onPanelRowTapped,
+        onNotificationsDismissed = viewModel.panel::closeNotifications,
+        onPanelRowTapped = viewModel.panel::onPanelRowTapped,
         onStageActionTapped = viewModel::onStageActionTapped,
-        onPanelTabTapped = viewModel::onPanelTabTapped,
-        onNotificationsSwipedOpen = viewModel::onNotificationsSwipedOpen,
-        onNotificationsSwipedClosed = viewModel::onNotificationsSwipedClosed,
-        onPanelSettingTapped = viewModel::onPanelSettingTapped,
+        onPanelTabTapped = viewModel.panel::onPanelTabTapped,
+        onNotificationsSwipedOpen = viewModel.panel::onNotificationsSwipedOpen,
+        onNotificationsSwipedClosed = viewModel.panel::onNotificationsSwipedClosed,
+        onPanelSettingTapped = viewModel.panel::onPanelSettingTapped,
         onOpenAppDrawer = viewModel::onOpenAppDrawer,
         onItemTap = viewModel::onItemTap,
         onRecentCardTap = viewModel::onRecentCardTap,
@@ -278,13 +278,13 @@ fun CrossbarShellContainer(
         onGameInfoAction = viewModel::onGameInfoAction,
         onGameInfoPanelClose = viewModel::closeGameInfoPanel,
         onGameInfoScrollMax = viewModel::onGameInfoScrollMax,
-        onPanelProfileTapped = viewModel::onPanelProfileTapped,
-        onProfileSet = viewModel::onProfileSetTapped,
-        onProfileBadge = viewModel::onProfileBadgeTapped,
-        onProfileFilter = viewModel::onProfileFilterTapped,
-        onProfileFriend = viewModel::onProfileFriendTapped,
-        onProfileEditName = viewModel::editProfileName,
-        onProfilePickAvatar = viewModel::pickProfileAvatar,
+        onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
+        onProfileSet = viewModel.panel::onProfileSetTapped,
+        onProfileBadge = viewModel.panel::onProfileBadgeTapped,
+        onProfileFilter = viewModel.panel::onProfileFilterTapped,
+        onProfileFriend = viewModel.panel::onProfileFriendTapped,
+        onProfileEditName = viewModel.panel::editProfileName,
+        onProfilePickAvatar = viewModel.panel::pickProfileAvatar,
         onAppDetailActionConsumed = viewModel::consumeAppDetailAction,
         onContextMenuItemActivated = viewModel::onContextMenuItemActivatedAt,
         onContextMenuDismiss = viewModel::closeContextMenu,

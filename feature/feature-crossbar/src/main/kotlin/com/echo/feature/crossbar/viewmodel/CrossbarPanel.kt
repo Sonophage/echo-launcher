@@ -1,0 +1,358 @@
+package com.echo.feature.crossbar.viewmodel
+
+import android.net.Uri
+import androidx.datastore.preferences.core.edit
+import com.echo.core.data.datastore.echoDataStore
+import com.echo.core.domain.model.GamepadAction
+import com.echo.core.ui.components.move
+import com.echo.core.ui.notification.AndroidNotifications
+import com.echo.core.ui.sound.MenuSound
+import com.echo.feature.crossbar.ui.detail.DetailPanelPage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import timber.log.Timber
+
+class CrossbarPanel(
+    private val vm: CrossbarViewModel,
+    private val uiState: MutableStateFlow<CrossbarUiState>,
+    private val scope: CoroutineScope,
+    private val menuSound: com.echo.core.ui.sound.MenuSoundPlayer,
+) {
+    fun openProfile(tab: ProfileTab, gameId: Long? = null, set: Int = 0, fromPanel: Boolean = false) {
+        menuSound.play(MenuSound.SELECT)
+        uiState.update {
+            it.copy(
+                notificationsOpen = if (fromPanel) false else it.notificationsOpen,
+                profile = ProfileState(tab = tab, set = set, openOnGameId = gameId, returnToPanel = fromPanel).withData(it.profileData),
+            )
+        }
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    internal fun observeProfileData() {
+        scope.launch {
+            uiState.map { it.notificationsOpen || it.profile != null }.distinctUntilChanged()
+                .flatMapLatest { shown -> if (shown) profileData() else kotlinx.coroutines.flow.emptyFlow() }
+                .collect { data -> uiState.update { s -> s.copy(profileData = data, profile = s.profile?.withData(data)) } }
+        }
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun profileData(): Flow<ProfileData> {
+        val achievements = combine(vm.achievementController.observeSets(), vm.achievementController.observeAllAchievements()) { sets, all ->
+            sets to sets.associate { set -> setKey(set) to all[set.provider to set.providerGameId].orEmpty() }
+        }
+        val accounts = combine(
+            vm.achievementCredentials.raUsernameFlow,
+            vm.achievementCredentials.steamId64Flow,
+            vm.discordSocial.signedIn,
+            vm.discordSocial.user,
+            vm.discordSocial.friends,
+        ) { ra, steam, signedIn, user, friends ->
+            ProfileData(
+                raLinked = !ra.isNullOrBlank(),
+                steamLinked = !steam.isNullOrBlank(),
+                discordSignedIn = signedIn,
+                discordUser = user,
+                friends = friends,
+            )
+        }
+        val library = combine(
+            vm.gameRepository.observeGamesOnlyStats(),
+            vm.gameRepository.observeRecentGamesOnly(RECENTLY_PLAYED_COUNT * 8),
+        ) { stats, recent -> stats to recentlyPlayed(recent) }
+        return combine(
+            library,
+            achievements,
+            vm.achievementController.observeTotals(),
+            accounts,
+            vm.platformDao.observeAll(),
+        ) { (stats, recent), (sets, badges), totals, acc, platforms ->
+            val platformOf = platforms.associate { it.id to it.shortName }
+            acc.copy(
+                games = stats.games,
+                playTimeMs = stats.playTimeMs,
+                recent = recent,
+                totals = totals,
+                sets = sets,
+                badges = badges,
+                platforms = sets.mapNotNull { set -> set.gameId?.let { id -> platformOf[set.platformId]?.let { id to it } } }.toMap(),
+            )
+        }
+    }
+
+    internal fun handleProfileInput(p: ProfileState, action: GamepadAction) {
+        when {
+            action == GamepadAction.BACK -> closeProfile()
+            p.tab == ProfileTab.ACHIEVEMENTS && p.data.sets.isEmpty() && action == GamepadAction.SELECT ->
+                openSettingsFromProfile("settings_accounts")
+            p.tab == ProfileTab.FRIENDS && !p.data.discordSignedIn && action == GamepadAction.SELECT ->
+                openSettingsFromProfile("settings_discord")
+            else -> setProfile(stepProfile(p, action))
+        }
+    }
+
+    private fun setProfile(next: ProfileState) {
+        val current = uiState.value.profile ?: return
+        if (next == current) {
+            vm.gamepadInputHandler.cancelRepeat()
+            return
+        }
+        menuSound.play(MenuSound.SCROLL)
+        uiState.update { s -> s.copy(profile = s.profile?.let { next.copy(data = it.data) }) }
+    }
+
+    fun onProfileSetTapped(index: Int) {
+        uiState.value.profile?.let { setProfile(it.copy(set = index, inGrid = false, badge = 0)) }
+    }
+
+    fun onProfileBadgeTapped(index: Int) {
+        uiState.value.profile?.let { setProfile(it.copy(inGrid = true, badge = index)) }
+    }
+
+    fun onProfileFilterTapped(filter: BadgeFilter) {
+        uiState.value.profile?.let { setProfile(it.copy(filter = filter, inGrid = false, badge = 0)) }
+    }
+
+    fun onProfileFriendTapped(index: Int) {
+        uiState.value.profile?.let { setProfile(it.copy(friend = index)) }
+    }
+
+    fun closeProfile() {
+        val profile = uiState.value.profile ?: return
+        menuSound.play(MenuSound.BACK)
+        uiState.update {
+            if (profile.returnToPanel) it.copy(profile = null, notificationsOpen = true, panelTab = PanelTab.PROFILE) else it.copy(profile = null)
+        }
+    }
+
+    internal fun runPanelProfile(action: GamepadAction) {
+        val s = uiState.value
+        val focus = s.panelProfile
+        when (action) {
+            GamepadAction.CHANGE_SORT -> onPanelProfileTapped(ProfileSpot.EDIT, 0)
+            GamepadAction.SELECT -> onPanelProfileTapped(focus.spot, if (focus.spot == ProfileSpot.SHOWCASE) showcaseSet(s.profileData) else focus.recent)
+            else -> Unit
+        }
+    }
+
+    fun onPanelProfileTapped(spot: ProfileSpot, index: Int) {
+        val s = uiState.value
+        when (spot) {
+            ProfileSpot.EDIT -> {
+                menuSound.play(MenuSound.SELECT)
+                uiState.update { it.copy(panelTab = PanelTab.PROFILE, panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT_NAME)) }
+            }
+            ProfileSpot.EDIT_NAME -> {
+                uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
+                closeNotifications()
+                editProfileName()
+            }
+            ProfileSpot.EDIT_PICTURE -> {
+                uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }
+                pickProfileAvatar()
+            }
+            ProfileSpot.RECENT -> s.profileData.recent.getOrNull(index)?.let { game ->
+                uiState.update { it.copy(panelProfile = ProfileFocus(ProfileSpot.RECENT, index)) }
+                closeNotifications()
+                vm.onOpenGameInfo(game.toSearchRow(vm.platformCache[game.platformId]?.name))
+            }
+            ProfileSpot.SHOWCASE -> {
+                uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.SHOWCASE)) }
+                openProfile(ProfileTab.ACHIEVEMENTS, set = index, fromPanel = true)
+            }
+            ProfileSpot.FRIENDS -> {
+                uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.FRIENDS)) }
+                openProfile(ProfileTab.FRIENDS, fromPanel = true)
+            }
+        }
+    }
+
+    private fun openSettingsFromProfile(screenId: String) {
+        menuSound.play(MenuSound.SELECT)
+        uiState.update {
+            it.withSettingsOpen(screenId).copy(settingsReturnTo = null, settingsFromPanel = false)
+        }
+    }
+
+    fun editProfileName() {
+        menuSound.play(MenuSound.SELECT)
+        uiState.update {
+            it.copy(collectionNameDialog = CollectionNameDialogState(
+                title = "Profile name",
+                subtitle = "The name your profile shows. It stays on this device.",
+                initialText = it.profileName,
+                renameProfile = true,
+                placeholder = DEFAULT_PROFILE_NAME,
+            ))
+        }
+    }
+
+    fun pickProfileAvatar() {
+        menuSound.play(MenuSound.SELECT)
+        uiState.update { it.copy(profileAvatarPick = true) }
+    }
+
+    fun onProfileAvatarPicked(uri: android.net.Uri?) {
+        uiState.update { it.copy(profileAvatarPick = false) }
+        if (uri == null) return
+        scope.launch(Dispatchers.IO) {
+            val dir = java.io.File(vm.context.filesDir, "profile").apply { mkdirs() }
+            val dest = java.io.File(dir, "avatar_${System.currentTimeMillis()}.jpg")
+            val ok = runCatching {
+                vm.context.contentResolver.openInputStream(uri)?.use { input -> dest.outputStream().use { input.copyTo(it) } } != null &&
+                    android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        .also { android.graphics.BitmapFactory.decodeFile(dest.absolutePath, it) }.outWidth > 0
+            }.getOrDefault(false)
+            if (!ok) {
+                dest.delete()
+                Timber.w("Profile picture %s could not be read", uri)
+                return@launch
+            }
+            vm.context.echoDataStore.edit { it[CrossbarViewModel.KEY_PROFILE_AVATAR] = dest.absolutePath }
+            dir.listFiles()?.filter { it != dest }?.forEach { it.delete() }
+        }
+    }
+
+    internal fun observeProfilePrefs() {
+        scope.launch {
+            vm.context.echoDataStore.data.collect { prefs ->
+                val avatar = prefs[CrossbarViewModel.KEY_PROFILE_AVATAR]?.takeIf { java.io.File(it).exists() }
+                uiState.update {
+                    it.copy(profileName = prefs[CrossbarViewModel.KEY_PROFILE_NAME]?.ifBlank { null } ?: DEFAULT_PROFILE_NAME, profileAvatar = avatar)
+                }
+            }
+        }
+    }
+
+    internal fun openAndroidNotice(key: String) {
+        menuSound.play(MenuSound.SELECT)
+        if (!AndroidNotifications.open(key)) Timber.i("Notification $key had nothing to open")
+    }
+
+    fun onPanelPageTapped(page: DetailPanelPage) = uiState.update {
+        it.copy(panelPage = page, panelPageGameId = it.hoverPanelItem?.gameId)
+    }
+
+    internal fun observeAndroidNotices() {
+        scope.launch {
+            combine(
+                AndroidNotifications.active,
+                uiState.map { it.interfaceChoices.showDeviceNotifications }.distinctUntilChanged(),
+            ) { notices, show -> if (show) notices else emptyList() }
+                .collect { notices ->
+                    uiState.update { it.copy(androidNotices = notices) }
+                }
+        }
+        scope.launch {
+            combine(
+                AndroidNotifications.playback,
+                uiState.map { it.interfaceChoices.showDeviceNotifications }.distinctUntilChanged(),
+            ) { playback, show -> playback?.takeIf { show } }
+                .collect { playback ->
+                    uiState.update { it.copy(externalPlayback = playback) }
+                }
+        }
+    }
+
+    fun toggleNotifications() {
+        menuSound.play(if (uiState.value.notificationsOpen) MenuSound.BACK else MenuSound.SYSTEM_BROWSE)
+        uiState.update {
+            it.copy(
+                notificationsOpen = !it.notificationsOpen,
+                panelTab = PanelTab.NOTIFICATIONS,
+                noticeCursor = 0,
+                panelQuick = QuickSetting.WAVE,
+                panelProfile = ProfileFocus(),
+                panelChip = 0,
+                panelSetting = 0,
+            )
+        }
+    }
+
+    fun onNotificationsSwipedOpen() {
+        if (!uiState.value.notificationsOpen) toggleNotifications()
+    }
+
+    fun onNotificationsSwipedClosed() {
+        if (uiState.value.notificationsOpen) toggleNotifications()
+    }
+
+    internal fun movePanelCursor(move: PanelMove) {
+        val s = uiState.value
+        val before = PanelCursor(s.panelTab, s.noticeCursor, PANEL_QUICK_SETTINGS.indexOf(s.panelQuick).coerceAtLeast(0), s.panelChip, s.panelSetting, s.panelProfile)
+        val after = movePanel(
+            before, move,
+            rows = s.noticeFocusables.size,
+            quicks = PANEL_QUICK_SETTINGS.size,
+            chips = s.libraryChips.size,
+            recents = s.profileData.recent.size,
+        )
+        if (after == before) {
+            vm.gamepadInputHandler.cancelRepeat()
+            return
+        }
+        menuSound.play(MenuSound.SCROLL)
+        uiState.update {
+            it.copy(
+                panelTab = after.tab,
+                noticeCursor = after.notice,
+                panelQuick = PANEL_QUICK_SETTINGS[after.quick],
+                panelChip = after.chip,
+                panelSetting = after.setting,
+                panelProfile = after.profile,
+            )
+        }
+    }
+
+    fun onPanelSettingTapped(index: Int) {
+        uiState.update { it.copy(panelTab = PanelTab.SETTINGS, panelSetting = index) }
+        openPanelSetting(index)
+    }
+
+    internal fun openPanelSetting(index: Int) {
+        val screenId = panelSettingScreen(index) ?: return
+        menuSound.play(MenuSound.SELECT)
+        uiState.update {
+            it.withSettingsOpen(screenId).copy(
+                notificationsOpen = false,
+                settingsReturnTo = null,
+                settingsFromPanel = true,
+            )
+        }
+    }
+
+    internal fun returnToPanelSettings() {
+        uiState.update { it.withSettingsClosed().copy(notificationsOpen = true, panelTab = PanelTab.SETTINGS) }
+    }
+
+    fun onPanelTabTapped(tab: PanelTab) {
+        if (uiState.value.panelTab == tab) return
+        menuSound.play(MenuSound.SCROLL)
+        uiState.update { it.copy(panelTab = tab) }
+    }
+
+    fun closeNotifications() {
+        uiState.update { it.copy(notificationsOpen = false) }
+    }
+
+    fun onPanelRowTapped(focus: NoticeFocus) {
+        val s = uiState.value
+        val index = s.noticeFocusables.indexOf(focus)
+        if (index < 0) return
+        if (s.panelTab == PanelTab.NOTIFICATIONS && s.focusedNotice == focus) {
+            vm.runStageButton(GamepadAction.SELECT)
+            return
+        }
+        menuSound.play(MenuSound.SCROLL)
+        uiState.update { it.copy(panelTab = PanelTab.NOTIFICATIONS, noticeCursor = index) }
+    }
+}
