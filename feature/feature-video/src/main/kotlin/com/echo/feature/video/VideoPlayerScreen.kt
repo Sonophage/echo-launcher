@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.video
+package com.echo.feature.video
 
 import com.echo.core.ui.theme.EchoTextStyle
 import android.net.Uri

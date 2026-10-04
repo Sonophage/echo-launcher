@@ -52,6 +52,8 @@ dependencies {
     implementation(project(":feature:feature-artwork"))
     implementation(project(":feature:feature-library"))
     implementation(project(":feature:feature-achievements"))
+    implementation(project(":feature:feature-photos"))
+    implementation(project(":feature:feature-video"))
     // Renders @Preview composables in Android Studio (same as feature-settings / feature-appbar).
     debugImplementation(libs.compose.ui.tooling)
 

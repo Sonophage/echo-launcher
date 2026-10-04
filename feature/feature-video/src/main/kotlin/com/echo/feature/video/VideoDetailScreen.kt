@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.detail
+package com.echo.feature.video
 
 import com.echo.core.ui.components.EchoTrio
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -73,7 +73,7 @@ import com.echo.core.ui.theme.menuCursor
 import com.echo.core.ui.theme.menuCursorEdge
 import com.echo.core.ui.components.EchoContextMenuOverlay
 import com.echo.core.ui.design.menuBackdrop
-import com.echo.feature.crossbar.video.VideoPlayerScreen
+import com.echo.feature.video.VideoPlayerScreen
 import androidx.compose.runtime.ReadOnlyComposable
 import com.echo.core.ui.theme.LocalEchoTextColors
 

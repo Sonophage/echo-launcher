@@ -62,11 +62,13 @@ desktop.ini
 *.rej
 replay_pid*
 
-# AI-assistant configuration and local state — kept out of version control
-.claude/
+# AI-assistant configuration and local state — kept out of version control. The project's own
+# instructions (CLAUDE.md) and skills (.claude/skills/) are tracked (owner, 2026-10-04):
+# checkStructure reads CLAUDE.md, so it has to be in every clone and in CI.
+.claude/*
+!.claude/skills/
 .codex/
 .agents/
-CLAUDE.md
 
 # Local companion tools and reference material — never committed. GSE-Generator-main
 # caches a personal Steam Web API key in Tools/steam_api_key.txt, so it must stay out

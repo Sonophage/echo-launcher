@@ -33,6 +33,10 @@ jobs:
       - name: Set up Gradle (with caching)
         uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
+      - name: Check the repo structure
+        # module list, package layout, feature dependencies and CLAUDE.md's module map (see CLAUDE.md)
+        run: ./gradlew checkStructure --no-daemon
+
       - name: Run JVM unit tests
         run: ./gradlew test -x :app:test -x :discord:discord-native:test --no-daemon --stacktrace
 

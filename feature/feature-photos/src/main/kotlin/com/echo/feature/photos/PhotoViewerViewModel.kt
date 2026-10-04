@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.photo
+package com.echo.feature.photos
 
 import android.content.Context
 import android.graphics.Bitmap

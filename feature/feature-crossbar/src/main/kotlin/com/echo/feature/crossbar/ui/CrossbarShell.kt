@@ -120,8 +120,8 @@ import com.echo.feature.crossbar.ui.app.AppDetailScreen
 import com.echo.feature.artwork.studio.ArtworkStudioScreen
 import com.echo.feature.crossbar.ui.detail.ManualViewerOverlay
 import com.echo.feature.crossbar.ui.detail.MetadataPreviewPanel
-import com.echo.feature.crossbar.ui.detail.VideoDetailScreen
-import com.echo.feature.crossbar.ui.photo.PhotoViewerScreen
+import com.echo.feature.video.VideoDetailScreen
+import com.echo.feature.photos.PhotoViewerScreen
 import com.echo.feature.crossbar.viewmodel.mediaStage
 import com.echo.feature.crossbar.viewmodel.recentStage
 import com.echo.feature.crossbar.viewmodel.PanelStage

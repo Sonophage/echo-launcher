@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.photo
+package com.echo.feature.photos
 
 import com.echo.core.ui.components.EchoTrio
 import com.echo.core.ui.theme.EchoTextStyle

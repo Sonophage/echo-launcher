@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.video
+package com.echo.feature.video
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

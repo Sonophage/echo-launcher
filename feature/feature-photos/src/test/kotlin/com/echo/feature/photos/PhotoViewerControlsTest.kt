@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.photo
+package com.echo.feature.photos
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

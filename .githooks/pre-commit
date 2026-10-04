@@ -1,0 +1,12 @@
+#!/bin/sh
+# A change to the module graph must change the docs that describe it (owner, 2026-10-04).
+# checkStructure in the gate and CI checks the module map itself; this stops the commit early.
+staged=$(git diff --cached --name-only --diff-filter=ACMRD)
+if echo "$staged" | grep -qE '(^|/)(settings\.gradle\.kts|build\.gradle\.kts)$'; then
+    if ! echo "$staged" | grep -qE '^(CLAUDE\.md|\.claude/skills/)'; then
+        echo "pre-commit: settings.gradle.kts or a build.gradle.kts changed, but CLAUDE.md and .claude/skills/ did not."
+        echo "Update the module map or the skill that covers the change. If neither is affected, commit with --no-verify."
+        exit 1
+    fi
+fi
+exit 0

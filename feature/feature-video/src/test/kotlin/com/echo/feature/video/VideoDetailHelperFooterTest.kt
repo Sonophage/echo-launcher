@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.detail
+package com.echo.feature.video
 
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.domain.model.Video

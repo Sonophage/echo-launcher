@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.ui.detail
+package com.echo.feature.video
 
 import android.content.Context
 import android.net.Uri
