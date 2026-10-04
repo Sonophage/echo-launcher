@@ -1,5 +1,15 @@
 package com.echo.core.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+
 import com.echo.core.ui.design.holdOutline
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.alpha
@@ -114,7 +124,17 @@ fun EchoHintBar(
             centre?.let { Box(Modifier.weight(1f, fill = false)) { it() } }
         }
 
-        primary?.let { ActionTab(it, accent, leading, u, pad, onAction, Modifier.align(Alignment.Bottom), secondary) }
+        // the card comes in rather than appearing (owner, 2026-10-04); the last one stays for its exit
+        var shown by remember { mutableStateOf(primary) }
+        if (primary != null) shown = primary
+        AnimatedVisibility(
+            visible = primary != null,
+            enter = CardEnter,
+            exit = CardExit,
+            modifier = Modifier.align(Alignment.Bottom),
+        ) {
+            shown?.let { ActionTab(it, accent, leading, u, pad, onAction, Modifier, secondary) }
+        }
 
         Row(
             Modifier.weight(1f),
@@ -162,10 +182,49 @@ private fun ActionTab(
     modifier: Modifier,
     secondary: HintAction? = null,
 ) {
-    if (primary.holdMs == 0L && secondary == null) return RestOrb(primary, accent, u, pad, onAction, modifier)
+    if (secondary != null) return ActionCard(primary, accent, leading, u, pad, onAction, modifier, secondary)
+    if (primary.holdMs == 0L) return RestOrb(primary, accent, u, pad, onAction, modifier)
+    // owner, 2026-10-04: A is only the A button until the hold starts; then the card rises with the item's info.
+    // The press lives on this wrapper, so swapping the orb for the card does not cut a touch hold short
+    var pressing by remember { mutableStateOf(false) }
+    val active = primary.holding || pressing
+    Box(
+        modifier.then(
+            if (onAction != null) Modifier.pressAndHold(primary.holdMs, primary.label, { pressing = it }) { onAction(primary.action) } else Modifier,
+        ),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        AnimatedContent(
+            targetState = active,
+            transitionSpec = { CardEnter togetherWith CardExit using SizeTransform(clip = false) },
+            contentAlignment = Alignment.BottomCenter,
+            label = "holdCard",
+        ) { card ->
+            if (card) {
+                ActionCard(primary, accent, leading, u, pad, onAction, Modifier, null, pressedOutside = pressing, ownGesture = false)
+            } else {
+                RestOrb(primary, accent, u, pad, onAction = null, modifier = Modifier)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionCard(
+    primary: HintAction,
+    accent: Color,
+    leading: (@Composable () -> Unit)?,
+    u: DesignUnits,
+    pad: Boolean,
+    onAction: ((GamepadAction) -> Unit)?,
+    modifier: Modifier,
+    secondary: HintAction? = null,
+    pressedOutside: Boolean = false,
+    ownGesture: Boolean = true,
+) {
     val edge = lerp(accent, Color.White, 0.3f)
     var pressing by remember { mutableStateOf(false) }
-    val progress = if (primary.holdMs > 0L) holdProgress(primary.holding || pressing, primary.holdMs) else 0f
+    val progress = if (primary.holdMs > 0L) holdProgress(primary.holding || pressing || pressedOutside, primary.holdMs) else 0f
     val radius = u.dp(20)
     val shape = RoundedCornerShape(topStart = radius, topEnd = radius)
     val style = LocalControllerPromptStyle.current
@@ -206,10 +265,11 @@ private fun ActionTab(
                 }
             }
             .then(
-                if (primary.holdMs > 0L && onAction != null) {
-                    Modifier.pressAndHold(primary.holdMs, primary.label, { pressing = it }) { onAction(primary.action) }
-                } else {
-                    Modifier.clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
+                when {
+                    !ownGesture -> Modifier
+                    primary.holdMs > 0L && onAction != null ->
+                        Modifier.pressAndHold(primary.holdMs, primary.label, { pressing = it }) { onAction(primary.action) }
+                    else -> Modifier.clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
                 }
             )
             .padding(start = u.dp(20), end = u.dp(20), top = u.dp(6), bottom = u.dp(14)),
@@ -290,7 +350,7 @@ private fun ActionTab(
     }
 }
 
-// kit 06 at rest: the action's name beside a glowing A; a launch needs the hold, so it shows the full tab instead
+// kit 06 at rest: only the glowing A (owner, 2026-10-04: no "Open" beside it); a launch's card rises on the hold
 @Composable
 private fun RestOrb(
     primary: HintAction,
@@ -309,17 +369,10 @@ private fun RestOrb(
             .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label, indication = null, interactionSource = null) {
                 presses++
                 onAction?.invoke(primary.action)
-            }
-            .padding(start = u.dp(14)),
+            },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
     ) {
-        Text(
-            primary.label,
-            color = Color.White,
-            style = EchoTextStyle.copy(fontSize = u.sp(14), fontWeight = FontWeight.Medium),
-            maxLines = 1,
-        )
         Box(
             Modifier
                 .size(u.dp(44))
@@ -374,5 +427,7 @@ internal fun hintBarRow(
     .sortedBy { it.tappableAction() == GamepadAction.BACK }
 
 private val BarHeight = HintBarHeight
+private val CardEnter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 2 }
+private val CardExit = fadeOut(tween(160)) + slideOutVertically(tween(180)) { it / 2 }
 private val HintLabel = Color.White.copy(alpha = 0.85f)
 private val TabInk = Color(0xFF1A0D05)

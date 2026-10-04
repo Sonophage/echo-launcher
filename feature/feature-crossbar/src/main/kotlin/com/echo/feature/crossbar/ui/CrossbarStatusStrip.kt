@@ -19,7 +19,14 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -142,6 +149,31 @@ object CrossbarStatusIcons {
 
 data class StripLiveActivity(val art: Any?, val title: String, val detail: String?, val stage: PanelStage? = null, val accentArgb: Long? = null)
 
+data class BatteryReading(val level: Int = 0, val charging: Boolean = false)
+
+// one reading for the strip's percentage and the battery line along the bottom edge
+@Composable
+fun rememberBatteryReading(): BatteryReading {
+    val context = LocalContext.current
+    var reading by remember { mutableStateOf(BatteryReading()) }
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
+                val level  = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale  = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                reading = BatteryReading(
+                    level = if (level >= 0 && scale > 0) (level * 100 / scale) else 0,
+                    charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL,
+                )
+            }
+        }
+        context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+    return reading
+}
+
 data class StripHints(val shoulder: Boolean = false, val leftRight: Boolean = false)
 
 @Composable
@@ -170,31 +202,15 @@ fun CrossbarStatusStrip(
 
     compact: Boolean = false,
 
-    ambient: Boolean = true,
-
     modifier: Modifier = Modifier,
+
+    battery: BatteryReading = rememberBatteryReading(),
 
     centre: (@Composable BoxScope.(DesignUnits, Boolean) -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    var batteryLevel   by remember { mutableIntStateOf(0) }
-    var isCharging     by remember { mutableStateOf(false) }
+    val batteryLevel = battery.level
     var timeString     by remember { mutableStateOf(currentTimeString(context)) }
-
-    DisposableEffect(Unit) {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(ctx: Context, intent: Intent) {
-                val level  = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                val scale  = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-                batteryLevel = if (level >= 0 && scale > 0) (level * 100 / scale) else 0
-                isCharging   = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                               status == BatteryManager.BATTERY_STATUS_FULL
-            }
-        }
-        context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        onDispose { context.unregisterReceiver(receiver) }
-    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -232,8 +248,27 @@ fun CrossbarStatusStrip(
                 .background(Brush.verticalGradient(0f to ChromeScrim, 1f to Color.Transparent)),
         )
 
-        live?.let { activity ->
-            if (orbLevel == 0 && !compact) {
+        // the card comes in rather than appearing (owner, 2026-10-04); the last one stays for its exit
+        var shownLive by remember { mutableStateOf(live) }
+        if (live != null) shownLive = live
+        val islandMode = when {
+            live == null -> IslandMode.NONE
+            orbLevel == 0 && !compact -> IslandMode.ORB
+            else -> IslandMode.CARD
+        }
+        AnimatedContent(
+            targetState = islandMode,
+            transitionSpec = {
+                (fadeIn(tween(220)) + slideInVertically(tween(260)) { -it / 2 }) togetherWith
+                    (fadeOut(tween(160)) + slideOutVertically(tween(180)) { -it / 2 }) using SizeTransform(clip = false)
+            },
+            contentAlignment = Alignment.TopStart,
+            label = "island",
+            modifier = Modifier.align(Alignment.TopStart).wrapContentHeight(Alignment.Top, unbounded = true),
+        ) { mode ->
+          val activity = shownLive
+          if (activity != null && mode != IslandMode.NONE) {
+            if (mode == IslandMode.ORB) {
                 RestOrb(
                     activity = activity,
                     tint = islandTint,
@@ -241,7 +276,7 @@ fun CrossbarStatusStrip(
                     u = u,
                     stageIcon = stageIcon?.bitmap,
                     onTapped = onOrbTapped,
-                    modifier = Modifier.align(Alignment.TopStart).padding(start = chromeGutter(), top = u.dp(10)),
+                    modifier = Modifier.padding(start = chromeGutter(), top = u.dp(10)),
                 )
             } else {
                 val music = orbLevel > 0 && activity.stage is PanelStage.Music
@@ -259,11 +294,11 @@ fun CrossbarStatusStrip(
                     holdMs = holdMs,
                     holding = holding,
                     modifier = Modifier
-                        .align(Alignment.TopStart)
                         .padding(start = 5.dp)
                         .wrapContentHeight(Alignment.Top, unbounded = true),
                 )
             }
+          }
         }
 
         val centreSlot: @Composable (Boolean) -> Unit = { tight ->
@@ -354,13 +389,6 @@ fun CrossbarStatusStrip(
                 statusPlaceable.place(width - statusPlaceable.width, (height - statusPlaceable.height) / 2)
             }
         }
-
-        BatteryLine(
-            level = batteryLevel,
-            charging = isCharging,
-            glint = ambient,
-            modifier = Modifier.align(Alignment.TopCenter),
-        )
     }
 }
 
@@ -674,7 +702,7 @@ internal fun stripFit(width: Int, left: Int, gap: Int, centre: Int, tightCentre:
 internal fun sectionLabelShown(hasIcon: Boolean): Boolean = !hasIcon
 
 @Composable
-private fun BatteryLine(level: Int, charging: Boolean, glint: Boolean, modifier: Modifier = Modifier) {
+internal fun BatteryLine(level: Int, charging: Boolean, glint: Boolean, modifier: Modifier = Modifier) {
     val fill = (level / 100f).coerceIn(0f, 1f)
     val travel by androidx.compose.runtime.produceState(0f, charging, glint) {
         if (!charging || !glint) return@produceState
@@ -718,6 +746,8 @@ private fun BatteryLine(level: Int, charging: Boolean, glint: Boolean, modifier:
 private fun StripHint(text: String, u: DesignUnits) {
     Text(text, color = StripMuted, fontSize = u.sp(10), fontWeight = FontWeight.Medium)
 }
+
+private enum class IslandMode { NONE, ORB, CARD }
 
 private val BatteryLineHeight = 2.dp
 

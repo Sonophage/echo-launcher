@@ -1081,6 +1081,7 @@ fun CrossbarShell(
             val crossbarContext = uiState.stripShowsCrossbarContext
 
             val panelPull = rememberPanelPull(notificationsOpen)
+            val battery = rememberBatteryReading()
             CompositionLocalProvider(LocalDensity provides baseDensity) {
             CrossbarStatusStrip(
                 sortRow = uiState.sortRow()?.takeIf { crossbarContext && !uiState.onLastPlayedHome }
@@ -1109,7 +1110,7 @@ fun CrossbarShell(
                 // category's own filter (Last Played's, through centre) or its sort
 
                 compact = !crossbarContext,
-                ambient = uiState.waveShown,
+                battery = battery,
 
                 centre = if (notificationsOpen) {
                     { u, tight ->
@@ -1135,6 +1136,14 @@ fun CrossbarShell(
                 ),
             )
             }
+
+            // owner, 2026-10-04: the battery line runs along the bottom edge, not the top
+            BatteryLine(
+                level = battery.level,
+                charging = battery.charging,
+                glint = uiState.waveShown,
+                modifier = Modifier.align(Alignment.BottomCenter).zIndex(aboveContextRail + 1f),
+            )
 
             val panelStage = uiState.panelStage()
             CompositionLocalProvider(LocalBackdropWave provides homeWave) {
