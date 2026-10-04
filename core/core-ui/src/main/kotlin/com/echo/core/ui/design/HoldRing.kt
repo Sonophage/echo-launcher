@@ -1,5 +1,9 @@
 package com.echo.core.ui.design
 
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -73,5 +77,24 @@ fun Modifier.pressAndHold(holdMs: Long, label: String, onPressing: (Boolean) -> 
             pressing(false)
             if (released == null) held()
         })
+    }
+}
+
+// kit "Echo · press": two rings pulse out from an orb and fade over 400 ms; bump trigger to fire
+@Composable
+fun Modifier.echoPulse(trigger: Int, color: Color): Modifier {
+    val pulse = remember { Animatable(1f) }
+    LaunchedEffect(trigger) {
+        if (trigger == 0) return@LaunchedEffect
+        pulse.snapTo(0f)
+        pulse.animateTo(1f, tween(400, easing = LinearEasing))
+    }
+    return drawBehind {
+        val p = pulse.value
+        if (p >= 1f) return@drawBehind
+        val r = size.minDimension / 2
+        val w = 1.5.dp.toPx()
+        drawCircle(color.copy(alpha = 0.4f * (1 - p)), r + r * 0.5f * p, style = Stroke(w))
+        drawCircle(color.copy(alpha = 0.18f * (1 - p)), r + r * p, style = Stroke(w))
     }
 }

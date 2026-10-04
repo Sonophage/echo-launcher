@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.design.echoPulse
 import androidx.compose.ui.unit.sp
 import com.echo.feature.crossbar.viewmodel.StageCommand
 import com.echo.core.ui.design.pressAndHold
@@ -599,11 +600,13 @@ private fun RestOrb(
 ) {
     val music = activity.stage as? PanelStage.Music
     val progress = music?.let { it.islandProgress(it.livePositionMs()) }
+    var presses by remember { mutableIntStateOf(0) }
     Box(
         modifier
             .size(u.dp(44))
+            .echoPulse(presses, glow)
             .clip(CircleShape)
-            .clickable(onClickLabel = activity.title, onClick = onTapped)
+            .clickable(onClickLabel = activity.title) { presses++; onTapped() }
             .holdRing(progress ?: 0f, glow, if (music != null) glow.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.18f), u.dp(2))
             .padding(u.dp(5))
             .clip(CircleShape)

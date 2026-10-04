@@ -1,5 +1,7 @@
 package com.echo.core.ui.components
 
+import com.echo.core.ui.design.echoPulse
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.border
@@ -246,11 +248,14 @@ private fun RestOrb(
 ) {
     val edge = lerp(accent, Color.White, 0.3f)
     val style = LocalControllerPromptStyle.current
+    var presses by remember { mutableIntStateOf(0) }
     Row(
         modifier
             .padding(end = maxOf(u.dp(28), chromeGutter(end = true)), bottom = u.dp(16))
-            .clip(RoundedCornerShape(u.dp(22)))
-            .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
+            .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label, indication = null, interactionSource = null) {
+                presses++
+                onAction?.invoke(primary.action)
+            }
             .padding(start = u.dp(14)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
@@ -264,6 +269,7 @@ private fun RestOrb(
         Box(
             Modifier
                 .size(u.dp(44))
+                .echoPulse(presses, edge)
                 .drawBehind { drawCircle(Brush.radialGradient(listOf(edge.copy(alpha = 0.45f), Color.Transparent), center, size.minDimension * 0.8f)) }
                 .clip(CircleShape)
                 .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.62f), lerp(accent, Color.Black, 0.4f).copy(alpha = 0.5f))))
