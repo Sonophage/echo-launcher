@@ -1088,10 +1088,8 @@ fun CrossbarShell(
                     leftRight = uiState.pillRowVisible && crossbarContext,
                 ),
 
-                sections = if (crossbarContext) barCategories else emptyList(),
-                selectedSection = barSelected,
-                onSectionTapped = onBarCategory,
-                onSearchTapped = onOpenSearch,
+                // owner, 2026-10-04: the XMB already shows its categories, so the centre carries only that
+                // category's own filter (Last Played's, through centre) or its sort
 
                 compact = !crossbarContext,
                 ambient = uiState.waveShown,

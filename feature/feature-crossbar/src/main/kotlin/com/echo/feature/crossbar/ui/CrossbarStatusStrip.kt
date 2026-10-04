@@ -88,7 +88,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.echo.core.domain.model.Category
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.ControllerPrompt
 import com.echo.core.ui.components.LocalPadPrompts
@@ -97,7 +96,6 @@ import com.echo.core.ui.components.chromeGutter
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.LEGIBILITY_FLOOR_PX
 import com.echo.core.ui.design.mediaAccent
-import com.echo.core.ui.icons.CategoryIconGlyph
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.theme.menuCursorEdge
 import com.echo.feature.crossbar.R
@@ -162,12 +160,6 @@ fun CrossbarStatusStrip(
 
     noticeCount: Int = 0,
     onNoticeCountTapped: (() -> Unit)? = null,
-
-    sections: List<Category> = emptyList(),
-    selectedSection: Int = 0,
-    onSectionTapped: (Int) -> Unit = {},
-
-    onSearchTapped: (() -> Unit)? = null,
 
     // the top-left orb's level for the live activity (0 rest, 1 focused, 2 expanded); -1 keeps the plain island
     orbLevel: Int = -1,
@@ -284,16 +276,6 @@ fun CrossbarStatusStrip(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(u.dp(18)),
                     ) {
-                        if (sections.isNotEmpty()) {
-                            StripSections(
-                                labels = sections.map { it.name },
-                                selected = selectedSection,
-                                onTapped = onSectionTapped,
-                                u = u,
-                                shoulders = false,
-                                onSearch = onSearchTapped,
-                            ) { i, tint, m -> CategoryIconGlyph(sections[i].iconKey, sections[i].name, m.alpha(tint.alpha)) }
-                        }
                         sortLabel?.let { label ->
                             Text(
                                 "⇅ $label",
