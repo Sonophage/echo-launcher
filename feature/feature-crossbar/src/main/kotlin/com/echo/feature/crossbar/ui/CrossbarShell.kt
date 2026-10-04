@@ -1,6 +1,7 @@
 package com.echo.feature.crossbar.ui
 
 import com.echo.core.ui.design.LocalBackdropWave
+import com.echo.core.ui.design.LocalMenuBackdropArt
 import androidx.compose.ui.graphics.toArgb
 import com.echo.feature.crossbar.viewmodel.resumeHoldId
 import com.echo.feature.crossbar.viewmodel.resumableFocus
@@ -608,6 +609,11 @@ fun CrossbarShell(
 
             CompositionLocalProvider(
                 LocalPadPrompts provides padPromptsShown(rememberSystemStatus().controllerConnected, uiState.lastInputWasTouch),
+                LocalMenuBackdropArt provides if (uiState.onLastPlayedHome) {
+                    uiState.currentItems.getOrNull(uiState.selectedItemIndex)?.backdropArt?.firstOrNull()
+                } else {
+                    uiState.focusedItemBackdrop?.takeIf { uiState.itemBackdropEnabled }
+                },
             ) {
             CompositionLocalProvider(
                 LocalDensity provides Density(baseDensity.density * uiScale * layoutAdjust.scale, baseDensity.fontScale),
@@ -1377,7 +1383,6 @@ fun CrossbarShell(
                         state = uiState.menuWithPills() ?: menu.state,
                         onRowActivated = onContextMenuItemActivated,
                         onDismiss = onContextMenuDismiss,
-                        backdropArt = if (uiState.onLastPlayedHome) selectedItem?.backdropArt?.firstOrNull() else selectedBg,
                     )
                 }
             }
@@ -1549,6 +1554,8 @@ fun CrossbarShell(
                 )
             }
 
+            // the detail screens' menus show the wave behind their backing, like the crossbar's
+            CompositionLocalProvider(LocalBackdropWave provides homeWave) {
             uiState.artworkStudioGameId?.let { gameId ->
                 ArtworkStudioScreen(
                     gameId = gameId,
@@ -1623,6 +1630,7 @@ fun CrossbarShell(
                     onTouchInput = onTouchInput,
                     modifier = Modifier.fillMaxSize(),
                 )
+            }
             }
 
             uiState.activeGameBoot?.let { request ->

@@ -3,6 +3,7 @@ package com.echo.core.ui.components
 import com.echo.core.ui.design.RailPanelFill
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.LocalBackdropWave
+import com.echo.core.ui.design.LocalMenuBackdropArt
 import com.echo.core.ui.design.PanelBase
 import com.echo.core.ui.image.rememberBlurSourceModel
 import androidx.compose.ui.draw.blur
@@ -71,7 +72,7 @@ fun <T> EchoContextMenuOverlay(
     onRowActivated: (index: Int) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    backdropArt: String? = null,
+    backdropArt: String? = LocalMenuBackdropArt.current,
 ) {
     val title = state.title
     val subtitle = state.subtitle

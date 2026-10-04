@@ -17,6 +17,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 // (owner, 2026-10-04); null when the wave is off
 val LocalBackdropWave = compositionLocalOf<(@Composable () -> Unit)?> { null }
 
+// the art behind every context menu's blurred backing: the crossbar's selection, so menus off the
+// crossbar (drawer, settings, detail screens) get the Recent rail's backing too; null draws the plain fill
+val LocalMenuBackdropArt = compositionLocalOf<String?> { null }
+
 // which side a screen's glow sits on: the panel and settings glow left (panelBackdrop), the drawer's art right
 enum class GlowSide(val x: Float) { LEFT(0.18f), RIGHT(0.82f) }
 
