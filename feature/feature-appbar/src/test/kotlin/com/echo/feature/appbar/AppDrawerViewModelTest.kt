@@ -52,6 +52,20 @@ class AppDrawerViewModelTest {
     }
 
     @Test
+    fun `A opens an app only after the hold, and letting go early opens nothing`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.handleGamepadAction(GamepadAction.SELECT)
+        testDispatcher.scheduler.advanceTimeBy(com.echo.core.ui.design.LAUNCH_HOLD_MS / 2)
+        viewModel.onSelectReleased()
+        testDispatcher.scheduler.advanceUntilIdle()
+        verify(exactly = 0) { repository.launchApp(any()) }
+
+        viewModel.handleGamepadAction(GamepadAction.SELECT)
+        testDispatcher.scheduler.advanceUntilIdle()
+        verify(exactly = 1) { repository.launchApp(any()) }
+    }
+
+    @Test
     fun `the drawer opens on Recently Used, not on the full alphabetical list`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.uiState.test {

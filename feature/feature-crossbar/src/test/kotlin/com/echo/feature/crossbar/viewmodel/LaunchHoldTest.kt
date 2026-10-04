@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.ui.design.LAUNCH_HOLD_MS
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent

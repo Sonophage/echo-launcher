@@ -121,7 +121,6 @@ internal fun AppWall(
     usingTouch: Boolean,
     u: DesignUnits,
     onAppTapped: (Int) -> Unit,
-    onAppLaunched: (String) -> Unit,
     onAppMenu: (InstalledApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -155,11 +154,8 @@ internal fun AppWall(
                 height = if (big) rowHeight * 2 + gap else rowHeight,
                 big = big,
                 u = u,
-                onClick = {
-                    val chosen = index == selectedIndex
-                    onAppTapped(index)
-                    if (chosen) onAppLaunched(app.packageName)
-                },
+                // a tap only picks the app; it opens by holding the launch button (owner, 2026-10-04)
+                onClick = { onAppTapped(index) },
                 onLongClick = { onAppTapped(index); onAppMenu(app) },
             )
         }
@@ -256,7 +252,14 @@ private fun TileGlyph(icon: AppIconArt?, app: InstalledApp, px: Int, u: DesignUn
 }
 
 @Composable
-internal fun WallInfo(app: InstalledApp, u: DesignUnits, onLaunch: () -> Unit, onOptions: () -> Unit, modifier: Modifier = Modifier) {
+internal fun WallInfo(
+    app: InstalledApp,
+    u: DesignUnits,
+    onLaunch: () -> Unit,
+    onOptions: () -> Unit,
+    modifier: Modifier = Modifier,
+    holding: Boolean = false,
+) {
     val game = app.isGame || app.gameId != null
     val kind = when {
         app.isEmulator -> "Emulator"
@@ -276,7 +279,7 @@ internal fun WallInfo(app: InstalledApp, u: DesignUnits, onLaunch: () -> Unit, o
             }
         }
         Row(Modifier.padding(top = u.dp(6)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-            PanelButton(GamepadAction.SELECT, actionLabel(app), u, onClick = onLaunch)
+            PanelButton(GamepadAction.SELECT, actionLabel(app), u, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onClick = onLaunch)
             if (app.gameId == null) PanelButton(GamepadAction.CHANGE_SORT, "Options", u, onClick = onOptions)
         }
     }

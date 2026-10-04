@@ -31,6 +31,10 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import kotlinx.coroutines.withTimeoutOrNull
 
+// how long A, Y or a finger must stay down before anything launches (owner: every launch holds;
+// kit: "Hold A; the ring fills, then launches")
+const val LAUNCH_HOLD_MS = 600L
+
 // fills over holdMs while A is held; empties quickly when A comes up early
 @Composable
 fun holdProgress(holding: Boolean, holdMs: Long): Float =

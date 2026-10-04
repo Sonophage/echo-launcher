@@ -1,12 +1,11 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.ui.design.LAUNCH_HOLD_MS
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// how long A must be held before a game or app opens (kit: "Hold A; the ring fills, then launches")
-const val LAUNCH_HOLD_MS = 600L
 
 // leaves ECHO: a real game, a shortcut or an installed app. Media plays inside ECHO and needs no hold.
 internal fun CrossbarItem.launchesOut(): Boolean =

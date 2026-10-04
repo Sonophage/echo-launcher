@@ -67,6 +67,9 @@ fun AppDrawerScreen(
     initialFilter: AppFilter = AppFilter.DEFAULT,
     pendingGamepadAction: GamepadAction? = null,
 
+    // bumps each time A comes up, ending a hold-to-launch
+    selectReleases: Int = 0,
+
     typedChar: String? = null,
     onTypedCharConsumed: () -> Unit = {},
     onGamepadActionConsumed: () -> Unit = {},
@@ -87,6 +90,8 @@ fun AppDrawerScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val closeDrawer = { onBack() }
+
+    LaunchedEffect(selectReleases) { if (selectReleases > 0) viewModel.onSelectReleased() }
 
     LaunchedEffect(pendingGamepadAction) {
         if (pendingGamepadAction != null) {
@@ -267,7 +272,6 @@ internal fun AppDrawerContent(
                                     usingTouch = state.usingTouch,
                                     u = u,
                                     onAppTapped = onAppTapped,
-                                    onAppLaunched = onAppLaunched,
                                     onAppMenu = onAppMenu,
                                     modifier = Modifier.fillMaxSize(),
                                 )
@@ -280,7 +284,7 @@ internal fun AppDrawerContent(
                         .padding(start = u.dp(80), end = u.dp(80), bottom = u.dp(32)),
                 ) {
                     focused?.let { app ->
-                        WallInfo(app, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
+                        WallInfo(app, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) }, holding = state.holdingPackage == app.packageName,
                             modifier = Modifier.align(Alignment.BottomStart))
                     }
                 }

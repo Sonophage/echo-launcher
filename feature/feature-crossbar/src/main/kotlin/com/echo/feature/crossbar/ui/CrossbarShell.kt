@@ -1252,6 +1252,7 @@ fun CrossbarShell(
                     initialFilter = initialFilter,
                     onBack = onCloseAppDrawer,
                     pendingGamepadAction = uiState.pendingDrawerAction,
+                    selectReleases = uiState.drawerSelectReleases,
                     typedChar = uiState.pendingDrawerTypedChar,
                     onTypedCharConsumed = onDrawerTypedCharConsumed,
                     onGamepadActionConsumed = onDrawerActionConsumed,

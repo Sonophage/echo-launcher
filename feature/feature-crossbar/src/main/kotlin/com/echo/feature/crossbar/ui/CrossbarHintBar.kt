@@ -1,6 +1,6 @@
 package com.echo.feature.crossbar.ui
 
-import com.echo.feature.crossbar.viewmodel.LAUNCH_HOLD_MS
+import com.echo.core.ui.design.LAUNCH_HOLD_MS
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color

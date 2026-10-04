@@ -516,6 +516,9 @@ data class CrossbarUiState(
     // the game ECHO last sent away, which Y can resume while ECHO is still running
     val resumeGameId: Long? = null,
 
+    // bumps when A comes up while the drawer is open, ending its hold-to-launch
+    val drawerSelectReleases: Int = 0,
+
     val respectBatterySaver: Boolean = true,
 
     val waveOverWallpaper: Boolean = false,
@@ -2386,7 +2389,12 @@ class CrossbarViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            gamepadInputHandler.holdReleases.collect { if (it == holdButton) launchHold.release() }
+            gamepadInputHandler.holdReleases.collect { released ->
+                if (released == holdButton) launchHold.release()
+                if (released == GamepadAction.SELECT && _uiState.value.activeAppDrawerFilter != null) {
+                    _uiState.update { it.copy(drawerSelectReleases = it.drawerSelectReleases + 1) }
+                }
+            }
         }
         viewModelScope.launch {
             gamepadInputHandler.shoulderHolds.collect { hold ->

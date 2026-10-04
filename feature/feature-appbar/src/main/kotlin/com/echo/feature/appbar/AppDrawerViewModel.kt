@@ -59,6 +59,9 @@ enum class AppMenuAction(val label: String, val group: MenuGroup) {
 data class AppDrawerUiState(
     val allApps: List<InstalledApp> = emptyList(),
 
+    // the app whose launch ring is filling while A is held
+    val holdingPackage: String? = null,
+
     val visibleApps: List<InstalledApp> = emptyList(),
 
     val activeFilter: AppFilter = AppFilter.DEFAULT,
@@ -394,7 +397,30 @@ class AppDrawerViewModel @Inject constructor(
 
     private var filterAtGestureStart: Char? = null
 
+    private var launchHold: kotlinx.coroutines.Job? = null
+
+    // A must be held before an app opens, as everywhere in ECHO; the crossbar reports A coming up
+    fun onSelectReleased() = cancelLaunchHold()
+
+    private fun cancelLaunchHold() {
+        launchHold?.cancel()
+        launchHold = null
+        if (_uiState.value.holdingPackage != null) _uiState.update { it.copy(holdingPackage = null) }
+    }
+
+    private fun holdToLaunch(packageName: String) {
+        cancelLaunchHold()
+        _uiState.update { it.copy(holdingPackage = packageName) }
+        launchHold = viewModelScope.launch {
+            kotlinx.coroutines.delay(com.echo.core.ui.design.LAUNCH_HOLD_MS)
+            launchHold = null
+            _uiState.update { it.copy(holdingPackage = null) }
+            launchApp(packageName)
+        }
+    }
+
     fun handleGamepadAction(action: GamepadAction) {
+        if (action != GamepadAction.SELECT) cancelLaunchHold()
         val state = _uiState.value
 
         if (state.letterCursor != null) {
@@ -473,7 +499,7 @@ class AppDrawerViewModel @Inject constructor(
             }
             GamepadAction.SELECT -> {
                 val app = state.visibleApps.getOrNull(cur)
-                if (app != null) launchApp(app.packageName)
+                if (app != null) holdToLaunch(app.packageName)
             }
 
             else -> Unit
