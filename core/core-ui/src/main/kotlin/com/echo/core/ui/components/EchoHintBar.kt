@@ -1,5 +1,8 @@
 package com.echo.core.ui.components
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.border
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -140,6 +143,7 @@ private fun ActionTab(
     onAction: ((GamepadAction) -> Unit)?,
     modifier: Modifier,
 ) {
+    if (primary.holdMs == 0L) return RestOrb(primary, accent, u, pad, onAction, modifier)
     val edge = lerp(accent, Color.White, 0.3f)
     var pressing by remember { mutableStateOf(false) }
     val progress = if (primary.holdMs > 0L) holdProgress(primary.holding || pressing, primary.holdMs) else 0f
@@ -225,6 +229,56 @@ private fun ActionTab(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.widthIn(max = u.dp(280)),
                 )
+            }
+        }
+    }
+}
+
+// kit 06 at rest: the action's name beside a glowing A; a launch needs the hold, so it shows the full tab instead
+@Composable
+private fun RestOrb(
+    primary: HintAction,
+    accent: Color,
+    u: DesignUnits,
+    pad: Boolean,
+    onAction: ((GamepadAction) -> Unit)?,
+    modifier: Modifier,
+) {
+    val edge = lerp(accent, Color.White, 0.3f)
+    val style = LocalControllerPromptStyle.current
+    Row(
+        modifier
+            .padding(end = maxOf(u.dp(28), chromeGutter(end = true)), bottom = u.dp(16))
+            .clip(RoundedCornerShape(u.dp(22)))
+            .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
+            .padding(start = u.dp(14)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
+    ) {
+        Text(
+            primary.label,
+            color = Color.White,
+            style = EchoTextStyle.copy(fontSize = u.sp(14), fontWeight = FontWeight.Medium),
+            maxLines = 1,
+        )
+        Box(
+            Modifier
+                .size(u.dp(44))
+                .drawBehind { drawCircle(Brush.radialGradient(listOf(edge.copy(alpha = 0.45f), Color.Transparent), center, size.minDimension * 0.8f)) }
+                .clip(CircleShape)
+                .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.62f), lerp(accent, Color.Black, 0.4f).copy(alpha = 0.5f))))
+                .border(1.5.dp, edge, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(Modifier.size(u.dp(26)).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                val icon = style.mappings.iconsFor(listOf(primary.action)).firstOrNull()
+                if (pad && icon != null) {
+                    ControllerIconGlyph(icon, style.family, size = u.dp(24), tint = TabInk)
+                } else {
+                    Canvas(Modifier.size(u.dp(10))) {
+                        drawPath(Path().apply { moveTo(size.width * 0.15f, 0f); lineTo(size.width, size.height / 2); lineTo(size.width * 0.15f, size.height); close() }, TabInk)
+                    }
+                }
             }
         }
     }
