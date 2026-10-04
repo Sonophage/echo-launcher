@@ -7,9 +7,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class AccentDeriverTest {
-    private fun image(width: Int = 60, height: Int = 30, argbAt: (Int, Int) -> Int): BmpImage {
+    private fun image(width: Int = 60, height: Int = 30, argbAt: (Int, Int) -> Int): ArgbImage {
         val px = IntArray(width * height) { i -> argbAt(i % width, i / width) }
-        return BmpImage(width, height, px)
+        return ArgbImage(width, height, px)
     }
 
     private fun hueOf(argb: Int): Float {

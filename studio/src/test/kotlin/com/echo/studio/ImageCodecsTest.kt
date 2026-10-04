@@ -12,9 +12,9 @@ import kotlin.test.assertTrue
 
 class ImageCodecsTest {
     @Test
-    fun `toBmpImage bounds huge images for accent sampling`() {
+    fun `toArgbImage bounds huge images for accent sampling`() {
         val big = BufferedImage(2000, 1000, BufferedImage.TYPE_INT_ARGB)
-        val bmp = ImageCodecs.toBmpImage(big, maxDim = 480)
+        val bmp = ImageCodecs.toArgbImage(big, maxDim = 480)
         assertEquals(480, bmp.width)
         assertEquals(240, bmp.height)
         assertEquals(480 * 240, bmp.argb.size)

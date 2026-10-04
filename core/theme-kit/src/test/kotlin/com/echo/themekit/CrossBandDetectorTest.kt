@@ -15,12 +15,12 @@ class CrossBandDetectorTest {
         bandRows: IntRange?,
         bandColor: Int = dark,
         background: Int = bright,
-    ): BmpImage {
+    ): ArgbImage {
         val argb = IntArray(width * height) { i ->
             val row = i / width
             if (bandRows != null && row in bandRows) bandColor else background
         }
-        return BmpImage(width, height, argb)
+        return ArgbImage(width, height, argb)
     }
 
     @Test

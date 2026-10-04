@@ -2,7 +2,7 @@ package com.echo.studio.io
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import com.echo.themekit.BmpImage
+import com.echo.themekit.ArgbImage
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -43,7 +43,7 @@ object ImageCodecs {
             if (boundsOk) ImageIO.read(bytes.inputStream()) else null
         }.getOrNull()
 
-    fun toBmpImage(image: BufferedImage, maxDim: Int = 480): BmpImage {
+    fun toArgbImage(image: BufferedImage, maxDim: Int = 480): ArgbImage {
         val scale = minOf(1f, maxDim.toFloat() / maxOf(image.width, image.height))
         val w = (image.width * scale).toInt().coerceAtLeast(1)
         val h = (image.height * scale).toInt().coerceAtLeast(1)
@@ -54,7 +54,7 @@ object ImageCodecs {
                 g.dispose()
             }
         }
-        return BmpImage(width = w, height = h, argb = scaled.getRGB(0, 0, w, h, null, 0, w))
+        return ArgbImage(width = w, height = h, argb = scaled.getRGB(0, 0, w, h, null, 0, w))
     }
 
     fun toImageBitmap(bytes: ByteArray): ImageBitmap? =

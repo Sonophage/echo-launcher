@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 
 class WallpaperLuminanceMapTest {
     private fun image(width: Int = 240, height: Int = 240, argbAt: (x: Int, y: Int) -> Int) =
-        BmpImage(width, height, IntArray(width * height) { i -> argbAt(i % width, i / width) })
+        ArgbImage(width, height, IntArray(width * height) { i -> argbAt(i % width, i / width) })
 
     private fun gray(v: Int) = 0xFF000000.toInt() or (v shl 16) or (v shl 8) or v
 

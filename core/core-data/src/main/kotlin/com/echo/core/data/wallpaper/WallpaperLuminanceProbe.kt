@@ -6,7 +6,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.echo.core.data.wallpaper.ThemeAccent.followWallpaperAccent
 import com.echo.themekit.AccentDeriver
-import com.echo.themekit.BmpImage
+import com.echo.themekit.ArgbImage
 import com.echo.themekit.WallpaperLuminanceMap
 import java.io.File
 import kotlin.math.max
@@ -39,7 +39,7 @@ object WallpaperLuminanceProbe {
         decoded.recycle()
         if (width <= 0 || height <= 0) return null
 
-        val image = BmpImage(width, height, pixels)
+        val image = ArgbImage(width, height, pixels)
         WallpaperSurvey(
             luma = WallpaperLuminanceMap.compute(image, path).toJson(),
 

@@ -12,7 +12,7 @@ object CrossBandDetector {
     private const val MIN_RUN_FRACTION = 0.06f
     private const val MAX_RUN_FRACTION = 0.35f
 
-    fun detectBarTopFraction(image: BmpImage, maxColumnSamples: Int = 256): Float? {
+    fun detectBarTopFraction(image: ArgbImage, maxColumnSamples: Int = 256): Float? {
         val width = image.width
         val height = image.height
         if (width < 32 || height < 32) return null

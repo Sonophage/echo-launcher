@@ -9,7 +9,7 @@ object WallpaperMetrics {
 
     const val DARK_ICON_LUMINANCE = 0.35f
 
-    fun busyness(image: BmpImage, maxSamples: Int = 6000): Float {
+    fun busyness(image: ArgbImage, maxSamples: Int = 6000): Float {
         val width = image.width
         val height = image.height
         if (width < 4 || height < 4) return 0f
@@ -41,7 +41,7 @@ object WallpaperMetrics {
         return if (count == 0) 0f else sum / count
     }
 
-    fun isBusy(image: BmpImage): Boolean = busyness(image) > BUSY_THRESHOLD
+    fun isBusy(image: ArgbImage): Boolean = busyness(image) > BUSY_THRESHOLD
 
     fun luminance(argb: Int): Float = CrossBandDetector.luminance(argb)
 }

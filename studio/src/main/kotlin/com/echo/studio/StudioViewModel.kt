@@ -151,7 +151,7 @@ class StudioViewModel(private val scope: CoroutineScope) {
         val image = ImageCodecs.decodeImage(png) ?: return@runBusy
 
         val detected = com.echo.themekit.CrossBandDetector.detectBarTopFraction(
-            ImageCodecs.toBmpImage(image),
+            ImageCodecs.toArgbImage(image),
         )
         if (detected != null) {
             _state.update {
@@ -188,7 +188,7 @@ class StudioViewModel(private val scope: CoroutineScope) {
         }.toMap()
         val wallpaperBusy = bundle.wallpaper
             ?.let(ImageCodecs::decodeImage)
-            ?.let { com.echo.themekit.WallpaperMetrics.isBusy(ImageCodecs.toBmpImage(it)) }
+            ?.let { com.echo.themekit.WallpaperMetrics.isBusy(ImageCodecs.toArgbImage(it)) }
             ?: false
 
         abandonPendingMotion()
@@ -313,7 +313,7 @@ class StudioViewModel(private val scope: CoroutineScope) {
         else ImageCodecs.centerCropScale(pending.source, preset.width, preset.height)
         val png = ImageCodecs.toPngBytes(image)
         val bitmap = ImageCodecs.toImageBitmap(png)
-        val bmp = ImageCodecs.toBmpImage(image)
+        val bmp = ImageCodecs.toArgbImage(image)
 
         val derived = com.echo.themekit.AccentDeriver.deriveAccent(bmp)
 

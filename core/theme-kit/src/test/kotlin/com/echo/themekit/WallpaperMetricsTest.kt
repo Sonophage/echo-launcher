@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 
 class WallpaperMetricsTest {
     private fun image(width: Int = 480, height: Int = 272, argbAt: (x: Int, y: Int) -> Int) =
-        BmpImage(width, height, IntArray(width * height) { i -> argbAt(i % width, i / width) })
+        ArgbImage(width, height, IntArray(width * height) { i -> argbAt(i % width, i / width) })
 
     @Test
     fun `flat image is quiet`() {

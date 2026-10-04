@@ -13,7 +13,7 @@ import com.echo.core.data.wallpaper.ThemeAccent
 import com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.setWallpaperLuma
 import com.echo.themekit.AccentDeriver
-import com.echo.themekit.BmpImage
+import com.echo.themekit.ArgbImage
 import com.echo.themekit.CustomizableIcons
 import com.echo.themekit.EchoThemeBundle
 import com.echo.themekit.EchoThemeCodec
@@ -61,7 +61,7 @@ class EchoThemeStore @Inject constructor(
         }.getOrNull() ?: return@withContext null
 
         val scaled = downscale(bitmap, maxEdge = 1920)
-        val accent = AccentDeriver.deriveAccent(scaled.toBmpImage())?.toUInt()?.toLong()
+        val accent = AccentDeriver.deriveAccent(scaled.toArgbImage())?.toUInt()?.toLong()
         val themeName = name ?: nextDefaultName()
         save(
             name = themeName,
@@ -471,10 +471,10 @@ class EchoThemeStore @Inject constructor(
         return Bitmap.createScaledBitmap(src, (src.width * scale).toInt().coerceAtLeast(1), (src.height * scale).toInt().coerceAtLeast(1), true)
     }
 
-    private fun Bitmap.toBmpImage(): BmpImage {
+    private fun Bitmap.toArgbImage(): ArgbImage {
         val px = IntArray(width * height)
         getPixels(px, 0, width, 0, 0, width, height)
-        return BmpImage(width, height, px)
+        return ArgbImage(width, height, px)
     }
 
     private fun String.toAccentArgbOrNull(): Long? {

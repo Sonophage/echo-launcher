@@ -8,7 +8,7 @@ object AccentDeriver {
     private const val ACCENT_MIN_SATURATION = 0.55f
     private const val ACCENT_MIN_VALUE = 0.85f
 
-    fun deriveAccent(image: BmpImage, maxSamples: Int = 6000): Int? {
+    fun deriveAccent(image: ArgbImage, maxSamples: Int = 6000): Int? {
         val total = image.argb.size
         if (total == 0) return null
         val stride = (total / maxSamples).coerceAtLeast(1)

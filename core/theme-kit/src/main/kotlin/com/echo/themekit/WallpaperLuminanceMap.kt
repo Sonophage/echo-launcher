@@ -65,7 +65,7 @@ data class WallpaperLuminanceMap(
             return (0.2126 * r + 0.7152 * g + 0.0722 * b).toFloat()
         }
 
-        fun compute(image: BmpImage, source: String): WallpaperLuminanceMap {
+        fun compute(image: ArgbImage, source: String): WallpaperLuminanceMap {
             val cells = ROWS * ZONES
             val sums = DoubleArray(cells)
             val counts = IntArray(cells)

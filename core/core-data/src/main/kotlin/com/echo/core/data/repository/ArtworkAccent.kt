@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.core.net.toUri
 import com.echo.themekit.AccentDeriver
-import com.echo.themekit.BmpImage
+import com.echo.themekit.ArgbImage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -58,7 +58,7 @@ class ArtworkAccent @Inject constructor(
     private fun accentOf(bitmap: Bitmap, uri: String): Long? {
         return try {
             val scaled = downscale(bitmap, MAX_EDGE)
-            AccentDeriver.deriveAccent(scaled.toBmpImage())
+            AccentDeriver.deriveAccent(scaled.toArgbImage())
                 ?.toUInt()?.toLong()
                 .also {
                     if (scaled !== bitmap) scaled.recycle()
@@ -91,10 +91,10 @@ class ArtworkAccent @Inject constructor(
         )
     }
 
-    private fun Bitmap.toBmpImage(): BmpImage {
+    private fun Bitmap.toArgbImage(): ArgbImage {
         val px = IntArray(width * height)
         getPixels(px, 0, width, 0, 0, width, height)
-        return BmpImage(width, height, px)
+        return ArgbImage(width, height, px)
     }
 
     private companion object {

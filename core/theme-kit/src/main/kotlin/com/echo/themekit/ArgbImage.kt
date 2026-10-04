@@ -1,6 +1,6 @@
 package com.echo.themekit
 
-class BmpImage(val width: Int, val height: Int, val argb: IntArray) {
+class ArgbImage(val width: Int, val height: Int, val argb: IntArray) {
     init {
         require(argb.size == width * height) { "pixel buffer ${argb.size} != ${width}x$height" }
     }

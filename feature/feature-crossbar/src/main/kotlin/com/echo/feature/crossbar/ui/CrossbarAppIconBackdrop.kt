@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.lerp
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.themekit.AccentDeriver
-import com.echo.themekit.BmpImage
+import com.echo.themekit.ArgbImage
 
 sealed interface CrossbarBackdrop {
     data class Art(val uri: String) : CrossbarBackdrop
@@ -40,7 +40,7 @@ fun appBackdropStops(accent: Color): List<Color> = listOf(
 fun appIconAccent(icon: ImageBitmap): Color? {
     val pixels = IntArray(icon.width * icon.height)
     icon.readPixels(pixels)
-    return AccentDeriver.deriveAccent(BmpImage(icon.width, icon.height, pixels))?.let { Color(it) }
+    return AccentDeriver.deriveAccent(ArgbImage(icon.width, icon.height, pixels))?.let { Color(it) }
 }
 
 @Composable
