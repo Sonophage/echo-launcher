@@ -1,6 +1,14 @@
 package com.echo.feature.appbar
 
+import android.content.Context
+import android.content.pm.LauncherApps
 import android.graphics.drawable.Drawable
+import android.os.Handler
+import android.os.Looper
+import android.os.UserHandle
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import com.echo.core.data.database.dao.AppOverrideDao
 import com.echo.core.data.database.dao.CategoryDao
 import com.echo.core.data.database.entity.AppOverrideEntity
@@ -24,6 +32,7 @@ private const val ITEM_TYPE_APP = "app"
 
 @Singleton
 class AppCategoryRepository @Inject constructor(
+    @ApplicationContext context: Context,
     private val installedAppRepository: InstalledAppRepository,
     private val classifier: AppClassifier,
     private val categoryDao: CategoryDao,
@@ -31,8 +40,30 @@ class AppCategoryRepository @Inject constructor(
 ) {
     @Volatile private var cache: List<InstalledApp> = emptyList()
 
+    // an install, update or removal empties the cache and tells every reader (owner, 2026-10-04: a new
+    // app stayed out of search until a reboot, because the cache was filled once per process)
+    private val packageChanges = MutableStateFlow(0)
+
+    init {
+        context.getSystemService(LauncherApps::class.java)?.registerCallback(
+            object : LauncherApps.Callback() {
+                override fun onPackageAdded(packageName: String?, user: UserHandle?) = onPackagesChanged()
+                override fun onPackageRemoved(packageName: String?, user: UserHandle?) = onPackagesChanged()
+                override fun onPackageChanged(packageName: String?, user: UserHandle?) = onPackagesChanged()
+                override fun onPackagesAvailable(packageNames: Array<out String>?, user: UserHandle?, replacing: Boolean) = onPackagesChanged()
+                override fun onPackagesUnavailable(packageNames: Array<out String>?, user: UserHandle?, replacing: Boolean) = onPackagesChanged()
+            },
+            Handler(Looper.getMainLooper()),
+        )
+    }
+
+    internal fun onPackagesChanged() {
+        cache = emptyList()
+        packageChanges.update { it + 1 }
+    }
+
     fun changes(): Flow<Unit> =
-        combine(categoryDao.observeAppItems(), appOverrideDao.observeAll()) { _, _ -> }
+        combine(categoryDao.observeAppItems(), appOverrideDao.observeAll(), packageChanges) { _, _, _ -> }
 
     suspend fun ensureLoaded() {
         if (cache.isEmpty()) cache = installedAppRepository.getInstalledApps()
