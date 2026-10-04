@@ -133,6 +133,9 @@ sealed interface PanelStage {
         val durationMs: Long,
         val app: String? = null,
         val packageName: String? = null,
+
+        // the queue's next title, when the player shares its queue (kit 05, level 2)
+        val nextTitle: String? = null,
     ) : PanelStage
 
     data class Video(val title: String, val detail: String?, val art: String?, val progress: Float?, val progressLabel: String?) : PanelStage
@@ -160,10 +163,11 @@ fun CrossbarUiState.mediaStage(): PanelStage? {
             loaded = true,
             playing = musicPlayback.isPlaying,
             durationMs = musicPlayback.durationMs.toLong(),
+            nextTitle = musicPlayback.upNext.firstOrNull()?.value?.let { it.title ?: it.displayName },
         )
     }
     val external = externalPlayback?.let {
-        PanelStage.Music(it.title, it.artist, null, it.art, true, it.playing, it.durationMs, it.appLabel, it.packageName)
+        PanelStage.Music(it.title, it.artist, null, it.art, true, it.playing, it.durationMs, it.appLabel, it.packageName, it.nextTitle)
     }
     return when {
         own?.playing == true -> own
@@ -206,7 +210,7 @@ fun CrossbarUiState.panelStage(): PanelStage = when (val focus = focusedNotice) 
 val CrossbarUiState.clearableNoticeCount: Int
     get() = androidNotices.count { it.canDismiss } + launcherNotices.size
 
-enum class StageCommand { PLAY_PAUSE, NEXT_TRACK, OPEN_MUSIC, OPEN_APP, LAUNCH_RECENT, OPEN_NOTICE, DISMISS, CLEAR_ALL }
+enum class StageCommand { PLAY_PAUSE, NEXT_TRACK, PREV_TRACK, OPEN_MUSIC, OPEN_APP, LAUNCH_RECENT, OPEN_NOTICE, DISMISS, CLEAR_ALL }
 
 data class StageAction(val button: GamepadAction, val label: String, val command: StageCommand)
 

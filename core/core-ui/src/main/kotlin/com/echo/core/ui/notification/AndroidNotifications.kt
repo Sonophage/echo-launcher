@@ -41,6 +41,9 @@ data class ExternalPlayback(
     val art: Any?,
     val playing: Boolean,
     val durationMs: Long = 0,
+
+    // the queue's next title, when the player shares its queue
+    val nextTitle: String? = null,
 )
 
 fun isMediaPlayback(hasMediaSession: Boolean, category: String?): Boolean =
@@ -86,6 +89,8 @@ object AndroidNotifications {
         fun playPause()
 
         fun skipNext()
+
+        fun skipPrevious()
     }
 
     private val _playback = MutableStateFlow<ExternalPlayback?>(null)
@@ -107,6 +112,10 @@ object AndroidNotifications {
 
     fun skipNext() {
         actions?.skipNext()
+    }
+
+    fun skipPrevious() {
+        actions?.skipPrevious()
     }
 
     private var actions: NoticeActions? = null

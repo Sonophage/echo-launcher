@@ -510,6 +510,9 @@ data class CrossbarUiState(
     // the item whose launch ring is filling while A is held
     val launchHold: String? = null,
 
+    // the top-left orb: 0 at rest, 1 focused, 2 expanded
+    val orbLevel: Int = 0,
+
     val respectBatterySaver: Boolean = true,
 
     val waveOverWallpaper: Boolean = false,
@@ -2702,6 +2705,8 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
+        if (orbPressHandled(action, state)) return
+
         when (action) {
             GamepadAction.NAVIGATE_UP   -> {
                 if (state.activePillIndex() != null) {
@@ -2709,7 +2714,14 @@ class CrossbarViewModel @Inject constructor(
                     _uiState.update { it.copy(pillCursor = null) }
                     return
                 }
-                if (!moveItemCursor(-1)) gamepadInputHandler.cancelRepeat()
+                if (!moveItemCursor(-1)) {
+                    gamepadInputHandler.cancelRepeat()
+                    // up from the top of a list focuses the orb (kit 05)
+                    if (state.orbKind() != null) {
+                        menuSound.play(MenuSound.SCROLL)
+                        _uiState.update { it.copy(orbLevel = 1) }
+                    }
+                }
             }
             GamepadAction.NAVIGATE_DOWN -> when (
                 downStep(
@@ -3359,13 +3371,60 @@ class CrossbarViewModel @Inject constructor(
 
     fun onStageActionTapped(command: StageCommand) = runStageCommand(command)
 
+    // the one place a transport press reaches a player: ECHO's own, or the external app's media session
+    private fun transport(command: StageCommand, external: String?) {
+        when (command) {
+            StageCommand.PLAY_PAUSE -> if (external != null) AndroidNotifications.playPause() else musicPlayer.playPause()
+            StageCommand.NEXT_TRACK -> if (external != null) AndroidNotifications.skipNext() else musicPlayer.next()
+            StageCommand.PREV_TRACK -> if (external != null) AndroidNotifications.skipPrevious() else musicPlayer.prev()
+            else -> Unit
+        }
+    }
+
+    fun onOrbTapped() {
+        markTouchInput()
+        if (_uiState.value.orbKind() == null) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(orbLevel = if (it.orbLevel == 0) 1 else 0) }
+    }
+
+    fun onOrbTransport(command: StageCommand) {
+        markTouchInput()
+        transport(command, (_uiState.value.mediaStage() as? PanelStage.Music)?.packageName)
+    }
+
+    // true when the orb took the press
+    private fun orbPressHandled(action: GamepadAction, state: CrossbarUiState): Boolean {
+        if (state.orbLevel == 0) return false
+        val kind = state.orbKind()
+        if (kind == null) {
+            _uiState.update { it.copy(orbLevel = 0) }
+            return false
+        }
+        when (val step = orbStep(action, state.orbLevel, kind)) {
+            is OrbStep.Level -> {
+                menuSound.play(if (step.level == 0) MenuSound.BACK else MenuSound.SCROLL)
+                _uiState.update { it.copy(orbLevel = step.level) }
+            }
+            is OrbStep.Transport -> transport(step.command, (state.mediaStage() as? PanelStage.Music)?.packageName)
+            OrbStep.Launch -> state.recentTop?.let { top ->
+                if (!holdToLaunch(top) { recents.launchRecentTop() }) recents.launchRecentTop()
+            }
+            OrbStep.Stay -> Unit
+            OrbStep.RestAndPass -> {
+                _uiState.update { it.copy(orbLevel = 0) }
+                return false
+            }
+        }
+        return true
+    }
+
     private fun runStageCommand(command: StageCommand) {
         val s = _uiState.value
         val focus = s.focusedNotice
         val external = (s.panelStage() as? PanelStage.Music)?.packageName
         when (command) {
-            StageCommand.PLAY_PAUSE -> if (external != null) AndroidNotifications.playPause() else musicPlayer.playPause()
-            StageCommand.NEXT_TRACK -> if (external != null) AndroidNotifications.skipNext() else musicPlayer.next()
+            StageCommand.PLAY_PAUSE, StageCommand.NEXT_TRACK, StageCommand.PREV_TRACK -> transport(command, external)
             StageCommand.OPEN_APP -> {
                 val pkg = external ?: return
                 menuSound.play(MenuSound.SELECT)

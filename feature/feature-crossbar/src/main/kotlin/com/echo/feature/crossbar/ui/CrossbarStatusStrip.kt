@@ -1,5 +1,16 @@
 package com.echo.feature.crossbar.ui
 
+import androidx.compose.ui.unit.sp
+import com.echo.feature.crossbar.viewmodel.StageCommand
+import com.echo.core.ui.design.pressAndHold
+import com.echo.core.ui.design.holdRing
+import com.echo.core.ui.design.holdProgress
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.ui.graphics.ImageBitmap
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -157,6 +168,15 @@ fun CrossbarStatusStrip(
 
     onSearchTapped: (() -> Unit)? = null,
 
+    // the top-left orb's level for the live activity (0 rest, 1 focused, 2 expanded); -1 keeps the plain island
+    orbLevel: Int = -1,
+    onOrbTapped: () -> Unit = {},
+    onOrbTransport: (StageCommand) -> Unit = {},
+
+    // over 0, the island's tap is a launch and must be held
+    holdMs: Long = 0L,
+    holding: Boolean = false,
+
     compact: Boolean = false,
 
     ambient: Boolean = true,
@@ -224,20 +244,37 @@ fun CrossbarStatusStrip(
         )
 
         live?.let { activity ->
-            IslandCard(
-                activity = activity,
-                tint = islandTint,
-                glow = islandGlow,
-                u = u,
-                band = band,
-                compact = compact,
-                onTapped = onLiveAreaTapped,
-                stageIcon = stageIcon?.bitmap,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = 5.dp)
-                    .wrapContentHeight(Alignment.Top, unbounded = true),
-            )
+            if (orbLevel == 0 && !compact) {
+                RestOrb(
+                    activity = activity,
+                    tint = islandTint,
+                    glow = islandGlow,
+                    u = u,
+                    stageIcon = stageIcon?.bitmap,
+                    onTapped = onOrbTapped,
+                    modifier = Modifier.align(Alignment.TopStart).padding(start = chromeGutter(), top = u.dp(10)),
+                )
+            } else {
+                val music = orbLevel > 0 && activity.stage is PanelStage.Music
+                IslandCard(
+                    activity = activity,
+                    tint = islandTint,
+                    glow = islandGlow,
+                    u = u,
+                    band = band,
+                    compact = compact,
+                    onTapped = if (music) onOrbTapped else onLiveAreaTapped,
+                    stageIcon = stageIcon?.bitmap,
+                    transport = if (music) onOrbTransport else null,
+                    expanded = music && orbLevel == 2,
+                    holdMs = holdMs,
+                    holding = holding,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 5.dp)
+                        .wrapContentHeight(Alignment.Top, unbounded = true),
+                )
+            }
         }
 
         val centreSlot: @Composable (Boolean) -> Unit = { tight ->
@@ -395,11 +432,19 @@ private fun IslandCard(
     onTapped: (() -> Unit)?,
     modifier: Modifier = Modifier,
     stageIcon: ImageBitmap? = null,
+
+    // the orb's level 1: transport buttons; level 2 adds the next track
+    transport: ((StageCommand) -> Unit)? = null,
+    expanded: Boolean = false,
+    holdMs: Long = 0L,
+    holding: Boolean = false,
 ) {
     val stage = activity.stage
     val music = stage as? PanelStage.Music
     val positionMs = music?.livePositionMs() ?: 0L
-    val progress = stage?.islandProgress(positionMs)
+    var pressing by remember { mutableStateOf(false) }
+    // a launch hold borrows the edge the track position normally traces
+    val progress = if (holdMs > 0L) holdProgress(holding || pressing, holdMs) else stage?.islandProgress(positionMs)
     val detail = listOfNotNull(activity.detail?.takeIf { it.isNotBlank() }, music?.timeLabel(positionMs)).joinToString("  ·  ")
     val playing = (stage as? PanelStage.Music)?.playing == true
     val radius = u.dp(20)
@@ -440,13 +485,18 @@ private fun IslandCard(
                     }
                 }
             }
-            .then(if (onTapped != null) Modifier.clickable(onClick = onTapped) else Modifier),
+            .then(
+                when {
+                    onTapped == null -> Modifier
+                    holdMs > 0L -> Modifier.pressAndHold(holdMs, activity.title, { pressing = it }, onTapped)
+                    else -> Modifier.clickable(onClick = onTapped)
+                }
+            ),
         contentAlignment = Alignment.Center,
     ) {
+        Column(Modifier.fillMaxWidth().padding(start = gutter, end = u.dp(22), top = if (compact) 2.dp else u.dp(12), bottom = if (expanded) u.dp(12) else 0.dp)) {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(start = gutter, end = u.dp(22), top = if (compact) 2.dp else u.dp(12)),
+            Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
@@ -488,7 +538,82 @@ private fun IslandCard(
                     )
                 }
             }
-            if (playing) EqualizerGlyph(u)
+            if (transport != null) {
+                Box(Modifier.width(1.dp).height(u.dp(30)).background(Color.White.copy(alpha = 0.2f)))
+                TransportButton(Icons.Filled.SkipPrevious, "Previous track", u) { transport(StageCommand.PREV_TRACK) }
+                TransportButton(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, if (playing) "Pause" else "Play", u) {
+                    transport(StageCommand.PLAY_PAUSE)
+                }
+                TransportButton(Icons.Filled.SkipNext, "Next track", u) { transport(StageCommand.NEXT_TRACK) }
+            } else if (playing) {
+                EqualizerGlyph(u)
+            }
+        }
+        if (expanded) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = u.dp(10))
+                    .drawBehind { drawLine(Color.White.copy(alpha = 0.18f), Offset.Zero, Offset(size.width, 0f), 1.dp.toPx()) }
+                    .padding(top = u.dp(9)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(u.dp(8)),
+            ) {
+                Text("NEXT", color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(10), letterSpacing = 1.4.sp, maxLines = 1)
+                Text(
+                    music?.nextTitle ?: "Skip to the next track",
+                    color = Color.White,
+                    fontSize = u.sp(10),
+                    fontWeight = FontWeight.Light,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                if (LocalPadPrompts.current) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(18), spacing = 0.dp)
+            }
+        }
+        }
+    }
+}
+
+@Composable
+private fun TransportButton(icon: ImageVector, label: String, u: DesignUnits, onClick: () -> Unit) {
+    Icon(
+        icon,
+        contentDescription = label,
+        tint = Color.White,
+        modifier = Modifier.clip(CircleShape).clickable(onClick = onClick).padding(u.dp(4)).size(u.dp(16)),
+    )
+}
+
+// kit 05 at rest: the art in a circle, the track's progress in a ring round it
+@Composable
+private fun RestOrb(
+    activity: StripLiveActivity,
+    tint: Color,
+    glow: Color,
+    u: DesignUnits,
+    stageIcon: ImageBitmap?,
+    onTapped: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val music = activity.stage as? PanelStage.Music
+    val progress = music?.let { it.islandProgress(it.livePositionMs()) }
+    Box(
+        modifier
+            .size(u.dp(44))
+            .clip(CircleShape)
+            .clickable(onClickLabel = activity.title, onClick = onTapped)
+            .holdRing(progress ?: 0f, glow, if (music != null) glow.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.18f), u.dp(2))
+            .padding(u.dp(5))
+            .clip(CircleShape)
+            .background(Brush.linearGradient(listOf(tint, lerp(tint, Color.Black, 0.6f)))),
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            activity.art != null -> AsyncImage(activity.art, activity.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            stageIcon != null -> androidx.compose.foundation.Image(stageIcon, activity.title, Modifier.fillMaxSize())
+            else -> Box(Modifier.size(u.dp(10)).border(2.dp, Color.White.copy(alpha = 0.85f), CircleShape))
         }
     }
 }

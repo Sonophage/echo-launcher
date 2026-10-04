@@ -89,6 +89,10 @@ class EchoNotificationListener : NotificationListenerService(), AndroidNotificat
         nowPlaying()?.first?.controller?.transportControls?.skipToNext()
     }
 
+    override fun skipPrevious() {
+        nowPlaying()?.first?.controller?.transportControls?.skipToPrevious()
+    }
+
     override fun open(key: String): Boolean {
         val intent = intents[key] ?: return false
 
@@ -228,6 +232,10 @@ class EchoNotificationListener : NotificationListenerService(), AndroidNotificat
             art = art,
             playing = state.isPlaying(),
             durationMs = durationMs(),
+            nextTitle = controller?.queue?.let { queue ->
+                val at = queue.indexOfFirst { it.queueId == state?.activeQueueItemId }
+                queue.getOrNull(at + 1).takeIf { at >= 0 }?.description?.title?.toString()?.takeIf { it.isNotBlank() }
+            },
         )
     }
 

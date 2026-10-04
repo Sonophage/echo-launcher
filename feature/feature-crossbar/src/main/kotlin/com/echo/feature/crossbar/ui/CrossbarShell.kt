@@ -1,5 +1,7 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.feature.crossbar.viewmodel.OrbKind
+import com.echo.feature.crossbar.viewmodel.orbKind
 import com.echo.feature.crossbar.viewmodel.holdMsFor
 import androidx.compose.ui.graphics.ImageBitmap
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
@@ -213,6 +215,8 @@ fun CrossbarShellContainer(
         onDrawerTypedCharConsumed = viewModel::onDrawerTypedCharConsumed,
         onNotificationsToggled = viewModel.panel::toggleNotifications,
         onLaunchRecentTop = viewModel.recents::launchRecentTop,
+        onOrbTapped = viewModel::onOrbTapped,
+        onOrbTransport = viewModel::onOrbTransport,
         onNotificationsDismissed = viewModel.panel::closeNotifications,
         onPanelRowTapped = viewModel.panel::onPanelRowTapped,
         onStageActionTapped = viewModel::onStageActionTapped,
@@ -387,6 +391,8 @@ fun CrossbarShell(
     onDrawerTypedCharConsumed: () -> Unit = {},
     onNotificationsToggled: () -> Unit = {},
     onLaunchRecentTop: () -> Unit = {},
+    onOrbTapped: () -> Unit = {},
+    onOrbTransport: (com.echo.feature.crossbar.viewmodel.StageCommand) -> Unit = {},
     onNotificationsDismissed: () -> Unit = {},
     onPanelRowTapped: (com.echo.feature.crossbar.viewmodel.NoticeFocus) -> Unit = {},
     onStageActionTapped: (com.echo.feature.crossbar.viewmodel.StageCommand) -> Unit = {},
@@ -1029,7 +1035,8 @@ fun CrossbarShell(
             }
             }
 
-            val musicActivity = (uiState.mediaStage() as? PanelStage.Music)?.takeIf { it.loaded && it.playing }?.let { music ->
+            val orbKind = uiState.orbKind()
+            val musicActivity = (uiState.mediaStage() as? PanelStage.Music)?.takeIf { orbKind == OrbKind.MUSIC }?.let { music ->
                 StripLiveActivity(
                     art = music.art,
                     title = music.title,
@@ -1067,6 +1074,12 @@ fun CrossbarShell(
                 live = liveActivity.takeIf { !notificationsOpen && uiState.activeSettingsScreen == null },
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
+
+                orbLevel = if (flash == null && busyActivity == null && orbKind != null) uiState.orbLevel else -1,
+                onOrbTapped = onOrbTapped,
+                onOrbTransport = onOrbTransport,
+                holdMs = if (islandIsRecent) holdMsFor(uiState.recentTop) else 0L,
+                holding = islandIsRecent && uiState.launchHold == uiState.recentTop?.id,
 
                 noticeCount = uiState.launcherNotices.size + androidNotices.size,
                 onNoticeCountTapped = onNotificationsToggled,
