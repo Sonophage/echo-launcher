@@ -282,6 +282,8 @@ fun SettingsScaffold(
 
     showRail: Boolean = true,
 
+    paneText: SettingsPaneText? = null,
+
     footer: (@Composable () -> Unit)? = null,
 
     helperFooterItems: List<ControllerPromptItem> = SettingsDefaultHelperItems,
@@ -687,7 +689,7 @@ fun SettingsScaffold(
         ) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, density)
             val tabs = tabEntries.isNotEmpty()
-            val paneShown = tabs && maxWidth - SETTINGS_COLUMN_MAX_WIDTH >= SETTINGS_HELP_PANE_MIN_WIDTH
+            val paneShown = (tabs || paneText != null) && maxWidth - SETTINGS_COLUMN_MAX_WIDTH >= SETTINGS_HELP_PANE_MIN_WIDTH
             backdrop?.invoke()
             Column(
                 modifier = Modifier
@@ -805,8 +807,7 @@ fun SettingsScaffold(
                         if (paneShown) {
                             SettingsHelpPane(
                                 info = focusInfo.value?.takeIf { cursorVisible.value },
-                                screenId = screenId,
-                                tabEntries = tabEntries,
+                                page = paneText ?: tabPaneText(screenId, tabEntries),
                                 u = u,
                                 modifier = Modifier.weight(1f),
                             )
@@ -1016,16 +1017,25 @@ private fun SettingsTabRow(
     }
 }
 
+data class SettingsPaneText(val eyebrow: String, val title: String, val body: String?)
+
+private fun tabPaneText(screenId: String?, tabEntries: List<com.echo.core.domain.model.SettingsEntry>): SettingsPaneText {
+    val entry = tabEntries.firstOrNull { it.id == screenId }
+    val position = tabEntries.indexOfFirst { it.id == screenId } + 1
+    return SettingsPaneText(
+        eyebrow = "${entry?.section?.title.orEmpty()} · $position of ${tabEntries.size}",
+        title = entry?.title.orEmpty(),
+        body = entry?.subtitle,
+    )
+}
+
 @Composable
 private fun SettingsHelpPane(
     info: SettingsFocusInfo?,
-    screenId: String?,
-    tabEntries: List<com.echo.core.domain.model.SettingsEntry>,
+    page: SettingsPaneText,
     u: DesignUnits,
     modifier: Modifier,
 ) {
-    val entry = tabEntries.firstOrNull { it.id == screenId }
-    val position = tabEntries.indexOfFirst { it.id == screenId } + 1
     Column(
         modifier = modifier
             .focusProperties { canFocus = false }
@@ -1033,13 +1043,13 @@ private fun SettingsHelpPane(
         verticalArrangement = Arrangement.spacedBy(u.dp(16)),
     ) {
         Text(
-            text = "${entry?.section?.title.orEmpty()} · $position of ${tabEntries.size}".uppercase(),
+            text = page.eyebrow.uppercase(),
             color = Color.White.copy(alpha = 0.55f),
             fontSize = u.sp(13),
             letterSpacing = 0.18.em,
         )
         Text(
-            text = info?.label ?: entry?.title.orEmpty(),
+            text = info?.label ?: page.title,
             color = Color.White,
             fontSize = u.sp(40),
             lineHeight = u.sp(44),
@@ -1049,7 +1059,7 @@ private fun SettingsHelpPane(
         info?.value?.takeIf { it.isNotBlank() }?.let {
             Text(text = it, color = Color.White, fontSize = u.sp(22), fontWeight = FontWeight.Light)
         }
-        (if (info != null) info.sublabel else entry?.subtitle)?.takeIf { it.isNotBlank() }?.let {
+        (if (info != null) info.sublabel else page.body)?.takeIf { it.isNotBlank() }?.let {
             Text(
                 text = it,
                 color = Color.White.copy(alpha = 0.65f),

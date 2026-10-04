@@ -1,5 +1,7 @@
 package com.echo.feature.settings.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -7,12 +9,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -23,11 +23,8 @@ import com.echo.feature.settings.permissions.AppPermissions
 import com.echo.feature.settings.permissions.GrantRoute
 import com.echo.feature.settings.permissions.isGranted
 import com.echo.feature.settings.permissions.systemScreenIntent
-import com.echo.feature.settings.ui.wizard.WizardRow
 import com.echo.feature.settings.ui.wizard.WizardScaffold
-import com.echo.feature.settings.ui.wizard.WizardSectionHeader
 import com.echo.feature.settings.ui.wizard.WizardSplash
-import com.echo.feature.settings.ui.wizard.WizardValueRow
 import com.echo.feature.settings.viewmodel.InitialSetupUiState
 import com.echo.feature.settings.viewmodel.InitialSetupViewModel
 import com.echo.feature.settings.viewmodel.RootFolderRow
@@ -91,7 +88,7 @@ fun InitialSetupScreen(
     val step = state.step
     val next = state.nextStep
     val continueRow: @Composable () -> Unit = {
-        if (next != null) WizardRow(label = "Continue", sublabel = "Next: ${titleFor(next)}", onClick = viewModel::nextStep)
+        if (next != null) SettingsRow(label = "Continue", sublabel = "Next: ${titleFor(next)}", onClick = viewModel::nextStep)
     }
 
     WizardScaffold(
@@ -192,7 +189,7 @@ private fun PermissionsPage(
     val rows = remember { AppPermissions.forWizard(Build.VERSION.SDK_INT) }
     rows.forEachIndexed { index, permission ->
         val granted = remember(permission.id, grantToken) { isGranted(context, permission) }
-        WizardValueRow(
+        SettingsValueRow(
             label = permission.label,
             value = if (granted) "Granted" else "Grant…",
             sublabel = permission.why,
@@ -206,7 +203,7 @@ private fun PermissionsPage(
             },
         )
     }
-    WizardValueRow(
+    SettingsValueRow(
         label = "ECHO as Home",
         value = if (state.isHomeLauncher) "Active" else "Set…",
         sublabel = "Makes the Home button come back to ECHO",
@@ -222,7 +219,7 @@ private fun StoragePage(
 ) {
     StorageSlot.entries.forEachIndexed { index, slot ->
         val row = storageRow(state, slot)
-        WizardValueRow(
+        SettingsValueRow(
             label = slot.label,
             value = row.value,
             sublabel = row.sublabel,
@@ -231,7 +228,7 @@ private fun StoragePage(
         )
     }
     if (state.romRoots.any { it.linked }) {
-        WizardRow(
+        SettingsRow(
             label = "Create console folders",
             sublabel = "One folder per console under your games folder, for a fresh card",
             onClick = onCreateConsoleFolders,
@@ -285,8 +282,8 @@ private fun EmulatorsPage(
     onLinkVita: () -> Unit,
 ) {
     if (state.retroArchInstalled) {
-        WizardSectionHeader("RetroArch")
-        WizardValueRow(
+        SettingsGroup("RetroArch")
+        SettingsValueRow(
             label = "Link RetroArch",
             value = when {
                 state.retroArchDetecting -> "Checking…"
@@ -300,8 +297,8 @@ private fun EmulatorsPage(
         )
     }
     if (state.vita3KInstalled) {
-        WizardSectionHeader("Vita3K")
-        WizardValueRow(
+        SettingsGroup("Vita3K")
+        SettingsValueRow(
             label = "Vita3K data folder",
             value = state.vitaFolderName ?: "Not set",
             sublabel = "Grant its ux0 folder so installed Vita titles show up",
@@ -321,7 +318,7 @@ internal fun AccountsPage(
 ) {
     ACCOUNT_SCREENS.map { requireNotNull(settingsEntryFor(it)) { "$it is not in the catalog" } }
         .forEachIndexed { index, entry ->
-            WizardValueRow(
+            SettingsValueRow(
                 label = entry.title,
                 value = if (entry.id == "settings_artwork_sources") "${state.scrapersConnected} of 4" else "Open",
                 sublabel = entry.subtitle,
@@ -330,11 +327,11 @@ internal fun AccountsPage(
             )
         }
 
-    WizardSectionHeader("Done")
+    SettingsGroup("Done")
     if (state.romRoots.isNotEmpty()) {
-        WizardRow(label = "Go to your games", sublabel = "Finish and open All Games", onClick = onGoToLibrary)
+        SettingsRow(label = "Go to your games", sublabel = "Finish and open All Games", onClick = onGoToLibrary)
     }
-    WizardRow(label = "Finish", sublabel = "Everything here stays in Settings", focusKey = "finish_done", onClick = onFinish)
+    SettingsRow(label = "Finish", sublabel = "Everything here stays in Settings", focusKey = "finish_done", onClick = onFinish)
 }
 
 @CombinedPreviews

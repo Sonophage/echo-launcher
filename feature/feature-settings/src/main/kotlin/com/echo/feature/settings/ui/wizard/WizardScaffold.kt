@@ -1,34 +1,30 @@
 package com.echo.feature.settings.ui.wizard
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import com.echo.feature.settings.ui.SettingsRow
+import com.echo.feature.settings.ui.SettingsPageTitle
+import com.echo.feature.settings.ui.SettingsPaneText
+import com.echo.core.domain.model.SettingsSectionId
+import com.echo.core.ui.design.panelSectionTint
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.echo.core.ui.components.ControllerHintStyle
@@ -36,17 +32,12 @@ import com.echo.core.ui.components.ControllerPromptItem
 import com.echo.core.ui.components.EchoControllerHints
 import com.echo.core.ui.sound.LocalMenuSounds
 import com.echo.core.ui.sound.MenuSound
-import com.echo.core.ui.theme.menuCursorEdge
-import com.echo.core.ui.wave.WaveLayers
-import com.echo.core.ui.wave.WaveStyle
 import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.settings.ui.LocalSettingsPromptAction
 import com.echo.feature.settings.ui.LocalSettingsScrollStateRegistrar
 import com.echo.feature.settings.ui.SettingsScaffold
 
-private val WizardProgressTrack = Color.White.copy(alpha = 0.16f)
 
-internal val WizardAmber = Color(0xFFFFC857)
 
 @Composable
 fun WizardScaffold(
@@ -82,10 +73,15 @@ fun WizardScaffold(
         onBack = onBack,
         modifier = modifier,
 
-        backdrop = { WizardBackdrop() },
+        panelTint = panelSectionTint(SettingsSectionId.SETUP),
 
         showRail = false,
-        header = { WizardHeader(stepNumber, stepCount, title) },
+        paneText = SettingsPaneText(
+            eyebrow = if (stepNumber != null && stepCount > 0) "$title · Step $stepNumber of $stepCount" else title,
+            title = heading,
+            body = hint,
+        ),
+        header = { SettingsPageTitle(if (stepNumber != null && stepCount > 0) "$title · Step $stepNumber of $stepCount" else title, heading) },
         footer = { WizardFooter(backEnabled, onSkip != null, footerNote) },
 
         onInterceptAction = { action ->
@@ -112,12 +108,10 @@ fun WizardScaffold(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = WizardEdgeInset)
                 .verticalScroll(scrollState),
         ) {
-            WizardHeading(heading, hint)
             if (message != null && onDismissMessage != null) {
-                WizardMessageRow(message, onDismissMessage)
+                SettingsRow(label = message, sublabel = "Select to dismiss", onClick = onDismissMessage)
             }
             content()
             Spacer(Modifier.height(24.dp))
@@ -125,90 +119,9 @@ fun WizardScaffold(
     }
 }
 
-@Composable
-private fun WizardBackdrop() {
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        WaveLayers(WaveStyle.ANIMATED)
-    }
-}
 
-@Composable
-private fun WizardHeader(stepNumber: Int?, stepCount: Int, title: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
 
-            .focusProperties { canFocus = false }
-            .padding(start = 48.dp, end = 48.dp, top = 18.dp, bottom = 8.dp),
-    ) {
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 30.sp,
 
-            fontWeight = FontWeight.Light,
-        )
-        if (stepNumber != null && stepCount > 0) {
-            Spacer(Modifier.height(10.dp))
-            WizardProgress(stepNumber, stepCount)
-        }
-    }
-}
-
-@Composable
-private fun WizardProgress(stepNumber: Int, stepCount: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = "STEP $stepNumber OF $stepCount",
-            color = Color.White.copy(alpha = 0.55f),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 1.4.sp,
-        )
-        Spacer(Modifier.width(14.dp))
-        Box(
-            modifier = Modifier
-                .width(WizardProgressWidth)
-                .height(2.dp)
-                .clip(CircleShape)
-                .background(WizardProgressTrack),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(stepNumber.toFloat() / stepCount.toFloat())
-                    .height(2.dp)
-                    .clip(CircleShape)
-                    .background(menuCursorEdge()),
-            )
-        }
-    }
-}
-
-@Composable
-private fun WizardHeading(heading: String, hint: String?) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = WizardGutter, end = WizardGutter, top = 14.dp, bottom = 10.dp),
-    ) {
-        Text(
-            text = heading,
-            color = Color.White,
-            fontSize = 19.sp,
-            fontWeight = FontWeight.Normal,
-            textAlign = TextAlign.Start,
-        )
-        if (hint != null) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = hint,
-                color = Color.White.copy(alpha = 0.70f),
-                fontSize = 13.sp,
-                textAlign = TextAlign.Start,
-            )
-        }
-    }
-}
 
 @Composable
 private fun WizardFooter(backEnabled: Boolean, skippable: Boolean, note: String?) {
@@ -238,10 +151,6 @@ private fun WizardFooter(backEnabled: Boolean, skippable: Boolean, note: String?
     }
 }
 
-private val WizardEdgeInset = 16.dp
 
-private val WizardGutter = 48.dp - WizardEdgeInset
 
-internal val WizardRowGutter = 48.dp - WizardEdgeInset
 
-private val WizardProgressWidth = 160.dp

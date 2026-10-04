@@ -69,7 +69,7 @@ fun SettingsPageScaffold(
 }
 
 @Composable
-private fun SettingsPageTitle(eyebrow: String?, title: String) {
+internal fun SettingsPageTitle(eyebrow: String?, title: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()

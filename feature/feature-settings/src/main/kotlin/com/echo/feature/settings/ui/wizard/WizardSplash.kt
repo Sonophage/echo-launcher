@@ -1,5 +1,6 @@
 package com.echo.feature.settings.ui.wizard
 
+import androidx.compose.ui.unit.em
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -161,14 +162,21 @@ fun WizardSplash(onBegin: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Let's set up your launcher",
-                color = Color.White.copy(alpha = 0.78f),
+                text = "EXTENSIBLE CONSOLE HANDHELD OPERATOR",
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 11.sp,
+                letterSpacing = 0.18.em,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Your games, apps and media on one crossbar. Setup takes four short steps.",
+                color = Color.White.copy(alpha = 0.85f),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Light,
             )
             Spacer(Modifier.height(10.dp))
             EchoControllerHints(
-                items = listOf(ControllerPromptItem(GamepadAction.SELECT, "Begin")),
+                items = listOf(ControllerPromptItem(GamepadAction.SELECT, "Get started")),
                 style = ControllerHintStyle.INLINE,
             )
             Spacer(Modifier.height(28.dp))
