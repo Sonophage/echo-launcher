@@ -172,8 +172,8 @@ class CrossbarAppPicker(
         scope.launch {
             when (target) {
                 is AppPickerTarget.AndroidGames -> {
-                    if (adds.isNotEmpty()) vm.importAndroidGames(target.platformId, adds)
-                    if (removals.isNotEmpty()) vm.removeAndroidGames(target.platformId, removals)
+                    if (adds.isNotEmpty()) vm.gameActions.importAndroidGames(target.platformId, adds)
+                    if (removals.isNotEmpty()) vm.gameActions.removeAndroidGames(target.platformId, removals)
 
                     vm.memoryCardRepository.recountGames(target.platformId)
                 }

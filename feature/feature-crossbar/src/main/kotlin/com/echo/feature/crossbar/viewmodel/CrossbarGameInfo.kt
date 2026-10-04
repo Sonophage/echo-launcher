@@ -138,7 +138,7 @@ class CrossbarGameInfo(
     }
 
     private fun openGameInfoOptions(info: GameInfoState) {
-        if (info.isApp) vm.openAppContextMenu(info.item) else vm.openGameContextMenu(info.item)
+        if (info.isApp) vm.openAppContextMenu(info.item) else vm.gameActions.openGameContextMenu(info.item)
     }
 
     private fun playFromGameInfo(item: CrossbarItem) {

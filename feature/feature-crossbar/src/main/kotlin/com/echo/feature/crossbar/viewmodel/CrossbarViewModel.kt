@@ -1299,6 +1299,8 @@ class CrossbarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CrossbarUiState())
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
 
+    internal val gameActions = CrossbarGames(this, _uiState, viewModelScope, memoryCardRepository, menuSound)
+
     internal val artworkTools = CrossbarArtwork(this, _uiState, viewModelScope, artworkRepository, menuSound)
 
     internal val launching = CrossbarLauncher(this, _uiState, viewModelScope, launchDispatcher, launchResolver, intentResolver, gameBootGate, mediaLaunchGate, launcherShortcutRepository, menuSound)
@@ -1654,7 +1656,7 @@ class CrossbarViewModel @Inject constructor(
                         var keepCursor = keepCursorOnRow
                         gameRepository.observeFavorites().collect { games ->
                             val visible = games.notHiddenAt(HideLocationType.FAVORITES)
-                            val items = if (visible.isEmpty()) listOf(emptyFavoritesItem())
+                            val items = if (visible.isEmpty()) listOf(gameActions.emptyFavoritesItem())
                                         else visible.gameSorted(_uiState.value.gameSortMode).toCrossbarItems()
                             publishGameItems(items, keepCursor)
                             keepCursor = true
@@ -1690,7 +1692,7 @@ class CrossbarViewModel @Inject constructor(
                             memoryCardRepository.observeEnabled(),
                             gameRepository.observeAll(),
                         ) { _, _ -> }.collect {
-                            _uiState.update { it.copy(currentItems = memoryCardItems()) }
+                            _uiState.update { it.copy(currentItems = gameActions.memoryCardItems()) }
                         }
                     }
                 }
@@ -1920,7 +1922,7 @@ class CrossbarViewModel @Inject constructor(
             ?: shelfCardFor(platformId)?.title
             ?: platformCache[platformId]?.name
 
-    private fun currentHideLocation(): Triple<HideLocationType, String, String>? {
+    internal fun currentHideLocation(): Triple<HideLocationType, String, String>? {
         val s = _uiState.value
         val cat = currentCategory()
         return when {
@@ -2303,7 +2305,7 @@ class CrossbarViewModel @Inject constructor(
             return sibs to idx
         }
         if (category?.id == BuiltInCategory.GAMES) {
-            val sibs = memoryCardItems().filter {
+            val sibs = gameActions.memoryCardItems().filter {
                 it.type == CrossbarItemType.ALL_GAMES || it.type == CrossbarItemType.FAVORITES ||
                     it.type == CrossbarItemType.MISSING ||
                     it.type == CrossbarItemType.MEMORY_CARD
@@ -2347,73 +2349,9 @@ class CrossbarViewModel @Inject constructor(
         )
     }
 
-    private fun cardItemId(platformId: String): String = "card_" + platformId
+    internal fun cardItemId(platformId: String): String = "card_" + platformId
 
-    private fun memoryCardItems(): List<CrossbarItem> {
-        val totalGames = _uiState.value.allGamesCount
-        val allGamesItem = CrossbarItem(
-            id       = ALL_GAMES_ITEM_ID,
-            title    = "All Games",
-            subtitle = countLabel(totalGames, "game", "games"),
-            insideCovers = _uiState.value.cardFanCovers[ALL_GAMES_ITEM_ID].orEmpty(),
-            type     = CrossbarItemType.ALL_GAMES,
-        )
-
-        val missingCount = _uiState.value.missingCount
-        val missingItem = if (missingCount > 0) {
-            CrossbarItem(
-                id       = MISSING_ITEM_ID,
-                title    = "Missing",
-                subtitle = countLabel(missingCount, "game", "games"),
-                type     = CrossbarItemType.MISSING,
-            )
-        } else null
-        val header = listOfNotNull(allGamesItem, missingItem)
-
-        val visibleCards = enabledCards.filter { card ->
-            card.platformId != WINDOWS_PLATFORM_ID ||
-                (_uiState.value.platformGameCounts[WINDOWS_PLATFORM_ID] ?: card.gameCount) > 0
-        }
-
-        if (visibleCards.isEmpty()) {
-            return libraryColumn(
-                header + CrossbarItem(
-                    id       = NO_CONSOLES_ITEM_ID,
-                    title    = "No consoles configured",
-                    subtitle = "Open Library Manager to add a Memory Card",
-                    type     = CrossbarItemType.EMPTY,
-                ),
-                SearchScope.GAMES,
-            )
-        }
-
-        val cardRows = visibleCards.map { card ->
-            val count = _uiState.value.platformGameCounts[card.platformId] ?: card.gameCount
-            CrossbarItem(
-                id          = cardItemId(card.platformId),
-                title       = if (card.platformId == WINDOWS_PLATFORM_ID) "Windows Games" else card.displayName,
-                subtitle    = countLabel(count, "game", "games"),
-                platformId  = card.platformId,
-                insideCovers = _uiState.value.cardFanCovers[cardItemId(card.platformId)].orEmpty(),
-                accentColor = platformCache[card.platformId]?.accentColor,
-                type        = CrossbarItemType.MEMORY_CARD,
-            )
-        }
-
-        val gapRow = if (totalGames == 0) setupGapItem() else null
-        val foldersRow = CrossbarItem(
-            id       = ROM_FOLDERS_ITEM_ID,
-            title    = "Folders",
-            subtitle = countLabel(visibleCards.size, "console", "consoles"),
-            type     = CrossbarItemType.MEDIA_ROOT,
-        )
-        return libraryColumn(
-            header + cardRows + listOfNotNull(gapRow) + foldersRow,
-            SearchScope.GAMES,
-        )
-    }
-
-    private fun setupGapItem(): CrossbarItem? {
+    internal fun setupGapItem(): CrossbarItem? {
         val gap = setupState.firstGap
         if (gap == com.echo.feature.launcher.SetupGap.NONE) return null
         return CrossbarItem(
@@ -2433,13 +2371,6 @@ class CrossbarViewModel @Inject constructor(
             type     = CrossbarItemType.EMPTY,
         )
     }
-
-    private fun emptyFavoritesItem(): CrossbarItem = CrossbarItem(
-        id       = EMPTY_FAVORITES_ITEM_ID,
-        title    = "No favorites yet",
-        subtitle = "Mark a game as a favorite from its options (△) menu.",
-        type     = CrossbarItemType.EMPTY,
-    )
 
     private fun emptyMissingItem(): CrossbarItem = CrossbarItem(
         id       = EMPTY_MISSING_ITEM_ID,
@@ -2714,8 +2645,8 @@ class CrossbarViewModel @Inject constructor(
         }
         if (state.collectionNameDialog != null) {
             when (action) {
-                GamepadAction.SELECT -> onConfirmCollectionName(state.collectionNameDialog.text)
-                GamepadAction.BACK   -> onCancelCollectionName()
+                GamepadAction.SELECT -> gameActions.onConfirmCollectionName(state.collectionNameDialog.text)
+                GamepadAction.BACK   -> gameActions.onCancelCollectionName()
                 else                 -> Unit
             }
             return
@@ -3074,58 +3005,9 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun moveCard(platformId: String, up: Boolean) {
-        appAction { memoryCardRepository.move(platformId, up) }
-    }
-
-    private fun promptRenameCard(platformId: String) {
-        val card = enabledCards.firstOrNull { it.platformId == platformId } ?: return
-        closeContextMenu()
-        _uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
-            title = "Rename Memory Card",
-            subtitle = "The name this console shows under on the crossbar.",
-            initialText = card.displayName,
-            renameCardPlatformId = platformId,
-        ))}
-    }
-
-
     private fun openAllGamesContextMenu() {
         _uiState.update { it.copy(
             activeContextMenu = CrossbarContextMenu(state = MenuState(title = "All Games", rows = allGamesContextMenuItems()), isAllGames = true)
-        )}
-    }
-
-    internal fun openGameContextMenu(item: CrossbarItem) {
-        val gameId = item.gameId
-        if (gameId == null) {
-            openGameContextMenuCore(item, discCount = 0)
-            return
-        }
-
-        viewModelScope.launch {
-            val game = runCatching { gameRepository.getById(gameId) }.getOrNull()
-            val discCount = runCatching {
-                game?.discSetKey?.let { gameRepository.getDiscSetMembers(it).size } ?: 0
-            }.getOrDefault(0)
-
-            openGameContextMenuCore(item, discCount, onRecentShelf = game?.lastPlayedAt != null)
-        }
-    }
-
-    private fun openGameContextMenuCore(item: CrossbarItem, discCount: Int, onRecentShelf: Boolean = false) {
-        val state = _uiState.value
-        val currentCat = currentCategory()
-        val inGamingCategory = currentCat?.isGamingCategory == true
-        val items = gameContextMenuItems(
-            item = item,
-            state = state,
-            discCount = discCount,
-            onRecentShelf = onRecentShelf,
-            hideLocation = currentHideLocation(),
-        )
-        _uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = item.packageName, shortcutId = item.shortcutId, launchIntentUri = item.launchIntentUri, categoryContext = if (inGamingCategory) currentCat.id else null, primaryId = "play")
         )}
     }
 
@@ -3260,20 +3142,20 @@ class CrossbarViewModel @Inject constructor(
                 "default_emulator" -> openDefaultEmulatorMenu(menu.platformId)
                 "emu_automatic"    -> launching.setPlatformEmulator(menu.platformId, null)
                 "clear_emulator_overrides" -> launching.clearPlatformEmulatorOverrides(menu.platformId)
-                "rename_card"      -> promptRenameCard(menu.platformId)
+                "rename_card"      -> gameActions.promptRenameCard(menu.platformId)
                 "card_rom_directory" -> folders.openRomFolders()
-                "card_move_up"     -> moveCard(menu.platformId, up = true)
-                "card_move_down"   -> moveCard(menu.platformId, up = false)
+                "card_move_up"     -> gameActions.moveCard(menu.platformId, up = true)
+                "card_move_down"   -> gameActions.moveCard(menu.platformId, up = false)
                 "find_games"       -> appPickerSection.openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
                 "import_pc_games"  -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
                 "scan_roms"        -> folders.scanCard(menu.platformId)
                 "scrape_missing_artwork" -> artworkTools.scrapeMissingArtworkForPlatform(menu.platformId)
                 "update_metadata"        -> artworkTools.updatePlatformMetadata(menu.platformId)
-                "pin"              -> setCardPinned(menu.platformId, true)
-                "unpin"            -> setCardPinned(menu.platformId, false)
+                "pin"              -> gameActions.setCardPinned(menu.platformId, true)
+                "unpin"            -> gameActions.setCardPinned(menu.platformId, false)
                 "library_manager"  -> _uiState.update { it.withSettingsOpen("settings_library") }
-                "hide"             -> hideCard(menu.platformId)
-                "remove"           -> removeCard(menu.platformId)
+                "hide"             -> gameActions.hideCard(menu.platformId)
+                "remove"           -> gameActions.removeCard(menu.platformId)
             }
             menu.gameId != null -> if (itemId.startsWith("emu_pick_")) {
                 val gid = menu.gameId
@@ -3315,7 +3197,7 @@ class CrossbarViewModel @Inject constructor(
                 }
             } else if (itemId == "shelf_favorite") {
                 val onShelf = menu.items.firstOrNull { it.action == "shelf_favorite" }?.checked == true
-                toggleGameFavorite(menu.gameId, !onShelf)
+                gameActions.toggleGameFavorite(menu.gameId, !onShelf)
             } else if (itemId.startsWith("pstate_")) {
                 val gid = menu.gameId
                 val choice = itemId.removePrefix("pstate_")
@@ -3335,8 +3217,8 @@ class CrossbarViewModel @Inject constructor(
                 "choose_disc"             -> openDiscPickerMenu(menu.gameId)
                 "export_game"            -> exportGameFromMenu(menu.gameId)
                 "edit_app"               -> openAppDetail(menu.gameId, menu.packageName ?: return)
-                "favorite"               -> toggleGameFavorite(menu.gameId, true)
-                "unfavorite"             -> toggleGameFavorite(menu.gameId, false)
+                "favorite"               -> gameActions.toggleGameFavorite(menu.gameId, true)
+                "unfavorite"             -> gameActions.toggleGameFavorite(menu.gameId, false)
 
                 "remove_from_recent"     -> {
                     val gid = menu.gameId
@@ -3428,7 +3310,7 @@ class CrossbarViewModel @Inject constructor(
                         }
                         memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
                     }
-                    "favorite"          -> addAppToFavorites(pkg, menu.title)
+                    "favorite"          -> gameActions.addAppToFavorites(pkg, menu.title)
                     "move"      -> openCategoryPicker(pkg, menu.categoryContext, "move")
                     "add"       -> openCategoryPicker(pkg, menu.categoryContext, "add")
                     "remove"    -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.removeFromCategory(pkg, cat) } }
@@ -3535,38 +3417,7 @@ class CrossbarViewModel @Inject constructor(
         _uiState.update { it.copy(renameAppTarget = null, renameAppCurrent = null) }
     }
 
-    fun onConfirmCollectionName(name: String) {
-        val dialog = _uiState.value.collectionNameDialog ?: return
-        _uiState.update { it.copy(collectionNameDialog = null) }
-        if (dialog.quickSearch) { runQuickSearch(name); return }
-
-        if (dialog.editTitleGameId != null) {
-            viewModelScope.launch {
-                gameRepository.updateUserTitleOverride(dialog.editTitleGameId, name.trim().ifBlank { null })
-
-                loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
-            }
-            return
-        }
-        if (dialog.editNoteGameId != null) {
-            viewModelScope.launch {
-                gameRepository.updateNote(dialog.editNoteGameId, name.trim().ifBlank { null })
-            }
-            return
-        }
-        if (dialog.renameProfile) {
-            viewModelScope.launch { context.echoDataStore.edit { it[KEY_PROFILE_NAME] = name.trim().ifBlank { DEFAULT_PROFILE_NAME } } }
-            return
-        }
-        if (dialog.renameCardPlatformId != null) {
-            val trimmed = name.trim()
-            if (trimmed.isEmpty()) return
-            appAction { memoryCardRepository.rename(dialog.renameCardPlatformId, trimmed) }
-            return
-        }
-    }
-
-    private fun runQuickSearch(text: String) {
+    internal fun runQuickSearch(text: String) {
         val intent = when (val action = quickSearchActionFor(text)) {
             is QuickSearchAction.None -> return
             is QuickSearchAction.Open ->
@@ -3590,10 +3441,6 @@ class CrossbarViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    fun onCancelCollectionName() {
-        _uiState.update { it.copy(collectionNameDialog = null) }
     }
 
     private fun showGameFileLocation(gameId: Long) {
@@ -3637,7 +3484,7 @@ class CrossbarViewModel @Inject constructor(
             item != null && video.openVideoContextMenu(item) -> Unit
             item != null && bookshelf.openBookContextMenu(item) -> Unit
             item != null && gallery.openPhotoContextMenu(item) -> Unit
-            item?.gameId != null -> openGameContextMenu(item)
+            item?.gameId != null -> gameActions.openGameContextMenu(item)
             item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu()
             item?.platformId != null -> openPlatformContextMenu(item.platformId)
             item?.packageName != null -> openAppContextMenu(item)
@@ -3822,15 +3669,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    internal suspend fun removeAndroidGames(platformId: String, packages: Set<String>) {
-        packages.forEach { pkg ->
-            val entry = gameRepository.getAppEntry(pkg) ?: return@forEach
-            if (entry.platformId != platformId) return@forEach
-            gameRepository.delete(entry.id)
-        }
-        Timber.i("Android library removal: ${packages.size} app(s) removed from $platformId")
-    }
-
     fun openGamePicker(categoryId: String) {
         _uiState.update { it.copy(gamePickerCategoryId = categoryId) }
     }
@@ -3876,66 +3714,12 @@ class CrossbarViewModel @Inject constructor(
         )}
     }
 
-    internal suspend fun importAndroidGames(platformId: String, packages: Set<String>) {
-        val labels = appCategoryRepository.allInstalledApps().associateBy { it.packageName }
-
-        packages.forEach { pkg ->
-
-            val existing = gameRepository.getAppEntry(pkg)
-            when {
-                existing == null -> gameRepository.upsert(
-                    com.echo.core.domain.model.Game(
-                        title         = labels[pkg]?.label ?: pkg,
-                        platformId    = platformId,
-                        packageName   = pkg,
-                        isManualEntry = true,
-
-                        contentType   = com.echo.core.domain.model.GameContentType.GAME,
-                    )
-                )
-
-                existing.platformId != platformId ||
-                    existing.contentType != com.echo.core.domain.model.GameContentType.GAME ->
-                    gameRepository.upsert(existing.copy(
-                        platformId  = platformId,
-                        contentType = com.echo.core.domain.model.GameContentType.GAME,
-                    ))
-            }
-        }
-        memoryCardRepository.recountGames(platformId)
-        Timber.i("Android library import: ${packages.size} app(s) selected for $platformId")
-    }
-
     fun onPlatformLongPress(categoryIndex: Int) {
         _uiState.value.currentItems.getOrNull(categoryIndex)?.platformId?.let(::openPlatformContextMenu)
     }
 
     internal fun cardName(platformId: String): String =
         knownPlatformName(platformId) ?: platformId.uppercase()
-
-    private fun setCardPinned(platformId: String, pinned: Boolean) {
-        viewModelScope.launch { memoryCardRepository.setPinned(platformId, pinned) }
-    }
-
-    private fun hideCard(platformId: String) {
-        viewModelScope.launch {
-            memoryCardRepository.setEnabled(platformId, false)
-            if (_uiState.value.selectedPlatformId == platformId) closePlatformFolder()
-        }
-    }
-
-    private fun removeCard(platformId: String) {
-        viewModelScope.launch {
-            memoryCardRepository.remove(platformId)
-            if (_uiState.value.selectedPlatformId == platformId) closePlatformFolder()
-        }
-    }
-
-    private fun toggleGameFavorite(gameId: Long, isFavorite: Boolean) {
-        viewModelScope.launch {
-            gameRepository.setFavorite(gameId, isFavorite)
-        }
-    }
 
     private val taskLabels = mutableMapOf<String, String>()
 
@@ -4296,7 +4080,7 @@ class CrossbarViewModel @Inject constructor(
             item != null && video.openVideoContextMenu(item) -> Unit
             item != null && bookshelf.openBookContextMenu(item) -> Unit
             item != null && gallery.openPhotoContextMenu(item) -> Unit
-            item?.gameId != null -> openGameContextMenu(item)
+            item?.gameId != null -> gameActions.openGameContextMenu(item)
             item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu()
             item?.platformId != null -> openPlatformContextMenu(item.platformId)
             item?.packageName != null -> openAppContextMenu(item)
@@ -4333,7 +4117,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun closePlatformFolder() = navigateRememberingCursor {
+    internal fun closePlatformFolder() = navigateRememberingCursor {
         it.copy(selectedPlatformId = null)
     }
 
@@ -4355,7 +4139,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private suspend fun ensureAppShortcut(packageName: String): Long {
+    internal suspend fun ensureAppShortcut(packageName: String): Long {
         gameRepository.getAppEntry(packageName)?.let { return it.id }
         val label = runCatching {
             context.packageManager.getApplicationLabel(
@@ -4373,22 +4157,6 @@ class CrossbarViewModel @Inject constructor(
             )
         )
     }
-
-    private fun addAppToFavorites(packageName: String, label: String) {
-        viewModelScope.launch {
-            runCatching {
-                val id = ensureAppShortcut(packageName)
-                gameRepository.setFavorite(id, true)
-            }.onSuccess {
-                Timber.i("App shortcut favorited: $packageName")
-                taskNotifier.complete("shortcut_fav_$packageName", label, "Added to Favorites")
-            }.onFailure { e ->
-                Timber.e(e, "Failed to add app to Favorites: $packageName")
-                taskNotifier.failed("shortcut_fav_$packageName", label, "Couldn't add to Favorites: ${e.message}")
-            }
-        }
-    }
-
 
     fun onCloseAppDetail() {
         _uiState.update { it.copy(activeAppId = null, pendingAppDetailAction = null) }
@@ -4656,7 +4424,7 @@ class CrossbarViewModel @Inject constructor(
     private fun checkInitialSetup() {
         viewModelScope.launch {
             val prefs = context.echoDataStore.data.first()
-            when (initialSetupDecision(prefs, existingCards())) {
+            when (initialSetupDecision(prefs, gameActions.existingCards())) {
                 InitialSetupDecision.ALREADY_SEEN ->
                     Timber.d("StartupSeq: initial setup already seen")
                 InitialSetupDecision.SEED_AS_SEEN -> {
@@ -4673,9 +4441,6 @@ class CrossbarViewModel @Inject constructor(
             _uiState.update { it.copy(initialSetupDecided = true) }
         }
     }
-
-    private suspend fun existingCards(): List<MemoryCard> =
-        runCatching { memoryCardRepository.getAll() }.getOrDefault(emptyList())
 
     private fun logStartupSequence() {
         viewModelScope.launch {
@@ -5032,20 +4797,20 @@ class CrossbarViewModel @Inject constructor(
 
         private const val ICON1_LINGER_MS = 1_500L
         private const val SETUP_ITEM_ID = "library_setup"
-        private const val NO_CONSOLES_ITEM_ID = "no_consoles"
+        internal const val NO_CONSOLES_ITEM_ID = "no_consoles"
 
         internal const val SETUP_GAP_ITEM_ID = "setup_gap"
         internal const val NO_GAMES_ITEM_ID    = "no_games"
-        private const val EMPTY_FAVORITES_ITEM_ID = "empty_favorites"
+        internal const val EMPTY_FAVORITES_ITEM_ID = "empty_favorites"
         internal const val EMPTY_CATEGORY_ITEM_ID = "empty_category"
-        private const val ALL_GAMES_ITEM_ID = "all_games"
+        internal const val ALL_GAMES_ITEM_ID = "all_games"
 
         internal const val RESUME_DONE_FRACTION = 0.97f
         private const val ALL_GAMES_PLATFORM_ID = "__all_games__"
         private const val FAVORITES_ITEM_ID = "favorites_folder"
 
         internal const val FAVORITES_PLATFORM_ID = "__favorites__"
-        private const val MISSING_ITEM_ID = "missing_folder"
+        internal const val MISSING_ITEM_ID = "missing_folder"
         internal const val MISSING_PLATFORM_ID = "__missing__"
         private const val EMPTY_MISSING_ITEM_ID = "empty_missing"
 
