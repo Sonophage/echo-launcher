@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.domain.model.GamepadAction
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.ui.components.MenuState
@@ -252,6 +253,36 @@ class CrossbarBookshelf(
                 }
                 is com.echo.feature.library.scanner.BookScanResult.Error ->
                     vm.failBackgroundTask(taskId, result.message)
+            }
+        }
+    }
+    internal suspend fun loadColumn() {
+        when (val nav = uiState.value.booksNav) {
+            BooksNav.Folders -> vm.mediaRootRepository.roots(MediaRootKind.BOOK).collect {
+                uiState.update { s -> s.copy(currentItems = vm.folders.mediaFolderItems(MediaRootKind.BOOK)) }
+            }
+            BooksNav.Root -> uiState.update { it.copy(currentItems = booksRootItems()) }
+            BooksNav.Shelves -> bookRepository.observeLibraries().collect { shelves ->
+                uiState.update { it.copy(bookLibraries = shelves, currentItems = bookShelfItems()) }
+            }
+            BooksNav.AllBooks -> bookRepository.observeAllBooks().collect { books ->
+                uiState.update { it.copy(currentItems = bookItems(books.bookSorted(it.bookSortMode)).ifEmpty { listOf(emptyBooksItem()) }) }
+            }
+            is BooksNav.Shelf -> bookRepository.observeBooksByLibrary(nav.id).collect { books ->
+                uiState.update { it.copy(currentItems = bookItems(books.bookSorted(it.bookSortMode)).ifEmpty { listOf(emptyBooksItem()) }) }
+            }
+            BooksNav.SeriesList -> bookRepository.observeAllBooks().collect { books ->
+                uiState.update {
+                    it.copy(
+                        bookSeries = books.seriesGroups(),
+                        currentItems = bookSeriesItems().ifEmpty { listOf(vm.emptySeriesItem()) },
+                    )
+                }
+            }
+
+            is BooksNav.Series -> bookRepository.observeAllBooks().collect { books ->
+                val inSeries = books.filter { it.seriesName == nav.name }.inSeriesOrder()
+                uiState.update { it.copy(currentItems = bookItems(inSeries).ifEmpty { listOf(emptyBooksItem()) }) }
             }
         }
     }

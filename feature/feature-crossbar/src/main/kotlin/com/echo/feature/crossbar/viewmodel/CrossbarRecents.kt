@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.domain.model.GamepadAction
 import androidx.datastore.preferences.core.edit
 import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.domain.model.HiddenPlacement
@@ -222,6 +223,36 @@ class CrossbarRecents(
                     val accent = top?.let { vm.artworkAccent.of(it.shelfCoverArt, *it.backdropArt.toTypedArray()) }
                     uiState.update { it.copy(recentTopAccentArgb = accent) }
                 }
+        }
+    }
+    internal suspend fun loadColumn(keepCursorOnRow: Boolean) {
+        var keepCursor = keepCursorOnRow
+        combine(
+            vm.gameRepository.observeRecentlyPlayed(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
+            vm.musicRepository.observeRecentlyPlayedTracks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
+            vm.bookRepository.observeRecentlyOpenedBooks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
+            vm.videoRepository.observeRecentlyWatched(),
+
+            recentFilterAndApps(),
+        ) { games, tracks, books, videos, filterAndApps ->
+            val (filter, appRows, limit) = filterAndApps
+
+            vm.music.currentMusicTracks = tracks
+            val visibleGames = with(vm) { games.notHiddenAt(HideLocationType.ALL_GAMES) }
+            mergeRecents(
+                games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(with(vm) { visibleGames.toCrossbarItems() }),
+
+                music  = tracks.recentMusicRows(),
+                books  = books.map { it.lastOpenedAt ?: 0L }.zip(vm.bookshelf.bookItems(books)),
+                videos = videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
+                apps   = appRows,
+                filter = filter,
+                limit  = limit,
+            )
+        }.collect { items ->
+
+            vm.publishGameItems(items, keepCursor)
+            keepCursor = true
         }
     }
 }

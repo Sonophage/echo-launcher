@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.domain.model.GamepadAction
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.ui.components.MenuState
@@ -279,4 +280,24 @@ class CrossbarGallery(
 
     internal fun photoAlbumSiblings(): List<CrossbarItem> =
         uiState.value.photoLibraries.map { CrossbarItem(id = "plib_${it.id}", title = it.displayName, type = CrossbarItemType.PHOTO_FOLDER) }
+    internal suspend fun loadColumn() {
+        when (val nav = uiState.value.photoNav) {
+            PhotoNav.Folders -> vm.mediaRootRepository.roots(MediaRootKind.PHOTO).collect {
+                uiState.update { s -> s.copy(currentItems = vm.folders.mediaFolderItems(MediaRootKind.PHOTO)) }
+            }
+            PhotoNav.Root -> uiState.update { it.copy(currentItems = photoRootItems()) }
+            PhotoNav.AllPhotos -> photoRepository.observeAllPhotos().collect { photos ->
+                setPhotoItems(photos, emptyAllPhotosItem())
+            }
+            PhotoNav.Favorites -> photoRepository.observeFavorites().collect { photos ->
+                setPhotoItems(photos, emptyFavoritePhotosItem())
+            }
+            PhotoNav.Albums -> photoRepository.observeLibraries().collect { libs ->
+                uiState.update { it.copy(currentItems = photoAlbumItems(libs)) }
+            }
+            is PhotoNav.Library -> photoRepository.observePhotosByLibrary(nav.id).collect { photos ->
+                setPhotoItems(photos, emptyLibraryPhotosItem())
+            }
+        }
+    }
 }

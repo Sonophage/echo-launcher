@@ -394,6 +394,38 @@ class CrossbarVideo(
             }
         }
     }
+    internal suspend fun loadColumn() {
+        when (val nav = uiState.value.videoNav) {
+            VideoNav.Folders -> vm.mediaRootRepository.roots(MediaRootKind.VIDEO).collect {
+                uiState.update { s -> s.copy(currentItems = vm.folders.mediaFolderItems(MediaRootKind.VIDEO)) }
+            }
+            VideoNav.Root -> uiState.update { it.copy(currentItems = videoRootItems()) }
+            VideoNav.Collections -> uiState.update { it.copy(currentItems = videoCollectionsItems()) }
+            VideoNav.AllVideos -> videoRepository.observeAllVideos().collect { videos ->
+                setVideoItems(videos, emptyAllVideosItem())
+            }
+            VideoNav.RecentlyWatched -> videoRepository.observeRecentlyWatched().collect { videos ->
+
+                setVideoItems(videos, vm.recents.emptyRecentItem(), sortable = false)
+            }
+            VideoNav.Favorites -> videoRepository.observeFavorites().collect { videos ->
+                setVideoItems(videos, emptyFavoriteVideosItem())
+            }
+            VideoNav.Playlists -> videoRepository.observePlaylists().collect { playlists ->
+                uiState.update { it.copy(currentItems = videoPlaylistItems(playlists), videoPlaylists = playlists) }
+            }
+            is VideoNav.Playlist -> videoRepository.observePlaylistVideos(nav.id).collect { videos ->
+
+                setVideoItems(videos, emptyPlaylistVideosItem(), sortable = false)
+            }
+            VideoNav.Libraries -> videoRepository.observeLibraries().collect { libs ->
+                uiState.update { it.copy(currentItems = videoLibraryItems(libs)) }
+            }
+            is VideoNav.Library -> videoRepository.observeVideosByLibrary(nav.id).collect { videos ->
+                setVideoItems(videos, emptyAllVideosItem())
+            }
+        }
+    }
 }
 
 internal fun List<com.echo.core.domain.model.Video>.toVideoItems(): List<CrossbarItem> =

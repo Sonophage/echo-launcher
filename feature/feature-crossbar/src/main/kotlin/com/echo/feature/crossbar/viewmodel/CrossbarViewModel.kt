@@ -1281,7 +1281,7 @@ class CrossbarViewModel @Inject constructor(
     private val mediaLaunchGate: com.echo.core.data.launch.MediaLaunchGate,
 
     internal val uiMediaAudioPlayer: com.echo.core.ui.media.UiMediaAudioPlayer,
-    private val mediaRootRepository: com.echo.core.data.repository.MediaRootRepository,
+    internal val mediaRootRepository: com.echo.core.data.repository.MediaRootRepository,
     private val videoScanner: com.echo.feature.library.scanner.VideoScanner,
     private val bookScanner: com.echo.feature.library.scanner.BookScanner,
     private val musicIntentResolver: com.echo.core.data.music.MusicIntentResolver,
@@ -1597,36 +1597,7 @@ class CrossbarViewModel @Inject constructor(
                         }
                     }
                 }
-                BuiltInCategory.RECENTLY_PLAYED -> {
-                    var keepCursor = keepCursorOnRow
-                    combine(
-                        gameRepository.observeRecentlyPlayed(RECENTLY_PLAYED_LIMIT),
-                        musicRepository.observeRecentlyPlayedTracks(RECENTLY_PLAYED_LIMIT),
-                        bookRepository.observeRecentlyOpenedBooks(RECENTLY_PLAYED_LIMIT),
-                        videoRepository.observeRecentlyWatched(),
-
-                        recents.recentFilterAndApps(),
-                    ) { games, tracks, books, videos, filterAndApps ->
-                        val (filter, appRows, limit) = filterAndApps
-
-                        music.currentMusicTracks = tracks
-                        val visibleGames = games.notHiddenAt(HideLocationType.ALL_GAMES)
-                        mergeRecents(
-                            games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(visibleGames.toCrossbarItems()),
-
-                            music  = tracks.recentMusicRows(),
-                            books  = books.map { it.lastOpenedAt ?: 0L }.zip(bookshelf.bookItems(books)),
-                            videos = videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
-                            apps   = appRows,
-                            filter = filter,
-                            limit  = limit,
-                        )
-                    }.collect { items ->
-
-                        publishGameItems(items, keepCursor)
-                        keepCursor = true
-                    }
-                }
+                BuiltInCategory.RECENTLY_PLAYED -> recents.loadColumn(keepCursorOnRow)
                 BuiltInCategory.ANDROID -> {
                     _uiState.update { it.copy(currentItems = ANDROID_ITEMS) }
                 }
@@ -1696,103 +1667,10 @@ class CrossbarViewModel @Inject constructor(
                         }
                     }
                 }
-                BuiltInCategory.MUSIC -> when (val nav = _uiState.value.musicNav) {
-                    MusicNav.Folders -> mediaRootRepository.roots(MediaRootKind.MUSIC).collect {
-                        _uiState.update { s -> s.copy(currentItems = folders.mediaFolderItems(MediaRootKind.MUSIC)) }
-                    }
-                    MusicNav.Root -> {
-                        music.clearMusicTrackCache()
-                        _uiState.update { it.copy(currentItems = music.musicRootItems()) }
-                    }
-                    MusicNav.AllMusic -> musicRepository.observeAllTracks().collect { tracks ->
-                        music.setMusicTrackItems(tracks, music.emptyAllMusicItem())
-                    }
-                    is MusicNav.Playlist -> musicRepository.observePlaylistTracks(nav.id).collect { tracks ->
-                        music.setMusicTrackItems(tracks, music.emptyPlaylistItem(), trailing = listOf(music.addTracksItem()))
-                    }
-                    MusicNav.Playlists -> {
-                        music.clearMusicTrackCache()
-                        musicRepository.observePlaylists().collect { playlists ->
-                            _uiState.update { it.copy(currentItems = music.playlistRootItems(playlists), musicPlaylists = playlists) }
-                        }
-                    }
-                }
-                BuiltInCategory.VIDEO -> when (val nav = _uiState.value.videoNav) {
-                    VideoNav.Folders -> mediaRootRepository.roots(MediaRootKind.VIDEO).collect {
-                        _uiState.update { s -> s.copy(currentItems = folders.mediaFolderItems(MediaRootKind.VIDEO)) }
-                    }
-                    VideoNav.Root -> _uiState.update { it.copy(currentItems = video.videoRootItems()) }
-                    VideoNav.Collections -> _uiState.update { it.copy(currentItems = video.videoCollectionsItems()) }
-                    VideoNav.AllVideos -> videoRepository.observeAllVideos().collect { videos ->
-                        video.setVideoItems(videos, video.emptyAllVideosItem())
-                    }
-                    VideoNav.RecentlyWatched -> videoRepository.observeRecentlyWatched().collect { videos ->
-
-                        video.setVideoItems(videos, recents.emptyRecentItem(), sortable = false)
-                    }
-                    VideoNav.Favorites -> videoRepository.observeFavorites().collect { videos ->
-                        video.setVideoItems(videos, video.emptyFavoriteVideosItem())
-                    }
-                    VideoNav.Playlists -> videoRepository.observePlaylists().collect { playlists ->
-                        _uiState.update { it.copy(currentItems = video.videoPlaylistItems(playlists), videoPlaylists = playlists) }
-                    }
-                    is VideoNav.Playlist -> videoRepository.observePlaylistVideos(nav.id).collect { videos ->
-
-                        video.setVideoItems(videos, video.emptyPlaylistVideosItem(), sortable = false)
-                    }
-                    VideoNav.Libraries -> videoRepository.observeLibraries().collect { libs ->
-                        _uiState.update { it.copy(currentItems = video.videoLibraryItems(libs)) }
-                    }
-                    is VideoNav.Library -> videoRepository.observeVideosByLibrary(nav.id).collect { videos ->
-                        video.setVideoItems(videos, video.emptyAllVideosItem())
-                    }
-                }
-                BuiltInCategory.PHOTO -> when (val nav = _uiState.value.photoNav) {
-                    PhotoNav.Folders -> mediaRootRepository.roots(MediaRootKind.PHOTO).collect {
-                        _uiState.update { s -> s.copy(currentItems = folders.mediaFolderItems(MediaRootKind.PHOTO)) }
-                    }
-                    PhotoNav.Root -> _uiState.update { it.copy(currentItems = gallery.photoRootItems()) }
-                    PhotoNav.AllPhotos -> photoRepository.observeAllPhotos().collect { photos ->
-                        gallery.setPhotoItems(photos, gallery.emptyAllPhotosItem())
-                    }
-                    PhotoNav.Favorites -> photoRepository.observeFavorites().collect { photos ->
-                        gallery.setPhotoItems(photos, gallery.emptyFavoritePhotosItem())
-                    }
-                    PhotoNav.Albums -> photoRepository.observeLibraries().collect { libs ->
-                        _uiState.update { it.copy(currentItems = gallery.photoAlbumItems(libs)) }
-                    }
-                    is PhotoNav.Library -> photoRepository.observePhotosByLibrary(nav.id).collect { photos ->
-                        gallery.setPhotoItems(photos, gallery.emptyLibraryPhotosItem())
-                    }
-                }
-                BuiltInCategory.LIBRARY -> when (val nav = _uiState.value.booksNav) {
-                    BooksNav.Folders -> mediaRootRepository.roots(MediaRootKind.BOOK).collect {
-                        _uiState.update { s -> s.copy(currentItems = folders.mediaFolderItems(MediaRootKind.BOOK)) }
-                    }
-                    BooksNav.Root -> _uiState.update { it.copy(currentItems = bookshelf.booksRootItems()) }
-                    BooksNav.Shelves -> bookRepository.observeLibraries().collect { shelves ->
-                        _uiState.update { it.copy(bookLibraries = shelves, currentItems = bookshelf.bookShelfItems()) }
-                    }
-                    BooksNav.AllBooks -> bookRepository.observeAllBooks().collect { books ->
-                        _uiState.update { it.copy(currentItems = bookshelf.bookItems(books.bookSorted(it.bookSortMode)).ifEmpty { listOf(bookshelf.emptyBooksItem()) }) }
-                    }
-                    is BooksNav.Shelf -> bookRepository.observeBooksByLibrary(nav.id).collect { books ->
-                        _uiState.update { it.copy(currentItems = bookshelf.bookItems(books.bookSorted(it.bookSortMode)).ifEmpty { listOf(bookshelf.emptyBooksItem()) }) }
-                    }
-                    BooksNav.SeriesList -> bookRepository.observeAllBooks().collect { books ->
-                        _uiState.update {
-                            it.copy(
-                                bookSeries = books.seriesGroups(),
-                                currentItems = bookshelf.bookSeriesItems().ifEmpty { listOf(emptySeriesItem()) },
-                            )
-                        }
-                    }
-
-                    is BooksNav.Series -> bookRepository.observeAllBooks().collect { books ->
-                        val inSeries = books.filter { it.seriesName == nav.name }.inSeriesOrder()
-                        _uiState.update { it.copy(currentItems = bookshelf.bookItems(inSeries).ifEmpty { listOf(bookshelf.emptyBooksItem()) }) }
-                    }
-                }
+                BuiltInCategory.MUSIC -> music.loadColumn()
+                BuiltInCategory.VIDEO -> video.loadColumn()
+                BuiltInCategory.PHOTO -> gallery.loadColumn()
+                BuiltInCategory.LIBRARY -> bookshelf.loadColumn()
                 else -> {
                     if (category.isGamingCategory) {
                         val gameRows = gameCategoryRepository.itemsForCategory(category.id)
@@ -1985,7 +1863,7 @@ class CrossbarViewModel @Inject constructor(
         return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
     }
 
-    private fun emptySeriesItem(): CrossbarItem = CrossbarItem(
+    internal fun emptySeriesItem(): CrossbarItem = CrossbarItem(
         id       = "series_empty",
         title    = "No series yet",
         subtitle = "No scanned book declares one. Embed series metadata, then Deep Rescan.",
@@ -2379,7 +2257,7 @@ class CrossbarViewModel @Inject constructor(
         type     = CrossbarItemType.EMPTY,
     )
 
-    private fun publishGameItems(items: List<CrossbarItem>, keepCursorOnRow: Boolean) = _uiState.update {
+    internal fun publishGameItems(items: List<CrossbarItem>, keepCursorOnRow: Boolean) = _uiState.update {
         if (!keepCursorOnRow) it.copy(currentItems = items)
         else it.copy(
             currentItems = items,

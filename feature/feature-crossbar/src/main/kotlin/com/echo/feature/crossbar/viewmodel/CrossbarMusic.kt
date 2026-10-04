@@ -792,4 +792,27 @@ class CrossbarMusic(
             }
         }
     }
+    internal suspend fun loadColumn() {
+        when (val nav = uiState.value.musicNav) {
+            MusicNav.Folders -> vm.mediaRootRepository.roots(MediaRootKind.MUSIC).collect {
+                uiState.update { s -> s.copy(currentItems = vm.folders.mediaFolderItems(MediaRootKind.MUSIC)) }
+            }
+            MusicNav.Root -> {
+                clearMusicTrackCache()
+                uiState.update { it.copy(currentItems = musicRootItems()) }
+            }
+            MusicNav.AllMusic -> musicRepository.observeAllTracks().collect { tracks ->
+                setMusicTrackItems(tracks, emptyAllMusicItem())
+            }
+            is MusicNav.Playlist -> musicRepository.observePlaylistTracks(nav.id).collect { tracks ->
+                setMusicTrackItems(tracks, emptyPlaylistItem(), trailing = listOf(addTracksItem()))
+            }
+            MusicNav.Playlists -> {
+                clearMusicTrackCache()
+                musicRepository.observePlaylists().collect { playlists ->
+                    uiState.update { it.copy(currentItems = playlistRootItems(playlists), musicPlaylists = playlists) }
+                }
+            }
+        }
+    }
 }
