@@ -366,10 +366,15 @@ private fun RestOrb(
     Row(
         modifier
             .padding(bottom = u.dp(16))
-            .clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label, indication = null, interactionSource = null) {
-                presses++
-                onAction?.invoke(primary.action)
-            },
+            // inside the hold wrapper it has no action; even a disabled clickable takes the finger
+            // down, so the wrapper's hold never started (owner, 2026-10-04)
+            .then(
+                if (onAction == null) Modifier
+                else Modifier.clickable(role = Role.Button, onClickLabel = primary.label, indication = null, interactionSource = null) {
+                    presses++
+                    onAction(primary.action)
+                },
+            ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
     ) {
