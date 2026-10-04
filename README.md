@@ -51,7 +51,6 @@ to fetch artwork or metadata.
 ## A tour
 
 *Shot on 2026-10-04 on an AYANEO Pocket FIT Elite (1920×1080) with a real library, on ECHO 2.2 to 2.4.
-The photo viewer further down is from 1.20.1 on a tablet, with demo files.
 Game artwork, wallpaper art, book covers and app icons belong to their owners.*
 
 ### Home
@@ -126,8 +125,8 @@ pans and rotates, and any photo can become the wallpaper with its EXIF data stri
 | Songs | The music player |
 | <img src="docs/screenshots/video-browser.jpg" width="420"> | <img src="docs/screenshots/video-player-controls.jpg" width="420"> |
 | Videos | The video player |
-| <img src="docs/screenshots/photo-viewer.jpg" width="420"> | |
-| The photo viewer (1.20.1) | |
+| <img src="docs/screenshots/photo-browser.jpg" width="420"> | <img src="docs/screenshots/photo-viewer.jpg" width="420"> |
+| Photos | The photo viewer |
 
 ### The top panel and Settings
 
