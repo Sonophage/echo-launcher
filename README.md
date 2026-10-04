@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/echo-logo.png" alt="ECHO" width="128"></p>
+
 # ECHO
 
 **Extensible Console Handheld Operator: a controller-first Android home screen in the style of the PSP's XrossMediaBar.**
