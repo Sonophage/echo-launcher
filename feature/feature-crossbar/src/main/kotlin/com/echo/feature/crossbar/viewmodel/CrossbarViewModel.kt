@@ -889,6 +889,10 @@ data class CrossbarUiState(
         get() = !fullscreenOverlay
 }
 
+// the boot sequence, the launch disc or GameBoot is on screen, with its own sound; the menu music waits for it
+val CrossbarUiState.ceremonyPlaying: Boolean
+    get() = showBootSequence || discCeremony != null || activeGameBoot != null
+
 data class DiscCeremonyState(val art: Any?, val style: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC)
 
 enum class CrossbarItemType {

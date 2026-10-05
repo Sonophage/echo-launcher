@@ -1,5 +1,8 @@
 package com.echo.launcher
 
+import com.echo.feature.crossbar.viewmodel.ceremonyPlaying
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import com.echo.core.domain.model.GamepadAction
 import android.Manifest
 import android.annotation.SuppressLint
@@ -215,7 +218,10 @@ class MainActivity : ComponentActivity() {
                 kotlinx.coroutines.flow.combine(
                     menuMusicPreferences.enabledFlow,
                     uiMediaStore.stamp,
-                ) { enabled, _ -> enabled }
+                    // owner, 2026-10-05: the boot and launch sounds were lost under the menu music, which started
+                    // with ECHO and kept playing through them; it now waits until they are over
+                    crossbarViewModel.uiState.map { it.ceremonyPlaying }.distinctUntilChanged(),
+                ) { enabled, _, ceremony -> enabled && !ceremony }
                     .collect { enabled ->
                         val track = withContext(kotlinx.coroutines.Dispatchers.IO) {
                             uiMediaStore.pathFor(com.echo.core.domain.model.UiMediaSlot.MENU_MUSIC)
