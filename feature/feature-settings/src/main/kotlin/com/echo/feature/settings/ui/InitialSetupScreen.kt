@@ -30,6 +30,7 @@ import com.echo.feature.settings.viewmodel.RootFolderRow
 import com.echo.feature.settings.viewmodel.pickerStartUri
 import com.echo.feature.settings.viewmodel.SetupStep
 import com.echo.feature.settings.viewmodel.StorageSlot
+import com.echo.feature.settings.viewmodel.storageSlotsFor
 
 @Composable
 fun InitialSetupScreen(
@@ -107,7 +108,7 @@ fun InitialSetupScreen(
         onBack = { if (!viewModel.previousStep() && !firstRun) onBack() },
 
         onSkip = onBack,
-        backEnabled = step != SetupStep.PERMISSIONS || !firstRun,
+        backEnabled = step != SetupStep.FEATURES || !firstRun,
         message = state.message,
         onDismissMessage = viewModel::dismissMessage,
         heading = headingFor(step),
@@ -116,6 +117,10 @@ fun InitialSetupScreen(
         modifier = modifier,
     ) {
         when (step) {
+            SetupStep.FEATURES -> {
+                FeaturesPage(state, onGaming = viewModel::setGaming, onMedia = viewModel::setMedia)
+                continueRow()
+            }
             SetupStep.PERMISSIONS -> {
                 PermissionsPage(
                     state = state,
@@ -160,6 +165,7 @@ private const val RETROARCH_PICK_STEPS =
     "In the picker: tap ☰, choose RetroArch, then Use this folder. Not the /RetroArch folder on storage."
 
 private fun titleFor(step: SetupStep): String = when (step) {
+    SetupStep.FEATURES -> "What ECHO is for"
     SetupStep.PERMISSIONS -> "Permissions"
     SetupStep.STORAGE -> "Your folders"
     SetupStep.EMULATORS -> "Emulators"
@@ -167,6 +173,7 @@ private fun titleFor(step: SetupStep): String = when (step) {
 }
 
 private fun headingFor(step: SetupStep): String = when (step) {
+    SetupStep.FEATURES    -> "What is ECHO for?"
     SetupStep.PERMISSIONS -> "Let ECHO see your library."
     SetupStep.STORAGE     -> "Point ECHO at your folders."
     SetupStep.EMULATORS   -> "Link your emulators."
@@ -174,10 +181,37 @@ private fun headingFor(step: SetupStep): String = when (step) {
 }
 
 private fun hintFor(step: SetupStep): String = when (step) {
+    SetupStep.FEATURES    -> "Setup only asks about what you turn on. Libraries and Settings bring the rest back."
     SetupStep.PERMISSIONS -> "Each one turns something on. Everything here can be changed later in Settings."
     SetupStep.STORAGE     -> "Each row opens the picker on the folder ECHO found. Tap Use this folder, then Allow."
     SetupStep.EMULATORS   -> "So ECHO only offers the cores and games you actually have."
     SetupStep.ACCOUNTS    -> "All optional. Each opens its settings page, so every key is entered once."
+}
+
+@Composable
+private fun FeaturesPage(state: InitialSetupUiState, onGaming: (Boolean) -> Unit, onMedia: (Boolean) -> Unit) {
+    // your apps are always there, so both off is a launcher only
+    SettingsGroup(
+        when {
+            state.gaming && state.media -> "The full suite"
+            state.gaming -> "Apps and games"
+            state.media -> "Apps and media"
+            else -> "A launcher only"
+        },
+    )
+    SettingsToggleRow(
+        label = "Gaming",
+        sublabel = "Your games folder, emulators and the Game column",
+        focusKey = "features_first",
+        checked = state.gaming,
+        onToggle = onGaming,
+    )
+    SettingsToggleRow(
+        label = "Media",
+        sublabel = "Music, video, photos and books, with their folders and permissions",
+        checked = state.media,
+        onToggle = onMedia,
+    )
 }
 
 @Composable
@@ -194,7 +228,7 @@ private fun PermissionsPage(
         onPauseOrDispose { }
     }
 
-    val rows = remember { AppPermissions.forWizard(Build.VERSION.SDK_INT) }
+    val rows = remember(state.media) { AppPermissions.forWizard(Build.VERSION.SDK_INT, state.media) }
     AppPermissionRows(rows, grantToken, onAsk, firstFocusKey = "perm_first")
     RestrictedSettingsRow(rows, grantToken)
     SettingsValueRow(
@@ -213,7 +247,7 @@ private fun StoragePage(
     onPick: (slot: StorageSlot, replacing: String?, start: Uri?) -> Unit,
     onCreateConsoleFolders: () -> Unit,
 ) {
-    StorageSlot.entries.forEachIndexed { index, slot ->
+    storageSlotsFor(state.gaming, state.media).forEachIndexed { index, slot ->
         val row = storageRow(state, slot)
         SettingsValueRow(
             label = slot.label,
@@ -338,8 +372,8 @@ internal fun AccountsPage(
 private fun StoragePagePreview() {
     EchoScreenPreview {
         WizardScaffold(
-            stepNumber = 2,
-            stepCount = 4,
+            stepNumber = 3,
+            stepCount = 5,
             title = "Setup",
             onBack = {},
             heading = headingFor(SetupStep.STORAGE),

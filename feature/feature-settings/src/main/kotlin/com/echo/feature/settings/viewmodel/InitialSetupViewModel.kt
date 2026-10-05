@@ -7,7 +7,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.echo.core.data.datastore.echoDataStore
+import com.echo.core.data.repository.CategoryRepositoryImpl
 import com.echo.core.data.repository.CoreInventory
+import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.data.repository.FolderLinkStatus
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.data.repository.MediaRootRepository
@@ -24,16 +26,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class SetupStep { PERMISSIONS, STORAGE, EMULATORS, ACCOUNTS }
+enum class SetupStep { FEATURES, PERMISSIONS, STORAGE, EMULATORS, ACCOUNTS }
 
 @Immutable
 data class InitialSetupUiState(
-    val step: SetupStep = SetupStep.PERMISSIONS,
+    val step: SetupStep = SetupStep.FEATURES,
+
+    // what ECHO is for: both off is a launcher only, both on the full suite
+    val gaming: Boolean = true,
+    val media: Boolean = true,
 
     val retroArchInstalled: Boolean = false,
 
@@ -69,7 +76,7 @@ data class InitialSetupUiState(
     val suggestions: Map<StorageSlot, String> = emptyMap(),
 ) {
     private val reachableSteps: List<SetupStep>
-        get() = reachableSetupSteps(retroArchInstalled, vita3KInstalled)
+        get() = reachableSetupSteps(retroArchInstalled, vita3KInstalled, gaming)
 
     val stepNumber: Int get() = (reachableSteps.indexOf(step) + 1).coerceAtLeast(1)
 
@@ -90,8 +97,28 @@ data class InitialSetupUiState(
     }
 }
 
-internal fun reachableSetupSteps(retroArchInstalled: Boolean, vita3KInstalled: Boolean): List<SetupStep> =
-    SetupStep.entries.filter { it != SetupStep.EMULATORS || retroArchInstalled || vita3KInstalled }
+// owner, 2026-10-05: setup first asks what ECHO is for. Gaming and Media are each on or off; what is off
+// is skipped in setup (its folders, its permissions, the Emulators step) and hidden from the crossbar.
+// Libraries and Settings turn any of it back on
+internal fun reachableSetupSteps(retroArchInstalled: Boolean, vita3KInstalled: Boolean, gaming: Boolean = true): List<SetupStep> =
+    SetupStep.entries.filter { it != SetupStep.EMULATORS || (gaming && (retroArchInstalled || vita3KInstalled)) }
+
+internal fun storageSlotsFor(gaming: Boolean, media: Boolean): List<StorageSlot> = StorageSlot.entries.filter {
+    when (it) {
+        StorageSlot.GAMES -> gaming
+        StorageSlot.ARTWORK -> true
+        StorageSlot.MUSIC, StorageSlot.VIDEO, StorageSlot.PHOTOS, StorageSlot.BOOKS -> media
+    }
+}
+
+internal val MEDIA_CATEGORIES = listOf(BuiltInCategory.MUSIC, BuiltInCategory.VIDEO, BuiltInCategory.PHOTO, BuiltInCategory.LIBRARY)
+
+// the crossbar columns to show or hide when a feature changed; a feature left alone keeps the columns
+// the user set by hand
+internal fun featureColumnChanges(from: Pair<Boolean, Boolean>, gaming: Boolean, media: Boolean): Map<String, Boolean> = buildMap {
+    if (from.first != gaming) put(BuiltInCategory.GAMES, gaming)
+    if (from.second != media) MEDIA_CATEGORIES.forEach { put(it, media) }
+}
 
 internal val StorageSlot.mediaKind: MediaRootKind?
     get() = when (this) {
@@ -146,10 +173,23 @@ class InitialSetupViewModel @Inject constructor(
     private val tmdbKeys: com.echo.feature.artwork.api.TmdbApiKeyProvider,
     private val artworkFolderSetup: ArtworkFolderSetup,
     private val storageSuggestions: StorageSuggestions,
+    private val categoryRepository: CategoryRepositoryImpl,
 ) : ViewModel() {
     private val scratch = MutableStateFlow(InitialSetupUiState())
 
+    // gaming and media as the crossbar has them, so Continue changes only what the user switched
+    private var featuresOnCrossbar = true to true
+
     init {
+        viewModelScope.launch {
+            val all = runCatching { categoryRepository.observeAll().first() }.getOrDefault(emptyList())
+            if (all.isNotEmpty()) {
+                val gaming = all.any { it.id == BuiltInCategory.GAMES && it.isVisible }
+                val media = all.any { it.id in MEDIA_CATEGORIES && it.isVisible }
+                featuresOnCrossbar = gaming to media
+                scratch.update { it.copy(gaming = gaming, media = media) }
+            }
+        }
         viewModelScope.launch {
             scratch.update {
                 it.copy(
@@ -271,16 +311,32 @@ class InitialSetupViewModel @Inject constructor(
             parkedForExcursion = false
             return
         }
-        scratch.update { it.copy(step = SetupStep.PERMISSIONS, message = null, retroArchDetecting = false) }
+        scratch.update {
+            it.copy(step = SetupStep.FEATURES, gaming = featuresOnCrossbar.first, media = featuresOnCrossbar.second,
+                message = null, retroArchDetecting = false)
+        }
     }
 
     private fun reachableSteps(): List<SetupStep> =
-        reachableSetupSteps(scratch.value.retroArchInstalled, scratch.value.vita3KInstalled)
+        reachableSetupSteps(scratch.value.retroArchInstalled, scratch.value.vita3KInstalled, scratch.value.gaming)
+
+    fun setGaming(on: Boolean) = scratch.update { it.copy(gaming = on) }
+
+    fun setMedia(on: Boolean) = scratch.update { it.copy(media = on) }
 
     fun nextStep() {
+        if (scratch.value.step == SetupStep.FEATURES) applyFeatures()
         val order = reachableSteps()
         val next = order.getOrNull(order.indexOf(scratch.value.step) + 1)
         scratch.update { it.copy(step = next ?: it.step, message = null) }
+    }
+
+    private fun applyFeatures() {
+        val (gaming, media) = scratch.value.let { it.gaming to it.media }
+        val changes = featureColumnChanges(featuresOnCrossbar, gaming, media)
+        featuresOnCrossbar = gaming to media
+        if (changes.isEmpty()) return
+        viewModelScope.launch { changes.forEach { (id, visible) -> categoryRepository.setVisible(id, visible) } }
     }
 
     fun previousStep(): Boolean {

@@ -97,7 +97,11 @@ object AppPermissions {
 
     // a new device needs every grant the user can give, so setup offers all of them; install-time
     // rows have nothing to tap (owner, 2026-10-04: the media permissions were missing here)
-    fun forWizard(sdk: Int): List<AppPermission> = forSdk(sdk).filter { it.route != GrantRoute.INSTALL_TIME }
+    // (owner, 2026-10-05) with Media off in setup, the media reads are not asked for
+    fun forWizard(sdk: Int, media: Boolean = true): List<AppPermission> =
+        forSdk(sdk).filter { it.route != GrantRoute.INSTALL_TIME && (media || it.id !in MEDIA_READS) }
+
+    val MEDIA_READS = setOf("read_media_audio", "read_media_images", "read_media_video", "read_external_storage")
 }
 
 // owner, 2026-10-05: Settings and Setup said "Not granted" and "Grant…" for the same row; one wording now

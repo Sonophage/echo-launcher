@@ -53,6 +53,7 @@ class InitialSetupViewModelTest {
     private val romRootScanRunner = mockk<RomRootScanRunner>(relaxed = true)
     private val launcherShortcuts =
         mockk<com.echo.feature.appbar.LauncherShortcutRepository>(relaxed = true)
+    private val categories = mockk<com.echo.core.data.repository.CategoryRepositoryImpl>(relaxed = true)
     private lateinit var vm: InitialSetupViewModel
 
     private fun buildVm() = InitialSetupViewModel(
@@ -66,6 +67,11 @@ class InitialSetupViewModelTest {
         },
         ArtworkFolderSetup(artworkImport),
         mockk<StorageSuggestions>(relaxed = true) { every { suggest() } returns emptyMap() },
+        categories,
+    )
+
+    private fun column(id: String, visible: Boolean) = com.echo.core.domain.model.Category(
+        id = id, name = id, iconKey = "", type = com.echo.core.domain.model.CategoryType.BUILT_IN, position = 0, isVisible = visible,
     )
 
     @Before fun setUp() {
@@ -83,6 +89,7 @@ class InitialSetupViewModelTest {
         every { metadataKeys.igdbClientIdFlow } returns flowOf(null)
         every { metadataKeys.ssUsernameFlow } returns flowOf(null)
         coEvery { retroArchLink.inventory() } returns CoreInventory.Unlinked
+        every { categories.observeAll() } returns flowOf(emptyList())
         vm = buildVm()
     }
 
@@ -161,7 +168,7 @@ class InitialSetupViewModelTest {
 
             vm.resetWizard()
             advanceUntilIdle()
-            assertEquals(SetupStep.PERMISSIONS, vm.uiState.value.step)
+            assertEquals(SetupStep.FEATURES, vm.uiState.value.step)
             job.cancel()
         }
 
@@ -196,9 +203,9 @@ class InitialSetupViewModelTest {
         job.cancel()
     }
 
-    @Test fun `setup is four steps at most, and Emulators only shows when there is an emulator to link`() {
+    @Test fun `setup is five steps at most, and Emulators only shows when there is an emulator to link`() {
         assertEquals(
-            listOf(SetupStep.PERMISSIONS, SetupStep.STORAGE, SetupStep.ACCOUNTS),
+            listOf(SetupStep.FEATURES, SetupStep.PERMISSIONS, SetupStep.STORAGE, SetupStep.ACCOUNTS),
             reachableSetupSteps(retroArchInstalled = false, vita3KInstalled = false),
         )
         assertEquals(SetupStep.entries, reachableSetupSteps(retroArchInstalled = true, vita3KInstalled = false))
@@ -208,11 +215,10 @@ class InitialSetupViewModelTest {
     @Test fun `steps advance and retreat in order, and back on the first step exits`() = runTest(dispatcher) {
         val job = collectState()
         advanceUntilIdle()
-        assertEquals(SetupStep.PERMISSIONS, vm.uiState.value.step)
+        assertEquals(SetupStep.FEATURES, vm.uiState.value.step)
         assertFalse("back on the first step means exit", vm.previousStep())
 
-        vm.nextStep()
-        vm.nextStep()
+        repeat(3) { vm.nextStep() }
         advanceUntilIdle()
         assertEquals(SetupStep.ACCOUNTS, vm.uiState.value.step)
 
@@ -256,6 +262,49 @@ class InitialSetupViewModelTest {
         advanceUntilIdle()
 
         assertEquals(ArtworkFolderSetup.COULD_NOT_LINK, vm.uiState.value.message)
+        job.cancel()
+    }
+
+    // owner, 2026-10-05: what is switched off in the first step is skipped in setup and hidden from the crossbar
+
+    @Test fun `with Gaming off there is no games folder and no Emulators step, even with RetroArch installed`() {
+        assertEquals(
+            listOf(SetupStep.FEATURES, SetupStep.PERMISSIONS, SetupStep.STORAGE, SetupStep.ACCOUNTS),
+            reachableSetupSteps(retroArchInstalled = true, vita3KInstalled = true, gaming = false),
+        )
+        assertEquals("a launcher only still gets the ECHO folder", listOf(StorageSlot.ARTWORK), storageSlotsFor(gaming = false, media = false))
+        assertFalse(StorageSlot.MUSIC in storageSlotsFor(gaming = true, media = false))
+        assertEquals(StorageSlot.entries, storageSlotsFor(gaming = true, media = true))
+    }
+
+    @Test fun `turning Media off hides the media columns and leaves Game as it was`() = runTest(dispatcher) {
+        every { categories.observeAll() } returns flowOf(listOf(column("games", true), column("music", true), column("videos", false)))
+        vm = buildVm()
+        val job = collectState()
+        advanceUntilIdle()
+        assertTrue("read from the crossbar", vm.uiState.value.media)
+
+        vm.setMedia(false)
+        vm.nextStep()
+        advanceUntilIdle()
+
+        MEDIA_CATEGORIES.forEach { coVerify { categories.setVisible(it, false) } }
+        coVerify(exactly = 0) { categories.setVisible("games", any()) }
+        assertEquals(SetupStep.PERMISSIONS, vm.uiState.value.step)
+        job.cancel()
+    }
+
+    @Test fun `Continue with nothing switched keeps the columns the user set by hand`() = runTest(dispatcher) {
+        every { categories.observeAll() } returns flowOf(listOf(column("games", false), column("music", true), column("videos", false)))
+        vm = buildVm()
+        val job = collectState()
+        advanceUntilIdle()
+        assertFalse("a hidden Game column reads as Gaming off", vm.uiState.value.gaming)
+
+        vm.nextStep()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { categories.setVisible(any(), any()) }
         job.cancel()
     }
 }

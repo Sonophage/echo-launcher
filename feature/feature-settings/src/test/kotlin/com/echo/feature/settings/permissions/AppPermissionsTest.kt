@@ -63,6 +63,17 @@ class AppPermissionsTest {
     }
 
     @Test
+    fun `with Media off in setup the media reads are not asked for, and the rest still are`() {
+        val wizard = AppPermissions.forWizard(Build.VERSION_CODES.TIRAMISU, media = false).map { it.id }
+        assertFalse("read_media_audio" in wizard)
+        assertFalse("read_media_images" in wizard)
+        assertFalse("read_media_video" in wizard)
+        assertFalse("read_external_storage" in AppPermissions.forWizard(Build.VERSION_CODES.Q, media = false).map { it.id })
+        assertTrue(AppPermissions.USAGE_ACCESS in wizard)
+        assertTrue(AppPermissions.NOTIFICATION_LISTENER in wizard)
+    }
+
+    @Test
     fun `an install-time row reads as unavailable rather than pretending it can be granted`() {
         assertEquals("Granted", permissionStateLabel(true, GrantRoute.INSTALL_TIME))
         assertEquals("Unavailable", permissionStateLabel(false, GrantRoute.INSTALL_TIME))

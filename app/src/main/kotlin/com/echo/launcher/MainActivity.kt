@@ -20,6 +20,7 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.repeatOnLifecycle
@@ -266,6 +267,7 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (minimalKeyboardKey(event)) return true
+        if (backHidesKeyboard(event)) return true
 
         if (gamepadInputHandler.onKeyEvent(event)) return true
         if (openSearchOnTypedCharacter(event)) return true
@@ -284,6 +286,17 @@ class MainActivity : ComponentActivity() {
             }
             else -> false
         }
+    }
+
+    // owner, 2026-10-05: Back (B) while the on-screen keyboard is up hides the keyboard and does nothing
+    // else; the next Back goes back as usual
+    private fun backHidesKeyboard(event: KeyEvent): Boolean {
+        if (event.action != KeyEvent.ACTION_DOWN) return false
+        if (gamepadInputHandler.currentMappings.actionFor(event.keyCode) != GamepadAction.BACK) return false
+        val insets = ViewCompat.getRootWindowInsets(window.decorView) ?: return false
+        if (!insets.isVisible(WindowInsetsCompat.Type.ime())) return false
+        WindowInsetsControllerCompat(window, window.decorView).hide(WindowInsetsCompat.Type.ime())
+        return true
     }
 
     private fun enterOpensAppDrawer(event: KeyEvent): Boolean {
