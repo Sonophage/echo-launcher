@@ -89,6 +89,9 @@ fun AppDrawerScreen(
     tabPick: AppFilter? = null,
     onTabPickConsumed: () -> Unit = {},
 
+    // owner, 2026-10-05: one place grants access; the empty Recently Used page sends people to Permissions
+    onOpenPermissions: (() -> Unit)? = null,
+
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -204,7 +207,7 @@ fun AppDrawerScreen(
         onCloseMenu = { viewModel.closeAppMenu() },
         onConfirmUninstall = { viewModel.confirmUninstall() },
         onCancelUninstall = { viewModel.cancelUninstall() },
-        onGrantUsageAccess = { viewModel.openUsageAccessSettings() },
+        onGrantUsageAccess = onOpenPermissions ?: { viewModel.openUsageAccessSettings() },
         modifier = modifier,
     )
 }

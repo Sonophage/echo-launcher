@@ -2,11 +2,7 @@ package com.echo.feature.settings.ui
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import android.content.Context
-import android.content.Intent
 import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
@@ -20,12 +16,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.DisposableEffect
-import com.echo.feature.settings.permissions.AppPermission
 import com.echo.feature.settings.permissions.AppPermissions
 import com.echo.feature.settings.permissions.GrantRoute
-import com.echo.feature.settings.permissions.permissionStateLabel
-import com.echo.feature.settings.permissions.isGranted
-import com.echo.feature.settings.permissions.systemScreenIntent
 import com.echo.feature.settings.viewmodel.PermissionsViewModel
 import android.widget.Toast
 import androidx.compose.runtime.LaunchedEffect
@@ -59,9 +51,7 @@ fun PermissionsSettingsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val requestPermission = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { readToken++ }
+    val ask = rememberPermissionAsker { readToken++ }
 
     val rows = remember { AppPermissions.forSdk(Build.VERSION.SDK_INT) }
 
@@ -78,9 +68,8 @@ fun PermissionsSettingsScreen(
                 .verticalScroll(scrollState),
         ) {
             SettingsGroup("Special access")
-            rows.filter { it.route == GrantRoute.SYSTEM_SCREEN }.forEach { row ->
-                PermissionRow(row, context, readToken) { openSystemScreen(context, row) }
-            }
+            AppPermissionRows(rows.filter { it.route == GrantRoute.SYSTEM_SCREEN }, readToken, ask)
+            RestrictedSettingsRow(rows, readToken)
 
             if (folders.isNotEmpty()) {
                 SettingsGroup("Folders")
@@ -88,39 +77,10 @@ fun PermissionsSettingsScreen(
             }
 
             SettingsGroup("Asked for when needed")
-            rows.filter { it.route == GrantRoute.REQUEST }.forEach { row ->
-                PermissionRow(row, context, readToken) {
-                    row.manifestName?.let(requestPermission::launch)
-                }
-            }
+            AppPermissionRows(rows.filter { it.route == GrantRoute.REQUEST }, readToken, ask)
 
             SettingsGroup("Granted at install")
-            rows.filter { it.route == GrantRoute.INSTALL_TIME }.forEach { row ->
-                PermissionRow(row, context, readToken, onClick = null)
-            }
+            AppPermissionRows(rows.filter { it.route == GrantRoute.INSTALL_TIME }, readToken, ask)
         }
-    }
-}
-
-@Composable
-private fun PermissionRow(
-    permission: AppPermission,
-    context: Context,
-    readToken: Int,
-    onClick: (() -> Unit)?,
-) {
-    val granted = remember(permission.id, readToken) { isGranted(context, permission) }
-    SettingsValueRow(
-        label = permission.label,
-        value = permissionStateLabel(granted, permission.route),
-        sublabel = permission.why,
-        focusKey = "permission_${permission.id}",
-        onClick = onClick,
-    )
-}
-
-private fun openSystemScreen(context: Context, permission: AppPermission) {
-    runCatching {
-        context.startActivity(systemScreenIntent(context, permission).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }

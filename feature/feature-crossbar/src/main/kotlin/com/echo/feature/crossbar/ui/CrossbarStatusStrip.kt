@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -720,25 +721,27 @@ internal fun BatteryLine(level: Int, charging: Boolean, glint: Boolean, modifier
     val low = level <= 20 && !charging
     Box(
         modifier
-            .fillMaxWidth()
-            .height(BatteryLineHeight)
+            .fillMaxHeight()
+            .width(BatteryLineHeight)
             .background(Color.White.copy(alpha = 0.10f)),
     ) {
         Box(
             Modifier
-                .fillMaxWidth(fill)
-                .height(BatteryLineHeight)
+                .align(Alignment.BottomCenter)
+                .fillMaxHeight(fill)
+                .width(BatteryLineHeight)
                 .drawWithCache {
                     val base = if (low) LowBatteryTint else Color.White
                     val brush = if (!charging) {
                         SolidColor(base)
                     } else {
-                        val glint = size.width * 0.22f
-                        val head = travel * (size.width + glint * 2f) - glint
+                        // the glint climbs from the bottom while charging
+                        val glint = size.height * 0.22f
+                        val head = size.height - (travel * (size.height + glint * 2f) - glint)
                         Brush.linearGradient(
                             colors = listOf(base.copy(alpha = 0.55f), Color.White, base.copy(alpha = 0.55f)),
-                            start = Offset(head, 0f),
-                            end = Offset(head + glint, 0f),
+                            start = Offset(0f, head),
+                            end = Offset(0f, head - glint),
                         )
                     }
                     onDrawBehind { drawRect(brush) }

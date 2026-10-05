@@ -100,8 +100,9 @@ object AppPermissions {
     fun forWizard(sdk: Int): List<AppPermission> = forSdk(sdk).filter { it.route != GrantRoute.INSTALL_TIME }
 }
 
+// owner, 2026-10-05: Settings and Setup said "Not granted" and "Grant…" for the same row; one wording now
 fun permissionStateLabel(granted: Boolean, route: GrantRoute): String = when {
     granted -> "Granted"
     route == GrantRoute.INSTALL_TIME -> "Unavailable"
-    else -> "Not granted"
+    else -> "Grant…"
 }

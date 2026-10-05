@@ -22,9 +22,6 @@ import com.echo.core.domain.model.settingsEntryFor
 import com.echo.core.ui.preview.CombinedPreviews
 import com.echo.core.ui.preview.EchoScreenPreview
 import com.echo.feature.settings.permissions.AppPermissions
-import com.echo.feature.settings.permissions.GrantRoute
-import com.echo.feature.settings.permissions.isGranted
-import com.echo.feature.settings.permissions.systemScreenIntent
 import com.echo.feature.settings.ui.wizard.WizardScaffold
 import com.echo.feature.settings.ui.wizard.WizardSplash
 import com.echo.feature.settings.viewmodel.InitialSetupUiState
@@ -84,9 +81,7 @@ fun InitialSetupScreen(
     ) { uri -> if (uri != null) viewModel.linkVitaFolder(uri) }
 
     var grantToken by remember { mutableIntStateOf(0) }
-    val permissionRequest = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { grantToken++; viewModel.refreshGrants() }
+    val askPermission = rememberPermissionAsker { grantToken++; viewModel.refreshGrants() }
     val systemScreen = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { grantToken++; viewModel.refreshGrants() }
@@ -126,8 +121,7 @@ fun InitialSetupScreen(
                     state = state,
                     grantToken = grantToken,
                     onRefresh = { grantToken++; viewModel.refreshGrants() },
-                    onRequest = { permissionRequest.launch(it) },
-                    onOpenSystemScreen = { systemScreen.launch(it) },
+                    onAsk = askPermission,
                     onSetAsHome = { systemScreen.launch(viewModel.homeRoleIntent()) },
                     onGrantFolder = regrantFolder,
                 )
@@ -191,8 +185,7 @@ private fun PermissionsPage(
     state: InitialSetupUiState,
     grantToken: Int,
     onRefresh: () -> Unit,
-    onRequest: (String) -> Unit,
-    onOpenSystemScreen: (android.content.Intent) -> Unit,
+    onAsk: (com.echo.feature.settings.permissions.AppPermission) -> Unit,
     onSetAsHome: () -> Unit,
     onGrantFolder: (com.echo.feature.settings.viewmodel.FolderAccessRow) -> Unit,
 ) {
@@ -201,24 +194,9 @@ private fun PermissionsPage(
         onPauseOrDispose { }
     }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
     val rows = remember { AppPermissions.forWizard(Build.VERSION.SDK_INT) }
-    rows.forEachIndexed { index, permission ->
-        val granted = remember(permission.id, grantToken) { isGranted(context, permission) }
-        SettingsValueRow(
-            label = permission.label,
-            value = if (granted) "Granted" else "Grant…",
-            sublabel = permission.why,
-            focusKey = if (index == 0) "perm_first" else null,
-            onClick = {
-                if (!granted) when (permission.route) {
-                    GrantRoute.REQUEST -> permission.manifestName?.let(onRequest)
-                    GrantRoute.SYSTEM_SCREEN -> onOpenSystemScreen(systemScreenIntent(context, permission))
-                    GrantRoute.INSTALL_TIME -> Unit
-                }
-            },
-        )
-    }
+    AppPermissionRows(rows, grantToken, onAsk, firstFocusKey = "perm_first")
+    RestrictedSettingsRow(rows, grantToken)
     SettingsValueRow(
         label = "ECHO as Home",
         value = if (state.isHomeLauncher) "Active" else "Set…",

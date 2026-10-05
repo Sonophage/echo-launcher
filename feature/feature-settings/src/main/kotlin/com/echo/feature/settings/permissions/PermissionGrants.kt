@@ -16,11 +16,15 @@ fun isGranted(context: Context, permission: AppPermission): Boolean = when (perm
     } ?: false
 }
 
+fun appDetailsIntent(context: Context): Intent =
+    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+
+// Android 13 and later block usage and notification access for an app installed outside a store until
+// "Allow restricted settings" is turned on in its App info
+fun restrictedSettingsApply(sdk: Int): Boolean = sdk >= android.os.Build.VERSION_CODES.TIRAMISU
+
 fun systemScreenIntent(context: Context, permission: AppPermission): Intent = when (permission.id) {
     AppPermissions.NOTIFICATION_LISTENER -> AndroidNotifications.settingsIntent()
     AppPermissions.USAGE_ACCESS -> UsageAccess.settingsIntent()
-    else -> Intent(
-        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-        Uri.fromParts("package", context.packageName, null),
-    )
+    else -> appDetailsIntent(context)
 }

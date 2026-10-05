@@ -66,8 +66,8 @@ class AppPermissionsTest {
     fun `an install-time row reads as unavailable rather than pretending it can be granted`() {
         assertEquals("Granted", permissionStateLabel(true, GrantRoute.INSTALL_TIME))
         assertEquals("Unavailable", permissionStateLabel(false, GrantRoute.INSTALL_TIME))
-        assertEquals("Not granted", permissionStateLabel(false, GrantRoute.REQUEST))
-        assertEquals("Not granted", permissionStateLabel(false, GrantRoute.SYSTEM_SCREEN))
+        assertEquals("a grantable row says what a tap does", "Grant…", permissionStateLabel(false, GrantRoute.REQUEST))
+        assertEquals("Grant…", permissionStateLabel(false, GrantRoute.SYSTEM_SCREEN))
     }
 
     @Test

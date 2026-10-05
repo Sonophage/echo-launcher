@@ -1168,12 +1168,13 @@ fun CrossbarShell(
             )
             }
 
-            // owner, 2026-10-04: the battery line runs along the bottom edge, not the top
+            // owner, 2026-10-05: the battery line stands up the left edge, filling from the bottom (it ran along
+            // the bottom edge, under the footer)
             BatteryLine(
                 level = battery.level,
                 charging = battery.charging,
                 glint = uiState.waveShown,
-                modifier = Modifier.align(Alignment.BottomCenter).zIndex(aboveContextRail + 1f),
+                modifier = Modifier.align(Alignment.CenterStart).zIndex(aboveContextRail + 1f),
             )
 
             val panelStage = uiState.panelStage()
@@ -1188,13 +1189,10 @@ fun CrossbarShell(
                     allCount = panelEntries(androidNotices, uiState.launcherNotices).size,
                     onChipTapped = onNoticeChipTapped,
                     androidAccessGranted = androidAccess,
+                    // owner, 2026-10-05: one place grants access, so the panel opens Settings ▸ Permissions
                     onGrantAndroidAccess = {
                         onNotificationsDismissed()
-                        runCatching {
-                            strip.startActivity(
-                                AndroidNotifications.settingsIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
-                        }
+                        onOpenSettingsScreen("settings_permissions")
                     },
                     quick = QuickSettingsState(
                         wave = uiState.waveStyle,
@@ -1329,6 +1327,7 @@ fun CrossbarShell(
                         onTabsShown = { active, sections -> drawerTabs = active; drawerSections = sections },
                         tabPick = drawerTabPick,
                         onTabPickConsumed = { drawerTabPick = null },
+                        onOpenPermissions = { onOpenSettingsScreen("settings_permissions") },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
