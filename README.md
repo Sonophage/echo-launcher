@@ -368,16 +368,27 @@ Installed emulators are detected from a built-in catalog, plus one profile per i
 | System | Emulators |
 |---|---|
 | PSP | PPSSPP / PPSSPP Gold |
-| PS1 | DuckStation |
-| PS2 | NetherSX2 / AetherSX2 |
-| GameCube / Wii | Dolphin |
-| DS / 3DS | melonDS, DraStic / Azahar, Citra, Lime3DS |
-| Switch | Sudachi / Yuzu / Suyu family |
-| N64 | Mupen64Plus FZ / AE |
-| GB / GBC / GBA | mGBA, My Boy!, GBA.emu, GBC.emu |
-| NES / SNES / Genesis / PC Engine / Neo Geo / WonderSwan / Lynx | the `*.emu` family |
-| Dreamcast | Flycast, Redream |
-| Xbox 360 | X360 Mobile (`.iso`) |
+| PS Vita | Vita3K, EmuCoreV |
+| PS1 | DuckStation, ePSXe, FPse, FPseNG, ARMSX1 |
+| PS2 | NetherSX2 / AetherSX2 and its Turnip builds, ARMSX2, Play!, EmuCoreX |
+| PS3 | aPS3e, ARMSX3 |
+| GameCube / Wii | Dolphin, Dolphin MMJR / MMJR2, PrimeHack |
+| Wii U | Cemu |
+| DS | melonDS, melonDualDS, DraStic, NooDS, SkyEmu |
+| 3DS | Azahar, AzaharPlus, Citra, Citra MMJ, Lime3DS, Mandarine, Borked3DS, Panda3DS |
+| Switch | Eden, Yuzu, Sudachi, Citron, Sumi, Uzuy, Suyu, Kenji-NX, Benji-SC, Skyline |
+| N64 | M64Plus FZ, Mupen64Plus-AE |
+| GB / GBC / GBA | mGBA, My Boy!, My OldBoy!, Pizza Boy, Linkboy, SkyEmu, GBA.emu, GBC.emu (and NooDS for GBA) |
+| NES / SNES | NES.emu, iNES / Snes9x EX+ |
+| Genesis / Master System / Game Gear | MD.emu, Pizza Boy SC, MasterGear |
+| Saturn | Yaba Sanshiro 2, Saturn.emu |
+| PC Engine / Neo Geo / Neo Geo Pocket / WonderSwan / Lynx / Atari 2600 / C64 | the `*.emu` family |
+| Arcade (MAME, CPS) | MAME4droid 2024, MAME4droid 0.139 |
+| Virtual Boy | Virtual Virtual Boy |
+| Dreamcast, NAOMI, Atomiswave | Flycast, Redream (Dreamcast only) |
+| Xbox | X1 BOX (xemu) |
+| Xbox 360 | X360 Mobile, aX360e |
+| Symbian | EKA2L1 |
 | Anything with a libretro core | RetroArch |
 
 A game launches with, in order: its own override (**≡ ▸ Settings ▸ Change Emulator**), then its
@@ -416,7 +427,8 @@ repositions it, restores the previous image, or clears it. Crops keep the untouc
 you can re-crop without loss.
 
 **Video snaps**: resting on a game plays its snap, muted and at most 60 seconds, in the tile or
-the background. Snaps are skipped under battery saver, low battery or heat.
+the background. Snaps do not start under battery saver, below 20% battery when not charging, or
+when the device is hot.
 
 **The artwork folder** (*Emulators ▸ Artwork ▸ Artwork Folder & Import*) is kept in the ES-DE
 `downloaded_media` layout, so other frontends can read it as it is. The same screen imports an
@@ -431,8 +443,9 @@ ES-DE media folder and its `gamelist.xml`, and exports for ES-DE.
     └─ pfp/                     launcher-only: tile art, tile snaps, originals, previous versions
 ```
 
-Imports match files to games by ROM file name, then title, then title without tags. Anything
-ambiguous is shown to you rather than guessed, and existing art is never overwritten.
+Imports match files to games by ROM file name, then title, then title without tags. A title that
+fits more than one game is shown to you rather than guessed. Tiles, backgrounds and logos you
+already have are kept, and art you set or locked yourself is never replaced.
 
 ### Music, video, photos and books
 
@@ -444,16 +457,17 @@ Each media column scans one or more folders. Add, rescan, relink or remove them 
 - **Video**: libraries with thumbnails, Recently Watched, and the built-in player or an external
   app. Resume picks up where you stopped.
 - **Photo**: albums, the viewer, and **Set as Wallpaper**. Location data is never read.
-- **Library**: EPUB, PDF and CBZ books by series. They open in the built-in reader (two-page or
-  single-page, contents, bookmarks, text size and page colour, and it remembers your place), or in
-  a reader app chosen from the Folders row.
+- **Library**: EPUB, PDF and CBZ books by series. They open in the built-in reader (contents, bookmarks,
+  and it remembers your place; EPUB books also get two-page or single-page, text size, typeface
+  and page colour), or in a reader app chosen from the Folders row.
 
 Each column also lists its apps. Add more with its **Add** row.
 
 ### Search
 
 - **Y**, or **LB** on the crossbar, searches games, apps, music, video, photos and books together.
-  Results say which library they came from, and opening one takes you to it.
+  Each result says what it is. Opening one goes to its column and opens it: a game or app
+  launches, a video or song plays, and a photo or book opens.
 - The **Search** row at the end of Game, Music, Video, Photo and Library searches only that library.
 - **Quick Search** in Network searches the web in your own browser, or opens an address if you
   type one.
@@ -478,7 +492,8 @@ Each column also lists its apps. Add more with its **Add** row.
 120 frames, 10 s). Animated icons only play on the row you are on. Your picks stay on top when you
 change theme; clear one with **≡**.
 
-**Motion wallpapers** can be MP4, WebM or animated GIF, up to 1080p, 60 seconds and 60 MB. They
+**Motion wallpapers** can be MP4, WebM, animated GIF or animated WebP, up to 1080p and 60 MB.
+Videos can be up to 60 seconds. They
 pause during video, behind fullscreen overlays, and on battery saver.
 
 **Sounds** can be MP3, WAV, OGG or M4A:
