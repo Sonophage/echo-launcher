@@ -15,6 +15,41 @@ val LIBRARY_CHIP_IDS = listOf(
     "network",
 )
 
+enum class NoticeIslandPress { SHOW_CARD, OPEN_PANEL }
+
+// owner, 2026-10-05: the first press brings the newest notification out as the card, the second opens the
+// panel; with nothing waiting a press opens it at once
+internal fun noticeIslandPress(cardOut: Boolean, hasNotice: Boolean): NoticeIslandPress =
+    if (!cardOut && hasNotice) NoticeIslandPress.SHOW_CARD else NoticeIslandPress.OPEN_PANEL
+
+internal const val NOTICE_CARD_MS = 4_000L
+
+// the notification card's rows, newest first; the card shows as many as fit (owner, 2026-10-05)
+val CrossbarUiState.noticeCardRows: List<com.echo.core.ui.notification.AndroidNotice>
+    get() = androidNotices.sortedByDescending { it.postedAt }
+
+sealed interface NoticeCardStep {
+    data class Move(val cursor: Int) : NoticeCardStep
+    data class Open(val index: Int) : NoticeCardStep
+    data class Dismiss(val index: Int) : NoticeCardStep
+    data object Close : NoticeCardStep
+    data object Stay : NoticeCardStep
+}
+
+// owner, 2026-10-05: on the card, up and down pick a notification, A opens its app, X dismisses it, B closes
+// the card; anything else closes it and goes on to the screen
+internal fun noticeCardStep(action: GamepadAction, cursor: Int, rows: Int): NoticeCardStep {
+    if (rows == 0) return NoticeCardStep.Close
+    val at = cursor.coerceIn(0, rows - 1)
+    return when (action) {
+        GamepadAction.NAVIGATE_UP -> if (at > 0) NoticeCardStep.Move(at - 1) else NoticeCardStep.Stay
+        GamepadAction.NAVIGATE_DOWN -> if (at < rows - 1) NoticeCardStep.Move(at + 1) else NoticeCardStep.Stay
+        GamepadAction.SELECT -> NoticeCardStep.Open(at)
+        GamepadAction.CHANGE_SORT -> NoticeCardStep.Dismiss(at)
+        else -> NoticeCardStep.Close
+    }
+}
+
 enum class QuickSetting { WAVE, BACKDROP, ROW_ART, RECENT_APPS, ANDROID_SETTINGS, LIBRARIES }
 
 val PANEL_QUICK_SETTINGS = listOf(QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.ROW_ART, QuickSetting.RECENT_APPS, QuickSetting.ANDROID_SETTINGS)

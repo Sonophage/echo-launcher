@@ -1,5 +1,7 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.feature.crossbar.viewmodel.noticeCardRows
+
 import com.echo.core.ui.design.LocalBackdropWave
 import com.echo.core.ui.design.LocalMenuBackdropArt
 import com.echo.feature.crossbar.viewmodel.CrossbarItemType
@@ -221,6 +223,10 @@ fun CrossbarShellContainer(
         onRecentFilterTapped = viewModel.recents::setRecentFilter,
         onDrawerTypedCharConsumed = viewModel::onDrawerTypedCharConsumed,
         onNotificationsToggled = viewModel.panel::toggleNotifications,
+        onNoticeIslandPressed = viewModel.panel::pressNoticeIsland,
+        onNewNotice = { viewModel.panel.showNoticeCard() },
+        onNoticeOpen = viewModel.panel::openNoticeFromCard,
+        onNoticeDismiss = viewModel.panel::dismissNoticeFromCard,
         onLaunchRecentTop = viewModel.recents::launchRecentTop,
         onGameInfoSectionPicked = viewModel.gameDetail::openGameInfoSection,
         onNoticeChipTapped = viewModel.panel::onNoticeChipTapped,
@@ -270,6 +276,7 @@ fun CrossbarShellContainer(
         onCloseAppDrawer = viewModel::onCloseAppDrawer,
         onAddAppToOpenCategory = viewModel::addAppToOpenCategory,
         onLaunchRomFromDrawer = viewModel.launching::launchGameFromDrawer,
+        onGameMenuFromDrawer = viewModel::openGameMenu,
         onOpenAppSearch = viewModel.librarySearch::openAppSearch,
         onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
@@ -339,6 +346,7 @@ fun CrossbarShellContainer(
         onSearchBack = viewModel.librarySearch::closeSearch,
         onSearchFocusedAt = viewModel.librarySearch::onSearchFocusedAt,
         onSearchOptionsAt = viewModel.librarySearch::onSearchOptionsAt,
+        onSearchKindPicked = viewModel.librarySearch::pickSearchKind,
         onMusicBrowserQueryChange = viewModel.music::onMusicBrowserQueryChange,
         onMusicBrowserActivatedAt = viewModel.music::onMusicBrowserActivatedAt,
         onMusicBrowserLongPressAt = viewModel.music::onMusicBrowserLongPressAt,
@@ -417,6 +425,10 @@ fun CrossbarShell(
 
     onDrawerTypedCharConsumed: () -> Unit = {},
     onNotificationsToggled: () -> Unit = {},
+    onNoticeIslandPressed: () -> Unit = {},
+    onNewNotice: () -> Unit = {},
+    onNoticeOpen: (String) -> Unit = {},
+    onNoticeDismiss: (String) -> Unit = {},
     onLaunchRecentTop: () -> Unit = {},
     onGameInfoSectionPicked: (com.echo.feature.crossbar.viewmodel.GameInfoAction?) -> Unit = {},
     onNoticeChipTapped: (com.echo.feature.crossbar.viewmodel.NoticeChip) -> Unit = {},
@@ -470,6 +482,7 @@ fun CrossbarShell(
 
     onAddAppToOpenCategory: (String) -> Unit = {},
     onLaunchRomFromDrawer: (Long) -> Unit = {},
+    onGameMenuFromDrawer: (Long) -> Unit = {},
     onOpenAppSearch: (String) -> Unit = {},
 
     onLetterRailTouch: (Int) -> Unit = {},
@@ -547,6 +560,7 @@ fun CrossbarShell(
 
     onSearchFocusedAt: (Int) -> Unit = {},
     onSearchOptionsAt: (Int) -> Unit = {},
+    onSearchKindPicked: (com.echo.feature.crossbar.viewmodel.SearchKind?) -> Unit = {},
     onMusicBrowserQueryChange: (String) -> Unit = {},
     onMusicBrowserActivatedAt: (Int) -> Unit = {},
     onMusicBrowserLongPressAt: (Int) -> Unit = {},
@@ -690,8 +704,6 @@ fun CrossbarShell(
             )
 
             val recentsListState = rememberLazyListState()
-            val panelItem = uiState.hoverPanelItem
-
             val panelContent = uiState.hoverPanelContent
 
             val panelLogo = panelContent?.logoUri
@@ -1139,7 +1151,19 @@ fun CrossbarShell(
                 holding = islandIsRecent && uiState.launchHold == uiState.recentTop?.id,
 
                 noticeCount = uiState.launcherNotices.size + androidNotices.size,
-                onNoticeCountTapped = onNotificationsToggled,
+                noticePeek = androidNotices.maxByOrNull { it.postedAt }?.let {
+                    NoticePeek(it.postedAt, it.title?.takeIf { t -> t.isNotBlank() } ?: it.appLabel, it.text, it.packageName)
+                },
+                profileAvatar = uiState.profileAvatar,
+                noticeCardOut = uiState.noticeCardOut,
+                noticeRows = uiState.noticeCardRows.map {
+                    NoticeRow(it.key, it.title?.takeIf { t -> t.isNotBlank() } ?: it.appLabel, it.text, it.packageName, it.canDismiss)
+                },
+                noticeCursor = uiState.noticeCardCursor.takeIf { uiState.noticeCardPinned && !uiState.lastInputWasTouch },
+                onNoticeOpen = onNoticeOpen,
+                onNoticeDismiss = onNoticeDismiss,
+                onNoticeIslandPressed = onNoticeIslandPressed,
+                onNewNotice = onNewNotice,
 
                 hints = StripHints(
                     shoulder = uiState.panelStripOpen && crossbarContext,
@@ -1151,7 +1175,8 @@ fun CrossbarShell(
                 // category's own filter (Last Played's, through centre) or its sort
 
                 compact = !crossbarContext,
-                minimized = uiState.activeAppDrawerFilter != null,
+                // Search has its own field across the top, so the island rests as its orb there too (owner, 2026-10-05)
+                minimized = uiState.activeAppDrawerFilter != null || uiState.search != null,
                 battery = battery,
 
                 centre = if (notificationsOpen) {
@@ -1241,6 +1266,8 @@ fun CrossbarShell(
                     cursor = uiState.letterJump?.cursor,
                     onTouch = onLetterRailTouch,
                     onReleased = onLetterRailReleased,
+                    // the top bar's real band, which is taller than the base strip on a short screen
+                    top = stripBandHeight(rememberStripUnits()),
                     modifier = Modifier
                         .alpha(chromeFade)
                         .zIndex(CrossbarChromeZ),
@@ -1310,6 +1337,8 @@ fun CrossbarShell(
                         bootVideoPath = uiState.bootVideoPath,
                         bootAudioPath = uiState.bootAudioPath,
                         skipRequested = uiState.bootSkipRequested,
+                        waveStyle = uiState.waveStyle,
+                        waveTint = waveColorFor(rememberWaveAccent(uiState)),
                     )
                 } else {
                     Box(modifier = Modifier.fillMaxSize().background(Color.Black))
@@ -1334,6 +1363,7 @@ fun CrossbarShell(
                         onTouchInteraction = onTouchInput,
                         onAddToCrossBar = onAddAppToOpenCategory,
                         onLaunchRom = onLaunchRomFromDrawer,
+                        onGameMenu = onGameMenuFromDrawer,
                         onOpenAppSearch = onOpenAppSearch,
                         onTabsShown = { active, sections -> drawerTabs = active; drawerSections = sections },
                         tabPick = drawerTabPick,
@@ -1353,6 +1383,8 @@ fun CrossbarShell(
 
                     onFocusAt = onSearchFocusedAt,
                     onOptionsAt = onSearchOptionsAt,
+                    onKindPicked = onSearchKindPicked,
+                    waveStyle = uiState.waveStyle,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

@@ -28,7 +28,7 @@ fun AccountsSettingsScreen(
     var steamKeyDraft by remember(state.hasSteam) { mutableStateOf("") }
 
     SettingsPageScaffold(
-        subtitle = "Accounts",
+        subtitle = "Achievements",
         onBack   = onBack,
         modifier = modifier,
     ) {

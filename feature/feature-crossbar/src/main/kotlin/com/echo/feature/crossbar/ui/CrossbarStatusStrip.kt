@@ -19,14 +19,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -46,11 +41,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -69,11 +62,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.SolidColor
@@ -87,7 +77,6 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -101,7 +90,6 @@ import com.echo.core.ui.components.LocalPadPrompts
 import com.echo.core.ui.components.StatusStripHeight
 import com.echo.core.ui.components.chromeGutter
 import com.echo.core.ui.design.DesignUnits
-import com.echo.core.ui.design.LEGIBILITY_FLOOR_PX
 import com.echo.core.ui.design.mediaAccent
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.theme.menuCursorEdge
@@ -111,9 +99,18 @@ import com.echo.feature.crossbar.viewmodel.countLabel
 import com.echo.feature.crossbar.viewmodel.islandProgress
 import com.echo.feature.crossbar.viewmodel.timeLabel
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
+import androidx.compose.runtime.key
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import com.echo.core.ui.design.NeckFlare
+import com.echo.core.ui.design.drawIslandNeck
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
+import com.echo.core.ui.design.MarkPose
+import com.echo.core.ui.design.drawEchoMark
 import java.util.Date
-import java.util.Locale
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.components.ChromeScrim
 
@@ -177,6 +174,26 @@ fun rememberBatteryReading(): BatteryReading {
 
 data class StripHints(val shoulder: Boolean = false, val leftRight: Boolean = false)
 
+// the newest notification, for the right-hand island's peek
+data class NoticePeek(val postedAt: Long, val title: String, val detail: String?, val packageName: String?)
+
+// one row of the notification card
+data class NoticeRow(val key: String, val title: String, val detail: String?, val packageName: String?, val canDismiss: Boolean)
+
+// owner, 2026-10-05: a notification newer than any seen peeks from the right, once; one already there when
+// the strip appears, or an older one left after a dismissal, does not
+internal fun noticePeekDue(seenAt: Long, newest: NoticePeek?): Boolean = newest != null && newest.postedAt > seenAt
+
+
+// the islands' cards grow out of their orb, down below the bar, and go back into it
+private fun cardDrop(origin: TransformOrigin) =
+    fadeIn(tween(200)) + scaleIn(tween(260), initialScale = 0.3f, transformOrigin = origin)
+
+private fun cardLift(origin: TransformOrigin) =
+    fadeOut(tween(160)) + scaleOut(tween(180), targetScale = 0.3f, transformOrigin = origin)
+
+
+
 @Composable
 fun CrossbarStatusStrip(
     // the XMB's sort as a Recent-style row (owner, 2026-10-04): the mode labels and the active one
@@ -190,7 +207,18 @@ fun CrossbarStatusStrip(
     onLiveAreaTapped: (() -> Unit)? = null,
 
     noticeCount: Int = 0,
-    onNoticeCountTapped: (() -> Unit)? = null,
+    noticePeek: NoticePeek? = null,
+    // the card's rows, newest first, and the pad's row on it (null when the pad is not on the card)
+    noticeRows: List<NoticeRow> = emptyList(),
+    noticeCursor: Int? = null,
+    onNoticeOpen: (String) -> Unit = {},
+    onNoticeDismiss: (String) -> Unit = {},
+    // the card is out (the view model times it); a press on the island, and a new notification arriving
+    noticeCardOut: Boolean = false,
+    onNoticeIslandPressed: () -> Unit = {},
+    onNewNotice: () -> Unit = {},
+    // the right-hand island with no notifications: the user's picture, else the ECHO mark
+    profileAvatar: String? = null,
 
     // the top-left orb's level for the live activity (0 rest, 1 focused, 2 expanded); -1 keeps the plain island
     orbLevel: Int = -1,
@@ -262,36 +290,55 @@ fun CrossbarStatusStrip(
             orbLevel == 0 && !compact -> IslandMode.ORB
             else -> IslandMode.CARD
         }
-        AnimatedContent(
-            targetState = islandMode,
-            transitionSpec = {
-                (fadeIn(tween(220)) + slideInVertically(tween(260)) { -it / 2 }) togetherWith
-                    (fadeOut(tween(160)) + slideOutVertically(tween(180)) { -it / 2 }) using SizeTransform(clip = false)
-            },
-            contentAlignment = Alignment.TopStart,
-            label = "island",
-            modifier = Modifier.align(Alignment.TopStart).wrapContentHeight(Alignment.Top, unbounded = true),
-        ) { mode ->
-          val activity = shownLive
-          if (activity != null && mode != IslandMode.NONE) {
-            if (mode == IslandMode.ORB) {
+        // owner, 2026-10-05: the orb stays in the bar, and the card drops below the bar from it, as the
+        // notification island's card does on the right. A bridge in the card's colour joins the two, so the
+        // orb and its card read as one shape
+        // just under each orb (owner, 2026-10-05: closer to the icon). The left orb hangs 10 from the top; the
+        // right one is centred in the band
+        val cardTop = u.dp(10 + 44 + 2)
+        val noticeCardTop = band / 2 + u.dp(22 + 2)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = islandMode == IslandMode.CARD,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(160)),
+            modifier = Modifier.align(Alignment.TopStart).padding(start = chromeGutter()).wrapContentHeight(Alignment.Top, unbounded = true),
+        ) { IslandBridge(islandCardFill(islandTint), orbCentreY = u.dp(32), cardTop = cardTop, end = false, u = u) }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = islandMode != IslandMode.NONE,
+            enter = fadeIn(tween(220)),
+            exit = fadeOut(tween(160)),
+            modifier = Modifier.align(Alignment.TopStart),
+        ) {
+            shownLive?.let { activity ->
                 RestOrb(
                     activity = activity,
                     tint = islandTint,
                     glow = islandGlow,
                     u = u,
                     stageIcon = stageIcon?.bitmap,
-                    onTapped = if (minimized) ({}) else onOrbTapped,
+                    onTapped = when {
+                        minimized -> ({})
+                        islandMode == IslandMode.CARD && orbLevel < 0 -> onLiveAreaTapped ?: {}
+                        else -> onOrbTapped
+                    },
                     modifier = Modifier.padding(start = chromeGutter(), top = u.dp(10)),
                 )
-            } else {
+            }
+        }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = islandMode == IslandMode.CARD,
+            enter = cardDrop(TransformOrigin(0f, 0f)),
+            exit = cardLift(TransformOrigin(0f, 0f)),
+            modifier = Modifier.align(Alignment.TopStart).padding(start = chromeGutter(), top = cardTop)
+                .wrapContentHeight(Alignment.Top, unbounded = true),
+        ) {
+            shownLive?.let { activity ->
                 val music = orbLevel > 0 && activity.stage is PanelStage.Music
                 IslandCard(
                     activity = activity,
                     tint = islandTint,
                     glow = islandGlow,
                     u = u,
-                    band = band,
                     compact = compact,
                     onTapped = if (music) onOrbTapped else onLiveAreaTapped,
                     stageIcon = stageIcon?.bitmap,
@@ -299,12 +346,8 @@ fun CrossbarStatusStrip(
                     expanded = music && orbLevel == 2,
                     holdMs = holdMs,
                     holding = holding,
-                    modifier = Modifier
-                        .padding(start = 5.dp)
-                        .wrapContentHeight(Alignment.Top, unbounded = true),
                 )
             }
-          }
         }
 
         val centreSlot: @Composable (Boolean) -> Unit = { tight ->
@@ -328,6 +371,18 @@ fun CrossbarStatusStrip(
             }
         }
 
+        // owner, 2026-10-05: the right-hand island peeks a new notification, as the left one shows what is live.
+        // A tap on the island brings the card out; a second tap (on the card) opens the notifications
+        // owner, 2026-10-05: only what arrives after ECHO is up peeks; the notifications already waiting at boot,
+        // which load a moment after the strip, do not
+        var seenAt by remember { mutableStateOf(maxOf(noticePeek?.postedAt ?: 0L, System.currentTimeMillis())) }
+        LaunchedEffect(noticePeek) {
+            if (!noticePeekDue(seenAt, noticePeek)) return@LaunchedEffect
+            seenAt = noticePeek?.postedAt ?: return@LaunchedEffect
+            onNewNotice()
+        }
+        val peeking = noticeRows.takeIf { noticeCardOut && it.isNotEmpty() }
+
         val endGutter = chromeGutter(end = true)
         val statusSlot: @Composable (Boolean) -> Unit = { date ->
             Row(
@@ -335,9 +390,7 @@ fun CrossbarStatusStrip(
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(u.dp(22)),
             ) {
-                if (noticeCount > 0) NoticeBell(noticeCount, islandGlow, u, onNoticeCountTapped)
-
-                // kit status corner: battery and time, nothing else
+                // kit status corner: battery and time, then the notification island at the far right
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(14))) {
                     Text(
                         text       = "$batteryLevel%",
@@ -354,14 +407,18 @@ fun CrossbarStatusStrip(
                         maxLines   = 1,
                     )
                 }
+                NoticeOrb(noticeCount, profileAvatar, islandGlow, u, onNoticeIslandPressed, connected = peeking != null)
             }
         }
 
-        val islandWidth = when {
-            live == null -> 0.dp
-            minimized || (orbLevel == 0 && !compact) -> u.dp(44) + chromeGutter()
-            else -> u.dp(264) + chromeGutter() + 5.dp
-        }
+        // the card drops below the bar, so the bar only ever holds the orb
+        val islandWidth = if (live == null) 0.dp else u.dp(44) + chromeGutter()
+        androidx.compose.animation.AnimatedVisibility(
+            visible = peeking != null,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(160)),
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = endGutter).wrapContentHeight(Alignment.Top, unbounded = true),
+        ) { IslandBridge(NoticeOrbFill, orbCentreY = band / 2, cardTop = noticeCardTop, end = true, u = u) }
         SubcomposeLayout(
             Modifier
                 .align(Alignment.TopCenter)
@@ -395,6 +452,141 @@ fun CrossbarStatusStrip(
                 statusPlaceable.place(width - statusPlaceable.width, (height - statusPlaceable.height) / 2)
             }
         }
+
+        var shownPeek by remember { mutableStateOf<List<NoticeRow>?>(null) }
+        peeking?.let { shownPeek = it }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = peeking != null,
+            enter = cardDrop(TransformOrigin(1f, 0f)),
+            exit = cardLift(TransformOrigin(1f, 0f)),
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = endGutter, top = noticeCardTop)
+                .wrapContentHeight(Alignment.Top, unbounded = true),
+        ) {
+            shownPeek?.let { NoticeCard(it, noticeCursor, u, noticeCardTop, onNoticeOpen, onNoticeDismiss) }
+        }
+    }
+}
+
+// the right-hand island at rest (owner, 2026-10-05): with notifications, their count in the notification colour
+// to the left of the ECHO mark; with none, the user's picture (the mark when there is none). The orb itself
+// stays uncoloured
+@Composable
+private fun NoticeOrb(count: Int, avatar: String?, accent: Color, u: DesignUnits, onTapped: () -> Unit, connected: Boolean = false) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(50))
+            .clickable(onClick = onTapped)
+            .semantics { contentDescription = countLabel(count, "notification") },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(8)),
+    ) {
+        if (count > 0) Text(count.toString(), color = accent, fontSize = u.sp(15), fontWeight = FontWeight.Bold, maxLines = 1)
+        Box(
+            Modifier
+                .size(u.dp(44))
+                // the same ring and inset as the left island's orb, so the two read as a pair; joined to its card,
+                // the ring gives way so the orb and the card are one shape
+                .then(if (connected) Modifier else Modifier.border(u.dp(2), Color.White.copy(alpha = 0.18f), CircleShape))
+                .padding(u.dp(5))
+                .clip(CircleShape)
+                .background(NoticeOrbFill),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (count == 0 && avatar != null) {
+                AsyncImage(avatar, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            } else {
+                Canvas(Modifier.fillMaxSize()) {
+                    drawEchoMark(MarkPose(cx = size.width / 2 / density, cy = size.height / 2 / density, size = size.width * 0.8f / density))
+                }
+            }
+        }
+    }
+}
+
+private val NoticeOrbFill = Color(0xFF12151C)
+
+private fun islandCardFill(tint: Color): Color = lerp(tint, Color.Black, 0.35f)
+
+// the neck between an orb and the card below it (drawIslandNeck), on the card's inner side only, since the
+// card lines up with the orb's outer edge
+@Composable
+private fun IslandBridge(fill: Color, orbCentreY: Dp, cardTop: Dp, end: Boolean, u: DesignUnits) {
+    val orb = u.dp(44)
+    // a long, soft flare (owner, 2026-10-05: curvier and smoother)
+    val flare = u.dp(40)
+    Canvas(Modifier.width(orb + flare).height(cardTop + 1.dp)) {
+        val r = orb.toPx() / 2f
+        val cx = if (end) size.width - r else r
+        drawIslandNeck(fill, Offset(cx, orbCentreY.toPx()), r, size.height, flare.toPx(), if (end) NeckFlare.LEFT else NeckFlare.RIGHT)
+    }
+}
+
+// owner, 2026-10-05: the notification card lists as many notifications as fit below it, newest first. A tap
+// (or A on the pad's row) opens the app, a sideways swipe (or X) dismisses one that can be dismissed
+@Composable
+private fun NoticeCard(rows: List<NoticeRow>, cursor: Int?, u: DesignUnits, top: Dp, onOpen: (String) -> Unit, onDismiss: (String) -> Unit) {
+    val screen = LocalConfiguration.current.screenHeightDp.dp
+    val rowHeight = u.dp(58)
+    // room down to the footer
+    val fits = (((screen - top - u.dp(90) - u.dp(16)) / rowHeight).toInt()).coerceAtLeast(1)
+    val shown = rows.take(fits)
+    // its top right corner joins the orb above it
+    val shape = RoundedCornerShape(topStart = u.dp(20), topEnd = 0.dp, bottomEnd = u.dp(20), bottomStart = u.dp(20))
+    Column(
+        Modifier
+            .width(u.dp(320))
+            .clip(shape)
+            // opaque and uncoloured (owner, 2026-10-05)
+            .background(NoticeOrbFill)
+            .padding(u.dp(8)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(2)),
+    ) {
+        shown.forEachIndexed { index, row ->
+            key(row.key) { NoticeCardRow(row, index == cursor, u, rowHeight, onOpen, onDismiss) }
+        }
+        if (rows.size > shown.size) {
+            Text("+${rows.size - shown.size} more", color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(11),
+                modifier = Modifier.padding(horizontal = u.dp(10), vertical = u.dp(4)))
+        }
+    }
+}
+
+@Composable
+private fun NoticeCardRow(row: NoticeRow, focused: Boolean, u: DesignUnits, height: Dp, onOpen: (String) -> Unit, onDismiss: (String) -> Unit) {
+    val icon = rememberAppIcon(row.packageName?.takeIf { it.isNotBlank() })
+    var drag by remember { mutableStateOf(0f) }
+    val threshold = with(LocalDensity.current) { u.dp(90).toPx() }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = height)
+            .graphicsLayer { translationX = drag; alpha = 1f - (kotlin.math.abs(drag) / (threshold * 2)).coerceIn(0f, 0.7f) }
+            .clip(RoundedCornerShape(u.dp(14)))
+            .background(if (focused) Color.White.copy(alpha = 0.14f) else Color.Transparent)
+            .then(
+                if (row.canDismiss) Modifier.pointerInput(row.key) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = { if (kotlin.math.abs(drag) > threshold) onDismiss(row.key) else drag = 0f },
+                        onDragCancel = { drag = 0f },
+                    ) { change, dx -> change.consume(); drag += dx }
+                } else Modifier,
+            )
+            .clickable { onOpen(row.key) }
+            .padding(horizontal = u.dp(10), vertical = u.dp(8)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
+    ) {
+        Box(Modifier.size(u.dp(32)).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+            if (icon != null) Image(icon.bitmap, null, Modifier.fillMaxSize())
+            else Icon(Icons.Outlined.Notifications, null, Modifier.size(u.dp(16)), tint = Color.White)
+        }
+        Column(Modifier.weight(1f)) {
+            Text(row.title, color = Color.White, fontSize = u.sp(13), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            row.detail?.takeIf { it.isNotBlank() }?.let {
+                Text(it, color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(11), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (focused && row.canDismiss && LocalPadPrompts.current) ControllerPrompt(GamepadAction.CHANGE_SORT, "", glyphSize = u.dp(18), spacing = 0.dp)
     }
 }
 
@@ -404,7 +596,6 @@ private fun IslandCard(
     tint: Color,
     glow: Color,
     u: DesignUnits,
-    band: Dp,
     compact: Boolean,
     onTapped: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -425,27 +616,23 @@ private fun IslandCard(
     val detail = listOfNotNull(activity.detail?.takeIf { it.isNotBlank() }, music?.timeLabel(positionMs)).joinToString("  ·  ")
     val playing = (stage as? PanelStage.Music)?.playing == true
     val radius = u.dp(20)
-    val shape = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
-    val gutter = chromeGutter()
+    // a whole card now, below the bar (owner, 2026-10-05); it no longer hangs from the top edge
+    // its top left corner joins the orb above it, and its fill is solid so the bridge to the orb matches
+    val shape = RoundedCornerShape(topStart = 0.dp, topEnd = radius, bottomEnd = radius, bottomStart = radius)
     Box(
         modifier
-            .width(u.dp(264) + gutter)
-            .heightIn(min = band)
+            .width(u.dp(264))
             .clip(shape)
-            .background(Brush.linearGradient(listOf(tint.copy(alpha = 0.62f), lerp(tint, Color.Black, 0.4f).copy(alpha = 0.5f))))
+            .background(islandCardFill(tint))
             .drawWithCache {
                 val stroke = u.dp(2).toPx()
                 val inset = stroke / 2f
                 val r = radius.toPx() - inset
                 val bottom = size.height - inset
                 val right = size.width - inset
+                // the whole edge, from the top left corner round, so a hold or the track traces all of it
                 val path = Path().apply {
-                    moveTo(inset, 0f)
-                    lineTo(inset, bottom - r)
-                    arcTo(Rect(inset, bottom - 2 * r, inset + 2 * r, bottom), 180f, -90f, false)
-                    lineTo(right - r, bottom)
-                    arcTo(Rect(right - 2 * r, bottom - 2 * r, right, bottom), 90f, -90f, false)
-                    lineTo(right, 0f)
+                    addRoundRect(androidx.compose.ui.geometry.RoundRect(inset, inset, right, bottom, androidx.compose.ui.geometry.CornerRadius(r, r)))
                 }
                 val done = Path()
                 progress?.let { p ->
@@ -455,7 +642,6 @@ private fun IslandCard(
                 }
                 onDrawWithContent {
                     drawContent()
-                    drawPath(path, glow.copy(alpha = 0.22f), style = Stroke(stroke))
                     if (progress != null) {
                         drawPath(done, glow.copy(alpha = 0.3f), style = Stroke(stroke * 3f, cap = StrokeCap.Round))
                         drawPath(done, glow, style = Stroke(stroke, cap = StrokeCap.Round))
@@ -471,13 +657,13 @@ private fun IslandCard(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Column(Modifier.fillMaxWidth().padding(start = gutter, end = u.dp(22), top = if (compact) 2.dp else u.dp(12), bottom = if (expanded) u.dp(12) else 0.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = u.dp(16), vertical = u.dp(12))) {
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
-            val tile = if (compact) minOf(u.dp(34), band - 10.dp) else u.dp(34)
+            val tile = u.dp(34)
             Box(
                 Modifier.size(tile).clip(RoundedCornerShape(u.dp(10))).background(tint),
                 contentAlignment = Alignment.Center,
@@ -611,34 +797,6 @@ private fun EqualizerGlyph(u: DesignUnits) {
 }
 
 @Composable
-private fun NoticeBell(count: Int, accent: Color, u: DesignUnits, onTapped: (() -> Unit)?) {
-    Row(
-        Modifier
-            .clip(RoundedCornerShape(u.dp(6)))
-            .then(if (onTapped != null) Modifier.clickable(onClick = onTapped) else Modifier)
-            .semantics { contentDescription = countLabel(count, "notification") }
-            .padding(u.dp(6)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(u.dp(4)),
-    ) {
-        Icon(Icons.Outlined.Notifications, null, Modifier.size(maxOf(u.dp(17), with(LocalDensity.current) { LEGIBILITY_FLOOR_PX.toDp() })), tint = Color.White)
-        if (count > 0) {
-            Box(
-                Modifier
-                    .heightIn(min = u.dp(16))
-                    .widthIn(min = u.dp(16))
-                    .clip(RoundedCornerShape(50))
-                    .background(accent)
-                    .padding(horizontal = u.dp(5)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(count.toString(), color = BadgeInk, fontSize = u.sp(10), fontWeight = FontWeight.Bold, maxLines = 1)
-            }
-        }
-    }
-}
-
-@Composable
 internal fun StripSections(
     labels: List<String>,
     selected: Int,
@@ -761,13 +919,9 @@ private val BatteryLineHeight = 2.dp
 
 private const val GLINT_PERIOD_MS = 2400L
 
-private val MeterActive   = StripPrimary
-private val MeterInactive = Color(0x40EEEEEE)
-
 internal val StripHeight: Dp
     @Composable @androidx.compose.runtime.ReadOnlyComposable get() = StatusStripHeight
 
-private val BadgeInk = Color(0xFF1A0D05)
 
 private val LowBatteryTint = Color(0xFFFF6B6B)
 

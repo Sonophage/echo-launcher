@@ -13,9 +13,6 @@ interface PlatformDao {
     @Query("SELECT * FROM platforms ORDER BY name ASC")
     fun observeAll(): Flow<List<PlatformEntity>>
 
-    @Query("SELECT * FROM platforms WHERE is_pinned_to_bar = 1 ORDER BY bar_position ASC")
-    fun observePinnedToBar(): Flow<List<PlatformEntity>>
-
     @Query("SELECT * FROM platforms WHERE id = :id")
     suspend fun getById(id: String): PlatformEntity?
 
@@ -33,7 +30,4 @@ interface PlatformDao {
 
     @Query("UPDATE platforms SET preferred_emulator_package = :packageName WHERE id = :id")
     suspend fun setPreferredEmulator(id: String, packageName: String?)
-
-    @Query("SELECT DISTINCT platform_id FROM games")
-    fun observeActivePlatformIds(): Flow<List<String>>
 }

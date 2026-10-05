@@ -104,7 +104,6 @@ fun DrawScope.drawEchoRings(rings: List<EchoRing>, color: Color = Color.White) {
 fun progress(t: Float, a: Float, b: Float): Float = ((t - a) / (b - a)).coerceIn(0f, 1f)
 fun easeOut(x: Float): Float = 1 - (1 - x).pow(3)
 fun easeInOut(x: Float): Float = if (x < .5f) 4 * x * x * x else 1 - (-2 * x + 2).pow(3) / 2
-fun easeOutBack(x: Float): Float { val c1 = 1.70158f; val c3 = c1 + 1; return 1 + c3 * (x - 1).pow(3) + c1 * (x - 1).pow(2) }
 fun mix(a: Float, b: Float, x: Float): Float = a + (b - a) * x
 
 // the dot's wait pulse after a hand-off: 40 to 100 percent on a 1200 ms cosine

@@ -163,44 +163,6 @@ fun SettingsChoiceOverlay(
 }
 
 @Composable
-fun SettingsActionsOverlay(
-    title: String,
-    message: String,
-    actions: List<Pair<String, () -> Unit>>,
-    onCancel: () -> Unit,
-) {
-    var cursor by remember(actions.size) { mutableIntStateOf(0) }
-    SettingsOverlayInput { action ->
-        when (action) {
-            GamepadAction.NAVIGATE_UP -> cursor = (cursor - 1).coerceAtLeast(0)
-            GamepadAction.NAVIGATE_DOWN -> cursor = (cursor + 1).coerceAtMost(actions.lastIndex)
-            GamepadAction.SELECT -> actions.getOrNull(cursor)?.second?.invoke()
-            GamepadAction.BACK -> onCancel()
-            else -> Unit
-        }
-    }
-    EchoOverlayCard(onScrimTap = onCancel) {
-        EchoOverlayTitle(title)
-        if (message.isNotBlank()) {
-            Spacer(Modifier.height(10.dp))
-            Text(message, color = MESSAGE_COLOR, fontSize = 14.sp)
-        }
-        Spacer(Modifier.height(20.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            actions.forEachIndexed { index, (label, onClick) ->
-                EchoDetailLaunchButton(
-                    label = label,
-                    icon = null,
-                    focused = index == cursor,
-                    onClick = onClick,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-    }
-}
-
-@Composable
 fun SettingsTextPromptOverlay(
     title: String,
     value: String,

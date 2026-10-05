@@ -104,9 +104,6 @@ class CategoryRepositoryImpl @Inject constructor(
     suspend fun removeItemFromCategory(categoryId: String, itemId: String) =
         categoryDao.removeItem(categoryId, itemId)
 
-    fun observeCategoryItems(categoryId: String) =
-        categoryDao.observeItemsForCategory(categoryId)
-
     suspend fun seedBuiltInCategories() {
         categoryDao.insertAll(builtInCategories().map { it.toEntity() })
         Timber.i("Built-in categories seeded")

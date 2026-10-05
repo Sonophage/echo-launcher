@@ -34,4 +34,19 @@ class KeystoreSecretCipherTest {
 
         assertEquals("  spaced  ", result.stored)
     }
+
+    // owner, 2026-10-05: SteamGridDB said "Invalid key format" because a key sealed by another install was sent as is
+    @Test
+    fun `a sealed secret this install cannot open reads as not set, not as the sealed text`() {
+        assertEquals(null, KeystoreSecretCipher.readStored("c2VhbGVk", sealedShape = true) { error("wrong key") })
+        assertEquals("plain", KeystoreSecretCipher.readStored("sealed", sealedShape = true) { "plain" })
+        assertEquals("an old plain value is used as it is", "abc123", KeystoreSecretCipher.readStored("abc123", sealedShape = false) { error("unused") })
+    }
+
+    @Test
+    fun `only a long base64 value looks sealed, so plain keys are not mistaken for one`() {
+        assertEquals("a 32-character SteamGridDB key is plain", false, KeystoreSecretCipher.looksSealed("0123456789abcdef0123456789abcdef"))
+        assertEquals("a token with dots is plain", false, KeystoreSecretCipher.looksSealed("eyJhbGciOi.eyJzdWIiOi.c2ln"))
+        assertEquals(true, KeystoreSecretCipher.looksSealed(java.util.Base64.getEncoder().encodeToString(ByteArray(60) { it.toByte() })))
+    }
 }

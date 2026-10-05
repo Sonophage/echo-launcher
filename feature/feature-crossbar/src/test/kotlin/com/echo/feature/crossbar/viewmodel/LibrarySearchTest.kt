@@ -104,15 +104,24 @@ class LibrarySearchTest {
         }
     }
 
-    // owner, 2026-10-05: two columns, so up and down move a whole row and left and right stay in it
+    // owner, 2026-10-05: the results stand on one shelf, so left and right walk it and up and down do nothing
     @Test
-    fun `the results are two columns, so up and down move a row and left and right stay in it`() {
-        assertEquals(2, searchStep(GamepadAction.NAVIGATE_DOWN, index = 0))
-        assertEquals(-2, searchStep(GamepadAction.NAVIGATE_UP, index = 3))
-        assertEquals(1, searchStep(GamepadAction.NAVIGATE_RIGHT, index = 2))
-        assertEquals(0, searchStep(GamepadAction.NAVIGATE_RIGHT, index = 3))
-        assertEquals(-1, searchStep(GamepadAction.NAVIGATE_LEFT, index = 3))
-        assertEquals(0, searchStep(GamepadAction.NAVIGATE_LEFT, index = 2))
+    fun `the results are one shelf, so left and right walk it`() {
+        assertEquals(1, searchStep(GamepadAction.NAVIGATE_RIGHT))
+        assertEquals(-1, searchStep(GamepadAction.NAVIGATE_LEFT))
+        assertEquals(0, searchStep(GamepadAction.NAVIGATE_DOWN))
+        assertEquals(0, searchStep(GamepadAction.NAVIGATE_UP))
+    }
+
+    // owner, 2026-10-05: LB and RB filter the shelf: All, then each kind the results hold
+    @Test
+    fun `the bumpers step through All and the kinds present, stopping at the ends`() {
+        val present = listOf(SearchKind.APPS, SearchKind.GAMES)
+        assertEquals(SearchKind.APPS, stepSearchKind(null, present, 1))
+        assertEquals(SearchKind.GAMES, stepSearchKind(SearchKind.APPS, present, 1))
+        assertEquals("stops at the last kind", SearchKind.GAMES, stepSearchKind(SearchKind.GAMES, present, 1))
+        assertEquals("back to All", null, stepSearchKind(SearchKind.APPS, present, -1))
+        assertEquals("a kind no longer present starts again from All", SearchKind.APPS, stepSearchKind(SearchKind.MUSIC, present, 1))
     }
 
     // owner, 2026-10-05: the hints sent people to "Settings ▸ Media ▸ Video", which did not exist. Every
@@ -139,5 +148,23 @@ class LibrarySearchTest {
         assertEquals("Games and apps", searchAllHint(searchKindsShown(listOf("games", "network"))))
         assertEquals("a launcher only still searches apps", "Apps", searchAllHint(searchKindsShown(emptyList())))
         assertFalse(SearchKind.MUSIC in searchKindsShown(listOf("games")))
+    }
+
+    // owner, 2026-10-05: the shelf opens with the likeliest result in the middle and the rest fanned out to both sides
+    @Test
+    fun `the whole title beats its start, which beats a word, which beats anywhere`() {
+        assertEquals(0, searchRank("zelda", "Zelda"))
+        assertEquals(1, searchRank("zel", "Zelda: Minish Cap"))
+        assertEquals(2, searchRank("min", "Zelda: Minish Cap"))
+        assertEquals(3, searchRank("ish", "Zelda: Minish Cap"))
+    }
+
+    @Test
+    fun `the best result sits in the middle and the next ones alternate outwards`() {
+        val laid = centreOut(listOf("1st", "2nd", "3rd", "4th", "5th"))
+        assertEquals(listOf("5th", "3rd", "1st", "2nd", "4th"), laid)
+        assertEquals("the selection starts on the best", "1st", laid[centreOutIndex(laid.size)])
+        assertEquals("one result is its own centre", listOf("only"), centreOut(listOf("only")))
+        assertEquals("1st", centreOut(listOf("1st", "2nd")).get(centreOutIndex(2)))
     }
 }

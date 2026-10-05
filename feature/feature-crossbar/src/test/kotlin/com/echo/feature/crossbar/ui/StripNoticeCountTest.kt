@@ -32,7 +32,7 @@ class StripNoticeCountTest {
                 CrossbarStatusStrip(
                     live = live,
                     noticeCount = noticeCount,
-                    onNoticeCountTapped = onCountTapped,
+                    onNoticeIslandPressed = onCountTapped,
                 )
             }
         }
@@ -63,12 +63,13 @@ class StripNoticeCountTest {
     }
 
     @Test
-    fun `tapping the count is what opens the notification bar`() {
+    // owner, 2026-10-05: the island takes the press; the view model decides card first, then the panel
+    fun `tapping the notification island is what reaches the notifications`() {
         var taps = 0
         strip(noticeCount = 2, onCountTapped = { taps++ })
 
         composeRule.onNodeWithContentDescription("2 notifications").performClick()
 
-        assertEquals("the count is the tap target for the bar", 1, taps)
+        assertEquals("the island is the tap target for the notifications", 1, taps)
     }
 }

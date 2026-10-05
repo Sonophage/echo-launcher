@@ -64,9 +64,12 @@ screen's padded column.
 - `WaveLayers(style)` draws the wave; the design (PSP, Echo Rings, Echo Arcs) comes from
   `LocalWaveDesign`. The wave sits just above the backdrop (wallpaper or full-screen art) and below
   icons, panels and words.
-- `HeroBanner` (`design/HeroBanner.kt`) is the banner across the top of the App Drawer and Search:
-  one height, the art on the right fading into the info on the left, `HERO_BANNER_SIDE` margins.
-  The caller passes the art and the info.
+- The App Drawer and Search share the shelf room's surfaces in `design/ShelfTexture.kt`: `ShelfRoom`,
+  `roomGlow`, `wallStripes`, `vignette`, `filmGrain`, `coverRings` (an app cover's echo rings),
+  `CoverSheen` and `sideways()` for text up a spine. Search draws the crossbar's wave behind its shelf.
+- An orb that opens a card (the top bar's islands, the footer's A orb) is joined to it with
+  `drawIslandNeck` (`design/IslandNeck.kt`), drawn behind both, so the two read as one shape.
+- A game's cover is `coverArtOf(iconUri, artworkUri)` (core-domain): the icon slot first.
 
 ## Settings rows
 

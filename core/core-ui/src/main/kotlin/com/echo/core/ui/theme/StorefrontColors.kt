@@ -62,35 +62,6 @@ data class StorefrontColors(
     val destructive: Color,
 )
 
-private val DefaultStorefrontColors = StorefrontColors(
-    accentHue         = Color(0xFF128BC9),
-    backgroundDeep    = Color(0xFF0743A2),
-    backgroundMid     = Color(0xFF128BC9),
-    selectionGlow     = Color(0x297EE8FF),
-    chromeTop         = Color(0xFF0743A2),
-    chromeBottom      = Color(0xFF128BC9),
-    chromeDivider     = Color(0xFF7EE8FF),
-    categorySelected  = Color(0xFF006BC4),
-    categorySelectedEdge = Color(0xFF7EE8FF),
-    categoryInactive  = Color(0xFF0874BE),
-    tileNormal        = Color(0xFF083880),
-    tileSelected      = Color(0xFF0B4FAA),
-    tileSelectedEdge  = Color(0xFF7EE8FF),
-    tileSelectedInner = Color(0xFF4CCFFF),
-    footerBackground  = Color(0xFF003C8F),
-    footerDivider     = Color(0xFF68C9EB),
-    textPrimary       = Color.White,
-    textSecondary     = Color(0xFFD6EDF7),
-    contentBackground = Color(0x00000000),
-    railBackground    = Color(0x30004590),
-    searchField       = Color(0xFF0A2E5A),
-    searchBorder      = Color(0xFF68C9EB),
-    overlayDim        = Color(0x99000000),
-    menuPanel         = Color(0xF00A1E3D),
-    menuRowSelected   = Color(0x347EE8FF),
-    destructive       = Color(0xFFFF6B6B),
-)
-
 private fun resolveHueSource(accent: Color, wave: Color, backgroundBottom: Color): Color =
     when {
         accent.isVividHue() -> accent

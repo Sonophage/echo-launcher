@@ -1,6 +1,5 @@
 package com.echo.core.common.security
 
-import android.util.Base64
 import timber.log.Timber
 
 object KeystoreSecretCipher {
@@ -17,21 +16,24 @@ object KeystoreSecretCipher {
         }
     }
 
-    fun isUsableOnThisDevice(stored: String): Boolean {
-        val data = try {
-            Base64.decode(stored, Base64.NO_WRAP)
-        } catch (_: IllegalArgumentException) {
-            return true
-        }
-        if (data.size <= KeystoreAesGcm.IV_BYTES + KeystoreAesGcm.TAG_BYTES) return true
-        return runCatching { aesGcm.open(stored) }.isSuccess
-    }
+    fun isUsableOnThisDevice(stored: String): Boolean = decryptOrLegacy(stored) != null
 
-    fun decryptOrLegacy(stored: String): String {
-        return try {
-            aesGcm.open(stored)
-        } catch (e: Exception) {
-            stored
+    // owner, 2026-10-05: a secret sealed by another install (a restored backup, a reinstall) cannot be opened here.
+    // It used to be handed on as it was, so SteamGridDB was sent the sealed blob ("Invalid key format") and Twitch
+    // an unreadable IGDB secret; now it reads as not set, so the account shows as needing its key again.
+    // A value that is not sealed-shaped is an old plain one and is used as it is
+    fun decryptOrLegacy(stored: String): String? = readStored(stored, looksSealed(stored)) { aesGcm.open(stored) }
+
+    internal fun readStored(stored: String, sealedShape: Boolean, open: () -> String): String? =
+        if (!sealedShape) stored else runCatching(open).getOrNull()
+
+    // sealed values are base64 of an IV, the ciphertext and its tag
+    internal fun looksSealed(stored: String): Boolean {
+        val data = try {
+            java.util.Base64.getDecoder().decode(stored)
+        } catch (_: IllegalArgumentException) {
+            return false
         }
+        return data.size > KeystoreAesGcm.IV_BYTES + KeystoreAesGcm.TAG_BYTES
     }
 }

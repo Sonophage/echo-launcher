@@ -9,7 +9,6 @@ import com.echo.core.data.repository.isRomDirUnder
 import com.echo.core.data.repository.mediaRootDisplayName
 import com.echo.core.data.repository.mediaRootRows
 import com.echo.core.data.repository.romFolderEntries
-import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.domain.model.PlatformIds.ANDROID as ANDROID_PLATFORM_ID
 import com.echo.core.domain.model.PlatformIds.WINDOWS as WINDOWS_PLATFORM_ID
 import com.echo.core.ui.components.MenuGroup
@@ -37,14 +36,6 @@ class CrossbarFolders(
     private val pcGameScanner: com.echo.feature.settings.pc.PcGameScanner,
     private val menuSound: com.echo.core.ui.sound.MenuSoundPlayer,
 ) {
-    private fun mediaRootKindOf(categoryId: String?): MediaRootKind? = when (categoryId) {
-        BuiltInCategory.MUSIC   -> MediaRootKind.MUSIC
-        BuiltInCategory.VIDEO   -> MediaRootKind.VIDEO
-        BuiltInCategory.PHOTO   -> MediaRootKind.PHOTO
-        BuiltInCategory.LIBRARY -> MediaRootKind.BOOK
-        else -> null
-    }
-
     private suspend fun scannedEntriesFor(kind: MediaRootKind): List<MediaScannedEntry> = when (kind) {
         MediaRootKind.MUSIC -> vm.musicRepository.getFolders().map {
             MediaScannedEntry(it.treeUri, it.displayName, it.trackCount, it.lastScannedAt)

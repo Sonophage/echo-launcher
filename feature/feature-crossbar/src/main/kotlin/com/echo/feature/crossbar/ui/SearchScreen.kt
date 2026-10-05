@@ -1,5 +1,33 @@
 package com.echo.feature.crossbar.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.util.lerp
+import androidx.compose.ui.zIndex
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.Dp
+import com.echo.core.ui.components.ControllerPrompt
+import com.echo.core.ui.components.LocalPadPrompts
+import com.echo.core.ui.design.CoverSheen
+import com.echo.core.ui.design.ShelfRoom
+import com.echo.core.ui.design.filmGrain
+import com.echo.core.ui.design.coverRings
+import com.echo.core.ui.design.roomGlow
+import com.echo.core.ui.design.sideways
+import com.echo.core.ui.design.vignette
+import com.echo.core.ui.design.wallStripes
+import com.echo.feature.crossbar.viewmodel.SearchKind
 import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import androidx.compose.foundation.background
@@ -53,16 +81,8 @@ import com.echo.core.ui.components.HintAction
 import com.echo.core.ui.components.HintBarHeight
 import com.echo.core.ui.components.EchoHintBar
 import com.echo.core.ui.components.EchoSearchField
-import com.echo.core.ui.components.SearchFieldHeight
 import com.echo.core.ui.components.StatusStripHeight
 import com.echo.core.ui.design.DesignUnits
-import com.echo.core.ui.design.PANEL_CARD_RADIUS
-import com.echo.core.ui.design.PANEL_FOCUS_RING_WIDTH
-import com.echo.core.ui.design.PANEL_UNFOCUSED_ALPHA
-import com.echo.core.ui.design.PanelCardFill
-import com.echo.core.ui.design.PanelCardFocusFill
-import com.echo.core.ui.design.PanelFocusRing
-import com.echo.core.ui.design.panelBackdrop
 import com.echo.core.ui.image.rememberArtworkModel
 import com.echo.core.ui.image.rememberBlurSourceModel
 import com.echo.core.ui.theme.deriveStorefrontColors
@@ -74,16 +94,11 @@ import com.echo.feature.crossbar.viewmodel.primaryVerbFor
 import com.echo.core.common.format.relativeTime
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.design.panelDesignUnits
-import com.echo.core.ui.design.HeroBanner
 import com.echo.core.ui.design.PanelButton
-import com.echo.core.ui.design.HERO_BANNER_SIDE
-import com.echo.feature.crossbar.viewmodel.SEARCH_COLUMNS
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 
+// owner, 2026-10-05: search is the "Drawer and Search Variations" design's 6b, the search shelf: a pegboard room lit
+// by the selected result's own art, the field and the kind filter across the top, what the selected result is,
+// and the results standing on one shelf, the selected one out as a whole case and the rest as spines
 @Composable
 fun SearchScreen(
     state: SearchState,
@@ -93,25 +108,24 @@ fun SearchScreen(
     modifier: Modifier = Modifier,
     onFocusAt: (Int) -> Unit = {},
     onOptionsAt: (Int) -> Unit = {},
+    onKindPicked: (SearchKind?) -> Unit = {},
+    // the crossbar's wave, which runs behind the shelf (owner, 2026-10-05: in place of the design's pegboard)
+    waveStyle: com.echo.core.ui.wave.WaveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
 ) {
-    val listState = rememberLazyGridState()
-    LaunchedEffect(state.selectedIndex, state.scrollToTopToken) {
-        if (state.rows.isNotEmpty()) listState.animateScrollToItem((state.selectedIndex - SEARCH_COLUMNS).coerceAtLeast(0))
-    }
-
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
     val empty = state.rows.singleOrNull()?.takeIf { it.type == CrossbarItemType.EMPTY }
     val focused = state.rows.getOrNull(state.selectedIndex)?.takeIf { empty == null }
     val icon = rememberAppIcon(focused?.packageName?.takeIf { focused.isInstalledApp })
-    val art = focused?.takeUnless { it.isInstalledApp }?.let { it.backdropArt.firstOrNull() ?: it.shelfCoverArt }
+    val art = focused?.let { if (it.isInstalledApp) it.coverUri else it.backdropArt.firstOrNull() ?: it.shelfCoverArt }
 
     BoxWithConstraints(
         modifier
             .fillMaxSize()
-            .panelBackdrop(icon?.color ?: SearchTint)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+            .background(ShelfRoom)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+            .filmGrain(0.16f),
     ) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         val imeUp = WindowInsets.ime.getBottom(LocalDensity.current) > 0
@@ -121,45 +135,50 @@ fun SearchScreen(
                 model = rememberBlurSourceModel(art),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().blur(u.dp(24)).graphicsLayer(alpha = 0.45f),
+                modifier = Modifier.fillMaxSize().blur(u.dp(28)).graphicsLayer(alpha = 0.35f),
             )
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+        } else {
+            Box(Modifier.fillMaxSize().roomGlow(icon?.color ?: SearchTint, Offset(0.5f, 0.35f)))
         }
+        if (waveStyle.drawsWave) Box(Modifier.fillMaxSize().graphicsLayer(alpha = 0.5f)) { com.echo.core.ui.wave.WaveLayers(waveStyle) }
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to ShelfRoom.copy(alpha = 0.55f), 0.45f to ShelfRoom.copy(alpha = 0.2f), 1f to ShelfRoom.copy(alpha = 0.85f))))
+        Box(Modifier.fillMaxSize().vignette(0.7f))
 
-        val fieldTop = StatusStripHeight + u.dp(12)
-        val belowField = fieldTop + SearchFieldHeight + u.dp(16)
-        EchoSearchField(
-            query = state.query,
-            active = true,
-            focusRequester = focusRequester,
-            placeholder = state.scope.label,
-            onActivate = {},
-            onQueryChange = onQueryChange,
-            onDone = {},
-            colors = deriveStorefrontColors().copy(
-                searchField = Color.White.copy(alpha = 0.10f),
-                searchBorder = Color.White.copy(alpha = 0.14f),
-                textPrimary = Color.White,
-                textSecondary = Color.White,
-            ),
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = fieldTop).width(u.dp(380)),
-        )
-
-        // owner, 2026-10-04: search takes the whole screen; the highlighted result is a hero banner across
-        // the top and the results run below it; moving through them changes the hero.
-        // owner, 2026-10-05: the banner is the App Drawer's, at the drawer's margins, and the results are two columns
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(start = u.dp(HERO_BANNER_SIDE), end = u.dp(HERO_BANNER_SIDE), top = belowField, bottom = if (imeUp) 10.dp else HintBarHeight)
+                .padding(top = StatusStripHeight + u.dp(8), bottom = if (imeUp) 8.dp else HintBarHeight)
                 .then(if (imeUp) Modifier.imePadding() else Modifier),
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                EchoSearchField(
+                    query = state.query,
+                    active = true,
+                    focusRequester = focusRequester,
+                    placeholder = state.scope.label,
+                    onActivate = {},
+                    onQueryChange = onQueryChange,
+                    onDone = {},
+                    colors = deriveStorefrontColors().copy(
+                        searchField = Color.Black.copy(alpha = 0.45f),
+                        searchBorder = Color.White.copy(alpha = 0.3f),
+                        textPrimary = Color.White,
+                        textSecondary = Color.White,
+                    ),
+                    modifier = Modifier.width(u.dp(480)),
+                )
+                if (state.total > 0) {
+                    Text("${state.total} result${if (state.total == 1) "" else "s"}", color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13),
+                        modifier = Modifier.padding(start = u.dp(16)))
+                }
+            }
+            if (state.kindCounts.size > 1) KindChips(state, u, onKindPicked)
             when {
-                empty != null -> EmptyNotice(empty, u)
+                empty != null -> Box(Modifier.padding(horizontal = u.dp(64))) { EmptyNotice(empty, u) }
                 focused != null -> {
-                    Hero(focused, u, short = imeUp, onOpen = { onActivateAt(state.selectedIndex) }, onOptions = { onOptionsAt(state.selectedIndex) })
-                    ResultList(state, listState, u, onActivateAt, onFocusAt)
+                    if (!imeUp) Info(focused, u, onOpen = { onActivateAt(state.selectedIndex) }, onOptions = { onOptionsAt(state.selectedIndex) })
+                    Shelf(state, u, onActivateAt, onFocusAt, Modifier.weight(1f).fillMaxWidth())
                 }
             }
         }
@@ -186,129 +205,234 @@ fun SearchScreen(
     }
 }
 
+// All, then each kind the results hold with its count; LB and RB step through them
 @Composable
-private fun ResultList(
-    state: SearchState,
-    listState: LazyGridState,
-    u: DesignUnits,
-    onActivateAt: (Int) -> Unit,
-    onFocusAt: (Int) -> Unit,
-) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(SEARCH_COLUMNS),
-        state = listState,
-        verticalArrangement = Arrangement.spacedBy(u.dp(4)),
-        horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        itemsIndexed(state.rows, key = { _, row -> row.id }) { index, row ->
-            val selected = index == state.selectedIndex
-            ResultRow(row, selected, u) { if (selected) onActivateAt(index) else onFocusAt(index) }
+private fun KindChips(state: SearchState, u: DesignUnits, onPick: (SearchKind?) -> Unit) {
+    val pad = LocalPadPrompts.current
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(6), Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+        if (pad) ControllerPrompt(GamepadAction.PREV_PAGE, "", glyphSize = u.dp(20), spacing = 0.dp)
+        val chip: @Composable (String, Boolean, () -> Unit) -> Unit = { label, on, pick ->
+            Text(
+                label,
+                color = if (on) Color(0xFF111111) else Color.White.copy(alpha = 0.75f),
+                fontSize = u.sp(14),
+                fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+                modifier = Modifier.clip(RoundedCornerShape(u.dp(18))).background(if (on) Color.White else Color.Transparent)
+                    .clickable(onClick = pick).padding(horizontal = u.dp(16), vertical = u.dp(7)),
+            )
+        }
+        chip("All ${state.total}", state.kind == null) { onPick(null) }
+        state.kindCounts.forEach { (kind, count) ->
+            chip("${kind.noun.replaceFirstChar { it.uppercase() }} $count", state.kind == kind) { onPick(kind) }
+        }
+        if (pad) ControllerPrompt(GamepadAction.NEXT_PAGE, "", glyphSize = u.dp(20), spacing = 0.dp)
+    }
+}
+
+// what the selected result is: its kind, title, a pill of facts and when it was last opened on the left; what is
+// known about it and its buttons on the right
+@Composable
+private fun Info(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOptions: () -> Unit) {
+    val (kind, detail) = kindAndDetail(row)
+    Row(Modifier.fillMaxWidth().padding(horizontal = u.dp(60)), horizontalArrangement = Arrangement.spacedBy(u.dp(52))) {
+        Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
+            Text(kind.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(12), letterSpacing = 0.2.em))
+            Text(row.title, color = Color.White, fontSize = u.sp(28), lineHeight = u.sp(31), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            val pill = listOfNotNull(detail.takeIf { it.isNotBlank() }, row.totalPlayTimeMillis.takeIf { it > 0 }?.let(::playTimeLabel)).joinToString(" · ")
+            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10)), verticalAlignment = Alignment.CenterVertically) {
+                if (pill.isNotBlank()) {
+                    Text(pill, color = Color.White, fontSize = u.sp(13), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clip(RoundedCornerShape(u.dp(20))).background(Color.Black.copy(alpha = 0.6f))
+                            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(u.dp(20))).padding(horizontal = u.dp(14), vertical = u.dp(6)))
+                }
+                row.lastOpenedAt?.let {
+                    Text("Last opened ${relativeTime(System.currentTimeMillis(), it).lowercase()}", color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(13), maxLines = 1)
+                }
+            }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(12))) {
+            (row.description ?: row.metadataLine)?.takeIf { it.isNotBlank() }?.let {
+                Text(it, color = Color.White, fontSize = u.sp(14), lineHeight = u.sp(21), fontWeight = FontWeight.Medium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
+                PanelButton(GamepadAction.SELECT, primaryVerbFor(row) ?: "Open", u, onClick = onOpen)
+                PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = onOptions)
+            }
         }
     }
 }
 
-// the highlighted result across the top: its art filling the banner, what it is, and its facts
+// the results on one shelf: the selected one out as a whole case, tilted a little and ringed; the rest as spines
+// cut from their own covers, one size, fanning out smaller away from it.
+// owner, 2026-10-05: moving along it must be smooth, so the shelf is laid out from one animated position: as it
+// travels, the case narrows back into a spine while the next spine grows into the case, and the shelf slides to
+// keep the position in the middle. A drag moves the position directly and settles on the nearest result
 @Composable
-private fun Hero(row: CrossbarItem, u: DesignUnits, short: Boolean, onOpen: () -> Unit, onOptions: () -> Unit) {
-    val (kind, detail) = kindAndDetail(row)
-    val icon = rememberAppIcon(row.packageName?.takeIf { row.isInstalledApp })
-    val art = (row.backdropArt.firstOrNull() ?: row.shelfCoverArt).takeUnless { row.isInstalledApp }
-    // an app has no art, so its banner takes the icon's colour
-    HeroBanner(
-        u,
-        tint = icon?.color,
-        short = short,
-        art = {
-            when {
-                art != null -> AsyncImage(rememberArtworkModel(art), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                // as in the App Drawer, an app's icon stands on the right of its banner
-                row.isInstalledApp -> Box(Modifier.align(Alignment.Center)) { AppIcon(icon?.bitmap, u.dp(if (short) 64 else 150), u.dp(if (short) 16 else 34)) }
-            }
-        },
-    ) {
-        Row(
-            Modifier.align(Alignment.BottomStart).padding(u.dp(if (short) 16 else 26)),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(u.dp(20)),
-        ) {
-            when {
-                art == null && !row.isInstalledApp -> Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(u.dp(if (short) 48 else 72)))
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-                Eyebrow(kind, u)
-                Headline(row.title, u.sp(if (short) 22 else 36), if (short) 1 else 2)
-                (row.metadataLine?.takeIf { it.isNotBlank() } ?: detail).takeIf { it.isNotBlank() }?.let { Meta(it, u.sp(14), 1) }
-                if (!short && row.gameId != null && (row.lastOpenedAt != null || row.totalPlayTimeMillis > 0)) {
-                    Row(Modifier.padding(top = u.dp(6)), horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
-                        row.lastOpenedAt?.let { Stat("Last played", relativeTime(System.currentTimeMillis(), it), u) }
-                        if (row.totalPlayTimeMillis > 0) Stat("Play time", playTimeLabel(row.totalPlayTimeMillis), u)
+private fun Shelf(state: SearchState, u: DesignUnits, onActivateAt: (Int) -> Unit, onFocusAt: (Int) -> Unit, modifier: Modifier) {
+    val rows = state.rows
+    val position = remember { Animatable(state.selectedIndex.toFloat()) }
+    // a new search or filter lands at once; a step along the shelf glides
+    LaunchedEffect(state.scrollToTopToken, state.kind, rows.size) { position.snapTo(state.selectedIndex.toFloat()) }
+    LaunchedEffect(state.selectedIndex) { position.animateTo(state.selectedIndex.toFloat(), spring(dampingRatio = 0.9f, stiffness = 220f)) }
+    val scope = rememberCoroutineScope()
+    BoxWithConstraints(modifier) {
+        val density = LocalDensity.current
+        val ledge = u.dp(18)
+        val caseH = with(density) { (maxHeight - ledge - u.dp(24)).coerceAtLeast(u.dp(60)).toPx() }
+        val caseW = caseH * 0.72f
+        val spineW = maxOf(caseH * 0.19f, with(density) { u.dp(30).toPx() })
+        val gap = with(density) { u.dp(5).toPx() }
+        val viewW = with(density) { maxWidth.toPx() }
+        val shelfBottom = with(density) { (maxHeight - ledge).toPx() }
+        val pos = position.value
+        fun distance(i: Int) = kotlin.math.abs(i - pos)
+        fun weight(i: Int) = (1f - distance(i)).coerceIn(0f, 1f)
+        fun fan(i: Int) = (1f - (distance(i) - 1f).coerceAtLeast(0f) * 0.035f).coerceAtLeast(0.7f)
+        fun width(i: Int) = lerp(spineW * fan(i), caseW, weight(i))
+        fun height(i: Int) = lerp(caseH * 0.9f * fan(i), caseH, weight(i))
+        if (rows.isNotEmpty()) {
+            val base = pos.toInt().coerceIn(0, rows.lastIndex)
+            val frac = (pos - base).coerceIn(0f, 1f)
+            val step = if (base < rows.lastIndex) (width(base) + width(base + 1)) / 2f + gap else 0f
+            val centres = HashMap<Int, Float>()
+            centres[base] = viewW / 2f - frac * step
+            var i = base
+            while (i < rows.lastIndex && centres.getValue(i) - width(i) / 2f < viewW) { centres[i + 1] = centres.getValue(i) + (width(i) + width(i + 1)) / 2f + gap; i++ }
+            i = base
+            while (i > 0 && centres.getValue(i) + width(i) / 2f > 0f) { centres[i - 1] = centres.getValue(i) - (width(i) + width(i - 1)) / 2f - gap; i-- }
+            Box(
+                Modifier.fillMaxSize().pointerInput(rows.size) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = { onFocusAt(position.value.roundToInt().coerceIn(0, rows.lastIndex)) },
+                    ) { change, dx ->
+                        change.consume()
+                        scope.launch { position.snapTo((position.value - dx / (spineW + gap)).coerceIn(0f, rows.lastIndex.toFloat())) }
+                    }
+                },
+            ) {
+                centres.keys.sorted().forEach { index ->
+                    val row = rows[index]
+                    val w = width(index)
+                    val h = height(index)
+                    val x = centres.getValue(index) - w / 2f
+                    key(row.id) {
+                        ShelfItem(
+                            row = row,
+                            weight = weight(index),
+                            alpha = (1f - distance(index) * 0.06f).coerceIn(0.55f, 1f),
+                            u = u,
+                            modifier = Modifier
+                                .zIndex(weight(index))
+                                .offset { IntOffset(x.roundToInt(), (shelfBottom - h).roundToInt()) }
+                                .size(with(density) { w.toDp() }, with(density) { h.toDp() }),
+                            onClick = { if (index == state.selectedIndex) onActivateAt(index) else onFocusAt(index) },
+                        )
                     }
                 }
-                if (!short) HeroButtons(row, u, onOpen, onOptions, Modifier.padding(top = u.dp(6)))
             }
         }
-        // with the keyboard up the banner is short, so its buttons stand at the right end
-        if (short) HeroButtons(row, u, onOpen, onOptions, Modifier.align(Alignment.CenterEnd).padding(end = u.dp(26)))
+        Box(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(ledge)
+                .background(Brush.verticalGradient(listOf(Color(0xFF34323B), Color(0xFF17161B))))
+                .wallStripes(0.02f),
+        )
     }
 }
 
-// owner, 2026-10-05: the App Drawer's buttons; search acts at once, so Open takes no hold
+// one result, between a spine (weight 0) and the whole case (weight 1): the case tilts, lifts and rings as it
+// comes out, and the spine fades under it
 @Composable
-private fun HeroButtons(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOptions: () -> Unit, modifier: Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-        PanelButton(GamepadAction.SELECT, primaryVerbFor(row) ?: "Open", u, onClick = onOpen)
-        PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = onOptions)
+private fun ShelfItem(row: CrossbarItem, weight: Float, alpha: Float, u: DesignUnits, modifier: Modifier, onClick: () -> Unit) {
+    val caseShape = RoundedCornerShape(u.dp(8))
+    Box(
+        modifier
+            .graphicsLayer {
+                translationY = -u.dp(12).toPx() * weight
+                rotationZ = -2f * weight
+                this.alpha = lerp(alpha, 1f, weight)
+            }
+            .clickable(onClick = onClick),
+    ) {
+        if (weight < 1f) Box(Modifier.fillMaxSize().graphicsLayer(alpha = 1f - weight)) { SpineFace(row, u) }
+        if (weight > 0f) {
+            Box(
+                Modifier.fillMaxSize().graphicsLayer(alpha = weight)
+                    .shadow(u.dp(24) * weight, caseShape)
+                    .clip(caseShape)
+                    .background(Brush.verticalGradient(listOf(Color(0xFF26252A), Color(0xFF141317))))
+                    .border(u.dp(3), Color.White.copy(alpha = weight), caseShape),
+            ) { CaseFace(row, u) }
+        }
     }
 }
+
+// the case's face: its reel windows and the cover inset beside them
+@Composable
+private fun CaseFace(row: CrossbarItem, u: DesignUnits) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        Box(Modifier.offset(u.dp(6), maxHeight * 0.26f).size(u.dp(12), maxHeight * 0.28f).clip(RoundedCornerShape(u.dp(4))).background(Color(0xFF3A3940)))
+        Box(Modifier.offset(u.dp(6), maxHeight * 0.6f).size(u.dp(12), maxHeight * 0.12f).clip(RoundedCornerShape(u.dp(4))).background(Color(0xFF2A292E)))
+        Box(Modifier.fillMaxSize().padding(start = u.dp(24), top = u.dp(5), end = u.dp(5), bottom = u.dp(5)).clip(RoundedCornerShape(u.dp(4)))) {
+            Cover(row, u, big = true)
+            Box(Modifier.fillMaxSize().background(CoverSheen))
+        }
+    }
+}
+
+// a spine's face: a strip of its cover, darkened, with a small label, its title running up it and a barcode
+@Composable
+private fun SpineFace(row: CrossbarItem, u: DesignUnits) {
+    Box(Modifier.fillMaxSize().shadow(u.dp(8), RoundedCornerShape(u.dp(3))).clip(RoundedCornerShape(u.dp(3)))) {
+        Cover(row, u, big = false)
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.38f)))
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.22f to Color.Transparent, 0.48f to Color.White.copy(alpha = 0.1f), 0.7f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.6f))))
+        Column(Modifier.fillMaxSize().padding(vertical = u.dp(10)), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
+            Text(spineLabel(row), color = Color(0xFF151515), fontSize = u.sp(8), fontWeight = FontWeight.ExtraBold, letterSpacing = 0.1.em, maxLines = 1,
+                modifier = Modifier.clip(RoundedCornerShape(u.dp(2))).background(Color(0xFFE8E2D3)).padding(horizontal = u.dp(4), vertical = u.dp(2)))
+            Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
+                Text(row.title, color = Color.White.copy(alpha = 0.88f), fontSize = u.sp(13), fontWeight = FontWeight.Bold, letterSpacing = 0.05.em,
+                    maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.sideways())
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(2))) { repeat(6) { Box(Modifier.size(1.dp, u.dp(6)).background(Color.White.copy(alpha = 0.7f))) } }
+        }
+    }
+}
+
+// a result's cover: its art (an app's too, when the app is in the game library), or for an app its colour with
+// ECHO's echo rings and its icon. On the case the art is fitted whole over a blur of itself, so no cover is cut off;
+// a spine is a strip cut from it
+@Composable
+private fun Cover(row: CrossbarItem, u: DesignUnits, big: Boolean) {
+    val art = when {
+        row.isInstalledApp -> row.coverUri
+        row.gameId != null -> com.echo.core.domain.model.coverArtOf(row.iconUri, row.shelfCoverArt)
+        else -> row.shelfCoverArt
+    }
+    val icon = rememberAppIcon(row.packageName?.takeIf { row.isInstalledApp && art == null })
+    when {
+        art != null && big -> Box(Modifier.fillMaxSize()) {
+            AsyncImage(rememberBlurSourceModel(art), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(u.dp(16)).graphicsLayer(alpha = 0.7f))
+            AsyncImage(rememberArtworkModel(art), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+        }
+        art != null -> AsyncImage(rememberArtworkModel(art), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        else -> Box(Modifier.fillMaxSize().background(icon?.color ?: SearchTint).coverRings(), contentAlignment = Alignment.Center) {
+            when {
+                icon != null -> androidx.compose.foundation.Image(icon.bitmap, null, Modifier.size(u.dp(if (big) 64 else 26)))
+                else -> Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(u.dp(if (big) 56 else 22)))
+            }
+        }
+    }
+}
+
+// the small label at the top of a spine: the console, or the kind of result
+private fun spineLabel(row: CrossbarItem): String =
+    (row.platformId?.takeIf { row.gameId != null && it.isNotBlank() } ?: kindAndDetail(row).first).uppercase().take(6)
 
 @Composable
 private fun EmptyNotice(row: CrossbarItem, u: DesignUnits) {
     Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
         Headline(row.title, u.sp(30), 2)
         row.subtitle?.let { Meta(it, u.sp(15), 2) }
-    }
-}
-
-@Composable
-private fun ResultRow(row: CrossbarItem, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
-    val (kind, detail) = kindAndDetail(row)
-    val shape = RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .graphicsLayer(alpha = if (focused) 1f else PANEL_UNFOCUSED_ALPHA)
-            .clip(shape)
-            .background(if (focused) PanelCardFocusFill else PanelCardFill)
-            .then(if (focused) Modifier.border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape) else Modifier)
-            .clickable(onClick = onClick)
-            .padding(start = u.dp(8), end = u.dp(14), top = u.dp(8), bottom = u.dp(8)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
-    ) {
-        if (row.isInstalledApp) {
-            AppIcon(rememberAppIcon(row.packageName)?.bitmap, u.dp(46), u.dp(11))
-        } else {
-            Art(row.shelfCoverArt, u.dp(46), u.dp(46), u.dp(11), kindGlyph(row), u)
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(3))) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(8))) {
-                Text(row.title, color = Color.White, fontSize = u.sp(14), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Text(
-                    kind.uppercase(),
-                    style = EchoTextStyle.copy(color = Color.White, fontSize = u.sp(9), fontWeight = FontWeight.SemiBold, letterSpacing = 0.08.em),
-                    modifier = Modifier.clip(RoundedCornerShape(u.dp(5))).background(Color.White.copy(alpha = 0.12f))
-                        .padding(horizontal = u.dp(7), vertical = u.dp(3)),
-                )
-            }
-            if (detail.isNotBlank()) {
-                Text(detail, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(11), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            row.lastOpenedAt?.let {
-                Text("Played ${relativeTime(System.currentTimeMillis(), it)}", color = Color.White.copy(alpha = 0.45f), fontSize = u.sp(11),
-                    fontWeight = FontWeight.Light, maxLines = 1)
-            }
-        }
     }
 }
 

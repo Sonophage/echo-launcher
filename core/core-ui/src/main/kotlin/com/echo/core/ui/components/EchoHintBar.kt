@@ -1,14 +1,17 @@
 package com.echo.core.ui.components
 
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.layout.wrapContentWidth
+import com.echo.core.ui.design.NeckFlare
+import com.echo.core.ui.design.drawIslandNeck
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 
 import com.echo.core.ui.design.holdOutline
 import androidx.compose.foundation.layout.width
@@ -48,7 +51,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -213,30 +215,64 @@ private fun ActionTab(
     modifier: Modifier,
     secondary: HintAction? = null,
 ) {
-    if (secondary != null) return ActionCard(primary, accent, leading, u, pad, onAction, modifier, secondary)
-    if (primary.holdMs == 0L) return RestOrb(primary, accent, u, pad, onAction, modifier)
+    // owner, 2026-10-05: the centre keeps one width whether the orb is alone or its card is out, so the hints on
+    // either side never move; the card stands over the bar, wider than its slot when it needs to be
+    if (secondary == null && primary.holdMs == 0L) {
+        return Box(modifier.width(u.dp(ACTION_SLOT)), contentAlignment = Alignment.BottomCenter) {
+            RestOrb(primary, accent, u, pad, onAction, Modifier)
+        }
+    }
     // owner, 2026-10-04: A is only the A button until the hold starts; then the card rises with the item's info.
-    // The press lives on this wrapper, so swapping the orb for the card does not cut a touch hold short
+    // The press lives on this wrapper, so bringing the card out does not cut a touch hold short.
+    // owner, 2026-10-05: as the top bar's islands do, the orb stays and the card rises above it, joined to it
+    // so the two read as one shape
+    val wrapperHold = secondary == null
     var pressing by remember { mutableStateOf(false) }
-    val active = primary.holding || pressing
+    val cardOut = secondary != null || primary.holding || pressing
+    val fill = actionCardFill(accent)
     Box(
-        modifier.then(
-            if (onAction != null) Modifier.pressAndHold(primary.holdMs, primary.label, { pressing = it }) { onAction(primary.action) } else Modifier,
+        modifier.width(u.dp(ACTION_SLOT)).then(
+            if (wrapperHold && onAction != null) Modifier.pressAndHold(primary.holdMs, primary.label, { pressing = it }) { onAction(primary.action) } else Modifier,
         ),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        AnimatedContent(
-            targetState = active,
-            transitionSpec = { CardEnter togetherWith CardExit using SizeTransform(clip = false) },
-            contentAlignment = Alignment.BottomCenter,
-            label = "holdCard",
-        ) { card ->
-            if (card) {
-                ActionCard(primary, accent, leading, u, pad, onAction, Modifier, null, pressedOutside = pressing, ownGesture = false)
-            } else {
-                RestOrb(primary, accent, u, pad, onAction = null, modifier = Modifier)
-            }
+        AnimatedVisibility(
+            visible = cardOut,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(160)),
+            modifier = Modifier.wrapContentHeight(Alignment.Bottom, unbounded = true),
+        ) { ActionBridge(fill, u) }
+        RestOrb(primary, accent, u, pad, onAction = null, modifier = Modifier, joinedFill = fill.takeIf { cardOut })
+        AnimatedVisibility(
+            visible = cardOut,
+            enter = fadeIn(tween(200)) + scaleIn(tween(260), initialScale = 0.3f, transformOrigin = TransformOrigin(0.5f, 1f)),
+            exit = fadeOut(tween(160)) + scaleOut(tween(180), targetScale = 0.3f, transformOrigin = TransformOrigin(0.5f, 1f)),
+            modifier = Modifier.wrapContentWidth(unbounded = true).wrapContentHeight(Alignment.Bottom, unbounded = true).padding(bottom = u.dp(ORB_BOTTOM + ORB + CARD_GAP)),
+        ) {
+            ActionCard(primary, accent, leading, u, pad, onAction, Modifier, secondary, pressedOutside = pressing, ownGesture = !wrapperHold)
         }
+    }
+}
+
+private const val ORB = 44
+// the centre's fixed width; the card is wider and stands over the hints beside it while it is out
+private const val ACTION_SLOT = 180
+private const val ORB_BOTTOM = 16
+// the card sits just above the orb (owner, 2026-10-05: closer to the icon)
+private const val CARD_GAP = 2
+
+private fun actionCardFill(accent: Color): Color = lerp(accent, Color.Black, 0.35f)
+
+// the neck between the A orb and the card above it (drawIslandNeck), flaring out on both sides
+@Composable
+private fun ActionBridge(fill: Color, u: DesignUnits) {
+    val orb = u.dp(ORB)
+    // a long, soft flare (owner, 2026-10-05: curvier and smoother)
+    val flare = u.dp(40)
+    Canvas(Modifier.width(orb + flare * 2).height(u.dp(ORB_BOTTOM + ORB + CARD_GAP) + 1.dp)) {
+        val r = orb.toPx() / 2f
+        val cy = size.height - u.dp(ORB_BOTTOM + ORB / 2).toPx()
+        drawIslandNeck(fill, Offset(size.width / 2f, cy), r, 0f, flare.toPx(), NeckFlare.BOTH)
     }
 }
 
@@ -257,7 +293,9 @@ private fun ActionCard(
     var pressing by remember { mutableStateOf(false) }
     val progress = if (primary.holdMs > 0L) holdProgress(primary.holding || pressing || pressedOutside, primary.holdMs) else 0f
     val radius = u.dp(20)
-    val shape = RoundedCornerShape(topStart = radius, topEnd = radius)
+    // a whole card above the orb, its fill solid so the bridge to the orb matches
+    val shape = RoundedCornerShape(radius)
+    val fillColour = actionCardFill(accent)
     val style = LocalControllerPromptStyle.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -268,30 +306,18 @@ private fun ActionCard(
             .widthIn(min = u.dp(220))
             .clip(shape)
             .drawWithCache {
-                val fill = Brush.linearGradient(
-                    0f to accent.copy(alpha = 0.62f),
-                    1f to lerp(accent, Color.Black, 0.4f).copy(alpha = 0.5f),
-                    start = Offset.Zero,
-                    end = Offset(size.width, size.height),
-                )
                 val w = u.dp(2).toPx()
                 val r = radius.toPx()
                 val path = Path().apply {
-                    moveTo(w / 2, size.height)
-                    lineTo(w / 2, r)
-                    arcTo(Rect(w / 2, w / 2, 2 * r - w / 2, 2 * r - w / 2), 180f, 90f, false)
-                    lineTo(size.width - r, w / 2)
-                    arcTo(Rect(size.width - 2 * r + w / 2, w / 2, size.width - w / 2, 2 * r - w / 2), 270f, 90f, false)
-                    lineTo(size.width - w / 2, size.height)
+                    addRoundRect(androidx.compose.ui.geometry.RoundRect(w / 2, w / 2, size.width - w / 2, size.height - w / 2, androidx.compose.ui.geometry.CornerRadius(r - w / 2, r - w / 2)))
                 }
                 val line = Stroke(width = w)
                 val measure = PathMeasure().apply { setPath(path, false) }
                 // touch has no A glyph to ring, so the hold traces the tab's edge instead
                 val trace = Path().also { if (!pad) measure.getSegment(0f, measure.length * progress, it, true) }
                 onDrawWithContent {
-                    drawRect(fill)
+                    drawRect(fillColour)
                     drawContent()
-                    drawPath(path, edge.copy(alpha = 0.22f), style = line)
                     drawPath(trace, Color.White, style = Stroke(width = w * 1.5f, cap = StrokeCap.Round))
                 }
             }
@@ -303,7 +329,7 @@ private fun ActionCard(
                     else -> Modifier.clickable(enabled = onAction != null, role = Role.Button, onClickLabel = primary.label) { onAction?.invoke(primary.action) }
                 }
             )
-            .padding(start = u.dp(20), end = u.dp(20), top = u.dp(6), bottom = u.dp(14)),
+            .padding(horizontal = u.dp(20), vertical = u.dp(10)),
     ) {
         secondary?.let { second ->
             var secondPressing by remember { mutableStateOf(false) }
@@ -390,6 +416,8 @@ private fun RestOrb(
     pad: Boolean,
     onAction: ((GamepadAction) -> Unit)?,
     modifier: Modifier,
+    // joined to its card: the card's solid fill, and no ring, so the two are one shape
+    joinedFill: Color? = null,
 ) {
     val edge = lerp(accent, Color.White, 0.3f)
     val style = LocalControllerPromptStyle.current
@@ -417,8 +445,12 @@ private fun RestOrb(
                 .echoPulse(presses, edge)
                 .drawBehind { drawCircle(Brush.radialGradient(listOf(edge.copy(alpha = 0.45f), Color.Transparent), center, size.minDimension * 0.8f)) }
                 .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.62f), lerp(accent, Color.Black, 0.4f).copy(alpha = 0.5f))))
-                .border(1.5.dp, edge, CircleShape),
+                .then(
+                    if (joinedFill != null) Modifier.background(joinedFill)
+                    else Modifier
+                        .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.62f), lerp(accent, Color.Black, 0.4f).copy(alpha = 0.5f))))
+                        .border(1.5.dp, edge, CircleShape),
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Box(Modifier.size(u.dp(26)).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {

@@ -3,7 +3,6 @@ package com.echo.feature.launcher
 import com.echo.core.domain.model.PlatformIds.WINDOWS as WINDOWS_PLATFORM_ID
 
 import android.content.Context
-import android.content.Intent
 import android.content.pm.LauncherApps
 import android.os.Handler
 import android.os.Looper
@@ -199,14 +198,6 @@ class PcShortcutImporter @Inject constructor(
         fun gameNativeAppId(hostPackage: String, shortcutId: String): String? {
             if (PcLauncherCatalog.forPackage(hostPackage)?.type != PcLauncherType.GAMENATIVE) return null
             return GAME_NATIVE_ID.matchEntire(shortcutId)?.groupValues?.get(1)
-        }
-
-        fun steamAppIdFromIntentUri(intentUri: String): String? {
-            val intent = runCatching { Intent.parseUri(intentUri, Intent.URI_INTENT_SCHEME) }
-                .getOrNull() ?: return null
-            val appId = intent.getIntExtra("app_id", -1).takeIf { it > 0 }?.toString()
-                ?: intent.getStringExtra("steamAppId")?.trim()
-            return appId?.takeIf { it.isNotEmpty() && it.length <= 12 && it.all(Char::isDigit) }
         }
 
         fun normalizeTitle(title: String): String =

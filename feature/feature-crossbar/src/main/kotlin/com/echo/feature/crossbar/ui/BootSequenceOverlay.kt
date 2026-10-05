@@ -38,6 +38,8 @@ fun BootSequenceOverlay(
     bootVideoPath: String? = null,
     bootAudioPath: String? = null,
     skipRequested: Boolean = false,
+    waveStyle: com.echo.core.ui.wave.WaveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
+    waveTint: Color = Color.White,
 ) {
     val overlayAlpha = remember { Animatable(1f) }
     val clock = remember { Animatable(0f) }
@@ -98,7 +100,7 @@ fun BootSequenceOverlay(
                 )
             }
         } else {
-            BootRippleAnimation(clock.value, skipAt)
+            BootRippleAnimation(clock.value, skipAt, waveStyle = waveStyle, waveTint = waveTint)
         }
 
         if (bootAudioPath != null) {

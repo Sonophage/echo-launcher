@@ -200,10 +200,6 @@ class ArtworkImportViewModel @Inject constructor(
         }
     }
 
-    fun dismissForgetConfirm() {
-        _uiState.value = _uiState.value.copy(confirmForget = false)
-    }
-
     fun rescan() {
         if (_uiState.value.scanning) return
         _uiState.value = _uiState.value.copy(scanning = true)

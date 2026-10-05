@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -55,7 +54,7 @@ fun ArtworkSettingsScreen(
 
     SettingsPageScaffold(
         subtitle = when (section) {
-            ArtworkSection.SOURCES -> "Scraping Sources"
+            ArtworkSection.SOURCES -> "Artwork Accounts"
             else                   -> "Artwork"
         },
         onBack   = onBack,
@@ -509,12 +508,3 @@ fun ArtworkSettingsScreen(
 
 private fun formatSnapDelay(seconds: Float): String =
     if (seconds % 1f == 0f) "${seconds.toInt()}s" else "${seconds}s"
-
-@Composable
-private fun credentialFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor   = SettingsAccent,
-    unfocusedBorderColor = SettingsDivider,
-    focusedTextColor     = SettingsText,
-    unfocusedTextColor   = SettingsText,
-    cursorColor          = SettingsAccent,
-)

@@ -263,11 +263,75 @@ class CrossbarPanel(
         }
     }
 
+    private var noticeCardJob: kotlinx.coroutines.Job? = null
+
+    // owner, 2026-10-05: Home (Guide or View) and a tap on the notification island do the same thing: the first
+    // press brings the newest notification out as the card, the second opens the panel
+    fun pressNoticeIsland() {
+        val s = uiState.value
+        if (s.notificationsOpen) return toggleNotifications()
+        when (noticeIslandPress(cardOut = s.noticeCardOut, hasNotice = s.androidNotices.isNotEmpty())) {
+            NoticeIslandPress.SHOW_CARD -> { menuSound.play(MenuSound.SCROLL); showNoticeCard(pinned = true) }
+            NoticeIslandPress.OPEN_PANEL -> toggleNotifications()
+        }
+    }
+
+    // a press brings the card out pinned, to stay until it is closed; a new notification brings it out on its
+    // own for a few seconds, unless it is already pinned
+    fun showNoticeCard(pinned: Boolean = false) {
+        if (!pinned && uiState.value.noticeCardPinned) return
+        noticeCardJob?.cancel()
+        uiState.update { it.copy(noticeCardOut = true, noticeCardPinned = pinned, noticeCardCursor = 0) }
+        if (!pinned) noticeCardJob = scope.launch {
+            kotlinx.coroutines.delay(NOTICE_CARD_MS)
+            closeNoticeCard()
+        }
+    }
+
+    fun closeNoticeCard() {
+        noticeCardJob?.cancel()
+        uiState.update { it.copy(noticeCardOut = false, noticeCardPinned = false) }
+    }
+
+    // true when the card took the press
+    internal fun onNoticeCardButton(action: GamepadAction, state: CrossbarUiState): Boolean {
+        val rows = state.noticeCardRows
+        return when (val step = noticeCardStep(action, state.noticeCardCursor, rows.size)) {
+            is NoticeCardStep.Move -> { menuSound.play(MenuSound.SCROLL); uiState.update { it.copy(noticeCardCursor = step.cursor) }; true }
+            is NoticeCardStep.Open -> { openNoticeFromCard(rows[step.index].key); true }
+            is NoticeCardStep.Dismiss -> { dismissNoticeFromCard(rows[step.index].key); true }
+            NoticeCardStep.Stay -> true
+            NoticeCardStep.Close -> { closeNoticeCard(); action == GamepadAction.BACK }
+        }
+    }
+
+    fun openNoticeFromCard(key: String) {
+        closeNoticeCard()
+        openAndroidNotice(key)
+    }
+
+    fun dismissNoticeFromCard(key: String) {
+        val notice = uiState.value.androidNotices.firstOrNull { it.key == key } ?: return
+        if (!notice.canDismiss) return
+        menuSound.play(MenuSound.BACK)
+        AndroidNotifications.dismiss(key)
+        // the card stays for the rest, and stays put while the user works through them
+        noticeCardJob?.cancel()
+        uiState.update {
+            val left = it.noticeCardRows.size - 1
+            it.copy(noticeCardPinned = true, noticeCardCursor = it.noticeCardCursor.coerceIn(0, (left - 1).coerceAtLeast(0)))
+        }
+        if (uiState.value.androidNotices.size <= 1) closeNoticeCard()
+    }
+
     fun toggleNotifications() {
+        noticeCardJob?.cancel()
         menuSound.play(if (uiState.value.notificationsOpen) MenuSound.BACK else MenuSound.SYSTEM_BROWSE)
         uiState.update {
             it.copy(
                 notificationsOpen = !it.notificationsOpen,
+                noticeCardOut = false,
+                noticeCardPinned = false,
                 panelTab = PanelTab.NOTIFICATIONS,
                 noticeCursor = 0,
                 panelQuick = QuickSetting.WAVE,

@@ -373,49 +373,6 @@ private fun CardArtGrid(covers: List<String>, size: Dp, modifier: Modifier = Mod
     }
 }
 
-@Composable
-private fun SiblingIcon(item: CrossbarItem, selected: Boolean) {
-    val chip = if (selected) 56.dp else 40.dp
-    val videoGlyph = when (item.type) {
-        CrossbarItemType.MISSING         -> Icons.AutoMirrored.Filled.HelpOutline
-        CrossbarItemType.VIDEO_FOLDER    -> Icons.Filled.Folder
-        CrossbarItemType.VIDEO_LIBRARY   -> Icons.Filled.VideoLibrary
-        CrossbarItemType.VIDEO_RECENT      -> Icons.Filled.History
-        CrossbarItemType.VIDEO_FAVORITES   -> Icons.Filled.Star
-        CrossbarItemType.VIDEO_COLLECTIONS -> Icons.Filled.Bookmarks
-        CrossbarItemType.PHOTO_FOLDER    -> Icons.Filled.Folder
-        CrossbarItemType.PHOTO_ALBUMS    -> Icons.Filled.PhotoLibrary
-        CrossbarItemType.PHOTO_FAVORITES -> Icons.Filled.Star
-        CrossbarItemType.SEARCH          -> Icons.Filled.Search
-        CrossbarItemType.MUSIC_ARTISTS   -> Icons.Filled.Person
-        CrossbarItemType.MUSIC_ALBUMS    -> Icons.Filled.Album
-
-        CrossbarItemType.PLAYLIST        -> Icons.AutoMirrored.Filled.QueueMusic
-        else                        -> null
-    }
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
-        contentAlignment = Alignment.CenterEnd,
-    ) {
-        if (videoGlyph != null) {
-            ThemedGlyph(
-                slotKey = itemSlotKeyFor(item.type) ?: "",
-                defaultVector = videoGlyph,
-                contentDescription = item.title,
-                tint = LocalEchoColors.current.iconColor,
-
-                modifier = Modifier.size(chip).alpha(if (selected) 1f else 0.5f),
-            )
-        } else {
-            com.echo.core.ui.icons.ConsoleIcon(
-                platformId = consoleIconKeyFor(item),
-                contentDescription = item.title,
-                modifier = Modifier.size(chip).alpha(if (selected) 1f else 0.5f),
-            )
-        }
-    }
-}
-
 internal fun memoryCardSlotKeyFor(item: CrossbarItem): String? = when {
     item.type == CrossbarItemType.COLLECTION -> "item_memcard_games"
     item.type != CrossbarItemType.MEMORY_CARD -> null
@@ -449,13 +406,6 @@ internal fun itemSlotKeyFor(type: CrossbarItemType): String? = when (type) {
     CrossbarItemType.MUSIC_ALBUMS -> "item_music_albums"
     CrossbarItemType.PLAYLIST -> "item_playlist"
     else -> null
-}
-
-private fun consoleIconKeyFor(item: CrossbarItem): String? = when (item.type) {
-    CrossbarItemType.ALL_GAMES   -> "allgames"
-    CrossbarItemType.FAVORITES   -> "favorites"
-    CrossbarItemType.MEMORY_CARD -> item.platformId
-    else                    -> null
 }
 
 @OptIn(ExperimentalFoundationApi::class)

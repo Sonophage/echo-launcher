@@ -36,6 +36,7 @@ data class InstalledApp(
 
     val gameId: Long? = null,
 
+    // a library game's cover: its icon slot, else its main art
     val art: String? = null,
 
     val playTimeMillis: Long = 0L,

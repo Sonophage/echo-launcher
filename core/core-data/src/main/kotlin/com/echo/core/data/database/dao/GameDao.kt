@@ -149,18 +149,6 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE last_played_at IS NOT NULL  AND is_missing = 0 ORDER BY last_played_at DESC LIMIT :limit")
     fun observeRecentlyPlayed(limit: Int): Flow<List<GameEntity>>
 
-    @Query(
-        """
-        SELECT * FROM games
-        WHERE platform_id = :platformId
-          AND last_played_at IS NOT NULL  
-          AND is_missing = 0
-        ORDER BY last_played_at DESC
-        LIMIT :limit
-        """
-    )
-    fun observeRecentByPlatform(platformId: String, limit: Int): Flow<List<GameEntity>>
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(game: GameEntity): Long
 

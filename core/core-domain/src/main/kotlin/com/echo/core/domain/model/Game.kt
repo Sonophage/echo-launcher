@@ -73,3 +73,19 @@ data class Game(
     val discFaceUri: String? get() = listOfNotNull(artworkUri, iconUri)
         .firstOrNull { it.isNotBlank() }
 }
+
+// owner, 2026-10-05: a game's cover is its icon slot, for every system; the main art is only the fallback. The
+// main art is often a wide background (ES-DE's miximages, or fanart), and the owner fills the icon slot with the
+// covers he picks (Skyrim, Sekiro and The Witcher 3 already hold their SteamGridDB grids there)
+fun coverArtOf(icon: String?, main: String?): String? = icon?.takeIf { it.isNotBlank() } ?: main?.takeIf { it.isNotBlank() }
+
+// owner, 2026-10-05: an installed app that is itself a game in the library (an Android game) wears that game's
+// cover, its icon slot first. An app that only launches library games (GameNative running Steam games, each with its
+// own shortcut) is not any one of them, so it keeps its own icon
+fun appCovers(games: List<Game>): Map<String, String> =
+    games.filter { it.packageName != null && it.launchIntentUri == null }
+        .groupBy { it.packageName!! }
+        .mapNotNull { (pkg, owned) ->
+            owned.singleOrNull()?.let { g -> coverArtOf(g.iconUri, g.artworkUri)?.let { pkg to it } }
+        }
+        .toMap()

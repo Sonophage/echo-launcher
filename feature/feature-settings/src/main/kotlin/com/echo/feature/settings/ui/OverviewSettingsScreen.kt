@@ -91,13 +91,14 @@ fun OverviewSettingsScreen(
         fullWidth = true,
         backdrop = banner?.let { art ->
             {
-                Box(Modifier.fillMaxSize()) {
+                // owner, 2026-10-05: an opaque base, so the wallpaper no longer shows through the game's art
+                Box(Modifier.fillMaxSize().background(PanelBase)) {
                     AsyncImage(
                         model = rememberArtworkModel(art),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         alignment = BiasAlignment(0f, -0.4f),
-                        modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.55f),
+                        modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.85f),
                     )
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.55f), 0.3f to PanelBase.copy(alpha = 0.3f), 0.55f to PanelBase.copy(alpha = 0.8f), 1f to PanelBase.copy(alpha = 0.95f))))
                 }

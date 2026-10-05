@@ -8,9 +8,6 @@ import androidx.compose.ui.graphics.Color
 internal object CrossbarGlow {
     val Color = Color(0xFFFFDCAA)
 
-    const val CategoryAlpha = 0.55f
-    const val CategoryReach = 0.30f
-
     const val RowAlpha = 0.58f
     const val RowReach = 0.26f
 }

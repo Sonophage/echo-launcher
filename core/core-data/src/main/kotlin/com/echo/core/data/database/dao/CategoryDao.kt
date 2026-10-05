@@ -48,9 +48,6 @@ interface CategoryDao {
     suspend fun setGamingFlag(id: String, gaming: Boolean)
 
     @Query("SELECT * FROM category_items WHERE category_id = :categoryId ORDER BY pinned DESC, sort_order ASC")
-    fun observeItemsForCategory(categoryId: String): Flow<List<CategoryItemEntity>>
-
-    @Query("SELECT * FROM category_items WHERE category_id = :categoryId ORDER BY pinned DESC, sort_order ASC")
     suspend fun getItemsForCategory(categoryId: String): List<CategoryItemEntity>
 
     @Query("SELECT * FROM category_items WHERE item_type = 'app'")

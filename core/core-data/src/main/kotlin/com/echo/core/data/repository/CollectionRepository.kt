@@ -16,11 +16,6 @@ import javax.inject.Singleton
 class CollectionRepository @Inject constructor(
     private val collectionDao: CollectionDao,
 ) {
-    fun observeCollections(): Flow<List<GameCollection>> =
-        collectionDao.observeAllWithCounts().map { rows ->
-            rows.map { it.collection.toDomain(gameCount = it.game_count) }
-        }
-
     fun observeGames(collectionId: Long): Flow<List<Game>> =
         collectionDao.observeGames(collectionId).map { list -> list.map { it.toDomain() } }
 

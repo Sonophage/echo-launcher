@@ -10,9 +10,10 @@ enum class SettingsSectionId(
     OVERVIEW("settings_section_overview", "Overview", "Library, artwork & build"),
     // owner, 2026-10-05: media folders get their own section, and Hidden Items moves here from Emulators
     LIBRARY("settings_section_library", "Library", "Media folders & hidden items"),
-    EMULATORS("settings_section_emulators", "Emulators", "Library Manager, emulator profiles, RetroArch & artwork"),
+    EMULATORS("settings_section_emulators", "Emulators", "Library Manager, emulator profiles, RetroArch & your art"),
     LOOK_AND_FEEL("settings_section_look_and_feel", "Look & Feel", "Theme, wallpaper, layout, sound, controls & touch"),
-    ACCOUNTS("settings_section_accounts", "Accounts", "Permissions, RetroAchievements, Steam & Discord"),
+    // owner, 2026-10-05: every account lives here, the artwork services' too, each kind on its own tab
+    ACCOUNTS("settings_section_accounts", "Accounts", "Permissions, achievements, artwork services & Discord"),
     SYSTEM("settings_section_system", "System", "About, logs, backup & credits"),
     SETUP("settings_section_setup", "Setup", "The guided setup wizard"),
 }
@@ -33,7 +34,6 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
 
     SettingsEntry("settings_library", "Library Manager", "ROM sources & scanning", SettingsSectionId.EMULATORS),
     SettingsEntry("settings_artwork", "Artwork", "Your art, scraping & cache", SettingsSectionId.EMULATORS),
-    SettingsEntry("settings_artwork_sources", "Scraping Sources", "Source priority & service accounts", SettingsSectionId.EMULATORS),
 
     SettingsEntry("settings_emulators_installed", "Installed", "Detected emulator profiles", SettingsSectionId.EMULATORS),
     SettingsEntry("settings_emulators_custom", "Custom Emulators", "Custom profiles & Add Custom Emulator", SettingsSectionId.EMULATORS),
@@ -51,7 +51,8 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_performance", "Performance", "Thermal, battery saver & rescanning", SettingsSectionId.LOOK_AND_FEEL),
 
     SettingsEntry("settings_permissions", "Permissions", "What ECHO can reach, and how to grant it", SettingsSectionId.ACCOUNTS),
-    SettingsEntry("settings_accounts", "Accounts", "RetroAchievements & Steam", SettingsSectionId.ACCOUNTS),
+    SettingsEntry("settings_accounts", "Achievements", "RetroAchievements & Steam", SettingsSectionId.ACCOUNTS),
+    SettingsEntry("settings_artwork_sources", "Artwork", "SteamGridDB, ScreenScraper, IGDB & TMDB, and their order", SettingsSectionId.ACCOUNTS),
     SettingsEntry("settings_discord", "Discord", "Sign in, friends & presence", SettingsSectionId.ACCOUNTS),
 
     SettingsEntry("settings_about", "About", "ECHO", SettingsSectionId.SYSTEM),

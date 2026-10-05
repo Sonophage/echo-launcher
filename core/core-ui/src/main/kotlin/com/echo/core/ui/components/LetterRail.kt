@@ -37,7 +37,8 @@ import kotlin.math.abs
 
 data class LetterAnchor(val letter: Char, val index: Int)
 
-const val LETTER_JUMP_MIN_ITEMS = 25
+// owner, 2026-10-05: Recent and the game lists are short, and asked for the rail too
+const val LETTER_JUMP_MIN_ITEMS = 10
 
 const val LETTER_JUMP_MIN_LETTERS = 3
 
@@ -46,17 +47,15 @@ fun initialOf(title: String): Char {
     return if (c.isLetter()) c.uppercaseChar() else '#'
 }
 
+// one rung per initial, A to Z, each pointing at the first row with that initial in the list's own order.
+// In a list sorted by title that is the letter's block; in one sorted by date it is that letter's most recent
+// row (owner, 2026-10-05: Recent and the game lists sorted by play date get the rail too)
 fun letterAnchors(titles: List<String>): List<LetterAnchor>? {
     if (titles.size < LETTER_JUMP_MIN_ITEMS) return null
 
-    val anchors = ArrayList<LetterAnchor>()
-    var previous: Char? = null
-    for ((index, title) in titles.withIndex()) {
-        val letter = initialOf(title)
-        if (previous != null && letter < previous) return null
-        if (letter != previous) anchors.add(LetterAnchor(letter, index))
-        previous = letter
-    }
+    val first = LinkedHashMap<Char, Int>()
+    titles.forEachIndexed { index, title -> first.getOrPut(initialOf(title)) { index } }
+    val anchors = first.entries.sortedBy { it.key }.map { (letter, index) -> LetterAnchor(letter, index) }
     return if (anchors.size < LETTER_JUMP_MIN_LETTERS) null else anchors
 }
 
@@ -73,7 +72,9 @@ data class LetterJumpState(
 fun letterJumpFor(titles: List<String>, currentIndex: Int): LetterJumpState? {
     val anchors = letterAnchors(titles) ?: return null
 
-    val cursor = anchors.indexOfLast { it.index <= currentIndex }.coerceAtLeast(0)
+    // the rung of the row the cursor is on
+    val here = titles.getOrNull(currentIndex)?.let(::initialOf)
+    val cursor = anchors.indexOfFirst { it.letter == here }.coerceAtLeast(0)
     return LetterJumpState(anchors = anchors, cursor = cursor, returnIndex = currentIndex)
 }
 
@@ -99,7 +100,6 @@ data class RailMetrics(
 internal val RailMinBadge = 16.dp
 internal val RailMaxBadge = RailIcon
 private val RungGap = 3.dp
-private val BadgeSideGap = 4.dp
 private const val GlyphRatio = 0.6f
 
 // owner, 2026-10-05: the rail reads like an XMB column: bare letters, the chosen one biggest, its neighbours
@@ -160,7 +160,12 @@ fun CrossbarLetterRail(
     if (letters.isEmpty()) return
 
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val metrics = railMetrics(maxHeight - top - bottom, letters.size)
+        // owner, 2026-10-05: the rail sits on the screen's centre line, clear of the header and the footer: the
+        // same margin above and below, with room for the chosen letter to grow at either end
+        val edge = maxOf(top, bottom)
+        val firstPass = railMetrics(maxHeight - edge * 2, letters.size)
+        val growth = firstPass.badge * (ACTIVE_SCALE - 1f) / 2f
+        val metrics = railMetrics(maxHeight - (edge + growth) * 2, letters.size)
         val rungs = remember(letters.size, metrics.rungs) { bucketIndices(letters.size, metrics.rungs) }
 
         if (cursor != null) {
@@ -170,12 +175,13 @@ fun CrossbarLetterRail(
                     .menuBackdrop(),
             ) {
                 Column(
-                    horizontalAlignment = Alignment.End,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(metrics.gap, Alignment.CenterVertically),
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .fillMaxHeight()
-                        .padding(top = top, bottom = bottom, end = RailEdgeGap),
+                        .padding(top = edge + growth, bottom = edge + growth, end = RailEdgeGap)
+                        .width(metrics.badge * ACTIVE_SCALE),
                 ) {
                     Rungs(letters, rungs, cursor, metrics)
                 }
@@ -187,7 +193,7 @@ fun CrossbarLetterRail(
                 .align(Alignment.CenterEnd)
                 .fillMaxHeight()
                 .width(RailEdgeZone)
-                .padding(top = top, bottom = bottom)
+                .padding(top = edge + growth, bottom = edge + growth)
                 .railSlide(rungs, metrics, onTouch = onTouch, onReleased = onReleased),
         )
     }
@@ -229,8 +235,6 @@ private fun RailLetter(
                 scaleX = scale
                 scaleY = scale
                 this.alpha = alpha
-                // the letters grow towards the screen, away from the edge
-                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(1f, 0.5f)
             },
     ) {
         Text(

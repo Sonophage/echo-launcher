@@ -45,21 +45,16 @@ import com.echo.feature.artwork.store.ArtworkDimensions
 import com.echo.feature.crossbar.R
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 
-private val ICON_WIDTH  = 62.dp
-private val ICON_HEIGHT = 86.dp
-
 private val PspShape    = RoundedCornerShape(4.dp)
 private val SquircleShape = com.echo.core.ui.icons.AppIconContainerShape
 
-private val CartridgeBodyColor      = Color(0xFF1C1C22)
-private val CartridgeConnectorColor = Color(0xFF111115)
-private val CartridgePinColor       = Color(0xFF2E2E38)
 private val IconBorder              = Color(0x55FFFFFF)
 private val ShineColor              = Color(0x18FFFFFF)
 
-// the shelf's cover, but not the icon it falls back to: with no cover the row keeps its icon
-private val CrossbarItem.coverForRow: String?
-    get() = shelfCoverArt?.takeIf { it != iconUri }
+// the shelf's cover, but not the icon it falls back to: with no cover the row keeps its icon. A game's cover is
+// its icon slot first (owner, 2026-10-05)
+private val CrossbarItem.rowCover: String?
+    get() = if (gameId != null) com.echo.core.domain.model.coverArtOf(iconUri, artworkUri) else shelfCoverArt?.takeIf { it != iconUri }
 
 @Composable
 fun GameIcon(
@@ -81,9 +76,9 @@ fun GameIcon(
         )
 
         // the cover keeps its own shape in the row's slot; a game with no cover keeps its icon
-        iconStyle == GameIconStyle.COVER_ART && item.coverForRow != null -> NaturalArtSlot(modifier) { artModifier ->
+        iconStyle == GameIconStyle.COVER_ART && item.rowCover != null -> NaturalArtSlot(modifier) { artModifier ->
             AsyncImage(
-                model = rememberArtworkModel(item.coverForRow),
+                model = rememberArtworkModel(item.rowCover),
                 contentDescription = item.title,
                 contentScale = ContentScale.Fit,
                 modifier = artModifier,

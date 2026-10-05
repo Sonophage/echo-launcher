@@ -11,9 +11,6 @@ interface PlaySessionDao {
     @Insert
     suspend fun insert(session: PlaySessionEntity): Long
 
-    @Query("SELECT * FROM play_sessions WHERE game_id = :gameId ORDER BY launched_at DESC")
-    fun observeForGame(gameId: Long): Flow<List<PlaySessionEntity>>
-
     @Query("""
         SELECT platform_id
         FROM play_sessions

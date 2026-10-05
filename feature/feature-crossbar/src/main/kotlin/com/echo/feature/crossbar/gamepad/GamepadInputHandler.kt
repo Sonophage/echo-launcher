@@ -221,8 +221,6 @@ class GamepadInputHandler @Inject constructor(
 
 
 
-    fun emitAction(action: GamepadAction) = emit(action)
-
     private fun emit(action: GamepadAction, physical: Boolean = false): Boolean {
         if (action == GamepadAction.PREV_PAGE || action == GamepadAction.NEXT_PAGE) {
             val last = lastPageEmitAt[action]

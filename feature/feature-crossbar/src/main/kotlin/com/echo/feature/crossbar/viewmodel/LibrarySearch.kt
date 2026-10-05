@@ -92,17 +92,52 @@ fun searchEmptyState(loaded: Boolean, query: String, anyContent: Boolean = true)
     else -> SearchEmptyState.NO_MATCHES
 }
 
-// owner, 2026-10-05: the results run in two columns under the banner
-const val SEARCH_COLUMNS = 2
+// owner, 2026-10-05: the results stand on one shelf (the "Drawer and Search Variations" design's 6b), so left and
+// right walk along it; up and down have nowhere to go
+fun searchStep(action: GamepadAction): Int = when (action) {
+    GamepadAction.NAVIGATE_LEFT -> -1
+    GamepadAction.NAVIGATE_RIGHT -> 1
+    else -> 0
+}
 
-// up and down move a row; left and right move within the row and stop at its ends
-fun searchStep(action: GamepadAction, index: Int): Int {
-    val column = index % SEARCH_COLUMNS
-    return when (action) {
-        GamepadAction.NAVIGATE_UP -> -SEARCH_COLUMNS
-        GamepadAction.NAVIGATE_DOWN -> SEARCH_COLUMNS
-        GamepadAction.NAVIGATE_LEFT -> if (column > 0) -1 else 0
-        GamepadAction.NAVIGATE_RIGHT -> if (column < SEARCH_COLUMNS - 1) 1 else 0
-        else -> 0
+// owner, 2026-10-05: the shelf opens with the likeliest result in the middle. How well a title matches, best
+// first: the whole title, its start, the start of one of its words, anywhere in it
+fun searchRank(query: String, title: String): Int {
+    val q = normalizeForSearch(query)
+    val t = normalizeForSearch(title)
+    return when {
+        q.isEmpty() -> 3
+        t == q -> 0
+        t.startsWith(q) -> 1
+        t.split(' ').any { it.startsWith(q) } -> 2
+        else -> 3
     }
+}
+
+// lays a ranked list out from the middle: the first in the centre, then one to the right, one to the left, and so
+// on outwards, so the likeliest results sit nearest the centre. The centre is at index (size - 1) / 2
+fun <T> centreOut(ranked: List<T>): List<T> {
+    val left = ranked.filterIndexed { i, _ -> i % 2 == 0 && i > 0 }
+    val right = ranked.filterIndexed { i, _ -> i % 2 == 1 }
+    return left.reversed() + ranked.take(1) + right
+}
+
+fun centreOutIndex(size: Int): Int = (size - 1).coerceAtLeast(0) / 2
+
+// the kind of thing a result is, for the shelf's filter
+fun searchKindOf(row: CrossbarItem): SearchKind? = when {
+    row.isInstalledApp -> SearchKind.APPS
+    row.type == CrossbarItemType.VIDEO_FILE -> SearchKind.VIDEO
+    row.type == CrossbarItemType.PHOTO_FILE -> SearchKind.PHOTOS
+    row.type == CrossbarItemType.LIBRARY_BOOK -> SearchKind.BOOKS
+    row.type == CrossbarItemType.MUSIC_TRACK -> SearchKind.MUSIC
+    row.gameId != null -> SearchKind.GAMES
+    else -> null
+}
+
+// LB and RB step through All and each kind the results hold, and stop at the ends
+fun stepSearchKind(current: SearchKind?, present: List<SearchKind>, delta: Int): SearchKind? {
+    val order = listOf<SearchKind?>(null) + present
+    val at = order.indexOf(current).coerceAtLeast(0)
+    return order[(at + delta).coerceIn(0, order.lastIndex)]
 }

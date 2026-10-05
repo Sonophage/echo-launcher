@@ -295,7 +295,6 @@ private fun CrossbarRailBadge(
 }
 
 val RailIcon = 29.dp
-val RailCorner = 7.dp
 val RailEdgeGap = 24.dp
 val RailRowGap = 13.dp
 private const val DimFadeMs = 160

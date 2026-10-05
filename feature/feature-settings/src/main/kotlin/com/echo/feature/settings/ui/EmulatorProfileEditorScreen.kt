@@ -22,14 +22,11 @@ import com.echo.core.domain.model.IntentType
 import com.echo.feature.settings.viewmodel.EmulatorTemplate
 import com.echo.feature.settings.viewmodel.ProfileEditorState
 
-private val EditorText: Color
-    @Composable get() = SettingsText
 private val EditorSubtext: Color
     @Composable get() = SettingsSubtext
 private val EditorAccent: Color
     @Composable get() = SettingsAccent
 private val EditorError    = Color(0xFFE57373)
-private val EditorBorder   = Color(0xFF444444)
 
 @Composable
 fun EmulatorProfileEditorScreen(

@@ -234,7 +234,7 @@ internal fun StudioResultsColumn(
                 Text(
                     when {
                         state.source in state.unavailableSources ->
-                            "${state.source.label} needs an account or key. Settings ▸ Artwork ▸ Scraping Sources."
+                            "${state.source.label} needs an account or key. Settings ▸ Accounts ▸ Artwork."
                         state.source != StudioSource.SCREENSCRAPER -> "No results"
                         state.matchResolving -> "Looking for this game on ScreenScraper…"
                         state.matchFailed    -> "ScreenScraper didn't answer. Use Change Match to search again."

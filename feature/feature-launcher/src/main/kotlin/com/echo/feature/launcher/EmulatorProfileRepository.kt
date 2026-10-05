@@ -69,12 +69,6 @@ class EmulatorProfileRepository @Inject constructor(
             .stabilizeCore(autoCoreMemory.rememberedProfileId(platformId))
     }
 
-    fun getInstalledVersionCode(packageName: String): Long {
-        return try {
-            context.packageManager.getPackageInfo(packageName, 0).longVersionCode
-        } catch (_: Exception) { -1L }
-    }
-
     suspend fun saveCustomProfile(profile: EmulatorProfile) =
         savePersistedProfile(profile.copy(isCustom = true))
 

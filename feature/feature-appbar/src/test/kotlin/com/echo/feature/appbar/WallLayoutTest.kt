@@ -4,7 +4,7 @@ import com.echo.core.domain.model.GamepadAction
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-// owner, 2026-10-04: the focused app is the hero banner, and the apps run below it in columns
+// owner, 2026-10-05: the apps stand as cases in columns beside the info column
 class WallLayoutTest {
     @Test
     fun `the d-pad walks the grid the way it is drawn, a row of columns at a time`() {
@@ -22,10 +22,10 @@ class WallLayoutTest {
     }
 
     @Test
-    fun `every app has one cell and none is wider than a column`() {
+    fun `every app has its own cell, four to a row`() {
         val cells = wallLayout(total = 20)
         assertEquals(20, cells.size)
         assertEquals(cells.size, cells.toSet().size)
-        cells.forEach { assertEquals(1, it.span) }
+        assertEquals(WallCell(row = 1, col = 0), cells[WALL_COLUMNS])
     }
 }

@@ -381,6 +381,10 @@ data class SearchState(
     val scrollToTopToken: Int = 0,
 
     val loaded: Boolean = false,
+    // the shelf's filter (null is All), and each kind the results hold with how many
+    val kind: SearchKind? = null,
+    val kindCounts: List<Pair<SearchKind, Int>> = emptyList(),
+    val total: Int = 0,
 )
 
 data class PlaylistNameDialogState(
@@ -687,6 +691,11 @@ data class CrossbarUiState(
     val pillCursor: PillCursor? = null,
 
     val notificationsOpen: Boolean = false,
+    // the notification island's card is out (owner, 2026-10-05). Pinned when the user brought it out, so it
+    // stays and takes the pad until it is closed; a new notification's own peek is not pinned and times out
+    val noticeCardOut: Boolean = false,
+    val noticeCardPinned: Boolean = false,
+    val noticeCardCursor: Int = 0,
 
     val panelTab: PanelTab = PanelTab.NOTIFICATIONS,
     val noticeCursor: Int = 0,
@@ -779,9 +788,6 @@ data class CrossbarUiState(
 
     val canFilterRecents: Boolean
         get() = onLastPlayedHome
-
-    val hoverPanelHasPages: Boolean
-        get() = (hoverPanelContent?.pages?.size ?: 0) > 1
 
     val focusedItemHasContextMenu: Boolean
         get() = focusedItem?.hasContextMenu(this) == true
@@ -2717,6 +2723,8 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
+        if (state.noticeCardPinned && action != GamepadAction.HOME && panel.onNoticeCardButton(action, state)) return
+
         if (state.search != null) {
             librarySearch.onButton(action, state)
             return
@@ -2738,7 +2746,7 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (action == GamepadAction.HOME && state.statusStripVisible) {
-            panel.toggleNotifications()
+            panel.pressNoticeIsland()
             return
         }
 
@@ -2943,7 +2951,7 @@ class CrossbarViewModel @Inject constructor(
             // the crossbar does not page, so its bumpers open Search (LB) and Apps (RB)
             GamepadAction.PREV_PAGE     -> librarySearch.openSearch(SearchScope.ALL)
             GamepadAction.NEXT_PAGE     -> onOpenAppDrawer()
-            GamepadAction.HOME          -> panel.toggleNotifications()
+            GamepadAction.HOME          -> panel.pressNoticeIsland()
 
             GamepadAction.CHANGE_SORT -> when {
                 !state.onLastPlayedHome -> cycleSort()
@@ -3290,20 +3298,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun openPlayStatePickerMenu(gameId: Long) {
-        viewModelScope.launch {
-            val game = gameRepository.getById(gameId) ?: return@launch
-            val current = PlayState.fromName(game.playState)
-            val items = buildList {
-                add(CrossbarContextMenuItem("pstate_none", "Unmarked", checked = current == null))
-                PlayState.entries.forEach { state ->
-                    add(CrossbarContextMenuItem("pstate_${state.name}", state.label, checked = current == state))
-                }
-            }
-            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Mark As", rows = items), gameId = gameId))}
-        }
-    }
-
     internal fun openEmulatorPickerMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
@@ -3411,15 +3405,20 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun normalizePcTitleKey(title: String): String =
-        title.lowercase().filter { it.isLetterOrDigit() }
-
     private fun openContextMenuForFocusedItem() {
         val state = _uiState.value
         openContextMenuFor(state.currentItems.getOrNull(state.selectedItemIndex))
     }
 
-    // the one place an item's Options menu is chosen: the crossbar, a long press and Search's banner
+    // a library game's Options from the App Drawer: the same menu as on the crossbar, drawn over the drawer
+    fun openGameMenu(gameId: Long) {
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            openContextMenuFor(listOf(game).toCrossbarItems().first())
+        }
+    }
+
+    // the one place an item's Options menu is chosen: the crossbar, a long press, Search's banner and the drawer
     internal fun openContextMenuFor(item: CrossbarItem?) {
         val before = _uiState.value.activeContextMenu
         openItemMenu(item)
@@ -4831,7 +4830,6 @@ class CrossbarViewModel @Inject constructor(
 
         internal const val RESUME_DONE_FRACTION = 0.97f
         private const val ALL_GAMES_PLATFORM_ID = "__all_games__"
-        private const val FAVORITES_ITEM_ID = "favorites_folder"
 
         internal const val FAVORITES_PLATFORM_ID = "__favorites__"
         internal const val MISSING_ITEM_ID = "missing_folder"

@@ -57,6 +57,17 @@ private fun recentInfoPrompt(state: CrossbarUiState, item: CrossbarItem): Crossb
 fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
     val focused = state.currentItems.getOrNull(state.selectedItemIndex)
 
+    // owner, 2026-10-05: while the notification card has the pad, the footer is the card's: A opens the
+    // notification's app, X dismisses it, B closes the card
+    if (state.noticeCardPinned && !state.notificationsOpen) {
+        val row = state.noticeCardRows.let { it.getOrNull(state.noticeCardCursor.coerceIn(0, (it.size - 1).coerceAtLeast(0))) }
+        return CrossbarPrompts(
+            primary = row?.let { CrossbarPrompt(GamepadAction.SELECT, "Open", it.appLabel) },
+            back = CrossbarPrompt(GamepadAction.BACK, "Close"),
+            right = listOfNotNull(row?.takeIf { it.canDismiss }?.let { CrossbarPrompt(GamepadAction.CHANGE_SORT, "Dismiss") }),
+        )
+    }
+
     if (state.notificationsOpen) {
         // kit 11: the focused notice's actions are the footer's: A on the card, X Dismiss, Y Clear all.
         // The tab row already shows its shoulder buttons, so the footer does not repeat them

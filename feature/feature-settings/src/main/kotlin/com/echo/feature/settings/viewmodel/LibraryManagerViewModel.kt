@@ -528,21 +528,6 @@ class LibraryManagerViewModel @Inject constructor(
         }
     }
 
-    fun addRomRoot(uri: Uri) {
-        viewModelScope.launch {
-            romRootRepository.persist(uri, writable = true)
-
-            romRootRepository.add(uri.toString())
-            scanRomRoot()
-        }
-    }
-
-    fun removeRomRoot(treeUri: String) {
-        viewModelScope.launch {
-            romRootRepository.remove(treeUri)
-        }
-    }
-
     private var pendingRelinkRomRoot: String? = null
 
     fun beginRelinkRomRoot(treeUri: String): Uri? {

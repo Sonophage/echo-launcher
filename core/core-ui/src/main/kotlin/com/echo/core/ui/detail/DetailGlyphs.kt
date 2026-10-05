@@ -6,9 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
@@ -36,28 +33,6 @@ fun EchoStarMark(
         }
         path.close()
         drawPath(path, color)
-    }
-}
-
-@Composable
-fun EchoChevronMark(
-    color: Color,
-    modifier: Modifier = Modifier,
-    size: Dp = 14.dp,
-) {
-    Canvas(modifier.size(size)) {
-        val w = this.size.width
-        val h = this.size.height
-        val path = Path().apply {
-            moveTo(w * 0.34f, h * 0.16f)
-            lineTo(w * 0.68f, h * 0.5f)
-            lineTo(w * 0.34f, h * 0.84f)
-        }
-        drawPath(
-            path,
-            color,
-            style = Stroke(width = w * 0.13f, cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
     }
 }
 

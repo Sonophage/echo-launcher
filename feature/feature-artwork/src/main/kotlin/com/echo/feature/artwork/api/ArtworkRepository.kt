@@ -46,7 +46,7 @@ fun scrapeStopMessage(reason: SsFailureReason?): String? = when (reason) {
     SsFailureReason.DAILY_QUOTA_EXCEEDED ->
         "ScreenScraper's daily quota for this account ran out, so the rest was skipped. It resets tomorrow."
     SsFailureReason.BAD_DEV_CREDENTIALS ->
-        "ScreenScraper rejected the app's developer credentials, so it was skipped. Check Scraping Sources."
+        "ScreenScraper rejected the app's developer credentials, so it was skipped. Check Settings ▸ Accounts ▸ Artwork."
     SsFailureReason.API_CLOSED ->
         "ScreenScraper is closed to non-members right now, so it was skipped. Other sources still ran."
     SsFailureReason.DISABLED ->

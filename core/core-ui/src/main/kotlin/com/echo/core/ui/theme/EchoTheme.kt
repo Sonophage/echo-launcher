@@ -36,16 +36,6 @@ fun EchoColors.withWaveTint(wave: Color): EchoColors {
     )
 }
 
-fun EchoColors.withArtTint(art: Color): EchoColors {
-    val argb = art.toArgb().toLong() and 0xFFFFFFFFL
-    return copy(
-        accentColor = art,
-        waveColor = art,
-        backgroundTop = Color(ColorCascade.darken(argb, 0.16f)),
-        backgroundBottom = Color(ColorCascade.darken(argb, 0.30f)),
-    )
-}
-
 val LocalEchoColors = compositionLocalOf {
     DefaultEchoColors
 }

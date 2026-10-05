@@ -70,7 +70,9 @@ class LaunchDispatcher @Inject constructor(
     private var watchdog: Job? = null
 
     suspend fun launch(game: Game, resolved: ResolvedLaunch?, intent: Intent): LaunchDispatchResult {
-        gameBootGate.awaitPresentation(game.displayTitle, game.discFaceUri, backdropArt = game.artworkUri, cardArt = game.iconUri ?: game.artworkUri)
+        // GameBoot's disc and card wear the game's cover, its icon slot, as every cover spot does (owner, 2026-10-05)
+        val cover = com.echo.core.domain.model.coverArtOf(game.iconUri, game.artworkUri)
+        gameBootGate.awaitPresentation(game.displayTitle, cover, backdropArt = game.artworkUri, cardArt = cover)
         return try {
             context.startActivity(
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).withoutTransition(),

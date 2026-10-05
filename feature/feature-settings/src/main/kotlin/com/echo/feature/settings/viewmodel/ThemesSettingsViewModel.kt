@@ -14,7 +14,6 @@ import com.echo.core.data.wallpaper.ThemeAccent
 import com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE
 import com.echo.core.data.wallpaper.ThemeAccent.followWallpaperAccent
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe
-import com.echo.core.domain.model.EchoTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,8 +40,6 @@ data class ThemesSettingsUiState(
     val iconColorArgb: Long? = null,
 
     val savedThemes: List<EchoThemeStore.SavedTheme> = emptyList(),
-
-    val installedThemes: List<EchoTheme> = emptyList(),
 )
 
 @HiltViewModel
@@ -96,19 +93,6 @@ class ThemesSettingsViewModel @Inject constructor(
             themeStore.resetApplied()
             Timber.i("Theme reset to default")
             _extra.update { it.copy(installMessage = "Theme reset — back to the default look") }
-        }
-    }
-
-    fun createThemeFromPhoto(uri: Uri) {
-        viewModelScope.launch {
-            _extra.update { it.copy(isInstalling = true, installMessage = null) }
-            val saved = themeStore.createFromImage(uri)
-            val message = if (saved != null) {
-                themeStore.apply(saved.id)
-                "Created \"${saved.name}\"" +
-                    if (saved.accentArgb != null) " — color derived from the photo" else ""
-            } else "Could not read that image"
-            _extra.update { it.copy(isInstalling = false, installMessage = message) }
         }
     }
 

@@ -1294,54 +1294,6 @@ fun SettingsRow(
 }
 
 @Composable
-fun SettingsFocusable(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    focusKey: String? = null,
-    content: @Composable (focused: Boolean) -> Unit,
-) {
-    val focusTracker = LocalSettingsFocusTracker.current
-    val touchInput = LocalSettingsTouchInput.current
-    val reportFocused = LocalSettingsReportFocused.current
-    val help = LocalSettingsHelp.current
-    val focusInfo = LocalSettingsFocusInfo.current
-    var isFocused by remember { mutableStateOf(false) }
-    if (isFocused && focusInfo != null) {
-        LaunchedEffect(Unit) { focusInfo.value = null }
-    }
-
-    val row = rememberControllerRowRegistration(
-        prefix = "custom",
-        focusKey = focusKey,
-        claimInitialFocus = true,
-        selectable = true,
-        onSelect = onClick,
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .focusRequester(row.focusRequester)
-            .then(row.positionReporting)
-            .onFocusChanged { state ->
-                isFocused = state.isFocused
-                if (state.isFocused) {
-                    focusTracker(onClick)
-                    reportFocused(row.focusRequester)
-
-                    help.value = null
-                }
-            }
-            .pointerInput(onClick) {
-                detectTapGestures(onTap = { touchInput(); onClick() })
-            }
-            .focusable(),
-    ) {
-        content(isFocused)
-    }
-}
-
-@Composable
 fun SettingsToggleRow(
     label: String,
     sublabel: String? = null,

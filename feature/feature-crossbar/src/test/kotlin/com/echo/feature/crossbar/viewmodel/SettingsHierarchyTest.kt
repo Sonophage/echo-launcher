@@ -104,7 +104,7 @@ class SettingsHierarchyTest {
         assertEquals(
             "Emulators holds the ROM library, its art and the emulators",
             listOf(
-                "settings_library", "settings_artwork", "settings_artwork_sources",
+                "settings_library", "settings_artwork",
                 "settings_emulators_installed",
                 "settings_emulators_custom",
                 "settings_emulators_retroarch",
@@ -121,7 +121,8 @@ class SettingsHierarchyTest {
         )
         assertEquals(
             "Accounts holds what signs in or grants access",
-            listOf("settings_permissions", "settings_accounts", "settings_discord"),
+            // owner, 2026-10-05: the artwork services' accounts moved here from Emulators
+            listOf("settings_permissions", "settings_accounts", "settings_artwork_sources", "settings_discord"),
             settingsEntriesIn(SettingsSectionId.ACCOUNTS).map { it.id },
         )
         assertEquals(

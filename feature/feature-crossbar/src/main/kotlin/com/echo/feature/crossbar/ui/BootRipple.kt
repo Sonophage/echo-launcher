@@ -1,6 +1,7 @@
 package com.echo.feature.crossbar.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,12 +28,15 @@ import com.echo.core.ui.design.echoRing
 import com.echo.core.ui.design.mix
 import com.echo.core.ui.design.progress
 import com.echo.core.ui.design.ringCentreY
+import com.echo.core.ui.wave.WaveLayers
+import com.echo.core.ui.wave.WaveStyle
 import kotlin.math.PI
 import kotlin.math.sin
 
 // owner, 2026-10-05: the boot animation is "B4 Horizon Ripple" from the ECHO Animations v2 design spec. A line
 // of light crosses the screen and collapses to a point; the point sends out three echo rings and the mark
-// gathers round it. Every number below is the spec's
+// gathers round it. Every number below is the spec's. The owner's later call (same day): the ripple is the
+// wave the user picked (PSP, Echo Rings or Echo Arcs), rising from the moment the rings would have left
 object BootRipple {
     const val TOTAL_MS = 3500f
     const val SOUND_MS = 850L
@@ -50,6 +54,8 @@ data class BootFrame(
     val glowRadius: Float,
     val glowAlpha: Float,
     val rings: List<EchoRing>,
+    // the user's chosen wave, rising in place of the rings
+    val waveAlpha: Float,
     val wordAlpha: Float,
     val wordSpacing: Float,
     // the whole layer, black included; it fades to the home screen behind
@@ -94,6 +100,7 @@ fun bootRippleFrame(t: Float, w: Float, h: Float, skipAt: Float? = null): BootFr
         glowRadius = .16f * h,
         glowAlpha = a * (1 - .7f * ring),
         rings = rings,
+        waveAlpha = easeOut(progress(ta, 850f, 1650f)),
         wordAlpha = .6f * word,
         wordSpacing = mix(10f, 4f, word),
         layerAlpha = 1 - exit,
@@ -101,12 +108,22 @@ fun bootRippleFrame(t: Float, w: Float, h: Float, skipAt: Float? = null): BootFr
 }
 
 @Composable
-internal fun BootRippleAnimation(t: Float, skipAt: Float?, modifier: Modifier = Modifier) {
+internal fun BootRippleAnimation(
+    t: Float,
+    skipAt: Float?,
+    modifier: Modifier = Modifier,
+    // the wave the crossbar draws; Off keeps the spec's rings
+    waveStyle: WaveStyle = WaveStyle.OFF,
+    waveTint: Color = Color.White,
+) {
     BoxWithConstraints(modifier.fillMaxSize()) {
         val f = bootRippleFrame(t, maxWidth.value, maxHeight.value, skipAt)
         Box(Modifier.fillMaxSize().alpha(f.layerAlpha)) {
+            Box(Modifier.fillMaxSize().background(Color(0xFF04060C)))
+            if (waveStyle.drawsWave && f.waveAlpha > 0f) {
+                Box(Modifier.fillMaxSize().alpha(f.waveAlpha)) { WaveLayers(waveStyle, waveTint) }
+            }
             Canvas(Modifier.fillMaxSize()) {
-                drawRect(Color(0xFF04060C))
                 val rx = f.mark.cx * density
                 val ry = f.mark.ringCentreY() * density
                 if (f.glowAlpha > 0f) {
@@ -115,7 +132,7 @@ internal fun BootRippleAnimation(t: Float, skipAt: Float?, modifier: Modifier = 
                         f.glowRadius * density, Offset(rx, ry), alpha = f.glowAlpha.coerceIn(0f, 1f),
                     )
                 }
-                drawEchoRings(f.rings)
+                if (!waveStyle.drawsWave) drawEchoRings(f.rings)
                 if (f.lineAlpha > 0f && f.lineWidth > 0f) {
                     val lw = f.lineWidth * density
                     drawRect(

@@ -138,7 +138,4 @@ object RetroArchCoreScanner {
         )
         return cores
     }
-
-    fun recommendedCoreNameFor(platformId: String): String? =
-        RECOMMENDED_CORES.firstOrNull { platformId in it.platformIds }?.name
 }

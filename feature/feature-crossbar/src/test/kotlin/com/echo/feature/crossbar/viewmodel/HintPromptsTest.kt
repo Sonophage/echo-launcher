@@ -158,4 +158,21 @@ class LastPlayedPromptsTest {
         val other = promptsFor(home(skyrim).copy(resumeGameId = 2L))
         assertNull("another game's session is not this one's to resume", other.resume)
     }
+
+    // owner, 2026-10-05: while the notification card has the pad, the footer is the card's
+    @Test
+    fun `with the card pinned the footer offers Open, Dismiss and Close for the row the pad is on`() {
+        val notices = listOf(
+            com.echo.core.ui.notification.AndroidNotice(key = "old", appLabel = "Mail", title = "a", text = null, postedAt = 1L, canDismiss = true),
+            com.echo.core.ui.notification.AndroidNotice(key = "new", appLabel = "Chat", title = "b", text = null, postedAt = 2L, canDismiss = false),
+        )
+        val pinned = CrossbarUiState(androidNotices = notices, noticeCardOut = true, noticeCardPinned = true, noticeCardCursor = 0)
+        val p = promptsFor(pinned)
+        assertEquals("the newest row is first", "Chat", p.primary?.target)
+        assertEquals("Close", p.back.verb)
+        assertTrue("a row that cannot be dismissed offers no Dismiss", p.right.none { it.action == GamepadAction.CHANGE_SORT })
+        val second = promptsFor(pinned.copy(noticeCardCursor = 1))
+        assertEquals("Mail", second.primary?.target)
+        assertTrue(second.right.any { it.action == GamepadAction.CHANGE_SORT && it.verb == "Dismiss" })
+    }
 }

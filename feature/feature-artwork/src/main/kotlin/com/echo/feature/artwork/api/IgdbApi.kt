@@ -119,15 +119,20 @@ class IgdbApi @Inject constructor(
         if (cached != null && cached.expiresAtMs > System.currentTimeMillis()) return cached
 
         return try {
-            val response: IgdbTokenResponse =
-            httpClient.submitForm(
+            val http = httpClient.submitForm(
                 url = "$AUTH_BASE/token",
                 formParameters = parameters {
                     append("client_id", clientId)
                     append("client_secret", clientSecret)
                     append("grant_type", "client_credentials")
                 },
-            ).body()
+            )
+            // Twitch answers a refused login with a message, not a token; say so instead of a parse error
+            if (!http.status.isSuccess()) {
+                Timber.w("IGDB token refused: " + http.status + " " + http.bodyAsText().take(200))
+                return null
+            }
+            val response: IgdbTokenResponse = http.body()
             val expiresAt = System.currentTimeMillis() + (response.expiresIn - 60L) * 1_000L
             IgdbToken(response.accessToken, expiresAt).also { cachedToken = it }
         } catch (e: CancellationException) {

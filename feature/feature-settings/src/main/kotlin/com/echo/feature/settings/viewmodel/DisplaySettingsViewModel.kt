@@ -304,11 +304,6 @@ class DisplaySettingsViewModel @Inject constructor(
         launchDiscPreferences.setLaunchDiscEnabled(enabled)
     }
 
-    fun showBootPreview() { _bootPreviewVisible.value = true }
-    fun hideBootPreview() { _bootPreviewVisible.value = false }
-    fun showGameBootPreview() { _gameBootPreviewVisible.value = true }
-    fun hideGameBootPreview() { _gameBootPreviewVisible.value = false }
-
     fun uiMediaPickerMime(slot: UiMediaSlot): Array<String> =
         if (slot.kind == UiMediaKind.VIDEO) UiMediaLimits.VIDEO_MIME.toTypedArray()
         else UiMediaLimits.AUDIO_MIME.toTypedArray()
@@ -389,8 +384,6 @@ class DisplaySettingsViewModel @Inject constructor(
         val result = motionWallpaper.apply(mime, knownSize) { context.contentResolver.openInputStream(uri) }
         _wallpaperMessage.value = result.message ?: "Motion wallpaper applied"
     }
-
-    private fun wallpaperDir(): File = stillWallpaper.dir
 
     private suspend fun pruneWallpaperDir(keep: List<File>) = stillWallpaper.prune(keep)
 

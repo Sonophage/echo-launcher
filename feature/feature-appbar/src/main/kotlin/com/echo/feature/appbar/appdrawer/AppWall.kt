@@ -1,10 +1,26 @@
 package com.echo.feature.appbar.appdrawer
 
-import com.echo.core.ui.design.GlowSide
-import com.echo.core.ui.design.GlowMaskedWave
+import android.content.pm.ApplicationInfo
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import com.echo.core.ui.design.CoverSheen
+import com.echo.core.ui.design.ShelfRoom
+import com.echo.core.ui.design.coverRings
+import com.echo.core.ui.design.roomGlow
+import com.echo.core.ui.design.sideways
+import com.echo.core.ui.design.vignette
+import com.echo.core.ui.design.wallStripes
 import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
-import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -16,7 +32,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,7 +42,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -36,20 +50,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.zIndex
@@ -61,55 +71,50 @@ import com.echo.core.ui.components.LocalPadPrompts
 import com.echo.core.ui.components.initialOf
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.PanelButton
-import com.echo.core.ui.design.panelBackdrop
 import com.echo.core.ui.icons.AppIconArt
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.image.rememberBlurSourceModel
-import com.echo.feature.appbar.AppFilter
 import com.echo.feature.appbar.InstalledApp
 import com.echo.feature.appbar.SystemChip
 import com.echo.feature.appbar.WALL_COLUMNS
-import com.echo.feature.appbar.wallLayout
 import com.echo.core.ui.design.PanelBase
 
+// owner, 2026-10-05: the drawer is the "Drawer and Search Variations" design's 6a: a dark room lit by the
+// selected app's colour, its big icon faint on the wall, and the apps standing as cases in four columns
 @Composable
 internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits) {
     val tint by animateColorAsState(icon?.color ?: NeutralTint, tween(500), label = "wallTint")
-    Box(Modifier.fillMaxSize().panelBackdrop(tint)) {
-        GlowMaskedWave(GlowSide.RIGHT)
-        app?.art?.let { AsyncImage(rememberBlurSourceModel(it), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(u.dp(26))) }
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 0.55f else 0.75f)))
-    }
-}
-
-@Composable
-// the banner's art; HeroBanner fades it into the info
-internal fun WallHero(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits, modifier: Modifier = Modifier) {
-    Box(modifier) {
+    Box(Modifier.fillMaxSize().background(ShelfRoom).roomGlow(tint).wallStripes()) {
         when {
-            app == null -> Unit
-            app.art != null -> AsyncImage(app.art, null, contentScale = ContentScale.Crop,
-                alignment = BiasAlignment(0.2f, -0.3f), modifier = Modifier.fillMaxSize())
-            else -> {
-                val tint = icon?.color ?: NeutralTint
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.6f), tint.copy(alpha = 0.12f)))))
-                TileGlyph(icon, app, 150, u, Modifier.align(Alignment.Center))
-            }
+            app?.art != null -> AsyncImage(rememberBlurSourceModel(app.art), null, contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().blur(u.dp(28)).graphicsLayer(alpha = 0.25f))
+            icon != null -> Image(icon.bitmap, null, Modifier.offset(u.dp(-120), u.dp(120)).size(u.dp(600)).rotate(-12f).graphicsLayer(alpha = 0.06f))
         }
+        Box(Modifier.fillMaxSize().vignette())
     }
 }
 
-@Composable
-internal fun WallShade() {
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.5f), 0.2f to Color.Transparent)))
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.52f to Color.Transparent, 1f to PanelBase.copy(alpha = 0.92f))))
+// what a case's spine says: the console for a game in the library, else the kind of app
+internal fun caseLabel(app: InstalledApp): String = when {
+    app.platformName != null -> app.platformName
+    app.isEmulator -> "Emulator"
+    app.isGame || app.gameId != null -> "Game"
+    else -> when (app.systemCategory) {
+        ApplicationInfo.CATEGORY_AUDIO -> "Music"
+        ApplicationInfo.CATEGORY_VIDEO -> "Video"
+        ApplicationInfo.CATEGORY_IMAGE -> "Photos"
+        ApplicationInfo.CATEGORY_SOCIAL -> "Social"
+        ApplicationInfo.CATEGORY_NEWS -> "News"
+        ApplicationInfo.CATEGORY_MAPS -> "Maps"
+        ApplicationInfo.CATEGORY_PRODUCTIVITY -> "Tools"
+        else -> "App"
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun AppWall(
     apps: List<InstalledApp>,
-    filter: AppFilter,
     selectedIndex: Int,
     usingTouch: Boolean,
     u: DesignUnits,
@@ -117,131 +122,142 @@ internal fun AppWall(
     onAppMenu: (InstalledApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cells = remember(apps.size) { wallLayout(apps.size) }
-    val lines = remember(cells) { cells.indices.groupBy { cells[it].row }.values.toList() }
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(selectedIndex, usingTouch, lines) {
-        if (usingTouch) return@LaunchedEffect
-        val line = lines.indexOfFirst { selectedIndex in it }
-        if (line < 0) return@LaunchedEffect
-        val item = line
-        val shown = listState.layoutInfo.visibleItemsInfo
-        val fits = shown.any { it.index == item && it.offset >= 0 && it.offset + it.size <= listState.layoutInfo.viewportEndOffset }
-        if (!fits) listState.animateScrollToItem((item - 1).coerceAtLeast(0))
+    val gridState = rememberLazyGridState()
+    // a new tab or filter brings a new list with the same index, so the list itself is a key too
+    LaunchedEffect(selectedIndex, usingTouch, apps) {
+        if (usingTouch || selectedIndex !in apps.indices) return@LaunchedEffect
+        val shown = gridState.layoutInfo.visibleItemsInfo
+        val fits = shown.any { it.index == selectedIndex && it.offset.y >= 0 && it.offset.y + it.size.height <= gridState.layoutInfo.viewportEndOffset }
+        if (!fits) gridState.animateScrollToItem((selectedIndex - WALL_COLUMNS).coerceAtLeast(0))
     }
-
-    BoxWithConstraints(modifier) {
-        val gap = u.dp(14)
-        val cell = (maxWidth - gap * (WALL_COLUMNS - 1)) / WALL_COLUMNS
-        val rowHeight = u.dp(112)
-        val tile: @Composable (Int) -> Unit = { index ->
-            val app = apps[index]
-            WallTile(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(WALL_COLUMNS),
+        state = gridState,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(28)),
+        verticalArrangement = Arrangement.spacedBy(u.dp(24)),
+        // room for the chosen case to rise
+        contentPadding = PaddingValues(top = u.dp(16), bottom = u.dp(16)),
+        modifier = modifier,
+    ) {
+        itemsIndexed(apps, key = { _, app -> app.packageName + (app.gameId ?: "") }) { index, app ->
+            AppCase(
                 app = app,
                 focused = index == selectedIndex,
-                eyebrow = null,
-                width = cell,
-                height = rowHeight,
-                big = false,
+                dimmed = selectedIndex in apps.indices && index != selectedIndex,
                 u = u,
                 // a tap only picks the app; it opens by holding the launch button (owner, 2026-10-04)
                 onClick = { onAppTapped(index) },
                 onLongClick = { onAppTapped(index); onAppMenu(app) },
             )
         }
-        LazyColumn(
-            state = listState,
-            verticalArrangement = Arrangement.spacedBy(gap),
-            contentPadding = PaddingValues(vertical = u.dp(10)),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            lines.forEach { indices ->
-                item(key = indices.first()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(gap)) { indices.forEach { tile(it) } }
-                }
-            }
-        }
     }
 }
 
+// one app as a case: ribbed black plastic, a VHS spine label down its edge, and the cover. A game's own art is
+// fitted whole, over a blur of itself where it does not fill; an app's cover is its colour with ECHO's echo rings,
+// its icon large and faint and again small and sharp, under the plastic's sheen
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun WallTile(
-    app: InstalledApp,
-    focused: Boolean,
-    eyebrow: String?,
-    width: Dp,
-    height: Dp,
-    big: Boolean,
-    u: DesignUnits,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    val grow by animateFloatAsState(if (focused) 1.04f else 1f, tween(200), label = "wallTile")
-    val shape = RoundedCornerShape(u.dp(16))
-    val icon = if (app.gameId == null && app.art == null) rememberAppIcon(app.packageName) else null
+private fun AppCase(app: InstalledApp, focused: Boolean, dimmed: Boolean, u: DesignUnits, onClick: () -> Unit, onLongClick: () -> Unit) {
+    val lift by animateFloatAsState(if (focused) 1f else 0f, tween(200), label = "caseLift")
+    // owner, 2026-10-05: the chosen case stands a little bigger than the rest, and the rest step back
+    val shade by animateFloatAsState(if (dimmed) 0.6f else 1f, tween(200), label = "caseShade")
+    val icon = if (app.art == null) rememberAppIcon(app.packageName.takeIf { app.gameId == null }) else null
+    val tint = icon?.color ?: NeutralTint
+    val shape = RoundedCornerShape(u.dp(8))
+    val rise = with(LocalDensity.current) { u.dp(10).toPx() }
     Box(
         Modifier
             .zIndex(if (focused) 1f else 0f)
-            .size(width, height)
-            .scale(grow)
+            .aspectRatio(0.7f)
+            .graphicsLayer {
+                translationY = -rise * lift
+                scaleX = 1f + 0.07f * lift
+                scaleY = 1f + 0.07f * lift
+                alpha = shade
+            }
+            .shadow(u.dp(if (focused) 18 else 10), shape)
             .clip(shape)
-            .background(icon?.color?.copy(alpha = 0.35f) ?: Color.White.copy(alpha = 0.08f))
-            .then(if (focused) Modifier.border(u.dp(2.5f), Color.White, shape) else Modifier)
+            .background(CaseShell)
+            .then(if (focused) Modifier.border(u.dp(3), Color.White, shape) else Modifier)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
-        when {
-            app.art != null -> AsyncImage(app.art, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            big -> TileGlyph(icon, app, 104, u, Modifier.align(BiasAlignment(0f, -0.45f)))
-            else -> Column(
-                Modifier.align(Alignment.Center).padding(horizontal = u.dp(10)),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(u.dp(8)),
-            ) {
-                TileGlyph(icon, app, 52, u, Modifier)
-                Text(app.label, color = Color.White, fontSize = u.sp(13), fontWeight = FontWeight.Medium,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        VhsSpine(caseLabel(app), tint, u, Modifier.padding(start = u.dp(4), top = u.dp(6), bottom = u.dp(6)).width(u.dp(24)).fillMaxHeight())
+        Box(
+            Modifier.fillMaxSize().padding(start = u.dp(32), top = u.dp(6), end = u.dp(6), bottom = u.dp(6))
+                .clip(RoundedCornerShape(u.dp(4))).background(tint),
+        ) {
+            if (app.art != null) {
+                FittedCover(app.art, u)
+            } else {
+                Box(Modifier.fillMaxSize().coverRings()) {
+                    icon?.let { Image(it.bitmap, null, Modifier.align(Alignment.BottomEnd).offset(u.dp(30), u.dp(18)).size(u.dp(130)).rotate(-14f).graphicsLayer(alpha = 0.16f)) }
+                }
+                Column(
+                    Modifier.align(Alignment.Center).padding(horizontal = u.dp(8)),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(u.dp(12)),
+                ) {
+                    if (icon != null) Image(icon.bitmap, null, Modifier.size(u.dp(56)).shadow(u.dp(8), RoundedCornerShape(u.dp(14))))
+                    else Text(initialOf(app.label).toString(), color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(40), fontWeight = FontWeight.ExtraLight)
+                    Text(app.label.uppercase(), color = Color.White, fontSize = u.sp(13), fontWeight = FontWeight.ExtraBold, letterSpacing = 0.04.em,
+                        lineHeight = u.sp(15), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
             }
-        }
-        if (big) {
-            Column(
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE604060C))))
-                    .padding(horizontal = u.dp(16), vertical = u.dp(14)),
-                verticalArrangement = Arrangement.spacedBy(u.dp(3)),
-            ) {
-                eyebrow?.let { Text(it.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(10), letterSpacing = 0.16.em)) }
-                Text(app.label, color = Color.White, fontSize = u.sp(17), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+            Box(Modifier.fillMaxSize().background(CoverSheen))
         }
     }
 }
 
+// owner, 2026-10-05: the spine reads as a VHS tape's: a cream label with the colour band and a play mark at the
+// top, the kind running down it, tracking rules, and a black VHS tab at the foot
 @Composable
-private fun TileGlyph(icon: AppIconArt?, app: InstalledApp, px: Int, u: DesignUnits, modifier: Modifier) {
-    if (icon != null) {
-        Image(icon.bitmap, null, modifier = modifier.size(u.dp(px)))
-    } else {
-        Box(modifier.size(u.dp(px)), contentAlignment = Alignment.Center) {
-            Text(initialOf(app.label).toString(), color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(px * 0.6f), fontWeight = FontWeight.ExtraLight)
+private fun VhsSpine(label: String, tint: Color, u: DesignUnits, modifier: Modifier) {
+    Column(
+        modifier.clip(RoundedCornerShape(u.dp(3))).background(CaseLabel),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.fillMaxWidth().height(u.dp(22)).background(tint), contentAlignment = Alignment.Center) {
+            Text("▶", color = Color.White, fontSize = u.sp(9))
+        }
+        Box(Modifier.weight(1f).padding(vertical = u.dp(8)), contentAlignment = Alignment.TopCenter) {
+            Text(label.uppercase(), color = CaseInk, fontSize = u.sp(10), fontWeight = FontWeight.ExtraBold, letterSpacing = 0.18.em,
+                maxLines = 1, softWrap = false, modifier = Modifier.sideways())
+        }
+        Column(Modifier.padding(bottom = u.dp(5)), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+            repeat(3) { Box(Modifier.size(u.dp(14), 1.dp).background(CaseInk.copy(alpha = 0.6f))) }
+        }
+        Box(Modifier.fillMaxWidth().height(u.dp(20)).background(CaseInk), contentAlignment = Alignment.Center) {
+            Text("VHS", color = CaseLabel, fontSize = u.sp(6), fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
         }
     }
 }
 
+// a cover fitted whole, so none of it is cut off, over a blur of itself filling the frame
+@Composable
+private fun FittedCover(art: String, u: DesignUnits) {
+    Box(Modifier.fillMaxSize()) {
+        AsyncImage(rememberBlurSourceModel(art), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(u.dp(16)).graphicsLayer(alpha = 0.7f))
+        AsyncImage(art, null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+    }
+}
+
+private val CaseShell = Brush.verticalGradient(listOf(Color(0xFF232227), Color(0xFF141317)))
+private val CaseLabel = Color(0xFFE8E2D3)
+private val CaseInk = Color(0xFF1A1A1A)
+
+// the left column: the app's tile, name and kind, a pill with what it is, what is known about it, when it was
+// last used, and its buttons
 @Composable
 internal fun WallInfo(
     app: InstalledApp,
+    icon: AppIconArt?,
     u: DesignUnits,
     onLaunch: () -> Unit,
     onOptions: () -> Unit,
     modifier: Modifier = Modifier,
     holding: Boolean = false,
     details: com.echo.feature.appbar.GameDetails? = null,
-    // inside the hero banner: a smaller title and a shorter description
-    compact: Boolean = false,
 ) {
     val game = app.isGame || app.gameId != null
     val kind = when {
@@ -249,37 +265,45 @@ internal fun WallInfo(
         game -> "Game"
         else -> "App"
     }
-    val eyebrow = if (app.lastUsedAt > 0L) {
-        "$kind · ${if (game) "Played" else "Used"} ${relativeTime(System.currentTimeMillis(), app.lastUsedAt).lowercase()}"
-    } else kind
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(if (compact) 8 else 14))) {
-        Text(eyebrow.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(12), letterSpacing = 0.16.em))
-        Text(app.label, color = Color.White, fontSize = u.sp(if (compact) 34 else 52), lineHeight = u.sp(if (compact) 36 else 54),
-            fontWeight = FontWeight.ExtraLight, letterSpacing = (-0.03).em, maxLines = if (compact) 1 else 2, overflow = TextOverflow.Ellipsis)
-        details?.facts?.let {
-            Text(it, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(15), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        details?.description?.let {
-            Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13), fontWeight = FontWeight.Light, lineHeight = u.sp(18),
-                maxLines = if (compact) 1 else 4, overflow = TextOverflow.Ellipsis)
-        }
-        if (app.playTimeMillis > 0L) {
-            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(32))) {
-                Stat(playTimeLabel(app.playTimeMillis), "Played", u)
+    val tint = icon?.color ?: NeutralTint
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(u.dp(12))) {
+        Box(
+            Modifier.size(u.dp(84)).shadow(u.dp(14), RoundedCornerShape(u.dp(22))).clip(RoundedCornerShape(u.dp(22))).background(tint),
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                app.art != null -> AsyncImage(app.art, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                icon != null -> Image(icon.bitmap, null, Modifier.size(u.dp(50)))
+                else -> Text(initialOf(app.label).toString(), color = Color.White, fontSize = u.sp(36), fontWeight = FontWeight.ExtraLight)
             }
         }
-        Row(Modifier.padding(top = u.dp(6)), horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
-            PanelButton(GamepadAction.SELECT, actionLabel(app), u, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onClick = onLaunch)
-            if (app.gameId == null) PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = onOptions)
+        Text(app.label, color = Color.White, fontSize = u.sp(30), lineHeight = u.sp(33), fontWeight = FontWeight.Bold,
+            maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(kind.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(12), letterSpacing = 0.2.em))
+        val pillRight = when {
+            app.playTimeMillis > 0L -> playTimeLabel(app.playTimeMillis)
+            else -> null
         }
-    }
-}
-
-@Composable
-private fun Stat(value: String, label: String, u: DesignUnits) {
-    Column(verticalArrangement = Arrangement.spacedBy(u.dp(3))) {
-        Text(value, color = Color.White, fontSize = u.sp(18), fontWeight = FontWeight.Light)
-        Text(label, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(11), fontWeight = FontWeight.Light)
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(u.dp(20))).background(Color.Black.copy(alpha = 0.6f))
+                .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(u.dp(20))).padding(horizontal = u.dp(16), vertical = u.dp(8)),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(caseLabel(app), color = Color.White, fontSize = u.sp(14), fontWeight = FontWeight.SemiBold, maxLines = 1)
+            pillRight?.let { Text(it, color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(14), maxLines = 1) }
+        }
+        (details?.description ?: details?.facts)?.let {
+            Text("ABOUT", style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(12), letterSpacing = 0.2.em))
+            Text(it, color = Color.White, fontSize = u.sp(15), lineHeight = u.sp(22), fontWeight = FontWeight.Medium, maxLines = 5, overflow = TextOverflow.Ellipsis)
+        }
+        if (app.lastUsedAt > 0L) {
+            Text("${if (game) "Played" else "Used"} ${relativeTime(System.currentTimeMillis(), app.lastUsedAt).lowercase()}",
+                color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13))
+        }
+        Row(Modifier.padding(top = u.dp(4)), horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
+            PanelButton(GamepadAction.SELECT, actionLabel(app), u, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onClick = onLaunch)
+            PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = onOptions)
+        }
     }
 }
 

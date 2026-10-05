@@ -459,14 +459,6 @@ internal fun Meta(text: String, size: androidx.compose.ui.unit.TextUnit, maxLine
     Text(text, color = Color.White.copy(alpha = 0.72f), fontSize = size, fontWeight = FontWeight.Light, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
 }
 
-@Composable
-internal fun Stat(label: String, value: String, u: DesignUnits) {
-    Row(horizontalArrangement = Arrangement.spacedBy(u.dp(6))) {
-        Text(label, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(14), fontWeight = FontWeight.Light)
-        Text(value, color = Color.White, fontSize = u.sp(14), fontWeight = FontWeight.Light)
-    }
-}
-
 
 @Composable
 internal fun Art(uri: Any?, width: Dp, height: Dp, radius: Dp, fallback: ImageVector, u: DesignUnits) {

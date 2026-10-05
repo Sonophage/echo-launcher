@@ -33,9 +33,6 @@ class ArtworkFolderRepository @Inject constructor(
 ) {
     val treeUri: Flow<String?> = context.echoDataStore.data.map { it[KEY_ARTWORK_FOLDER_TREE_URI] }
 
-    val storageMode: Flow<ArtworkStorageMode> =
-        context.echoDataStore.data.map { ArtworkStorageMode.fromName(it[KEY_ARTWORK_STORAGE_MODE]) }
-
     suspend fun getTreeUri(): String? =
         context.echoDataStore.data.first()[KEY_ARTWORK_FOLDER_TREE_URI]
 

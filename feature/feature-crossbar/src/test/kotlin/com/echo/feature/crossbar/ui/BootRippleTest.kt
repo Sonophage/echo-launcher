@@ -46,4 +46,12 @@ class BootRippleTest {
         assertEquals(0f, bootRippleFrame(1500f, w, h, skipAt = 1200f).layerAlpha, .001f)
         assertEquals(1500f, BootRipple.endMs(1200f), .001f)
     }
+
+    // owner, 2026-10-05: the boot's ripple is the wave the user picked, rising when the rings would leave
+    @Test
+    fun `the chosen wave rises with the ripple and is fully up by the hold`() {
+        assertEquals(0f, bootRippleFrame(800f, w, h).waveAlpha, .001f)
+        assertTrue(bootRippleFrame(1200f, w, h).waveAlpha in .01f..0.99f)
+        assertEquals(1f, bootRippleFrame(2600f, w, h).waveAlpha, .001f)
+    }
 }

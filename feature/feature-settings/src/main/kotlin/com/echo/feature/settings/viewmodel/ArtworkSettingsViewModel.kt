@@ -558,6 +558,4 @@ class ArtworkSettingsViewModel @Inject constructor(
             _extra.update { it.copy(posterMessage = "Posters cleared") }
         }
     }
-
-    fun dismissPosterMessage() = _extra.update { it.copy(posterMessage = null) }
 }

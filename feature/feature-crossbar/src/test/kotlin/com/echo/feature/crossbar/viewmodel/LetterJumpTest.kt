@@ -27,15 +27,18 @@ class LetterJumpTest {
         assertEquals("A's rung points at the first row", 0, anchors.first().index)
     }
 
+    // owner, 2026-10-05: Recent and the game lists sorted by play date get the rail too; a rung takes the
+    // cursor to that letter's first row in the list's own order, its most recent one
     @Test
-    fun `a list sorted by something other than title gets no rail at all`() {
-        val byDate = listOf("Zelda", "Astro Bot", "Metroid", "Barnyard", "Yakuza")
-            .flatMap { base -> (0 until 8).map { item("$base $it") } }
+    fun `a list sorted by date still gets a rail, each letter at its first row`() {
+        val byDate = listOf("Zelda 1", "Astro Bot", "Metroid", "Zelda 2", "Barnyard", "Astro Two", "Yakuza", "Metroid 2", "Barnyard 2", "Yakuza 2")
+            .map(::item)
         assertTrue("fixture must clear the length minimum", byDate.size >= LETTER_JUMP_MIN_ITEMS)
-        assertNull(
-            "a rail over a non-alphabetical list would point at the wrong rows, so there must be none",
-            letterAnchors(byDate),
-        )
+        val anchors = letterAnchors(byDate)
+        assertNotNull(anchors)
+        assertEquals("the rungs still read A to Z", listOf('A', 'B', 'M', 'Y', 'Z'), anchors!!.map { it.letter })
+        assertEquals("Z points at the first Zelda, not the second", 0, anchors.first { it.letter == 'Z' }.index)
+        assertEquals("the rail opens on the rung of the row under the cursor", 'M', letterJumpFor(byDate, currentIndex = 7)!!.letter)
     }
 
     @Test

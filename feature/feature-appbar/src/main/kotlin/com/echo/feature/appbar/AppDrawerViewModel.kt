@@ -31,6 +31,9 @@ import com.echo.core.ui.components.letterMenuFor
 
 private const val ROM_KEY_PREFIX = "rom:"
 
+// the drawer's name for the PC games GameNative launches (owner, 2026-10-05)
+private const val STEAM_GAMES_LABEL = "Steam Games"
+
 enum class AppFilter(val label: String, val subtitle: String) {
     RECENT("Recently Used", "Apps you've used lately"),
     APPS("Apps", "Everything that is not a game or an emulator"),
@@ -113,6 +116,8 @@ data class AppDrawerUiState(
 
     val letterFilter: Char? = null,
 
+    // a library game's Options: the crossbar's own game menu, opened over the drawer (owner, 2026-10-05)
+    val pendingGameMenu: Long? = null,
     val pendingRomLaunch: Long? = null,
 
     val pendingCrossBarAdd: String? = null,
@@ -173,7 +178,9 @@ class AppDrawerViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             val hasUsageAccess = appRepository.hasUsageAccess()
             val hidden = appCategoryRepository.hiddenEverywhere()
-            val apps = appRepository.getInstalledApps().filterNot { it.packageName in hidden } + romsInLibrary()
+            // owner, 2026-10-05: an installed app that is also in the game library shows its cover
+            val covers = libraryCovers()
+            val apps = appRepository.getInstalledApps().filterNot { it.packageName in hidden }.map { app -> covers[app.packageName]?.let { app.copy(art = it) } ?: app } + romsInLibrary()
             _uiState.update {
                 it.copy(
                     allApps = apps.sortedBy { app -> app.label.lowercase() },
@@ -185,10 +192,16 @@ class AppDrawerViewModel @Inject constructor(
         }
     }
 
+    private suspend fun libraryCovers(): Map<String, String> =
+        com.echo.core.domain.model.appCovers(gameRepository.observeAllGames().first())
+
     private suspend fun romsInLibrary(): List<InstalledApp> {
-        val roms = gameRepository.observeAllGames().first().filter { it.packageName == null }
+        // a game a launcher app opens with its own shortcut (owner, 2026-10-05: the Steam games GameNative runs)
+        // counts as a library game even though it names that app
+        val roms = gameRepository.observeAllGames().first().filter { it.packageName == null || it.launchIntentUri != null }
         val names = roms.map { it.platformId }.distinct().associateWith { id ->
-            runCatching { platformDao.getById(id)?.shortName }.getOrNull() ?: id.uppercase()
+            if (id == com.echo.core.domain.model.PlatformIds.WINDOWS) STEAM_GAMES_LABEL
+            else runCatching { platformDao.getById(id)?.shortName }.getOrNull() ?: id.uppercase()
         }
         return roms.map { game ->
                 InstalledApp(
@@ -199,7 +212,7 @@ class AppDrawerViewModel @Inject constructor(
                     isEmulator = false,
                     lastUsedAt = game.lastPlayedAt ?: 0L,
                     gameId = game.id,
-                    art = game.artworkUri ?: game.iconUri,
+                    art = com.echo.core.domain.model.coverArtOf(game.iconUri, game.artworkUri),
                     playTimeMillis = game.totalPlayTimeMillis,
                     platformId = game.platformId,
                     platformName = names[game.platformId],
@@ -272,6 +285,8 @@ class AppDrawerViewModel @Inject constructor(
 
     fun onRomLaunchHandled() = _uiState.update { it.copy(pendingRomLaunch = null) }
 
+    fun onGameMenuHandled() = _uiState.update { it.copy(pendingGameMenu = null) }
+
     fun onCrossBarAddHandled() = _uiState.update { it.copy(pendingCrossBarAdd = null) }
 
     fun refresh() {
@@ -279,7 +294,11 @@ class AppDrawerViewModel @Inject constructor(
     }
 
     fun openAppMenu(app: InstalledApp) {
-        if (app.gameId != null) return
+        if (app.gameId != null) {
+            menuSound.play(MenuSound.SELECT)
+            _uiState.update { it.copy(pendingGameMenu = app.gameId) }
+            return
+        }
         menuSound.play(MenuSound.SELECT)
         _uiState.update { it.copy(menuApp = app, menuAppIsGame = false).let { s -> s.copy(appMenu = s.menuStateFor(app)) } }
 

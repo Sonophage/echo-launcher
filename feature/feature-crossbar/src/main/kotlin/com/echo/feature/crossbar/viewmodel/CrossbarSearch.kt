@@ -77,6 +77,7 @@ class CrossbarSearch(
             val wantsApps = scope == SearchScope.ALL || scope == SearchScope.APPS
             searchApps = if (wantsApps) vm.appCategoryRepository.visibleInstalledApps() else emptyList()
             uiState.update { it.copy(search = it.search?.copy(loaded = true)) }
+            centreNext = true
             rebuildSearchRows()
         }
     }
@@ -89,6 +90,7 @@ class CrossbarSearch(
             selectedIndex = 0,
             scrollToTopToken = state.scrollToTopToken + 1,
         )) }
+        centreNext = true
         rebuildSearchRows()
     }
 
@@ -101,10 +103,14 @@ class CrossbarSearch(
         uiState.update { it.copy(search = null) }
     }
 
+    // the next rebuild puts the likeliest result in the middle and selects it: a new query, a new filter, a fresh open
+    private var centreNext = true
+
     private fun rebuildSearchRows() {
         val state = uiState.value.search ?: return
         val q = state.query
-        val rows = buildList {
+        val libraryCovers = com.echo.core.domain.model.appCovers(searchGames)
+        val found = buildList {
             searchApps.filter { matchesSearch(q, it.label, it.packageName) }
                 .take(CrossbarViewModel.SEARCH_RESULTS_PER_LIBRARY)
                 .forEach { app ->
@@ -114,6 +120,9 @@ class CrossbarSearch(
                             title = app.label,
                             subtitle = "App",
                             packageName = app.packageName,
+                            // an app that is also in the game library shows its cover (owner, 2026-10-05)
+                            coverUri = libraryCovers[app.packageName],
+                            lastOpenedAt = app.lastUsedAt.takeIf { it > 0L },
 
                             isAndroidApp = true,
                         ),
@@ -139,11 +148,15 @@ class CrossbarSearch(
                 .forEach { add(it.toSearchRow()) }
         }
 
+        val rows = found.sortedWith(compareBy<CrossbarItem>({ searchRank(q, it.title) }, { -(it.lastOpenedAt ?: 0L) }))
+        val counts = SearchKind.entries.mapNotNull { k -> rows.count { searchKindOf(it) == k }.takeIf { it > 0 }?.let { k to it } }
+        val kind = state.kind?.takeIf { k -> counts.any { it.first == k } }
+        val shown = centreOut(if (kind == null) rows else rows.filter { searchKindOf(it) == kind })
         val anyContent = searchGames.isNotEmpty() || searchVideos.isNotEmpty() ||
             searchPhotos.isNotEmpty() || searchBooks.isNotEmpty() || searchTracks.isNotEmpty() ||
             searchApps.isNotEmpty()
         val display = when {
-            rows.isNotEmpty() -> rows
+            shown.isNotEmpty() -> shown
             else -> when (searchEmptyState(state.loaded, q, anyContent)) {
                 SearchEmptyState.LOADING -> searchNoticeItem("Reading your libraries", "One moment.")
                 SearchEmptyState.EMPTY_LIBRARY -> searchNoticeItem(state.scope.emptyTitle, state.scope.emptyHint)
@@ -153,8 +166,12 @@ class CrossbarSearch(
         }
         uiState.update { it.copy(search = it.search?.copy(
             rows = display,
-            selectedIndex = state.selectedIndex.coerceIn(0, (display.size - 1).coerceAtLeast(0)),
+            selectedIndex = if (centreNext) centreOutIndex(display.size) else state.selectedIndex.coerceIn(0, (display.size - 1).coerceAtLeast(0)),
+            kind = kind,
+            kindCounts = counts,
+            total = rows.size,
         )) }
+        if (shown.isNotEmpty()) centreNext = false
     }
 
     private fun searchNoticeItem(title: String, subtitle: String): CrossbarItem =
@@ -163,6 +180,20 @@ class CrossbarSearch(
     fun onSearchFocusedAt(index: Int) {
         vm.markTouchInput()
         moveSearch(index - (uiState.value.search?.selectedIndex ?: return))
+    }
+
+    private fun stepKind(delta: Int) {
+        val state = uiState.value.search ?: return
+        val next = stepSearchKind(state.kind, state.kindCounts.map { it.first }, delta)
+        if (next == state.kind) return
+        pickSearchKind(next)
+    }
+
+    fun pickSearchKind(kind: SearchKind?) {
+        menuSound.play(MenuSound.SCROLL)
+        uiState.update { it.copy(search = it.search?.copy(kind = kind, selectedIndex = 0)) }
+        centreNext = true
+        rebuildSearchRows()
     }
 
     internal fun moveSearch(delta: Int) {
@@ -229,10 +260,9 @@ class CrossbarSearch(
 
     internal fun onButton(action: GamepadAction, state: CrossbarUiState) {
         when (action) {
-            GamepadAction.NAVIGATE_UP,
-            GamepadAction.NAVIGATE_DOWN,
             GamepadAction.NAVIGATE_LEFT,
-            GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action, state.search?.selectedIndex ?: 0))
+            GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action))
+            GamepadAction.PREV_PAGE, GamepadAction.NEXT_PAGE -> stepKind(if (action == GamepadAction.PREV_PAGE) -1 else 1)
             GamepadAction.SELECT        -> onSearchActivatedAt(state.search?.selectedIndex ?: return)
             GamepadAction.OPEN_CONTEXT_MENU -> onSearchOptionsAt(state.search?.selectedIndex ?: return)
             GamepadAction.BACK          -> closeSearch()
@@ -264,7 +294,9 @@ internal fun com.echo.core.domain.model.Game.toSearchRow(platformName: String?):
     subtitle = listOfNotNull("Game", platformName).joinToString("  ·  "),
 
     coverUri = artworkUri,
+    iconUri = iconUri,
     metadataLine = gameMetadataLine(releaseYear, genre, developer, players),
+    description = description,
     totalPlayTimeMillis = totalPlayTimeMillis,
     lastOpenedAt = lastPlayedAt,
     gameId = id,

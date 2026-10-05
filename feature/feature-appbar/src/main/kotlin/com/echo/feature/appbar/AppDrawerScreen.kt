@@ -41,22 +41,20 @@ import com.echo.core.ui.components.EchoContextMenuOverlay
 import com.echo.core.ui.components.StatusStripHeight
 import com.echo.core.ui.components.CrossbarLetterRail
 import com.echo.core.ui.design.DesignUnits
-import com.echo.core.ui.design.PanelBase
-import com.echo.core.ui.design.HeroBanner
-import com.echo.core.ui.design.HERO_BANNER_SIDE
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.preview.CombinedPreviews
 import com.echo.core.ui.preview.EchoPreview
 import com.echo.feature.appbar.appdrawer.AppWall
 import com.echo.feature.appbar.appdrawer.UninstallConfirmDialog
 import com.echo.feature.appbar.appdrawer.WallBackdrop
-import com.echo.feature.appbar.appdrawer.WallHero
 import com.echo.feature.appbar.appdrawer.WallHints
 import com.echo.feature.appbar.appdrawer.WallInfo
-import com.echo.feature.appbar.appdrawer.WallShade
 import com.echo.feature.appbar.appdrawer.SystemChipRow
 import com.echo.feature.appbar.appdrawer.actionLabel
 import com.echo.core.ui.design.panelDesignUnits
+import com.echo.core.ui.design.filmGrain
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -80,6 +78,8 @@ fun AppDrawerScreen(
     onAddToCrossBar: (String) -> Unit = {},
 
     onLaunchRom: (Long) -> Unit = {},
+
+    onGameMenu: (Long) -> Unit = {},
 
     onOpenAppSearch: (String) -> Unit = {},
 
@@ -128,6 +128,12 @@ fun AppDrawerScreen(
             }
             onGamepadActionConsumed()
         }
+    }
+
+    LaunchedEffect(state.pendingGameMenu) {
+        val id = state.pendingGameMenu ?: return@LaunchedEffect
+        onGameMenu(id)
+        viewModel.onGameMenuHandled()
     }
 
     LaunchedEffect(state.pendingRomLaunch) {
@@ -236,69 +242,61 @@ internal fun AppDrawerContent(
     onLetterRailReleased: () -> Unit = {},
     onSystemChip: (String?) -> Unit = {},
 ) {
-    BoxWithConstraints(modifier = modifier.fillMaxSize().background(PanelBase)) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize().filmGrain()) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         val focused = state.visibleApps.getOrNull(state.selectedIndex)
         val focusedIcon = rememberAppIcon(focused?.packageName?.takeIf { focused.gameId == null })
         WallBackdrop(focused, focusedIcon, u)
-        WallShade()
 
+        // owner, 2026-10-05: the design's 6a: the chosen app's details in a column on the left, the apps as cases
+        // in four columns on the right, the bar's sections above and the hints below
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(StatusStripHeight))
-
-            // owner, 2026-10-04: the drawer looks like search: the focused app is a hero banner across the
-            // top with its Open and Options buttons, and the apps run below it in columns
-            focused?.let { app ->
-                HeroBanner(
-                    u,
-                    tint = focusedIcon?.color,
-                    modifier = Modifier.padding(start = u.dp(HERO_BANNER_SIDE), end = u.dp(HERO_BANNER_SIDE), top = u.dp(12)),
-                    art = { WallHero(app, focusedIcon, u, Modifier.fillMaxSize()) },
-                ) {
-                    WallInfo(app, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) }, holding = state.holdingPackage == app.packageName,
-                        details = state.gameDetails?.takeIf { it.gameId == app.gameId }, compact = true,
-                        modifier = Modifier.align(Alignment.BottomStart).padding(u.dp(26)).width(u.dp(560)))
+            Row(Modifier.weight(1f).fillMaxWidth().padding(start = u.dp(46), end = u.dp(52))) {
+                Box(Modifier.width(u.dp(350)).fillMaxHeight().padding(top = u.dp(24))) {
+                    focused?.let { app ->
+                        WallInfo(app, focusedIcon, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
+                            holding = state.holdingPackage == app.packageName, details = state.gameDetails?.takeIf { it.gameId == app.gameId })
+                    }
                 }
-            }
-
-            Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(start = u.dp(80), end = u.dp(80), top = u.dp(12))) {
-                if (state.showSystemChips) {
-                    SystemChipRow(
-                        chips = state.systemChips,
-                        selected = state.systemFilter,
-                        focused = state.chipFocus,
-                        u = u,
-                        onChip = onSystemChip,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = u.dp(10)),
-                    )
-                }
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    when {
-                        state.isLoading -> EchoTrio(color = Color.White, modifier = Modifier.align(Alignment.Center))
-                        state.visibleApps.isEmpty() -> Box(Modifier.align(Alignment.Center)) {
-                            EmptyDrawerMessage(
-                                filter = state.activeFilter,
-                                hasUsageAccess = state.hasUsageAccess,
-                                onGrantUsageAccess = onGrantUsageAccess,
+                Spacer(Modifier.width(u.dp(56)))
+                Column(Modifier.weight(1f).fillMaxHeight().padding(top = u.dp(12))) {
+                    if (state.showSystemChips) {
+                        SystemChipRow(
+                            chips = state.systemChips,
+                            selected = state.systemFilter,
+                            focused = state.chipFocus,
+                            u = u,
+                            onChip = onSystemChip,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = u.dp(4)),
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        when {
+                            state.isLoading -> EchoTrio(color = Color.White, modifier = Modifier.align(Alignment.Center))
+                            state.visibleApps.isEmpty() -> Box(Modifier.align(Alignment.Center)) {
+                                EmptyDrawerMessage(
+                                    filter = state.activeFilter,
+                                    hasUsageAccess = state.hasUsageAccess,
+                                    onGrantUsageAccess = onGrantUsageAccess,
+                                    u = u,
+                                )
+                            }
+                            else -> AppWall(
+                                apps = state.visibleApps,
+                                selectedIndex = if (state.chipFocus) -1 else state.selectedIndex,
+                                usingTouch = state.usingTouch,
                                 u = u,
+                                onAppTapped = onAppTapped,
+                                onAppMenu = onAppMenu,
+                                modifier = Modifier.fillMaxSize(),
                             )
                         }
-                        else -> AppWall(
-                            apps = state.visibleApps,
-                            filter = state.activeFilter,
-                            selectedIndex = if (state.chipFocus) -1 else state.selectedIndex,
-                            usingTouch = state.usingTouch,
-                            u = u,
-                            onAppTapped = onAppTapped,
-                            onAppMenu = onAppMenu,
-                            modifier = Modifier.fillMaxSize(),
-                        )
                     }
                 }
             }
 
-            Column(Modifier.fillMaxWidth().padding(horizontal = u.dp(80))) {
-                Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
+            Column(Modifier.fillMaxWidth().padding(horizontal = u.dp(46))) {
                 WallHints(
                     u = u,
                     action = focused?.let(::actionLabel),
@@ -316,7 +314,9 @@ internal fun AppDrawerContent(
             cursor = state.letterCursor,
             onTouch = onLetterRailTouch,
             onReleased = onLetterRailReleased,
-            bottom = u.dp(220),
+            // clear of the bar above and the hints below, on the screen's centre line
+            top = u.dp(76),
+            bottom = u.dp(76),
         )
 
         state.appMenu?.let { menu ->

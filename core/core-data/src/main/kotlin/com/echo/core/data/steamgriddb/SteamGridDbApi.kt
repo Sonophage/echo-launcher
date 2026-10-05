@@ -2,6 +2,8 @@ package com.echo.core.data.steamgriddb
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.isSuccess
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
@@ -94,9 +96,12 @@ class SteamGridDbApi @Inject constructor(
         val key = apiKeyProvider.getKey()
             ?: error("SteamGridDB API key not configured")
 
-        val response: SgdbSearchResponse = httpClient.get("$BASE_URL/search/autocomplete/$name") {
+        val http = httpClient.get("$BASE_URL/search/autocomplete/$name") {
             header("Authorization", "Bearer $key")
-        }.body()
+        }
+        // the reason SteamGridDB gives (a bad key, a bad request) is what the user needs to see, not just "failed"
+        if (!http.status.isSuccess()) error("SteamGridDB refused the search (${http.status.value}): ${http.bodyAsText().take(200)}")
+        val response: SgdbSearchResponse = http.body()
 
         if (!response.success) error("SteamGridDB search failed for: $name")
         response.data.also { Timber.d("SGDB search '$name' → ${it.size} results") }

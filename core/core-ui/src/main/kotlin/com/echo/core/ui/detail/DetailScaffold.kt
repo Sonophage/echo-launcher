@@ -222,21 +222,6 @@ fun EchoDetailHelperFooter(
 }
 
 @Composable
-fun EchoDetailSectionLabel(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text.uppercase(),
-        color = DetailTextMuted.copy(alpha = 0.75f),
-        fontSize = 11.sp,
-        fontWeight = FontWeight.SemiBold,
-        maxLines = 1,
-        modifier = modifier,
-    )
-}
-
-@Composable
 internal fun Modifier.detailFocusRing(
     focused: Boolean,
     edge: Color,
