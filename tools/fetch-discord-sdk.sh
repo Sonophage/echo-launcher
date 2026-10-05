@@ -6,7 +6,7 @@ set -euo pipefail
 
 OID=e2b84847311923a7cf5ee61ea4a7911b0bb89fec5454c297ac85024fefeaee1c
 SIZE=29641460
-REPO=Sonophage/platform-selection-portal-launcher
+REPO=Sonophage/echo-launcher
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DEST="$ROOT/discord/discord-native/libs/discord_partner_sdk.aar"
 

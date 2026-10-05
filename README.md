@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Sonophage/platform-selection-portal-launcher/releases/latest"><img src="https://img.shields.io/github/v/release/Sonophage/platform-selection-portal-launcher?label=latest" alt="Latest release"></a>
+  <a href="https://github.com/Sonophage/echo-launcher/releases/latest"><img src="https://img.shields.io/github/v/release/Sonophage/echo-launcher?label=latest" alt="Latest release"></a>
   &nbsp;·&nbsp; Android 10 or newer
   &nbsp;·&nbsp; Side-loaded APK, not on the Play Store
 </p>
@@ -270,7 +270,7 @@ separately; ECHO launches them and does not emulate anything itself. A controlle
 recommended, and touch works throughout.
 
 1. Download `ECHO-<version>.apk` from
-   [Releases](https://github.com/Sonophage/platform-selection-portal-launcher/releases).
+   [Releases](https://github.com/Sonophage/echo-launcher/releases).
    A release can also carry a `-debug.apk`; that one installs as
    `com.echo.launcher.debug`, beside the normal app rather than over it.
 2. Open it on the device, allow installs from that source when Android asks, and tap **Install**.
@@ -564,8 +564,8 @@ wrapper.
 (compileSdk 37, targetSdk 35, minSdk 29).
 
 ```bash
-git clone https://github.com/Sonophage/platform-selection-portal-launcher.git
-cd platform-selection-portal-launcher
+git clone https://github.com/Sonophage/echo-launcher.git
+cd echo-launcher
 
 ./gradlew :app:assembleDebug      # debug APK, application id ends in .debug
 ./gradlew :app:assembleRelease    # release APK, signed if keystore.properties exists

@@ -6,7 +6,7 @@ driven by a game controller and by touch. The app id is `com.echo.launcher`; deb
 `.pfptheme` themes.
 
 Open work and recent decisions are in the handoff, outside this repo:
-`~/Documents/repositories/sonophage/the-grid/platform-selection-portal-launcher/HANDOFF.md`.
+`~/Documents/repositories/sonophage/the-grid/echo-launcher/HANDOFF.md`.
 
 ## The gate
 

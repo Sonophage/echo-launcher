@@ -28,5 +28,5 @@ Only when the owner asks. Run every check; read results from the tools, not from
    `gh release create v<v> dist/ECHO-<v>.apk debug/ECHO-<v>-debug.apk --verify-tag --latest --notes-file <notes>`.
    Release notes are the changelog (`CHANGELOG.md` points to the releases page). Write them for
    users: what changed, grouped by area, plain sentences.
-7. Check: `gh api repos/Sonophage/platform-selection-portal-launcher/releases/latest --jq .tag_name`
+7. Check: `gh api repos/Sonophage/echo-launcher/releases/latest --jq .tag_name`
    names the new tag, and the uploaded asset sizes match `stat -c %s` of the local files.
