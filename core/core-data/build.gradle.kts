@@ -9,6 +9,7 @@ android {
     namespace  = "com.echo.core.data"
     compileSdk = 37
     defaultConfig { minSdk = 29 }
+    buildFeatures { buildConfig = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

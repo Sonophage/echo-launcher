@@ -1,4 +1,4 @@
-package com.echo.feature.artwork.api
+package com.echo.core.data.network
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
