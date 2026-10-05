@@ -376,6 +376,21 @@ fun CrossbarShellContainer(
     }
 
     uiState.discCeremony?.let { ceremony ->
+        if (ceremony.style == com.echo.core.data.repository.GameBootStyle.LENS) {
+            val cue = com.echo.core.ui.sound.LocalLaunchDiscCue.current
+            com.echo.core.ui.components.LensLaunchCeremony(
+                title = "",
+                coverArt = ceremony.art,
+                backdropArt = ceremony.art,
+                accent = null,
+                waveStyle = uiState.waveStyle,
+                onHandOff = viewModel.launching::onDiscCeremonyHandOff,
+                onFinished = viewModel.launching::onDiscCeremonyFinished,
+                soundCue = cue,
+                modifier = Modifier.fillMaxSize(),
+            )
+            return@let
+        }
         DiscLaunchCeremony(
             art = ceremony.art,
             onHandOff = viewModel.launching::onDiscCeremonyHandOff,

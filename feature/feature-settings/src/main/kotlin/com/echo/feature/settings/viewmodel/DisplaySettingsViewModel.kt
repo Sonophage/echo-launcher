@@ -140,6 +140,7 @@ data class DisplaySettingsUiState(
     val gameBootEnabled: Boolean = true,
     val gameBootStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC,
     val launchDiscEnabled: Boolean = true,
+    val launchDiscStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC,
     val gameBootVideoLabel: String = UI_MEDIA_DEFAULT_LABEL,
     val gameBootVideoAssigned: Boolean = false,
     val gameBootPreviewVisible: Boolean = false,
@@ -245,6 +246,7 @@ class DisplaySettingsViewModel @Inject constructor(
             gameBootEnabled      = GameBootPreferences.resolve(prefs),
             gameBootStyle        = GameBootPreferences.styleOf(prefs),
             launchDiscEnabled    = com.echo.core.data.launch.LaunchDiscPreferences.resolve(prefs),
+            launchDiscStyle      = com.echo.core.data.launch.LaunchDiscPreferences.styleOf(prefs),
             gameBootVideoLabel   = label(UiMediaSlot.GAMEBOOT_VIDEO),
             gameBootVideoAssigned = UiMediaSlot.GAMEBOOT_VIDEO in assigned,
             gameBootPreviewVisible = transient.gameBootPreviewVisible,
@@ -286,6 +288,11 @@ class DisplaySettingsViewModel @Inject constructor(
 
     fun setGameBootEnabled(enabled: Boolean) = viewModelScope.launch {
         gameBootPreferences.setGameBootEnabled(enabled)
+    }
+
+    fun cycleLaunchDiscStyle() = viewModelScope.launch {
+        val styles = com.echo.core.data.repository.GameBootStyle.entries
+        launchDiscPreferences.setStyle(styles[(uiState.value.launchDiscStyle.ordinal + 1) % styles.size])
     }
 
     fun cycleGameBootStyle() = viewModelScope.launch {

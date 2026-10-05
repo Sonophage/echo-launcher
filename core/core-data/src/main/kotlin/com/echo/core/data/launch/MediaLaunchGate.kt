@@ -11,7 +11,7 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class MediaLaunchRequest(val art: Any?)
+data class MediaLaunchRequest(val art: Any?, val style: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC)
 
 @Singleton
 class MediaLaunchGate @Inject constructor(
@@ -32,7 +32,7 @@ class MediaLaunchGate @Inject constructor(
         }
         val done = CompletableDeferred<Unit>()
         handOff = done
-        _active.value = MediaLaunchRequest(art)
+        _active.value = MediaLaunchRequest(art, preferences.styleFlow.first())
         try {
             withTimeout(TIMEOUT_MS) { done.await() }
         } catch (_: TimeoutCancellationException) {

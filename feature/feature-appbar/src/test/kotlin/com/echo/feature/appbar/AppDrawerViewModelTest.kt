@@ -235,6 +235,7 @@ class AppDrawerViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         io.mockk.coVerify { appCategories.setHidden("com.example.browser", true) }
+        assertEquals("the menu goes once a row is chosen", null, viewModel.uiState.value.appMenu)
         assertFalse(viewModel.uiState.value.allApps.any { it.packageName == "com.example.browser" })
     }
 

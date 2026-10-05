@@ -273,7 +273,7 @@ class CrossbarLauncher(
     internal fun observeMediaLaunch() {
         scope.launch {
             mediaLaunchGate.active.collect { request ->
-                uiState.update { it.copy(discCeremony = request?.let { r -> DiscCeremonyState(r.art) }) }
+                uiState.update { it.copy(discCeremony = request?.let { r -> DiscCeremonyState(r.art, r.style) }) }
             }
         }
     }

@@ -401,6 +401,17 @@ fun DisplaySettingsScreen(
                     onToggle = { viewModel.setLaunchDiscEnabled(it) },
                 )
 
+                if (state.launchDiscEnabled) {
+                    // owner, 2026-10-05: the same choice of animation as GameBoot
+                    SettingsValueRow(
+                        label = "Launch Disc Style",
+                        value = state.launchDiscStyle.label,
+                        sublabel = "Disc spins the cover as a disc. Lens spins it inside the ECHO ring, then opens it like a lens",
+                        onFocusChangedExternal = { if (it) focusedSlot = null },
+                        onClick = { viewModel.cycleLaunchDiscStyle() },
+                    )
+                }
+
                 SettingsGroup("GameBoot")
 
                 SettingsToggleRow(

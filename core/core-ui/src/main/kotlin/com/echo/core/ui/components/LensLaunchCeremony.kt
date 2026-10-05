@@ -142,14 +142,17 @@ fun lensFrame(t: Float, w: Float, h: Float): LensFrame {
 @Composable
 fun LensLaunchCeremony(
     title: String,
-    coverArt: String?,
-    backdropArt: String?,
+    // a URI string, or anything Coil loads (the launch disc passes an app's icon drawable)
+    coverArt: Any?,
+    backdropArt: Any?,
     // the game's colour from its art; null falls back to ECHO's blue
     accent: Color?,
     waveStyle: WaveStyle,
     onHandOff: () -> Unit,
     onFinished: () -> Unit,
     modifier: Modifier = Modifier,
+    // the launch disc's own sound, started as the lens opens; GameBoot plays its sound itself
+    soundCue: (() -> Unit)? = null,
 ) {
     val handOff by rememberUpdatedState(onHandOff)
     val finished by rememberUpdatedState(onFinished)
@@ -162,9 +165,13 @@ fun LensLaunchCeremony(
         delay(LensCeremony.HAND_OFF_MS.toLong())
         handOff()
     }
+    if (soundCue != null) LaunchedEffect(Unit) {
+        delay(LensCeremony.SOUND_MS.toLong())
+        soundCue()
+    }
     val gc = accent ?: Color(0xFF128BC9)
-    val art = (backdropArt ?: coverArt)?.let { rememberArtworkModel(it) }
-    val card = (coverArt ?: backdropArt)?.let { rememberArtworkModel(it) }
+    val art = (backdropArt ?: coverArt)?.let { if (it is String) rememberArtworkModel(it) else it }
+    val card = (coverArt ?: backdropArt)?.let { if (it is String) rememberArtworkModel(it) else it }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val f = lensFrame(clock.value, maxWidth.value, maxHeight.value)

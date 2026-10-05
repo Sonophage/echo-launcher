@@ -320,6 +320,9 @@ class AppDrawerViewModel @Inject constructor(
 
     fun onMenuAction(action: AppMenuAction) {
         val app = _uiState.value.menuApp ?: return
+        // owner, 2026-10-05: the menu goes once a row is chosen; the branches below only cleared menuApp,
+        // which left the menu drawn after Hide Everywhere, Mark as Game and the rest
+        _uiState.update { it.copy(appMenu = null) }
         when (action) {
             AppMenuAction.APP_INFO -> {
                 appRepository.openAppInfo(app.packageName)

@@ -6,6 +6,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -13,7 +14,10 @@ import org.junit.Test
 
 class MediaLaunchGateTest {
     private fun gate(enabled: Boolean) = MediaLaunchGate(
-        mockk<LaunchDiscPreferences> { every { launchDiscEnabledFlow } returns flowOf(enabled) },
+        mockk<LaunchDiscPreferences> {
+            every { launchDiscEnabledFlow } returns flowOf(enabled)
+            every { styleFlow } returns flowOf(com.echo.core.data.repository.GameBootStyle.LENS)
+        },
     )
 
     @Test
@@ -32,6 +36,8 @@ class MediaLaunchGateTest {
         val awaiting = async { gate.awaitHandOff("art") }
         runCurrent()
         assertNotNull("the disc should be up", gate.active.value)
+        // owner, 2026-10-05: the launch disc carries the chosen animation, as GameBoot does
+        assertEquals(com.echo.core.data.repository.GameBootStyle.LENS, gate.active.value?.style)
         assertTrue("the launch must still be waiting", awaiting.isActive)
 
         gate.onHandOff()

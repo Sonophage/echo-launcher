@@ -883,7 +883,7 @@ data class CrossbarUiState(
         get() = !fullscreenOverlay
 }
 
-data class DiscCeremonyState(val art: Any?)
+data class DiscCeremonyState(val art: Any?, val style: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC)
 
 enum class CrossbarItemType {
     STANDARD,
