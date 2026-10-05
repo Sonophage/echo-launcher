@@ -116,8 +116,9 @@ import com.echo.core.common.format.relativeTime
 import com.echo.core.ui.design.panelDesignUnits
 
 data class QuickSettingsState(
-    val waveOn: Boolean,
+    val wave: com.echo.core.ui.wave.WaveStyle,
     val backdropOn: Boolean,
+    val rowCoverArt: Boolean,
     val recentAppsOn: Boolean,
     val chips: List<LibraryChip>,
 )
@@ -159,6 +160,7 @@ fun CrossbarNotificationBar(
     chipFocus: Int,
     accent: Color,
     onRowTapped: (NoticeFocus) -> Unit,
+    onFocusedTapped: () -> Unit,
     settingFocus: Int,
     onQuickTapped: (QuickSetting, Int) -> Unit,
     onSettingTapped: (Int) -> Unit,
@@ -199,12 +201,12 @@ fun CrossbarNotificationBar(
                     val others = entries.filter { it.focus != focus }
                     if (u.square) {
                         Column(Modifier.fillMaxSize().padding(top = u.dp(24)), verticalArrangement = Arrangement.spacedBy(u.dp(20))) {
-                            Box(Modifier.fillMaxWidth().weight(1f)) { FocusedNotice(stage, stageIcon?.bitmap, tint, u) }
+                            Box(Modifier.fillMaxWidth().weight(1f)) { FocusedNotice(stage, stageIcon?.bitmap, tint, u, onFocusedTapped) }
                             NoticeList(others, androidAccessGranted, u, onRowTapped, onGrantAndroidAccess, Modifier.fillMaxWidth().weight(1f))
                         }
                     } else {
                         Row(Modifier.fillMaxSize().padding(top = u.dp(24)), horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
-                            Box(Modifier.weight(1.15f).fillMaxHeight()) { FocusedNotice(stage, stageIcon?.bitmap, tint, u) }
+                            Box(Modifier.weight(1.15f).fillMaxHeight()) { FocusedNotice(stage, stageIcon?.bitmap, tint, u, onFocusedTapped) }
                             NoticeList(others, androidAccessGranted, u, onRowTapped, onGrantAndroidAccess, Modifier.weight(1f).fillMaxHeight())
                         }
                     }
@@ -247,7 +249,7 @@ private fun NoticeChips(chip: NoticeChip, allCount: Int, u: DesignUnits, onTappe
 
 // the focused notice shown large, as a card tinted by its app
 @Composable
-private fun FocusedNotice(stage: PanelStage, icon: ImageBitmap?, tint: Color, u: DesignUnits) {
+private fun FocusedNotice(stage: PanelStage, icon: ImageBitmap?, tint: Color, u: DesignUnits, onTapped: () -> Unit) {
     val now = System.currentTimeMillis()
     val (app, sub, title, text) = when (stage) {
         is PanelStage.Android -> NoticeCardText(stage.notice.appLabel, relativeTime(now, stage.notice.postedAt), stage.notice.title ?: stage.notice.appLabel, stage.notice.text)
@@ -265,6 +267,8 @@ private fun FocusedNotice(stage: PanelStage, icon: ImageBitmap?, tint: Color, u:
             .clip(shape)
             .background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.55f), tint.copy(alpha = 0.25f))))
             .border(u.dp(2), Color.White, shape)
+            // owner, 2026-10-05: tapping the notification opens its app
+            .clickable(onClick = onTapped)
             .padding(u.dp(30)),
         verticalArrangement = Arrangement.spacedBy(u.dp(18)),
     ) {
@@ -344,8 +348,10 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(22))) {
         PANEL_QUICK_SETTINGS.forEach { setting ->
             val (label, value) = when (setting) {
-                QuickSetting.WAVE -> "Wave" to if (quick.waveOn) "On" else "Off"
-                QuickSetting.BACKDROP -> "Crossbar shows" to if (quick.backdropOn) "Art" else "Wallpaper"
+                QuickSetting.WAVE -> "Wave" to quick.wave.label
+                // owner, 2026-10-05: "Crossbar shows Art / Wallpaper" was unclear; this is what fills the background
+                QuickSetting.BACKDROP -> "Background" to if (quick.backdropOn) "Game art" else "Your theme"
+                QuickSetting.ROW_ART -> "Game rows show" to if (quick.rowCoverArt) "Cover art" else "Icons"
                 QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
                 QuickSetting.ANDROID_SETTINGS -> "Android settings" to "Open"
                 QuickSetting.LIBRARIES -> "" to ""
@@ -354,7 +360,8 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
                 Icon(quickIcon(setting), null, tint = Color.White, modifier = Modifier.size(u.dp(34)))
                 Column {
                     Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(17), lineHeight = u.sp(17) * 1.2f, fontWeight = FontWeight.Light)
-                    Text(value, color = Color.White, fontSize = u.sp(30), lineHeight = u.sp(30) * 1.1f, fontWeight = FontWeight.ExtraLight, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // five tiles share the row, so a long value ("Reduced + Static", "Cover art") takes two lines
+                    Text(value, color = Color.White, fontSize = u.sp(26), lineHeight = u.sp(26) * 1.1f, fontWeight = FontWeight.ExtraLight, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -509,6 +516,7 @@ internal fun stageGlyph(stage: PanelStage): ImageVector = when (stage) {
 private fun quickIcon(setting: QuickSetting): ImageVector = when (setting) {
     QuickSetting.WAVE -> Icons.Outlined.Waves
     QuickSetting.BACKDROP -> Icons.Outlined.Image
+    QuickSetting.ROW_ART -> Icons.Outlined.Games
     QuickSetting.RECENT_APPS -> Icons.Outlined.History
     QuickSetting.ANDROID_SETTINGS -> Icons.Outlined.Settings
     QuickSetting.LIBRARIES -> Icons.Outlined.GridView

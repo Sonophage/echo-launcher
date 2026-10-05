@@ -95,32 +95,60 @@ class RecentsShelfTest {
         assertEquals(null, recentLaunchFor(CrossbarItem(id = "x", title = "Folders")))
     }
 
+    // owner, 2026-10-05: an album on the shelf could not be removed; it had no menu and X skipped it
+    @Test
+    fun `an album on the shelf can be removed, and removing it clears every recent track of it`() {
+        val tracks = listOf(
+            musicTrack("t1", "Black Cow", album = "Aja"),
+            musicTrack("t2", "Aja", album = "Aja"),
+            musicTrack("t3", "Kid A", album = "Kid A"),
+            musicTrack("t4", "Peg", album = " aja "),
+            musicTrack("t5", "Josie", album = "Aja").copy(lastPlayedAt = null),
+        )
+        val album = tracks.take(2).recentMusicRows().single().second
+
+        assertTrue(album.isRecentAlbum)
+        assertTrue(album.removableFromRecent)
+        assertEquals(listOf("t1", "t2", "t4"), recentAlbumTrackIds(tracks, album.musicGroupKey!!))
+    }
+
+    private val everyKind = RecentFilter.shown(RecentFilter.entries.toSet())
+
     @Test
     fun `the cycle visits every filter once and returns to All`() {
-        val seen = generateSequence(RecentFilter.ALL) { it.step(+1, includeApps = false) }
+        val seen = generateSequence(RecentFilter.ALL) { it.step(+1, everyKind) }
             .drop(1)
-            .take(4)
+            .take(6)
             .toList()
 
         assertEquals(
             listOf(
                 RecentFilter.GAMES, RecentFilter.MUSIC, RecentFilter.BOOKS,
-                RecentFilter.VIDEO,
+                RecentFilter.VIDEO, RecentFilter.APPS, RecentFilter.ALL,
             ),
             seen,
         )
     }
 
+    // owner, 2026-10-05: a filter with nothing in it is neither drawn nor stepped onto
     @Test
-    fun `Apps is not in the cycle while it is switched off`() {
-        assertEquals(RecentFilter.ALL, RecentFilter.VIDEO.step(+1, includeApps = false))
-        assertEquals(RecentFilter.APPS, RecentFilter.VIDEO.step(+1, includeApps = true))
-        assertEquals(RecentFilter.ALL, RecentFilter.APPS.step(+1, includeApps = true))
+    fun `only the kinds with something played are offered, after All`() {
+        val stocked = stockedRecentFilters(
+            games = listOf(1), music = emptyList(), books = emptyList(), videos = listOf(1), apps = emptyList(),
+        )
+        assertEquals(listOf(RecentFilter.ALL, RecentFilter.GAMES, RecentFilter.VIDEO), RecentFilter.shown(stocked))
     }
 
     @Test
-    fun `a filter that has just been switched off falls back to All`() {
-        assertEquals(RecentFilter.ALL, RecentFilter.APPS.step(+1, includeApps = false))
+    fun `stepping skips an empty filter`() {
+        val shown = listOf(RecentFilter.ALL, RecentFilter.GAMES, RecentFilter.VIDEO)
+        assertEquals(RecentFilter.VIDEO, RecentFilter.GAMES.step(+1, shown))
+        assertEquals(RecentFilter.ALL, RecentFilter.VIDEO.step(+1, shown))
+    }
+
+    @Test
+    fun `a filter that has just emptied falls back to All`() {
+        assertEquals(RecentFilter.ALL, RecentFilter.APPS.step(+1, listOf(RecentFilter.ALL, RecentFilter.GAMES)))
     }
 
     @Test

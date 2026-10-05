@@ -7,7 +7,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onRoot
-import com.echo.core.ui.components.HintBarHeight
+import com.echo.core.ui.components.ChromeBandBaseHeight
 import com.echo.core.ui.preview.EchoScreenPreview
 import com.echo.feature.crossbar.viewmodel.AppPickerEntry
 import com.echo.feature.crossbar.viewmodel.AppPickerState
@@ -82,7 +82,7 @@ class AppPickerThreeRowsTest {
 
         val rootBottom = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.bottom
 
-        val minFooterSlot = with(composeRule.density) { HintBarHeight.toPx() }
+        val minFooterSlot = with(composeRule.density) { ChromeBandBaseHeight.toPx() }
         assert(gridBottom <= rootBottom - minFooterSlot) {
             "grid viewport bottom $gridBottom runs into the footer slot (root bottom $rootBottom)"
         }

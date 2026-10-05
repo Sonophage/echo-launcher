@@ -95,15 +95,12 @@ class CrossbarMusic(
     }
 
     internal suspend fun musicRootItems(): List<CrossbarItem> =
-        vm.libraryColumn(
-            mediaColumn(uiState.value.musicRootSections(), vm.musicAppItems(), musicAddActions()),
-            SearchScope.MUSIC,
-        )
+        vm.mediaRootColumn(uiState.value.musicFolders.isNotEmpty(), uiState.value.musicRootSections(), vm.musicAppItems(), musicAddActions(), SearchScope.MUSIC)
 
     private fun addMusicFolderItem(): CrossbarItem = CrossbarItem(
         id       = CrossbarViewModel.ADD_MUSIC_FOLDER_ITEM_ID,
         title    = "Add Music Folder",
-        subtitle = "Set your Music root folder in Settings to get started",
+        subtitle = "Add a music folder here or in Settings ▸ Library",
         type     = CrossbarItemType.ADD_ACTION,
     )
 
@@ -530,6 +527,15 @@ class CrossbarMusic(
                 activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Add to Playlist", rows = items, selectedIndex = selectIndex?.coerceIn(0, items.lastIndex.coerceAtLeast(0))), playlistPickerTrackId = trackId)
             )}
         }
+    }
+
+    internal fun removeAlbumFromRecent(key: String) {
+        val ids = recentAlbumTrackIds(currentMusicTracks, key)
+        vm.appAction { ids.forEach { musicRepository.clearTrackLastPlayed(it) } }
+    }
+
+    internal fun openRecentAlbumContextMenu(item: CrossbarItem) {
+        uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = recentAlbumContextMenuItems()), recentAlbum = item)) }
     }
 
     internal fun openMusicContextMenu(item: CrossbarItem): Boolean {

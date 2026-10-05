@@ -15,13 +15,14 @@ val LIBRARY_CHIP_IDS = listOf(
     "network",
 )
 
-enum class QuickSetting { WAVE, BACKDROP, RECENT_APPS, ANDROID_SETTINGS, LIBRARIES }
+enum class QuickSetting { WAVE, BACKDROP, ROW_ART, RECENT_APPS, ANDROID_SETTINGS, LIBRARIES }
 
-val PANEL_QUICK_SETTINGS = listOf(QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.RECENT_APPS, QuickSetting.ANDROID_SETTINGS)
+val PANEL_QUICK_SETTINGS = listOf(QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.ROW_ART, QuickSetting.RECENT_APPS, QuickSetting.ANDROID_SETTINGS)
 
 const val LIBRARY_GRID_COLUMNS = 3
 
-const val SETTINGS_GRID_COLUMNS = 3
+// four across, so the seven sections fit the panel in two rows (Library made the seventh)
+const val SETTINGS_GRID_COLUMNS = 4
 
 val PANEL_SETTINGS: List<com.echo.core.domain.model.SettingsSectionId> = com.echo.core.domain.model.SettingsSectionId.entries
 

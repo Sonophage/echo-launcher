@@ -288,6 +288,19 @@ internal fun mediaColumn(
     addRows: List<CrossbarItem>,
 ): List<CrossbarItem> = apps + sections + collapseAddRows(addRows)
 
+// the rows that add a media folder; they go with the browse rows when a category has no folder
+internal val ADD_FOLDER_ITEM_IDS = setOf(
+    CrossbarViewModel.ADD_MUSIC_FOLDER_ITEM_ID,
+    CrossbarViewModel.ADD_VIDEOS_ITEM_ID,
+    CrossbarViewModel.ADD_PHOTO_LIBRARY_ITEM_ID,
+    CrossbarViewModel.ADD_BOOK_FOLDER_ITEM_ID,
+)
+
+// owner, 2026-10-05: a media category with no folder stays on the bar with only its apps and Add Apps;
+// its browse rows, Folders, Add Folder and search go (folders are added in Settings > Library)
+internal fun folderlessColumn(apps: List<CrossbarItem>, addRows: List<CrossbarItem>): List<CrossbarItem> =
+    apps + addRows.filterNot { it.id in ADD_FOLDER_ITEM_IDS }
+
 internal fun collapseAddRows(rows: List<CrossbarItem>): List<CrossbarItem> = when {
     rows.size <= 1 -> rows
     else -> listOf(
@@ -407,7 +420,7 @@ internal fun List<MusicTrack>.recentMusicRows(): List<Pair<Long, CrossbarItem>> 
         } else {
             val name = run.firstNotNullOfOrNull { it.album?.trim()?.ifBlank { null } } ?: "Album"
             run.maxOf { it.lastPlayedAt ?: 0L } to CrossbarItem(
-                id            = "mg_alb_$key",
+                id            = "$RECENT_ALBUM_ID_PREFIX$key",
                 title         = name,
                 subtitle      = countLabel(run.size, "track", "tracks"),
                 coverUri      = run.firstNotNullOfOrNull { it.artUri },

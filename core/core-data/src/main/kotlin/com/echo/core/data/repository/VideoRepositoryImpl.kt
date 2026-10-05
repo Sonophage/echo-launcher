@@ -118,8 +118,10 @@ class VideoRepositoryImpl @Inject constructor(
         videoDao.setCustomThumbnail(id, uri?.takeIf { it.isNotBlank() })
 
     override suspend fun removeVideo(id: String) {
-        val thumbs = videoDao.getById(id)?.let { listOfNotNull(it.thumbnailUri, it.customThumbnailUri) }.orEmpty()
+        val video = videoDao.getById(id)
+        val thumbs = video?.let { listOfNotNull(it.thumbnailUri, it.customThumbnailUri) }.orEmpty()
         videoDao.deleteById(id)
+        video?.let { libraryDao.recount(it.libraryId) }
         deleteOrphanedThumbnails(thumbs) { videoDao.countReferencingThumbnail(it) > 0 }
     }
 

@@ -59,11 +59,14 @@ class ContextMenusTest {
         )
     }
 
+    // owner, 2026-10-05: Remove from Recent (back once it is used again) and Hide from Recent (gone from the
+    // panel until unhidden in Hidden Items) are two different options
     @Test
-    fun `the home shelf offers one way to take an app off it, not two`() {
+    fun `the home shelf offers Remove and Hide from Recent, and nothing that writes elsewhere`() {
         val cats = listOf(category(BuiltInCategory.GAMES, gaming = true), category("retro", gaming = true))
         val shelf = ids(appContextMenuItems(state(cats), categoryId = "retro", onRecentShelf = true))
-        assertTrue("the working one is offered", shelf.contains("remove_from_recent"))
+        assertTrue("the temporary one is offered", shelf.contains("remove_from_recent"))
+        assertTrue("the lasting one is offered", shelf.contains("hide_from_recent"))
         assertFalse(
             "hide_from_category writes a CATEGORY record and the shelf reads only RECENTS, so " +
                 "offering it here would be a second item for one intent that does nothing",

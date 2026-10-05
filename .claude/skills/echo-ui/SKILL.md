@@ -38,6 +38,8 @@ screen's padded column.
 
 - `Modifier.pressAndHold(holdMs, label, onPressing, onHeld)` (`design/HoldRing.kt`). Launches use
   `LAUNCH_HOLD_MS` (1000).
+- A card or row that launches by touch reports the finger down and up to the view model, which
+  runs the same `LaunchHold` as pad A, so the footer card rises and fills (`onRecentCardPress`).
 - Trap: `animateFloatAsState` starts at its target on first composition. A ring composed mid-hold
   shows full. Use an `Animatable` that starts at 0 (see `holdProgress`).
 - Trap: a `clickable(enabled = false)` inside a gesture wrapper still takes the finger down, so the
@@ -60,7 +62,11 @@ screen's padded column.
   through it: `rowBadge` replaces the letter badge (the Colour Scheme picker's swatches).
 - `GlowMaskedWave(side)` shows the wave only inside a screen's glow.
 - `WaveLayers(style)` draws the wave; the design (PSP, Echo Rings, Echo Arcs) comes from
-  `LocalWaveDesign`.
+  `LocalWaveDesign`. The wave sits just above the backdrop (wallpaper or full-screen art) and below
+  icons, panels and words.
+- `HeroBanner` (`design/HeroBanner.kt`) is the banner across the top of the App Drawer and Search:
+  one height, the art on the right fading into the info on the left, `HERO_BANNER_SIDE` margins.
+  The caller passes the art and the info.
 
 ## Settings rows
 

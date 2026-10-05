@@ -46,6 +46,9 @@ fun CrossbarLayoutAdjustOverlay(
     onSave: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    sizingHeader: Boolean = false,
+    onHeader: (Float) -> Unit = {},
+    onFooter: (Float) -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(
@@ -75,7 +78,9 @@ fun CrossbarLayoutAdjustOverlay(
             Text(
                 text = "Scale ${"%.2f".format(draft.scale)}x    " +
                     "Horizontal ${(draft.barLeftFraction * 100).roundToInt()}%    " +
-                    "Vertical ${(draft.barTopFraction * 100).roundToInt()}%",
+                    "Vertical ${(draft.barTopFraction * 100).roundToInt()}%    " +
+                    "Top bar ${(draft.headerScale * 100).roundToInt()}%    " +
+                    "Footer ${(draft.footerScale * 100).roundToInt()}%",
                 color = Color(0xFFB9C6DC),
                 fontSize = 13.sp,
             )
@@ -88,6 +93,11 @@ fun CrossbarLayoutAdjustOverlay(
                         listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY),
                         "Scale",
                     ),
+                    ControllerPromptItem(
+                        listOf(GamepadAction.PREV_PAGE, GamepadAction.NEXT_PAGE),
+                        if (sizingHeader) "Top bar size" else "Footer size",
+                    ),
+                    ControllerPromptItem(GamepadAction.OPEN_SEARCH, if (sizingHeader) "Size the footer" else "Size the top bar"),
                     ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Reset"),
                     ControllerPromptItem(GamepadAction.CHANGE_SORT, "Sliders"),
                     ControllerPromptItem(GamepadAction.SELECT, "Save"),
@@ -100,6 +110,8 @@ fun CrossbarLayoutAdjustOverlay(
                 AxisSlider("Scale", draft.scale, CrossbarLayoutAdjust.SCALE_MIN, CrossbarLayoutAdjust.SCALE_MAX, onScale)
                 AxisSlider("Horizontal", draft.barLeftFraction, CrossbarLayoutAdjust.LEFT_MIN, CrossbarLayoutAdjust.LEFT_MAX, onHorizontal)
                 AxisSlider("Vertical", draft.barTopFraction, CrossbarLayoutAdjust.TOP_MIN, CrossbarLayoutAdjust.TOP_MAX, onVertical)
+                AxisSlider("Top bar", draft.headerScale, CrossbarLayoutAdjust.CHROME_MIN, CrossbarLayoutAdjust.CHROME_MAX, onHeader)
+                AxisSlider("Footer", draft.footerScale, CrossbarLayoutAdjust.CHROME_MIN, CrossbarLayoutAdjust.CHROME_MAX, onFooter)
             }
 
             Row(

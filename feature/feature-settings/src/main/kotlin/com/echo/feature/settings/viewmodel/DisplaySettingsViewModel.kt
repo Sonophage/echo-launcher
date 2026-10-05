@@ -93,14 +93,6 @@ private fun TouchSensitivity.label(): String = when (this) {
     TouchSensitivity.HIGH     -> "High"
 }
 
-private val WAVE_STYLE_LABELS = mapOf(
-    WaveStyle.ANIMATED       to "Animated",
-    WaveStyle.REDUCED        to "Reduced",
-    WaveStyle.STATIC         to "Static",
-    WaveStyle.REDUCED_STATIC to "Reduced + Static",
-    WaveStyle.OFF            to "Off",
-)
-
 private data class Transient(
     val bootPreviewVisible: Boolean,
     val gameBootPreviewVisible: Boolean,
@@ -312,7 +304,7 @@ class DisplaySettingsViewModel @Inject constructor(
     fun setWaveDesign(design: WaveDesign) = save { it[KEY_WAVE_DESIGN] = design.name }
 
     val waveStyleOptions: List<Pair<WaveStyle, String>> =
-        WaveStyle.entries.map { it to (WAVE_STYLE_LABELS[it] ?: it.name) }
+        WaveStyle.entries.map { it to it.label }
     val touchNavButtonOptions: List<Pair<TouchNavButtonMode, String>> =
         TouchNavButtonMode.entries.map { it to (TOUCH_NAV_BUTTON_LABELS[it] ?: it.name) }
     val touchSensitivityOptions: List<Pair<TouchSensitivity, String>> =

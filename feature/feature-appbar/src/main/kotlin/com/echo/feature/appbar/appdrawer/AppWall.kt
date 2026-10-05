@@ -42,13 +42,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -87,15 +83,9 @@ internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits)
 }
 
 @Composable
-internal fun WallHero(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits, modifier: Modifier = Modifier, glyphLift: Dp = u.dp(180)) {
-    Box(
-        modifier
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-            .drawWithContent {
-                drawContent()
-                drawRect(HeroFade, blendMode = BlendMode.DstIn)
-            },
-    ) {
+// the banner's art; HeroBanner fades it into the info
+internal fun WallHero(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits, modifier: Modifier = Modifier) {
+    Box(modifier) {
         when {
             app == null -> Unit
             app.art != null -> AsyncImage(app.art, null, contentScale = ContentScale.Crop,
@@ -103,7 +93,7 @@ internal fun WallHero(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits, mod
             else -> {
                 val tint = icon?.color ?: NeutralTint
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.6f), tint.copy(alpha = 0.12f)))))
-                TileGlyph(icon, app, 150, u, Modifier.align(Alignment.Center).padding(bottom = glyphLift))
+                TileGlyph(icon, app, 150, u, Modifier.align(Alignment.Center))
             }
         }
     }
@@ -369,9 +359,3 @@ internal fun SystemChipRow(
 private val NeutralTint = Color(0xFF222838)
 
 
-private val HeroFade = Brush.horizontalGradient(
-    0f to Color.Transparent,
-    0.14f to Color.Black.copy(alpha = 0.35f),
-    0.3f to Color.Black.copy(alpha = 0.8f),
-    0.46f to Color.Black,
-)

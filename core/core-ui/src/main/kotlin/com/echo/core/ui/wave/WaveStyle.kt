@@ -1,12 +1,15 @@
 package com.echo.core.ui.wave
 
-enum class WaveStyle {
-    ANIMATED,
-    REDUCED,
-    STATIC,
-    REDUCED_STATIC,
+enum class WaveStyle(val label: String) {
+    ANIMATED("Animated"),
+    REDUCED("Reduced"),
+    STATIC("Static"),
+    REDUCED_STATIC("Reduced + Static"),
 
-    OFF;
+    OFF("Off");
+
+    // Quick Settings steps through the styles in this order, Off included (owner, 2026-10-05)
+    val next: WaveStyle get() = entries[(ordinal + 1) % entries.size]
 
     val animated: Boolean get() = this == ANIMATED || this == REDUCED
 

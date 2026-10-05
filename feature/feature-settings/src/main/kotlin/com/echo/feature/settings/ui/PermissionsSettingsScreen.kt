@@ -26,19 +26,34 @@ import com.echo.feature.settings.permissions.GrantRoute
 import com.echo.feature.settings.permissions.permissionStateLabel
 import com.echo.feature.settings.permissions.isGranted
 import com.echo.feature.settings.permissions.systemScreenIntent
+import com.echo.feature.settings.viewmodel.PermissionsViewModel
+import android.widget.Toast
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 @Composable
 fun PermissionsSettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: PermissionsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val folders by viewModel.folders.collectAsState()
+    val message by viewModel.message.collectAsState()
+    LaunchedEffect(message) {
+        message?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show(); viewModel.messageShown() }
+    }
+    val regrantFolder = rememberFolderRegrant(viewModel::regrant)
 
     var readToken by remember { mutableIntStateOf(0) }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) readToken++
+            if (event == Lifecycle.Event.ON_RESUME) {
+                readToken++
+                viewModel.refresh()
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -65,6 +80,11 @@ fun PermissionsSettingsScreen(
             SettingsGroup("Special access")
             rows.filter { it.route == GrantRoute.SYSTEM_SCREEN }.forEach { row ->
                 PermissionRow(row, context, readToken) { openSystemScreen(context, row) }
+            }
+
+            if (folders.isNotEmpty()) {
+                SettingsGroup("Folders")
+                FolderAccessRows(folders, regrantFolder)
             }
 
             SettingsGroup("Asked for when needed")

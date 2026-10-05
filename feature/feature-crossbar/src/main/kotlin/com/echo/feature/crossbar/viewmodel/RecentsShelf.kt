@@ -12,12 +12,12 @@ enum class RecentFilter(val label: String) {
     APPS("Apps");
 
     companion object {
-        fun visible(includeApps: Boolean): List<RecentFilter> =
-            entries.filter { it != APPS || includeApps }
+        // All, then only the kinds that have something in them (owner, 2026-10-05: an empty filter is not shown)
+        fun shown(stocked: Set<RecentFilter>): List<RecentFilter> =
+            entries.filter { it == ALL || it in stocked }
     }
 
-    fun step(delta: Int, includeApps: Boolean): RecentFilter {
-        val cycle = visible(includeApps)
+    fun step(delta: Int, cycle: List<RecentFilter>): RecentFilter {
         val here = cycle.indexOf(this)
         return if (here < 0) ALL else cycle[(here + delta).mod(cycle.size)]
     }
@@ -51,6 +51,17 @@ internal fun recentLaunchFor(item: CrossbarItem): RecentLaunch? = when {
     item.packageName != null                            -> RecentLaunch.APP
 
     else -> null
+}
+
+// apps is empty while Apps on the Recent shelf is off, so that filter goes with it
+internal fun stockedRecentFilters(
+    games: List<Any>, music: List<Any>, books: List<Any>, videos: List<Any>, apps: List<Any>,
+): Set<RecentFilter> = buildSet {
+    if (games.isNotEmpty()) add(RecentFilter.GAMES)
+    if (music.isNotEmpty()) add(RecentFilter.MUSIC)
+    if (books.isNotEmpty()) add(RecentFilter.BOOKS)
+    if (videos.isNotEmpty()) add(RecentFilter.VIDEO)
+    if (apps.isNotEmpty()) add(RecentFilter.APPS)
 }
 
 internal fun mergeRecents(
@@ -101,9 +112,16 @@ internal fun recentAppId(packageName: String): String = "${CrossbarViewModel.REC
 internal val CrossbarItem.removableFromRecent: Boolean
     get() = when (type) {
         CrossbarItemType.VIDEO_FILE, CrossbarItemType.LIBRARY_BOOK, CrossbarItemType.MUSIC_TRACK -> true
-        CrossbarItemType.MUSIC_GROUP -> false
+        // owner, 2026-10-05: an album on the shelf is its recent tracks, and removing it clears them all
+        CrossbarItemType.MUSIC_GROUP -> isRecentAlbum
         else -> gameId != null || packageName != null
     }
+
+// the album row the shelf folds from consecutive tracks (recentMusicRows)
+internal val CrossbarItem.isRecentAlbum: Boolean
+    get() = type == CrossbarItemType.MUSIC_GROUP && musicGroupKey != null && id.startsWith(RECENT_ALBUM_ID_PREFIX)
+
+internal const val RECENT_ALBUM_ID_PREFIX = "mg_alb_"
 
 /**
  * An app's "last used" comes from Android's UsageStats and cannot be cleared, so

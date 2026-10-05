@@ -47,6 +47,8 @@ data class InitialSetupUiState(
 
     val isHomeLauncher: Boolean = false,
 
+    val folderAccess: List<FolderAccessRow> = emptyList(),
+
     val artworkFolderName: String? = null,
 
     // the ECHO folder to confirm in the picker, after it was renamed or made
@@ -138,8 +140,7 @@ class InitialSetupViewModel @Inject constructor(
     private val vita3KLibrary: Vita3KLibrary,
     private val sgdbKeys: SgdbApiKeyProvider,
     private val metadataKeys: MetadataApiKeyProvider,
-    private val wizardMediaScanRunner: com.echo.feature.settings.media.WizardMediaScanRunner,
-    private val romRootScanRunner: RomRootScanRunner,
+    private val folderAccess: FolderAccess,
     private val standardRomFolders: StandardRomFolders,
     private val launcherShortcuts: com.echo.feature.appbar.LauncherShortcutRepository,
     private val tmdbKeys: com.echo.feature.artwork.api.TmdbApiKeyProvider,
@@ -167,6 +168,15 @@ class InitialSetupViewModel @Inject constructor(
 
     fun refreshGrants() {
         scratch.update { it.copy(isHomeLauncher = launcherShortcuts.isDefaultLauncher()) }
+        viewModelScope.launch { scratch.update { it.copy(folderAccess = folderAccess.rows()) } }
+    }
+
+    fun regrantFolder(row: FolderAccessRow, uri: Uri) {
+        viewModelScope.launch {
+            val message = folderAccess.regrant(row, uri)
+            scratch.update { it.copy(message = message ?: it.message) }
+            refreshGrants()
+        }
     }
 
     fun homeRoleIntent(): android.content.Intent = launcherShortcuts.homeRoleRequestIntent()
@@ -283,20 +293,7 @@ class InitialSetupViewModel @Inject constructor(
 
     fun onStoragePicked(slot: StorageSlot, replacing: String?, uri: Uri) {
         if (slot == StorageSlot.ARTWORK) return onArtworkFolderPicked(uri)
-        val kind = slot.mediaKind
-        viewModelScope.launch {
-            if (kind == null) {
-                romRootRepository.persist(uri, writable = true)
-                if (replacing != null) romRootRepository.replace(replacing, uri.toString())
-                else romRootRepository.add(uri.toString())
-                romRootScanRunner.kickoff()
-            } else {
-                mediaRootRepository.persist(uri)
-                if (replacing != null) mediaRootRepository.replace(kind, replacing, uri.toString())
-                else mediaRootRepository.add(kind, uri.toString())
-                wizardMediaScanRunner.kickoff(kind)
-            }
-        }
+        viewModelScope.launch { folderAccess.link(slot, replacing, uri) }
     }
 
     fun createStandardRomFolders() {

@@ -344,16 +344,18 @@ class CrossbarPanel(
         uiState.update { it.copy(notificationsOpen = false) }
     }
 
+    // owner, 2026-10-05: a tapped notification opens its app at once; the first tap used to only pick it
     fun onPanelRowTapped(focus: NoticeFocus) {
-        val s = uiState.value
-        val index = s.noticeFocusables.indexOf(focus)
+        val index = uiState.value.noticeFocusables.indexOf(focus)
         if (index < 0) return
-        if (s.panelTab == PanelTab.NOTIFICATIONS && s.focusedNotice == focus) {
-            vm.runStageButton(GamepadAction.SELECT)
-            return
-        }
-        menuSound.play(MenuSound.SCROLL)
+        vm.markTouchInput()
         uiState.update { it.copy(panelTab = PanelTab.NOTIFICATIONS, noticeCursor = index) }
+        vm.runStageButton(GamepadAction.SELECT)
+    }
+
+    fun onFocusedNoticeTapped() {
+        vm.markTouchInput()
+        vm.runStageButton(GamepadAction.SELECT)
     }
 
     // kit 11: LB/RB step the notifications chips (All, Messages, System)

@@ -9,6 +9,9 @@ import com.echo.core.domain.repository.MusicRepository
 import com.echo.core.domain.repository.PhotoRepository
 import com.echo.core.domain.repository.VideoRepository
 import com.echo.core.ui.notification.BackgroundTaskNotifier
+import com.echo.core.domain.repository.BookRepository
+import com.echo.feature.library.scanner.BookScanResult
+import com.echo.feature.library.scanner.BookScanner
 import com.echo.feature.library.scanner.MusicScanResult
 import com.echo.feature.library.scanner.MusicScanner
 import com.echo.feature.library.scanner.PhotoScanResult
@@ -36,6 +39,8 @@ class WizardMediaScanRunner @Inject constructor(
     private val photoScanner: PhotoScanner,
     private val videoRepository: VideoRepository,
     private val videoScanner: VideoScanner,
+    private val bookRepository: BookRepository,
+    private val bookScanner: BookScanner,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val notifier = BackgroundTaskNotifier(context)
@@ -67,7 +72,10 @@ class WizardMediaScanRunner @Inject constructor(
                 dropOrphanVideoLibraries(roots); roots.forEach { scanVideo(it) }
             }
 
-            MediaRootKind.BOOK -> Unit
+            // owner, 2026-10-05: a changed Books folder kept the old shelf and never scanned the new one
+            MediaRootKind.BOOK -> {
+                dropOrphanBookLibraries(roots); roots.forEach { scanBook(it) }
+            }
         }
     }
 
@@ -87,6 +95,31 @@ class WizardMediaScanRunner @Inject constructor(
         videoRepository.getLibraries()
             .filter { it.treeUri !in roots }
             .forEach { videoRepository.removeLibrary(it.id) }
+    }
+
+    private suspend fun dropOrphanBookLibraries(roots: List<String>) {
+        bookRepository.getLibraries()
+            .filter { it.treeUri !in roots }
+            .forEach { bookRepository.removeLibrary(it.id) }
+    }
+
+    private suspend fun scanBook(root: String) {
+        val libs = bookRepository.getLibraries()
+        val library = libs.firstOrNull { it.treeUri == root } ?: bookRepository.addLibrary(displayName(root, "Books"), root)
+        val target = bookRepository.getLibrary(library.id) ?: library
+
+        val taskId = "book_scan_${target.id}"
+        notifier.running(taskId, "Scanning ${target.displayName}", null)
+        bookScanner.scan(target, deep = false, existing = bookRepository.getBooksForLibrary(target.id)).collect { result ->
+            when (result) {
+                is BookScanResult.Progress -> Unit
+                is BookScanResult.Complete -> {
+                    bookRepository.replaceBooksForLibrary(result.libraryId, result.books, System.currentTimeMillis())
+                    notifier.complete(taskId, "Scanned ${target.displayName}", "${result.books.size} books")
+                }
+                is BookScanResult.Error -> notifier.failed(taskId, "Scan failed", result.message)
+            }
+        }
     }
 
     private suspend fun scanMusic(root: String) {

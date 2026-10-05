@@ -57,15 +57,12 @@ class CrossbarVideo(
     }
 
     internal suspend fun videoRootItems(): List<CrossbarItem> =
-        vm.libraryColumn(
-            mediaColumn(uiState.value.videoRootSections(), vm.videoAppItems(), videoAddActions()),
-            SearchScope.VIDEOS,
-        )
+        vm.mediaRootColumn(uiState.value.videoLibraries.isNotEmpty(), uiState.value.videoRootSections(), vm.videoAppItems(), videoAddActions(), SearchScope.VIDEOS)
 
     private fun addVideosItem(): CrossbarItem = CrossbarItem(
         id       = CrossbarViewModel.ADD_VIDEOS_ITEM_ID,
         title    = "Add Videos",
-        subtitle = "Set your Video root folder in Settings to get started",
+        subtitle = "Add a video folder here or in Settings ▸ Library",
         type     = CrossbarItemType.ADD_ACTION,
     )
 

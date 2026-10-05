@@ -40,6 +40,13 @@ class IconDisplayPreferences @Inject constructor(
     suspend fun setItemBackdrop(enabled: Boolean) =
         context.echoDataStore.edit { it[KEY_ITEM_BACKDROP] = enabled }
 
+    // true: game rows show their cover art; false: their icon
+    val rowCoverArtFlow: Flow<Boolean> = context.echoDataStore.data
+        .map { it[KEY_ROW_COVER_ART] ?: false }
+
+    suspend fun setRowCoverArt(enabled: Boolean) =
+        context.echoDataStore.edit { it[KEY_ROW_COVER_ART] = enabled }
+
     val lingerDelaySecondsFlow: Flow<Float> = context.echoDataStore.data
         .map { (it[KEY_ICON1_LINGER_DELAY_SECONDS] ?: 1.5f).coerceIn(1f, 5f) }
 
@@ -53,6 +60,8 @@ class IconDisplayPreferences @Inject constructor(
         private val KEY_SNAP_PLACEMENT = stringPreferencesKey("pref_video_snap_placement")
         private val KEY_GAME_METADATA =
             androidx.datastore.preferences.core.booleanPreferencesKey("pref_xmb_game_metadata")
+        private val KEY_ROW_COVER_ART =
+            androidx.datastore.preferences.core.booleanPreferencesKey("pref_xmb_row_cover_art")
         private val KEY_ITEM_BACKDROP =
             androidx.datastore.preferences.core.booleanPreferencesKey("pref_xmb_item_backdrop")
     }

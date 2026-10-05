@@ -90,10 +90,7 @@ class CrossbarBookshelf(
     }
 
     internal suspend fun booksRootItems(): List<CrossbarItem> =
-        vm.libraryColumn(
-            mediaColumn(uiState.value.booksRootSections(), vm.bookAppItems(), booksAddActions()),
-            SearchScope.BOOKS,
-        )
+        vm.mediaRootColumn(uiState.value.bookLibraries.isNotEmpty(), uiState.value.booksRootSections(), vm.bookAppItems(), booksAddActions(), SearchScope.BOOKS)
 
     private fun addBookAppsItem(): CrossbarItem = CrossbarItem(
         id       = CrossbarViewModel.ADD_LIBRARY_APPS_ITEM_ID,
@@ -130,7 +127,7 @@ class CrossbarBookshelf(
     internal fun emptyBooksItem(): CrossbarItem = CrossbarItem(
         id       = "books_empty",
         title    = "No books yet",
-        subtitle = "Add a folder of EPUBs in Settings, then rescan",
+        subtitle = "Add a folder of EPUBs in Settings ▸ Library, then rescan",
         type     = CrossbarItemType.EMPTY,
     )
 

@@ -49,15 +49,12 @@ class CrossbarGallery(
     }
 
     internal suspend fun photoRootItems(): List<CrossbarItem> =
-        vm.libraryColumn(
-            mediaColumn(uiState.value.photoRootSections(vm.cameraAvailable), vm.photoAppItems(), photoAddActions()),
-            SearchScope.PHOTOS,
-        )
+        vm.mediaRootColumn(uiState.value.photoLibraries.isNotEmpty(), uiState.value.photoRootSections(vm.cameraAvailable), vm.photoAppItems(), photoAddActions(), SearchScope.PHOTOS)
 
     private fun addPhotoLibraryItem(): CrossbarItem = CrossbarItem(
         id       = CrossbarViewModel.ADD_PHOTO_LIBRARY_ITEM_ID,
         title    = "Add Photo Library",
-        subtitle = "Set your Photo root folder in Settings to get started",
+        subtitle = "Add a photo folder here or in Settings ▸ Library",
         type     = CrossbarItemType.ADD_ACTION,
     )
 

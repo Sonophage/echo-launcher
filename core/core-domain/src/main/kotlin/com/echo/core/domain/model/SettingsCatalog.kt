@@ -8,7 +8,9 @@ enum class SettingsSectionId(
     val subtitle: String,
 ) {
     OVERVIEW("settings_section_overview", "Overview", "Library, artwork & build"),
-    EMULATORS("settings_section_emulators", "Emulators", "Library Manager, emulator profiles, RetroArch, artwork & hidden games"),
+    // owner, 2026-10-05: media folders get their own section, and Hidden Items moves here from Emulators
+    LIBRARY("settings_section_library", "Library", "Media folders & hidden items"),
+    EMULATORS("settings_section_emulators", "Emulators", "Library Manager, emulator profiles, RetroArch & artwork"),
     LOOK_AND_FEEL("settings_section_look_and_feel", "Look & Feel", "Theme, wallpaper, layout, sound, controls & touch"),
     ACCOUNTS("settings_section_accounts", "Accounts", "Permissions, RetroAchievements, Steam & Discord"),
     SYSTEM("settings_section_system", "System", "About, logs, backup & credits"),
@@ -26,10 +28,12 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
 
     SettingsEntry("settings_overview", "Overview", "Library, artwork & build", SettingsSectionId.OVERVIEW),
 
+    SettingsEntry("settings_media_libraries", "Media Libraries", "Your music, video, photo & book folders", SettingsSectionId.LIBRARY),
+    SettingsEntry("settings_app_visibility", "Hidden Items", "Apps & games hidden everywhere or from one place", SettingsSectionId.LIBRARY),
+
     SettingsEntry("settings_library", "Library Manager", "ROM sources & scanning", SettingsSectionId.EMULATORS),
     SettingsEntry("settings_artwork", "Artwork", "Your art, scraping & cache", SettingsSectionId.EMULATORS),
     SettingsEntry("settings_artwork_sources", "Scraping Sources", "Source priority & service accounts", SettingsSectionId.EMULATORS),
-    SettingsEntry("settings_app_visibility", "Hidden Items", "Review apps & games you've hidden", SettingsSectionId.EMULATORS),
 
     SettingsEntry("settings_emulators_installed", "Installed", "Detected emulator profiles", SettingsSectionId.EMULATORS),
     SettingsEntry("settings_emulators_custom", "Custom Emulators", "Custom profiles & Add Custom Emulator", SettingsSectionId.EMULATORS),

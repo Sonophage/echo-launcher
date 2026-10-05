@@ -2,7 +2,7 @@ package com.echo.core.ui.detail
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.echo.core.ui.components.StatusStripHeight
+import com.echo.core.ui.components.ChromeBandBaseHeight
 import com.echo.core.domain.model.lightBackgroundAnchors
 import com.echo.core.ui.theme.EchoColors
 import com.echo.core.ui.theme.composite
@@ -114,7 +114,7 @@ class DetailPaletteTest {
 
     @Test
     fun `the hero gives up height so the primary actions clear the footer`() {
-        val viewport = 468.dp - StatusStripHeight - 64.dp - DetailFooterHeight
+        val viewport = 468.dp - ChromeBandBaseHeight - 64.dp - DetailFooterHeight
         val hero = detailHeroHeightFor(viewport)
         assertTrue("hero $hero must shrink below $DetailHeroHeight", hero < DetailHeroHeight)
         assertTrue("the band below the hero must fit", hero + DetailHeroBandBelow <= viewport)
@@ -122,7 +122,7 @@ class DetailPaletteTest {
 
     @Test
     fun `a message line under the actions takes its room from the hero too`() {
-        val viewport = 468.dp - StatusStripHeight - 64.dp - DetailFooterHeight
+        val viewport = 468.dp - ChromeBandBaseHeight - 64.dp - DetailFooterHeight
         val withMessage = detailHeroHeightFor(viewport, messageLine = true)
         assertTrue(withMessage < detailHeroHeightFor(viewport))
         assertTrue(

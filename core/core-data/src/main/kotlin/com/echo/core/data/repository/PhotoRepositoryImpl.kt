@@ -103,8 +103,10 @@ class PhotoRepositoryImpl @Inject constructor(
         photoDao.setFavorite(id, favorite)
 
     override suspend fun removePhoto(id: String) {
-        val thumb = photoDao.getById(id)?.thumbnailUri
+        val photo = photoDao.getById(id)
+        val thumb = photo?.thumbnailUri
         photoDao.deleteById(id)
+        photo?.let { libraryDao.recount(it.libraryId) }
         if (thumb != null) {
             deleteOrphanedThumbnails(listOf(thumb)) { photoDao.countReferencingThumbnail(it) > 0 }
         }

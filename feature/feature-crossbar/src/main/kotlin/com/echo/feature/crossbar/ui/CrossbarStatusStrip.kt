@@ -761,7 +761,8 @@ private const val GLINT_PERIOD_MS = 2400L
 private val MeterActive   = StripPrimary
 private val MeterInactive = Color(0x40EEEEEE)
 
-internal val StripHeight   = StatusStripHeight
+internal val StripHeight: Dp
+    @Composable @androidx.compose.runtime.ReadOnlyComposable get() = StatusStripHeight
 
 private val BadgeInk = Color(0xFF1A0D05)
 
@@ -774,9 +775,13 @@ private fun currentTimeString(context: Context): String =
 internal fun rememberStripUnits(): DesignUnits {
     val config = LocalConfiguration.current
     val density = LocalDensity.current
-    return remember(config.screenWidthDp, config.screenHeightDp, density) {
-        panelDesignUnits(config.screenWidthDp.toFloat(), config.screenHeightDp.toFloat(), density)
+    // the top bar's own size (LocalChromeScale) grows or shrinks everything in it
+    val header = com.echo.core.ui.components.LocalChromeScale.current.header
+    return remember(config.screenWidthDp, config.screenHeightDp, density, header) {
+        val u = panelDesignUnits(config.screenWidthDp.toFloat(), config.screenHeightDp.toFloat(), density)
+        DesignUnits(u.scale * header, density, u.square)
     }
 }
 
+@Composable
 internal fun stripBandHeight(u: DesignUnits): Dp = maxOf(StripHeight, u.dp(76))

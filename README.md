@@ -130,8 +130,8 @@ pans and rotates, and any photo can become the wallpaper with its EXIF data stri
 
 ### The top panel and Settings
 
-**Home** (the Guide or View button), or a pull down on the top bar, opens the panel: Notifications,
-Profile, Quick settings, Libraries and Settings. Settings has six sections: **Overview, Emulators,
+**Home** (the Guide or View button), or a tap on the top bar's bell, opens the panel: Notifications,
+Profile, Quick settings, Libraries and Settings. Settings has seven sections: **Overview, Library, Emulators,
 Look & Feel, Accounts, System, Setup**.
 
 | | |
@@ -325,7 +325,7 @@ access to all of your storage.
 | App Drawer | **RB** on the crossbar, or **B** at the top level | | Apps, in the footer |
 | Categories, tabs, sections and filters | **LT / RT** | Page Up / Page Down | Tap |
 | Page or seek in lists and players | **LB / RB** | | |
-| Home: the top panel | **Guide** or **View** | | Pull down the top bar |
+| Home: the top panel | **Guide** or **View** | | Tap the bell; slide up to close |
 
 - **D-pad ◀ backs out** of a folder, flyout or settings page wherever LEFT is not already doing
   something. Turn it off with *Look & Feel ▸ Controller ▸ Left Backs Out*.
@@ -527,13 +527,16 @@ Relink Folder**.
 | Section | Holds |
 |---|---|
 | **Overview** | Library, artwork and build cards |
-| **Emulators** | Library Manager · Artwork · Scraping Sources · Hidden Items · Installed · Custom Emulators · RetroArch |
+| **Library** | Media Libraries (music, video, photo and book folders) · Hidden Items |
+| **Emulators** | Library Manager · Artwork · Scraping Sources · Installed · Custom Emulators · RetroArch |
 | **Look & Feel** | Theme · Wallpaper & Text · Layout · Boot · Sound · Categories · Controller · Touch · Performance |
 | **Accounts** | Permissions · Accounts (RetroAchievements and Steam) · Discord |
 | **System** | About · Logs · Backup & Restore · Credits |
 | **Setup** | Setup Wizard |
 
-Media folders are not in Settings; they are on each column's **Folders** row.
+Media folders are in **Library ▸ Media Libraries**, and on each column's **Folders** row. A media
+category with no folder keeps only its apps. In a media category's top column or a category of apps,
+**Options ▸ Move Up / Move Down** puts an app or row where you want it.
 
 ---
 

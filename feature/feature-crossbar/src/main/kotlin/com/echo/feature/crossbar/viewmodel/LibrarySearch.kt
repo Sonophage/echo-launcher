@@ -11,27 +11,27 @@ enum class SearchScope(
     ALL(
 
         "Search", "Games, apps, music, video, photos and books",
-        "Nothing to search yet", "Add a library in Settings, then search from anywhere",
+        "Nothing to search yet", "Add folders in Settings ▸ Library or Settings ▸ Emulators, then search from anywhere",
     ),
     GAMES(
         "Search Games", "Titles in your game library",
-        "No games yet", "Add a ROM root in Settings ▸ Library ▸ Library Manager",
+        "No games yet", "Add a ROM folder in Settings ▸ Emulators ▸ Library Manager",
     ),
     VIDEOS(
         "Search Video", "Titles in your video libraries",
-        "No videos yet", "Set a root folder in Settings ▸ Media ▸ Video",
+        "No videos yet", "Add a video folder in Settings ▸ Library ▸ Media Libraries",
     ),
     PHOTOS(
         "Search Photos", "File names in your albums",
-        "No photos yet", "Set a root folder in Settings ▸ Media ▸ Photo",
+        "No photos yet", "Add a photo folder in Settings ▸ Library ▸ Media Libraries",
     ),
     BOOKS(
         "Search Books", "Titles, authors and series",
-        "No books yet", "Set a root folder in Settings ▸ Media ▸ Books",
+        "No books yet", "Add a book folder in Settings ▸ Library ▸ Media Libraries",
     ),
     MUSIC(
         "Search Music", "Titles, artists and albums",
-        "No music yet", "Set a root folder in Settings ▸ Media ▸ Music",
+        "No music yet", "Add a music folder in Settings ▸ Library ▸ Media Libraries",
     ),
     APPS(
         "Search Apps", "Installed apps and their package names",
@@ -71,8 +71,17 @@ fun searchEmptyState(loaded: Boolean, query: String, anyContent: Boolean = true)
     else -> SearchEmptyState.NO_MATCHES
 }
 
-fun searchStep(action: GamepadAction): Int = when (action) {
-    GamepadAction.NAVIGATE_UP -> -1
-    GamepadAction.NAVIGATE_DOWN -> 1
-    else -> 0
+// owner, 2026-10-05: the results run in two columns under the banner
+const val SEARCH_COLUMNS = 2
+
+// up and down move a row; left and right move within the row and stop at its ends
+fun searchStep(action: GamepadAction, index: Int): Int {
+    val column = index % SEARCH_COLUMNS
+    return when (action) {
+        GamepadAction.NAVIGATE_UP -> -SEARCH_COLUMNS
+        GamepadAction.NAVIGATE_DOWN -> SEARCH_COLUMNS
+        GamepadAction.NAVIGATE_LEFT -> if (column > 0) -1 else 0
+        GamepadAction.NAVIGATE_RIGHT -> if (column < SEARCH_COLUMNS - 1) 1 else 0
+        else -> 0
+    }
 }

@@ -36,6 +36,14 @@ val DefaultEchoTextColors = EchoTextColors(
 
 val LocalEchoTextColors = staticCompositionLocalOf { DefaultEchoTextColors }
 
+// owner, 2026-10-05: the crossbar's words are white or accent, never black. It draws over art, wallpaper and
+// the wave, so a contrast check against the theme gradient flipped them dark on a bright item. A light chosen
+// colour is kept; anything darker is white
+fun crossbarTextColors(requested: Color): EchoTextColors {
+    val primary = if (requested.luminance() >= 0.5f) requested else Color.White
+    return DefaultEchoTextColors.copy(primary = primary, requested = requested, adjusted = primary != requested)
+}
+
 fun resolveTextColors(
     requested: Color,
     backgroundTop: Color,

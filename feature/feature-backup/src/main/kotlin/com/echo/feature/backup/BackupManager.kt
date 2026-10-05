@@ -581,6 +581,7 @@ open class BackupManager @Inject constructor(
             booleanPreferencesKey("pref_xmb_game_metadata"),
 
         booleanPreferencesKey("pref_xmb_item_backdrop"),
+        booleanPreferencesKey("pref_xmb_row_cover_art"),
 
         booleanPreferencesKey("artwork_crop_preview_enabled"),
 

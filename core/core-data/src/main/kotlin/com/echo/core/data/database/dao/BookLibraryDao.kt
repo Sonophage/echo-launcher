@@ -36,4 +36,8 @@ interface BookLibraryDao {
 
     @Query("UPDATE book_libraries SET book_count = :count, last_scanned_at = :scannedAt, updated_at = :scannedAt WHERE id = :id")
     suspend fun updateScanResult(id: String, count: Int, scannedAt: Long)
+
+    // after one item is removed, so the library's count (and the columns built from it) follow without a rescan
+    @Query("UPDATE book_libraries SET book_count = (SELECT COUNT(*) FROM books WHERE library_id = :id) WHERE id = :id")
+    suspend fun recount(id: String)
 }

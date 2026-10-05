@@ -36,4 +36,8 @@ interface PhotoLibraryDao {
 
     @Query("UPDATE photo_libraries SET photo_count = :count, last_scanned_at = :scannedAt, updated_at = :scannedAt WHERE id = :id")
     suspend fun updateScanResult(id: String, count: Int, scannedAt: Long)
+
+    // after one item is removed, so the library's count (and the columns built from it) follow without a rescan
+    @Query("UPDATE photo_libraries SET photo_count = (SELECT COUNT(*) FROM photos WHERE library_id = :id) WHERE id = :id")
+    suspend fun recount(id: String)
 }

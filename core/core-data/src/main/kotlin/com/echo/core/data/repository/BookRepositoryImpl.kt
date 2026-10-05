@@ -95,7 +95,11 @@ class BookRepositoryImpl @Inject constructor(
         libraryDao.updateScanResult(libraryId, books.size, scannedAt)
     }
 
-    override suspend fun removeBook(id: String) = bookDao.deleteById(id)
+    override suspend fun removeBook(id: String) {
+        val book = bookDao.getById(id)
+        bookDao.deleteById(id)
+        book?.let { libraryDao.recount(it.libraryId) }
+    }
 
     override fun observeDefaultReader(): Flow<String?> =
         context.echoDataStore.data.map { it[KEY_BOOK_DEFAULT_READER] }

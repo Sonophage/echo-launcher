@@ -9,8 +9,12 @@ import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -92,7 +96,10 @@ fun LastPlayedPage(
     onCardTapped: (Int) -> Unit,
     modifier: Modifier = Modifier,
 
-    // the crossbar wave, drawn over the art and under the words (owner, 2026-10-04)
+    // a finger down (true) and up (false) on a card or row, so holding it launches like holding A (owner, 2026-10-05)
+    onCardPressed: (Int, Boolean) -> Unit = { _, _ -> },
+
+    // the crossbar wave, drawn over the backdrop art and under icons, panels and words (owner, 2026-10-05)
     wave: (@Composable () -> Unit)? = null,
 ) {
     val focused = items.getOrNull(selectedIndex)
@@ -103,9 +110,9 @@ fun LastPlayedPage(
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Crossfade(railVisible, animationSpec = tween(220), label = "recentRail") { rail ->
             if (rail) {
-                RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, wave)
+                RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, onCardPressed, wave)
             } else {
-                Letterbox(focused, now, empty, u, wave) { onCardTapped(selectedIndex) }
+                Letterbox(focused, now, empty, u, wave, { onCardPressed(selectedIndex, it) }) { onCardTapped(selectedIndex) }
             }
         }
     }
@@ -118,21 +125,23 @@ private fun Letterbox(
     empty: String,
     u: DesignUnits,
     wave: (@Composable () -> Unit)?,
+    onArtPressed: (Boolean) -> Unit,
     onArtTapped: () -> Unit,
 ) {
     Box(
         Modifier
             .fillMaxSize()
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onArtTapped),
+            .tapOrHold(onArtTapped, onArtPressed),
     ) {
         val kind = item?.let(::recentKind)
         if (item != null && (kind == RecentKind.MUSIC || kind == RecentKind.VIDEO || kind == RecentKind.BOOK)) {
             MediaStage(item, kind, now, u, wave)
             return@Box
         }
-        ItemArt(item, u.dp(150), BiasAlignment(0f, -0.2f))
+        BackdropArt(item, BiasAlignment(0f, -0.2f))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.92f))))
         wave?.invoke()
+        AppIconArt(item, u.dp(150))
         Column(
             Modifier
                 .align(Alignment.BottomStart)
@@ -189,6 +198,7 @@ private fun RecentList(
     empty: String,
     u: DesignUnits,
     onCardTapped: (Int) -> Unit,
+    onCardPressed: (Int, Boolean) -> Unit,
     wave: (@Composable () -> Unit)?,
 ) {
     val groups = remember(items, now / 60_000L) { groupRecentsByDay(items, now) }
@@ -210,11 +220,12 @@ private fun RecentList(
             )
         }
         Box(Modifier.fillMaxSize().padding(start = u.dp(RAIL_PANEL_WIDTH))) {
-            ItemArt(focused, u.dp(150), Alignment.Center)
+            BackdropArt(focused, Alignment.Center)
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to PanelBase.copy(alpha = 0.85f), 0.3f to Color.Transparent)))
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to PanelBase.copy(alpha = 0.92f))))
         }
         wave?.invoke()
+        Box(Modifier.fillMaxSize().padding(start = u.dp(RAIL_PANEL_WIDTH))) { AppIconArt(focused, u.dp(150)) }
         Box(Modifier.fillMaxHeight().width(u.dp(RAIL_PANEL_WIDTH)).background(RailPanelFill))
 
         Column(
@@ -238,7 +249,7 @@ private fun RecentList(
                     val entry = row.item
                     if (entry != null) {
                         val dim = contextMenuDim(abs(entry.index - selectedIndex), items.lastIndex)
-                        RecentRow(entry.value, entry.index == selectedIndex, dim, now, u) { onCardTapped(entry.index) }
+                        RecentRow(entry.value, entry.index == selectedIndex, dim, now, u, { onCardPressed(entry.index, it) }) { onCardTapped(entry.index) }
                     } else {
                         Text(
                             row.day.label.uppercase(),
@@ -281,10 +292,24 @@ private fun RecentList(
     }
 }
 
+// a tap acts as a click; the finger's down and up are reported too, so the caller can time a hold
+private fun Modifier.tapOrHold(onTap: () -> Unit, onPressed: (Boolean) -> Unit): Modifier =
+    semantics { role = Role.Button; onClick { onTap(); true } }
+        .pointerInput(onTap, onPressed) {
+            detectTapGestures(
+                onPress = {
+                    onPressed(true)
+                    tryAwaitRelease()
+                    onPressed(false)
+                },
+                onTap = { onTap() },
+            )
+        }
+
 private class RailRow(val day: RecentDay, val item: IndexedValue<CrossbarItem>?)
 
 @Composable
-private fun RecentRow(item: CrossbarItem, focused: Boolean, dim: Float, now: Long, u: DesignUnits, onClick: () -> Unit) {
+private fun RecentRow(item: CrossbarItem, focused: Boolean, dim: Float, now: Long, u: DesignUnits, onPressed: (Boolean) -> Unit, onClick: () -> Unit) {
     val shape = RoundedCornerShape(u.dp(12))
     Column(
         Modifier
@@ -292,7 +317,7 @@ private fun RecentRow(item: CrossbarItem, focused: Boolean, dim: Float, now: Lon
             .graphicsLayer(alpha = if (focused) 1f else dim.coerceAtLeast(0.55f))
             .clip(shape)
             .then(if (focused) Modifier.background(Color.White.copy(alpha = 0.10f)).border(u.dp(2), Color.White, shape) else Modifier)
-            .clickable(onClick = onClick)
+            .tapOrHold(onClick, onPressed)
             .padding(horizontal = u.dp(14), vertical = u.dp(10)),
         verticalArrangement = Arrangement.spacedBy(u.dp(6)),
     ) {
@@ -308,20 +333,25 @@ private fun RecentRow(item: CrossbarItem, focused: Boolean, dim: Float, now: Lon
 }
 
 
+// the art fills the page like a wallpaper, so the wave draws over it
 @Composable
-private fun ItemArt(item: CrossbarItem?, iconSize: Dp, alignment: Alignment) {
-    val art = item?.backdropArt?.firstOrNull()
-    when {
-        art != null -> AsyncImage(
-            model = rememberArtworkModel(art),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            alignment = alignment,
-            modifier = Modifier.fillMaxSize(),
-        )
-        item?.isInstalledApp == true -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            AndroidAppIcon(packageName = item.packageName, title = item.title, size = iconSize)
-        }
+private fun BackdropArt(item: CrossbarItem?, alignment: Alignment) {
+    val art = item?.backdropArt?.firstOrNull() ?: return
+    AsyncImage(
+        model = rememberArtworkModel(art),
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        alignment = alignment,
+        modifier = Modifier.fillMaxSize(),
+    )
+}
+
+// an app with no art shows its icon, which sits above the wave
+@Composable
+private fun AppIconArt(item: CrossbarItem?, iconSize: Dp) {
+    if (item?.backdropArt?.firstOrNull() != null || item?.isInstalledApp != true) return
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        AndroidAppIcon(packageName = item.packageName, title = item.title, size = iconSize)
     }
 }
 
@@ -367,9 +397,8 @@ fun RecentFilterRow(
 
     onFilterTapped: (RecentFilter) -> Unit = {},
 
-    includeApps: Boolean = false,
+    filters: List<RecentFilter> = listOf(RecentFilter.ALL),
 ) {
-    val filters = RecentFilter.visible(includeApps)
     StripSections(
         labels = filters.map { it.label },
         selected = filters.indexOf(filter),
@@ -382,8 +411,7 @@ fun RecentFilterRow(
 
 // the app drawer's sections as icons in the top bar, LT and RT at the ends (owner, 2026-10-04)
 @Composable
-fun DrawerSectionRow(active: AppFilter, u: DesignUnits, modifier: Modifier = Modifier, onTapped: (AppFilter) -> Unit) {
-    val sections = AppFilter.entries
+fun DrawerSectionRow(active: AppFilter, sections: List<AppFilter>, u: DesignUnits, modifier: Modifier = Modifier, onTapped: (AppFilter) -> Unit) {
     StripSections(
         labels = sections.map { it.label },
         selected = sections.indexOf(active),

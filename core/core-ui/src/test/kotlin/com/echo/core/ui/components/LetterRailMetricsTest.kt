@@ -6,8 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LetterRailMetricsTest {
-    private val HANDHELD = 462.dp - StatusStripHeight - HintBarHeight
-    private val TABLET = 668.dp - StatusStripHeight - HintBarHeight
+    private val HANDHELD = 462.dp - ChromeBandBaseHeight - ChromeBandBaseHeight
+    private val TABLET = 668.dp - ChromeBandBaseHeight - ChromeBandBaseHeight
     private val WHOLE_ALPHABET = 27
 
     private fun span(m: RailMetrics) = m.badge * m.rungs + m.gap * (m.rungs - 1)

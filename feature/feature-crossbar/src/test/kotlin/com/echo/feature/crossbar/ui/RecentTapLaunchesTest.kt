@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import com.echo.core.ui.preview.EchoScreenPreview
 import com.echo.feature.crossbar.viewmodel.RecentFilter
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
@@ -29,7 +30,7 @@ class RecentTapLaunchesTest {
         CrossbarItem(id = "c", title = "Charlie Game", gameId = 3L),
     )
 
-    private fun page(selectedIndex: Int, railVisible: Boolean, onCardTapped: (Int) -> Unit) {
+    private fun page(selectedIndex: Int, railVisible: Boolean, onCardPressed: (Int, Boolean) -> Unit = { _, _ -> }, onCardTapped: (Int) -> Unit) {
         composeRule.setContent {
             EchoScreenPreview {
                 LastPlayedPage(
@@ -39,6 +40,7 @@ class RecentTapLaunchesTest {
                     filter = RecentFilter.ALL,
                     railVisible = railVisible,
                     onCardTapped = onCardTapped,
+                    onCardPressed = onCardPressed,
                 )
             }
         }
@@ -69,5 +71,32 @@ class RecentTapLaunchesTest {
         composeRule.onNodeWithText("Bravo Game").performClick()
 
         assertEquals("the art carries the focused index", listOf(1), tapped)
+    }
+
+    // owner, 2026-10-05: holding a card or row should launch it, as holding A does. The page reports the
+    // finger down and up with the row's own index; CrossbarRecents times the hold on the shared launch hold
+    @Test
+    fun `holding a row reports its own index down, then up`() {
+        val presses = mutableListOf<Pair<Int, Boolean>>()
+        page(selectedIndex = 0, railVisible = true, onCardPressed = { i, down -> presses += i to down }, onCardTapped = {})
+
+        composeRule.onNodeWithText("Charlie Game").performTouchInput { down(center) }
+        composeRule.mainClock.advanceTimeBy(1_200)
+        composeRule.onNodeWithText("Charlie Game").performTouchInput { up() }
+        composeRule.waitForIdle()
+
+        assertEquals(listOf(2 to true, 2 to false), presses)
+    }
+
+    @Test
+    fun `holding the art reports the focused index`() {
+        val presses = mutableListOf<Pair<Int, Boolean>>()
+        page(selectedIndex = 1, railVisible = false, onCardPressed = { i, down -> presses += i to down }, onCardTapped = {})
+
+        composeRule.onNodeWithText("Bravo Game").performTouchInput { down(center) }
+        composeRule.onNodeWithText("Bravo Game").performTouchInput { up() }
+        composeRule.waitForIdle()
+
+        assertEquals(listOf(1 to true, 1 to false), presses)
     }
 }

@@ -61,7 +61,7 @@ class CrossbarRecents(
             .map { (includeApps, dismissals) ->
                 if (!includeApps) return@map emptyList()
                 val dismissedAt = parseRecentDismissals(dismissals)
-                vm.appCategoryRepository.allInstalledApps()
+                vm.appCategoryRepository.visibleInstalledApps()
                     .filter { it.lastUsedAt > 0L }
 
                     .filterNot { dismissedFromRecents(it.lastUsedAt, dismissedAt[it.packageName]) }
@@ -82,7 +82,7 @@ class CrossbarRecents(
             }
 
     internal fun stepRecentFilter(delta: Int) =
-        setRecentFilter(uiState.value.let { it.recentFilter.step(delta, it.recentsIncludeApps) })
+        setRecentFilter(uiState.value.let { it.recentFilter.step(delta, it.recentFilters) })
 
     fun setRecentFilter(filter: RecentFilter) {
         menuSound.play(MenuSound.SYSTEM_BROWSE)
@@ -97,6 +97,7 @@ class CrossbarRecents(
             item.type == CrossbarItemType.VIDEO_FILE -> vm.video.handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent")
             item.type == CrossbarItemType.LIBRARY_BOOK -> vm.bookshelf.handleBookAction(item.id.removePrefix("book_"), "book_remove_recent")
             item.type == CrossbarItemType.MUSIC_TRACK -> vm.music.handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null)
+            item.isRecentAlbum -> vm.music.removeAlbumFromRecent(item.musicGroupKey!!)
             item.gameId != null -> {
                 val gid = item.gameId
                 vm.appAction { vm.gameRepository.clearLastPlayed(gid) }
@@ -144,7 +145,7 @@ class CrossbarRecents(
                 vm.videoRepository.observeRecentlyWatched(),
                 recentAppRows(),
             ) { games, tracks, books, videos, appRows ->
-                val visibleGames = with(vm) { games.notHiddenAt(HideLocationType.ALL_GAMES) }
+                val visibleGames = with(vm) { games.notHiddenAt(HideLocationType.RECENTS) }
                 val rows = listOf(
                     visibleGames.map { it.lastPlayedAt ?: 0L }.zip(with(vm) { visibleGames.toCrossbarItems() }),
                     tracks.recentMusicRows(),
@@ -209,6 +210,28 @@ class CrossbarRecents(
         if (s.currentItems[index].launchesOut()) uiState.update { it.copy(selectedItemIndex = index) } else vm.onItemSelected(index)
     }
 
+    private var touchHolding = false
+
+    // owner, 2026-10-05: holding a game or app's card or row launches it, the same hold as A; a tap only picks it
+    fun onRecentCardPress(index: Int, down: Boolean) {
+        if (!down) {
+            if (touchHolding) vm.releaseLaunchHold()
+            touchHolding = false
+            return
+        }
+        vm.markTouchInput()
+        val s = uiState.value
+        val item = s.currentItems.getOrNull(index)
+        if (s.hasBlockingOverlay || item == null || !item.launchesOut()) return
+        uiState.update { it.copy(selectedItemIndex = index) }
+        touchHolding = true
+        vm.startLaunchHold(item) {
+            touchHolding = false
+            // by id, in case the column changed under the finger during the hold
+            uiState.value.currentItems.indexOfFirst { it.id == item.id }.takeIf { it >= 0 }?.let(vm::onItemSelected)
+        }
+    }
+
     internal fun openShelf(cardId: String) {
         vm.navigateRememberingCursor {
             it.copy(selectedPlatformId = cardId)
@@ -239,19 +262,26 @@ class CrossbarRecents(
             val (filter, appRows, limit) = filterAndApps
 
             vm.music.currentMusicTracks = tracks
-            val visibleGames = with(vm) { games.notHiddenAt(HideLocationType.ALL_GAMES) }
-            mergeRecents(
+            val visibleGames = with(vm) { games.notHiddenAt(HideLocationType.RECENTS) }
+            val music = tracks.recentMusicRows()
+            val filters = RecentFilter.shown(stockedRecentFilters(visibleGames, music, books, videos, appRows))
+            filters to mergeRecents(
                 games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(with(vm) { visibleGames.toCrossbarItems() }),
 
-                music  = tracks.recentMusicRows(),
+                music  = music,
                 books  = books,
                 videos = videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
                 apps   = appRows,
                 filter = filter,
                 limit  = limit,
             )
-        }.collect { items ->
-
+        }.collect { (filters, items) ->
+            // the filter that was showing has just emptied: go back to All, which reloads the column
+            if (uiState.value.recentFilter !in filters) {
+                uiState.update { it.copy(recentFilters = filters, recentFilter = RecentFilter.ALL, selectedItemIndex = 0) }
+                return@collect
+            }
+            uiState.update { it.copy(recentFilters = filters) }
             vm.publishGameItems(items, keepCursor)
             keepCursor = true
         }

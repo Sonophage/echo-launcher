@@ -80,6 +80,15 @@ class AppCategoryRepository @Inject constructor(
 
     suspend fun allInstalledApps(): List<InstalledApp> = installedApps()
 
+    // owner, 2026-10-05: Hide Everywhere hides an app from the whole system: the drawer, Recent and Search too
+    suspend fun hiddenEverywhere(): Set<String> =
+        appOverrideDao.getAll().filter { it.isHidden }.map { it.packageName }.toSet()
+
+    suspend fun visibleInstalledApps(): List<InstalledApp> {
+        val hidden = hiddenEverywhere()
+        return installedApps().filterNot { it.packageName in hidden }
+    }
+
     suspend fun packagesIn(categoryId: String): Set<String> {
         val explicit = categoryDao.getAppItems()
             .filter { it.categoryId == categoryId }

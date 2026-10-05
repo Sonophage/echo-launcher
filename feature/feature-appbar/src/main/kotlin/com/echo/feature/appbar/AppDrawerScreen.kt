@@ -1,6 +1,5 @@
 package com.echo.feature.appbar
 
-import androidx.compose.ui.graphics.Brush
 import com.echo.core.ui.components.EchoTrio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,6 +42,8 @@ import com.echo.core.ui.components.StatusStripHeight
 import com.echo.core.ui.components.CrossbarLetterRail
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.PanelBase
+import com.echo.core.ui.design.HeroBanner
+import com.echo.core.ui.design.HERO_BANNER_SIDE
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.preview.CombinedPreviews
 import com.echo.core.ui.preview.EchoPreview
@@ -84,14 +85,14 @@ fun AppDrawerScreen(
 
     // the sections live in the top bar (owner, 2026-10-04): the drawer reports the active one and the
     // counts, and a section tapped there arrives here
-    onTabsShown: (AppFilter, Map<AppFilter, Int>) -> Unit = { _, _ -> },
+    onTabsShown: (AppFilter, List<AppFilter>) -> Unit = { _, _ -> },
     tabPick: AppFilter? = null,
     onTabPickConsumed: () -> Unit = {},
 
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(state.activeFilter, state.filterCounts) { onTabsShown(state.activeFilter, state.filterCounts) }
+    LaunchedEffect(state.activeFilter, state.sections) { onTabsShown(state.activeFilter, state.sections) }
     LaunchedEffect(tabPick) {
         tabPick?.let {
             onTouchInteraction()
@@ -245,17 +246,12 @@ internal fun AppDrawerContent(
             // owner, 2026-10-04: the drawer looks like search: the focused app is a hero banner across the
             // top with its Open and Options buttons, and the apps run below it in columns
             focused?.let { app ->
-                val shape = RoundedCornerShape(u.dp(22))
-                Box(
-                    Modifier
-                        .padding(start = u.dp(80), end = u.dp(80), top = u.dp(12))
-                        .fillMaxWidth()
-                        .height(u.dp(250))
-                        .clip(shape)
-                        .background(focusedIcon?.color?.copy(alpha = 0.35f) ?: Color.White.copy(alpha = 0.06f)),
+                HeroBanner(
+                    u,
+                    tint = focusedIcon?.color,
+                    modifier = Modifier.padding(start = u.dp(HERO_BANNER_SIDE), end = u.dp(HERO_BANNER_SIDE), top = u.dp(12)),
+                    art = { WallHero(app, focusedIcon, u, Modifier.fillMaxSize()) },
                 ) {
-                    WallHero(app, focusedIcon, u, Modifier.fillMaxSize().padding(start = u.dp(380)), glyphLift = 0.dp)
-                    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to PanelBase.copy(alpha = 0.85f), 0.55f to Color.Transparent)))
                     WallInfo(app, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) }, holding = state.holdingPackage == app.packageName,
                         details = state.gameDetails?.takeIf { it.gameId == app.gameId }, compact = true,
                         modifier = Modifier.align(Alignment.BottomStart).padding(u.dp(26)).width(u.dp(560)))

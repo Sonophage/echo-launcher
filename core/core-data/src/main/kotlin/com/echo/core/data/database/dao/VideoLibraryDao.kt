@@ -40,4 +40,8 @@ interface VideoLibraryDao {
 
     @Query("UPDATE video_libraries SET video_count = :count, last_scanned_at = :scannedAt, updated_at = :scannedAt WHERE id = :id")
     suspend fun updateScanResult(id: String, count: Int, scannedAt: Long)
+
+    // after one item is removed, so the library's count (and the columns built from it) follow without a rescan
+    @Query("UPDATE video_libraries SET video_count = (SELECT COUNT(*) FROM videos WHERE library_id = :id) WHERE id = :id")
+    suspend fun recount(id: String)
 }

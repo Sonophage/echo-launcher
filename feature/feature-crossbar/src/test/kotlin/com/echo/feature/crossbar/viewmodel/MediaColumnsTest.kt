@@ -149,6 +149,23 @@ class MediaColumnsTest {
         )
     }
 
+    // owner, 2026-10-05: with no folder the category stays, but only its apps (and Add Apps) remain
+    @Test
+    fun `a media category with no folder keeps only its apps and Add Apps`() {
+        val apps = listOf(CrossbarItem(id = "app_spotify", title = "Spotify"))
+        val addRows = CrossbarViewModel.run {
+            listOf(
+                CrossbarItem(id = ADD_MUSIC_FOLDER_ITEM_ID, title = "Add Music Folder"),
+                CrossbarItem(id = ADD_VIDEOS_ITEM_ID, title = "Add Videos"),
+                CrossbarItem(id = ADD_PHOTO_LIBRARY_ITEM_ID, title = "Add Photo Library"),
+                CrossbarItem(id = ADD_BOOK_FOLDER_ITEM_ID, title = "Add Book Folder"),
+                CrossbarItem(id = ADD_MUSIC_APPS_ITEM_ID, title = "Add Music Apps"),
+            )
+        }
+
+        assertEquals(listOf("app_spotify", CrossbarViewModel.ADD_MUSIC_APPS_ITEM_ID), ids(folderlessColumn(apps, addRows)))
+    }
+
     @Test
     fun `a column with no apps still reads sections then add`() {
         val sections = listOf(CrossbarItem(id = "all_music", title = "Songs"))

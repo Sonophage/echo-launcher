@@ -104,11 +104,30 @@ class LibrarySearchTest {
         }
     }
 
+    // owner, 2026-10-05: two columns, so up and down move a whole row and left and right stay in it
     @Test
-    fun `the results are one column, so up and down move one row and left and right move nothing`() {
-        assertEquals(1, searchStep(GamepadAction.NAVIGATE_DOWN))
-        assertEquals(-1, searchStep(GamepadAction.NAVIGATE_UP))
-        assertEquals(0, searchStep(GamepadAction.NAVIGATE_LEFT))
-        assertEquals(0, searchStep(GamepadAction.NAVIGATE_RIGHT))
+    fun `the results are two columns, so up and down move a row and left and right stay in it`() {
+        assertEquals(2, searchStep(GamepadAction.NAVIGATE_DOWN, index = 0))
+        assertEquals(-2, searchStep(GamepadAction.NAVIGATE_UP, index = 3))
+        assertEquals(1, searchStep(GamepadAction.NAVIGATE_RIGHT, index = 2))
+        assertEquals(0, searchStep(GamepadAction.NAVIGATE_RIGHT, index = 3))
+        assertEquals(-1, searchStep(GamepadAction.NAVIGATE_LEFT, index = 3))
+        assertEquals(0, searchStep(GamepadAction.NAVIGATE_LEFT, index = 2))
+    }
+
+    // owner, 2026-10-05: the hints sent people to "Settings ▸ Media ▸ Video", which did not exist. Every
+    // "Settings ▸ Section ▸ Page" a hint names must be a real section holding that page
+    @Test
+    fun `every Settings path a hint names exists`() {
+        val path = Regex("Settings ▸ ([^▸,]+?)(?: ▸ ([^,]+?))?(?=,| or |$)")
+        val named = SearchScope.entries.flatMap { scope -> path.findAll(scope.emptyHint).toList() }
+        assertTrue("no hint names a Settings path, so this check sees nothing", named.isNotEmpty())
+        named.forEach { m ->
+            val section = com.echo.core.domain.model.SettingsSectionId.entries.firstOrNull { it.title == m.groupValues[1].trim() }
+            assertTrue("no section called '${m.groupValues[1]}'", section != null)
+            m.groupValues[2].takeIf { it.isNotBlank() }?.let { page ->
+                assertTrue("no '$page' in ${section!!.title}", com.echo.core.domain.model.settingsEntriesIn(section).any { it.title == page.trim() })
+            }
+        }
     }
 }

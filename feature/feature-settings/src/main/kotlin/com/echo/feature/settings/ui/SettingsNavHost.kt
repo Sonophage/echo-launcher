@@ -12,6 +12,7 @@ import com.echo.core.domain.model.SETTINGS_ROOT_SCREEN_ID
 val SETTINGS_SCREEN_ROUTES: Set<String> = setOf(
     SETTINGS_ROOT_SCREEN_ID,
     "settings_overview",
+    "settings_media_libraries",
     "settings_initial_setup",
     "settings_initial_setup_first",
     "settings_library",
@@ -152,6 +153,7 @@ fun SettingsNavHost(
             "settings_backup"     -> BackupSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_logs"       -> LogsSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_overview"   -> OverviewSettingsScreen(onBack = onBack, modifier = modifier)
+            "settings_media_libraries" -> MediaLibrariesScreen(onBack = onBack, modifier = modifier)
             "settings_permissions" -> PermissionsSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_accounts"   -> AccountsSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_about"      -> AboutSettingsScreen(onBack = onBack, modifier = modifier)

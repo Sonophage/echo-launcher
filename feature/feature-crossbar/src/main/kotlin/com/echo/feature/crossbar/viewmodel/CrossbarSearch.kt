@@ -70,7 +70,7 @@ class CrossbarSearch(
             searchTracks = if (wantsTracks) vm.musicRepository.observeAllTracks().first() else emptyList()
 
             val wantsApps = scope == SearchScope.ALL || scope == SearchScope.APPS
-            searchApps = if (wantsApps) vm.appCategoryRepository.allInstalledApps() else emptyList()
+            searchApps = if (wantsApps) vm.appCategoryRepository.visibleInstalledApps() else emptyList()
             uiState.update { it.copy(search = it.search?.copy(loaded = true)) }
             rebuildSearchRows()
         }
@@ -198,6 +198,13 @@ class CrossbarSearch(
         }
     }
 
+    // the banner's Options (owner, 2026-10-05): the row's own menu, drawn over the search
+    fun onSearchOptionsAt(index: Int) {
+        val row = uiState.value.search?.rows?.getOrNull(index)?.takeUnless { it.type == CrossbarItemType.EMPTY } ?: return
+        uiState.update { it.copy(search = it.search?.copy(selectedIndex = index)) }
+        vm.openContextMenuFor(row)
+    }
+
     private fun searchRowCategory(row: CrossbarItem): String? = row.owningCategory()
 
     private fun openSearchedPhoto(photo: com.echo.core.domain.model.Photo) {
@@ -220,8 +227,9 @@ class CrossbarSearch(
             GamepadAction.NAVIGATE_UP,
             GamepadAction.NAVIGATE_DOWN,
             GamepadAction.NAVIGATE_LEFT,
-            GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action))
+            GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action, state.search?.selectedIndex ?: 0))
             GamepadAction.SELECT        -> onSearchActivatedAt(state.search?.selectedIndex ?: return)
+            GamepadAction.OPEN_CONTEXT_MENU -> onSearchOptionsAt(state.search?.selectedIndex ?: return)
             GamepadAction.BACK          -> closeSearch()
             else -> Unit
         }

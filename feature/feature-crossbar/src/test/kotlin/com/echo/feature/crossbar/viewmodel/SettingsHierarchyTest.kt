@@ -102,9 +102,9 @@ class SettingsHierarchyTest {
 
     @Test fun `each section exposes its screens in the planned order`() {
         assertEquals(
-            "Library and Emulators are one section, named Emulators",
+            "Emulators holds the ROM library, its art and the emulators",
             listOf(
-                "settings_library", "settings_artwork", "settings_artwork_sources", "settings_app_visibility",
+                "settings_library", "settings_artwork", "settings_artwork_sources",
                 "settings_emulators_installed",
                 "settings_emulators_custom",
                 "settings_emulators_retroarch",
@@ -170,9 +170,13 @@ class SettingsHierarchyTest {
         }
     }
 
-    @Test fun `Hidden Games is present under Emulators via its dedicated route`() {
-        val libraryIds = settingsEntriesIn(SettingsSectionId.EMULATORS).map { it.id }
-        assertTrue("Hidden Games missing from Emulators", libraryIds.contains("settings_app_visibility"))
+    // owner, 2026-10-05: Hidden Items moved from Emulators to Library, beside the media folders
+    @Test fun `Hidden Items is under Library via its dedicated route`() {
+        assertEquals(
+            listOf("settings_media_libraries", "settings_app_visibility"),
+            settingsEntriesIn(SettingsSectionId.LIBRARY).map { it.id },
+        )
+        assertFalse(settingsEntriesIn(SettingsSectionId.EMULATORS).any { it.id == "settings_app_visibility" })
         assertTrue("settings_app_visibility route missing", SETTINGS_SCREEN_ROUTES.contains("settings_app_visibility"))
     }
 

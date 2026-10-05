@@ -26,6 +26,7 @@ class AppDrawerViewModelTest {
     private lateinit var repository: InstalledAppRepository
     private lateinit var games: com.echo.core.domain.repository.GameRepository
     private lateinit var viewModel: AppDrawerViewModel
+    private val appCategories = mockk<AppCategoryRepository>(relaxed = true)
 
     @Before
     fun setUp() {
@@ -43,6 +44,7 @@ class AppDrawerViewModelTest {
 
             mockk(relaxed = true),
             mockk(relaxed = true),
+            appCategories,
         )
     }
 
@@ -200,9 +202,10 @@ class AppDrawerViewModelTest {
         }
     }
 
+    // owner, 2026-10-05: Hide Everywhere hides an app from the whole system, the drawer included
     @Test
-    fun `category cycling works out of an empty recently-used filter`() = runTest {
-        coEvery { repository.getInstalledApps() } returns fakeApps().map { it.copy(lastUsedAt = 0L) }
+    fun `an app hidden everywhere is not in the drawer`() = runTest {
+        coEvery { appCategories.hiddenEverywhere() } returns setOf("com.example.browser")
         viewModel = AppDrawerViewModel(
             repository,
             mockk(relaxed = true),
@@ -211,45 +214,54 @@ class AppDrawerViewModelTest {
 
             mockk(relaxed = true),
             mockk(relaxed = true),
+            appCategories,
         )
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.setFilter(AppFilter.RECENT)
-        testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.uiState.test {
-            val state = awaitItem()
-            assertEquals(AppFilter.RECENT, state.activeFilter)
-            assertTrue("the section itself is empty", state.visibleApps.isEmpty())
-            cancelAndIgnoreRemainingEvents()
-        }
 
-        viewModel.handleGamepadAction(GamepadAction.NEXT_CATEGORY)
+        assertFalse(viewModel.uiState.value.allApps.any { it.packageName == "com.example.browser" })
+        assertTrue(viewModel.uiState.value.allApps.any { it.packageName == "com.mojang.minecraftpe" })
+    }
+
+    private fun drawerWithNothingUsed(usageAccess: Boolean): AppDrawerViewModel {
+        coEvery { repository.getInstalledApps() } returns fakeApps().map { it.copy(lastUsedAt = 0L) }
+        every { repository.hasUsageAccess() } returns usageAccess
+        return AppDrawerViewModel(
+            repository,
+            mockk(relaxed = true),
+            games,
+            mockk(relaxed = true),
+
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            appCategories,
+        )
+    }
+
+    // owner, 2026-10-05: an empty section is not shown, and LT/RT step over it
+    @Test
+    fun `an empty Recently Used is neither shown nor stepped onto`() = runTest {
+        viewModel = drawerWithNothingUsed(usageAccess = true)
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.uiState.test {
-            assertEquals(AppFilter.APPS, awaitItem().activeFilter)
-            cancelAndIgnoreRemainingEvents()
-        }
+
+        val state = viewModel.uiState.value
+        assertEquals(listOf(AppFilter.APPS, AppFilter.EMULATORS, AppFilter.GAMES), state.sections)
+        assertEquals("the drawer opens on the first section that has apps", AppFilter.APPS, state.activeFilter)
 
         viewModel.handleGamepadAction(GamepadAction.PREV_CATEGORY)
-        testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.uiState.test {
-            val state = awaitItem()
-            assertEquals(AppFilter.RECENT, state.activeFilter)
-            assertTrue("the section itself is empty", state.visibleApps.isEmpty())
-            cancelAndIgnoreRemainingEvents()
-        }
-
-        viewModel.handleGamepadAction(GamepadAction.PREV_CATEGORY)
-        testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.uiState.test {
-            assertEquals(AppFilter.GAMES, awaitItem().activeFilter)
-            cancelAndIgnoreRemainingEvents()
-        }
+        assertEquals(AppFilter.GAMES, viewModel.uiState.value.activeFilter)
         viewModel.handleGamepadAction(GamepadAction.NEXT_CATEGORY)
+        assertEquals(AppFilter.APPS, viewModel.uiState.value.activeFilter)
+    }
+
+    @Test
+    fun `without usage access Recently Used stays, since its page is where access is granted`() = runTest {
+        viewModel = drawerWithNothingUsed(usageAccess = false)
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.uiState.test {
-            assertEquals(AppFilter.RECENT, awaitItem().activeFilter)
-            cancelAndIgnoreRemainingEvents()
-        }
+
+        val state = viewModel.uiState.value
+        assertEquals(AppFilter.entries, state.sections)
+        assertEquals(AppFilter.RECENT, state.activeFilter)
+        assertTrue("the section itself is empty", state.visibleApps.isEmpty())
     }
 
     @Test
@@ -433,7 +445,7 @@ class AppDrawerViewModelTest {
 
     private fun drawerOver(apps: List<InstalledApp>): AppDrawerViewModel {
         coEvery { repository.getInstalledApps() } returns apps
-        return AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+        return AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), appCategories)
     }
 
     private fun pick(vm: AppDrawerViewModel, letter: Char) {

@@ -101,7 +101,11 @@ internal fun appContextMenuItems(
 
     add(CrossbarContextMenuItem("mark_game", "Mark as Game", group = MenuGroup.LIBRARY))
     add(CrossbarContextMenuItem("favorite", "Add to Favorites", group = MenuGroup.LIBRARY, pinnedToRoot = true))
-    if (onRecentShelf) add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+    if (onRecentShelf) {
+        // Remove clears it until it is used again; Hide keeps it off the panel until unhidden (owner, 2026-10-05)
+        add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+        add(CrossbarContextMenuItem("hide_from_recent", "Hide from Recent", group = MenuGroup.REMOVE))
+    }
 
     add(CrossbarContextMenuItem("edit_app", "Edit App Details", group = MenuGroup.SETTINGS))
     add(CrossbarContextMenuItem("rename", "Rename Shortcut", group = MenuGroup.SETTINGS))
@@ -167,6 +171,15 @@ internal fun bookContextMenuItems(hasOpenStamp: Boolean): List<CrossbarContextMe
     if (hasOpenStamp) add(CrossbarContextMenuItem("book_remove_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
     add(CrossbarContextMenuItem("book_remove", "Remove From Library", isDestructive = true, group = MenuGroup.REMOVE))
 }
+
+internal fun recentAlbumContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
+    CrossbarContextMenuItem("open_album", "Open Album"),
+    CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true),
+)
+
+// every recent track of the album, not only the run the row was folded from
+internal fun recentAlbumTrackIds(recentTracks: List<com.echo.core.domain.model.MusicTrack>, key: String): List<String> =
+    recentTracks.filter { it.lastPlayedAt != null && it.album.musicGroupKey() == key }.map { it.id }
 
 internal fun musicTrackContextMenuItems(
     playlistId: Long?,

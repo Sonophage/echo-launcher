@@ -54,10 +54,11 @@ class NoticePanelNavTest {
         assertEquals("down from a column with no tile below stays put", 1, move(g.copy(chip = 1), PanelMove.DOWN, chips = 4).chip)
     }
 
-    @Test fun `the settings grid is three wide and reaches every section`() {
-        val g = PanelCursor(tab = PanelTab.SETTINGS, setting = 2)
-        assertEquals("right off the end of a row must not wrap", 2, move(g, PanelMove.RIGHT).setting)
-        assertEquals(5, move(g, PanelMove.DOWN).setting)
+    // owner, 2026-10-05: a seventh section (Media) made the grid four wide, so it still fits in two rows
+    @Test fun `the settings grid is four wide and reaches every section`() {
+        val g = PanelCursor(tab = PanelTab.SETTINGS, setting = 3)
+        assertEquals("right off the end of a row must not wrap", 3, move(g, PanelMove.RIGHT).setting)
+        assertEquals(6, move(PanelCursor(tab = PanelTab.SETTINGS, setting = 2), PanelMove.DOWN).setting)
         var c = PanelCursor(tab = PanelTab.SETTINGS, setting = PANEL_SETTINGS.lastIndex % SETTINGS_GRID_COLUMNS)
         repeat(PANEL_SETTINGS.size) { c = move(c, PanelMove.DOWN) }
         assertEquals("the last section must be reachable", PANEL_SETTINGS.lastIndex, c.setting)

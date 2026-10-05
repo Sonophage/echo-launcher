@@ -70,4 +70,17 @@ class ResolvedTextColorsTest {
         assertTrue(whiteOnSilver < 2.0, "silver is no longer clearly failing at $whiteOnSilver")
         assertTrue(resolve(Color.White, classicBlueTop, classicBlueBottom).primary == Color.White)
     }
+
+    // owner, 2026-10-05: crossbar text is white or accent, never black, whatever the item's colour
+    @Test
+    fun `crossbar text is never dark`() {
+        val chosen = listOf(Color.White, Color.Black, Color(0xFF1A0C03), Color(0xFFFFE000), Color(0xFF6FBF3B), Color(0xFF0743A2))
+        for (c in chosen) {
+            val t = crossbarTextColors(c)
+            assertTrue(t.primary.luminance() >= 0.5f, "$c gave dark primary ${t.primary}")
+            assertTrue(t.secondary == DefaultEchoTextColors.secondary, "$c changed secondary to ${t.secondary}")
+            assertTrue(t.inactive == DefaultEchoTextColors.inactive, "$c changed inactive to ${t.inactive}")
+        }
+        assertTrue(crossbarTextColors(Color(0xFFFFE000)).primary == Color(0xFFFFE000), "a light chosen colour was not kept")
+    }
 }

@@ -10,12 +10,17 @@ data class CrossbarLayoutAdjust(
     val scale: Float = 1f,
     val barLeftFraction: Float = 0f,
     val barTopFraction: Float = CrossbarLayoutSpec.DEFAULT.barTopFraction,
+    // owner, 2026-10-05: the top bar and the footer are sized on their own, per device
+    val headerScale: Float = 1f,
+    val footerScale: Float = 1f,
 ) {
     companion object {
         val DEFAULT = CrossbarLayoutAdjust()
 
         const val SCALE_MIN = 0.6f
         const val SCALE_MAX = 1.8f
+        const val CHROME_MIN = 0.75f
+        const val CHROME_MAX = 1.5f
         const val LEFT_MIN = -0.25f
         const val LEFT_MAX = 0.35f
 
@@ -62,6 +67,8 @@ object CrossbarLayoutAdjustCodec {
         barLeftFraction = a.barLeftFraction.safe(0f).coerceIn(CrossbarLayoutAdjust.LEFT_MIN, CrossbarLayoutAdjust.LEFT_MAX),
         barTopFraction = a.barTopFraction.safe(CrossbarLayoutAdjust.DEFAULT.barTopFraction)
             .coerceIn(CrossbarLayoutAdjust.TOP_MIN, CrossbarLayoutAdjust.TOP_MAX),
+        headerScale = a.headerScale.safe(1f).coerceIn(CrossbarLayoutAdjust.CHROME_MIN, CrossbarLayoutAdjust.CHROME_MAX),
+        footerScale = a.footerScale.safe(1f).coerceIn(CrossbarLayoutAdjust.CHROME_MIN, CrossbarLayoutAdjust.CHROME_MAX),
     )
 
     private fun Float.safe(fallback: Float): Float = if (isNaN() || isInfinite()) fallback else this

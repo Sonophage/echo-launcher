@@ -30,6 +30,7 @@ import com.echo.feature.settings.ui.wizard.WizardSplash
 import com.echo.feature.settings.viewmodel.InitialSetupUiState
 import com.echo.feature.settings.viewmodel.InitialSetupViewModel
 import com.echo.feature.settings.viewmodel.RootFolderRow
+import com.echo.feature.settings.viewmodel.pickerStartUri
 import com.echo.feature.settings.viewmodel.SetupStep
 import com.echo.feature.settings.viewmodel.StorageSlot
 
@@ -90,6 +91,8 @@ fun InitialSetupScreen(
         ActivityResultContracts.StartActivityForResult()
     ) { grantToken++; viewModel.refreshGrants() }
 
+    val regrantFolder = rememberFolderRegrant(viewModel::regrantFolder)
+
     val openSettingsScreen = LocalSettingsOpenScreen.current
     val openScreen: (String) -> Unit = { id ->
         viewModel.parkForExcursion()
@@ -126,6 +129,7 @@ fun InitialSetupScreen(
                     onRequest = { permissionRequest.launch(it) },
                     onOpenSystemScreen = { systemScreen.launch(it) },
                     onSetAsHome = { systemScreen.launch(viewModel.homeRoleIntent()) },
+                    onGrantFolder = regrantFolder,
                 )
                 continueRow()
             }
@@ -190,6 +194,7 @@ private fun PermissionsPage(
     onRequest: (String) -> Unit,
     onOpenSystemScreen: (android.content.Intent) -> Unit,
     onSetAsHome: () -> Unit,
+    onGrantFolder: (com.echo.feature.settings.viewmodel.FolderAccessRow) -> Unit,
 ) {
     LifecycleResumeEffect(Unit) {
         onRefresh()
@@ -220,6 +225,8 @@ private fun PermissionsPage(
         sublabel = "Makes the Home button come back to ECHO",
         onClick = { if (!state.isHomeLauncher) onSetAsHome() },
     )
+    // a folder linked before (a later setup, or a reinstall) whose access Android has dropped
+    FolderAccessRows(state.folderAccess.filterNot { it.granted }, onGrantFolder)
 }
 
 @Composable
@@ -235,7 +242,7 @@ private fun StoragePage(
             value = row.value,
             sublabel = row.sublabel,
             focusKey = if (index == 0) "storage_first" else null,
-            onClick = { onPick(slot, row.replacing, row.start?.let(Uri::parse)) },
+            onClick = { onPick(slot, row.replacing, row.start?.let(::pickerStartUri)) },
         )
     }
     if (state.romRoots.any { it.linked }) {

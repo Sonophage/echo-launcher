@@ -1,8 +1,5 @@
 package com.echo.feature.crossbar.ui
 
-import com.echo.core.ui.components.chromeGutter
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.foundation.layout.height
 import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import androidx.compose.foundation.background
@@ -22,9 +19,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
@@ -80,6 +74,15 @@ import com.echo.feature.crossbar.viewmodel.primaryVerbFor
 import com.echo.core.common.format.relativeTime
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.design.panelDesignUnits
+import com.echo.core.ui.design.HeroBanner
+import com.echo.core.ui.design.PanelButton
+import com.echo.core.ui.design.HERO_BANNER_SIDE
+import com.echo.feature.crossbar.viewmodel.SEARCH_COLUMNS
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 
 @Composable
 fun SearchScreen(
@@ -89,10 +92,11 @@ fun SearchScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onFocusAt: (Int) -> Unit = {},
+    onOptionsAt: (Int) -> Unit = {},
 ) {
-    val listState = rememberLazyListState()
+    val listState = rememberLazyGridState()
     LaunchedEffect(state.selectedIndex, state.scrollToTopToken) {
-        if (state.rows.isNotEmpty()) listState.animateScrollToItem((state.selectedIndex - 1).coerceAtLeast(0))
+        if (state.rows.isNotEmpty()) listState.animateScrollToItem((state.selectedIndex - SEARCH_COLUMNS).coerceAtLeast(0))
     }
 
     val focusRequester = remember { FocusRequester() }
@@ -142,18 +146,19 @@ fun SearchScreen(
         )
 
         // owner, 2026-10-04: search takes the whole screen; the highlighted result is a hero banner across
-        // the top and the results run below it, full width; moving through them changes the hero
+        // the top and the results run below it; moving through them changes the hero.
+        // owner, 2026-10-05: the banner is the App Drawer's, at the drawer's margins, and the results are two columns
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(start = chromeGutter(), end = chromeGutter(end = true), top = belowField, bottom = if (imeUp) 10.dp else HintBarHeight)
+                .padding(start = u.dp(HERO_BANNER_SIDE), end = u.dp(HERO_BANNER_SIDE), top = belowField, bottom = if (imeUp) 10.dp else HintBarHeight)
                 .then(if (imeUp) Modifier.imePadding() else Modifier),
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
             when {
                 empty != null -> EmptyNotice(empty, u)
                 focused != null -> {
-                    Hero(focused, u, short = imeUp) { onActivateAt(state.selectedIndex) }
+                    Hero(focused, u, short = imeUp, onOpen = { onActivateAt(state.selectedIndex) }, onOptions = { onOptionsAt(state.selectedIndex) })
                     ResultList(state, listState, u, onActivateAt, onFocusAt)
                 }
             }
@@ -164,6 +169,7 @@ fun SearchScreen(
                 items = listOf(
                     ControllerPromptItem(GamepadAction.BACK, "Close"),
                     ControllerPromptItem(GamepadAction.SELECT, "Open"),
+                    ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
                 ),
                 modifier = Modifier.align(Alignment.BottomCenter),
                 primary = focused?.let { HintAction(GamepadAction.SELECT, primaryVerbFor(it) ?: "Open", listOfNotNull(it.title, it.subtitle).filter { t -> t.isNotBlank() }.joinToString(" · ")) },
@@ -171,6 +177,7 @@ fun SearchScreen(
                     when (action) {
                         GamepadAction.BACK -> onBack()
                         GamepadAction.SELECT -> state.selectedIndex.takeIf { focused != null }?.let(onActivateAt)
+                        GamepadAction.OPEN_CONTEXT_MENU -> state.selectedIndex.takeIf { focused != null }?.let(onOptionsAt)
                         else -> Unit
                     }
                 },
@@ -182,12 +189,18 @@ fun SearchScreen(
 @Composable
 private fun ResultList(
     state: SearchState,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyGridState,
     u: DesignUnits,
     onActivateAt: (Int) -> Unit,
     onFocusAt: (Int) -> Unit,
 ) {
-    LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(u.dp(4)), modifier = Modifier.fillMaxSize()) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(SEARCH_COLUMNS),
+        state = listState,
+        verticalArrangement = Arrangement.spacedBy(u.dp(4)),
+        horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
+        modifier = Modifier.fillMaxSize(),
+    ) {
         itemsIndexed(state.rows, key = { _, row -> row.id }) { index, row ->
             val selected = index == state.selectedIndex
             ResultRow(row, selected, u) { if (selected) onActivateAt(index) else onFocusAt(index) }
@@ -197,31 +210,30 @@ private fun ResultList(
 
 // the highlighted result across the top: its art filling the banner, what it is, and its facts
 @Composable
-private fun Hero(row: CrossbarItem, u: DesignUnits, short: Boolean, onClick: () -> Unit) {
+private fun Hero(row: CrossbarItem, u: DesignUnits, short: Boolean, onOpen: () -> Unit, onOptions: () -> Unit) {
     val (kind, detail) = kindAndDetail(row)
     val icon = rememberAppIcon(row.packageName?.takeIf { row.isInstalledApp })
     val art = (row.backdropArt.firstOrNull() ?: row.shelfCoverArt).takeUnless { row.isInstalledApp }
-    val shape = RoundedCornerShape(u.dp(22))
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(u.dp(if (short) 120 else 230))
-            .clip(shape)
-            // an app has no art, so its banner takes the icon's colour
-            .background(icon?.color?.copy(alpha = 0.45f) ?: Color.White.copy(alpha = 0.07f))
-            .border(u.dp(PANEL_FOCUS_RING_WIDTH), PanelFocusRing, shape)
-            .clickable(onClick = onClick),
+    // an app has no art, so its banner takes the icon's colour
+    HeroBanner(
+        u,
+        tint = icon?.color,
+        short = short,
+        art = {
+            when {
+                art != null -> AsyncImage(rememberArtworkModel(art), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                // as in the App Drawer, an app's icon stands on the right of its banner
+                row.isInstalledApp -> Box(Modifier.align(Alignment.Center)) { AppIcon(icon?.bitmap, u.dp(if (short) 64 else 150), u.dp(if (short) 16 else 34)) }
+            }
+        },
     ) {
-        art?.let { AsyncImage(rememberArtworkModel(it), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.78f), 0.65f to Color.Transparent)))
         Row(
             Modifier.align(Alignment.BottomStart).padding(u.dp(if (short) 16 else 26)),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(u.dp(20)),
         ) {
             when {
-                row.isInstalledApp -> AppIcon(icon?.bitmap, u.dp(if (short) 64 else 96), u.dp(if (short) 16 else 24))
-                art == null -> Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(u.dp(if (short) 48 else 72)))
+                art == null && !row.isInstalledApp -> Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(u.dp(if (short) 48 else 72)))
             }
             Column(verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
                 Eyebrow(kind, u)
@@ -233,8 +245,20 @@ private fun Hero(row: CrossbarItem, u: DesignUnits, short: Boolean, onClick: () 
                         if (row.totalPlayTimeMillis > 0) Stat("Play time", playTimeLabel(row.totalPlayTimeMillis), u)
                     }
                 }
+                if (!short) HeroButtons(row, u, onOpen, onOptions, Modifier.padding(top = u.dp(6)))
             }
         }
+        // with the keyboard up the banner is short, so its buttons stand at the right end
+        if (short) HeroButtons(row, u, onOpen, onOptions, Modifier.align(Alignment.CenterEnd).padding(end = u.dp(26)))
+    }
+}
+
+// owner, 2026-10-05: the App Drawer's buttons; search acts at once, so Open takes no hold
+@Composable
+private fun HeroButtons(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOptions: () -> Unit, modifier: Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
+        PanelButton(GamepadAction.SELECT, primaryVerbFor(row) ?: "Open", u, onClick = onOpen)
+        PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = onOptions)
     }
 }
 

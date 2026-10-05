@@ -108,7 +108,7 @@ fun EchoHintBar(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .height(BarHeight)
+            .height(HintBarHeight)
 
             .background(Brush.verticalGradient(0f to Color.Transparent, 1f to ChromeScrim))
             .padding(start = chromeGutter(), end = chromeGutter(end = true)),
@@ -178,6 +178,7 @@ private fun Hint(item: ControllerPromptItem, u: DesignUnits, pad: Boolean, onAct
 private fun BackButton(label: String, u: DesignUnits, onClick: () -> Unit) {
     Row(
         Modifier
+            .wrapContentHeight(unbounded = true)
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(u.dp(22)))
             .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
@@ -395,6 +396,8 @@ private fun RestOrb(
     var presses by remember { mutableIntStateOf(0) }
     Row(
         modifier
+            // the bar is shorter than the orb on a large screen; it rises out of it like the card, so it stays round
+            .wrapContentHeight(Alignment.Bottom, unbounded = true)
             .padding(bottom = u.dp(16))
             // inside the hold wrapper it has no action; even a disabled clickable takes the finger
             // down, so the wrapper's hold never started (owner, 2026-10-04)
@@ -439,7 +442,9 @@ private fun hintBarUnits(): DesignUnits {
     val density = LocalDensity.current
     val window = LocalWindowInfo.current.containerSize
     val units = panelDesignUnits(window.width / density.density, window.height / density.density, density)
-    return if (units.scale > 0f) units else DesignUnits(1f, density)
+    // the footer's own size (LocalChromeScale) grows or shrinks everything in it with the bar
+    val footer = LocalChromeScale.current.footer
+    return if (units.scale > 0f) DesignUnits(units.scale * footer, density, units.square) else DesignUnits(footer, density)
 }
 
 @Composable
@@ -461,7 +466,6 @@ internal fun hintBarRow(
     }
     .sortedBy { it.tappableAction() == GamepadAction.BACK }
 
-private val BarHeight = HintBarHeight
 private val CardEnter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 2 }
 private val CardExit = fadeOut(tween(160)) + slideOutVertically(tween(180)) { it / 2 }
 private val HintLabel = Color.White.copy(alpha = 0.85f)

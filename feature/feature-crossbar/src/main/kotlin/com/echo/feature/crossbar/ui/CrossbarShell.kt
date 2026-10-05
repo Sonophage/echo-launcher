@@ -229,6 +229,7 @@ fun CrossbarShellContainer(
         onOrbTransport = viewModel::onOrbTransport,
         onNotificationsDismissed = viewModel.panel::closeNotifications,
         onPanelRowTapped = viewModel.panel::onPanelRowTapped,
+        onFocusedNoticeTapped = viewModel.panel::onFocusedNoticeTapped,
         onPanelTabTapped = viewModel.panel::onPanelTabTapped,
         onNotificationsSwipedOpen = viewModel.panel::onNotificationsSwipedOpen,
         onNotificationsSwipedClosed = viewModel.panel::onNotificationsSwipedClosed,
@@ -236,6 +237,7 @@ fun CrossbarShellContainer(
         onOpenAppDrawer = viewModel::onOpenAppDrawer,
         onItemTap = viewModel::onItemTap,
         onRecentCardTap = viewModel.recents::onRecentCardTap,
+        onRecentCardPress = viewModel.recents::onRecentCardPress,
         onItemLongPress = viewModel::onItemLongPress,
         onPlatformLongPress = viewModel::onPlatformLongPress,
         onUserInteraction = viewModel::onUserInteraction,
@@ -320,6 +322,8 @@ fun CrossbarShellContainer(
         onCrossbarLayoutReset = viewModel::resetCrossbarLayoutAdjust,
         onCrossbarLayoutSave = viewModel::saveCrossbarLayoutAdjust,
         onCrossbarLayoutCancel = viewModel::cancelCrossbarLayoutAdjust,
+        onCrossbarLayoutHeader = viewModel::setCrossbarLayoutHeader,
+        onCrossbarLayoutFooter = viewModel::setCrossbarLayoutFooter,
         onNamePromptTextChanged = viewModel::onNamePromptTextChanged,
         onConfirmAppRename = viewModel::onConfirmAppRename,
         onCancelAppRename = viewModel::onCancelAppRename,
@@ -334,6 +338,7 @@ fun CrossbarShellContainer(
         onSearchActivatedAt = viewModel.librarySearch::onSearchActivatedAt,
         onSearchBack = viewModel.librarySearch::closeSearch,
         onSearchFocusedAt = viewModel.librarySearch::onSearchFocusedAt,
+        onSearchOptionsAt = viewModel.librarySearch::onSearchOptionsAt,
         onMusicBrowserQueryChange = viewModel.music::onMusicBrowserQueryChange,
         onMusicBrowserActivatedAt = viewModel.music::onMusicBrowserActivatedAt,
         onMusicBrowserLongPressAt = viewModel.music::onMusicBrowserLongPressAt,
@@ -405,6 +410,7 @@ fun CrossbarShell(
     onOrbTransport: (com.echo.feature.crossbar.viewmodel.StageCommand) -> Unit = {},
     onNotificationsDismissed: () -> Unit = {},
     onPanelRowTapped: (com.echo.feature.crossbar.viewmodel.NoticeFocus) -> Unit = {},
+    onFocusedNoticeTapped: () -> Unit = {},
     onPanelTabTapped: (com.echo.feature.crossbar.viewmodel.PanelTab) -> Unit = {},
     onNotificationsSwipedOpen: () -> Unit = {},
     onNotificationsSwipedClosed: () -> Unit = {},
@@ -413,6 +419,7 @@ fun CrossbarShell(
 
     onItemTap: (Int) -> Unit = {},
     onRecentCardTap: (Int) -> Unit = {},
+    onRecentCardPress: (Int, Boolean) -> Unit = { _, _ -> },
     onItemLongPress: (Int) -> Unit = {},
     onPlatformLongPress: (Int) -> Unit = {},
     onUserInteraction: () -> Unit = {},
@@ -510,6 +517,8 @@ fun CrossbarShell(
     onCrossbarLayoutReset: () -> Unit = {},
     onCrossbarLayoutSave: () -> Unit = {},
     onCrossbarLayoutCancel: () -> Unit = {},
+    onCrossbarLayoutHeader: (Float) -> Unit = {},
+    onCrossbarLayoutFooter: (Float) -> Unit = {},
     onNamePromptTextChanged: (String) -> Unit = {},
     onConfirmAppRename: (String) -> Unit = {},
     onCancelAppRename: () -> Unit = {},
@@ -522,6 +531,7 @@ fun CrossbarShell(
     onSearchBack: () -> Unit = {},
 
     onSearchFocusedAt: (Int) -> Unit = {},
+    onSearchOptionsAt: (Int) -> Unit = {},
     onMusicBrowserQueryChange: (String) -> Unit = {},
     onMusicBrowserActivatedAt: (Int) -> Unit = {},
     onMusicBrowserLongPressAt: (Int) -> Unit = {},
@@ -572,7 +582,10 @@ fun CrossbarShell(
         uiState.themeColors.withWaveTint(crossbarWave).copy(accentColor = crossbarGameAccent)
     }
     EchoTheme(colors = crossbarColors) {
+      val crossbarText = remember(crossbarColors.textPrimary) { com.echo.core.ui.theme.crossbarTextColors(crossbarColors.textPrimary) }
       CompositionLocalProvider(
+          com.echo.core.ui.theme.LocalEchoTextColors provides crossbarText,
+          androidx.compose.material3.LocalContentColor provides crossbarText.primary,
           com.echo.core.ui.icons.LocalCrossbarIconOverrides provides uiState.iconOverrides,
 
           LocalLiveRowProgress provides uiState.musicPlayback.let { pb ->
@@ -609,6 +622,7 @@ fun CrossbarShell(
                 )
 
             CompositionLocalProvider(
+                com.echo.core.ui.components.LocalChromeScale provides com.echo.core.ui.components.ChromeScale(layoutAdjust.headerScale, layoutAdjust.footerScale),
                 LocalPadPrompts provides padPromptsShown(rememberSystemStatus().controllerConnected, uiState.lastInputWasTouch),
                 LocalMenuBackdropArt provides if (uiState.onLastPlayedHome) {
                     uiState.currentItems.getOrNull(uiState.selectedItemIndex)?.backdropArt?.firstOrNull()
@@ -764,7 +778,7 @@ fun CrossbarShell(
                     glowScale = { waveGlow },
                 )
             }
-            // Last Played draws its own art over the background, so it draws the wave itself, above the art
+            // Last Played draws its own art over the background, so it draws the wave itself: over that art, under its icons
             val homeWaveStyle = if (powerThrottled) uiState.waveStyle.frozen else uiState.waveStyle
             val homeWave: (@Composable () -> Unit)? = if (homeWaveStyle.drawsWave) {
                 { WaveOverlay(homeWaveStyle, waveAccent, Modifier.fillMaxSize(), speedScale = { waveSpeed }, glowScale = { waveGlow }) }
@@ -839,6 +853,7 @@ fun CrossbarShell(
                     filter = uiState.recentFilter,
                     railVisible = uiState.recentRailVisible,
                     onCardTapped = onRecentCardTap,
+                    onCardPressed = onRecentCardPress,
                     wave = homeWave,
                     modifier = Modifier
                         .fillMaxSize()
@@ -1095,6 +1110,7 @@ fun CrossbarShell(
 
             var drawerTabs by remember { mutableStateOf<AppFilter?>(null) }
             var drawerTabPick by remember { mutableStateOf<AppFilter?>(null) }
+            var drawerSections by remember { mutableStateOf(AppFilter.entries.toList()) }
             val panelPull = rememberPanelPull(notificationsOpen)
             val battery = rememberBatteryReading()
             CompositionLocalProvider(LocalDensity provides baseDensity) {
@@ -1134,7 +1150,7 @@ fun CrossbarShell(
                     }
                 } else if (uiState.activeAppDrawerFilter != null && drawerTabs != null) {
                     { u, _ ->
-                        DrawerSectionRow(drawerTabs!!, u, Modifier.align(Alignment.Center)) { drawerTabPick = it }
+                        DrawerSectionRow(drawerTabs!!, drawerSections, u, Modifier.align(Alignment.Center)) { drawerTabPick = it }
                     }
                 } else if (uiState.onLastPlayedHome && crossbarContext) {
                     { u, _ ->
@@ -1143,17 +1159,12 @@ fun CrossbarShell(
                             u = u,
                             modifier = Modifier.align(Alignment.Center),
                             onFilterTapped = onRecentFilterTapped,
-                            includeApps = uiState.recentsIncludeApps,
+                            filters = uiState.recentFilters,
                         )
                     }
                 } else null,
-                modifier = Modifier.align(Alignment.TopCenter).zIndex(aboveContextRail).then(
-                    if (!notificationsOpen && uiState.activeSettingsScreen == null) {
-                        Modifier.panelPullGesture(panelPull, onNotificationsSwipedOpen, onNotificationsSwipedClosed)
-                    } else {
-                        Modifier
-                    },
-                ),
+                // owner, 2026-10-05: the panel opens by a tap on the strip, not a slide down; a slide up still closes it
+                modifier = Modifier.align(Alignment.TopCenter).zIndex(aboveContextRail),
             )
             }
 
@@ -1186,8 +1197,9 @@ fun CrossbarShell(
                         }
                     },
                     quick = QuickSettingsState(
-                        waveOn = uiState.waveStyle != com.echo.core.ui.wave.WaveStyle.OFF,
+                        wave = uiState.waveStyle,
                         backdropOn = uiState.itemBackdropEnabled,
+                        rowCoverArt = uiState.iconStyle == com.echo.core.ui.icons.GameIconStyle.COVER_ART,
                         recentAppsOn = uiState.recentsIncludeApps,
                         chips = uiState.libraryChips,
                     ),
@@ -1200,6 +1212,7 @@ fun CrossbarShell(
                     chipFocus = uiState.panelChip,
                     accent = com.echo.core.ui.theme.menuCursorEdge(),
                     onRowTapped = onPanelRowTapped,
+                    onFocusedTapped = onFocusedNoticeTapped,
                     settingFocus = uiState.panelSetting,
                     onQuickTapped = onQuickSettingTapped,
                     onSettingTapped = onPanelSettingTapped,
@@ -1313,7 +1326,7 @@ fun CrossbarShell(
                         onAddToCrossBar = onAddAppToOpenCategory,
                         onLaunchRom = onLaunchRomFromDrawer,
                         onOpenAppSearch = onOpenAppSearch,
-                        onTabsShown = { active, _ -> drawerTabs = active },
+                        onTabsShown = { active, sections -> drawerTabs = active; drawerSections = sections },
                         tabPick = drawerTabPick,
                         onTabPickConsumed = { drawerTabPick = null },
                         modifier = Modifier.fillMaxSize(),
@@ -1329,6 +1342,7 @@ fun CrossbarShell(
                     onBack = onSearchBack,
 
                     onFocusAt = onSearchFocusedAt,
+                    onOptionsAt = onSearchOptionsAt,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -1435,6 +1449,9 @@ fun CrossbarShell(
                     onReset = onCrossbarLayoutReset,
                     onSave = onCrossbarLayoutSave,
                     onCancel = onCrossbarLayoutCancel,
+                    sizingHeader = session.sizingHeader,
+                    onHeader = onCrossbarLayoutHeader,
+                    onFooter = onCrossbarLayoutFooter,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

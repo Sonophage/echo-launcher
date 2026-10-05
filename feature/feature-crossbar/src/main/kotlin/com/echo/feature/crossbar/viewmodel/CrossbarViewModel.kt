@@ -138,6 +138,8 @@ data class CrossbarContextMenu(
     val musicFolderId: String? = null,
     val musicTrackId: String? = null,
 
+    val recentAlbum: CrossbarItem? = null,
+
     val playlistId: Long? = null,
 
     val playlistPickerTrackId: String? = null,
@@ -226,6 +228,8 @@ data class CrossbarLayoutAdjustSession(
     val original: com.echo.themekit.CrossbarLayoutAdjust,
     val bucketKey: String,
     val slidersVisible: Boolean = false,
+    // which band LB and RB size: the footer, or (after Y) the top bar
+    val sizingHeader: Boolean = false,
 )
 
 data class CustomIconSession(
@@ -673,6 +677,8 @@ data class CrossbarUiState(
 
     val recentFilter: RecentFilter = RecentFilter.ALL,
 
+    val recentFilters: List<RecentFilter> = listOf(RecentFilter.ALL),
+
     val recentRailVisible: Boolean = false,
 
     val pillCursor: PillCursor? = null,
@@ -1045,6 +1051,8 @@ fun CrossbarItem.hasContextMenu(state: CrossbarUiState): Boolean {
             (type == CrossbarItemType.PHOTO_FILE && id.startsWith("pho_")) ||
                 (type == CrossbarItemType.PHOTO_FOLDER && id.startsWith("plib_"))
         ) -> true
+        isRecentAlbum -> true
+        movableInColumn && state.columnOrderKey() != null -> true
         mediaRootKind != null && type == CrossbarItemType.MEDIA_ROOT -> true
         type == CrossbarItemType.MEDIA_ROOT -> true
         gameId != null -> true
@@ -1344,6 +1352,10 @@ class CrossbarViewModel @Inject constructor(
     private var heldFromPad: GamepadAction? = null
     private var holdButton: GamepadAction? = null
 
+    internal fun startLaunchHold(item: CrossbarItem, launch: () -> Unit) = launchHold.start(item.id, launch)
+
+    internal fun releaseLaunchHold() = launchHold.release()
+
     // starts the launch ring when a pad A press would leave ECHO; false means act now
     internal fun holdToLaunch(item: CrossbarItem, launch: () -> Unit): Boolean {
         if (heldFromPad != GamepadAction.SELECT || !item.launchesOut()) return false
@@ -1423,6 +1435,7 @@ class CrossbarViewModel @Inject constructor(
         artworkTools.observeMediaCovers()
         bookshelf.observeContinueBook()
         observeHiddenPlacements()
+        observeColumnOrders()
         panel.observeAndroidNotices()
         recents.observeRecentTop()
         recents.observeShelfCounts()
@@ -1740,7 +1753,7 @@ class CrossbarViewModel @Inject constructor(
 
                         val lead = if (category.id == NETWORK_CATEGORY_ID) listOf(librarySearch.quickSearchItem()) else emptyList()
 
-                        _uiState.update { it.copy(currentItems = lead + items + addAppsItem()) }
+                        _uiState.update { it.copy(currentItems = lead + orderedColumn(items, columnOrderFor(category.id)) + addAppsItem()) }
                     }
                 }
             }
@@ -1763,6 +1776,16 @@ class CrossbarViewModel @Inject constructor(
 
     internal fun libraryColumn(body: List<CrossbarItem>, scope: SearchScope): List<CrossbarItem> =
         body + librarySearch.librarySearchItem(scope)
+
+    internal fun mediaRootColumn(
+        hasFolders: Boolean,
+        sections: List<CrossbarItem>,
+        apps: List<CrossbarItem>,
+        addRows: List<CrossbarItem>,
+        scope: SearchScope,
+    ): List<CrossbarItem> =
+        orderedColumn(if (hasFolders) mediaColumn(sections, apps, addRows) else folderlessColumn(apps, addRows), columnOrderFor(currentCategory()?.id))
+            .let { if (hasFolders) libraryColumn(it, scope) else it }
 
     private fun addAppsItem(): CrossbarItem = CrossbarItem(
         id       = ADD_APPS_ITEM_ID,
@@ -1803,6 +1826,42 @@ class CrossbarViewModel @Inject constructor(
     }
 
     @Volatile private var hiddenKeys: Set<String> = emptySet()
+
+    @Volatile private var columnOrders: Map<String, List<String>> = emptyMap()
+
+    internal fun columnOrderFor(categoryId: String?): List<String> = categoryId?.let { columnOrders[it] }.orEmpty()
+
+    private fun observeColumnOrders() {
+        viewModelScope.launch {
+            context.echoDataStore.data
+                .map { prefs ->
+                    prefs.asMap().mapNotNull { (key, value) ->
+                        key.name.removePrefix(COLUMN_ORDER_PREFIX).takeIf { key.name.startsWith(COLUMN_ORDER_PREFIX) }
+                            ?.let { it to (value as? String).orEmpty().split('\n').filter(String::isNotBlank) }
+                    }.toMap()
+                }
+                .distinctUntilChanged()
+                .collect { orders ->
+                    columnOrders = orders
+                    loadItemsForCategory(currentCategory())
+                }
+        }
+    }
+
+    // owner, 2026-10-05: Move Up and Move Down put an app or folder row where the owner wants it in the column
+    private fun moveInColumn(delta: Int) {
+        val state = _uiState.value
+        val key = state.columnOrderKey() ?: return
+        val item = state.currentItems.getOrNull(state.selectedItemIndex)?.takeIf { it.movableInColumn } ?: return
+        val ids = state.currentItems.filter { it.movableInColumn }.map { it.id }
+        val next = movedOrder(ids, item.id, delta)
+        if (next == ids) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(selectedItemIndex = (it.selectedItemIndex + delta).coerceIn(0, it.currentItems.lastIndex)) }
+        viewModelScope.launch {
+            context.echoDataStore.edit { it[stringPreferencesKey(COLUMN_ORDER_PREFIX + key)] = next.joinToString("\n") }
+        }
+    }
 
     private fun observeHiddenPlacements() {
         viewModelScope.launch {
@@ -1865,6 +1924,9 @@ class CrossbarViewModel @Inject constructor(
 
             cat != null && cat.isGamingCategory && cat.id != BuiltInCategory.GAMES ->
                 Triple(HideLocationType.CATEGORY, cat.id, cat.name)
+
+            // owner, 2026-10-05: hidden from the Recent panel only, until it is unhidden in Hidden Items
+            cat?.id == BuiltInCategory.RECENTLY_PLAYED -> Triple(HideLocationType.RECENTS, "", "Recent")
             else -> null
         }
     }
@@ -2560,6 +2622,11 @@ class CrossbarViewModel @Inject constructor(
                 GamepadAction.PREV_CATEGORY  -> nudgeCrossbarLayoutScale(-1)
                 GamepadAction.NEXT_CATEGORY  -> nudgeCrossbarLayoutScale(+1)
                 GamepadAction.OPEN_CONTEXT_MENU -> resetCrossbarLayoutAdjust()
+                GamepadAction.PREV_PAGE      -> nudgeCrossbarChrome(-1)
+                GamepadAction.NEXT_PAGE      -> nudgeCrossbarChrome(+1)
+                GamepadAction.OPEN_SEARCH    -> state.crossbarLayoutAdjust.let { s ->
+                    _uiState.update { it.copy(crossbarLayoutAdjust = s.copy(sizingHeader = !s.sizingHeader)) }
+                }
 
                 GamepadAction.CHANGE_SORT       -> toggleCrossbarLayoutSliders()
                 GamepadAction.SELECT         -> saveCrossbarLayoutAdjust()
@@ -3040,6 +3107,9 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
+        // the menu stays open, so each press moves the row one more place
+        if (itemId == COLUMN_MOVE_UP || itemId == COLUMN_MOVE_DOWN) return moveInColumn(if (itemId == COLUMN_MOVE_UP) -1 else 1)
+
         if (menu.isAddMenu) {
             val row = currentAddActions().firstOrNull { it.id == itemId }
             closeContextMenu()
@@ -3059,6 +3129,13 @@ class CrossbarViewModel @Inject constructor(
 
         closeContextMenu()
 
+        if (menu.recentAlbum != null) {
+            when (itemId) {
+                "open_album" -> _uiState.value.currentItems.indexOfFirst { it.id == menu.recentAlbum.id }.takeIf { it >= 0 }?.let(::onItemSelected)
+                "remove_from_recent" -> recents.removeFromRecent(menu.recentAlbum)
+            }
+            return
+        }
         if (menu.videoFileId != null) {
             video.handleVideoFileAction(menu.videoFileId, itemId)
             return
@@ -3170,6 +3247,7 @@ class CrossbarViewModel @Inject constructor(
                     }
 
                     "remove_from_recent" -> recents.dismissAppFromRecents(pkg)
+                    "hide_from_recent" -> persistHide(HiddenPlacement.appKey(pkg), menu.title, HideLocationType.RECENTS, "", "Recent")
                     "hide_everywhere" -> appAction { appCategoryRepository.setHidden(pkg, true) }
                     "rename"    -> _uiState.update {
                         it.copy(renameAppTarget = pkg, renameAppCurrent = menu.title, renameAppText = menu.title)
@@ -3324,12 +3402,29 @@ class CrossbarViewModel @Inject constructor(
 
     private fun openContextMenuForFocusedItem() {
         val state = _uiState.value
-        val item = state.currentItems.getOrNull(state.selectedItemIndex)
+        openContextMenuFor(state.currentItems.getOrNull(state.selectedItemIndex))
+    }
+
+    // the one place an item's Options menu is chosen: the crossbar, a long press and Search's banner
+    internal fun openContextMenuFor(item: CrossbarItem?) {
+        val before = _uiState.value.activeContextMenu
+        openItemMenu(item)
+        // in a column the owner can order, every app and folder row also offers Move Up and Move Down
+        if (item == null || !item.movableInColumn || _uiState.value.columnOrderKey() == null) return
+        _uiState.update { s ->
+            val opened = s.activeContextMenu?.takeIf { it !== before }
+            s.copy(activeContextMenu = opened?.copy(state = opened.state.copy(rows = opened.state.rows + columnMoveRows()))
+                ?: CrossbarContextMenu(state = MenuState(title = item.title, rows = columnMoveRows())))
+        }
+    }
+
+    private fun openItemMenu(item: CrossbarItem?) {
         when {
             item?.mediaRootUri != null && item.mediaRootKind == null -> folders.openRomRootContextMenu(item)
             item?.mediaRootUri != null -> folders.openMediaRootContextMenu(item)
             item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
                 folders.openMediaFoldersContextMenu(item)
+            item?.isRecentAlbum == true -> music.openRecentAlbumContextMenu(item)
             item != null && music.openMusicContextMenu(item) -> Unit
             item != null && video.openVideoContextMenu(item) -> Unit
             item != null && bookshelf.openBookContextMenu(item) -> Unit
@@ -3364,10 +3459,10 @@ class CrossbarViewModel @Inject constructor(
         viewModelScope.launch {
             when (setting) {
                 QuickSetting.WAVE -> context.echoDataStore.edit { prefs ->
-                    prefs[KEY_WAVE_STYLE] = (if (s.waveStyle == WaveStyle.OFF) waveStyleBeforeOff else WaveStyle.OFF).name
-                    if (s.waveStyle != WaveStyle.OFF) waveStyleBeforeOff = s.waveStyle
+                    prefs[KEY_WAVE_STYLE] = s.waveStyle.next.name
                 }
                 QuickSetting.BACKDROP -> iconDisplayPreferences.setItemBackdrop(!s.itemBackdropEnabled)
+                QuickSetting.ROW_ART -> iconDisplayPreferences.setRowCoverArt(s.iconStyle != GameIconStyle.COVER_ART)
                 QuickSetting.RECENT_APPS -> context.echoDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
                 QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
                 QuickSetting.ANDROID_SETTINGS -> {
@@ -3394,7 +3489,6 @@ class CrossbarViewModel @Inject constructor(
         toggleQuickSetting(setting, chip)
     }
 
-    private var waveStyleBeforeOff = WaveStyle.ANIMATED
 
     private fun observeLibraryChips() {
         viewModelScope.launch {
@@ -3969,21 +4063,7 @@ class CrossbarViewModel @Inject constructor(
 
     fun onItemLongPress(index: Int) {
         if (_uiState.value.hasBlockingOverlay) return
-        val item = _uiState.value.currentItems.getOrNull(index)
-        when {
-            item?.mediaRootUri != null && item.mediaRootKind == null -> folders.openRomRootContextMenu(item)
-            item?.mediaRootUri != null -> folders.openMediaRootContextMenu(item)
-            item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
-                folders.openMediaFoldersContextMenu(item)
-            item != null && music.openMusicContextMenu(item) -> Unit
-            item != null && video.openVideoContextMenu(item) -> Unit
-            item != null && bookshelf.openBookContextMenu(item) -> Unit
-            item != null && gallery.openPhotoContextMenu(item) -> Unit
-            item?.gameId != null -> gameActions.openGameContextMenu(item)
-            item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu()
-            item?.platformId != null -> openPlatformContextMenu(item.platformId)
-            item?.packageName != null -> openAppContextMenu(item)
-        }
+        openContextMenuFor(_uiState.value.currentItems.getOrNull(index))
     }
 
     private fun openPlatformFolder(platformId: String) {
@@ -4183,6 +4263,14 @@ class CrossbarViewModel @Inject constructor(
     fun nudgeCrossbarLayoutHorizontal(dir: Int) = updateAdjustDraft { it.copy(barLeftFraction = it.barLeftFraction + dir * 0.01f) }
     fun nudgeCrossbarLayoutVertical(dir: Int) = updateAdjustDraft { it.copy(barTopFraction = it.barTopFraction + dir * 0.01f) }
     fun nudgeCrossbarLayoutScale(dir: Int) = updateAdjustDraft { it.copy(scale = it.scale + dir * 0.02f) }
+
+    private fun nudgeCrossbarChrome(dir: Int) = updateAdjustDraft {
+        if (_uiState.value.crossbarLayoutAdjust?.sizingHeader == true) it.copy(headerScale = it.headerScale + dir * 0.05f)
+        else it.copy(footerScale = it.footerScale + dir * 0.05f)
+    }
+
+    fun setCrossbarLayoutHeader(v: Float) = updateAdjustDraft { it.copy(headerScale = v) }
+    fun setCrossbarLayoutFooter(v: Float) = updateAdjustDraft { it.copy(footerScale = v) }
 
     fun setCrossbarLayoutScale(v: Float) = updateAdjustDraft { it.copy(scale = v) }
     fun setCrossbarLayoutHorizontal(v: Float) = updateAdjustDraft { it.copy(barLeftFraction = v) }
@@ -4442,6 +4530,11 @@ class CrossbarViewModel @Inject constructor(
         viewModelScope.launch {
             iconDisplayPreferences.gameMetadataFlow.collect { visible ->
                 _uiState.update { it.copy(gameMetadataVisible = visible) }
+            }
+        }
+        viewModelScope.launch {
+            iconDisplayPreferences.rowCoverArtFlow.collect { cover ->
+                _uiState.update { it.copy(iconStyle = if (cover) GameIconStyle.COVER_ART else GameIconStyle.PSP_RECTANGLE) }
             }
         }
         viewModelScope.launch {

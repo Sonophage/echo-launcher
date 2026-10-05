@@ -44,10 +44,18 @@ enum class AppFilter(val label: String, val subtitle: String) {
         RECENT -> app.lastUsedAt > 0L
     }
 
-    fun stepped(delta: Int): AppFilter = entries[(ordinal + delta).mod(entries.size)]
+    fun stepped(delta: Int, shown: List<AppFilter>): AppFilter {
+        val here = shown.indexOf(this)
+        return if (here < 0) shown.first() else shown[(here + delta).mod(shown.size)]
+    }
 
     companion object {
         val DEFAULT = RECENT
+
+        // owner, 2026-10-05: a section with nothing in it is not shown. Recently Used stays while usage
+        // access is off, because its empty page is where that access is granted
+        fun shown(counts: Map<AppFilter, Int>, hasUsageAccess: Boolean): List<AppFilter> =
+            entries.filter { (counts[it] ?: 0) > 0 || (it == RECENT && !hasUsageAccess) }.ifEmpty { listOf(DEFAULT) }
     }
 }
 
@@ -94,6 +102,8 @@ data class AppDrawerUiState(
     val menuAppIsGame: Boolean = false,
 
     val filterCounts: Map<AppFilter, Int> = emptyMap(),
+
+    val sections: List<AppFilter> = AppFilter.entries,
 
     val letterMenu: List<Char> = emptyList(),
 
@@ -146,6 +156,7 @@ class AppDrawerViewModel @Inject constructor(
     private val memoryCardRepository: com.echo.core.data.repository.MemoryCardRepository,
     private val mediaLaunchGate: com.echo.core.data.launch.MediaLaunchGate,
     private val platformDao: com.echo.core.data.database.dao.PlatformDao,
+    private val appCategoryRepository: AppCategoryRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AppDrawerUiState())
     val uiState: StateFlow<AppDrawerUiState> = _uiState.asStateFlow()
@@ -158,7 +169,8 @@ class AppDrawerViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val hasUsageAccess = appRepository.hasUsageAccess()
-            val apps = appRepository.getInstalledApps() + romsInLibrary()
+            val hidden = appCategoryRepository.hiddenEverywhere()
+            val apps = appRepository.getInstalledApps().filterNot { it.packageName in hidden } + romsInLibrary()
             _uiState.update {
                 it.copy(
                     allApps = apps.sortedBy { app -> app.label.lowercase() },
@@ -503,7 +515,7 @@ class AppDrawerViewModel @Inject constructor(
         }
 
         if (action == GamepadAction.PREV_CATEGORY || action == GamepadAction.NEXT_CATEGORY) {
-            setFilter(state.activeFilter.stepped(if (action == GamepadAction.PREV_CATEGORY) -1 else 1))
+            setFilter(state.activeFilter.stepped(if (action == GamepadAction.PREV_CATEGORY) -1 else 1, state.sections))
             return
         }
 
@@ -544,6 +556,11 @@ class AppDrawerViewModel @Inject constructor(
     }
 
     private fun applyFilter() {
+        val counts = AppFilter.entries.associateWith { filter -> _uiState.value.allApps.count(filter::matches) }
+        // nothing is counted until the apps have loaded, so every section stays until then
+        val sections = if (_uiState.value.allApps.isEmpty()) AppFilter.entries else AppFilter.shown(counts, _uiState.value.hasUsageAccess)
+        // the section that was showing has emptied: move to the first one left
+        if (_uiState.value.activeFilter !in sections) _uiState.update { it.copy(activeFilter = sections.first(), selectedIndex = 0) }
         val state = _uiState.value
 
         val tabApps = state.allApps.filter { app -> state.activeFilter.matches(app) }
@@ -559,12 +576,6 @@ class AppDrawerViewModel @Inject constructor(
                 }
             }
 
-        val counts = AppFilter.values().associateWith { filter ->
-            state.allApps.count { app ->
-                filter.matches(app)
-            }
-        }
-
         val letters = letterMenuFor(inTab.map { it.label })
         val pick = state.letterFilter?.takeIf { it in letters }
         val kept = { app: InstalledApp -> pick == null || initialOf(app.label) == pick }
@@ -573,6 +584,7 @@ class AppDrawerViewModel @Inject constructor(
             it.copy(
                 visibleApps = inTab.filter(kept),
                 filterCounts = counts,
+                sections = sections,
                 letterMenu = letters,
                 letterFilter = pick,
                 systemChips = chips,

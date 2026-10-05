@@ -57,6 +57,10 @@ private val CartridgePinColor       = Color(0xFF2E2E38)
 private val IconBorder              = Color(0x55FFFFFF)
 private val ShineColor              = Color(0x18FFFFFF)
 
+// the shelf's cover, but not the icon it falls back to: with no cover the row keeps its icon
+private val CrossbarItem.coverForRow: String?
+    get() = shelfCoverArt?.takeIf { it != iconUri }
+
 @Composable
 fun GameIcon(
     item: CrossbarItem,
@@ -75,6 +79,16 @@ fun GameIcon(
             title       = item.title,
             modifier    = modifier,
         )
+
+        // the cover keeps its own shape in the row's slot; a game with no cover keeps its icon
+        iconStyle == GameIconStyle.COVER_ART && item.coverForRow != null -> NaturalArtSlot(modifier) { artModifier ->
+            AsyncImage(
+                model = rememberArtworkModel(item.coverForRow),
+                contentDescription = item.title,
+                contentScale = ContentScale.Fit,
+                modifier = artModifier,
+            )
+        }
 
         iconStyle == GameIconStyle.CARTRIDGE -> NaturalArtSlot(modifier) { artModifier ->
             PhysicalMediaIcon(

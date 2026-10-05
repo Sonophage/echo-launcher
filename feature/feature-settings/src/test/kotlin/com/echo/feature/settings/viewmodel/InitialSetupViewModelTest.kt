@@ -58,7 +58,7 @@ class InitialSetupViewModelTest {
     private fun buildVm() = InitialSetupViewModel(
         context, romRoots, mediaRoots, artworkImport, RetroArchSetup(retroArchLink, autoConfig), vita3KLibrary,
         sgdbKeys, metadataKeys,
-        scanRunner, romRootScanRunner,
+        FolderAccess(context, romRoots, mediaRoots, artworkImport, romRootScanRunner, scanRunner),
         StandardRomFolders(mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)),
         launcherShortcuts,
         mockk<com.echo.feature.artwork.api.TmdbApiKeyProvider>(relaxed = true) {
