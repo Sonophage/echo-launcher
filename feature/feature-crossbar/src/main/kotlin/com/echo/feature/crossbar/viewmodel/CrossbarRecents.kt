@@ -53,7 +53,7 @@ class CrossbarRecents(
     private fun recentAppRows(): Flow<List<Pair<Long, CrossbarItem>>> =
         combine(
             uiState.map { it.recentsIncludeApps }.distinctUntilChanged(),
-            vm.appCategoryRepository.changes().onStart { emit(Unit) },
+            combine(vm.appCategoryRepository.changes().onStart { emit(Unit) }, vm.appCategoryRepository.lastUsedChanges()) { _, _ -> },
             vm.context.echoDataStore.data
                 .map { it[CrossbarViewModel.KEY_RECENT_APP_DISMISSALS].orEmpty() }
                 .distinctUntilChanged(),

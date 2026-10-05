@@ -46,4 +46,19 @@ class AppCategoryCacheTest {
         repo.onPackagesChanged()
         assertEquals(2, seen.await().size)
     }
+
+    // owner, 2026-10-05: an app opened after ECHO started stayed out of Recent until a package changed
+    @Test
+    fun `coming back to ECHO re-reads when each app was used, without reloading the apps`() = runTest {
+        coEvery { installed.getInstalledApps() } returns listOf(app("a"), app("b"))
+        every { installed.loadLastUsedTimestamps() } returns mapOf("b" to 42L)
+        repo.allInstalledApps()
+        val before = repo.lastUsedChanges().first()
+
+        repo.refreshLastUsed()
+
+        assertEquals(mapOf("a" to 0L, "b" to 42L), repo.allInstalledApps().associate { it.packageName to it.lastUsedAt })
+        assertEquals("Recent is told to reload", before + 1, repo.lastUsedChanges().first())
+        io.mockk.coVerify(exactly = 1) { installed.getInstalledApps() }
+    }
 }

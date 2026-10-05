@@ -4410,6 +4410,7 @@ class CrossbarViewModel @Inject constructor(
     internal var bootOnResume: Boolean = false
 
     fun onHostResumed() {
+        viewModelScope.launch { runCatching { appCategoryRepository.refreshLastUsed() }.onFailure { Timber.w(it, "Could not re-read app usage") } }
         if (!bootEnabled || !bootOnResume) return
         _uiState.update { it.copy(showBootSequence = true) }
     }

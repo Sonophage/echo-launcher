@@ -151,7 +151,7 @@ class InstalledAppRepository @Inject constructor(
         }
     }
 
-    private fun loadLastUsedTimestamps(): Map<String, Long> {
+    fun loadLastUsedTimestamps(): Map<String, Long> {
         if (!hasUsageAccess()) return emptyMap()
 
         val usageStatsManager = context.getSystemService(UsageStatsManager::class.java)

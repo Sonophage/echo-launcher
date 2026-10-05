@@ -19,9 +19,13 @@ class CrossbarSearch(
     internal fun librarySearchItem(scope: SearchScope): CrossbarItem = CrossbarItem(
         id       = CrossbarViewModel.SEARCH_ITEM_ID,
         title    = scope.label,
-        subtitle = scope.hint,
+        subtitle = hintFor(scope),
         type     = CrossbarItemType.SEARCH,
     )
+
+    private fun kindsShown(): Set<SearchKind> = searchKindsShown(uiState.value.categories.map { it.id })
+
+    private fun hintFor(scope: SearchScope): String = if (scope == SearchScope.ALL) searchAllHint(kindsShown()) else scope.hint
 
     internal fun quickSearchItem(): CrossbarItem = CrossbarItem(
         id       = CrossbarViewModel.QUICK_SEARCH_ITEM_ID,
@@ -57,16 +61,17 @@ class CrossbarSearch(
         menuSound.play(MenuSound.SELECT)
         uiState.update { it.copy(search = SearchState(scope = scope)) }
         this@CrossbarSearch.scope.launch {
-            val wantsGames = scope == SearchScope.ALL || scope == SearchScope.GAMES
-            val wantsVideos = scope == SearchScope.ALL || scope == SearchScope.VIDEOS
-            val wantsPhotos = scope == SearchScope.ALL || scope == SearchScope.PHOTOS
-            val wantsBooks = scope == SearchScope.ALL || scope == SearchScope.BOOKS
+            val shown = kindsShown()
+            val wantsGames = (scope == SearchScope.ALL && SearchKind.GAMES in shown) || scope == SearchScope.GAMES
+            val wantsVideos = (scope == SearchScope.ALL && SearchKind.VIDEO in shown) || scope == SearchScope.VIDEOS
+            val wantsPhotos = (scope == SearchScope.ALL && SearchKind.PHOTOS in shown) || scope == SearchScope.PHOTOS
+            val wantsBooks = (scope == SearchScope.ALL && SearchKind.BOOKS in shown) || scope == SearchScope.BOOKS
             searchGames = if (wantsGames) vm.gameRepository.observeAllGames().first() else emptyList()
             searchVideos = if (wantsVideos) vm.videoRepository.observeAllVideos().first() else emptyList()
             searchPhotos = if (wantsPhotos) vm.photoRepository.observeAllPhotos().first() else emptyList()
             searchBooks = if (wantsBooks) vm.bookRepository.observeAllBooks().first() else emptyList()
 
-            val wantsTracks = scope == SearchScope.ALL || scope == SearchScope.MUSIC
+            val wantsTracks = (scope == SearchScope.ALL && SearchKind.MUSIC in shown) || scope == SearchScope.MUSIC
             searchTracks = if (wantsTracks) vm.musicRepository.observeAllTracks().first() else emptyList()
 
             val wantsApps = scope == SearchScope.ALL || scope == SearchScope.APPS
@@ -142,7 +147,7 @@ class CrossbarSearch(
             else -> when (searchEmptyState(state.loaded, q, anyContent)) {
                 SearchEmptyState.LOADING -> searchNoticeItem("Reading your libraries", "One moment.")
                 SearchEmptyState.EMPTY_LIBRARY -> searchNoticeItem(state.scope.emptyTitle, state.scope.emptyHint)
-                SearchEmptyState.PROMPT -> searchNoticeItem("Type to search", state.scope.hint)
+                SearchEmptyState.PROMPT -> searchNoticeItem("Type to search", hintFor(state.scope))
                 SearchEmptyState.NO_MATCHES -> searchNoticeItem("No matches", "Nothing here matches that.")
             }.let(::listOf)
         }

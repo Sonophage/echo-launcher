@@ -57,6 +57,19 @@ class AppCategoryRepository @Inject constructor(
         )
     }
 
+    // owner, 2026-10-05: an app opened after ECHO started never reached Recent, because its last-used
+    // time was read once with the list. Coming back to ECHO re-reads only the times, not the apps
+    private val lastUsedChanges = MutableStateFlow(0)
+
+    fun lastUsedChanges(): Flow<Int> = lastUsedChanges
+
+    suspend fun refreshLastUsed() {
+        if (cache.isEmpty()) return
+        val lastUsed = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { installedAppRepository.loadLastUsedTimestamps() }
+        cache = cache.map { it.copy(lastUsedAt = lastUsed[it.packageName] ?: 0L) }
+        lastUsedChanges.update { it + 1 }
+    }
+
     internal fun onPackagesChanged() {
         cache = emptyList()
         packageChanges.update { it + 1 }

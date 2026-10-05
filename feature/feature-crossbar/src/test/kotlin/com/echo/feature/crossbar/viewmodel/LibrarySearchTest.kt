@@ -130,4 +130,14 @@ class LibrarySearchTest {
             }
         }
     }
+
+    // owner, 2026-10-05: with Media off the hint said "music, video, photos and books" over nothing
+    @Test
+    fun `the search hint names apps and only the libraries on the crossbar`() {
+        val everything = listOf("games", "music", "videos", "photos", "library")
+        assertEquals("Games, apps, music, video, photos and books", searchAllHint(searchKindsShown(everything)))
+        assertEquals("Games and apps", searchAllHint(searchKindsShown(listOf("games", "network"))))
+        assertEquals("a launcher only still searches apps", "Apps", searchAllHint(searchKindsShown(emptyList())))
+        assertFalse(SearchKind.MUSIC in searchKindsShown(listOf("games")))
+    }
 }

@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.domain.model.GamepadAction
 
 enum class SearchScope(
@@ -37,6 +38,26 @@ enum class SearchScope(
         "Search Apps", "Installed apps and their package names",
         "No apps yet", "Nothing is installed that can be launched",
     ),
+}
+
+// owner, 2026-10-05: Search finds apps, plus each library whose column is on the crossbar, and its hint
+// names only those; turning Media or Gaming off in setup takes them out of both
+enum class SearchKind(val noun: String, val categoryId: String?) {
+    GAMES("games", BuiltInCategory.GAMES),
+    APPS("apps", null),
+    MUSIC("music", BuiltInCategory.MUSIC),
+    VIDEO("video", BuiltInCategory.VIDEO),
+    PHOTOS("photos", BuiltInCategory.PHOTO),
+    BOOKS("books", BuiltInCategory.LIBRARY),
+}
+
+fun searchKindsShown(visibleCategoryIds: Collection<String>): Set<SearchKind> =
+    SearchKind.entries.filter { it.categoryId == null || it.categoryId in visibleCategoryIds }.toSet()
+
+fun searchAllHint(kinds: Set<SearchKind>): String {
+    val nouns = SearchKind.entries.filter { it in kinds }.map { it.noun }
+    val text = if (nouns.size < 2) nouns.joinToString() else nouns.dropLast(1).joinToString(", ") + " and " + nouns.last()
+    return text.replaceFirstChar { it.uppercase() }
 }
 
 fun normalizeForSearch(text: String): String =
