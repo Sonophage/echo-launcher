@@ -1299,6 +1299,7 @@ fun CrossbarShell(
                         onComplete = onBootComplete,
                         bootVideoPath = uiState.bootVideoPath,
                         bootAudioPath = uiState.bootAudioPath,
+                        skipRequested = uiState.bootSkipRequested,
                     )
                 } else {
                     Box(modifier = Modifier.fillMaxSize().background(Color.Black))
@@ -1667,6 +1668,19 @@ fun CrossbarShell(
             }
 
             uiState.activeGameBoot?.let { request ->
+                if (request.videoPath == null && request.style == com.echo.core.data.repository.GameBootStyle.LENS) {
+                    com.echo.core.ui.components.LensLaunchCeremony(
+                        title = request.gameTitle,
+                        coverArt = request.cardArt,
+                        backdropArt = request.backdropArt,
+                        accent = request.accentArgb?.let { Color(it.toInt()) },
+                        waveStyle = gameBootWaveStyle,
+                        onHandOff = onGameBootHandOff,
+                        onFinished = onGameBootComplete,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    return@let
+                }
                 if (request.videoPath == null) {
                     DiscLaunchCeremony(
                         art = request.coverArt,

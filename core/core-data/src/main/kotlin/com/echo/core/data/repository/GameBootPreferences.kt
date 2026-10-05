@@ -12,6 +12,9 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+// owner, 2026-10-05: the built-in game launch animation; Lens is the second option beside the disc
+enum class GameBootStyle(val label: String) { DISC("Disc"), LENS("Lens") }
+
 @Singleton
 class GameBootPreferences @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -25,7 +28,16 @@ class GameBootPreferences @Inject constructor(
         it.remove(KEY_GAMEBOOT_MODE)
     }
 
+    val styleFlow: Flow<GameBootStyle> = context.echoDataStore.data.map { styleOf(it) }
+
+    suspend fun setStyle(style: GameBootStyle) = context.echoDataStore.edit { it[KEY_GAMEBOOT_STYLE] = style.name }
+
     companion object {
+        private val KEY_GAMEBOOT_STYLE = stringPreferencesKey("display_gameboot_style")
+
+        fun styleOf(prefs: Preferences): GameBootStyle =
+            GameBootStyle.entries.firstOrNull { it.name == prefs[KEY_GAMEBOOT_STYLE] } ?: GameBootStyle.DISC
+
         private val KEY_GAMEBOOT_ENABLED = booleanPreferencesKey("display_gameboot_enabled")
 
         private val KEY_GAMEBOOT_MODE = stringPreferencesKey("display_gameboot_mode")

@@ -29,13 +29,25 @@ data class GameBootRequest(
     val audioPath: String? = null,
 
     val coverArt: String? = null,
+    val style: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC,
+    // for Lens: the wide art that fills the screen, the card it starts from, and the game's colour
+    val backdropArt: String? = null,
+    val cardArt: String? = null,
+    val accentArgb: Long? = null,
 )
+
+// when the launch sound starts in each built-in animation
+internal fun gameBootSoundDelayMs(style: com.echo.core.data.repository.GameBootStyle): Long = when (style) {
+    com.echo.core.data.repository.GameBootStyle.DISC -> com.echo.core.ui.components.DiscCeremony.DiscOutStartMs.toLong()
+    com.echo.core.data.repository.GameBootStyle.LENS -> com.echo.core.ui.components.LensCeremony.SOUND_MS.toLong()
+}
 
 @Singleton
 class GameBootGate @Inject constructor(
     private val preferences: GameBootPreferences,
     private val uiMedia: UiMediaStore,
     private val audioPlayer: UiMediaAudioPlayer,
+    private val artworkAccent: com.echo.core.data.repository.ArtworkAccent,
 
     @LaunchDispatcherScope private val scope: CoroutineScope,
 ) {
@@ -50,7 +62,7 @@ class GameBootGate @Inject constructor(
 
     val isActive: Boolean get() = _active.value != null
 
-    suspend fun awaitPresentation(gameTitle: String, coverArt: String? = null) {
+    suspend fun awaitPresentation(gameTitle: String, coverArt: String? = null, backdropArt: String? = null, cardArt: String? = null) {
         if (!preferences.gameBootEnabledFlow.first()) return
         if (isActive) {
             Timber.d("GameBoot already presenting — ignoring a second request for $gameTitle")
@@ -65,14 +77,21 @@ class GameBootGate @Inject constructor(
                 customAudioPath = uiMedia.pathFor(UiMediaSlot.GAMEBOOT_AUDIO),
             )
         }
-        _active.value = GameBootRequest(gameTitle = gameTitle, videoPath = video, audioPath = audio, coverArt = coverArt)
+        val style = preferences.styleFlow.first()
+        val accent = if (video == null && style == com.echo.core.data.repository.GameBootStyle.LENS) {
+            runCatching { artworkAccent.of(backdropArt, cardArt, coverArt) }.getOrNull()
+        } else null
+        _active.value = GameBootRequest(
+            gameTitle = gameTitle, videoPath = video, audioPath = audio, coverArt = coverArt,
+            style = style, backdropArt = backdropArt, cardArt = cardArt, accentArgb = accent,
+        )
 
         audio?.let { track ->
             if (video != null) {
                 audioPlayer.play(uri = track, clipEndMs = UiMediaLimits.GAMEBOOT_SEQUENCE_MS, label = "gameboot")
             } else {
                 pendingSound = scope.launch {
-                    delay(com.echo.core.ui.components.DiscCeremony.DiscOutStartMs.toLong())
+                    delay(gameBootSoundDelayMs(style))
                     audioPlayer.play(uri = track, clipEndMs = UiMediaLimits.GAMEBOOT_SEQUENCE_MS, label = "gameboot")
                 }
             }

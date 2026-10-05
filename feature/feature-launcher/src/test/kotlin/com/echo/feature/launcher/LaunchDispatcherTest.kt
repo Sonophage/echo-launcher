@@ -59,7 +59,7 @@ class LaunchDispatcherTest {
             }
         val uiMediaStore: com.echo.core.data.repository.UiMediaStore = mockk(relaxed = true)
         val gameBootAudioPlayer: com.echo.core.ui.media.UiMediaAudioPlayer = mockk(relaxed = true)
-        val gameBootGate = GameBootGate(gameBootPreferences, uiMediaStore, gameBootAudioPlayer, scope)
+        val gameBootGate = GameBootGate(gameBootPreferences, uiMediaStore, gameBootAudioPlayer, mockk(relaxed = true), scope)
         val menuSound: com.echo.core.ui.sound.MenuSoundPlayer = mockk(relaxed = true)
         val autoCoreMemory: AutoCoreMemory = mockk(relaxed = true)
         val gameRepository: com.echo.core.domain.repository.GameRepository = mockk(relaxed = true)

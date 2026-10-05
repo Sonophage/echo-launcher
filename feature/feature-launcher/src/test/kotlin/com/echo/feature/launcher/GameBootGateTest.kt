@@ -25,9 +25,16 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GameBootGateTest {
-    private class Harness(val scope: TestScope, enabled: Boolean, customVideo: String? = null, customAudio: String? = null) {
+    private class Harness(
+        val scope: TestScope,
+        enabled: Boolean,
+        customVideo: String? = null,
+        customAudio: String? = null,
+        style: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC,
+    ) {
         val prefs: GameBootPreferences = mockk(relaxed = true) {
             every { gameBootEnabledFlow } returns flowOf(enabled)
+            every { styleFlow } returns flowOf(style)
         }
         val store: UiMediaStore = mockk(relaxed = true) {
             every { pathFor(any()) } returns null
@@ -36,7 +43,7 @@ class GameBootGateTest {
         }
         val player: UiMediaAudioPlayer = mockk(relaxed = true)
 
-        val gate = GameBootGate(prefs, store, player, scope)
+        val gate = GameBootGate(prefs, store, player, mockk(relaxed = true), scope)
     }
 
     private fun TestScope.eventually(what: String, timeoutMs: Long = 5_000, condition: () -> Boolean) {
@@ -59,6 +66,29 @@ class GameBootGateTest {
         assertNull(h.gate.active.value, "A disabled gate must never put a presentation on screen")
         assertFalse(h.gate.isActive)
         verify(exactly = 0) { h.player.play(any<String>(), any(), any()) }
+    }
+
+    // owner, 2026-10-05: Lens starts the launch sound as the lens opens (2700 ms), not when the disc leaves
+    @Test
+    fun `with Lens the request carries the style and the sound starts at 2700 ms`() = runTest {
+        val h = Harness(this, enabled = true, customAudio = "/data/ui-media/gameboot_audio.mp3", style = com.echo.core.data.repository.GameBootStyle.LENS)
+
+        val awaiting = async { h.gate.awaitPresentation("Skyrim", backdropArt = "bg.png", cardArt = "card.png") }
+        eventually("the presentation request is raised") { h.gate.active.value != null }
+        val request = assertNotNull(h.gate.active.value)
+        assertEquals(com.echo.core.data.repository.GameBootStyle.LENS, request.style)
+        assertEquals("bg.png", request.backdropArt)
+
+        advanceTimeBy(com.echo.core.ui.components.LensCeremony.SOUND_MS.toLong() - 1)
+        runCurrent()
+        verify(exactly = 0) { h.player.play(any<String>(), any(), any()) }
+        advanceTimeBy(2)
+        runCurrent()
+        verify(exactly = 1) { h.player.play(any<String>(), any(), any()) }
+
+        h.gate.onPresentationFinished()
+        advanceUntilIdle()
+        assertTrue(awaiting.isCompleted)
     }
 
     @Test

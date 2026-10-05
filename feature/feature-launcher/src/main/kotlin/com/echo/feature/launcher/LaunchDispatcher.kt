@@ -70,7 +70,7 @@ class LaunchDispatcher @Inject constructor(
     private var watchdog: Job? = null
 
     suspend fun launch(game: Game, resolved: ResolvedLaunch?, intent: Intent): LaunchDispatchResult {
-        gameBootGate.awaitPresentation(game.displayTitle, game.discFaceUri)
+        gameBootGate.awaitPresentation(game.displayTitle, game.discFaceUri, backdropArt = game.artworkUri, cardArt = game.iconUri ?: game.artworkUri)
         return try {
             context.startActivity(
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).withoutTransition(),

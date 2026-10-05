@@ -415,6 +415,17 @@ fun DisplaySettingsScreen(
                     onToggle = { viewModel.setGameBootEnabled(it) },
                 )
 
+                if (state.gameBootEnabled && !state.gameBootVideoAssigned) {
+                    // owner, 2026-10-05: Lens is a second built-in animation beside the disc
+                    SettingsValueRow(
+                        label = "GameBoot Style",
+                        value = state.gameBootStyle.label,
+                        sublabel = "Disc spins a disc and opens the game. Lens spins the game's own art inside the ECHO ring, then opens it like a lens",
+                        onFocusChangedExternal = { if (it) focusedSlot = null },
+                        onClick = { viewModel.cycleGameBootStyle() },
+                    )
+                }
+
                 if (state.gameBootEnabled) {
                     MediaAssignmentRow(
                         label    = "GameBoot Video",

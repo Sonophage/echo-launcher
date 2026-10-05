@@ -482,8 +482,10 @@ Each column also lists its apps. Add more with its **Add** row.
 - **Layout**: **Adjust Crossbar Layout** scales and shifts the crossbar over the live screen, kept
   separately for each screen size. **Customize Crossbar Icons** replaces any of the 42 theme glyphs
   or a console's icon, live.
-- **Boot**: the boot sequence, your own boot video, the launch disc, and GameBoot (two seconds, or
-  your own video).
+- **Boot**: the boot sequence (a line of light that becomes the ECHO mark, about 3.5 seconds; A or B
+  skips it), your own boot video, the launch disc, and GameBoot. GameBoot Style picks the disc or
+  **Lens**, where the game's art spins inside the ECHO ring and opens over the screen; or use your
+  own video.
 - **Sound**: add any interface sound and set looping **Menu Music**. ECHO ships with no sounds;
   the interface is silent until you add some.
 - **Categories, Controller, Touch, Performance**.

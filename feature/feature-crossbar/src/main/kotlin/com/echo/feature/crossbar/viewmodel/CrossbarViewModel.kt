@@ -539,6 +539,9 @@ data class CrossbarUiState(
 
     val showBootSequence: Boolean = true,
 
+    // A or B during the boot animation: it runs its short exit, then completes
+    val bootSkipRequested: Boolean = false,
+
     val bootVideoPath: String? = null,
     val bootAudioPath: String? = null,
 

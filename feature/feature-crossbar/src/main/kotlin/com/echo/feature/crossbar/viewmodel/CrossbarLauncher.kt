@@ -363,12 +363,13 @@ class CrossbarLauncher(
 
     fun onBootSequenceComplete() {
         Timber.d("StartupSeq: boot sequence complete")
-        uiState.update { it.copy(showBootSequence = false) }
+        uiState.update { it.copy(showBootSequence = false, bootSkipRequested = false) }
     }
 
+    // the overlay runs the animation's exit from this frame and then calls onBootSequenceComplete
     internal fun onBootButton(action: GamepadAction, state: CrossbarUiState) {
         if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
-            onBootSequenceComplete()
+            uiState.update { it.copy(bootSkipRequested = true) }
         }
     }
 

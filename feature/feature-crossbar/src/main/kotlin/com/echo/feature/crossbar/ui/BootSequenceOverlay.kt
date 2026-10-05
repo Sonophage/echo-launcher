@@ -2,13 +2,10 @@ package com.echo.feature.crossbar.ui
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
-import androidx.compose.ui.res.painterResource
-import com.echo.core.ui.R as CoreUiR
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,11 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.echo.core.ui.icons.PortalIcon
 import com.echo.themekit.UiMediaLimits
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.delay
@@ -33,26 +25,28 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
-private const val FADE_IN_MS  = 800
-private const val HOLD_MS     = 1_400L
 private const val FADE_OUT_MS = 600
 
 private const val HARD_CAP_MS = 12_000L
 
+// owner, 2026-10-05: with no boot video, the boot is BootRipple (the design spec's "Horizon Ripple"). A press of
+// A or B (skipRequested) runs its 300 ms exit from the pressed frame; a boot video still skips at once
 @Composable
 fun BootSequenceOverlay(
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
     bootVideoPath: String? = null,
     bootAudioPath: String? = null,
+    skipRequested: Boolean = false,
 ) {
-    val logoAlpha    = remember { Animatable(0f) }
-    val logoScale    = remember { Animatable(0.92f) }
     val overlayAlpha = remember { Animatable(1f) }
+    val clock = remember { Animatable(0f) }
+    var skipAt by remember { mutableStateOf<Float?>(null) }
 
     val currentComplete by rememberUpdatedState(onComplete)
 
     val completed = remember { AtomicBoolean(false) }
+    val complete = { if (completed.compareAndSet(false, true)) currentComplete() }
 
     var presentationDone by remember { mutableStateOf(false) }
 
@@ -62,20 +56,25 @@ fun BootSequenceOverlay(
         val endedNaturally = withTimeoutOrNull(HARD_CAP_MS) {
             snapshotFlow { presentationDone }.first { it }
         } != null
-        if (endedNaturally) {
-            overlayAlpha.animateTo(0f, animationSpec = tween(FADE_OUT_MS))
-        } else {
+        if (!endedNaturally) {
             Timber.w("Boot watchdog fired after ${HARD_CAP_MS}ms — completing boot regardless")
+        } else if (!useLogoAnimation) {
+            overlayAlpha.animateTo(0f, animationSpec = tween(FADE_OUT_MS))
         }
-        if (completed.compareAndSet(false, true)) currentComplete()
+        complete()
     }
 
-    LaunchedEffect(useLogoAnimation) {
+    // the animation's own clock; its last 600 ms (or the 300 ms after a skip) are the fade to the home screen
+    LaunchedEffect(useLogoAnimation, skipAt) {
         if (!useLogoAnimation) return@LaunchedEffect
-        logoScale.animateTo(1f, animationSpec = tween(FADE_IN_MS))
-        logoAlpha.animateTo(1f, animationSpec = tween(FADE_IN_MS))
-        delay(HOLD_MS)
+        val end = BootRipple.endMs(skipAt)
+        clock.animateTo(end, tween(((end - clock.value).coerceAtLeast(0f)).toInt(), easing = LinearEasing))
         presentationDone = true
+    }
+
+    LaunchedEffect(skipRequested) {
+        if (!skipRequested) return@LaunchedEffect
+        if (useLogoAnimation) { if (skipAt == null) skipAt = clock.value } else complete()
     }
 
     Box(
@@ -99,36 +98,14 @@ fun BootSequenceOverlay(
                 )
             }
         } else {
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black))
-
-            PortalIcon(
-                painter = painterResource(CoreUiR.drawable.echo_logo),
-                contentDescription = "ECHO",
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .fillMaxSize(0.42f)
-                    .graphicsLayer {
-                        alpha = logoAlpha.value
-                        scaleX = logoScale.value
-                        scaleY = logoScale.value
-                    },
-            )
-
-            Text(
-                text = "ECHO",
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Light,
-                letterSpacing = 4.sp,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 48.dp)
-                    .alpha(logoAlpha.value),
-            )
+            BootRippleAnimation(clock.value, skipAt)
         }
 
         if (bootAudioPath != null) {
-            OneShotAudioLayer(path = bootAudioPath, clipEndMs = UiMediaLimits.BOOT_MAX_MS)
+            // with the animation, the sound starts with the first ripple
+            var soundDue by remember(useLogoAnimation) { mutableStateOf(!useLogoAnimation) }
+            LaunchedEffect(useLogoAnimation) { if (useLogoAnimation) { delay(BootRipple.SOUND_MS); soundDue = true } }
+            if (soundDue && skipAt == null) OneShotAudioLayer(path = bootAudioPath, clipEndMs = UiMediaLimits.BOOT_MAX_MS)
         }
     }
 }

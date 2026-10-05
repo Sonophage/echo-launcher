@@ -138,6 +138,7 @@ data class DisplaySettingsUiState(
     val bootPreviewVisible: Boolean = false,
 
     val gameBootEnabled: Boolean = true,
+    val gameBootStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC,
     val launchDiscEnabled: Boolean = true,
     val gameBootVideoLabel: String = UI_MEDIA_DEFAULT_LABEL,
     val gameBootVideoAssigned: Boolean = false,
@@ -242,6 +243,7 @@ class DisplaySettingsViewModel @Inject constructor(
             bootPreviewVisible   = transient.bootPreviewVisible,
 
             gameBootEnabled      = GameBootPreferences.resolve(prefs),
+            gameBootStyle        = GameBootPreferences.styleOf(prefs),
             launchDiscEnabled    = com.echo.core.data.launch.LaunchDiscPreferences.resolve(prefs),
             gameBootVideoLabel   = label(UiMediaSlot.GAMEBOOT_VIDEO),
             gameBootVideoAssigned = UiMediaSlot.GAMEBOOT_VIDEO in assigned,
@@ -284,6 +286,11 @@ class DisplaySettingsViewModel @Inject constructor(
 
     fun setGameBootEnabled(enabled: Boolean) = viewModelScope.launch {
         gameBootPreferences.setGameBootEnabled(enabled)
+    }
+
+    fun cycleGameBootStyle() = viewModelScope.launch {
+        val styles = com.echo.core.data.repository.GameBootStyle.entries
+        gameBootPreferences.setStyle(styles[(uiState.value.gameBootStyle.ordinal + 1) % styles.size])
     }
 
     fun setLaunchDiscEnabled(enabled: Boolean) = viewModelScope.launch {
