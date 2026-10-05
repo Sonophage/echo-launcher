@@ -30,10 +30,10 @@ data class GameBootRequest(
 
     val coverArt: String? = null,
     val style: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC,
-    // for Lens: the wide art that fills the screen, the card it starts from, and the game's colour
+    // for Lens: the wide art that fills the screen and the card it starts from. Its colour is the waves'
+    // (owner, 2026-10-05), which the crossbar knows
     val backdropArt: String? = null,
     val cardArt: String? = null,
-    val accentArgb: Long? = null,
 )
 
 // when the launch sound starts in each built-in animation
@@ -47,7 +47,6 @@ class GameBootGate @Inject constructor(
     private val preferences: GameBootPreferences,
     private val uiMedia: UiMediaStore,
     private val audioPlayer: UiMediaAudioPlayer,
-    private val artworkAccent: com.echo.core.data.repository.ArtworkAccent,
 
     @LaunchDispatcherScope private val scope: CoroutineScope,
 ) {
@@ -78,12 +77,9 @@ class GameBootGate @Inject constructor(
             )
         }
         val style = preferences.styleFlow.first()
-        val accent = if (video == null && style == com.echo.core.data.repository.GameBootStyle.LENS) {
-            runCatching { artworkAccent.of(backdropArt, cardArt, coverArt) }.getOrNull()
-        } else null
         _active.value = GameBootRequest(
             gameTitle = gameTitle, videoPath = video, audioPath = audio, coverArt = coverArt,
-            style = style, backdropArt = backdropArt, cardArt = cardArt, accentArgb = accent,
+            style = style, backdropArt = backdropArt, cardArt = cardArt,
         )
 
         audio?.let { track ->

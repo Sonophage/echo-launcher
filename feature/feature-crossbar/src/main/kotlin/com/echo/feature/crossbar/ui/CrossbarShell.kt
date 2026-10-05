@@ -382,7 +382,7 @@ fun CrossbarShellContainer(
                 title = "",
                 coverArt = ceremony.art,
                 backdropArt = ceremony.art,
-                accent = null,
+                accent = waveColorFor(rememberWaveAccent(uiState)),
                 waveStyle = uiState.waveStyle,
                 onHandOff = viewModel.launching::onDiscCeremonyHandOff,
                 onFinished = viewModel.launching::onDiscCeremonyFinished,
@@ -778,12 +778,7 @@ fun CrossbarShell(
                 animationSpec = tween(if (launching) 260 else 1200),
                 label = "crossbarWaveGlow",
             )
-            // owner, 2026-10-04: the wave takes the colour of whatever is selected; an installed app has no
-            // art file, so its icon gives the colour
-            val focusedAppIcon = rememberAppIcon(uiState.focusedItem?.packageName?.takeIf { uiState.focusedItemAccentArgb == null })
-            val waveAccent = uiState.focusedItemAccentArgb
-                ?: focusedAppIcon?.color?.toArgb()?.toLong()?.and(0xFFFFFFFFL)
-                ?: uiState.wallpaperAccent
+            val waveAccent = rememberWaveAccent(uiState)
             if (waveVisible(uiState.customWallpaperPath != null, uiState.waveOverWallpaper, effectiveWaveStyle)) {
                 WaveOverlay(
                     waveStyle = effectiveWaveStyle,
@@ -1688,7 +1683,8 @@ fun CrossbarShell(
                         title = request.gameTitle,
                         coverArt = request.cardArt,
                         backdropArt = request.backdropArt,
-                        accent = request.accentArgb?.let { Color(it.toInt()) },
+                        // owner, 2026-10-05: GameBoot's accent is the colour the waves are drawing in
+                        accent = waveColorFor(rememberWaveAccent(uiState)),
                         waveStyle = gameBootWaveStyle,
                         onHandOff = onGameBootHandOff,
                         onFinished = onGameBootComplete,
@@ -1722,6 +1718,16 @@ fun CrossbarShell(
         }
       }
     }
+}
+
+// owner, 2026-10-04: the wave takes the colour of whatever is selected; an installed app has no art file,
+// so its icon gives the colour
+@Composable
+private fun rememberWaveAccent(uiState: CrossbarUiState): Long? {
+    val focusedAppIcon = rememberAppIcon(uiState.focusedItem?.packageName?.takeIf { uiState.focusedItemAccentArgb == null })
+    return uiState.focusedItemAccentArgb
+        ?: focusedAppIcon?.color?.toArgb()?.toLong()?.and(0xFFFFFFFFL)
+        ?: uiState.wallpaperAccent
 }
 
 @Composable

@@ -134,4 +134,15 @@ class LetterRailMetricsTest {
             rungAt(extent / 2f, extent, span, pitch, rungs),
         )
     }
+
+    // owner, 2026-10-05: the chosen letter is biggest and its neighbours swell in a short wave, like the XMB
+    @Test
+    fun `the wave peaks on the chosen letter and dies out within a few rungs`() {
+        assertEquals(1f, railWave(0), 0f)
+        assertTrue("a neighbour swells, less than the chosen one", railWave(1) in 0.1f..0.99f)
+        assertTrue("it falls with distance", railWave(2) < railWave(1))
+        assertEquals("the same on both sides", railWave(-2), railWave(2), 0f)
+        assertEquals("far letters are left at rest", 0f, railWave(3), 0f)
+        assertEquals(0f, railWave(10), 0f)
+    }
 }

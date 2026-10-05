@@ -69,6 +69,9 @@ fun CrossbarBackground(
 private fun waveTintFrom(accentArgb: Long): Color =
     lerp(Color(accentArgb or 0xFF000000L), Color.White, 0.62f)
 
+// the colour the waves draw in for an accent; white when there is none
+fun waveColorFor(accentArgb: Long?): Color = accentArgb?.let(::waveTintFrom) ?: Color.White
+
 @Composable
 fun WaveOverlay(
     waveStyle: WaveStyle,
@@ -78,7 +81,7 @@ fun WaveOverlay(
     glowScale: () -> Float = { 1f },
 ) {
     Box(modifier) {
-        WaveLayers(waveStyle, accentArgb?.let(::waveTintFrom) ?: Color.White, speedScale, glowScale)
+        WaveLayers(waveStyle, waveColorFor(accentArgb), speedScale, glowScale)
     }
 }
 

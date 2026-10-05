@@ -1,6 +1,7 @@
 package com.echo.core.ui.components
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -13,15 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
@@ -102,10 +100,19 @@ internal val RailMinBadge = 16.dp
 internal val RailMaxBadge = RailIcon
 private val RungGap = 3.dp
 private val BadgeSideGap = 4.dp
-private const val GlyphRatio = 0.45f
+private const val GlyphRatio = 0.6f
 
-private const val ACTIVE_SCALE = 1.3f
-private const val INACTIVE_ALPHA = 0.55f
+// owner, 2026-10-05: the rail reads like an XMB column: bare letters, the chosen one biggest, its neighbours
+// swelling in a short wave, the rest dimmed
+private const val ACTIVE_SCALE = 1.7f
+private const val INACTIVE_ALPHA = 0.4f
+private const val WAVE_REACH = 3
+
+// 1 at the chosen rung, easing to 0 at WAVE_REACH rungs away
+internal fun railWave(distance: Int): Float {
+    val d = abs(distance).toFloat() / WAVE_REACH
+    return if (d >= 1f) 0f else (0.5f + 0.5f * kotlin.math.cos(Math.PI * d)).toFloat()
+}
 
 internal val RailEdgeZone = RailIcon + RailEdgeGap * 2
 
@@ -195,48 +202,45 @@ private fun Rungs(
 ) {
     val activeRung = cursor?.let { c -> rungs.indexOfLast { it <= c }.coerceAtLeast(0) }
     rungs.forEachIndexed { rung, letter ->
-        val active = rung == activeRung
-        RailLetterBadge(
+        val wave = activeRung?.let { railWave(rung - it) } ?: 0f
+        RailLetter(
             letter = letters[letter],
-            active = active,
+            wave = wave,
             metrics = metrics,
-            modifier = Modifier
-                .zIndex(if (active) 1f else 0f)
-                .alpha(if (active) 1f else INACTIVE_ALPHA),
+            modifier = Modifier.zIndex(wave),
         )
     }
 }
 
 @Composable
-private fun RailLetterBadge(
+private fun RailLetter(
     letter: Char,
-    active: Boolean,
+    wave: Float,
     metrics: RailMetrics,
     modifier: Modifier = Modifier,
 ) {
+    val scale by animateFloatAsState(1f + (ACTIVE_SCALE - 1f) * wave, tween(140), label = "railLetterScale")
+    val alpha by animateFloatAsState(INACTIVE_ALPHA + (1f - INACTIVE_ALPHA) * wave, tween(140), label = "railLetterAlpha")
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(metrics.badge)
             .graphicsLayer {
-                if (active) {
-                    scaleX = ACTIVE_SCALE
-                    scaleY = ACTIVE_SCALE
-                }
-            }
-            .clip(RoundedCornerShape(metrics.badge * RailCornerRatio))
-            .background(if (active) RailInk else Color.White.copy(alpha = 0.85f)),
+                scaleX = scale
+                scaleY = scale
+                this.alpha = alpha
+                // the letters grow towards the screen, away from the edge
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(1f, 0.5f)
+            },
     ) {
         Text(
             text = letter.toString(),
-            color = if (active) Color.White else RailInk,
+            color = Color.White,
             fontSize = metrics.glyph,
-            fontWeight = FontWeight.Bold,
+            fontWeight = if (wave >= 1f) FontWeight.Bold else FontWeight.Medium,
         )
     }
 }
-
-private val RailCornerRatio = RailCorner.value / RailIcon.value
 
 private fun Modifier.railSlide(
     rungs: List<Int>,

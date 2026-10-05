@@ -145,7 +145,7 @@ fun LensLaunchCeremony(
     // a URI string, or anything Coil loads (the launch disc passes an app's icon drawable)
     coverArt: Any?,
     backdropArt: Any?,
-    // the game's colour from its art; null falls back to ECHO's blue
+    // the colour the crossbar's waves are drawing in; null falls back to ECHO's blue
     accent: Color?,
     waveStyle: WaveStyle,
     onHandOff: () -> Unit,

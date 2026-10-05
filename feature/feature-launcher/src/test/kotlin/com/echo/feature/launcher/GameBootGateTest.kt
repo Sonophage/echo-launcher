@@ -43,7 +43,7 @@ class GameBootGateTest {
         }
         val player: UiMediaAudioPlayer = mockk(relaxed = true)
 
-        val gate = GameBootGate(prefs, store, player, mockk(relaxed = true), scope)
+        val gate = GameBootGate(prefs, store, player, scope)
     }
 
     private fun TestScope.eventually(what: String, timeoutMs: Long = 5_000, condition: () -> Boolean) {
