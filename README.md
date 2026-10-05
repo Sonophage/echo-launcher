@@ -65,7 +65,9 @@ it in the colour of its art. Press LEFT, or swipe right, to bring in the **Recen
 | Last Played | The Recent rail |
 
 The bar along the top holds the **island** (what is playing, or the last thing you opened), the
-section icons, notifications, battery and time. The footer holds **Home** and **Back** on the left,
+section icons, battery and time, and at the far right a second island for notifications: the ECHO
+mark with the count beside it when something is waiting, otherwise your profile picture. A new
+notification drops out of it as a card; press it once to see the newest, twice to open them all. The footer holds **Home** and **Back** on the left,
 the **A** action in the centre, and the screen's own actions on the right. Games and apps launch
 when you **hold A** until the ring fills, so a stray press never launches anything.
 
@@ -99,16 +101,23 @@ anything destructive asks twice. **Game Info** shows play time, platform, screen
 
 ### The App Drawer and Search
 
-The **App Drawer** (RB) shows the focused app as a hero banner, with **Open** and **Options**, and
-every app below it in columns. Its sections (Recently Used, Apps, Emulators, Games) are icons in the
-top bar; LT and RT move between them. **Search** (Y or LB) works the same way across every library
-at once: the highlighted result is the hero, and the results run full width below it. A newly
-installed app shows up straight away.
+The **App Drawer** (RB) lists the focused app's details on the left (its name, kind, what is known
+about it, **Open** and **Options**) and every app as a case in four columns on the right, with a VHS
+spine saying what it is. Its sections (Recently Used, Apps, Emulators, Games) are icons in the top
+bar; LT and RT move between them. The Games tab has a chip per system, Steam Games included, and a
+game's **≡** opens the same menu as on the crossbar.
+
+**Search** (Y or LB) puts every result on one shelf: the likeliest match stands in the middle as a
+whole case, the rest as spines fanning out to both sides, and left and right slide along it. LB and
+RB filter by kind (Games, Apps, Music, Video, Books). A newly installed app shows up straight away.
+
+A game's cover, everywhere it shows (the crossbar's cover rows, the drawer, Search and GameBoot), is
+its **icon slot**; the main art is used only when the icon slot is empty.
 
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/app-drawer.jpg" width="420"> | <img src="docs/screenshots/app-drawer-context-menu.jpg" width="420"> |
-| The App Drawer | An app's options |
+| The App Drawer | An item's options |
 | <img src="docs/screenshots/search.jpg" width="420"> | |
 | Search | |
 
@@ -130,7 +139,8 @@ pans and rotates, and any photo can become the wallpaper with its EXIF data stri
 
 ### The top panel and Settings
 
-**Home** (the Guide or View button), or a tap on the top bar's bell, opens the panel: Notifications,
+**Home** (the Guide or View button) or a tap on the notification island at the top right first shows the newest
+notification as a card, when there is one; a second press opens the panel: Notifications,
 Profile, Quick settings, Libraries and Settings. Settings has seven sections: **Overview, Library, Emulators,
 Look & Feel, Accounts, System, Setup**.
 
@@ -329,7 +339,7 @@ access to all of your storage.
 | App Drawer | **RB** on the crossbar, or **B** at the top level | | Apps, in the footer |
 | Categories, tabs, sections and filters | **LT / RT** | Page Up / Page Down | Tap |
 | Page or seek in lists and players | **LB / RB** | | |
-| Home: the top panel | **Guide** or **View** | | Tap the bell; slide up to close |
+| Home: the top panel | **Guide** or **View** (twice when a notification is waiting) | | Tap the notification island twice; slide up to close |
 
 - **D-pad ◀ backs out** of a folder, flyout or settings page wherever LEFT is not already doing
   something. Turn it off with *Look & Feel ▸ Controller ▸ Left Backs Out*.
@@ -414,7 +424,7 @@ Recent** takes one off.
 ### Artwork
 
 Art and metadata are fetched only when you ask. Sources are set up in
-*Emulators ▸ Scraping Sources*:
+*Accounts ▸ Artwork*:
 
 - **ScreenScraper**: works without setup; a user account is optional.
 - **SteamGridDB**: needs a free API key.
@@ -535,9 +545,9 @@ Relink Folder**.
 |---|---|
 | **Overview** | Library, artwork and build cards |
 | **Library** | Media Libraries (music, video, photo and book folders) · Hidden Items |
-| **Emulators** | Library Manager · Artwork · Scraping Sources · Installed · Custom Emulators · RetroArch |
+| **Emulators** | Library Manager · Artwork · Installed · Custom Emulators · RetroArch |
 | **Look & Feel** | Theme · Wallpaper & Text · Layout · Boot · Sound · Categories · Controller · Touch · Performance |
-| **Accounts** | Permissions · Accounts (RetroAchievements and Steam) · Discord |
+| **Accounts** | Permissions · Achievements (RetroAchievements and Steam) · Artwork (SteamGridDB, ScreenScraper, IGDB, TMDB) · Discord |
 | **System** | About · Logs · Backup & Restore · Credits |
 | **Setup** | Setup Wizard |
 
@@ -568,7 +578,7 @@ category with no folder keeps only its apps. In a media category's top column or
 | A console shows no new games | **≡ ▸ Scan This Console**, or turn on *Rescan On Return* |
 | A game will not launch | Check the emulator is installed, then **≡ ▸ Settings ▸ Change Emulator** and the card's **Default Emulator** |
 | Games or media went missing after a reinstall or restore | Relink the folder: **Folders ▸ ≡ ▸ Relink Folder** |
-| Artwork will not download | Add a key in *Emulators ▸ Scraping Sources* and check the connection |
+| Artwork will not download | Add a key in *Accounts ▸ Artwork* and check the connection. A key saved on another install (a restored backup) cannot be read here and shows as not set: enter it again |
 | Recently Used is empty | Allow restricted settings for ECHO, then grant usage access (see [Permissions](#permissions)) |
 | No notifications in the top panel | Grant notification access in *Accounts ▸ Permissions* |
 | The interface is too big, small or off-centre | *Look & Feel ▸ Layout ▸ Adjust Crossbar Layout* |
