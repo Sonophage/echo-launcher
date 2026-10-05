@@ -44,6 +44,14 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.ControllerPrompt
+import com.echo.core.ui.theme.EchoTextStyle
+import com.echo.core.ui.components.HintAction
+import com.echo.core.ui.components.ControllerPromptItem
+import com.echo.core.ui.components.EchoHintBar
+import com.echo.core.ui.components.HintBarHeight
+import com.echo.core.ui.components.StatusStripHeight
+import com.echo.core.ui.design.panelDesignUnits
+import androidx.compose.ui.platform.LocalDensity
 import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.components.MenuState
 import com.echo.core.ui.components.MenuSelect
@@ -303,6 +311,8 @@ internal fun StudioResultsColumn(
     }
 }
 
+// the kit's look (owner, 2026-10-04): design units, the eyebrow over a light title, and the kit's
+// footer with A as the centre orb, Close on B and Change Match on X
 @Composable
 internal fun StudioProviderPicker(
     cards: List<StudioProviderCard>,
@@ -311,60 +321,46 @@ internal fun StudioProviderPicker(
     matchLabel: String?,
     accent: Color,
     background: Color,
-    showTouchControls: Boolean,
     onPick: (Int) -> Unit,
     onChangeMatch: () -> Unit,
     onClose: () -> Unit,
 ) {
-    Box(
+    BoxWithConstraints(
         Modifier
             .fillMaxSize()
             .background(background)
             .background(Brush.verticalGradient(0f to MenuScrim, 1f to MenuScrim.copy(alpha = 0.97f)))
             .clickable(enabled = false) {},
     ) {
-        Column(Modifier.fillMaxSize().padding(start = 26.dp, end = 26.dp, top = 16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    gameTitle ?: "Artwork Studio",
-                    color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    matchLabel?.let { "Matched as $it" } ?: "No match yet",
-                    color = Color.White.copy(alpha = 0.4f), fontSize = 10.sp,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "CHANGE MATCH",
-                    color = Color.White.copy(alpha = 0.8f), fontSize = 9.sp,
-                    fontWeight = FontWeight.SemiBold, maxLines = 1,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(5.dp))
-                        .background(Color.White.copy(alpha = 0.10f))
-                        .clickable(onClick = onChangeMatch)
-                        .padding(horizontal = 7.dp, vertical = 3.dp),
-                )
-            }
-            Spacer(Modifier.height(2.dp))
+        val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(start = u.dp(48), end = u.dp(48), top = StatusStripHeight + u.dp(8), bottom = HintBarHeight + u.dp(12)),
+        ) {
+            Text(
+                listOf(gameTitle ?: "Artwork Studio", matchLabel?.let { "Matched as $it" } ?: "No match yet")
+                    .joinToString("  ·  ").uppercase(),
+                style = u.eyebrow(),
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(u.dp(6)))
             Text(
                 "Where should the artwork come from?",
-                color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold,
+                color = Color.White, fontSize = u.sp(30), fontWeight = FontWeight.Light,
+                style = EchoTextStyle,
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(u.dp(4)))
             Text(
                 "One provider for the whole pass. Change it any time from Options.",
-                color = Color.White.copy(alpha = 0.5f), fontSize = 10.5.sp,
+                color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(14),
+                style = EchoTextStyle,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(u.dp(20)))
 
             Row(
                 Modifier.fillMaxWidth().weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(u.dp(16)),
             ) {
                 cards.forEachIndexed { index, card ->
                     StudioProviderCardView(
@@ -376,30 +372,23 @@ internal fun StudioProviderPicker(
                     )
                 }
             }
-
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (!showTouchControls) {
-                    ControllerPrompt(
-                        action = GamepadAction.SELECT,
-                        label = "Use this provider",
-                        glyphSize = 13.dp,
-                        labelColor = Color.White.copy(alpha = 0.6f),
-                    )
-                    Spacer(Modifier.width(14.dp))
-                }
-                Text(
-                    "Close",
-                    color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color.White.copy(alpha = 0.07f))
-                        .clickable(onClick = onClose)
-                        .padding(horizontal = 12.dp, vertical = 5.dp),
-                )
-            }
-            Spacer(Modifier.height(14.dp))
         }
+        EchoHintBar(
+            items = listOf(
+                ControllerPromptItem(GamepadAction.BACK, "Close"),
+                ControllerPromptItem(GamepadAction.CHANGE_SORT, "Change Match"),
+            ),
+            primary = HintAction(GamepadAction.SELECT, "Use this provider"),
+            onAction = { action ->
+                when (action) {
+                    GamepadAction.SELECT -> onPick(focusedIndex)
+                    GamepadAction.CHANGE_SORT -> onChangeMatch()
+                    GamepadAction.BACK -> onClose()
+                    else -> Unit
+                }
+            },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 

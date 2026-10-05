@@ -959,6 +959,19 @@ class ArtworkStudioViewModelTest {
         assertFalse(vm.uiState.value.matchFailed)
     }
 
+    // the provider screen's Change Match was a touch-only chip; X reaches it from the pad (owner, 2026-10-04)
+    @Test
+    fun `X on the provider picker opens Change Match`() = runTest(testDispatcher) {
+        val vm = screenshotGridOnSgdb(perType = 2)
+        vm.handleGamepadAction(GamepadAction.BACK)
+        assertTrue("the fixture is not on the picker", vm.uiState.value.providerPickerOpen)
+
+        vm.handleGamepadAction(GamepadAction.CHANGE_SORT)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.changeMatchOpen)
+    }
+
     @Test
     fun `Change Match is offered only where there is something to pick from`() = runTest(testDispatcher) {
         assertTrue(loadedOn(StudioSource.STEAMGRIDDB).uiState.value.canChangeMatch)

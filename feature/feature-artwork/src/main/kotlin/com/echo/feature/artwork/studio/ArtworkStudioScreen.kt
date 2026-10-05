@@ -403,7 +403,6 @@ internal fun ArtworkStudioContent(
                 matchLabel = state.matchTitle,
                 accent = accent,
                 background = echoColors.backgroundBottom,
-                showTouchControls = showTouchControls,
                 onPick = actions::selectSource,
                 onChangeMatch = actions::onChangeMatchPressed,
                 onClose = { actions.handleGamepadAction(GamepadAction.BACK) },

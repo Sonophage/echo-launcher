@@ -46,6 +46,8 @@ import coil3.compose.AsyncImage
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.EchoHintBar
 import com.echo.core.ui.components.ControllerPromptItem
+import com.echo.core.ui.components.HintAction
+import com.echo.core.ui.components.HintBarHeight
 import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.core.ui.theme.menuCursorEdge
 import com.echo.feature.crossbar.viewmodel.MusicBrowserState
@@ -91,7 +93,7 @@ fun MusicBrowserScreen(
                 )
             ),
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 24.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(start = 40.dp, end = 40.dp, top = 24.dp, bottom = HintBarHeight)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -153,26 +155,27 @@ fun MusicBrowserScreen(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
-
-            EchoHintBar(
-                items = listOfNotNull(
-                    ControllerPromptItem(GamepadAction.SELECT, "Open"),
-
-                    state.sortLabel?.let { ControllerPromptItem(GamepadAction.CHANGE_SORT, it) },
-                    ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
-                    ControllerPromptItem(GamepadAction.BACK, "Back"),
-                ),
-                onAction = { action ->
-                    when (action) {
-                        GamepadAction.CHANGE_SORT -> onSortTapped()
-                        GamepadAction.OPEN_CONTEXT_MENU -> onOptionsTapped()
-                        GamepadAction.BACK -> onBack()
-                        else -> Unit
-                    }
-                },
-            )
         }
+
+        // the kit's footer across the whole bottom edge, A as the centre orb, like the other browsers
+        EchoHintBar(
+            items = listOfNotNull(
+                ControllerPromptItem(GamepadAction.BACK, "Back"),
+                state.sortLabel?.let { ControllerPromptItem(GamepadAction.CHANGE_SORT, it) },
+                ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
+            ),
+            primary = HintAction(GamepadAction.SELECT, "Open"),
+            onAction = { action ->
+                when (action) {
+                    GamepadAction.SELECT -> onActivateAt(state.selectedIndex)
+                    GamepadAction.CHANGE_SORT -> onSortTapped()
+                    GamepadAction.OPEN_CONTEXT_MENU -> onOptionsTapped()
+                    GamepadAction.BACK -> onBack()
+                    else -> Unit
+                }
+            },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 

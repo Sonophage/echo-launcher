@@ -19,7 +19,9 @@ Paths below are under `core/core-ui/src/main/kotlin/com/echo/core/ui/`.
 
 ## The footer: `EchoHintBar`
 
-`components/EchoHintBar.kt`. One footer for every screen.
+`components/EchoHintBar.kt`. One footer for every screen, across the full bottom edge
+(`Modifier.align(Alignment.BottomCenter)`, content padded by `HintBarHeight`), never inside a
+screen's padded column.
 
 - Left: the actions that are always there (Home, Back). Centre: the A action. Right: what this
   screen adds.
@@ -54,7 +56,8 @@ Paths below are under `core/core-ui/src/main/kotlin/com/echo/core/ui/`.
   side rail that the Recent rail and every context menu share.
 - `EchoContextMenuOverlay` (`components/EchoContextMenu.kt`) is the context menu. Its backing art
   comes from `LocalMenuBackdropArt` and its wave from `LocalBackdropWave` (`design/GlowWave.kt`),
-  both provided by `CrossbarShell`. Do not pass art per screen.
+  both provided by `CrossbarShell`. Do not pass art per screen. Any side-rail picker is drawn
+  through it: `rowBadge` replaces the letter badge (the Colour Scheme picker's swatches).
 - `GlowMaskedWave(side)` shows the wave only inside a screen's glow.
 - `WaveLayers(style)` draws the wave; the design (PSP, Echo Rings, Echo Arcs) comes from
   `LocalWaveDesign`.
@@ -62,13 +65,14 @@ Paths below are under `core/core-ui/src/main/kotlin/com/echo/core/ui/`.
 ## Settings rows
 
 `SettingsRow` and `SettingsValueRow` (`feature-settings`, `SettingsScaffold.kt`) carry controller
-focus and navigation. Inside `LocalSettingsRailUnits` they draw as the kit's rail rows; the setup
-wizard sets it. Use them for any list of options instead of a new row.
+focus and navigation. Inside `LocalSettingsRailUnits` they draw as the kit's rail rows;
+`SettingsScaffold` and the setup wizard set it, so every settings page has them. Use them for any list of options instead of a new row.
 
 ## See it on a device
 
 - `screenrecord` works. `screencap` has returned black frames on this app's GL surfaces. Record two
-  seconds and take a frame with `ffmpeg -ss 1.2 -i in.mp4 -frames:v 1 out.png`.
+  seconds and take the last frame with `ffmpeg -i in.mp4 -update 1 out.png`; a still screen gives a
+  recording too short for `-ss`.
 - Tap by label, never by remembered coordinates: dump with `uiautomator dump` and tap the one node
   whose text matches, in the same command. Refuse when there are zero or several.
 - A release build (`com.echo.launcher`) installs beside the debug build. Install it and run

@@ -2322,6 +2322,7 @@ class ArtworkStudioViewModel @Inject constructor(
                 GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_UP    -> moveProviderCursor(-1)
                 GamepadAction.NAVIGATE_RIGHT, GamepadAction.NAVIGATE_DOWN -> moveProviderCursor(+1)
                 GamepadAction.SELECT -> selectSource(s.sourceIndex)
+                GamepadAction.CHANGE_SORT -> onChangeMatchPressed()
                 GamepadAction.BACK   -> backOutOfStudio()
                 else -> Unit
             }

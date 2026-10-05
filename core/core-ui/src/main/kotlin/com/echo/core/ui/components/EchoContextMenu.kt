@@ -73,6 +73,8 @@ fun <T> EchoContextMenuOverlay(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     backdropArt: String? = LocalMenuBackdropArt.current,
+    // drawn in place of the letter badge, for a menu whose rows are better shown another way (a swatch)
+    rowBadge: (@Composable (index: Int, focused: Boolean) -> Unit)? = null,
 ) {
     val title = state.title
     val subtitle = state.subtitle
@@ -131,6 +133,7 @@ fun <T> EchoContextMenuOverlay(
                         opensSubmenu = row.opensSubmenu,
                         dim = dim,
                         u = u,
+                        badge = rowBadge?.let { { it(index, index == selectedIndex) } },
                         onClick = { onRowActivated(index) },
                     )
                 }
@@ -228,6 +231,7 @@ private fun CrossbarRailRow(
     opensSubmenu: Boolean,
     dim: Float,
     u: DesignUnits,
+    badge: (@Composable () -> Unit)?,
     onClick: () -> Unit,
 ) {
     val tint = if (destructive) RailDestructive else null
@@ -251,7 +255,7 @@ private fun CrossbarRailRow(
             )
         }
         Spacer(Modifier.width(u.dp(12)))
-        CrossbarRailBadge(label = label, u = u, filled = focused, opensSubmenu = opensSubmenu, tint = tint)
+        if (badge != null) badge() else CrossbarRailBadge(label = label, u = u, filled = focused, opensSubmenu = opensSubmenu, tint = tint)
     }
 }
 
