@@ -140,20 +140,23 @@ Look & Feel, Accounts, System, Setup**.
 | Quick settings | Libraries: which columns are on the crossbar |
 | <img src="docs/screenshots/settings-home.jpg" width="420"> | <img src="docs/screenshots/settings-overview.jpg" width="420"> |
 | Settings | Overview: your library at a glance |
-| <img src="docs/screenshots/settings-emulators.jpg" width="420"> | <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> |
-| Emulators: the Library Manager | Look & Feel |
-| <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> | <img src="docs/screenshots/settings-system.jpg" width="420"> |
-| Colour Scheme, previewed on the live crossbar | System: About, Logs, Backup & Restore |
+| <img src="docs/screenshots/settings-library.jpg" width="420"> | <img src="docs/screenshots/settings-emulators.jpg" width="420"> |
+| Library: media folders and hidden items | Emulators: the Library Manager |
+| <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> | <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> |
+| Look & Feel | Colour Scheme, previewed on the live crossbar |
+| <img src="docs/screenshots/settings-system.jpg" width="420"> | |
+| System: About, Logs, Backup & Restore | |
 
 ### First run
 
-The setup wizard asks for every permission ECHO can use, including Music, Photos and Video, then
-your folders, emulators and accounts. Each step runs the same code as its Settings screen.
+The setup wizard first asks what ECHO is for: Gaming and Media, each on or off (both off is a
+launcher only). Then it asks for the permissions ECHO can use, your folders, emulators and
+accounts, leaving out what you turned off. Each step runs the same code as its Settings screen.
 
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/setup-wizard-welcome.jpg" width="420"> | <img src="docs/screenshots/setup-wizard-permissions.jpg" width="420"> |
-| Welcome | Step 1, permissions |
+| Welcome | Permissions |
 
 ### The ECHO folder
 
@@ -282,18 +285,19 @@ recommended, and touch works throughout.
 A fresh install opens the **setup wizard**. Every step is optional and sets the same thing as the
 matching Settings screen. Run it again any time from **Settings ▸ Setup ▸ Setup Wizard**.
 
-1. **Welcome**
-2. **Permissions**: each one turns something on; none is required.
-3. **ROM folders**: grant a root folder with one subfolder per console (`gba`, `snes`, `psx`, …,
-   the ES-DE names). Adding it here scans it straight away and creates a Memory Card for every
-   console that has games, including a **Windows** card for PC games.
-4. **Music, Video, Photo and Books** folders
-5. **Artwork** folder, with an offer to import what is already there
-6. **Artwork sources**: SteamGridDB, TMDB, IGDB and a ScreenScraper account, each optional.
-   ScreenScraper's developer credentials are built in.
-7. **Vita data folder** and **RetroArch**, shown only when those apps are installed
-8. **Personalize**: shortcuts into the real theme, sound, boot and layout screens
-9. **Finish**
+1. **What ECHO is for**: **Gaming** and **Media**, each on or off. Both on is the full suite; both
+   off is a launcher only. What is off is left out of the steps below and hidden from the crossbar;
+   *Home ▸ Libraries* brings a column back.
+2. **Permissions**: each one turns something on; none is required. With Media off, the Music,
+   Photos and Video permissions are not asked for.
+3. **Your folders**: the **Games** folder, one subfolder per console (`gba`, `snes`, `psx`, …, the
+   ES-DE names); adding it scans it straight away and creates a Memory Card for every console that
+   has games, including a **Windows** card for PC games. Then the **Music, Video, Photos and Books**
+   folders, and the **ECHO folder** for artwork and the look.
+4. **Emulators**: **RetroArch** and the **Vita3K data folder**, shown only when Gaming is on and
+   those apps are installed.
+5. **Accounts**: accounts, Discord, and the artwork sources (SteamGridDB, TMDB, IGDB and a
+   ScreenScraper account, each optional). Then **Finish**.
 
 ### Permissions
 
@@ -330,6 +334,7 @@ access to all of your storage.
 - **D-pad ◀ backs out** of a folder, flyout or settings page wherever LEFT is not already doing
   something. Turn it off with *Look & Feel ▸ Controller ▸ Left Backs Out*.
 - *Look & Feel ▸ Controller* swaps A/B and X/Y.
+- **B with the on-screen keyboard up hides the keyboard**; the next B goes back.
 
 ---
 
@@ -483,9 +488,9 @@ Each column also lists its apps. Add more with its **Add** row.
   separately for each screen size. **Customize Crossbar Icons** replaces any of the 42 theme glyphs
   or a console's icon, live.
 - **Boot**: the boot sequence (a line of light that becomes the ECHO mark, about 3.5 seconds; A or B
-  skips it), your own boot video, the launch disc, and GameBoot. GameBoot Style picks the disc or
-  **Lens**, where the game's art spins inside the ECHO ring and opens over the screen; or use your
-  own video.
+  skips it), your own boot video, the launch disc, and GameBoot. GameBoot Style and Launch Disc
+  Style each pick the disc or **Lens**, where the art spins inside the ECHO ring and opens over the
+  screen; GameBoot can also use your own video.
 - **Sound**: add any interface sound and set looping **Menu Music**. ECHO ships with no sounds;
   the interface is silent until you add some.
 - **Categories, Controller, Touch, Performance**.
