@@ -29,7 +29,7 @@ class CrossbarPanel(
     fun openProfile(tab: ProfileTab, gameId: Long? = null, set: Int = 0, fromPanel: Boolean = false) {
         menuSound.play(MenuSound.SELECT)
         uiState.update {
-            it.copy(
+            it.withDrawerAndSearchClosed().copy(
                 notificationsOpen = if (fromPanel) false else it.notificationsOpen,
                 profile = ProfileState(tab = tab, set = set, openOnGameId = gameId, returnToPanel = fromPanel).withData(it.profileData),
             )

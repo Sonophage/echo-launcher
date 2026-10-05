@@ -1,12 +1,11 @@
 package com.echo.feature.settings.ui
 
-import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,8 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.SportsEsports
@@ -31,18 +28,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.echo.core.ui.design.PANEL_CARD_RADIUS
+import com.echo.core.ui.design.PanelCardFill
+import com.echo.core.ui.icons.rememberAppIcon
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
@@ -53,8 +54,12 @@ import com.echo.core.ui.design.PanelBase
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.common.format.formatByteSize
 import com.echo.core.ui.image.rememberArtworkModel
-import com.echo.feature.artwork.api.ArtworkStatus
 import com.echo.feature.settings.viewmodel.OverviewSettingsViewModel
+import com.echo.feature.settings.viewmodel.OverviewMedia
+import com.echo.feature.settings.viewmodel.overviewMediaRows
+import androidx.compose.material.icons.outlined.Computer
+import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.Photo
 
 @Composable
 fun OverviewSettingsScreen(
@@ -70,65 +75,152 @@ fun OverviewSettingsScreen(
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
     }
 
+    val density = LocalDensity.current
+    val window = LocalWindowInfo.current.containerSize
+    // sized from the whole window like the panel kit, not from this half of the page
+    val u = panelDesignUnits(window.width / density.density, window.height / density.density, density)
+    val banner = c.lastPlayed.firstOrNull()?.artUri
+
+    // owner, 2026-10-05: in the Profile page's language: the last-played art behind the page, a header with an
+    // icon and chips, big numbers, a rule, then cards with art and icons
     SettingsPageScaffold(
         subtitle = "Overview",
         onBack = onBack,
         modifier = modifier,
-    ) {
-        // owner, 2026-10-05: restyled like the Profile panel: the last-played art as a banner behind big
-        // numbers, a rule, then the details in columns
-        Box(Modifier.fillMaxSize().padding(top = 6.dp, bottom = 14.dp, end = 26.dp).clip(RoundedCornerShape(18.dp))) {
-            // sized from the whole window like the panel kit, not from this half of the page
-            val density = LocalDensity.current
-            val window = LocalWindowInfo.current.containerSize
-            val u = panelDesignUnits(window.width / density.density, window.height / density.density, density)
-            c.lastPlayed.firstOrNull()?.let { banner ->
-                AsyncImage(
-                    model = rememberArtworkModel(banner.artUri),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alignment = BiasAlignment(0f, -0.4f),
-                    modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.55f),
-                )
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.55f), 0.3f to PanelBase.copy(alpha = 0.3f), 0.55f to PanelBase.copy(alpha = 0.8f), 1f to PanelBase.copy(alpha = 0.95f))))
-            }
-            Column(Modifier.fillMaxSize().padding(u.dp(40)), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-                Text("Library", color = Color.White, fontSize = u.sp(52), fontWeight = FontWeight.ExtraLight, maxLines = 1)
-                c.lastPlayed.firstOrNull()?.let { Detail("Last played  ·  ${it.title}") }
-                Row(Modifier.padding(top = u.dp(18)), horizontalArrangement = Arrangement.spacedBy(u.dp(48))) {
-                    BigStat(dash(c.games, state.loading), "Games", u)
-                    BigStat(dash(c.tracks, state.loading), "Tracks", u)
-                    BigStat(dash(c.books, state.loading), "Books", u)
-                    BigStat(dash(c.videos, state.loading), "Videos", u)
+        // owner, 2026-10-05: the columns stretch the full width, so the page has no help pane
+        fullWidth = true,
+        backdrop = banner?.let { art ->
+            {
+                Box(Modifier.fillMaxSize()) {
+                    AsyncImage(
+                        model = rememberArtworkModel(art),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        alignment = BiasAlignment(0f, -0.4f),
+                        modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.55f),
+                    )
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.55f), 0.3f to PanelBase.copy(alpha = 0.3f), 0.55f to PanelBase.copy(alpha = 0.8f), 1f to PanelBase.copy(alpha = 0.95f))))
                 }
-                Box(Modifier.padding(top = u.dp(18), bottom = u.dp(18)).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(40))) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
-                        Eyebrow("In the library")
-                        StatRow(Icons.Outlined.SportsEsports, 20.dp, alpha = 0.9f) {
-                            StatLine(count(c.consoles, state.loading, "console"), "${dash(c.android, state.loading)} Android  ·  ${dash(c.pc, state.loading)} PC")
-                        }
-                        StatRow(Icons.Outlined.MusicNote, 20.dp, alpha = 0.9f) { StatLine(count(c.artists, state.loading, "artist"), "") }
-                        StatRow(Icons.AutoMirrored.Outlined.MenuBook, 20.dp, alpha = 0.9f) { StatLine("${dash(c.booksOpened, state.loading)} books opened", "") }
-                        StatRow(Icons.Outlined.Movie, 20.dp, alpha = 0.9f) { StatLine(count(c.videoCollections, state.loading, "collection"), "") }
+            }
+        },
+    ) {
+        val scrollState = rememberScrollState()
+        LocalSettingsScrollStateRegistrar.current(scrollState)
+        // the same left edge as the settings rows (their 40dp, plus the rail row's own inset)
+        Column(Modifier.fillMaxSize().verticalScroll(scrollState).padding(start = 40.dp + u.dp(14), end = 26.dp, bottom = 14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(24))) {
+                val icon = rememberAppIcon(context.packageName)?.bitmap
+                Box(Modifier.size(u.dp(96)).clip(RoundedCornerShape(u.dp(14))).background(Color.White.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
+                    icon?.let { Image(it, null, Modifier.fillMaxSize()) }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
+                    Text("Library", color = Color.White, fontSize = u.sp(52), fontWeight = FontWeight.ExtraLight, maxLines = 1)
+                    Detail("ECHO ${packageInfo?.versionName ?: "?"}  ·  Android ${android.os.Build.VERSION.RELEASE}")
+                    Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
+                        Chip("Artwork ${state.artwork.complete} of ${state.artwork.total}", u)
+                        Chip("Cache ${state.artworkCacheBytes?.let { formatByteSize(it) } ?: "…"}", u)
                     }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
-                        Eyebrow("System")
-                        StatRow(Icons.Outlined.Image, 20.dp, alpha = 0.9f) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text("Artwork", style = RowText)
-                                ArtworkBar(state.artwork, Modifier.width(64.dp).height(4.dp))
-                            }
-                            Detail("${state.artwork.complete} of ${state.artwork.total}  ·  cache ${state.artworkCacheBytes?.let { formatByteSize(it) } ?: "…"}")
+                }
+            }
+            Row(Modifier.padding(top = u.dp(16)), horizontalArrangement = Arrangement.spacedBy(u.dp(48))) {
+                BigStat(dash(c.games, state.loading), "Games", u)
+                overviewMediaRows(c, state.mediaShown).forEach { row ->
+                    val (value, label) = when (row.kind) {
+                        OverviewMedia.MUSIC -> c.tracks to "Tracks"
+                        OverviewMedia.VIDEO -> c.videos to "Videos"
+                        OverviewMedia.PHOTOS -> c.photos to "Photos"
+                        OverviewMedia.BOOKS -> c.books to "Books"
+                    }
+                    BigStat(dash(value, state.loading), label, u)
+                }
+            }
+            Box(Modifier.padding(top = u.dp(12), bottom = u.dp(16)).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
+            // three columns side by side, as on the Profile page, so the page fits the short screen
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(24))) {
+                Column(Modifier.weight(1.2f)) {
+                    SectionLabel("Recently played", u)
+                    if (c.lastPlayed.isEmpty()) Detail("Nothing played yet")
+                    c.lastPlayed.forEach { game ->
+                        Card(u) {
+                            AsyncImage(
+                                model = rememberArtworkModel(game.artUri),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(u.dp(40)).clip(RoundedCornerShape(u.dp(10))),
+                            )
+                            Text(game.title, color = Color.White, fontSize = u.sp(15), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        StatRow(Icons.Outlined.Info, 20.dp, alpha = 0.9f) {
-                            StatLine("Build ${packageInfo?.versionName ?: "?"}", "Android ${android.os.Build.VERSION.RELEASE}")
+                    }
+                }
+                Column(Modifier.weight(1f)) {
+                    SectionLabel("Games", u)
+                    StatCard(Icons.Outlined.SportsEsports, count(c.consoles, state.loading, "console"), null, u)
+                    StatCard(Icons.Outlined.PhoneAndroid, "${dash(c.android, state.loading)} Android", null, u)
+                    StatCard(Icons.Outlined.Computer, "${dash(c.pc, state.loading)} PC", null, u)
+                }
+                val media = overviewMediaRows(c, state.mediaShown)
+                if (media.isNotEmpty()) {
+                    Column(Modifier.weight(1f)) {
+                        SectionLabel("Media", u)
+                        // two to a row, so four kinds fit the short screen
+                        media.chunked(2).forEach { pair ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                                pair.forEach { row ->
+                                    val icon = when (row.kind) {
+                                        OverviewMedia.MUSIC -> Icons.Outlined.MusicNote
+                                        OverviewMedia.VIDEO -> Icons.Outlined.Movie
+                                        OverviewMedia.PHOTOS -> Icons.Outlined.Photo
+                                        OverviewMedia.BOOKS -> Icons.AutoMirrored.Outlined.MenuBook
+                                    }
+                                    StatCard(icon, row.main, row.detail, u, Modifier.weight(1f).padding(bottom = u.dp(6)))
+                                }
+                                if (pair.size == 1) Spacer(Modifier.weight(1f))
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun StatCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    main: String,
+    detail: String?,
+    u: DesignUnits,
+    modifier: Modifier = Modifier.fillMaxWidth().padding(bottom = u.dp(6)),
+) {
+    Card(u, modifier) {
+        Icon(icon, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(u.dp(24)))
+        Column {
+            Text(main, color = Color.White, fontSize = u.sp(15), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            detail?.let { Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(12), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String, u: DesignUnits, top: Dp = 0.dp) {
+    Text(text.uppercase(), style = u.eyebrow(), modifier = Modifier.padding(top = top, bottom = u.dp(10)))
+}
+
+@Composable
+private fun Chip(text: String, u: DesignUnits) {
+    Text(
+        text, color = Color.White, fontSize = u.sp(13), maxLines = 1,
+        modifier = Modifier.clip(RoundedCornerShape(u.dp(12))).background(Color.White.copy(alpha = 0.14f)).padding(horizontal = u.dp(14), vertical = u.dp(8)),
+    )
+}
+
+@Composable
+private fun Card(u: DesignUnits, modifier: Modifier = Modifier.fillMaxWidth().padding(bottom = u.dp(6)), content: @Composable () -> Unit) {
+    Row(
+        modifier.clip(RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))).background(PanelCardFill).padding(horizontal = u.dp(14), vertical = u.dp(7)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+    ) { content() }
 }
 
 @Composable
@@ -140,56 +232,9 @@ private fun BigStat(value: String, label: String, u: DesignUnits) {
 }
 
 @Composable
-private fun StatRow(icon: ImageVector, size: Dp, alpha: Float, content: @Composable () -> Unit) {
-    Row(
-        Modifier.alpha(alpha),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Box(Modifier.width(36.dp), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(size))
-        }
-        Column { content() }
-    }
-}
-
-@Composable
-private fun StatLine(main: String, detail: String) {
-    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(main, style = RowText, maxLines = 1)
-        Detail(detail)
-    }
-}
-
-@Composable
-private fun Eyebrow(text: String) {
-    Text(
-        text.uppercase(),
-        style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.28.em),
-        modifier = Modifier.padding(start = 50.dp),
-    )
-}
-
-@Composable
 private fun Detail(text: String) {
     Text(text, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
-
-@Composable
-private fun ArtworkBar(status: ArtworkStatus, modifier: Modifier) {
-    val total = status.total.coerceAtLeast(1)
-    Row(modifier.clip(RoundedCornerShape(2.dp)), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        listOf(
-            status.complete to Color(0xFF66BB6A),
-            status.stale to Color(0xFFE0A030),
-            status.missing to Color.White.copy(alpha = 0.25f),
-        ).filter { it.first > 0 }.forEach { (n, color) ->
-            Box(Modifier.weight(n.toFloat() / total).fillMaxHeight().background(color))
-        }
-    }
-}
-
-private val RowText = EchoTextStyle.copy(color = Color.White, fontSize = 17.sp)
 
 private fun dash(value: Int, loading: Boolean): String = if (loading) "—" else value.toString()
 

@@ -46,6 +46,22 @@ class SettingsExitTest {
         assertNull("the Profile draws above settings, so the screen would open unseen", open.profile)
     }
 
+    // owner, 2026-10-05: with the App Drawer or Search up, a screen picked from the top panel opened under it
+    @Test fun `opening settings or Game info closes the App Drawer and Search`() {
+        val covered = CrossbarUiState(
+            showBootSequence = false,
+            activeAppDrawerFilter = "apps",
+            search = SearchState(scope = SearchScope.ALL),
+        )
+        val settings = covered.withSettingsOpen("settings_themes")
+        assertNull("the drawer draws above settings", settings.activeAppDrawerFilter)
+        assertNull("Search draws above settings", settings.search)
+
+        val info = covered.withGameInfoOpen(GameInfoState(CrossbarItem(id = "g", title = "Ico", gameId = 1L)))
+        assertNull(info.activeAppDrawerFilter)
+        assertNull(info.search)
+    }
+
     @Test fun `every way into settings goes through withSettingsOpen`() {
         val root = generateSequence(File(".").absoluteFile) { it.parentFile }
             .first { File(it, "settings.gradle.kts").isFile }

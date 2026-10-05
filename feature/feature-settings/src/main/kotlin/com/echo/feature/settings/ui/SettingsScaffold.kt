@@ -296,6 +296,8 @@ fun SettingsScaffold(
     helperFooterItems: List<ControllerPromptItem> = SettingsDefaultHelperItems,
 
     contentKey: Any? = null,
+    // the page uses the whole width, with no help pane (the Overview, owner 2026-10-05)
+    fullWidth: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val leftBacksOut = LocalSettingsLeftBacksOut.current
@@ -696,7 +698,7 @@ fun SettingsScaffold(
         ) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, density)
             val tabs = tabEntries.isNotEmpty()
-            val paneShown = (tabs || paneText != null) && maxWidth - SETTINGS_COLUMN_MAX_WIDTH >= SETTINGS_HELP_PANE_MIN_WIDTH
+            val paneShown = !fullWidth && (tabs || paneText != null) && maxWidth - SETTINGS_COLUMN_MAX_WIDTH >= SETTINGS_HELP_PANE_MIN_WIDTH
             backdrop?.invoke()
             // the wave shows inside the panel's glow, on the left (owner, 2026-10-04)
             if (backdrop == null && panelTint != null) GlowMaskedWave(GlowSide.LEFT)
@@ -808,7 +810,7 @@ fun SettingsScaffold(
                         },
                 ) {
                     Row(Modifier.fillMaxSize()) {
-                        Box(modifier = Modifier.widthIn(max = SETTINGS_COLUMN_MAX_WIDTH)) {
+                        Box(modifier = if (fullWidth) Modifier.weight(1f) else Modifier.widthIn(max = SETTINGS_COLUMN_MAX_WIDTH)) {
                             // every settings page draws its rows as the kit's rail rows (owner, 2026-10-04),
                             // as the first-run wizard does
                             CompositionLocalProvider(

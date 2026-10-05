@@ -222,6 +222,22 @@ class AppDrawerViewModelTest {
         assertTrue(viewModel.uiState.value.allApps.any { it.packageName == "com.mojang.minecraftpe" })
     }
 
+    // owner, 2026-10-05: an app that is never used can be hidden from the whole layout, from the drawer
+    @Test
+    fun `Hide Everywhere from the drawer hides the app and drops it from the drawer`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        val browser = viewModel.uiState.value.allApps.first { it.packageName == "com.example.browser" }
+        viewModel.openAppMenu(browser)
+        assertTrue(AppMenuAction.HIDE_EVERYWHERE in viewModel.uiState.value.menuActions)
+
+        coEvery { appCategories.hiddenEverywhere() } returns setOf("com.example.browser")
+        viewModel.onMenuAction(AppMenuAction.HIDE_EVERYWHERE)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        io.mockk.coVerify { appCategories.setHidden("com.example.browser", true) }
+        assertFalse(viewModel.uiState.value.allApps.any { it.packageName == "com.example.browser" })
+    }
+
     private fun drawerWithNothingUsed(usageAccess: Boolean): AppDrawerViewModel {
         coEvery { repository.getInstalledApps() } returns fakeApps().map { it.copy(lastUsedAt = 0L) }
         every { repository.hasUsageAccess() } returns usageAccess

@@ -36,6 +36,9 @@ fun SettingsPageScaffold(
     restoreFocusKey: String? = null,
     onInterceptAction: ((GamepadAction) -> Boolean)? = null,
     helperFooterItems: List<ControllerPromptItem> = SettingsDefaultHelperItems,
+    // drawn behind the whole page, under the content (the Overview's last-played art)
+    backdrop: (@Composable () -> Unit)? = null,
+    fullWidth: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     SettingsScaffold(
@@ -60,6 +63,8 @@ fun SettingsPageScaffold(
 
         showDivider = false,
         showRail = heading == null,
+        backdrop = backdrop,
+        fullWidth = fullWidth,
     ) {
         Column(Modifier.fillMaxWidth()) {
             content()

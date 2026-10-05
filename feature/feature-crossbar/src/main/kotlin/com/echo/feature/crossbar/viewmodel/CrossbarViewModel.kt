@@ -1250,13 +1250,24 @@ internal fun CrossbarUiState.withSettingsClosed(): CrossbarUiState = copy(
     settingsFromPanel = false,
 )
 
-internal fun CrossbarUiState.withSettingsOpen(screenId: String): CrossbarUiState = copy(
+// owner, 2026-10-05: a screen opened while the App Drawer or Search is up (from the top panel, say) opened
+// under it, so nothing seemed to happen until the drawer was closed. Opening a screen closes both
+internal fun CrossbarUiState.withDrawerAndSearchClosed(): CrossbarUiState = copy(
+    activeAppDrawerFilter = null,
+    pendingDrawerAction = null,
+    pendingDrawerTypedChar = null,
+    drawerLetterRailHeld = false,
+    search = null,
+)
+
+internal fun CrossbarUiState.withSettingsOpen(screenId: String): CrossbarUiState = withDrawerAndSearchClosed().copy(
     activeSettingsScreen = screenId,
     gameInfo = null,
     profile = null,
 )
 
-internal fun CrossbarUiState.withGameInfoOpen(info: GameInfoState): CrossbarUiState = copy(gameInfo = info, profile = null)
+internal fun CrossbarUiState.withGameInfoOpen(info: GameInfoState): CrossbarUiState =
+    withDrawerAndSearchClosed().copy(gameInfo = info, profile = null)
 
 fun CrossbarUiState.withNamePromptText(text: String): CrossbarUiState = when {
     renameAppTarget != null      -> copy(renameAppText = text)

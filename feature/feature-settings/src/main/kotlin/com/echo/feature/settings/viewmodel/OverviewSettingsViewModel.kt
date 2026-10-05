@@ -31,6 +31,7 @@ data class OverviewCounts(
     val booksOpened: Int = 0,
     val videos: Int = 0,
     val videoCollections: Int = 0,
+    val photos: Int = 0,
     val lastPlayed: List<OverviewCover> = emptyList(),
 )
 
@@ -66,6 +67,19 @@ internal fun overviewCounts(
 
 internal const val OVERVIEW_FAN_SIZE = 3
 
+enum class OverviewMedia { MUSIC, VIDEO, PHOTOS, BOOKS }
+
+data class OverviewMediaRow(val kind: OverviewMedia, val main: String, val detail: String?)
+
+// owner, 2026-10-05: the Overview's media column, one row per kind, only for the categories on the crossbar
+internal fun overviewMediaRows(c: OverviewCounts, shown: Set<String>): List<OverviewMediaRow> = buildList {
+    fun n(value: Int, noun: String) = "$value ${if (value == 1) noun else noun + "s"}"
+    if (com.echo.core.domain.model.BuiltInCategory.MUSIC in shown) add(OverviewMediaRow(OverviewMedia.MUSIC, n(c.tracks, "track"), n(c.artists, "artist")))
+    if (com.echo.core.domain.model.BuiltInCategory.VIDEO in shown) add(OverviewMediaRow(OverviewMedia.VIDEO, n(c.videos, "video"), n(c.videoCollections, "collection")))
+    if (com.echo.core.domain.model.BuiltInCategory.PHOTO in shown) add(OverviewMediaRow(OverviewMedia.PHOTOS, n(c.photos, "photo"), null))
+    if (com.echo.core.domain.model.BuiltInCategory.LIBRARY in shown) add(OverviewMediaRow(OverviewMedia.BOOKS, n(c.books, "book"), "${c.booksOpened} opened"))
+}
+
 private const val PC_PLATFORM = "windows"
 
 data class OverviewUiState(
@@ -74,6 +88,8 @@ data class OverviewUiState(
 
     val artworkCacheBytes: Long? = null,
     val loading: Boolean = true,
+    // the media categories on the crossbar; the Overview shows only those (owner, 2026-10-05)
+    val mediaShown: Set<String> = emptySet(),
 )
 
 @HiltViewModel
@@ -82,6 +98,8 @@ class OverviewSettingsViewModel @Inject constructor(
     musicRepository: MusicRepository,
     bookRepository: BookRepository,
     videoRepository: VideoRepository,
+    photoRepository: com.echo.core.domain.repository.PhotoRepository,
+    categoryRepository: com.echo.core.data.repository.CategoryRepositoryImpl,
     private val artworkRepository: ArtworkRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(OverviewUiState())
@@ -97,7 +115,13 @@ class OverviewSettingsViewModel @Inject constructor(
                 videoRepository.observePlaylists(),
             ) { games, tracks, books, videos, playlists ->
                 overviewCounts(games, tracks, books, videos.size, playlists.size)
-            }.collect { counts -> _state.update { it.copy(counts = counts, loading = false) } }
+            }.combine(photoRepository.observeAllPhotos()) { counts, photos -> counts.copy(photos = photos.size) }
+                .collect { counts -> _state.update { it.copy(counts = counts, loading = false) } }
+        }
+        viewModelScope.launch {
+            categoryRepository.observeVisible().collect { visible ->
+                _state.update { it.copy(mediaShown = visible.map { c -> c.id }.toSet()) }
+            }
         }
 
         viewModelScope.launch {

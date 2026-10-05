@@ -64,6 +64,8 @@ enum class AppMenuAction(val label: String, val group: MenuGroup) {
     APP_INFO("App Info", MenuGroup.SETTINGS),
     MARK_GAME("Mark as Game", MenuGroup.LIBRARY),
     UNMARK_GAME("Unmark as Game", MenuGroup.LIBRARY),
+    // owner, 2026-10-05: hide an app that is never used from the whole layout; undone in Settings > Library > Hidden Items
+    HIDE_EVERYWHERE("Hide Everywhere", MenuGroup.REMOVE),
     UNINSTALL("Uninstall", MenuGroup.REMOVE),
 }
 
@@ -130,6 +132,7 @@ data class AppDrawerUiState(
             add(AppMenuAction.ADD_TO_CROSS_BAR)
             add(AppMenuAction.APP_INFO)
             add(if (menuAppIsGame) AppMenuAction.UNMARK_GAME else AppMenuAction.MARK_GAME)
+            add(AppMenuAction.HIDE_EVERYWHERE)
             if (menuApp?.isSystemApp == false) add(AppMenuAction.UNINSTALL)
         }
 
@@ -328,6 +331,14 @@ class AppDrawerViewModel @Inject constructor(
             AppMenuAction.UNINSTALL -> _uiState.update { it.copy(menuApp = null, confirmUninstall = app, uninstallConfirmFocused = false) }
 
             AppMenuAction.ADD_TO_CROSS_BAR -> _uiState.update { it.copy(menuApp = null, pendingCrossBarAdd = app.packageName) }
+
+            AppMenuAction.HIDE_EVERYWHERE -> {
+                _uiState.update { it.copy(menuApp = null) }
+                viewModelScope.launch {
+                    appCategoryRepository.setHidden(app.packageName, true)
+                    loadApps()
+                }
+            }
         }
     }
 

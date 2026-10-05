@@ -51,4 +51,16 @@ class OverviewCountsTest {
         )
         assertEquals(1, overviewCounts(emptyList(), emptyList(), books, 0, 0).booksOpened)
     }
+
+    // owner, 2026-10-05: the Overview's media column shows only the kinds whose category is on the crossbar
+    @Test
+    fun `the media column lists only the media categories that are turned on`() {
+        val counts = OverviewCounts(tracks = 3966, artists = 248, videos = 33, photos = 12, books = 80, booksOpened = 1)
+        val shown = setOf(com.echo.core.domain.model.BuiltInCategory.MUSIC, com.echo.core.domain.model.BuiltInCategory.LIBRARY, "network")
+
+        val rows = overviewMediaRows(counts, shown)
+
+        org.junit.Assert.assertEquals(listOf(OverviewMedia.MUSIC, OverviewMedia.BOOKS), rows.map { it.kind })
+        org.junit.Assert.assertEquals("3966 tracks", rows.first().main)
+    }
 }
