@@ -182,15 +182,17 @@ class CrossbarSearch(
             return
         }
 
+        // resolved before closeSearch, which empties the lists a photo or track is found in
+        val target = searchOpenTarget(row, searchPhotos, searchTracks)
         val categoryId = searchRowCategory(row) ?: return
         closeSearch()
         vm.selectCategoryById(categoryId)
         when (row.type) {
             CrossbarItemType.VIDEO_FILE ->
                 uiState.update { it.copy(activeVideoId = row.id.removePrefix("vid_"), activeVideoAutoPlay = true) }
-            CrossbarItemType.PHOTO_FILE -> openSearchedPhoto(row)
+            CrossbarItemType.PHOTO_FILE -> (target as? SearchOpen.Photo)?.let { openSearchedPhoto(it.photo) }
             CrossbarItemType.LIBRARY_BOOK -> vm.bookshelf.openBook(row.id.removePrefix("book_"))
-            CrossbarItemType.MUSIC_TRACK -> openSearchedTrack(row)
+            CrossbarItemType.MUSIC_TRACK -> (target as? SearchOpen.Track)?.let { openSearchedTrack(it.track) }
 
             else -> row.gameId?.let { id -> vm.launching.launchGameDirectly(id) }
         }
@@ -198,17 +200,14 @@ class CrossbarSearch(
 
     private fun searchRowCategory(row: CrossbarItem): String? = row.owningCategory()
 
-    private fun openSearchedPhoto(row: CrossbarItem) {
-        val photoId = row.id.removePrefix("pho_")
-        val libraryId = searchPhotos.firstOrNull { it.id == photoId }?.libraryId ?: return
+    private fun openSearchedPhoto(photo: com.echo.core.domain.model.Photo) {
+        val libraryId = photo.libraryId
         val name = uiState.value.photoLibraries.firstOrNull { it.id == libraryId }?.displayName.orEmpty()
         uiState.update { it.copy(photoNav = PhotoNav.Library(libraryId, name)) }
-        vm.gallery.openPhoto(photoId)
+        vm.gallery.openPhoto(photo.id)
     }
 
-    private fun openSearchedTrack(row: CrossbarItem) {
-        val trackId = row.id.removePrefix("mt_")
-        val track = searchTracks.firstOrNull { it.id == trackId } ?: return
+    private fun openSearchedTrack(track: MusicTrack) {
         scope.launch {
             vm.launching.awaitDiscHandOff(track.artUri)
             vm.musicPlayer.setQueue(listOf(track), 0)
@@ -227,6 +226,23 @@ class CrossbarSearch(
             else -> Unit
         }
     }
+}
+
+internal sealed interface SearchOpen {
+    data class Photo(val photo: com.echo.core.domain.model.Photo) : SearchOpen
+    data class Track(val track: MusicTrack) : SearchOpen
+}
+
+// the photo or track a search row opens, looked up while the results are still held; null for rows
+// that open from their own id (games, apps, videos, books)
+internal fun searchOpenTarget(
+    row: CrossbarItem,
+    photos: List<com.echo.core.domain.model.Photo>,
+    tracks: List<MusicTrack>,
+): SearchOpen? = when (row.type) {
+    CrossbarItemType.PHOTO_FILE -> photos.firstOrNull { it.id == row.id.removePrefix("pho_") }?.let(SearchOpen::Photo)
+    CrossbarItemType.MUSIC_TRACK -> tracks.firstOrNull { it.id == row.id.removePrefix("mt_") }?.let(SearchOpen::Track)
+    else -> null
 }
 
 internal fun com.echo.core.domain.model.Game.toSearchRow(platformName: String?): CrossbarItem = CrossbarItem(
