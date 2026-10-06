@@ -29,6 +29,9 @@ import com.echo.feature.artwork.portable.PortableArtworkLibrary
 import com.echo.feature.artwork.store.ArtworkFileNaming
 import com.echo.feature.artwork.store.ArtworkKind
 import com.echo.feature.artwork.store.ArtworkStore
+import com.echo.feature.artwork.store.GameArtColumn
+import com.echo.feature.artwork.store.gameArtColumnFor
+import com.echo.feature.artwork.store.relinkColumnFor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -370,6 +373,8 @@ class ArtworkImportManager @Inject constructor(
         var changedFiles = 0
         var duplicateNames = 0
         val linkedIds = mutableSetOf<Long>()
+        // games is a snapshot, so the columns this pass wrote are remembered here
+        val filledColumns = HashSet<Pair<Long, GameArtColumn>>()
 
         for (platformDir in library.platformDirs(tree)) {
             val platformId = platformDir.name
@@ -388,6 +393,8 @@ class ArtworkImportManager @Inject constructor(
                     ArtworkPathResolver.kindForMediaDir(child.name)?.let { mediaDirs += it to child }
                 }
             }
+            // a slot's own kind links before its stand-ins (relinkColumnFor), so a cover never takes the place of an icon0 file
+            mediaDirs.sortBy { gameArtColumnFor(it.first, 0) == null }
             for ((kind, mediaDir) in mediaDirs) {
                 val records = mutableListOf<ArtworkRecordEntity>()
                 val stemsInDir = HashSet<String>()
@@ -461,37 +468,25 @@ class ArtworkImportManager @Inject constructor(
                     for (gameId in ids) {
                         val game = games.firstOrNull { it.id == gameId } ?: continue
 
-                        val isColumnKind = sortOrder == 0 && (
-                            kind == ArtworkKind.ICON || kind == ArtworkKind.HERO ||
-                                kind == ArtworkKind.BACKGROUND || kind == ArtworkKind.LOGO ||
-                                kind == ArtworkKind.BOX_ART || kind == ArtworkKind.PHYSICAL_MEDIA ||
-                                kind == ArtworkKind.BOX_3D
-                            )
-                        if (isColumnKind && kind.name !in lockedTypes(gameId)) {
-                            val current = when (kind) {
-                                ArtworkKind.ICON -> game.iconUri
-                                ArtworkKind.BACKGROUND -> game.artworkUri
-                                else -> game.logoUri
+                        val column = relinkColumnFor(kind)
+                        if (column != null && (gameId to column) !in filledColumns &&
+                            kind.name !in lockedTypes(gameId) && column.kind.name !in lockedTypes(gameId)
+                        ) {
+                            val current = when (column) {
+                                GameArtColumn.ICON -> game.iconUri
+                                GameArtColumn.ARTWORK -> game.artworkUri
+                                GameArtColumn.LOGO -> game.logoUri
                             }
 
                             val replaceable = !artworkStore.isValidRef(current) ||
                                 current?.startsWith("http", ignoreCase = true) == true
                             if (replaceable) {
-                                when (kind) {
-                                    ArtworkKind.ICON -> gameDao.updateIconUri(gameId, uri)
-                                    ArtworkKind.BACKGROUND -> gameDao.updateArtwork(gameId, uri)
-                                    else -> gameDao.updateLogo(gameId, uri)
+                                when (column) {
+                                    GameArtColumn.ICON -> gameDao.updateIconUri(gameId, uri)
+                                    GameArtColumn.ARTWORK -> gameDao.updateArtwork(gameId, uri)
+                                    GameArtColumn.LOGO -> gameDao.updateLogo(gameId, uri)
                                 }
-                                linkedIds.add(gameId)
-                            }
-                        }
-
-                        if (kind == ArtworkKind.HERO && sortOrder == 0 &&
-                            ArtworkKind.BACKGROUND.name !in lockedTypes(gameId)
-                        ) {
-                            val bg = game.artworkUri
-                            if (!artworkStore.isValidRef(bg) || bg?.startsWith("http", ignoreCase = true) == true) {
-                                gameDao.updateArtwork(gameId, uri)
+                                filledColumns += gameId to column
                                 linkedIds.add(gameId)
                             }
                         }
@@ -517,7 +512,8 @@ class ArtworkImportManager @Inject constructor(
                             portableName = fileStem,
                             relativePath = ArtworkPathResolver.relativePath(platformId, kind, file.name),
                             documentUri = uri,
-                            source = prior?.source ?: "relink",
+                            // a file changed since it was recorded was changed by hand, so it is no longer a scrape's
+                            source = prior?.source?.takeIf { prior.sizeBytes == size } ?: "relink",
                             sizeBytes = size,
                             userAssigned = prior?.userAssigned ?: false,
                             locked = prior?.locked ?: false,
@@ -551,7 +547,7 @@ class ArtworkImportManager @Inject constructor(
                             portableName = f.fileStem,
                             relativePath = f.relativePath,
                             documentUri = f.documentUri,
-                            source = prior?.source ?: "relink",
+                            source = prior?.source?.takeIf { prior.sizeBytes == f.sizeBytes } ?: "relink",
                             sizeBytes = f.sizeBytes,
                             userAssigned = prior?.userAssigned ?: false,
                             locked = prior?.locked ?: false,

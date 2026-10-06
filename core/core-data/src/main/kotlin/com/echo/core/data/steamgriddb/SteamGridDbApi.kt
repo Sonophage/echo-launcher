@@ -129,14 +129,9 @@ class SteamGridDbApi @Inject constructor(
         response.data.also { Timber.d("SGDB ${type.name} for $gameId → ${it.size} results") }
     }
 
-    suspend fun getBestHorizontalGridUrl(gameId: Long): String? =
-        getArt(gameId, SgdbArtType.GRID, dimensions = listOf("920x430", "460x215"))
-            .getOrNull()
-            ?.firstOrNull()
-            ?.url
-
+    // upright covers only: the grid endpoint also serves wide Steam headers, which are not covers
     suspend fun getBestGridUrl(gameId: Long): String? =
-        getArt(gameId, SgdbArtType.GRID)
+        getArt(gameId, SgdbArtType.GRID, dimensions = listOf("600x900", "342x482", "660x930"))
             .getOrNull()
             ?.firstOrNull()
             ?.url

@@ -101,6 +101,16 @@ class RoutingArtworkStore @Inject constructor(
         artworkRecordDao.clear()
     }
 
+    override suspend fun deleteScraped(): Set<String> {
+        val scraped = artworkRecordDao.getAll().filter(::isRescrapable)
+        scraped.forEach { r ->
+            artworkRecordDao.deleteById(r.id)
+            runCatching { library.deleteUri(Uri.parse(r.documentUri)) }
+                .onFailure { Timber.w(it, "Could not delete scraped ${r.relativePath}") }
+        }
+        return scraped.mapTo(HashSet()) { it.documentUri }
+    }
+
     suspend fun saveTempPortable(
         gameId: Long,
         kind: ArtworkKind,
@@ -397,6 +407,15 @@ class RoutingArtworkStore @Inject constructor(
                 ?: ArtworkFileNaming.withOrdinal(portableName, ArtworkFileNaming.nextOrdinal(slotRecords.map { it.portableName }))
         }
 
+        // a scrape never overwrites a file it has no record of: one already under this name was put in the folder by
+        // hand or by a restore, and saveFromFile would delete it. The relink gives it a record
+        if (source == SOURCE_SCRAPE && existing == null && !multi) {
+            library.findInPath(tree, ArtworkPathResolver.mediaDirSegments(game.platformId, kind), portableName)?.let {
+                tempFile.delete()
+                return it.uri.toString()
+            }
+        }
+
         var prevDocumentUri: String? = existing?.prevDocumentUri
         var prevRelativePath: String? = existing?.prevRelativePath
         var prevSizeBytes: Long = existing?.prevSizeBytes ?: 0L
@@ -490,7 +509,7 @@ class RoutingArtworkStore @Inject constructor(
         else   -> "image/jpeg"
     }
 
-    private companion object {
+    companion object {
         const val SOURCE_SCRAPE = "scrape"
         const val SOURCE_USER = "user"
     }
@@ -521,7 +540,13 @@ data class StudioArtworkSlot(
     val sizeBytes: Long,
 )
 
-enum class GameArtColumn { ICON, ARTWORK, LOGO }
+// owner, 2026-10-05: a rescrape replaces what a scraper fetched and nothing else. Art he picked, locked, or put in the
+// folder himself (a relinked file, or a scraped one he changed) is kept
+fun isRescrapable(record: ArtworkRecordEntity): Boolean =
+    record.source == RoutingArtworkStore.SOURCE_SCRAPE && !record.locked && !record.userAssigned
+
+// kind: the artwork kind the column is named for, whose lock guards it
+enum class GameArtColumn(val kind: ArtworkKind) { ICON(ArtworkKind.ICON), ARTWORK(ArtworkKind.BACKGROUND), LOGO(ArtworkKind.LOGO) }
 
 fun gameArtColumnFor(kind: ArtworkKind, sortOrder: Int): GameArtColumn? {
     if (sortOrder != 0) return null
@@ -531,4 +556,13 @@ fun gameArtColumnFor(kind: ArtworkKind, sortOrder: Int): GameArtColumn? {
         ArtworkKind.LOGO -> GameArtColumn.LOGO
         else -> null
     }
+}
+
+// the column a relinked file may fill. Beside the three own kinds, two stand in for a missing file: a cover fills the
+// icon slot (owner, 2026-10-05: a game's cover is its icon slot, every system) and a miximage the background. No other
+// kind has a column, so box sides and discs never land in the logo slot
+fun relinkColumnFor(kind: ArtworkKind): GameArtColumn? = gameArtColumnFor(kind, 0) ?: when (kind) {
+    ArtworkKind.BOX_ART -> GameArtColumn.ICON
+    ArtworkKind.HERO -> GameArtColumn.ARTWORK
+    else -> null
 }

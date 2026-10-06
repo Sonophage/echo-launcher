@@ -50,6 +50,9 @@ object ArtworkPathResolver {
 
     val importedKinds: Set<ArtworkKind> = KIND_TO_DIR.keys
 
+    fun mediaDirSegments(platformId: String, kind: ArtworkKind): List<String> =
+        listOf(ArtworkLibraryManifest.DIR_ARTWORK, platformId) + mediaDirFor(kind).split('/')
+
     fun relativePath(platformId: String, kind: ArtworkKind, fileName: String): String =
         "${ArtworkLibraryManifest.DIR_ARTWORK}/$platformId/${mediaDirFor(kind)}/$fileName"
 }

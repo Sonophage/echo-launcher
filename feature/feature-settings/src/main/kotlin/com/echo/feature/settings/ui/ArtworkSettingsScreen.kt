@@ -161,7 +161,7 @@ fun ArtworkSettingsScreen(
                 } else {
                     SettingsRow(
                         label    = "Re-Scrape All Games",
-                        sublabel = "Clears and re-fetches artwork for every game",
+                        sublabel = "Re-fetches scraped artwork for every game — keeps art you picked or added",
                         onClick  = { viewModel.requestRescrapeAll() },
                     )
                     SettingsRow(

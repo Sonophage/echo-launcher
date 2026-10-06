@@ -259,6 +259,7 @@ class MetadataRepository @Inject constructor(
 
         var backgroundPath: String? = null
         var logoPath: String? = null
+        var coverPath: String? = null
 
         if (!options.metadataOnly) {
         onAssetProgress?.invoke(src, "Background")
@@ -267,6 +268,16 @@ class MetadataRepository @Inject constructor(
 
         if (options.downloadClearLogos) onAssetProgress?.invoke(src, "Logo")
         logoPath = finalLogoUrl?.let { savedTracked(ArtworkKind.LOGO, it, fromSs = it == ssInfo?.logoUrl) }
+
+        // owner, 2026-10-05: a game's cover is its icon slot, every system, so the tile gets an upright cover. The first
+        // source that downloads wins; a cover he picked or locked is kept by the store
+        onAssetProgress?.invoke(src, "Cover")
+        coverPath = listOfNotNull(steamArt?.boxArtUrl, ssInfo?.boxArtUrl, igdbInfo?.artworkUrl, sgdbGridUrl).distinct()
+            .firstNotNullOfOrNull { savedTracked(ArtworkKind.ICON, it, fromSs = it == ssInfo?.boxArtUrl) }
+        val icon = gameEntity?.iconUri
+        if (coverPath != null && (!artworkStore.isValidRef(icon) || icon!!.startsWith("http", ignoreCase = true))) {
+            gameDao.updateIconUri(gameId, coverPath)
+        }
 
         ssInfo?.screenshotUrl?.let {
             onAssetProgress?.invoke("ScreenScraper", "Screenshot")
@@ -368,8 +379,7 @@ class MetadataRepository @Inject constructor(
             }
         }
 
-        prewarm(backgroundPath, logoPath)
-        if (!options.metadataOnly) fetchHorizontalIcon(gameId, bestTitle, sgdbGameId)
+        prewarm(backgroundPath, logoPath, coverPath)
 
         Timber.i("Metadata from $src: '$bestTitle' (scrapedTitle='$newScrapedTitle')")
         return MetadataFetchResult(true, src, "Found via $src", scrapedTitle = newScrapedTitle)
@@ -404,21 +414,6 @@ class MetadataRepository @Inject constructor(
             sgdbUrl != null -> "steamgriddb"
             else            -> "mixed"
         }
-
-    private suspend fun fetchHorizontalIcon(gameId: Long, title: String, knownSgdbId: Long?) {
-        val key = sgdbKeyProvider.getKey()
-        if (key.isNullOrBlank()) return
-        runCatching {
-            val id = knownSgdbId
-                ?: steamGridDb.searchGame(title).getOrNull()?.firstOrNull()?.id
-                ?: return
-            val url  = steamGridDb.getBestHorizontalGridUrl(id) ?: return
-            val path = artworkStore.saveFromUrl(gameId, ArtworkKind.ICON, url) ?: url
-            gameDao.updateIconUri(gameId, path)
-            prewarm(path)
-            Timber.d("Horizontal icon from SteamGridDB: '$title'")
-        }
-    }
 
     private fun prewarm(vararg urls: String?) {
         urls.filterNotNull().forEach { url ->

@@ -13,6 +13,7 @@ import com.echo.feature.artwork.rom.RomIdentity
 import com.echo.feature.artwork.api.ScreenScraperApi
 import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
 import com.echo.core.data.steamgriddb.SteamGridDbApi
+import com.echo.feature.artwork.store.ArtworkKind
 import com.echo.feature.artwork.store.ArtworkStore
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -91,7 +92,7 @@ class MetadataRepositoryCandidatesTest {
         )
     }
 
-    private fun givenGame(userTitleOverride: String? = null) {
+    private fun givenGame(userTitleOverride: String? = null, iconUri: String? = null) {
         coEvery { gameDao.getById(1L) } returns GameEntity(
             id = 1L,
             title = "raw_rom_name",
@@ -108,6 +109,7 @@ class MetadataRepositoryCandidatesTest {
             genre = null,
             steamGridDbId = null,
             userTitleOverride = userTitleOverride,
+            iconUri = iconUri,
         )
         coEvery { screenScraper.isEnabled() } returns true
         coEvery { sgdbKeyProvider.getKey() } returns null
@@ -242,5 +244,31 @@ class MetadataRepositoryCandidatesTest {
         )
 
         coVerify(exactly = 0) { gameDao.fillScrapedTitleIfMissing(any(), any()) }
+    }
+
+    private val ssWithCover = ssHit.copy(boxArtUrl = "https://ss/box2d.png", heroUrl = "https://ss/wide-hero.jpg")
+
+    @Test
+    fun `the refetch puts the upright cover in the icon slot, because the tile shows the icon slot`() = runTest {
+        givenGame()
+        ssReturns(ssWithCover)
+        coEvery { artworkStore.saveFromUrl(1L, ArtworkKind.ICON, "https://ss/box2d.png", any()) } returns "content://icon0/cover"
+
+        repo.fetchForGame(1L, "raw_rom_name", "snes", romPath = null)
+
+        coVerify(exactly = 1) { gameDao.updateIconUri(1L, "content://icon0/cover") }
+        coVerify(exactly = 0) { artworkStore.saveFromUrl(1L, ArtworkKind.ICON, "https://ss/wide-hero.jpg", any()) }
+    }
+
+    @Test
+    fun `the refetch leaves a working icon the user already has`() = runTest {
+        givenGame(iconUri = "content://icon0/mine")
+        ssReturns(ssWithCover)
+        coEvery { artworkStore.isValidRef("content://icon0/mine") } returns true
+        coEvery { artworkStore.saveFromUrl(1L, ArtworkKind.ICON, any(), any()) } returns "content://icon0/cover"
+
+        repo.fetchForGame(1L, "raw_rom_name", "snes", romPath = null)
+
+        coVerify(exactly = 0) { gameDao.updateIconUri(any(), any()) }
     }
 }

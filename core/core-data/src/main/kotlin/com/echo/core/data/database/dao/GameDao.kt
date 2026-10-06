@@ -427,9 +427,6 @@ interface GameDao {
     @Query("UPDATE games SET artwork_key = COALESCE(artwork_key, :artworkKey) WHERE id = :id")
     suspend fun mintArtworkKey(id: Long, artworkKey: String)
 
-    @Query("UPDATE games SET artwork_uri = NULL, logo_uri = NULL, icon_uri = NULL")
-    suspend fun clearAllArtwork()
-
     @Query("UPDATE games SET artwork_uri = NULL, logo_uri = NULL, icon_uri = NULL WHERE id = :id")
     suspend fun clearArtworkForGame(id: Long)
 

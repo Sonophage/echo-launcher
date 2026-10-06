@@ -35,4 +35,8 @@ interface ArtworkStore {
     suspend fun findAll(gameId: Long, kind: ArtworkKind): List<String>
 
     suspend fun deleteAll()
+
+    // forgets what a scraper fetched (isRescrapable) and deletes its files, so a rescrape fetches it again; returns the
+    // references it removed. Only portable records say where art came from, so a store without them removes nothing
+    suspend fun deleteScraped(): Set<String> = emptySet()
 }

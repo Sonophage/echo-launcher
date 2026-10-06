@@ -169,8 +169,9 @@ class ArtworkRepository @Inject constructor(
 
     private fun isValidArtworkRef(uri: String?): Boolean = artworkStore.isValidRef(uri)
 
+    // the icon is the cover (owner, 2026-10-05), so a game without one still needs artwork
     private fun primaryArtRefs(g: com.echo.core.data.database.entity.GameEntity) =
-        listOf(g.artworkUri, g.logoUri)
+        listOf(g.artworkUri, g.logoUri, g.iconUri)
 
     private fun needsArtwork(g: com.echo.core.data.database.entity.GameEntity): Boolean =
         primaryArtRefs(g).any { !isValidArtworkRef(it) }
@@ -192,16 +193,15 @@ class ArtworkRepository @Inject constructor(
             .also { Timber.i("Artwork status: $it") }
     }
 
-    suspend fun clearAllArtwork() = withContext(Dispatchers.IO) {
-        gameDao.clearAllArtwork()
-        artworkStore.deleteAll()
-        clearCache()
-        Timber.i("All artwork cleared (db refs + files + cache)")
-    }
-
     suspend fun reScrapeAllGames(onProgress: (ScrapeProgress) -> Unit): ScrapeProgress =
         withContext(Dispatchers.IO) {
-            clearAllArtwork()
+            val gone = artworkStore.deleteScraped()
+            gameDao.getAll().forEach { g ->
+                if (g.iconUri in gone) gameDao.updateIconUri(g.id, null)
+                if (g.artworkUri in gone) gameDao.updateArtwork(g.id, null)
+                if (g.logoUri in gone) gameDao.updateLogo(g.id, null)
+            }
+            imageCache.clear()
 
             fetchForGames(gameDao.getAll().map { it.id to Triple(it.title, it.platformId, it.romPath) }, onProgress, bypassSsCache = true)
         }
