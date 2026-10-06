@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECHO — Your handheld, as a console</title>
+<meta name="description" content="A controller-first Android home screen inspired by the XMB. Games, apps, music, video, photos and books on one crossbar.">
+<meta property="og:title" content="ECHO — Your handheld, as a console">
+<meta property="og:description" content="A controller-first Android home screen inspired by the XMB.">
+<meta property="og:image" content="https://echo.sonophage.dev/docs/screenshots/header.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="docs/echo-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Sora:wght@200;300;400;500;600&display=swap">
+<!-- The site is served from the repo root (GitHub Pages, main /), so it uses the repo's own
+     screenshots and controller glyphs in place: docs/screenshots, core/core-ui/.../drawable-nodpi
+     and assets/UI/touch_icons. -->
+<style>
+html,body{margin:0;background:#04060C;color:#eef2f6;font-family:'Sora',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#9fdcec;text-decoration:none}
+a:hover{color:#fff}
+::selection{background:#9fdcec;color:#04060C}
+img{max-width:100%}
+echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
+
+.page{background:#04060C;overflow:hidden}
+.wrap{max-width:1440px;margin:0 auto}
+.sec{padding:200px 32px 0}
+.col{display:flex;flex-direction:column}
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:40px;align-items:end}
+.center{align-items:center;text-align:center}
+
+.eyebrow{display:flex;gap:16px;align-items:center;font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:#8d98a2}
+.eyebrow b{color:#9fdcec;font-weight:400}
+.eyebrow i{width:40px;height:1px;background:rgba(255,255,255,.25)}
+.h2{margin:0;font-size:clamp(40px,5.5vw,80px);font-weight:200;letter-spacing:-.03em;line-height:1}
+.lede{margin:0;font-size:17px;line-height:1.7;color:#a9b4bd;font-weight:300;max-width:520px;text-wrap:pretty}
+
+.btn{padding:16px 28px;border-radius:999px;background:#fff;color:#04060C;font-weight:600;font-size:15px}
+.btn:hover{background:#9fdcec;color:#04060C}
+.btn-ghost{padding:16px 28px;border-radius:999px;border:1px solid rgba(255,255,255,.3);color:#fff;font-size:15px;backdrop-filter:blur(10px)}
+.btn-ghost:hover{border-color:#9fdcec;color:#fff}
+
+.frame{position:relative;aspect-ratio:16/9;border-radius:28px;overflow:hidden;background:#0a0e16;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 80px 160px rgba(0,0,0,.7)}
+.frame>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.fill{position:absolute;inset:0}
+
+.seg{display:flex;gap:4px;padding:5px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);align-self:flex-start;width:max-content;max-width:100%;overflow-x:auto}
+.seg button{border:0;cursor:pointer;padding:10px 20px;border-radius:999px;font-family:'Sora',sans-serif;font-size:14px;background:transparent;color:#c3ccd4;font-weight:400}
+.seg button[aria-pressed=true]{background:#fff;color:#04060C;font-weight:600}
+
+.shot{margin:0;display:flex;flex-direction:column;gap:12px}
+.shot img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:18px;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.shot figcaption{font-size:14px;color:#8d98a2}
+.shot figcaption span{color:#fff}
+.tag{padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);font-size:13px;color:#c3ccd4}
+.mono{font-family:'JetBrains Mono',monospace}
+.code{font-family:'JetBrains Mono',monospace;font-size:13px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.08)}
+.glyph{object-fit:contain}
+.pill{padding:7px 12px;border-radius:999px;border:1.5px solid rgba(255,255,255,.5);font-size:12px;font-weight:600;white-space:nowrap}
+
+/* 02 Controls: tiles */
+.tiles{flex:1 1 340px;min-width:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
+.tiles button{position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:14px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);cursor:pointer;font-family:'Sora',sans-serif;color:#eef2f6;transition:background .2s,border-color .2s,box-shadow .2s}
+.tiles button:hover{border-color:rgba(255,255,255,.28)}
+.tiles button[aria-pressed=true]{border-color:rgba(159,220,236,.6);background:radial-gradient(120% 100% at 50% 0%,rgba(159,220,236,.16),rgba(159,220,236,.03));box-shadow:0 0 0 1px rgba(159,220,236,.25),0 18px 40px rgba(159,220,236,.12)}
+.tiles .g{display:flex;gap:2px;align-items:center;justify-content:center;height:52px}
+.tiles .g img{width:48px;height:48px}
+.tiles .l{font-size:12px;line-height:1.3;text-align:center;letter-spacing:.02em;color:#a9b4bd;text-wrap:balance}
+.tiles button[aria-pressed=true] .l{color:#fff;font-weight:600}
+
+/* 03 Crossbar */
+.cats{flex:1 1 auto;min-width:0;display:flex;gap:12px;overflow-x:auto;padding:6px 2px 10px;scrollbar-width:none}
+.cats button{flex:1 1 0;min-width:120px;display:flex;flex-direction:column;gap:12px;padding:0;border:0;background:none;cursor:pointer;text-align:left;font-family:'Sora',sans-serif;transition:flex .35s ease}
+.cats .t{position:relative;display:block;width:100%;aspect-ratio:16/10;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.08);opacity:.45;transition:opacity .3s,box-shadow .3s}
+.cats .t img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cats .n{display:flex;gap:10px;align-items:baseline}
+.cats .n span:first-child{font-family:'JetBrains Mono',monospace;font-size:11px;color:#5f6a73}
+.cats .n span:last-child{font-size:14px;white-space:nowrap;color:#7d8891}
+.cats button[aria-pressed=true]{flex:2.2 1 0}
+.cats button[aria-pressed=true] .t{opacity:1;box-shadow:0 0 0 2px #9fdcec,0 20px 50px rgba(159,220,236,.18)}
+.cats button[aria-pressed=true] .n span:first-child{color:#9fdcec}
+.cats button[aria-pressed=true] .n span:last-child{color:#fff;font-weight:600}
+.round{flex:0 0 auto;width:56px;height:56px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.round:hover{background:rgba(255,255,255,.1)}
+
+/* 07 Media thumbs */
+.thumbs{display:flex;gap:14px;flex-wrap:wrap}
+.thumbs button{flex:0 1 220px;padding:0;border:2px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;background:none;cursor:pointer;opacity:.6}
+.thumbs button:hover{opacity:1}
+.thumbs button[aria-pressed=true]{border-color:#9fdcec;opacity:1}
+.thumbs img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+
+.badge{position:absolute;font-size:14px;color:#fff;padding:7px 14px;border-radius:999px;background:rgba(4,6,12,.65);backdrop-filter:blur(8px)}
+.rule{padding:28px 0;border-top:1px solid rgba(255,255,255,.1);font-size:clamp(28px,4vw,56px);font-weight:200;letter-spacing:-.02em}
+.step{display:grid;grid-template-columns:48px 1fr;gap:16px;padding:20px 0;border-top:1px solid rgba(255,255,255,.12)}
+.step>span:first-child{font-family:'JetBrains Mono',monospace;color:#9fdcec;font-size:13px;padding-top:3px}
+.step>span:last-child{font-size:16px;line-height:1.6;font-weight:300}
+
+@media (max-width:600px){
+  .sec{padding:120px 16px 0}
+  .hero{padding:120px 16px 56px !important}
+  .bar{padding:16px !important}
+  .bar nav a:not(.dl){display:none}
+}
+</style>
+</head>
+<body>
+
+<echo-boot overlay></echo-boot>
+<script>
+  // The boot intro covers the page for 3.5 s; skip it for visitors who asked for less motion.
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) document.currentScript.previousElementSibling.remove();
+</script>
+
+<div class="page">
+
+  <header style="position:fixed;top:0;left:0;right:0;z-index:50;background:linear-gradient(rgba(4,6,12,.88),rgba(4,6,12,0))">
+    <div class="wrap bar" style="padding:22px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px">
+      <a href="#top" style="display:flex;align-items:center;gap:14px;color:#fff">
+        <img src="docs/echo-logo.png" alt="ECHO" style="width:30px;height:30px;border-radius:8px">
+        <span style="font-weight:300;letter-spacing:.42em;font-size:14px">ECHO</span>
+      </a>
+      <nav style="display:flex;align-items:center;gap:26px;font-size:13px;letter-spacing:.06em;flex-wrap:wrap">
+        <a href="#navigate" style="color:#c3ccd4">Controls</a>
+        <a href="#games" style="color:#c3ccd4">Games</a>
+        <a href="#media" style="color:#c3ccd4">Media</a>
+        <a href="#install" class="btn dl" style="padding:9px 18px;font-size:13px">Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <section id="top" class="hero" style="position:relative;min-height:100vh;display:flex;align-items:flex-end;padding:140px 32px 72px">
+    <echo-hero id="hero"></echo-hero>
+    <div class="fill" style="pointer-events:none;background:linear-gradient(90deg,rgba(4,6,12,.7) 0%,rgba(4,6,12,0) 50%),linear-gradient(0deg,#04060C 0%,rgba(4,6,12,0) 35%)"></div>
+    <div class="wrap col" style="position:relative;width:100%;gap:32px">
+      <div style="font-size:12px;letter-spacing:.42em;text-transform:uppercase;color:#9fdcec">Extensible Console Handheld Operator</div>
+      <h1 style="margin:0;font-size:clamp(52px,9vw,140px);line-height:.95;font-weight:200;letter-spacing:-.035em;max-width:11ch">Your handheld, as a console.</h1>
+      <p style="margin:0;max-width:560px;font-size:18px;line-height:1.65;color:#c3ccd4;font-weight:300;text-wrap:pretty">One crossbar for everything: games from the emulators you already have, Android apps, music, video, photos and books, all from a controller or by touch.</p>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+        <a href="https://github.com/Sonophage/echo-launcher/releases/latest" class="btn">Download the APK</a>
+        <a href="#power" class="btn-ghost">Power on ↓</a>
+        <span style="font-size:13px;color:#8d98a2;margin-left:8px">Android 10 or newer · Free · Side-loaded</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="power" class="sec" style="padding-top:160px">
+    <div class="wrap col" style="gap:56px">
+      <div class="split">
+        <div class="col" style="gap:20px">
+          <div class="eyebrow"><b>01</b><i></i><span>Power on</span></div>
+          <h2 class="h2">It starts with a ring of light.</h2>
+        </div>
+        <p class="lede">Hold A and the game’s art shrinks into the ECHO ring and spins there as a disc. With the launch sound the ring opens like a lens and the game fills the screen.</p>
+      </div>
+      <div class="frame">
+        <echo-launch class="fill" bg="docs/screenshots/game-hover-panel.jpg" game-title="Castlevania: Curse of Darkness" mode="lens" data-glyph="@a"></echo-launch>
+      </div>
+    </div>
+  </section>
+
+  <section id="navigate" class="sec">
+    <div class="wrap col" style="gap:48px">
+      <div class="split">
+        <div class="col" style="gap:20px">
+          <div class="eyebrow"><b>02</b><i></i><span>Controls</span></div>
+          <h2 class="h2">Every button has a job.</h2>
+        </div>
+        <div class="col" style="gap:20px">
+          <p class="lede">Controller ▸ Type picks the button glyphs drawn in the footer and every hint. Every control has a touch equivalent. Pick a button to see what it does.</p>
+          <div class="seg" id="types"></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+        <div class="tiles" id="controls"></div>
+        <div class="col" style="flex:2.4 1 560px;min-width:0;gap:20px">
+          <div class="frame" style="border-radius:24px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 60px 120px rgba(0,0,0,.6)">
+            <img id="ctl-shot" alt="">
+          </div>
+          <div style="display:flex;gap:18px;align-items:flex-start">
+            <div id="ctl-glyphs" style="display:flex;gap:4px;flex:0 0 auto"></div>
+            <div class="col" style="gap:6px">
+              <div id="ctl-action" style="font-size:24px;font-weight:300"></div>
+              <div id="ctl-text" style="font-size:15px;line-height:1.65;color:#a9b4bd;font-weight:300;max-width:640px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="crossbar" class="sec">
+    <div class="wrap col" style="gap:44px">
+      <div class="col center" style="gap:20px">
+        <div class="eyebrow"><b>03</b><i></i><span>The crossbar</span></div>
+        <h2 class="h2" style="max-width:14ch">Categories across. Everything else down.</h2>
+        <p class="lede" style="max-width:620px">Each category is a column. Media columns list the apps that belong to them first, then their own library rows, ending with a Folders row for the folders they scan.</p>
+      </div>
+      <div class="frame">
+        <img id="cat-shot" alt="">
+        <div style="position:absolute;left:0;right:0;bottom:0;padding:80px 32px 28px;background:linear-gradient(rgba(4,6,12,0),rgba(4,6,12,.92));display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+          <div class="col" style="gap:8px;max-width:620px">
+            <div id="cat-label" style="font-size:26px;font-weight:300"></div>
+            <div id="cat-text" style="font-size:15px;line-height:1.6;color:#c3ccd4;font-weight:300"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <img class="glyph" data-glyph="trigger_left" alt="LT" style="width:40px;height:40px">
+            <img class="glyph" data-glyph="trigger_right" alt="RT" style="width:40px;height:40px">
+            <span id="cat-num" class="mono" style="font-size:12px;color:#8d98a2;margin-left:8px"></span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <button class="round" id="prev-cat" aria-label="Previous category"><img class="glyph" data-glyph="trigger_left" alt="LT" style="width:40px;height:40px"></button>
+        <div class="cats" id="cats"></div>
+        <button class="round" id="next-cat" aria-label="Next category"><img class="glyph" data-glyph="trigger_right" alt="RT" style="width:40px;height:40px"></button>
+      </div>
+      <div style="text-align:center;font-size:12px;color:#5f6a73;letter-spacing:.06em">Use ← → to move along the bar</div>
+    </div>
+  </section>
+
+  <section id="games" class="sec">
+    <div class="wrap col" style="gap:56px">
+      <div class="split">
+        <div class="col" style="gap:20px">
+          <div class="eyebrow"><b>04</b><i></i><span>Games</span></div>
+          <h2 class="h2">Every console you own, on one card each.</h2>
+        </div>
+        <p class="lede">Point ECHO at your Games folder and it creates a Memory Card for every console that has games, with the emulators you already have. A focused game fills the background with its own art and shows its details beside the tile.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px">
+        <figure style="margin:0;grid-column:1/-1;position:relative;border-radius:24px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.08)">
+          <img src="docs/screenshots/col-game-cards.jpg" alt="Console cards" style="display:block;width:100%;aspect-ratio:21/9;object-fit:cover">
+          <figcaption class="badge" style="left:20px;bottom:18px;padding:6px 12px">Console cards, each showing four covers from inside it</figcaption>
+        </figure>
+        <figure class="shot"><img src="docs/screenshots/game-list.jpg" alt="All Games"><figcaption>All Games</figcaption></figure>
+        <figure class="shot"><img src="docs/screenshots/game-console.jpg" alt="One console's games"><figcaption>One console's games, by cover</figcaption></figure>
+        <figure class="shot"><img src="docs/screenshots/game-info.jpg" alt="Game Info"><figcaption>Game Info: play time, platform, screenshots and video</figcaption></figure>
+        <figure class="shot"><img src="docs/screenshots/game-context-menu.jpg" alt="Its options"><figcaption>Its options, on a rail at the right edge</figcaption></figure>
+        <figure class="shot"><img src="docs/screenshots/context-menu-confirm.jpg" alt="Anything destructive asks twice"><figcaption>Anything destructive asks twice, with Cancel first</figcaption></figure>
+        <figure class="shot"><img src="docs/screenshots/artwork-studio.jpg" alt="The Artwork Studio"><figcaption>The Artwork Studio: pick where the art comes from</figcaption></figure>
+      </div>
+      <div id="systems" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+    </div>
+  </section>
+
+  <section id="launch" class="sec">
+    <div class="wrap col" style="gap:48px">
+      <div class="col center" style="gap:20px">
+        <div class="eyebrow"><b>05</b><i></i><span>Launch</span></div>
+        <div style="display:flex;align-items:center;gap:20px;justify-content:center">
+          <h2 class="h2" style="font-size:clamp(48px,7vw,112px);letter-spacing:-.035em;line-height:.95">Hold</h2>
+          <img class="glyph" data-glyph="@a" alt="A" style="width:clamp(64px,7vw,104px);height:clamp(64px,7vw,104px)">
+        </div>
+        <p class="lede" style="max-width:600px">Games and apps launch when you hold A until the ring fills, so a stray press never launches anything. GameBoot then plays one of two launches: Disc, where the cover becomes a spinning disc, or Lens, where the ECHO ring opens over the game. Try it: hold the A orb, or the A key.</p>
+      </div>
+      <div class="frame">
+        <echo-launch class="fill" id="launch-demo" bg="docs/screenshots/game-hover-panel.jpg" game-title="Castlevania: Curse of Darkness" mode="disc" data-glyph="@a"></echo-launch>
+      </div>
+      <div style="display:flex;justify-content:center">
+        <div class="seg" id="modes" style="align-self:center"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px">
+        <figure class="shot"><img src="docs/screenshots/launch-lens.jpg" alt="The Lens launch" style="aspect-ratio:auto"><figcaption><span>Lens.</span> The cover spins inside the ECHO ring, then opens over the screen.</figcaption></figure>
+        <figure class="shot"><img src="docs/screenshots/boot-sequence.jpg" alt="The boot sequence" style="aspect-ratio:auto"><figcaption><span>Boot.</span> Each moment has its own sound slot; ECHO ships no audio.</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap col" style="gap:56px">
+      <div class="col" style="gap:20px;max-width:760px">
+        <div class="eyebrow"><b>06</b><i></i><span>The shelf</span></div>
+        <h2 class="h2">Artwork that looks like a shelf.</h2>
+        <p class="lede" style="max-width:none">Box covers fetched from ScreenScraper, SteamGridDB, IGDB and Steam, shown as VHS cases. A game's cover keeps its own shape on the case's ribbed plastic, so square Game Boy boxes and tall Switch covers both show whole.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:24px">
+        <figure class="shot" style="gap:16px">
+          <img src="docs/screenshots/app-drawer.jpg" alt="The App Drawer" style="border-radius:22px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 60px 120px rgba(0,0,0,.5)">
+          <figcaption style="display:flex;gap:14px;align-items:center;font-size:15px;line-height:1.6;color:#a9b4bd;font-weight:300">
+            <img class="glyph" data-glyph="bumper_right" alt="RB" style="width:44px;height:44px;flex:0 0 auto;aspect-ratio:auto;box-shadow:none;border-radius:0">
+            <span style="color:inherit"><span style="font-weight:400">The App Drawer.</span> Every app as a VHS case in three columns, with a spine saying what it is.</span>
+          </figcaption>
+        </figure>
+        <figure class="shot" style="gap:16px">
+          <img src="docs/screenshots/search.jpg" alt="Search" style="border-radius:22px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 60px 120px rgba(0,0,0,.5)">
+          <figcaption style="display:flex;gap:14px;align-items:center;font-size:15px;line-height:1.6;color:#a9b4bd;font-weight:300">
+            <img class="glyph" data-glyph="@y" alt="Y" style="width:44px;height:44px;flex:0 0 auto;aspect-ratio:auto;box-shadow:none;border-radius:0">
+            <span style="color:inherit"><span style="font-weight:400">Search.</span> The likeliest match stands in the middle, the rest as spines fanning out to both sides.</span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="media" class="sec">
+    <div class="wrap col" style="gap:44px">
+      <div class="split">
+        <div class="col" style="gap:20px">
+          <div class="eyebrow"><b>07</b><i></i><span>Media</span></div>
+          <h2 class="h2">Built-in players for everything else.</h2>
+        </div>
+        <div class="col" style="gap:20px">
+          <p class="lede" id="media-text"></p>
+          <div class="seg" id="media-tabs"></div>
+        </div>
+      </div>
+      <div class="frame">
+        <img id="media-shot" alt="">
+        <div class="badge" id="media-caption" style="left:24px;bottom:22px"></div>
+      </div>
+      <div class="thumbs" id="media-thumbs"></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap" style="display:flex;flex-wrap:wrap;gap:56px;align-items:center">
+      <div class="col" style="flex:1 1 320px;gap:22px;max-width:480px">
+        <div class="eyebrow"><b>08</b><i></i><span>Profile</span></div>
+        <h2 class="h2" style="font-size:clamp(40px,5vw,72px)">Your games, hours and achievements.</h2>
+        <p class="lede">The Profile tab shows your name and picture, your games, hours and achievements, what you played last with its achievement progress, and your Steam, RetroAchievements and Discord accounts.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="tag" style="border:0;background:rgba(255,255,255,.08);color:inherit">Steam</span>
+          <span class="tag" style="border:0;background:rgba(255,255,255,.08);color:inherit">RetroAchievements</span>
+          <span class="tag" style="border:0;background:rgba(255,255,255,.08);color:inherit">Discord</span>
+        </div>
+      </div>
+      <div style="position:relative;flex:2 1 560px;min-width:0;padding-bottom:10%">
+        <img src="docs/screenshots/panel-profile.jpg" alt="Your profile" style="display:block;width:88%;border-radius:22px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 60px 120px rgba(0,0,0,.6)">
+        <img src="docs/screenshots/card-island.jpg" alt="The island card" style="position:absolute;right:0;bottom:0;width:46%;border-radius:16px;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 40px 100px rgba(0,0,0,.8)">
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap" style="display:flex;flex-wrap:wrap;gap:56px;align-items:center">
+      <div style="flex:2 1 560px;min-width:0">
+        <img src="docs/screenshots/theme-color-scheme.jpg" alt="Colour Scheme, previewed on the live crossbar" style="display:block;width:100%;border-radius:22px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 60px 120px rgba(0,0,0,.6)">
+      </div>
+      <div class="col" style="flex:1 1 320px;gap:22px">
+        <div class="eyebrow"><b>09</b><i></i><span>Make it yours</span></div>
+        <h2 class="h2" style="font-size:clamp(40px,4.5vw,64px)">Almost everything is adjustable.</h2>
+        <p class="lede" style="font-size:16px">Controller glyphs, touch, layout, colours, icons, wallpaper, sounds and boot all have a setting, and most of it previews live on the crossbar.</p>
+        <div class="mono" style="font-size:13px;line-height:2;color:#c3ccd4;padding:20px 24px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
+          <div style="color:#9fdcec">ECHO/</div>
+          <div style="display:flex;justify-content:space-between;gap:16px"><span>├ Artwork/</span><span style="color:#6f7a83">per console</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px"><span>├ Import/</span><span style="color:#6f7a83">other launchers</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px"><span>├ Look/</span><span style="color:#6f7a83">sounds, icons, wallpaper</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px"><span>└ settings.json</span><span style="color:#6f7a83">colours, wave, layout</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap col" style="gap:48px">
+      <div class="eyebrow"><b>10</b><i></i><span>Local-first</span></div>
+      <div class="col">
+        <div class="rule">No account.</div>
+        <div class="rule">No analytics. No telemetry.</div>
+        <div class="rule" style="border-bottom:1px solid rgba(255,255,255,.1);color:#7d8891">Online only when you ask it to fetch artwork.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install" class="sec">
+    <div class="wrap" style="position:relative;border-radius:32px;overflow:hidden;padding:clamp(28px,7vw,96px);background:radial-gradient(120% 140% at 50% 120%,#12305a 0%,#081428 45%,#04060C 80%);box-shadow:0 0 0 1px rgba(255,255,255,.08)">
+      <div style="position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:56px">
+        <div class="col" style="gap:24px">
+          <img src="docs/echo-logo.png" alt="" style="width:72px;height:72px;border-radius:18px;box-shadow:0 0 0 1px rgba(255,255,255,.12)">
+          <h2 class="h2" style="font-size:clamp(40px,5vw,72px)">Bring ECHO home.</h2>
+          <p class="lede" style="font-size:16px;max-width:440px">You need Android 10 (API 29) or newer, and the emulators you want to use, installed separately. ECHO launches them and does not emulate anything itself.</p>
+          <div style="display:flex;gap:14px;flex-wrap:wrap">
+            <a href="https://github.com/Sonophage/echo-launcher/releases/latest" class="btn">Download the APK</a>
+            <a href="https://github.com/Sonophage/echo-launcher" class="btn-ghost">View source</a>
+          </div>
+        </div>
+        <div class="col" style="gap:14px;align-self:center">
+          <div style="font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#9fdcec">With Obtainium · updates arrive by themselves</div>
+          <ol style="list-style:none;margin:0;padding:0" class="col">
+            <li class="step"><span>01</span><span>Install <a href="https://github.com/ImranR98/Obtainium">Obtainium</a>, tap Add App and paste <span class="code" style="word-break:break-all">github.com/Sonophage/echo-launcher</span></span></li>
+            <li class="step"><span>02</span><span>Set Filter APKs by regular expression to <span class="code">^ECHO-[0-9.]+\.apk$</span>, then Add and Install.</span></li>
+            <li class="step" style="border-bottom:1px solid rgba(255,255,255,.12)"><span>03</span><span>Press Home, pick ECHO and choose Always. The setup wizard takes it from there.</span></li>
+          </ol>
+          <div style="font-size:13px;color:#7d8891;line-height:1.6">Or download <span class="mono" style="font-size:12px">ECHO-&lt;version&gt;.apk</span> from the latest release and install it by hand.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer style="padding:96px 32px 48px">
+    <div class="wrap col" style="gap:28px;border-top:1px solid rgba(255,255,255,.08);padding-top:32px">
+      <div style="display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;align-items:center;gap:14px">
+          <img src="docs/echo-logo.png" alt="" style="width:26px;height:26px;border-radius:7px">
+          <span style="font-weight:300;letter-spacing:.42em;font-size:13px">ECHO</span>
+        </div>
+        <div style="display:flex;gap:24px;font-size:13px">
+          <a href="https://github.com/Sonophage/echo-launcher" style="color:#a9b4bd">GitHub</a>
+          <a href="https://github.com/Sonophage/echo-launcher/releases" style="color:#a9b4bd">Releases</a>
+          <a href="https://github.com/JohnnyCollado/PlayFieldPortal" style="color:#a9b4bd">PlayFieldPortal</a>
+        </div>
+      </div>
+      <p style="margin:0;font-size:12px;line-height:1.7;color:#5f6a73;max-width:900px">ECHO is a fork of PlayFieldPortal by JohnnyC96 / JohnnyCollado. It is an independent, non-commercial fan project, not affiliated with or endorsed by Sony. "XrossMediaBar", "XMB", "PSP" and "PlayStation" are trademarks of Sony Interactive Entertainment Inc. Controller button icons from Zacksly's PS5, Xbox Series and Switch 2 button packs, CC BY 3.0. Game artwork in screenshots belongs to its owners.</p>
+    </div>
+  </footer>
+</div>
+
+<script>
+const G = 'core/core-ui/src/main/res/drawable-nodpi/ctl_';
+const T = 'assets/UI/touch_icons/ctl_touch_';
+const shot = f => `docs/screenshots/${f}.jpg`;
+const TYPES = [['xb', 'Xbox'], ['ns', 'Nintendo'], ['ps', 'PlayStation'], ['touch', 'Touch']];
+// confirm/back/x/y positions per layout; Nintendo puts A on the east face
+const FACE = {
+  xb: { a: 'face_south', b: 'face_east', x: 'face_west', y: 'face_north' },
+  ps: { a: 'face_south', b: 'face_east', x: 'face_west', y: 'face_north' },
+  ns: { a: 'face_east', b: 'face_south', x: 'face_north', y: 'face_west' }
+};
+const CONTROLS = [
+  { action: 'Move', pad: ['dpad_all'], touch: ['swipe_all'], shot: 'col-game-cards', text: 'D-pad or left stick. Up and down move through a column, sideways changes category. On touch, swipe, or tap.' },
+  { action: 'Open', pad: ['@a'], touch: ['tap'], shot: 'game-hover-panel', text: 'A focused game fills the background with its own art and shows its details beside the tile.' },
+  { action: 'Hold to launch', pad: ['@a'], touch: ['tap'], pill: 'Hold', shot: 'launch-lens', text: 'Hold A until the ring fills, so a stray press never launches anything. On touch, hold the A button on screen.' },
+  { action: 'Back', pad: ['@b'], touchPill: 'Back', shot: 'game-console', text: 'B backs out. With touch, the footer shows a Back button, since ECHO hides Android’s own.' },
+  { action: 'Options', pad: ['start'], touch: ['long_press'], shot: 'game-context-menu', text: 'Menu (≡) opens a thing’s options on a rail at the right edge, with the art blurred behind it. Long-press on touch.' },
+  { action: 'Search', pad: ['@y', 'bumper_left'], touchPill: 'Search', shot: 'search', text: 'Y, or LB on the crossbar, searches games, apps, music, video, photos and books together.' },
+  { action: 'App Drawer', pad: ['bumper_right'], touchPill: 'Apps', shot: 'app-drawer', text: 'RB on the crossbar opens the App Drawer: every app as a VHS case, with a spine saying what it is.' },
+  { action: 'Sort', pad: ['@x'], touch: [], shot: 'game-list', text: 'X sorts a list, or runs the screen’s own X action: Title, Recently Played or Date Added.' },
+  { action: 'Categories and tabs', pad: ['trigger_left', 'trigger_right'], touch: ['swipe_left', 'swipe_right'], shot: 'col-shelves', text: 'LT and RT move between categories, tabs, sections and filters.' },
+  { action: 'Home: the top panel', padPill: 'Guide', touchPill: 'Tap island', shot: 'card-notifications', text: 'Guide or View first shows the newest notification as a card; a second press opens the panel: Notifications, Profile, Quick settings, Libraries and Settings.' }
+];
+const CATS = [
+  ['Last Played', 'last-played', 'Games, apps, music, video and books together, newest first.'],
+  ['Shelves', 'col-shelves', 'Playing, Backlog, Completed and Favorites. A shelf only shows when it has a game.'],
+  ['Game', 'col-game', 'All Games, then one card per console, each with its own emulator.'],
+  ['Music', 'col-music', 'Spotify and your other music apps first, then Songs, Artists, Albums and Playlists.'],
+  ['Video', 'col-video', 'Libraries with thumbnails, Recently Watched, and resume where you stopped.'],
+  ['Photo', 'col-photo', 'Albums and the viewer. Any photo can become the wallpaper.'],
+  ['Library', 'col-library', 'EPUB, PDF and CBZ books by series, with a built-in reader.']
+];
+const MEDIA = [
+  ['Music', 'Songs, Artists, Albums and Playlists open a fullscreen browser, and music keeps playing in the background with its controls on the island.',
+    [['music-songs', 'Songs'], ['music-player', 'The music player'], ['launch-disc-music', 'A song opening through the Lens launch']]],
+  ['Video', 'The built-in video player seeks with LEFT and RIGHT and keeps speed, subtitles, audio track and screen mode under Options. Resume picks up where you stopped.',
+    [['video-browser', 'Videos'], ['video-detail', 'A video’s page: resume or start over'], ['video-player-controls', 'The video player']]],
+  ['Photo', 'The photo viewer zooms, pans and rotates, and any photo can become the wallpaper with its EXIF data stripped.',
+    [['photo-browser', 'Photos'], ['photo-viewer', 'The photo viewer']]],
+  ['Books', 'Books open in the built-in reader: two pages side by side or one, text size, typeface and page colour, contents and bookmarks, and it keeps your place.',
+    [['library-series', 'Books by series'], ['reader', 'The book reader']]]
+];
+const SYSTEMS = ['PSP', 'PS Vita', 'PS1', 'PS2', 'PS3', 'GameCube / Wii', 'Wii U', 'DS', '3DS', 'Switch', 'N64', 'GB / GBC / GBA', 'NES / SNES', 'Genesis', 'Saturn', 'Dreamcast', 'Arcade', 'Xbox', 'Xbox 360', 'Windows', 'Android', 'RetroArch cores'];
+
+const state = { type: 'xb', ctl: 1, cat: 0, mode: 'disc', media: 0, shot: 0 };
+const $ = id => document.getElementById(id);
+
+function glyph(type, name) {
+  if (type === 'touch') return T + name + '.png';
+  const n = name[0] === '@' ? FACE[type][name.slice(1)] : name;
+  return `${G}${type}_${n}.png`;
+}
+// glyphs and the pill a control shows for the current controller type
+function pick(c) {
+  const isTouch = state.type === 'touch', list = (isTouch ? c.touch : c.pad) || [];
+  return {
+    imgs: list.slice(0, 2).map(n => glyph(state.type, n)),
+    pill: isTouch ? (c.touchPill || (c.pill && list.length ? c.pill : '') || (list.length ? '' : '—')) : (c.padPill || '')
+  };
+}
+const imgs = (srcs, px) => srcs.map(s => `<img class="glyph" src="${s}" alt="" style="width:${px}px;height:${px}px">`).join('');
+// one row of toggle buttons; the selected one gets aria-pressed, which the CSS styles
+function buttons(el, items, current, html, onPick) {
+  el.innerHTML = items.map((x, k) => `<button type="button" aria-pressed="${k === current}">${html(x, k)}</button>`).join('');
+  [...el.children].forEach((b, k) => b.onclick = () => onPick(k));
+}
+
+function render() {
+  const pt = state.type === 'touch' ? 'xb' : state.type;
+  document.querySelectorAll('[data-glyph]').forEach(el => {
+    const src = glyph(pt, el.dataset.glyph);
+    el.tagName === 'IMG' ? (el.src = src) : el.setAttribute('glyph', src);
+  });
+
+  buttons($('types'), TYPES, TYPES.findIndex(t => t[0] === state.type), t => t[1], k => { state.type = TYPES[k][0]; render(); });
+  buttons($('controls'), CONTROLS, state.ctl, c => {
+    const p = pick(c);
+    return `<span class="g">${imgs(p.imgs, 48)}${p.pill ? `<span class="pill">${p.pill}</span>` : ''}</span><span class="l">${c.action}</span>`;
+  }, k => { state.ctl = k; render(); });
+  const cur = CONTROLS[state.ctl];
+  $('ctl-shot').src = shot(cur.shot); $('ctl-shot').alt = cur.action;
+  $('ctl-glyphs').innerHTML = imgs(pick(cur).imgs, 56);
+  $('ctl-action').textContent = cur.action; $('ctl-text').textContent = cur.text;
+
+  const [label, file, text] = CATS[state.cat], pad = n => String(n).padStart(2, '0');
+  $('cat-shot').src = shot(file); $('cat-shot').alt = label;
+  $('cat-label').textContent = label; $('cat-text').textContent = text;
+  $('cat-num').textContent = `${pad(state.cat + 1)} / ${pad(CATS.length)}`;
+  buttons($('cats'), CATS, state.cat, (c, k) => `<span class="t"><img src="${shot(c[1])}" alt=""></span><span class="n"><span>${pad(k + 1)}</span><span>${c[0]}</span></span>`, k => { state.cat = k; render(); });
+
+  const modes = [['disc', 'Disc'], ['lens', 'Lens']];
+  buttons($('modes'), modes, modes.findIndex(m => m[0] === state.mode), m => m[1], k => { state.mode = modes[k][0]; render(); });
+  $('launch-demo').setAttribute('mode', state.mode);
+
+  const m = MEDIA[state.media], mi = Math.min(state.shot, m[2].length - 1);
+  $('media-text').textContent = m[1];
+  $('media-shot').src = shot(m[2][mi][0]); $('media-shot').alt = m[2][mi][1];
+  $('media-caption').textContent = m[2][mi][1];
+  buttons($('media-tabs'), MEDIA, state.media, x => x[0], k => { state.media = k; state.shot = 0; render(); });
+  buttons($('media-thumbs'), m[2], mi, ([f, cap]) => `<img src="${shot(f)}" alt="${cap}">`, k => { state.shot = k; render(); });
+}
+
+const go = d => { state.cat = (state.cat + d + CATS.length) % CATS.length; render(); };
+$('prev-cat').onclick = () => go(-1);
+$('next-cat').onclick = () => go(1);
+window.addEventListener('keydown', e => {
+  if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight') go(1);
+  if (e.key === 'ArrowLeft') go(-1);
+});
+$('systems').innerHTML = SYSTEMS.map(s => `<span class="tag">${s}</span>`).join('');
+// the hero's own boot waits for the intro overlay to finish
+$('hero').setAttribute('delay', document.querySelector('echo-boot') ? 3600 : 0);
+render();
+</script>
+<script src="docs/echo-anim.js"></script>
+</body>
+</html>
