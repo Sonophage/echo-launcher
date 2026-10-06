@@ -286,6 +286,9 @@ the top screen, and the bottom screen is a **companion**. Devices with one scree
   **RB**, **LB**, a menu or a tap. The controller still drives them. Search opens the keyboard,
   which the Thor shows on the bottom screen; **B** hides the keyboard first, and the next **B**
   closes Search. The first-run setup stays on the top screen.
+- **A keyboard you drive with the controller:** [Inlay](https://github.com/dakingeman/inlay), a
+  free, open-source gamepad keyboard for Android handhelds, works well with ECHO on two screens.
+  Install it and choose it as your keyboard in Android's settings.
 - **Tap a screen to give it the controller.** On the companion, the d-pad's left and right change
   page, up and down move through Recent, LT and RT change its filter, A opens and **B** hands the
   controller back to the XMB. The screen the controller is on has a light outline.
