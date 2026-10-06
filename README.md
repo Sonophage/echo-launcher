@@ -147,6 +147,8 @@ anything destructive asks twice. **Game Info** shows play time, platform, screen
 | Game Info | The Artwork Studio: pick where the art comes from |
 | <img src="docs/screenshots/col-game-cards.jpg" width="420"> | <img src="docs/screenshots/game-list.jpg" width="420"> |
 | Console cards, each showing four covers from inside it | All Games |
+| <img src="docs/screenshots/context-menu-confirm.jpg" width="420"> | |
+| Anything destructive asks twice, with Cancel first | |
 
 ### The App Drawer and Search
 
@@ -186,10 +188,14 @@ and bookmarks, and it keeps your place.
 | Songs | The music player |
 | <img src="docs/screenshots/video-browser.jpg" width="420"> | <img src="docs/screenshots/video-player-controls.jpg" width="420"> |
 | Videos | The video player |
+| <img src="docs/screenshots/video-player-options.jpg" width="420"> | <img src="docs/screenshots/launch-disc-music.jpg" width="420"> |
+| Speed, subtitles, audio track and screen mode | A song opening through the Lens launch |
 | <img src="docs/screenshots/photo-browser.jpg" width="420"> | <img src="docs/screenshots/photo-viewer.jpg" width="420"> |
 | Photos | The photo viewer |
+| <img src="docs/screenshots/photo-viewer-options.jpg" width="420"> | <img src="docs/screenshots/library-series.jpg" width="420"> |
+| Rotate, zoom and information | Books by series |
 | <img src="docs/screenshots/reader.jpg" width="420"> | <img src="docs/screenshots/reader-options.jpg" width="420"> |
-| The book reader | Its options |
+| The book reader | Its options: contents, text size, typeface, page colour, layout |
 
 ### The top panel and Settings
 
@@ -223,7 +229,7 @@ accounts, leaving out what you turned off. Each step runs the same code as its S
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/setup-wizard-welcome.jpg" width="420"> | <img src="docs/screenshots/setup-wizard-permissions.jpg" width="420"> |
-| Welcome | Permissions |
+| What is ECHO for? | Permissions |
 
 ### The ECHO folder
 
@@ -495,6 +501,7 @@ The focused game or app also tints the wave and fills the screen with its own ar
 ### Boot and launch — *Look & Feel ▸ Boot*
 
 <p align="center"><img src="docs/screenshots/boot-sequence.jpg" alt="The boot sequence: a line of light collapses to a point, then the ECHO mark gathers with the wave behind it" width="840"></p>
+<p align="center"><img src="docs/screenshots/launch-lens.jpg" alt="The Lens launch: the cover spins inside the ECHO ring, then opens over the screen" width="840"></p>
 
 | Setting | What it changes |
 |---|---|
