@@ -5,7 +5,7 @@
 **Extensible Console Handheld Operator: a controller-first Android home screen inspired by the XMB.**
 
 <p align="center">
-  <img src="docs/screenshots/last-played.jpg" alt="ECHO: Last Played, the home shelf, with Skyrim's art filling the screen" width="820">
+  <img src="docs/screenshots/header.jpg" alt="ECHO: Last Played with Skyrim's art filling the screen, the App Drawer's VHS cases, and Search's shelf" width="900">
 </p>
 
 <p align="center">
@@ -147,8 +147,8 @@ anything destructive asks twice. **Game Info** shows play time, platform, screen
 | Game Info | The Artwork Studio: pick where the art comes from |
 | <img src="docs/screenshots/col-game-cards.jpg" width="420"> | <img src="docs/screenshots/game-list.jpg" width="420"> |
 | Console cards, each showing four covers from inside it | All Games |
-| <img src="docs/screenshots/context-menu-confirm.jpg" width="420"> | |
-| Anything destructive asks twice, with Cancel first | |
+| <img src="docs/screenshots/game-console.jpg" width="420"> | <img src="docs/screenshots/context-menu-confirm.jpg" width="420"> |
+| One console's games, by cover | Anything destructive asks twice, with Cancel first |
 
 ### The App Drawer and Search
 
@@ -188,6 +188,8 @@ and bookmarks, and it keeps your place.
 | Songs | The music player |
 | <img src="docs/screenshots/video-browser.jpg" width="420"> | <img src="docs/screenshots/video-player-controls.jpg" width="420"> |
 | Videos | The video player |
+| <img src="docs/screenshots/video-detail.jpg" width="420"> | |
+| A video's page: resume or start over | |
 | <img src="docs/screenshots/video-player-options.jpg" width="420"> | <img src="docs/screenshots/launch-disc-music.jpg" width="420"> |
 | Speed, subtitles, audio track and screen mode | A song opening through the Lens launch |
 | <img src="docs/screenshots/photo-browser.jpg" width="420"> | <img src="docs/screenshots/photo-viewer.jpg" width="420"> |
@@ -459,8 +461,10 @@ Paths are in *Settings*; **≡** is the Menu button (long-press on touch).
 | Look & Feel | Colour Scheme, previewed on the live crossbar |
 | <img src="docs/screenshots/settings-controller.jpg" width="420"> | <img src="docs/screenshots/glyphs-playstation.jpg" width="420"> |
 | Controller ▸ Type picks the button glyphs | The same screen with PlayStation glyphs |
-| <img src="docs/screenshots/settings-touch.jpg" width="420"> | |
-| Touch: the on-screen button, swipes and hints | |
+| <img src="docs/screenshots/settings-touch.jpg" width="420"> | <img src="docs/screenshots/settings-wallpaper.jpg" width="420"> |
+| Touch: the on-screen button, swipes and hints | Wallpaper & Text: wave design and style, legibility, Last Played |
+| <img src="docs/screenshots/settings-layout.jpg" width="420"> | <img src="docs/screenshots/settings-sound.jpg" width="420"> |
+| Layout: adjust the crossbar live, custom icons | Sound: menu sounds and your own menu music |
 
 ### Colour and theme — *Look & Feel ▸ Theme*
 
