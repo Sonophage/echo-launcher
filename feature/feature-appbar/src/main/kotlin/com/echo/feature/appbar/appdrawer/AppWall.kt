@@ -1,7 +1,6 @@
 package com.echo.feature.appbar.appdrawer
 
 import android.content.pm.ApplicationInfo
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -50,6 +49,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.BoxWithConstraints
+import com.echo.feature.appbar.coverWindow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -77,10 +81,12 @@ import com.echo.core.ui.image.rememberBlurSourceModel
 import com.echo.feature.appbar.InstalledApp
 import com.echo.feature.appbar.SystemChip
 import com.echo.feature.appbar.WALL_COLUMNS
+import com.echo.feature.appbar.WALL_ROWS
+import androidx.compose.ui.unit.Dp
 import com.echo.core.ui.design.PanelBase
 
 // owner, 2026-10-05: the drawer is the "Drawer and Search Variations" design's 6a: a dark room lit by the
-// selected app's colour, its big icon faint on the wall, and the apps standing as cases in four columns
+// selected app's colour, its big icon faint on the wall, and the apps standing as cases in three columns
 @Composable
 internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits) {
     val tint by animateColorAsState(icon?.color ?: NeutralTint, tween(500), label = "wallTint")
@@ -130,35 +136,41 @@ internal fun AppWall(
         val fits = shown.any { it.index == selectedIndex && it.offset.y >= 0 && it.offset.y + it.size.height <= gridState.layoutInfo.viewportEndOffset }
         if (!fits) gridState.animateScrollToItem((selectedIndex - WALL_COLUMNS).coerceAtLeast(0))
     }
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(WALL_COLUMNS),
-        state = gridState,
-        horizontalArrangement = Arrangement.spacedBy(u.dp(28)),
-        verticalArrangement = Arrangement.spacedBy(u.dp(24)),
-        // room for the chosen case to rise
-        contentPadding = PaddingValues(top = u.dp(16), bottom = u.dp(16)),
-        modifier = modifier,
-    ) {
-        itemsIndexed(apps, key = { _, app -> app.packageName + (app.gameId ?: "") }) { index, app ->
-            AppCase(
-                app = app,
-                focused = index == selectedIndex,
-                dimmed = selectedIndex in apps.indices && index != selectedIndex,
-                u = u,
-                // a tap only picks the app; it opens by holding the launch button (owner, 2026-10-04)
-                onClick = { onAppTapped(index) },
-                onLongClick = { onAppTapped(index); onAppMenu(app) },
-            )
+    // owner, 2026-10-05: no row is cut off at the bottom. The cases are as tall as fits WALL_ROWS whole rows in
+    // the space, and the d-pad scrolls a row at a time, so the rows always land whole
+    BoxWithConstraints(modifier) {
+        val caseHeight = (maxHeight - u.dp(16) * 2 - u.dp(24) * (WALL_ROWS - 1)) / WALL_ROWS
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(WALL_COLUMNS),
+            state = gridState,
+            horizontalArrangement = Arrangement.spacedBy(u.dp(28)),
+            verticalArrangement = Arrangement.spacedBy(u.dp(24)),
+            // room for the chosen case to rise
+            contentPadding = PaddingValues(top = u.dp(16), bottom = u.dp(16)),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            itemsIndexed(apps, key = { _, app -> app.packageName + (app.gameId ?: "") }) { index, app ->
+                AppCase(
+                    app = app,
+                    height = caseHeight,
+                    focused = index == selectedIndex,
+                    dimmed = selectedIndex in apps.indices && index != selectedIndex,
+                    u = u,
+                    // a tap only picks the app; it opens by holding the launch button (owner, 2026-10-04)
+                    onClick = { onAppTapped(index) },
+                    onLongClick = { onAppTapped(index); onAppMenu(app) },
+                )
+            }
         }
     }
 }
 
-// one app as a case: ribbed black plastic, a VHS spine label down its edge, and the cover. A game's own art is
-// fitted whole, over a blur of itself where it does not fill; an app's cover is its colour with ECHO's echo rings,
+// one app as a case: ribbed black plastic, a VHS spine label down its edge, and the cover. A game's own art keeps
+// its shape (FittedCover), with the plastic round it; an app's cover is its colour with ECHO's echo rings,
 // its icon large and faint and again small and sharp, under the plastic's sheen
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppCase(app: InstalledApp, focused: Boolean, dimmed: Boolean, u: DesignUnits, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun AppCase(app: InstalledApp, height: Dp, focused: Boolean, dimmed: Boolean, u: DesignUnits, onClick: () -> Unit, onLongClick: () -> Unit) {
     val lift by animateFloatAsState(if (focused) 1f else 0f, tween(200), label = "caseLift")
     // owner, 2026-10-05: the chosen case stands a little bigger than the rest, and the rest step back
     val shade by animateFloatAsState(if (dimmed) 0.6f else 1f, tween(200), label = "caseShade")
@@ -169,7 +181,7 @@ private fun AppCase(app: InstalledApp, focused: Boolean, dimmed: Boolean, u: Des
     Box(
         Modifier
             .zIndex(if (focused) 1f else 0f)
-            .aspectRatio(0.7f)
+            .height(height)
             .graphicsLayer {
                 translationY = -rise * lift
                 scaleX = 1f + 0.07f * lift
@@ -185,7 +197,7 @@ private fun AppCase(app: InstalledApp, focused: Boolean, dimmed: Boolean, u: Des
         VhsSpine(caseLabel(app), tint, u, Modifier.padding(start = u.dp(4), top = u.dp(6), bottom = u.dp(6)).width(u.dp(24)).fillMaxHeight())
         Box(
             Modifier.fillMaxSize().padding(start = u.dp(32), top = u.dp(6), end = u.dp(6), bottom = u.dp(6))
-                .clip(RoundedCornerShape(u.dp(4))).background(tint),
+                .then(if (app.art == null) Modifier.clip(RoundedCornerShape(u.dp(4))).background(tint) else Modifier),
         ) {
             if (app.art != null) {
                 FittedCover(app.art, u)
@@ -198,7 +210,7 @@ private fun AppCase(app: InstalledApp, focused: Boolean, dimmed: Boolean, u: Des
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(u.dp(12)),
                 ) {
-                    if (icon != null) Image(icon.bitmap, null, Modifier.size(u.dp(56)).shadow(u.dp(8), RoundedCornerShape(u.dp(14))))
+                    if (icon != null) Image(icon.bitmap, null, Modifier.size(u.dp(72)).shadow(u.dp(8), RoundedCornerShape(u.dp(18))))
                     else Text(initialOf(app.label).toString(), color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(40), fontWeight = FontWeight.ExtraLight)
                     Text(app.label.uppercase(), color = Color.White, fontSize = u.sp(13), fontWeight = FontWeight.ExtraBold, letterSpacing = 0.04.em,
                         lineHeight = u.sp(15), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -233,12 +245,18 @@ private fun VhsSpine(label: String, tint: Color, u: DesignUnits, modifier: Modif
     }
 }
 
-// a cover fitted whole, so none of it is cut off, over a blur of itself filling the frame
+// owner, 2026-10-05: a cover keeps its own shape. The window it shows through is sized to the art and centred, and
+// the case's plastic shows round it, so a square Game Boy box is neither stretched, cropped nor padded with blur
 @Composable
 private fun FittedCover(art: String, u: DesignUnits) {
-    Box(Modifier.fillMaxSize()) {
-        AsyncImage(rememberBlurSourceModel(art), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(u.dp(16)).graphicsLayer(alpha = 0.7f))
-        AsyncImage(art, null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+    var aspect by remember(art) { mutableStateOf<Float?>(null) }
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val (w, h) = coverWindow(maxWidth.value, maxHeight.value, aspect ?: (maxWidth / maxHeight))
+        AsyncImage(
+            art, null, contentScale = ContentScale.Fit,
+            onSuccess = { s -> s.result.image.let { if (it.width > 0 && it.height > 0) aspect = it.width.toFloat() / it.height } },
+            modifier = Modifier.size(w.dp, h.dp).clip(RoundedCornerShape(u.dp(4))),
+        )
     }
 }
 

@@ -249,11 +249,11 @@ internal fun AppDrawerContent(
         WallBackdrop(focused, focusedIcon, u)
 
         // owner, 2026-10-05: the design's 6a: the chosen app's details in a column on the left, the apps as cases
-        // in four columns on the right, the bar's sections above and the hints below
+        // in three columns on the right, the bar's sections above and the hints below
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(StatusStripHeight))
             Row(Modifier.weight(1f).fillMaxWidth().padding(start = u.dp(46), end = u.dp(52))) {
-                Box(Modifier.width(u.dp(350)).fillMaxHeight().padding(top = u.dp(24))) {
+                Box(Modifier.width(u.dp(420)).fillMaxHeight().padding(top = u.dp(24))) {
                     focused?.let { app ->
                         WallInfo(app, focusedIcon, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
                             holding = state.holdingPackage == app.packageName, details = state.gameDetails?.takeIf { it.gameId == app.gameId })

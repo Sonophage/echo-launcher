@@ -22,10 +22,18 @@ class WallLayoutTest {
     }
 
     @Test
-    fun `every app has its own cell, four to a row`() {
+    fun `every app has its own cell, a row of WALL_COLUMNS`() {
         val cells = wallLayout(total = 20)
         assertEquals(20, cells.size)
         assertEquals(cells.size, cells.toSet().size)
         assertEquals(WallCell(row = 1, col = 0), cells[WALL_COLUMNS])
+    }
+
+    @Test
+    fun `a cover's window keeps the art's shape, so no cover is stretched`() {
+        // a 160 x 230 case
+        assertEquals("a square Game Boy box sits full width, plastic above and below", 160f to 160f, coverWindow(160f, 230f, 1f))
+        assertEquals("a tall Switch cover fills the height", 230f * 0.62f to 230f, coverWindow(160f, 230f, 0.62f))
+        assertEquals("a wide DS box sits full width", 160f to 160f / 1.12f, coverWindow(160f, 230f, 1.12f))
     }
 }

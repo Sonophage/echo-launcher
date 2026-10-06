@@ -3,8 +3,14 @@ package com.echo.feature.appbar
 import com.echo.core.domain.model.GamepadAction
 import kotlin.math.abs
 
-// owner, 2026-10-05: four columns of cases beside the info column (the design's 6a)
-const val WALL_COLUMNS = 4
+// owner, 2026-10-05: three columns of cases beside a wider info column (was four, the design's 6a), so covers are
+// big enough to read
+const val WALL_COLUMNS = 3
+const val WALL_ROWS = 2
+
+// the window a cover shows through in a w × h case: the art's own shape, as large as fits. aspect is width / height
+fun coverWindow(w: Float, h: Float, aspect: Float): Pair<Float, Float> =
+    if (aspect > w / h) w to w / aspect else h * aspect to h
 
 data class WallCell(val row: Int, val col: Int)
 

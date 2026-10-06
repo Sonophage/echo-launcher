@@ -102,7 +102,7 @@ anything destructive asks twice. **Game Info** shows play time, platform, screen
 ### The App Drawer and Search
 
 The **App Drawer** (RB) lists the focused app's details on the left (its name, kind, what is known
-about it, **Open** and **Options**) and every app as a case in four columns on the right, with a VHS
+about it, **Open** and **Options**) and every app as a case in three columns on the right, with a VHS
 spine saying what it is. Its sections (Recently Used, Apps, Emulators, Games) are icons in the top
 bar; LT and RT move between them. The Games tab has a chip per system, Steam Games included, and a
 game's **≡** opens the same menu as on the crossbar.
