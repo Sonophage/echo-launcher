@@ -27,6 +27,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+// owner, 2026-10-06: a new install starts on Black; an earlier install keeps Classic Blue (keepOldDefaults)
+internal val DEFAULT_COLOR_SCHEME = CrossbarColorScheme.BLACK
+
 class CrossbarLook(
     private val vm: CrossbarViewModel,
     private val uiState: MutableStateFlow<CrossbarUiState>,
@@ -40,7 +43,7 @@ class CrossbarLook(
             vm.context.echoDataStore.data
                 .map { prefs ->
                     SchemePrefs(
-                        schemeName = prefs[CrossbarViewModel.KEY_COLOR_SCHEME] ?: CrossbarColorScheme.CLASSIC_BLUE.name,
+                        schemeName = prefs[CrossbarViewModel.KEY_COLOR_SCHEME] ?: DEFAULT_COLOR_SCHEME.name,
                         accentOverride = prefs[CrossbarViewModel.KEY_ACCENT_OVERRIDE],
                         iconColor = prefs[CrossbarViewModel.KEY_ICON_COLOR],
                         iconsStamp = prefs[com.echo.core.data.repository.EchoThemeStore.KEY_THEME_ICONS_STAMP],
@@ -58,7 +61,7 @@ class CrossbarLook(
                         )
                     } else {
                         val scheme = runCatching { CrossbarColorScheme.valueOf(name) }
-                            .getOrDefault(CrossbarColorScheme.CLASSIC_BLUE)
+                            .getOrDefault(DEFAULT_COLOR_SCHEME)
                         val month = java.time.LocalDate.now().monthValue
                         scheme.resolve(month).toEchoColors()
                     }
@@ -127,8 +130,8 @@ class CrossbarLook(
         scope.launch {
             val prefs = vm.context.echoDataStore.data.first()
             val current = runCatching {
-                CrossbarColorScheme.valueOf(prefs[CrossbarViewModel.KEY_COLOR_SCHEME] ?: CrossbarColorScheme.CLASSIC_BLUE.name)
-            }.getOrDefault(CrossbarColorScheme.CLASSIC_BLUE)
+                CrossbarColorScheme.valueOf(prefs[CrossbarViewModel.KEY_COLOR_SCHEME] ?: DEFAULT_COLOR_SCHEME.name)
+            }.getOrDefault(DEFAULT_COLOR_SCHEME)
             colorSchemeOriginal = current
             accentOverrideOriginal = prefs[CrossbarViewModel.KEY_ACCENT_OVERRIDE]
 

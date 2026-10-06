@@ -31,6 +31,8 @@ class StartupDataPrep @Inject constructor(
         val alreadyPrepped = prefs[KEY_DATA_PREP_VERSION] == currentVersionCode
 
         runCatching {
+            // before the prep version is written below, which is how an earlier install is told apart
+            context.echoDataStore.edit(::keepOldDefaults)
             if (!alreadyPrepped) {
                 normalizeGameArtwork()
                 normalizeWallpaper()
@@ -126,7 +128,6 @@ class StartupDataPrep @Inject constructor(
     }
 
     private companion object {
-        val KEY_DATA_PREP_VERSION = intPreferencesKey("data_prep_version")
 
 
         val KEY_ART_COLUMN_REPAIR = booleanPreferencesKey("art_column_repair_done")
@@ -139,6 +140,25 @@ internal val RETIRED_ACHIEVEMENT_KEYS = setOf(
     "goldberg_installer_enabled",
     "local_steam_tracking_enabled",
 )
+
+private val KEY_DATA_PREP_VERSION = intPreferencesKey("data_prep_version")
+
+private val KEY_NEW_DEFAULTS = booleanPreferencesKey("new_defaults_v1")
+
+// owner, 2026-10-06: a new install opens apps and games with the Lens and starts on the Black colour
+// scheme. An install that ran ECHO before keeps what it showed: the old default is written, once, for
+// each of these it never set
+private val OLD_DEFAULTS = listOf(
+    Pair(stringPreferencesKey("display_launch_disc_style"), "DISC"),
+    Pair(stringPreferencesKey("display_gameboot_style"), "DISC"),
+    Pair(stringPreferencesKey("display_color_scheme"), "CLASSIC_BLUE"),
+)
+
+internal fun keepOldDefaults(prefs: androidx.datastore.preferences.core.MutablePreferences) {
+    if (prefs[KEY_NEW_DEFAULTS] == true) return
+    if (prefs[KEY_DATA_PREP_VERSION] != null) OLD_DEFAULTS.forEach { (key, old) -> if (prefs[key] == null) prefs[key] = old }
+    prefs[KEY_NEW_DEFAULTS] = true
+}
 
 internal fun wipeRetiredKeys(prefs: androidx.datastore.preferences.core.MutablePreferences) {
     prefs.asMap().keys.filter { it.name in RETIRED_ACHIEVEMENT_KEYS }.forEach { prefs.remove(it) }

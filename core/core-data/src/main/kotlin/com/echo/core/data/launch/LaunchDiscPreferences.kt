@@ -32,8 +32,9 @@ class LaunchDiscPreferences @Inject constructor(
         private val KEY_LAUNCH_DISC_ENABLED = booleanPreferencesKey("display_launch_disc")
         private val KEY_LAUNCH_DISC_STYLE = stringPreferencesKey("display_launch_disc_style")
 
+        // owner, 2026-10-06: ECHO's own Lens is the default; an earlier install keeps Disc (keepOldDefaults)
         fun styleOf(prefs: Preferences): GameBootStyle =
-            GameBootStyle.entries.firstOrNull { it.name == prefs[KEY_LAUNCH_DISC_STYLE] } ?: GameBootStyle.DISC
+            GameBootStyle.entries.firstOrNull { it.name == prefs[KEY_LAUNCH_DISC_STYLE] } ?: GameBootStyle.LENS
 
         fun resolve(prefs: Preferences): Boolean = prefs[KEY_LAUNCH_DISC_ENABLED] ?: true
     }

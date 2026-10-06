@@ -138,9 +138,9 @@ data class DisplaySettingsUiState(
     val bootPreviewVisible: Boolean = false,
 
     val gameBootEnabled: Boolean = true,
-    val gameBootStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC,
+    val gameBootStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.LENS,
     val launchDiscEnabled: Boolean = true,
-    val launchDiscStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC,
+    val launchDiscStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.LENS,
     val gameBootVideoLabel: String = UI_MEDIA_DEFAULT_LABEL,
     val gameBootVideoAssigned: Boolean = false,
     val gameBootPreviewVisible: Boolean = false,

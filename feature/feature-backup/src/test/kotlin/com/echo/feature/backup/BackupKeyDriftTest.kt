@@ -29,6 +29,7 @@ class BackupKeyDriftTest {
             "marks a wizard in progress on this device; the seen flag is what a restore carries",
         "initial_setup_step" to "the step of a wizard in progress on this device",
         "data_prep_version" to "migration marker",
+        "new_defaults_v1" to "migration marker",
         "open_play_session" to "a launch in progress on this device; it is settled and cleared on the next start",
         "achievements_sync_last" to "when this device last synced; a restored device has not synced yet",
 

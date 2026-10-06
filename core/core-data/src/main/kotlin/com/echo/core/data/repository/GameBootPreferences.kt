@@ -35,8 +35,9 @@ class GameBootPreferences @Inject constructor(
     companion object {
         private val KEY_GAMEBOOT_STYLE = stringPreferencesKey("display_gameboot_style")
 
+        // owner, 2026-10-06: ECHO's own Lens is the default; an earlier install keeps Disc (keepOldDefaults)
         fun styleOf(prefs: Preferences): GameBootStyle =
-            GameBootStyle.entries.firstOrNull { it.name == prefs[KEY_GAMEBOOT_STYLE] } ?: GameBootStyle.DISC
+            GameBootStyle.entries.firstOrNull { it.name == prefs[KEY_GAMEBOOT_STYLE] } ?: GameBootStyle.LENS
 
         private val KEY_GAMEBOOT_ENABLED = booleanPreferencesKey("display_gameboot_enabled")
 
