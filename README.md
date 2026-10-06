@@ -102,13 +102,14 @@ anything destructive asks twice. **Game Info** shows play time, platform, screen
 ### The App Drawer and Search
 
 The **App Drawer** (RB) lists the focused app's details on the left (its name, kind, what is known
-about it, **Open** and **Options**) and every app as a case in three columns on the right, with a VHS
-spine saying what it is. Its sections (Recently Used, Apps, Emulators, Games) are icons in the top
+about it, **Open** and **Options**) and every app as a VHS case in three columns on the right, two
+whole rows at a time, with a spine saying what it is. A game's cover keeps its own shape on the case's
+ribbed plastic, so square Game Boy boxes and tall Switch covers both show whole. Its sections (Recently Used, Apps, Emulators, Games) are icons in the top
 bar; LT and RT move between them. The Games tab has a chip per system, Steam Games included, and a
 game's **≡** opens the same menu as on the crossbar.
 
-**Search** (Y or LB) puts every result on one shelf: the likeliest match stands in the middle as a
-whole case, the rest as spines fanning out to both sides, and left and right slide along it. LB and
+**Search** (Y or LB) puts every result on one shelf: the likeliest match stands in the middle as the
+same VHS case the drawer uses, the rest as spines fanning out to both sides, and left and right slide along it. LB and
 RB filter by kind (Games, Apps, Music, Video, Books). A newly installed app shows up straight away.
 
 A game's cover, everywhere it shows (the crossbar's cover rows, the drawer, Search and GameBoot), is
