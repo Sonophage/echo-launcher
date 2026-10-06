@@ -32,8 +32,8 @@ android {
         applicationId = "com.echo.launcher"
         minSdk = 29           // Android 10 — Winlator minimum
         targetSdk = 35
-        versionCode = 50
-        versionName = "2.7.2"
+        versionCode = 51
+        versionName = "2.8.0"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
