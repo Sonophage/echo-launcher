@@ -19,7 +19,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.Dp
 import com.echo.core.ui.components.ControllerPrompt
 import com.echo.core.ui.components.LocalPadPrompts
-import com.echo.core.ui.design.CoverSheen
+import com.echo.core.ui.design.VhsAppFace
+import com.echo.core.ui.design.VhsCase
+import com.echo.core.ui.design.VhsCoverArt
+import com.echo.core.ui.design.caseShape
 import com.echo.core.ui.design.ShelfRoom
 import com.echo.core.ui.design.filmGrain
 import com.echo.core.ui.design.coverRings
@@ -262,7 +265,7 @@ private fun Info(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOption
     }
 }
 
-// the results on one shelf: the selected one out as a whole case, tilted a little and ringed; the rest as spines
+// the results on one shelf: the selected one out as a whole case, lifted and ringed; the rest as spines
 // cut from their own covers, one size, fanning out smaller away from it.
 // owner, 2026-10-05: moving along it must be smooth, so the shelf is laid out from one animated position: as it
 // travels, the case narrows back into a spine while the next spine grows into the case, and the shelf slides to
@@ -339,42 +342,39 @@ private fun Shelf(state: SearchState, u: DesignUnits, onActivateAt: (Int) -> Uni
     }
 }
 
-// one result, between a spine (weight 0) and the whole case (weight 1): the case tilts, lifts and rings as it
-// comes out, and the spine fades under it
+// one result, between a spine (weight 0) and the whole case (weight 1): the case lifts and rings as it comes out,
+// and the spine fades under it. owner, 2026-10-05: the case is the App Drawer's (VhsCase), so the two screens match
 @Composable
 private fun ShelfItem(row: CrossbarItem, weight: Float, alpha: Float, u: DesignUnits, modifier: Modifier, onClick: () -> Unit) {
-    val caseShape = RoundedCornerShape(u.dp(8))
+    val shape = caseShape(u)
     Box(
         modifier
             .graphicsLayer {
                 translationY = -u.dp(12).toPx() * weight
-                rotationZ = -2f * weight
                 this.alpha = lerp(alpha, 1f, weight)
             }
             .clickable(onClick = onClick),
     ) {
         if (weight < 1f) Box(Modifier.fillMaxSize().graphicsLayer(alpha = 1f - weight)) { SpineFace(row, u) }
-        if (weight > 0f) {
-            Box(
-                Modifier.fillMaxSize().graphicsLayer(alpha = weight)
-                    .shadow(u.dp(24) * weight, caseShape)
-                    .clip(caseShape)
-                    .background(Brush.verticalGradient(listOf(Color(0xFF26252A), Color(0xFF141317))))
-                    .border(u.dp(3), Color.White.copy(alpha = weight), caseShape),
-            ) { CaseFace(row, u) }
-        }
+        if (weight > 0f) CaseFace(
+            row, u,
+            Modifier.fillMaxSize().graphicsLayer(alpha = weight)
+                .shadow(u.dp(24) * weight, shape)
+                .border(u.dp(3), Color.White.copy(alpha = weight), shape),
+        )
     }
 }
 
-// the case's face: its reel windows and the cover inset beside them
+// the whole case: its art keeping its own shape on the ribbed plastic, or for an app its colour, rings and icon
 @Composable
-private fun CaseFace(row: CrossbarItem, u: DesignUnits) {
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        Box(Modifier.offset(u.dp(6), maxHeight * 0.26f).size(u.dp(12), maxHeight * 0.28f).clip(RoundedCornerShape(u.dp(4))).background(Color(0xFF3A3940)))
-        Box(Modifier.offset(u.dp(6), maxHeight * 0.6f).size(u.dp(12), maxHeight * 0.12f).clip(RoundedCornerShape(u.dp(4))).background(Color(0xFF2A292E)))
-        Box(Modifier.fillMaxSize().padding(start = u.dp(24), top = u.dp(5), end = u.dp(5), bottom = u.dp(5)).clip(RoundedCornerShape(u.dp(4)))) {
-            Cover(row, u, big = true)
-            Box(Modifier.fillMaxSize().background(CoverSheen))
+private fun CaseFace(row: CrossbarItem, u: DesignUnits, modifier: Modifier) {
+    val art = coverArt(row)
+    val icon = rememberAppIcon(row.packageName?.takeIf { row.isInstalledApp && art == null })
+    val tint = icon?.color ?: SearchTint
+    VhsCase(spineLabel(row), tint, u, modifier) {
+        if (art != null) VhsCoverArt(rememberArtworkModel(art), u)
+        else VhsAppFace(row.title, icon, tint, u) {
+            Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(u.dp(56)))
         }
     }
 }
@@ -383,7 +383,7 @@ private fun CaseFace(row: CrossbarItem, u: DesignUnits) {
 @Composable
 private fun SpineFace(row: CrossbarItem, u: DesignUnits) {
     Box(Modifier.fillMaxSize().shadow(u.dp(8), RoundedCornerShape(u.dp(3))).clip(RoundedCornerShape(u.dp(3)))) {
-        Cover(row, u, big = false)
+        SpineCover(row, u)
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.38f)))
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.22f to Color.Transparent, 0.48f to Color.White.copy(alpha = 0.1f), 0.7f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.6f))))
         Column(Modifier.fillMaxSize().padding(vertical = u.dp(10)), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
@@ -398,27 +398,24 @@ private fun SpineFace(row: CrossbarItem, u: DesignUnits) {
     }
 }
 
-// a result's cover: its art (an app's too, when the app is in the game library), or for an app its colour with
-// ECHO's echo rings and its icon. On the case the art is fitted whole over a blur of itself, so no cover is cut off;
-// a spine is a strip cut from it
+// a result's cover art: an app's when the app is in the game library, a game's from its icon slot (its cover)
+private fun coverArt(row: CrossbarItem): String? = when {
+    row.isInstalledApp -> row.coverUri
+    row.gameId != null -> com.echo.core.domain.model.coverArtOf(row.iconUri, row.shelfCoverArt)
+    else -> row.shelfCoverArt
+}
+
+// a spine is a strip cut from the cover, or for an app its colour with ECHO's echo rings and its icon
 @Composable
-private fun Cover(row: CrossbarItem, u: DesignUnits, big: Boolean) {
-    val art = when {
-        row.isInstalledApp -> row.coverUri
-        row.gameId != null -> com.echo.core.domain.model.coverArtOf(row.iconUri, row.shelfCoverArt)
-        else -> row.shelfCoverArt
-    }
+private fun SpineCover(row: CrossbarItem, u: DesignUnits) {
+    val art = coverArt(row)
     val icon = rememberAppIcon(row.packageName?.takeIf { row.isInstalledApp && art == null })
     when {
-        art != null && big -> Box(Modifier.fillMaxSize()) {
-            AsyncImage(rememberBlurSourceModel(art), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().blur(u.dp(16)).graphicsLayer(alpha = 0.7f))
-            AsyncImage(rememberArtworkModel(art), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-        }
         art != null -> AsyncImage(rememberArtworkModel(art), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         else -> Box(Modifier.fillMaxSize().background(icon?.color ?: SearchTint).coverRings(), contentAlignment = Alignment.Center) {
             when {
-                icon != null -> androidx.compose.foundation.Image(icon.bitmap, null, Modifier.size(u.dp(if (big) 64 else 26)))
-                else -> Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(u.dp(if (big) 56 else 22)))
+                icon != null -> androidx.compose.foundation.Image(icon.bitmap, null, Modifier.size(u.dp(26)))
+                else -> Icon(kindGlyph(row), null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(u.dp(22)))
             }
         }
     }

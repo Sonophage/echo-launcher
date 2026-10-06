@@ -8,10 +8,6 @@ import kotlin.math.abs
 const val WALL_COLUMNS = 3
 const val WALL_ROWS = 2
 
-// the window a cover shows through in a w × h case: the art's own shape, as large as fits. aspect is width / height
-fun coverWindow(w: Float, h: Float, aspect: Float): Pair<Float, Float> =
-    if (aspect > w / h) w to w / aspect else h * aspect to h
-
 data class WallCell(val row: Int, val col: Int)
 
 fun wallLayout(total: Int, columns: Int = WALL_COLUMNS): List<WallCell> =

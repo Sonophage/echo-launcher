@@ -11,11 +11,12 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
-import com.echo.core.ui.design.CoverSheen
 import com.echo.core.ui.design.ShelfRoom
-import com.echo.core.ui.design.coverRings
+import com.echo.core.ui.design.VhsAppFace
+import com.echo.core.ui.design.VhsCase
+import com.echo.core.ui.design.VhsCoverArt
+import com.echo.core.ui.design.caseShape
 import com.echo.core.ui.design.roomGlow
-import com.echo.core.ui.design.sideways
 import com.echo.core.ui.design.vignette
 import com.echo.core.ui.design.wallStripes
 import com.echo.core.ui.theme.EchoTextStyle
@@ -49,20 +50,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.BoxWithConstraints
-import com.echo.feature.appbar.coverWindow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -165,9 +160,8 @@ internal fun AppWall(
     }
 }
 
-// one app as a case: ribbed black plastic, a VHS spine label down its edge, and the cover. A game's own art keeps
-// its shape (FittedCover), with the plastic round it; an app's cover is its colour with ECHO's echo rings,
-// its icon large and faint and again small and sharp, under the plastic's sheen
+// one app as the shared VHS case (VhsCase): a game's own art keeps its shape on the ribbed plastic, an app's cover
+// is its colour, rings and icon
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AppCase(app: InstalledApp, height: Dp, focused: Boolean, dimmed: Boolean, u: DesignUnits, onClick: () -> Unit, onLongClick: () -> Unit) {
@@ -176,10 +170,11 @@ private fun AppCase(app: InstalledApp, height: Dp, focused: Boolean, dimmed: Boo
     val shade by animateFloatAsState(if (dimmed) 0.6f else 1f, tween(200), label = "caseShade")
     val icon = if (app.art == null) rememberAppIcon(app.packageName.takeIf { app.gameId == null }) else null
     val tint = icon?.color ?: NeutralTint
-    val shape = RoundedCornerShape(u.dp(8))
+    val shape = caseShape(u)
     val rise = with(LocalDensity.current) { u.dp(10).toPx() }
-    Box(
-        Modifier
+    VhsCase(
+        label = caseLabel(app), tint = tint, u = u,
+        modifier = Modifier
             .zIndex(if (focused) 1f else 0f)
             .height(height)
             .graphicsLayer {
@@ -189,80 +184,15 @@ private fun AppCase(app: InstalledApp, height: Dp, focused: Boolean, dimmed: Boo
                 alpha = shade
             }
             .shadow(u.dp(if (focused) 18 else 10), shape)
-            .clip(shape)
-            .background(CaseShell)
             .then(if (focused) Modifier.border(u.dp(3), Color.White, shape) else Modifier)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
-        VhsSpine(caseLabel(app), tint, u, Modifier.padding(start = u.dp(4), top = u.dp(6), bottom = u.dp(6)).width(u.dp(24)).fillMaxHeight())
-        Box(
-            Modifier.fillMaxSize().padding(start = u.dp(32), top = u.dp(6), end = u.dp(6), bottom = u.dp(6))
-                .then(if (app.art == null) Modifier.clip(RoundedCornerShape(u.dp(4))).background(tint) else Modifier),
-        ) {
-            if (app.art != null) {
-                FittedCover(app.art, u)
-            } else {
-                Box(Modifier.fillMaxSize().coverRings()) {
-                    icon?.let { Image(it.bitmap, null, Modifier.align(Alignment.BottomEnd).offset(u.dp(30), u.dp(18)).size(u.dp(130)).rotate(-14f).graphicsLayer(alpha = 0.16f)) }
-                }
-                Column(
-                    Modifier.align(Alignment.Center).padding(horizontal = u.dp(8)),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(u.dp(12)),
-                ) {
-                    if (icon != null) Image(icon.bitmap, null, Modifier.size(u.dp(72)).shadow(u.dp(8), RoundedCornerShape(u.dp(18))))
-                    else Text(initialOf(app.label).toString(), color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(40), fontWeight = FontWeight.ExtraLight)
-                    Text(app.label.uppercase(), color = Color.White, fontSize = u.sp(13), fontWeight = FontWeight.ExtraBold, letterSpacing = 0.04.em,
-                        lineHeight = u.sp(15), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Box(Modifier.fillMaxSize().background(CoverSheen))
+        if (app.art != null) VhsCoverArt(app.art, u)
+        else VhsAppFace(app.label, icon, tint, u) {
+            Text(initialOf(app.label).toString(), color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(40), fontWeight = FontWeight.ExtraLight)
         }
     }
 }
-
-// owner, 2026-10-05: the spine reads as a VHS tape's: a cream label with the colour band and a play mark at the
-// top, the kind running down it, tracking rules, and a black VHS tab at the foot
-@Composable
-private fun VhsSpine(label: String, tint: Color, u: DesignUnits, modifier: Modifier) {
-    Column(
-        modifier.clip(RoundedCornerShape(u.dp(3))).background(CaseLabel),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(Modifier.fillMaxWidth().height(u.dp(22)).background(tint), contentAlignment = Alignment.Center) {
-            Text("▶", color = Color.White, fontSize = u.sp(9))
-        }
-        Box(Modifier.weight(1f).padding(vertical = u.dp(8)), contentAlignment = Alignment.TopCenter) {
-            Text(label.uppercase(), color = CaseInk, fontSize = u.sp(10), fontWeight = FontWeight.ExtraBold, letterSpacing = 0.18.em,
-                maxLines = 1, softWrap = false, modifier = Modifier.sideways())
-        }
-        Column(Modifier.padding(bottom = u.dp(5)), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
-            repeat(3) { Box(Modifier.size(u.dp(14), 1.dp).background(CaseInk.copy(alpha = 0.6f))) }
-        }
-        Box(Modifier.fillMaxWidth().height(u.dp(20)).background(CaseInk), contentAlignment = Alignment.Center) {
-            Text("VHS", color = CaseLabel, fontSize = u.sp(6), fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
-        }
-    }
-}
-
-// owner, 2026-10-05: a cover keeps its own shape. The window it shows through is sized to the art and centred, and
-// the case's plastic shows round it, so a square Game Boy box is neither stretched, cropped nor padded with blur
-@Composable
-private fun FittedCover(art: String, u: DesignUnits) {
-    var aspect by remember(art) { mutableStateOf<Float?>(null) }
-    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val (w, h) = coverWindow(maxWidth.value, maxHeight.value, aspect ?: (maxWidth / maxHeight))
-        AsyncImage(
-            art, null, contentScale = ContentScale.Fit,
-            onSuccess = { s -> s.result.image.let { if (it.width > 0 && it.height > 0) aspect = it.width.toFloat() / it.height } },
-            modifier = Modifier.size(w.dp, h.dp).clip(RoundedCornerShape(u.dp(4))),
-        )
-    }
-}
-
-private val CaseShell = Brush.verticalGradient(listOf(Color(0xFF232227), Color(0xFF141317)))
-private val CaseLabel = Color(0xFFE8E2D3)
-private val CaseInk = Color(0xFF1A1A1A)
 
 // the left column: the app's tile, name and kind, a pill with what it is, what is known about it, when it was
 // last used, and its buttons
