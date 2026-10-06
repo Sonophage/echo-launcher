@@ -44,13 +44,6 @@ class EnterOpensAppDrawerTest {
     }
 
     @Test
-    fun `in the pill row it stays confirm`() {
-        val inPills = onCrossbar().copy(pillCursor = PillCursor(itemId = "g1", index = 0))
-        assertTrue("the fixture is not in the pill row", inPills.activePillIndex() != null)
-        assertFalse(inPills.enterOpensAppDrawer)
-    }
-
-    @Test
     fun `under any overlay it stays confirm`() {
         assertFalse(
             onCrossbar().copy(

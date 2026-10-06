@@ -101,8 +101,6 @@ import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.feature.crossbar.viewmodel.GRID_COVER_COUNT
 import com.echo.core.domain.model.PlayState
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.echo.feature.crossbar.viewmodel.pillHoldMs
-import com.echo.feature.crossbar.viewmodel.pillsFor
 import com.echo.core.ui.design.holdOutline
 import com.echo.core.ui.design.holdProgress
 import com.echo.core.ui.design.pressAndHold
@@ -250,10 +248,7 @@ fun CrossbarDrillFlyout(
 
     labelHiddenByPanel: Boolean,
 
-    onPillActivated: (String) -> Unit,
 
-    focusedPillIndex: Int?,
-    pillFade: Float = 1f,
     cardArtGrid: Boolean = true,
     metadataAsSubtitle: Boolean = false,
     modifier: Modifier = Modifier,
@@ -269,10 +264,6 @@ fun CrossbarDrillFlyout(
             showLabels = false,
             drillCursorOnSelected = true,
             iconAnimatingAllowed = iconAnimatingAllowed,
-
-            onPillActivated = onPillActivated,
-            focusedPillIndex = focusedPillIndex,
-            pillFade = pillFade,
             modifier = Modifier.fillMaxHeight().width(DRILL_GAME_COLUMN_LEFT - 10.dp),
         )
 
@@ -286,9 +277,6 @@ fun CrossbarDrillFlyout(
             iconAnimatingAllowed = iconAnimatingAllowed,
             cardArtGrid = cardArtGrid,
             labelHiddenByPanel = labelHiddenByPanel,
-            onPillActivated = onPillActivated,
-            focusedPillIndex = focusedPillIndex,
-            pillFade = pillFade,
             metadataAsSubtitle = metadataAsSubtitle,
             modifier = Modifier.fillMaxSize().padding(start = DRILL_GAME_COLUMN_LEFT),
         )
@@ -303,10 +291,7 @@ private fun CrossbarGameColumn(
     iconStyle: GameIconStyle,
     belowTopY: Dp,
     labelHiddenByPanel: Boolean,
-    onPillActivated: (String) -> Unit,
 
-    focusedPillIndex: Int?,
-    pillFade: Float = 1f,
     cardArtGrid: Boolean = true,
     metadataAsSubtitle: Boolean = false,
     onItemSelected: (Int) -> Unit,
@@ -331,9 +316,6 @@ private fun CrossbarGameColumn(
                 cardArtGrid = cardArtGrid,
 
                 labelHiddenByPanel = labelHiddenByPanel,
-                onPillActivated = onPillActivated,
-                focusedPillIndex = focusedPillIndex,
-                pillFade = pillFade,
                 metadataAsSubtitle = metadataAsSubtitle,
                 iconStyle = iconStyle,
                 onClick = { onItemSelected(i) },
@@ -425,10 +407,7 @@ fun CrossbarItemList(
     showLabels: Boolean = true,
 
     labelHiddenByPanel: Boolean = false,
-    onPillActivated: (String) -> Unit,
 
-    focusedPillIndex: Int?,
-    pillFade: Float = 1f,
     cardArtGrid: Boolean = true,
     metadataAsSubtitle: Boolean = false,
 
@@ -458,9 +437,6 @@ fun CrossbarItemList(
                     key(items[i].id) {
                         CrossbarVerticalListRow(
                             labelHiddenByPanel = labelHiddenByPanel,
-                            onPillActivated = onPillActivated,
-                            focusedPillIndex = focusedPillIndex,
-                            pillFade = pillFade,
                             cardArtGrid = cardArtGrid,
                             metadataAsSubtitle = metadataAsSubtitle,
                             item = items[i],
@@ -508,10 +484,7 @@ private fun CrossbarVerticalListRow(
     textShadow: Boolean = true,
 
     labelHiddenByPanel: Boolean,
-    onPillActivated: (String) -> Unit,
 
-    focusedPillIndex: Int?,
-    pillFade: Float = 1f,
     cardArtGrid: Boolean = true,
     metadataAsSubtitle: Boolean = false,
 
@@ -663,25 +636,6 @@ private fun CrossbarVerticalListRow(
                         }
                     }
 
-                    if (isSelected && pillFade > 0f) {
-                        val pills = pillsFor(item)
-                        if (pills.isNotEmpty()) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(PillGap),
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = 6.dp).alpha(pillFade),
-                            ) {
-                                pills.forEachIndexed { index, pill ->
-                                    CrossbarActionPill(
-                                        label = pill.label,
-                                        focused = index == focusedPillIndex,
-                                        holdMs = pillHoldMs(item, pill),
-                                        onClick = { onPillActivated(pill.id) },
-                                    )
-                                }
-                            }
-                        }
-                    }
                 }
             }
 
@@ -1167,36 +1121,6 @@ private fun AppListIcon(
     )
 }
 
-@Composable
-private fun CrossbarActionPill(label: String, focused: Boolean, holdMs: Long, onClick: () -> Unit) {
-    var pressing by remember { mutableStateOf(false) }
-    val progress = if (holdMs > 0L) holdProgress(pressing, holdMs) else 0f
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .height(PillHeight)
-            .clip(RoundedCornerShape(PillHeight / 2))
-            .background(if (focused) Color.White else Color.White.copy(alpha = 0.14f))
-            .holdOutline(progress, if (focused) PillFocusedText else Color.White, 2.dp)
-            .then(if (holdMs > 0L) Modifier.pressAndHold(holdMs, label, { pressing = it }, onClick) else Modifier.clickable(onClick = onClick))
-            .padding(horizontal = PillPadH),
-    ) {
-        Text(
-            text = label,
-
-            color = if (focused) PillFocusedText else PrimaryText,
-            fontSize = PillTextSize,
-            fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
-            maxLines = 1,
-        )
-    }
-}
-
-private val PillHeight = 31.dp
-private val PillPadH = 10.dp
-private val PillGap = 5.dp
-private val PillTextSize = 12.sp
-private val PillFocusedText = Color(0xFF1A0C03)
 
 @Composable
 private fun PlayStateBadge(state: PlayState, dimmed: Boolean) {

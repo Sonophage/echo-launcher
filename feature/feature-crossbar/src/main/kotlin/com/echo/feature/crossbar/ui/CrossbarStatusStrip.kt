@@ -172,7 +172,7 @@ fun rememberBatteryReading(): BatteryReading {
     return reading
 }
 
-data class StripHints(val shoulder: Boolean = false, val leftRight: Boolean = false)
+data class StripHints(val shoulder: Boolean = false)
 
 // the newest notification, for the right-hand island's peek
 data class NoticePeek(val postedAt: Long, val title: String, val detail: String?, val packageName: String?)
@@ -365,7 +365,6 @@ fun CrossbarStatusStrip(
                             }
                         }
                         if (hints.shoulder) StripHint("LB  RB", u)
-                        if (hints.leftRight) StripHint("◀  ▶", u)
                     }
                 }
             }

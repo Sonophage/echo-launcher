@@ -109,6 +109,15 @@ class MainActivity : ComponentActivity() {
             }
         }
         startMenuMusicIfWanted()
+        // shows the second screen each time ECHO comes to the front, and at once when Dual is chosen
+        // again in Quick settings
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                crossbarViewModel.uiState.map { it.secondScreenEnabled }.distinctUntilChanged().collect { on ->
+                    if (on) com.echo.feature.crossbar.bottomscreen.BottomScreenActivity.showBeside(this@MainActivity)
+                }
+            }
+        }
         ContextCompat.registerReceiver(
             this,
             installShortcutReceiver,
@@ -242,7 +251,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         bottomScreenLink.hostShown(true)
-        com.echo.feature.crossbar.bottomscreen.BottomScreenActivity.showBeside(this)
+        crossbarViewModel.secondDisplayPresent(com.echo.feature.crossbar.bottomscreen.BottomScreenActivity.secondDisplay(this) != null)
     }
 
     override fun onStop() {

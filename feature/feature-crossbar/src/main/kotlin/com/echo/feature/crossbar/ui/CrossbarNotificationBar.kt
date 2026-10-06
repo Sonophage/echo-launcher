@@ -10,6 +10,7 @@ import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import androidx.compose.animation.core.Animatable
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -104,7 +105,6 @@ import com.echo.feature.settings.ui.icon
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.feature.crossbar.viewmodel.LibraryChip
 import com.echo.feature.crossbar.viewmodel.NoticeFocus
-import com.echo.feature.crossbar.viewmodel.PANEL_QUICK_SETTINGS
 import com.echo.feature.crossbar.viewmodel.PanelEntry
 import com.echo.feature.crossbar.viewmodel.PanelStage
 import com.echo.feature.crossbar.viewmodel.PanelTab
@@ -121,6 +121,8 @@ data class QuickSettingsState(
     val rowCoverArt: Boolean,
     val recentAppsOn: Boolean,
     val chips: List<LibraryChip>,
+    val secondDisplay: Boolean = false,
+    val secondScreenOn: Boolean = true,
 )
 
 @Composable
@@ -346,13 +348,14 @@ private data class RowText(val pkg: String, val title: String, val app: String, 
 @Composable
 private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: DesignUnits, onTapped: (QuickSetting, Int) -> Unit, modifier: Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(22))) {
-        PANEL_QUICK_SETTINGS.forEach { setting ->
+        com.echo.feature.crossbar.viewmodel.quickSettingsFor(quick.secondDisplay).forEach { setting ->
             val (label, value) = when (setting) {
                 QuickSetting.WAVE -> "Wave" to quick.wave.label
                 // owner, 2026-10-05: "Crossbar shows Art / Wallpaper" was unclear; this is what fills the background
                 QuickSetting.BACKDROP -> "Background" to if (quick.backdropOn) "Game art" else "Your theme"
                 QuickSetting.ROW_ART -> "Game rows show" to if (quick.rowCoverArt) "Cover art" else "Icons"
                 QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
+                QuickSetting.SECOND_SCREEN -> "Screens" to if (quick.secondScreenOn) "Dual" else "Single"
                 QuickSetting.ANDROID_SETTINGS -> "Android settings" to "Open"
                 QuickSetting.LIBRARIES -> "" to ""
             }
@@ -510,6 +513,7 @@ private fun quickIcon(setting: QuickSetting): ImageVector = when (setting) {
     QuickSetting.BACKDROP -> Icons.Outlined.Image
     QuickSetting.ROW_ART -> Icons.Outlined.Games
     QuickSetting.RECENT_APPS -> Icons.Outlined.History
+    QuickSetting.SECOND_SCREEN -> Icons.Outlined.Devices
     QuickSetting.ANDROID_SETTINGS -> Icons.Outlined.Settings
     QuickSetting.LIBRARIES -> Icons.Outlined.GridView
 }

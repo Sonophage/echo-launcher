@@ -87,8 +87,8 @@ class CrossbarBottomScreen(
             link.attached.collect { on -> uiState.update { it.copy(secondScreen = on) } }
         }
         scope.launch {
-            vm.context.echoDataStore.data.map { it[KEY_SWAP_SCREENS] == true }.distinctUntilChanged()
-                .collect { swapped -> uiState.update { it.copy(screensSwapped = swapped) } }
+            vm.context.echoDataStore.data.map { (it[KEY_SWAP_SCREENS] == true) to (it[KEY_SECOND_SCREEN] != false) }.distinctUntilChanged()
+                .collect { (swapped, enabled) -> uiState.update { it.copy(screensSwapped = swapped, secondScreenEnabled = enabled) } }
         }
         link.bind(vm)
         vm.addCloseable { link.unbind(vm) }
@@ -178,8 +178,14 @@ class CrossbarBottomScreen(
         return true
     }
 
+    // dual or single screen: off, the second screen is left to Android and ECHO uses one screen
+    fun setSecondScreenEnabled(on: Boolean) {
+        scope.launch { vm.context.echoDataStore.edit { it[KEY_SECOND_SCREEN] = on } }
+    }
+
     internal companion object {
         val KEY_SWAP_SCREENS = booleanPreferencesKey("display_swap_screens")
+        val KEY_SECOND_SCREEN = booleanPreferencesKey("display_second_screen")
         const val SETTLE_MS = 150L
     }
 }

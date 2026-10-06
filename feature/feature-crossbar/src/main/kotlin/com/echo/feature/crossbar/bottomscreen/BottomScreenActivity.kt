@@ -56,6 +56,8 @@ class BottomScreenActivity : ComponentActivity() {
                 val crossbar by link.crossbar.collectAsState()
                 crossbar?.let { vm ->
                     val ui by vm.uiState.collectAsState()
+                    // single screen chosen in Quick settings: the second screen goes back to Android
+                    LaunchedEffect(ui.secondScreenEnabled) { if (!ui.secondScreenEnabled) finishAndRemoveTask() }
                     if (ui.screensSwapped) {
                         // swapped: the XMB is drawn here, the companion on the main screen
                         LaunchedEffect(Unit) { onLocked(LockedScreenOpen(open = false, typing = false)) }
@@ -160,10 +162,14 @@ class BottomScreenActivity : ComponentActivity() {
 
     companion object {
         // shows the bottom screen on a second display, when the device has one; nothing otherwise
-        fun showBeside(activity: Activity) {
-            val displays = activity.getSystemService(DisplayManager::class.java)
+        // the device's second display, if it has one
+        fun secondDisplay(activity: Activity): Display? =
+            activity.getSystemService(DisplayManager::class.java)
                 ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).orEmpty()
-            val target = displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY } ?: return
+                .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+
+        fun showBeside(activity: Activity) {
+            val target = secondDisplay(activity) ?: return
             val options = ActivityOptions.makeBasic().setLaunchDisplayId(target.displayId).toBundle()
             runCatching {
                 activity.startActivity(Intent(activity, BottomScreenActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options)

@@ -352,11 +352,12 @@ class CrossbarPanel(
 
     internal fun movePanelCursor(move: PanelMove) {
         val s = uiState.value
-        val before = PanelCursor(s.panelTab, s.noticeCursor, PANEL_QUICK_SETTINGS.indexOf(s.panelQuick).coerceAtLeast(0), s.panelChip, s.panelSetting, s.panelProfile)
+        val quicks = quickSettingsFor(s.secondDisplayPresent)
+        val before = PanelCursor(s.panelTab, s.noticeCursor, quicks.indexOf(s.panelQuick).coerceAtLeast(0), s.panelChip, s.panelSetting, s.panelProfile)
         val after = movePanel(
             before, move,
             rows = s.noticeFocusables.size,
-            quicks = PANEL_QUICK_SETTINGS.size,
+            quicks = quicks.size,
             chips = s.libraryChips.size,
             recents = s.profileData.recent.size,
         )
@@ -369,7 +370,7 @@ class CrossbarPanel(
             it.copy(
                 panelTab = after.tab,
                 noticeCursor = after.notice,
-                panelQuick = PANEL_QUICK_SETTINGS[after.quick],
+                panelQuick = quicks[after.quick],
                 panelChip = after.chip,
                 panelSetting = after.setting,
                 panelProfile = after.profile,

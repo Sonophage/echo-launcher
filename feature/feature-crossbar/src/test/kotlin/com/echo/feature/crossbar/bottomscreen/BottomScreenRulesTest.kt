@@ -86,4 +86,13 @@ class BottomScreenRulesTest {
         assertEquals(BottomPage.INFO, BottomScreenState(page = BottomPage.INFO, focused = skyrim).shownPage())
         assertEquals(BottomPage.RECENT, BottomScreenState(page = BottomPage.RECENT, focused = skyrim).shownPage())
     }
+
+    // owner, 2026-10-06: dual or single screen is a quick setting, offered only where there is a second display
+    @Test
+    fun `Screens is a quick setting only on a device with a second display`() {
+        val dual = com.echo.feature.crossbar.viewmodel.quickSettingsFor(secondDisplay = true)
+        assertTrue(com.echo.feature.crossbar.viewmodel.QuickSetting.SECOND_SCREEN in dual)
+        assertEquals("Android settings stays last", com.echo.feature.crossbar.viewmodel.QuickSetting.ANDROID_SETTINGS, dual.last())
+        assertFalse(com.echo.feature.crossbar.viewmodel.QuickSetting.SECOND_SCREEN in com.echo.feature.crossbar.viewmodel.quickSettingsFor(secondDisplay = false))
+    }
 }

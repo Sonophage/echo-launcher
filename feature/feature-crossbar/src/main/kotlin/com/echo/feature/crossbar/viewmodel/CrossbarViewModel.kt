@@ -94,7 +94,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.update
@@ -495,8 +494,6 @@ data class CrossbarUiState(
 
     val lastInputWasTouch: Boolean = false,
 
-    val inColumn: Boolean = false,
-
     val showContextMenuHint: Boolean = false,
 
     val idle: Boolean = false,
@@ -648,6 +645,9 @@ data class CrossbarUiState(
     val screensSwapped: Boolean = false,
     // the companion takes the controller, after a tap on its screen, until B or a tap on the XMB
     val companionActive: Boolean = false,
+    // the device has a second display, and whether ECHO uses it (Quick settings, owner 2026-10-06)
+    val secondDisplayPresent: Boolean = false,
+    val secondScreenEnabled: Boolean = true,
 
     val infoDialog: InfoDialogState? = null,
 
@@ -695,8 +695,6 @@ data class CrossbarUiState(
     val recentFilters: List<RecentFilter> = listOf(RecentFilter.ALL),
 
     val recentRailVisible: Boolean = false,
-
-    val pillCursor: PillCursor? = null,
 
     val notificationsOpen: Boolean = false,
     // the notification island's card is out (owner, 2026-10-05). Pinned when the user brought it out, so it
@@ -843,8 +841,7 @@ data class CrossbarUiState(
         get() = search == null &&
             !hasBlockingOverlay &&
             !isInSubItem &&
-            !onLastPlayedHome &&
-            activePillIndex() == null
+            !onLastPlayedHome
 
     val hasBlockingOverlay: Boolean
         get() = otherBlockingOverlay || activeContextMenu != null || notificationsOpen
@@ -2874,11 +2871,6 @@ class CrossbarViewModel @Inject constructor(
 
         when (action) {
             GamepadAction.NAVIGATE_UP   -> {
-                if (state.activePillIndex() != null) {
-                    menuSound.play(MenuSound.SCROLL)
-                    _uiState.update { it.copy(pillCursor = null) }
-                    return
-                }
                 if (!moveItemCursor(-1)) {
                     gamepadInputHandler.cancelRepeat()
                     // up from the top of a list focuses the orb (kit 05)
@@ -2888,35 +2880,10 @@ class CrossbarViewModel @Inject constructor(
                     }
                 }
             }
-            // Last Played's stage has no column to enter, so down steps to the next recent at once
-            GamepadAction.NAVIGATE_DOWN -> if (state.onLastPlayedHome && state.activePillIndex() == null) {
+            // owner, 2026-10-06: no pill row under a row any more; its actions are in the row's menu
+            GamepadAction.NAVIGATE_DOWN ->
                 if (!moveItemCursor(+1)) gamepadInputHandler.cancelRepeat()
-            } else when (
-                downStep(
-                    inPillRow = state.activePillIndex() != null,
-                    pillRowVisible = state.pillRowVisible,
-                    inColumn = state.inColumn,
-                    hasPills = state.focusedPills().isNotEmpty(),
-                )
-            ) {
-                DownStep.EnterColumn -> {
-                    menuSound.play(MenuSound.SCROLL)
-                    _uiState.update { it.copy(inColumn = true) }
-                }
-
-                DownStep.LeaveRowAndStepItem ->
-                    if (moveItemCursor(+1)) _uiState.update { it.copy(pillCursor = null) }
-                    else gamepadInputHandler.cancelRepeat()
-
-                DownStep.EnterRow ->
-                    if (!pillPressHandled(action, state)) gamepadInputHandler.cancelRepeat()
-
-                DownStep.StepItem ->
-                    if (!moveItemCursor(+1)) gamepadInputHandler.cancelRepeat()
-            }
             GamepadAction.NAVIGATE_LEFT -> {
-                if (state.activePillIndex() != null && pillPressHandled(action, state)) return
-
                 if (state.isInSubItem) {
                     gamepadInputHandler.cancelRepeat()
                     if (!state.leftBacksOut) return
@@ -2931,14 +2898,11 @@ class CrossbarViewModel @Inject constructor(
                     _uiState.update { it.copy(recentRailVisible = true) }
                     return
                 }
-                if (state.pillRowVisible && pillPressHandled(action, state)) return
                 val next = state.stepToReachableCategory(-1)
                 if (next != state.selectedCategoryIndex) onCategorySelected(next)
                 else gamepadInputHandler.cancelRepeat()
             }
             GamepadAction.NAVIGATE_RIGHT -> {
-                if (state.activePillIndex() != null && pillPressHandled(action, state)) return
-
                 if (recentRailStep(action, state.onLastPlayedHome, state.recentRailVisible) == RailStep.Close) {
                     gamepadInputHandler.cancelRepeat()
                     menuSound.play(MenuSound.SYSTEM_BROWSE)
@@ -2946,32 +2910,19 @@ class CrossbarViewModel @Inject constructor(
                     return
                 }
 
-                if (state.pillRowVisible && pillPressHandled(action, state)) return
                 if (state.isInSubItem) { gamepadInputHandler.cancelRepeat(); return }
                 val next = state.stepToReachableCategory(+1)
                 if (next != state.selectedCategoryIndex) onCategorySelected(next)
                 else gamepadInputHandler.cancelRepeat()
             }
             GamepadAction.SELECT     -> {
-                val pill = state.activePillIndex()?.let { state.focusedPills().getOrNull(it) }
                 val index = state.selectedItemIndex
                 val item = state.currentItems.getOrNull(index)
-                val held = item != null && !state.hasBlockingOverlay &&
-                    (pill == null || pillHoldMs(item, pill) > 0L) &&
-                    holdToLaunch(item) { if (pill != null) onPillActivated(pill.id) else onItemSelected(index) }
-                when {
-                    held -> Unit
-                    pill != null -> onPillActivated(pill.id)
-                    else -> onItemSelected(index)
-                }
+                val held = item != null && !state.hasBlockingOverlay && holdToLaunch(item) { onItemSelected(index) }
+                if (!held) onItemSelected(index)
             }
             GamepadAction.BACK       -> {
                 menuSound.play(MenuSound.BACK)
-
-                if (state.activePillIndex() != null) {
-                    _uiState.update { it.copy(pillCursor = null) }
-                    return
-                }
 
                 if (recentRailStep(action, state.onLastPlayedHome, state.recentRailVisible) == RailStep.Close) {
                     _uiState.update { it.copy(recentRailVisible = false) }
@@ -3484,23 +3435,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun pillPressHandled(action: GamepadAction, state: CrossbarUiState): Boolean {
-        val pills = state.focusedPills()
-        return when (val nav = pillNav(action, state.activePillIndex(), pills.size)) {
-            is PillNav.Move -> {
-                val item = state.currentItems.getOrNull(state.selectedItemIndex) ?: return false
-                menuSound.play(MenuSound.SCROLL)
-                _uiState.update { it.copy(pillCursor = PillCursor(item.id, nav.index)) }
-                true
-            }
-            PillNav.ExitAndPass -> {
-                _uiState.update { it.copy(pillCursor = null) }
-                false
-            }
-            PillNav.Pass -> false
-        }
-    }
-
     fun toggleQuickSetting(setting: QuickSetting, chip: Int = _uiState.value.panelChip) {
         menuSound.play(MenuSound.SELECT)
         val s = _uiState.value
@@ -3512,6 +3446,7 @@ class CrossbarViewModel @Inject constructor(
                 QuickSetting.BACKDROP -> iconDisplayPreferences.setItemBackdrop(!s.itemBackdropEnabled)
                 QuickSetting.ROW_ART -> iconDisplayPreferences.setRowCoverArt(s.iconStyle != GameIconStyle.COVER_ART)
                 QuickSetting.RECENT_APPS -> context.echoDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
+                QuickSetting.SECOND_SCREEN -> bottomScreen.setSecondScreenEnabled(!s.secondScreenEnabled)
                 QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
                 QuickSetting.ANDROID_SETTINGS -> {
                     panel.closeNotifications()
@@ -3651,34 +3586,12 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private val MENU_RAISE_TIMEOUT_MS = 500L
-
-    fun onPillActivated(pillId: String) {
-        viewModelScope.launch {
-            openContextMenuForFocusedItem()
-
-            val menu = withTimeoutOrNull(MENU_RAISE_TIMEOUT_MS) {
-                uiState.first { it.activeContextMenu != null }.activeContextMenu
-            }
-            if (menu == null) {
-                Timber.w("Pill '$pillId' pressed on a row that raised no menu")
-                return@launch
-            }
-
-            if (menu.items.none { it.action == pillId }) {
-                Timber.w("Pill '$pillId' is not offered by the focused row's menu")
-                closeContextMenu()
-                return@launch
-            }
-            activateContextMenuItem(pillId)
-        }
-    }
 
     fun onContextMenuItemActivatedAt(index: Int) {
         val state = _uiState.value
         val menu = state.activeContextMenu ?: return
 
-        when (val chosen = state.menuWithPills()?.chose(index)) {
+        when (val chosen = state.activeContextMenu?.state?.chose(index)) {
             is MenuSelect.Replace -> _uiState.update { it.copy(activeContextMenu = menu.copy(state = chosen.state)) }
             is MenuSelect.Run -> {
                 _uiState.update { it.copy(activeContextMenu = menu.withSelected(index)) }
@@ -3784,7 +3697,7 @@ class CrossbarViewModel @Inject constructor(
         if (index != _uiState.value.selectedCategoryIndex) menuSound.play(MenuSound.SYSTEM_BROWSE)
         val category = _uiState.value.categories.getOrNull(index)
 
-        _uiState.update { it.copy(selectedCategoryIndex = index, selectedItemIndex = 0, inColumn = false, pillCursor = null, recentRailVisible = false, selectedPlatformId = null, musicNav = MusicNav.Root, videoNav = VideoNav.Root, photoNav = PhotoNav.Root, romFoldersOpen = false, activeAppDrawerFilter = null) }
+        _uiState.update { it.copy(selectedCategoryIndex = index, selectedItemIndex = 0, recentRailVisible = false, selectedPlatformId = null, musicNav = MusicNav.Root, videoNav = VideoNav.Root, photoNav = PhotoNav.Root, romFoldersOpen = false, activeAppDrawerFilter = null) }
         tintWaveForCategory(category)
         loadItemsForCategory(category)
     }
@@ -3812,6 +3725,11 @@ class CrossbarViewModel @Inject constructor(
         }
         val next = s.stepToReachableCategory(direction)
         if (next != s.selectedCategoryIndex) onCategorySelected(next)
+    }
+
+    // MainActivity reports whether the device has a second display when it comes to the front
+    fun secondDisplayPresent(present: Boolean) {
+        if (_uiState.value.secondDisplayPresent != present) _uiState.update { it.copy(secondDisplayPresent = present) }
     }
 
     // a tap on a screen that shows the companion (true) or the XMB (false); with a second screen, the
@@ -3847,7 +3765,7 @@ class CrossbarViewModel @Inject constructor(
         if (next == s.selectedItemIndex) return false
         _uiState.update {
             // owner, 2026-10-04: on Last Played, up and down change the stage; only LEFT opens the rail
-            it.copy(selectedItemIndex = next, inColumn = true)
+            it.copy(selectedItemIndex = next)
         }
         menuSound.play(MenuSound.SCROLL)
         return true
@@ -3868,7 +3786,7 @@ class CrossbarViewModel @Inject constructor(
         } else {
             val clamped = index.coerceIn(0, (s.currentItems.size - 1).coerceAtLeast(0))
             if (clamped != s.selectedItemIndex) {
-                _uiState.update { it.copy(selectedItemIndex = clamped, inColumn = true) }
+                _uiState.update { it.copy(selectedItemIndex = clamped) }
                 menuSound.play(MenuSound.SCROLL)
             }
         }

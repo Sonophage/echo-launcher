@@ -131,10 +131,7 @@ import com.echo.feature.crossbar.viewmodel.clearableNoticeCount
 import com.echo.feature.crossbar.viewmodel.stageActions
 import com.echo.feature.crossbar.viewmodel.panelEntries
 import com.echo.feature.crossbar.viewmodel.panelStage
-import com.echo.feature.crossbar.viewmodel.focusedPillIndex
-import com.echo.feature.crossbar.viewmodel.pillRowVisible
 import com.echo.feature.crossbar.viewmodel.promptsFor
-import com.echo.feature.crossbar.viewmodel.menuWithPills
 import com.echo.feature.crossbar.viewmodel.RecentFilter
 import com.echo.feature.crossbar.viewmodel.fanCoversToDraw
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
@@ -271,8 +268,6 @@ fun CrossbarShellContainer(
         onThemeShareConsumed = viewModel.look::onThemeShareConsumed,
         onSettingsActionConsumed = viewModel::consumeSettingsAction,
         onPromptTapped = viewModel::onPromptTapped,
-        onPillActivated = viewModel::onPillActivated,
-        focusedPillIndex = uiState.focusedPillIndex,
         onCloseAppDrawer = viewModel::onCloseAppDrawer,
         onAddAppToOpenCategory = viewModel::addAppToOpenCategory,
         onLaunchRomFromDrawer = viewModel.launching::launchGameFromDrawer,
@@ -475,9 +470,7 @@ fun CrossbarShell(
 
     onPromptTapped: (com.echo.core.domain.model.GamepadAction) -> Unit = {},
 
-    onPillActivated: (String) -> Unit = {},
 
-    focusedPillIndex: Int? = null,
     onCloseAppDrawer: () -> Unit = {},
 
     onAddAppToOpenCategory: (String) -> Unit = {},
@@ -1010,8 +1003,6 @@ fun CrossbarShell(
 
                     if (uiState.drillTitle != null) {
                         CrossbarDrillFlyout(
-                            onPillActivated = onPillActivated,
-                            focusedPillIndex = focusedPillIndex,
                             siblings = uiState.drillSiblings,
                             siblingIndex = uiState.drillSiblingIndex,
                             items = uiState.currentItems,
@@ -1049,9 +1040,6 @@ fun CrossbarShell(
                             val itemSelectedIndex =
                                 if (categoryIndex == uiState.selectedCategoryIndex) uiState.selectedItemIndex else -1
                             CrossbarItemList(
-                                onPillActivated = onPillActivated,
-                                focusedPillIndex = focusedPillIndex,
-                                pillFade = if (uiState.inColumn) chromeFade else 0f,
                                 items = uiState.currentItems,
                                 selectedIndex = itemSelectedIndex,
                                 onItemSelected = onItemTap,
@@ -1167,8 +1155,6 @@ fun CrossbarShell(
 
                 hints = StripHints(
                     shoulder = uiState.panelStripOpen && crossbarContext,
-
-                    leftRight = uiState.pillRowVisible && crossbarContext,
                 ),
 
                 // owner, 2026-10-04: the XMB already shows its categories, so the centre carries only that
@@ -1235,6 +1221,8 @@ fun CrossbarShell(
                         rowCoverArt = uiState.iconStyle == com.echo.core.ui.icons.GameIconStyle.COVER_ART,
                         recentAppsOn = uiState.recentsIncludeApps,
                         chips = uiState.libraryChips,
+                        secondDisplay = uiState.secondDisplayPresent,
+                        secondScreenOn = uiState.secondScreenEnabled,
                     ),
                     profile = uiState.profileData,
                     profileName = uiState.profileName,
@@ -1292,7 +1280,7 @@ fun CrossbarShell(
                             ?: hintIcon?.color
                             ?: menuCursorEdge(),
                         leading = hintItem?.let { hintTile(it, hintIcon?.bitmap) },
-                        holdMs = holdMsFor(hintItem.takeIf { uiState.focusedPillIndex == null && !uiState.hasBlockingOverlay }),
+                        holdMs = holdMsFor(hintItem.takeIf { !uiState.hasBlockingOverlay }),
                         holding = hintItem != null && uiState.launchHold == hintItem.id,
                         resumeHolding = uiState.resumableFocus()?.let { uiState.launchHold == resumeHoldId(it.id) } == true,
                     )
@@ -1453,7 +1441,7 @@ fun CrossbarShell(
 
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
                     EchoContextMenuOverlay(
-                        state = uiState.menuWithPills() ?: menu.state,
+                        state = menu.state,
                         onRowActivated = onContextMenuItemActivated,
                         onDismiss = onContextMenuDismiss,
                     )
