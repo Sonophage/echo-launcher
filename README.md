@@ -61,6 +61,9 @@ tablet, used every day.
 - **A built-in book reader** for EPUB, PDF and CBZ, and built-in music, video and photo players.
 - **Artwork that looks like a shelf**: box covers fetched from ScreenScraper, SteamGridDB, IGDB and
   Steam, shown as VHS cases in the App Drawer and Search.
+- **Two screens on dual-screen handhelds** such as the AYN Thor: the XMB on one, a companion on
+  the other with the focused game's details, Last Played, the App Drawer, Search and Settings. See
+  [Dual screens](#dual-screens).
 - **A profile** with RetroAchievements, Steam achievements and Discord presence.
 - **Almost everything is adjustable**: see [Make it yours](#make-it-yours). Controller glyphs,
   touch, layout, colours, icons, wallpaper, sounds and boot all have a setting.
@@ -75,6 +78,7 @@ tablet, used every day.
 - [Highlights](#highlights)
 - [A tour](#a-tour)
 - [Handhelds and tablets](#handhelds-and-tablets)
+  - [Dual screens](#dual-screens)
 - [A fork of PlayFieldPortal](#a-fork-of-playfieldportal)
 - [Install](#install)
 - [Controls](#controls)
@@ -268,6 +272,31 @@ and a 2400×1504 tablet. The same build runs on both. Phones and foldables work 
   step.
 - **A controller is optional on a tablet** and works the same as on a handheld when one is paired.
 
+### Dual screens
+
+On a handheld with a second screen, such as the **AYN Thor**, ECHO uses both. The XMB stays on
+the top screen, and the bottom screen is a **companion**. Devices with one screen are unchanged.
+
+- **Info** follows the XMB's cursor: the focused game's or app's details, play time, achievements,
+  screenshots and description. While a game you launched from ECHO is running, Info shows that game
+  and a **Resume** button (hold it, like every launch).
+- **Recent** is the Last Played screen, with its filters. With a second screen, Last Played leaves
+  the XMB and lives here. Tap to pick, hold to launch.
+- **The App Drawer, Search and Settings open on the bottom screen**, whether you open them with
+  **RB**, **LB**, a menu or a tap. The controller still drives them. Search opens the keyboard,
+  which the Thor shows on the bottom screen; **B** hides the keyboard first, and the next **B**
+  closes Search. The first-run setup stays on the top screen.
+- **Tap a screen to give it the controller.** On the companion, the d-pad's left and right change
+  page, up and down move through Recent, LT and RT change its filter, A opens and **B** hands the
+  controller back to the XMB. The screen the controller is on has a light outline.
+- **Swap** (on the companion's bar) puts the XMB on the bottom screen and the companion on the top,
+  and back. ECHO remembers it. The controller stays with the XMB.
+- **Games always open on the main screen.** DS and 3DS emulators keep the bottom screen while a
+  game runs, and ECHO comes back to it when you return.
+- **Dual or single:** the top panel's **Quick settings ▸ Screens** turns the second screen off
+  (Single), which gives it back to Android, and on again (Dual). The tile only shows on a device
+  with a second screen.
+
 ---
 
 ## A fork of PlayFieldPortal
@@ -439,6 +468,7 @@ access to all of your storage.
 | Categories, tabs, sections and filters | **LT / RT** | Page Up / Page Down | Tap |
 | Page or seek in lists and players | **LB / RB** | | |
 | Home: the top panel | **Guide** or **View** (twice when a notification is waiting) | | Tap the notification island twice; slide up to close |
+| Give the controller to the other screen (two screens) | **B** on the companion returns it to the XMB | | Tap that screen |
 
 - **D-pad ◀ backs out** of a folder, flyout or settings page wherever LEFT is not already doing
   something. Turn it off with *Look & Feel ▸ Controller ▸ Left Backs Out*.
@@ -664,7 +694,8 @@ lets you test-launch a ROM before saving.
 
 ### Last Played and Shelves
 
-**Last Played** keeps its order, newest first, and is never sorted.
+**Last Played** keeps its order, newest first, and is never sorted. With a second screen it is the
+bottom screen's **Recent** page instead of a column (see [Dual screens](#dual-screens)).
 *Look & Feel ▸ Wallpaper & Text ▸ Last Played Size* sets how many it holds, and **≡ ▸ Remove from
 Recent** takes one off.
 
