@@ -127,6 +127,7 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
         <a href="#navigate" style="color:#c3ccd4">Controls</a>
         <a href="#games" style="color:#c3ccd4">Games</a>
         <a href="#media" style="color:#c3ccd4">Media</a>
+        <a href="#dual" style="color:#c3ccd4">Two screens</a>
         <a href="#install" class="btn dl" style="padding:9px 18px;font-size:13px">Download</a>
       </nav>
     </div>
@@ -335,13 +336,37 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
     </div>
   </section>
 
+  <section id="dual" class="sec">
+    <div class="wrap" style="display:flex;flex-wrap:wrap;gap:56px;align-items:center">
+      <div class="col" style="flex:1 1 320px;gap:22px;max-width:520px">
+        <div class="eyebrow"><b>09</b><i></i><span>Two screens</span></div>
+        <h2 class="h2" style="font-size:clamp(40px,5vw,72px)">On a dual-screen handheld, both screens.</h2>
+        <p class="lede">On a handheld like the AYN Thor, the XMB stays on top and the bottom screen follows it: the focused game's details, or the game you are playing with a Resume button. Last Played, the App Drawer, Search and Settings open down there, so the XMB never leaves the top.</p>
+        <div class="col" style="gap:12px;font-size:15px;line-height:1.6;color:#a9b4bd;font-weight:300">
+          <div><span style="color:#eef2f6;font-weight:400">Tap a screen</span> to give it the controller. B hands it back to the XMB.</div>
+          <div><span style="color:#eef2f6;font-weight:400">Swap</span> puts the XMB on the bottom screen and the companion on top, and ECHO remembers it.</div>
+          <div><span style="color:#eef2f6;font-weight:400">DS and 3DS emulators</span> keep the bottom screen while a game runs.</div>
+          <div><span style="color:#eef2f6;font-weight:400">Quick settings ▸ Screens</span> switches between Dual and Single.</div>
+        </div>
+      </div>
+      <!-- an illustration put together from ECHO's own screenshots: the crossbar above, Game Info
+           below, which is what the bottom screen's Info page shows -->
+      <figure class="shot" style="flex:2 1 560px;min-width:0;margin:0;display:flex;flex-direction:column;align-items:center;gap:14px">
+        <img src="docs/screenshots/col-game.jpg" alt="The XMB on the top screen" style="display:block;width:100%;border-radius:22px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 60px 120px rgba(0,0,0,.6)">
+        <div style="width:22%;height:6px;border-radius:3px;background:rgba(255,255,255,.12)"></div>
+        <img src="docs/screenshots/game-info.jpg" alt="The focused game's details on the bottom screen" style="display:block;width:72%;border-radius:18px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 40px 100px rgba(0,0,0,.6)">
+        <figcaption style="font-size:13px;color:#7d8891">Top: the XMB. Bottom: the focused game, as the companion shows it.</figcaption>
+      </figure>
+    </div>
+  </section>
+
   <section class="sec">
     <div class="wrap" style="display:flex;flex-wrap:wrap;gap:56px;align-items:center">
       <div style="flex:2 1 560px;min-width:0">
         <img src="docs/screenshots/theme-color-scheme.jpg" alt="Colour Scheme, previewed on the live crossbar" style="display:block;width:100%;border-radius:22px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 60px 120px rgba(0,0,0,.6)">
       </div>
       <div class="col" style="flex:1 1 320px;gap:22px">
-        <div class="eyebrow"><b>09</b><i></i><span>Make it yours</span></div>
+        <div class="eyebrow"><b>10</b><i></i><span>Make it yours</span></div>
         <h2 class="h2" style="font-size:clamp(40px,4.5vw,64px)">Almost everything is adjustable.</h2>
         <p class="lede" style="font-size:16px">Controller glyphs, touch, layout, colours, icons, wallpaper, sounds and boot all have a setting, and most of it previews live on the crossbar.</p>
         <div class="mono" style="font-size:13px;line-height:2;color:#c3ccd4;padding:20px 24px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
@@ -357,7 +382,7 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
 
   <section class="sec">
     <div class="wrap col" style="gap:48px">
-      <div class="eyebrow"><b>10</b><i></i><span>Local-first</span></div>
+      <div class="eyebrow"><b>11</b><i></i><span>Local-first</span></div>
       <div class="col">
         <div class="rule">No account.</div>
         <div class="rule">No analytics. No telemetry.</div>
