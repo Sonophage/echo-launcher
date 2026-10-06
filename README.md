@@ -32,13 +32,53 @@ to fetch artwork or metadata.
 
 ---
 
+## How ECHO started
+
+ECHO began as a side project with two small wishes. I wanted a **book reader** that lived on my
+handheld's home screen next to my games, instead of one more app to dig for. And I missed the
+**XMB**: the way the PSP and PS3 felt to move through, the slow wave behind everything, and the
+little sounds every press made. Android launchers for handhelds were good at lists of games, but
+none of them felt like that.
+
+So on 2026-09-18 I forked [PlayFieldPortal](https://github.com/JohnnyCollado/PlayFieldPortal), an
+XMB-style launcher that already did the hard parts, and started bending it toward the one I wanted.
+The reader came first in spirit and landed in 1.21 (a built-in EPUB, PDF and CBZ reader on
+Readium). The feel took longer: a PS3-style wave, a crossbar that takes on the colour of what you
+are looking at, hold-to-launch so nothing starts by accident, a launch disc and GameBoot, and a
+slot for every interface sound so the presses can sound the way you remember. ECHO ships no Sony
+audio, so the sounds are yours to add.
+
+Somewhere along the way it stopped being a reader with a menu and became the whole home screen,
+and from 2.0.0 it has its own name. It is still a personal project, built on one handheld and one
+tablet, used every day.
+
+## Highlights
+
+- **One crossbar for everything**: games from the emulators you already have, Android apps, music,
+  video, photos and books, all from a controller or by touch.
+- **The XMB feel**: a PS3-style wave (or ECHO's own Rings and Arcs) tinted by the focused art,
+  a boot sequence, a launch disc and GameBoot, menu music and a slot for every interface sound.
+- **A built-in book reader** for EPUB, PDF and CBZ, and built-in music, video and photo players.
+- **Artwork that looks like a shelf**: box covers fetched from ScreenScraper, SteamGridDB, IGDB and
+  Steam, shown as VHS cases in the App Drawer and Search.
+- **A profile** with RetroAchievements, Steam achievements and Discord presence.
+- **Almost everything is adjustable**: see [Make it yours](#make-it-yours). Controller glyphs,
+  touch, layout, colours, icons, wallpaper, sounds and boot all have a setting.
+- **Local-first**: no account, no telemetry, and an editable [ECHO folder](#the-echo-folder) for
+  your art and look.
+
+---
+
 ## Contents
 
+- [How ECHO started](#how-echo-started)
+- [Highlights](#highlights)
 - [A tour](#a-tour)
 - [Handhelds and tablets](#handhelds-and-tablets)
 - [A fork of PlayFieldPortal](#a-fork-of-playfieldportal)
 - [Install](#install)
 - [Controls](#controls)
+- [Make it yours](#make-it-yours)
 - [Guide](#guide)
 - [Privacy](#privacy)
 - [Troubleshooting](#troubleshooting)
@@ -50,8 +90,8 @@ to fetch artwork or metadata.
 
 ## A tour
 
-*Shot on 2026-10-04 on an AYANEO Pocket FIT Elite (1920×1080) with a real library, on ECHO 2.2 to 2.4.
-Game artwork, wallpaper art, book covers and app icons belong to their owners.*
+*Shot on an AYANEO Pocket FIT Elite (1920×1080) with a real library, on ECHO 2.2 to 2.7. Game
+artwork, wallpaper art, book covers and app icons belong to their owners.*
 
 ### Home
 
@@ -67,9 +107,16 @@ it in the colour of its art. Press LEFT, or swipe right, to bring in the **Recen
 The bar along the top holds the **island** (what is playing, or the last thing you opened), the
 section icons, battery and time, and at the far right a second island for notifications: the ECHO
 mark with the count beside it when something is waiting, otherwise your profile picture. A new
-notification drops out of it as a card; press it once to see the newest, twice to open them all. The footer holds **Home** and **Back** on the left,
+notification drops out of it as a card; press it once to see the newest, twice to open them all.
+UP from the top of a list drops the left island's card the same way: what is playing, or the last thing
+you opened. The footer holds **Home** and **Back** on the left,
 the **A** action in the centre, and the screen's own actions on the right. Games and apps launch
 when you **hold A** until the ring fills, so a stray press never launches anything.
+
+| | |
+|:---:|:---:|
+| <img src="docs/screenshots/card-notifications.jpg" width="420"> | <img src="docs/screenshots/card-island.jpg" width="420"> |
+| The notification card | The island card: the last thing you opened |
 
 ### The crossbar
 
@@ -98,6 +145,8 @@ anything destructive asks twice. **Game Info** shows play time, platform, screen
 | A focused game | Its options |
 | <img src="docs/screenshots/game-info.jpg" width="420"> | <img src="docs/screenshots/artwork-studio.jpg" width="420"> |
 | Game Info | The Artwork Studio: pick where the art comes from |
+| <img src="docs/screenshots/col-game-cards.jpg" width="420"> | <img src="docs/screenshots/game-list.jpg" width="420"> |
+| Console cards, each showing four covers from inside it | All Games |
 
 ### The App Drawer and Search
 
@@ -122,12 +171,14 @@ its **icon slot**; the main art is used only when the icon slot is empty.
 | <img src="docs/screenshots/search.jpg" width="420"> | |
 | Search | |
 
-### Music, video and photos
+### Music, video, photos and books
 
 Songs, Artists, Albums and Playlists open a fullscreen browser, and music keeps playing in the
 background with its controls on the island. The built-in video player seeks with LEFT and RIGHT
 and keeps speed, subtitles, audio track and screen mode under **Options**. The photo viewer zooms,
-pans and rotates, and any photo can become the wallpaper with its EXIF data stripped.
+pans and rotates, and any photo can become the wallpaper with its EXIF data stripped. Books open in
+the built-in reader: two pages side by side or one, text size, typeface and page colour, contents
+and bookmarks, and it keeps your place.
 
 | | |
 |:---:|:---:|
@@ -137,6 +188,8 @@ pans and rotates, and any photo can become the wallpaper with its EXIF data stri
 | Videos | The video player |
 | <img src="docs/screenshots/photo-browser.jpg" width="420"> | <img src="docs/screenshots/photo-viewer.jpg" width="420"> |
 | Photos | The photo viewer |
+| <img src="docs/screenshots/reader.jpg" width="420"> | <img src="docs/screenshots/reader-options.jpg" width="420"> |
+| The book reader | Its options |
 
 ### The top panel and Settings
 
@@ -145,18 +198,21 @@ notification as a card, when there is one; a second press opens the panel: Notif
 Profile, Quick settings, Libraries and Settings. Settings has seven sections: **Overview, Library, Emulators,
 Look & Feel, Accounts, System, Setup**.
 
+The **Profile** tab shows your name and picture, your games, hours and achievements, what you played
+last with its achievement progress, and your Steam, RetroAchievements and Discord accounts.
+
 | | |
 |:---:|:---:|
+| <img src="docs/screenshots/panel-notifications.jpg" width="420"> | <img src="docs/screenshots/panel-profile.jpg" width="420"> |
+| Notifications | Your profile |
 | <img src="docs/screenshots/panel-quick-settings.jpg" width="420"> | <img src="docs/screenshots/panel-libraries.jpg" width="420"> |
 | Quick settings | Libraries: which columns are on the crossbar |
 | <img src="docs/screenshots/settings-home.jpg" width="420"> | <img src="docs/screenshots/settings-overview.jpg" width="420"> |
 | Settings | Overview: your library at a glance |
 | <img src="docs/screenshots/settings-library.jpg" width="420"> | <img src="docs/screenshots/settings-emulators.jpg" width="420"> |
 | Library: media folders and hidden items | Emulators: the Library Manager |
-| <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> | <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> |
-| Look & Feel | Colour Scheme, previewed on the live crossbar |
-| <img src="docs/screenshots/settings-system.jpg" width="420"> | |
-| System: About, Logs, Backup & Restore | |
+| <img src="docs/screenshots/settings-system.jpg" width="420"> | <img src="docs/screenshots/settings-boot.jpg" width="420"> |
+| System: About, Logs, Backup & Restore | Boot: the boot sequence, launch disc and GameBoot |
 
 ### First run
 
@@ -229,8 +285,8 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
   section icons, a footer with Home and Back on the left and the A action in the centre, Echo Rings
   and Echo Arcs waves in the colour of what is selected, and one rail panel for every menu.
 - **Hold to launch.** Games and apps launch only when A, or the A button on screen, is held.
-- **Hero layouts** (2.2): Search and the App Drawer show the selected item as a hero banner over a
-  full-width list or grid.
+- **A shelf of VHS cases** (2.6, 2.7): the App Drawer stands every app and game as a case with a
+  spine, and Search lays results along one shelf, the likeliest match in the middle.
 - **Touch as a first-class input**: a Back button, swipes that follow the d-pad's rules, and holds
   that work by touch.
 - **The ECHO folder**: one folder for artwork and the editable look.
@@ -245,7 +301,7 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 - **A top bar and a top panel** with media transport, device notifications and launcher
   notices.
 - **One search page** across every library, with type-to-search.
-- **Settings rebuilt** into five sections, with an Overview of art cards, a Permissions screen, and
+- **Settings rebuilt** into seven sections, with an Overview of art cards, a Permissions screen, and
   eight new settings for behaviour that used to be fixed in code.
 - **The setup wizard rebuilt** so each step runs the same code as the matching Settings screen.
 - **Media folders managed in place**, from a Folders row on each media column. Music gains Artists
@@ -283,13 +339,47 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 separately; ECHO launches them and does not emulate anything itself. A controller is
 recommended, and touch works throughout.
 
-1. Download `ECHO-<version>.apk` from
-   [Releases](https://github.com/Sonophage/echo-launcher/releases).
-   A release can also carry a `-debug.apk`; that one installs as
-   `com.echo.launcher.debug`, beside the normal app rather than over it.
+### With Obtainium (recommended: updates arrive by themselves)
+
+[Obtainium](https://github.com/ImranR98/Obtainium) installs apps straight from their GitHub
+releases and tells you when there is a new one.
+
+1. Install Obtainium from its [releases page](https://github.com/ImranR98/Obtainium/releases)
+   (or from F-Droid or IzzyOnDroid).
+2. In Obtainium, tap **Add App** and paste:
+
+   ```text
+   https://github.com/Sonophage/echo-launcher
+   ```
+
+3. Each release carries two APKs. To always get the normal app, set **Filter APKs by regular
+   expression** to:
+
+   ```text
+   ^ECHO-[0-9.]+\.apk$
+   ```
+
+   (The other one, `ECHO-<version>-debug.apk`, installs as a separate app,
+   `com.echo.launcher.debug`, beside the normal one. Use `-debug\.apk$` instead if that is the one
+   you want.)
+4. Tap **Add**, then **Install**, and allow installs from Obtainium when Android asks.
+5. Press **Home**, pick **ECHO** and choose **Always**.
+
+Obtainium checks for new releases on its own schedule; every release is signed with the same key,
+so an update installs over the old one and keeps your library.
+
+### By hand, from the APK
+
+1. Download `ECHO-<version>.apk` from the
+   [latest release](https://github.com/Sonophage/echo-launcher/releases/latest) (not the `-debug`
+   one, unless you want a second copy beside the normal app).
 2. Open it on the device, allow installs from that source when Android asks, and tap **Install**.
-3. Optional: press **Home**, pick **ECHO**, choose **Always**. Importing shortcuts from other
-   launchers needs it to be the default home app.
+3. Press **Home**, pick **ECHO** and choose **Always**. Importing shortcuts from other launchers
+   needs it to be the default home app.
+
+To update by hand, install the newer APK over the old one; your library and settings stay. To go
+back to your old launcher, pick it under *Android Settings ▸ Apps ▸ Default apps ▸ Home app*, then
+uninstall ECHO if you like. Back up first (*System ▸ Backup & Restore*) if you might return.
 
 ### First run
 
@@ -344,8 +434,156 @@ access to all of your storage.
 
 - **D-pad ◀ backs out** of a folder, flyout or settings page wherever LEFT is not already doing
   something. Turn it off with *Look & Feel ▸ Controller ▸ Left Backs Out*.
-- *Look & Feel ▸ Controller* swaps A/B and X/Y.
+- *Look & Feel ▸ Controller* swaps A/B and X/Y, and **Type** picks the button glyphs drawn in the
+  footer and hints: Generic, **Xbox**, **Nintendo**, **PlayStation**, Keyboard or Touch.
+- Every control has a touch equivalent; *Look & Feel ▸ Touch* sets swipe distance, the on-screen
+  button and whether hints can be tapped. See [Make it yours](#make-it-yours).
 - **B with the on-screen keyboard up hides the keyboard**; the next B goes back.
+
+---
+
+## Make it yours
+
+Nearly everything ECHO draws or plays can be changed, and most of it previews live on the crossbar.
+Paths are in *Settings*; **≡** is the Menu button (long-press on touch).
+
+| | |
+|:---:|:---:|
+| <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> | <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> |
+| Look & Feel | Colour Scheme, previewed on the live crossbar |
+| <img src="docs/screenshots/settings-controller.jpg" width="420"> | <img src="docs/screenshots/glyphs-playstation.jpg" width="420"> |
+| Controller ▸ Type picks the button glyphs | The same screen with PlayStation glyphs |
+| <img src="docs/screenshots/settings-touch.jpg" width="420"> | |
+| Touch: the on-screen button, swipes and hints | |
+
+### Colour and theme — *Look & Feel ▸ Theme*
+
+| Setting | What it changes |
+|---|---|
+| **Color Scheme** | 13 schemes (Original, which changes with the month, Classic Blue, Sunset Orange, Fresh Green, Royal Purple, Crimson Red, Silver, Sakura Pink, Golden Amber, Aqua Teal, Midnight Navy, Charcoal, Black), previewed live |
+| **Icon Color** | one tint for every crossbar glyph: 8 swatches or a **Custom Theme Color** |
+| **Color from Wallpaper** | takes the scheme from your wallpaper |
+| **Save Current Look as Theme** | bundles icons, wallpaper, colours and motion into a shareable `.pfptheme`; **Import Theme** loads one, **Reset to Default** clears it |
+| **Theme Studio** | a desktop editor for `.pfptheme` files (Windows, Linux, macOS), built from `studio/` |
+
+The focused game or app also tints the wave and fills the screen with its own art;
+*Emulators ▸ Artwork ▸ Backdrop & Tint* turns that off and keeps your theme's colour and wallpaper.
+
+### Background and text — *Look & Feel ▸ Wallpaper & Text*
+
+| Setting | What it changes |
+|---|---|
+| **Choose Wallpaper** | a still picture, or a motion wallpaper (MP4, WebM, animated GIF or WebP) |
+| **Wave Design** | **PSP**, **Echo Rings** or **Echo Arcs** |
+| **Wave Style** | Animated, Reduced, Static, Reduced + Static, or Off (Quick settings steps through them too) |
+| **Wave Over Wallpaper** | keep the wave drawn on top of your wallpaper |
+| **Background Motion** | the same styles for a motion wallpaper |
+| **Icon Legibility** | how icons stand off the background: None, Offset Shadow, or a dark, light or automatic contour |
+| **Apps On The Recent Shelf** · **Last Played Size** | whether apps join Last Played, and how many items it keeps |
+| **Card Art Grid** | a console card shows four covers from inside it instead of its icon |
+| **Fade By Distance** · **Text Shadow** | dim rows by distance from the cursor; shadow helper text over bright wallpaper |
+| **Show Device Notifications** · **Last Opened In The Island** | what the top bar shows |
+
+### Layout and icons — *Look & Feel ▸ Layout*
+
+| Setting | What it changes |
+|---|---|
+| **Adjust Crossbar Layout** | scale and move the crossbar over the live screen with the d-pad or sliders, kept separately for each screen size |
+| **Classic Layout** | the PSP's own proportions, applied to this screen |
+| **Customize Crossbar Icons** | replace any of the 42 theme glyphs or a console's icon with your own image or GIF, live |
+
+### Boot and launch — *Look & Feel ▸ Boot*
+
+<p align="center"><img src="docs/screenshots/boot-sequence.jpg" alt="The boot sequence: a line of light collapses to a point, then the ECHO mark gathers with the wave behind it" width="840"></p>
+
+| Setting | What it changes |
+|---|---|
+| **Show Boot Sequence** (and **on Resume**) | the line of light that becomes the ECHO mark, with your chosen wave rising behind it; A or B skips it |
+| **Boot Video** | your own clip instead |
+| **Launch Disc** · **Launch Disc Style** | the cover becomes a spinning disc between choosing an app or media and it opening; **Disc** or **Lens** (the art spins inside the ECHO ring, then opens like a lens) |
+| **GameBoot** · **GameBoot Style** · **GameBoot Video** | the same for games, or your own clip |
+
+### Sound — *Look & Feel ▸ Sound*
+
+**Menu Sounds** on or off, a sound for every slot below, and looping **Menu Music** of your own.
+ECHO ships with no sounds, so the interface is silent until you add some; the boot, launch disc and
+GameBoot each have their own slot, and the menu music waits while they play.
+
+### Controller — *Look & Feel ▸ Controller*
+
+| Setting | What it changes |
+|---|---|
+| **Type** | the **button glyphs** in the footer and every hint: Generic, **Xbox**, **Nintendo**, **PlayStation**, Keyboard or Touch |
+| **A / B Swap** · **X / Y Swap** | confirm on B and back on A; search on X and sort on Y |
+| **Stick Sensitivity** | how far the stick moves before it navigates, and before it counts as a full tilt |
+| **Trigger Sensitivity** | how far L2 and R2 pull to turn a page (High suits short or worn triggers) |
+| **Shoulder Hold Time** | how long L1 or R1 is held before it counts as a hold |
+| **Scroll Speed** | Slow, Relaxed, Standard or Fast, for held d-pad and stick |
+| **Left Backs Out** | LEFT leaves folders, flyouts and settings pages |
+| **Reset All Controller Settings** | back to the defaults |
+
+### Touch — *Look & Feel ▸ Touch*
+
+ECHO works with no controller at all: swipe through a column, swipe sideways to change category,
+tap to pick, long-press for options, and hold the on-screen A to launch.
+
+| Setting | What it changes |
+|---|---|
+| **Touch Navigation Button** | the on-screen App Drawer and Back button |
+| **Touch Sensitivity** | how far a swipe travels per step: Very Low, Low, Normal or High |
+| **Button Hints** | show the footer prompts and let them be tapped |
+| **Hint Delay** | how long before hints appear, from always shown to 5 seconds |
+| **Seek Step** · **Hide Controls After** | the video player's skip distance and how long its controls stay up |
+
+### Categories — *Look & Feel ▸ Categories*
+
+Create your own categories (gaming for games, non-gaming for apps), rename them, change their icon,
+move them left or right, hide them, or delete the ones you made. *Home ▸ Libraries* switches whole
+columns on and off.
+
+### Performance — *Look & Feel ▸ Performance*
+
+**Thermal Throttle Awareness** lowers background quality when the device runs hot, **Battery Saver
+Mode** freezes the background under Battery Saver, and **Rescan On Return** looks for new and
+missing games when you come back, at most every five minutes.
+
+### Your library's look
+
+- **Artwork per game**: the Artwork Studio (**≡ ▸ Metadata ▸ Artwork**) picks each slot's image
+  from ScreenScraper, SteamGridDB, IGDB or a file, and crops it. A game's cover is its **Tile** slot.
+- **Your profile**: the panel's Profile tab edits your **name** and **picture** and shows your
+  RetroAchievements, Steam and Discord.
+- **The [ECHO folder](#the-echo-folder)**: sounds, fonts, wallpaper, icons and `settings.json` as
+  plain files you can edit and reload.
+
+### File limits
+
+**Custom icons** can be PNG, JPG, WebP, BMP, HEIC or animated GIF, up to 8 MB (GIFs up to 512 px,
+120 frames, 10 s). Animated icons only play on the row you are on. Your picks stay on top when you
+change theme; clear one with **≡**.
+
+**Motion wallpapers** can be MP4, WebM, animated GIF or animated WebP, up to 1080p and 60 MB.
+Videos can be up to 60 seconds. They
+pause during video, behind fullscreen overlays, and on battery saver.
+
+**Sounds** can be MP3, WAV, OGG or M4A:
+
+| Sound | Plays when | Max |
+|---|---|---|
+| Navigation | Moving the cursor | 0.5 s |
+| Select / Open | Opening an item | 0.5 s |
+| Category Change | Changing category | 0.5 s |
+| Back / Cancel | Backing out | 1 s |
+| Confirm / Apply | Committing a choice | 1 s |
+| Error / Invalid | A refused launch or import | 1 s |
+| Launch Sound | Starting an app | 3 s |
+| Notification | Preview only in this build | 2 s |
+| Boot Sound | Startup | 10 s |
+| Launch Disc Sound | The launch disc | 10 s |
+| GameBoot Sound | A game launching | 10 s |
+
+Boot and GameBoot videos can be MP4 or WebM, up to 10 seconds and 25 MB. A GameBoot that has not
+finished in time never holds the game back.
 
 ---
 
@@ -490,48 +728,7 @@ Each column also lists its apps. Add more with its **Add** row.
 
 ### Look & Feel
 
-- **Theme**: 13 colour schemes previewed live, one icon tint across every crossbar glyph (8
-  swatches or a custom colour), **Color from Wallpaper**, and your saved themes
-  as shareable `.pfptheme` files.
-- **Wallpaper & Text**: a still or motion wallpaper, the wave and whether it draws over the
-  wallpaper, Last Played size, and the status strip.
-- **Layout**: **Adjust Crossbar Layout** scales and shifts the crossbar over the live screen, kept
-  separately for each screen size. **Customize Crossbar Icons** replaces any of the 42 theme glyphs
-  or a console's icon, live.
-- **Boot**: the boot sequence (a line of light that becomes the ECHO mark, about 3.5 seconds; A or B
-  skips it), your own boot video, the launch disc, and GameBoot. GameBoot Style and Launch Disc
-  Style each pick the disc or **Lens**, where the art spins inside the ECHO ring and opens over the
-  screen; GameBoot can also use your own video.
-- **Sound**: add any interface sound and set looping **Menu Music**. ECHO ships with no sounds;
-  the interface is silent until you add some.
-- **Categories, Controller, Touch, Performance**.
-
-**Custom icons** can be PNG, JPG, WebP, BMP, HEIC or animated GIF, up to 8 MB (GIFs up to 512 px,
-120 frames, 10 s). Animated icons only play on the row you are on. Your picks stay on top when you
-change theme; clear one with **≡**.
-
-**Motion wallpapers** can be MP4, WebM, animated GIF or animated WebP, up to 1080p and 60 MB.
-Videos can be up to 60 seconds. They
-pause during video, behind fullscreen overlays, and on battery saver.
-
-**Sounds** can be MP3, WAV, OGG or M4A:
-
-| Sound | Plays when | Max |
-|---|---|---|
-| Navigation | Moving the cursor | 0.5 s |
-| Select / Open | Opening an item | 0.5 s |
-| Category Change | Changing category | 0.5 s |
-| Back / Cancel | Backing out | 1 s |
-| Confirm / Apply | Committing a choice | 1 s |
-| Error / Invalid | A refused launch or import | 1 s |
-| Launch Sound | Starting an app | 3 s |
-| Notification | Preview only in this build | 2 s |
-| Boot Sound | Startup | 10 s |
-| Launch Disc Sound | The launch disc | 10 s |
-| GameBoot Sound | A game launching | 10 s |
-
-Boot and GameBoot videos can be MP4 or WebM, up to 10 seconds and 25 MB. A GameBoot that has not
-finished in time never holds the game back.
+Every look and feel setting is described in [Make it yours](#make-it-yours).
 
 ### Backup and restore
 
