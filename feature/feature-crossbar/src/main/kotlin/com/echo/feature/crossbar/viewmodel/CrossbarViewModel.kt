@@ -641,6 +641,14 @@ data class CrossbarUiState(
     val musicBrowser: MusicBrowserState? = null,
     val search: SearchState? = null,
 
+    // a second screen is showing ECHO (the AYN Thor's bottom screen)
+    val secondScreen: Boolean = false,
+    // owner, 2026-10-06: the XMB on the second screen and the companion (Info, Recent, the drawer,
+    // Search, Settings) on the main one; remembered
+    val screensSwapped: Boolean = false,
+    // the companion takes the controller, after a tap on its screen, until B or a tap on the XMB
+    val companionActive: Boolean = false,
+
     val infoDialog: InfoDialogState? = null,
 
     val showWindowsSetupPrompt: Boolean = false,
@@ -827,7 +835,9 @@ data class CrossbarUiState(
         }
 
     fun categoryReachable(category: Category): Boolean =
-        category.id != BuiltInCategory.SHELVES || shelfCards.isNotEmpty()
+        (category.id != BuiltInCategory.SHELVES || shelfCards.isNotEmpty()) &&
+            // owner, 2026-10-06: with a second screen, Last Played is the bottom screen's Recent page
+            !(secondScreen && category.id == BuiltInCategory.RECENTLY_PLAYED)
 
     val enterOpensAppDrawer: Boolean
         get() = search == null &&
@@ -848,15 +858,27 @@ data class CrossbarUiState(
             activeVideoId == null && activePhotoViewer == null && musicBrowser == null &&
             musicTrackPicker == null && !musicPlayerVisible
 
+    // owner, 2026-10-06: with a second screen, the App Drawer, Search and Settings open there whatever
+    // opened them (LB, RB, a tap on either screen); the controller still drives them. The first-run
+    // wizard stays on this screen. These are what this screen draws.
+    val topSearch: SearchState?
+        get() = search?.takeUnless { secondScreen }
+
+    val topDrawerFilter: String?
+        get() = activeAppDrawerFilter?.takeUnless { secondScreen }
+
+    val topSettingsScreen: String?
+        get() = activeSettingsScreen?.takeUnless { secondScreen && it !in CrossbarViewModel.WIZARD_SCREEN_IDS }
+
     private val chromeOverlay: Boolean
-        get() = activeSettingsScreen != null ||
+        get() = topSettingsScreen != null ||
             appPicker != null ||
             gamePickerCategoryId != null ||
-            activeAppDrawerFilter != null ||
+            topDrawerFilter != null ||
             activeAppId != null ||
             gameInfo != null ||
             profile != null ||
-            search != null
+            topSearch != null
 
     private val fullscreenOverlay: Boolean
         get() = showBootSequence ||
@@ -1346,6 +1368,7 @@ class CrossbarViewModel @Inject constructor(
     internal val achievementController: com.echo.feature.achievements.AchievementController,
     internal val achievementCredentials: com.echo.core.data.achievement.AchievementCredentialsProvider,
     internal val discordSocial: com.echo.core.data.discord.DiscordSocialRepository,
+    bottomScreenLink: com.echo.feature.crossbar.bottomscreen.BottomScreenLink,
 ) : ViewModel() {
     @Volatile
     private var lastInteractionMs: Long = 0L
@@ -1368,6 +1391,9 @@ class CrossbarViewModel @Inject constructor(
     internal val recents = CrossbarRecents(this, _uiState, viewModelScope, menuSound)
 
     internal val gameDetail = CrossbarGameInfo(this, _uiState, viewModelScope, menuSound)
+    internal val bottomScreen = com.echo.feature.crossbar.bottomscreen.CrossbarBottomScreen(
+        this, _uiState, viewModelScope, bottomScreenLink, launchDispatcher.lastLaunch,
+    )
 
     private val launchHold = LaunchHold(viewModelScope) { id -> _uiState.update { it.copy(launchHold = id) } }
 
@@ -1433,6 +1459,7 @@ class CrossbarViewModel @Inject constructor(
         observeIconPreferences()
         observeFocusedGameVideo()
         observeFocusedItemAccent()
+        bottomScreen.observe()
         recents.observeRecentTopAccent()
         observeBackgroundSettings()
         observeTouchNavButtonMode()
@@ -2839,6 +2866,10 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
+        // owner, 2026-10-06: with a second screen the controller drives the screen last touched; Home
+        // and anything the companion does not use still reach the XMB
+        if (state.secondScreen && state.companionActive && action != GamepadAction.HOME && bottomScreen.onButton(action)) return
+
         if (orbPressHandled(action, state)) return
 
         when (action) {
@@ -3779,8 +3810,23 @@ class CrossbarViewModel @Inject constructor(
             }
             RailStep.Pass -> Unit
         }
-        val next = (s.selectedCategoryIndex + direction)
-            .coerceIn(0, (s.categories.size - 1).coerceAtLeast(0))
+        val next = s.stepToReachableCategory(direction)
+        if (next != s.selectedCategoryIndex) onCategorySelected(next)
+    }
+
+    // a tap on a screen that shows the companion (true) or the XMB (false); with a second screen, the
+    // controller then drives that screen's content
+    fun touchedScreen(showsCompanion: Boolean) {
+        if (_uiState.value.secondScreen) bottomScreen.setCompanionActive(showsCompanion)
+    }
+
+    // a column that cannot be reached now (Last Played, once a second screen shows it) is left for
+    // the nearest one that can
+    internal fun leaveUnreachableCategory() {
+        val s = _uiState.value
+        val current = s.categories.getOrNull(s.selectedCategoryIndex) ?: return
+        if (s.categoryReachable(current)) return
+        val next = s.stepToReachableCategory(+1).takeIf { it != s.selectedCategoryIndex } ?: s.stepToReachableCategory(-1)
         if (next != s.selectedCategoryIndex) onCategorySelected(next)
     }
 
@@ -3908,6 +3954,59 @@ class CrossbarViewModel @Inject constructor(
         if (!backOutOfDrill(s)) onOpenAppDrawer()
     }
 
+    // opens or launches an item as the column does: a video, book, track or album opens in ECHO; a game,
+    // shortcut or app launches. False when the item is none of these. The bottom screen's Recent page
+    // opens its items through this too.
+    internal fun openItem(item: CrossbarItem): Boolean {
+        when (item.type) {
+            CrossbarItemType.VIDEO_FILE -> {
+                menuSound.play(MenuSound.SELECT)
+                _uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
+                return true
+            }
+            CrossbarItemType.LIBRARY_BOOK -> {
+                menuSound.play(MenuSound.SELECT)
+                bookshelf.openBook(item.id.removePrefix("book_"))
+                return true
+            }
+            CrossbarItemType.MUSIC_TRACK -> {
+                menuSound.play(MenuSound.SELECT)
+                music.openMusicPlayerForItem(item)
+                return true
+            }
+
+            CrossbarItemType.MUSIC_GROUP -> {
+                item.musicGroupKey?.let {
+                    menuSound.play(MenuSound.SELECT)
+                    music.openMusicBrowser(MusicBrowserView.Album(item.title, it))
+                }
+                return true
+            }
+            else -> Unit
+        }
+
+        if (item.gameId != null && item.isRealGame) {
+            launching.launchGameDirectly(item.gameId)
+            return true
+        }
+
+        if (item.launchIntentUri != null) {
+            launching.launchStoredIntent(item.launchIntentUri, item.title)
+            return true
+        }
+
+        if (item.shortcutId != null && item.packageName != null) {
+            launching.launchHarvestedShortcut(item.packageName, item.shortcutId)
+            return true
+        }
+
+        if (item.packageName != null) {
+            launching.launchAppWithDisc(item.packageName, item.shelfCoverArt)
+            return true
+        }
+        return false
+    }
+
     fun onItemSelected(index: Int) {
         if (_uiState.value.hasBlockingOverlay) return
         _uiState.update { it.copy(selectedItemIndex = index) }
@@ -3986,52 +4085,7 @@ class CrossbarViewModel @Inject constructor(
             EMPTY_CATEGORY_ITEM_ID -> return
         }
 
-        if (item != null) when (item.type) {
-            CrossbarItemType.VIDEO_FILE -> {
-                menuSound.play(MenuSound.SELECT)
-                _uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
-                return
-            }
-            CrossbarItemType.LIBRARY_BOOK -> {
-                menuSound.play(MenuSound.SELECT)
-                bookshelf.openBook(item.id.removePrefix("book_"))
-                return
-            }
-            CrossbarItemType.MUSIC_TRACK -> {
-                menuSound.play(MenuSound.SELECT)
-                music.openMusicPlayerForItem(item)
-                return
-            }
-
-            CrossbarItemType.MUSIC_GROUP -> {
-                item.musicGroupKey?.let {
-                    menuSound.play(MenuSound.SELECT)
-                    music.openMusicBrowser(MusicBrowserView.Album(item.title, it))
-                }
-                return
-            }
-            else -> Unit
-        }
-
-        if (item?.gameId != null && item.isRealGame) {
-            launching.launchGameDirectly(item.gameId)
-            return
-        }
-
-        if (item?.launchIntentUri != null) {
-            launching.launchStoredIntent(item.launchIntentUri, item.title)
-            return
-        }
-
-        if (item?.shortcutId != null && item.packageName != null) {
-            launching.launchHarvestedShortcut(item.packageName, item.shortcutId)
-            return
-        }
-
-        if (item?.packageName != null) {
-            launching.launchAppWithDisc(item.packageName, item.shelfCoverArt)
-            return
-        }
+        if (item != null && openItem(item)) return
 
         if (item?.gameId != null) {
             openContextMenuForFocusedItem()

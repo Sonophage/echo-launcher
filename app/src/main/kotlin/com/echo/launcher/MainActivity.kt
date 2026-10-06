@@ -18,13 +18,14 @@ import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.repeatOnLifecycle
@@ -37,6 +38,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import com.echo.feature.crossbar.gamepad.GamepadInputHandler
+import com.echo.feature.crossbar.gamepad.backHidesKeyboard
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.launcher.notification.EchoNotificationListener
 import com.echo.launcher.receiver.InstallShortcutReceiver
@@ -73,6 +75,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var discordBootstrap: com.echo.launcher.discord.DiscordBootstrap
+
+    @Inject
+    lateinit var bottomScreenLink: com.echo.feature.crossbar.bottomscreen.BottomScreenLink
 
     private val crossbarViewModel: CrossbarViewModel by viewModels()
 
@@ -140,26 +145,14 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            EchoTheme {
-                androidx.compose.runtime.CompositionLocalProvider(
-                    com.echo.core.ui.sound.LocalMenuSounds provides { sound -> menuSoundPlayer.play(sound) },
-                    com.echo.core.ui.sound.LocalLaunchDiscCue provides {
-                        uiMediaStore.pathFor(
-                            com.echo.core.domain.model.UiMediaSlot.LAUNCH_DISC_AUDIO,
-                        )?.let { track ->
-
-                            uiMediaAudioPlayer.play(
-                                uri = track,
-                                clipEndMs =
-                                    com.echo.core.ui.components.DiscCeremony.HandOffMs.toLong(),
-                                label = "launch-disc",
-                            )
-                        }
-                    },
-                ) {
-                ProvideControllerPrompts {
+            com.echo.feature.crossbar.ui.EchoRoot(menuSoundPlayer, uiMediaStore, uiMediaAudioPlayer) {
+                val ui by crossbarViewModel.uiState.collectAsState()
+                if (ui.secondScreen && ui.screensSwapped) {
+                    // owner, 2026-10-06: swapped, this screen shows the companion and the XMB moves to the second one
+                    val bottom by bottomScreenLink.state.collectAsState()
+                    com.echo.feature.crossbar.bottomscreen.BottomScreen(bottom, crossbarViewModel)
+                } else {
                     AppCrossbarHost()
-                }
                 }
             }
         }
@@ -246,7 +239,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        bottomScreenLink.hostShown(true)
+        com.echo.feature.crossbar.bottomscreen.BottomScreenActivity.showBeside(this)
+    }
+
     override fun onStop() {
+        bottomScreenLink.hostShown(false)
         menuMusicPlayer.setWanted(wanted = false, track = null)
 
         launchDispatcher.onHostStopped()
@@ -284,10 +284,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // owner, 2026-10-06: with a second screen, a tap gives the controller to the screen tapped; this one
+    // shows the XMB, or the companion when the screens are swapped
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            crossbarViewModel.touchedScreen(showsCompanion = crossbarViewModel.uiState.value.screensSwapped)
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (minimalKeyboardKey(event)) return true
-        if (backHidesKeyboard(event)) return true
+        if (backHidesKeyboard(event, gamepadInputHandler)) return true
 
         if (gamepadInputHandler.onKeyEvent(event)) return true
         if (openSearchOnTypedCharacter(event)) return true
@@ -310,15 +319,6 @@ class MainActivity : ComponentActivity() {
 
     // owner, 2026-10-05: Back (B) while the on-screen keyboard is up hides the keyboard and does nothing
     // else; the next Back goes back as usual
-    private fun backHidesKeyboard(event: KeyEvent): Boolean {
-        if (event.action != KeyEvent.ACTION_DOWN) return false
-        if (gamepadInputHandler.currentMappings.actionFor(event.keyCode) != GamepadAction.BACK) return false
-        val insets = ViewCompat.getRootWindowInsets(window.decorView) ?: return false
-        if (!insets.isVisible(WindowInsetsCompat.Type.ime())) return false
-        WindowInsetsControllerCompat(window, window.decorView).hide(WindowInsetsCompat.Type.ime())
-        return true
-    }
-
     private fun enterOpensAppDrawer(event: KeyEvent): Boolean {
         if (!crossbarViewModel.enterOpensAppDrawer()) return false
         crossbarViewModel.onOpenAppDrawer()

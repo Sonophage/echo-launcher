@@ -1,4 +1,4 @@
-package com.echo.launcher
+package com.echo.feature.crossbar.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider

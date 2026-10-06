@@ -1,0 +1,69 @@
+package com.echo.feature.crossbar.bottomscreen
+
+import com.echo.feature.crossbar.viewmodel.CrossbarItem
+import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
+import com.echo.feature.crossbar.viewmodel.GameInfoState
+import com.echo.feature.crossbar.viewmodel.RecentFilter
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import javax.inject.Inject
+import javax.inject.Singleton
+
+data class BottomScreenState(
+    // the game or app under the XMB's cursor
+    val focused: GameInfoState? = null,
+    // the game ECHO launched, while it runs in front of ECHO
+    val playing: GameInfoState? = null,
+    // the Recent page: the Last Played screen, which leaves the top screen for this one (owner, 2026-10-06)
+    val recent: List<CrossbarItem> = emptyList(),
+    val recentFilters: List<RecentFilter> = listOf(RecentFilter.ALL),
+    val recentFilter: RecentFilter = RecentFilter.ALL,
+    val recentSelected: Int = 0,
+    val page: BottomPage = BottomPage.INFO,
+)
+
+// the page in view: Info stands down for Recent while there is no info to show, so the button lit is
+// the page drawn and the controller moves what is on screen
+fun BottomScreenState.shownPage(): BottomPage =
+    if (page == BottomPage.INFO && shownInfo() == null) BottomPage.RECENT else page
+
+// owner, 2026-10-06: on a device with a second screen, the bottom screen follows the top one. It is a
+// second activity with no view model of its own: it draws the crossbar's state and acts through the
+// crossbar, as the top screen does, so the App Drawer, Search and Settings have one owner on both.
+@Singleton
+class BottomScreenLink @Inject constructor() {
+    private val _state = MutableStateFlow(BottomScreenState())
+    val state: StateFlow<BottomScreenState> = _state.asStateFlow()
+
+    // the crossbar of the running ECHO, while it lives
+    private val _crossbar = MutableStateFlow<CrossbarViewModel?>(null)
+    val crossbar: StateFlow<CrossbarViewModel?> = _crossbar.asStateFlow()
+
+    // the bottom screen is on show, so the crossbar has something to keep current
+    private val _attached = MutableStateFlow(false)
+    val attached: StateFlow<Boolean> = _attached.asStateFlow()
+
+    // ECHO's own screen is in front on the top display
+    private val _hostShown = MutableStateFlow(true)
+    val hostShown: StateFlow<Boolean> = _hostShown.asStateFlow()
+
+    fun update(change: (BottomScreenState) -> BottomScreenState) = _state.update(change)
+
+    fun attach(on: Boolean) { _attached.value = on }
+
+    fun hostShown(shown: Boolean) { _hostShown.value = shown }
+
+    fun bind(crossbar: CrossbarViewModel) { _crossbar.value = crossbar }
+
+    // a crossbar going away clears only itself, not one that has replaced it
+    fun unbind(crossbar: CrossbarViewModel) { _crossbar.compareAndSet(crossbar, null) }
+}
+
+// the info the bottom screen shows: the running game while it is in front, else the cursor's item.
+// None means the Recent shelf stands in.
+fun BottomScreenState.shownInfo(): GameInfoState? = playing ?: focused
+
+// a game counts as playing while ECHO is behind the game it launched last
+fun playingGameId(hostShown: Boolean, lastLaunchGameId: Long?): Long? = lastLaunchGameId.takeIf { !hostShown }

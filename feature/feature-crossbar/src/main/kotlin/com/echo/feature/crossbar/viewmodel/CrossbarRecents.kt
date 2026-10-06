@@ -43,9 +43,9 @@ class CrossbarRecents(
         type     = CrossbarItemType.EMPTY,
     )
 
-    internal fun recentFilterAndApps(): Flow<Triple<RecentFilter, List<Pair<Long, CrossbarItem>>, Int>> =
+    internal fun recentFilterAndApps(filter: Flow<RecentFilter>): Flow<Triple<RecentFilter, List<Pair<Long, CrossbarItem>>, Int>> =
         combine(
-            uiState.map { it.recentFilter }.distinctUntilChanged(),
+            filter,
             recentAppRows(),
             uiState.map { it.interfaceChoices.lastPlayedSize }.distinctUntilChanged(),
         ) { filter, rows, limit -> Triple(filter, rows, limit) }
@@ -249,32 +249,41 @@ class CrossbarRecents(
                 }
         }
     }
-    internal suspend fun loadColumn(keepCursorOnRow: Boolean) {
-        var keepCursor = keepCursorOnRow
+    internal class RecentRows(val filters: List<RecentFilter>, val items: List<CrossbarItem>, val tracks: List<com.echo.core.domain.model.MusicTrack>)
+
+    // the Last Played rows for [filter]: the column on the top screen, and on a device with a second
+    // screen the bottom screen's Recent page (owner, 2026-10-06), so both read the same list
+    internal fun recentRows(filter: Flow<RecentFilter>): Flow<RecentRows> =
         combine(
             vm.gameRepository.observeRecentlyPlayed(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
             vm.musicRepository.observeRecentlyPlayedTracks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
             vm.bookshelf.observeRecentBookRows(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
             vm.videoRepository.observeRecentlyWatched(),
 
-            recentFilterAndApps(),
+            recentFilterAndApps(filter),
         ) { games, tracks, books, videos, filterAndApps ->
-            val (filter, appRows, limit) = filterAndApps
+            val (shownFilter, appRows, limit) = filterAndApps
 
-            vm.music.currentMusicTracks = tracks
             val visibleGames = with(vm) { games.notHiddenAt(HideLocationType.RECENTS) }
             val music = tracks.recentMusicRows()
             val filters = RecentFilter.shown(stockedRecentFilters(visibleGames, music, books, videos, appRows))
-            filters to mergeRecents(
+            RecentRows(filters, mergeRecents(
                 games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(with(vm) { visibleGames.toCrossbarItems() }),
 
                 music  = music,
                 books  = books,
                 videos = videos.map { it.lastWatchedAt ?: 0L }.zip(videos.toVideoItems()),
                 apps   = appRows,
-                filter = filter,
+                filter = shownFilter,
                 limit  = limit,
-            )
+            ), tracks)
+        }
+
+    internal suspend fun loadColumn(keepCursorOnRow: Boolean) {
+        var keepCursor = keepCursorOnRow
+        recentRows(uiState.map { it.recentFilter }.distinctUntilChanged()).map { rows ->
+            vm.music.currentMusicTracks = rows.tracks
+            rows.filters to rows.items
         }.collect { (filters, items) ->
             // the filter that was showing has just emptied: go back to All, which reloads the column
             if (uiState.value.recentFilter !in filters) {

@@ -1,0 +1,189 @@
+package com.echo.feature.crossbar.bottomscreen
+
+import com.echo.core.domain.model.HideLocationType
+import com.echo.feature.crossbar.viewmodel.CrossbarItem
+import com.echo.feature.crossbar.viewmodel.CrossbarUiState
+import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
+import com.echo.feature.crossbar.viewmodel.GameInfoState
+import com.echo.feature.crossbar.viewmodel.RecentFilter
+import com.echo.feature.crossbar.viewmodel.RecentKind
+import com.echo.feature.crossbar.viewmodel.launchesOut
+import com.echo.feature.crossbar.viewmodel.recentKind
+import com.echo.feature.launcher.OpenSession
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import com.echo.core.data.datastore.echoDataStore
+import com.echo.core.domain.model.GamepadAction
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+
+// keeps the bottom screen's state current from the crossbar, and acts on its taps. Nothing is loaded
+// while no bottom screen is attached, so a one-screen device pays nothing.
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+class CrossbarBottomScreen(
+    private val vm: CrossbarViewModel,
+    private val uiState: MutableStateFlow<CrossbarUiState>,
+    private val scope: CoroutineScope,
+    private val link: BottomScreenLink,
+    private val lastLaunch: StateFlow<OpenSession?>,
+) {
+    fun observe() {
+        scope.launch {
+            link.attached.flatMapLatest { on ->
+                if (!on) flowOf(null)
+                // the cursor settles before the info is read, so scrolling a column reads only where it stops
+                else uiState.map { it.focusedItem?.takeIf(::hasInfo) }
+                    .distinctUntilChanged { a, b -> a?.id == b?.id }
+                    .debounce(SETTLE_MS)
+            }.collectLatest { item ->
+                val info = item?.let { vm.gameDetail.load(GameInfoState(it)) }
+                link.update { it.copy(focused = info) }
+            }
+        }
+        scope.launch {
+            combine(link.attached, link.hostShown, lastLaunch) { on, shown, last ->
+                if (on) playingGameId(shown, last?.gameId) else null
+            }.distinctUntilChanged().collectLatest { gameId ->
+                val info = gameId?.let { itemFor(it) }?.let { vm.gameDetail.load(GameInfoState(it)) }
+                link.update { it.copy(playing = info) }
+            }
+        }
+        scope.launch {
+            link.attached.flatMapLatest { on ->
+                if (on) vm.recents.recentRows(recentFilter) else flowOf(null)
+            }.collect { rows ->
+                if (rows == null) return@collect
+                // a filter that has emptied goes back to All, as the column does
+                if (recentFilter.value !in rows.filters) recentFilter.value = RecentFilter.ALL
+                link.update {
+                    it.copy(
+                        recent = rows.items,
+                        recentFilters = rows.filters,
+                        recentFilter = recentFilter.value,
+                        recentSelected = it.recentSelected.coerceIn(0, (rows.items.size - 1).coerceAtLeast(0)),
+                    )
+                }
+            }
+        }
+        // Last Played leaves the top screen while this one shows it
+        scope.launch {
+            combine(link.attached, uiState.map { it.categories to it.selectedCategoryIndex }.distinctUntilChanged()) { on, _ -> on }
+                .collect { on -> if (on) vm.leaveUnreachableCategory() }
+        }
+        // the top screen hands the App Drawer, Search and Settings to this one while it is attached
+        scope.launch {
+            link.attached.collect { on -> uiState.update { it.copy(secondScreen = on) } }
+        }
+        scope.launch {
+            vm.context.echoDataStore.data.map { it[KEY_SWAP_SCREENS] == true }.distinctUntilChanged()
+                .collect { swapped -> uiState.update { it.copy(screensSwapped = swapped) } }
+        }
+        link.bind(vm)
+        vm.addCloseable { link.unbind(vm) }
+    }
+
+    private val recentFilter = MutableStateFlow(RecentFilter.ALL)
+
+    fun pickRecentFilter(filter: RecentFilter) {
+        recentFilter.value = filter
+        link.update { it.copy(recentFilter = filter, recentSelected = 0) }
+    }
+
+    // as on the column: a game or app is only picked by a tap and launches by a hold; a track, video
+    // or book opens at once
+    fun tapRecent(index: Int) {
+        vm.markTouchInput()
+        val item = link.state.value.recent.getOrNull(index) ?: return
+        link.update { it.copy(recentSelected = index) }
+        if (!item.launchesOut()) vm.openItem(item)
+    }
+
+    private var holding = false
+
+    fun pressRecent(index: Int, down: Boolean) {
+        if (!down) {
+            if (holding) vm.releaseLaunchHold()
+            holding = false
+            return
+        }
+        val item = link.state.value.recent.getOrNull(index)?.takeIf { it.launchesOut() } ?: return
+        link.update { it.copy(recentSelected = index) }
+        holding = true
+        vm.startLaunchHold(item) {
+            holding = false
+            vm.openItem(item)
+        }
+    }
+
+    // Resume on the bottom screen, which brings back the game ECHO launched last
+    fun resume() {
+        lastLaunch.value?.gameId?.let(vm.launching::resumeGame)
+    }
+
+    private suspend fun itemFor(gameId: Long): CrossbarItem? =
+        runCatching { vm.gameRepository.getById(gameId) }.getOrNull()?.let { game -> with(vm) { listOf(game).toCrossbarItems() }.first() }
+
+    // the Swap button: the XMB and the companion change screens, and the controller follows the XMB's
+    // cursor to its new screen (owner, 2026-10-06)
+    fun toggleSwap() {
+        setCompanionActive(false)
+        scope.launch { vm.context.echoDataStore.edit { it[KEY_SWAP_SCREENS] = it[KEY_SWAP_SCREENS] != true } }
+    }
+
+    // a tap gives the controller to the screen tapped: true for the companion's, false for the XMB's
+    fun setCompanionActive(on: Boolean) {
+        if (uiState.value.companionActive != on) uiState.update { it.copy(companionActive = on) }
+    }
+
+    fun showPage(page: BottomPage) = link.update { it.copy(page = page) }
+
+    // the controller on the companion: left and right change page, up and down walk Recent, LT and RT
+    // its filters, A opens (a hold for what leaves ECHO, as everywhere), B hands the controller back
+    // to the XMB. False lets the XMB have the press.
+    fun onButton(action: GamepadAction): Boolean {
+        val state = link.state.value
+        val page = state.shownPage()
+        when (action) {
+            GamepadAction.BACK -> setCompanionActive(false)
+            GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT ->
+                showPage(if (page == BottomPage.INFO) BottomPage.RECENT else BottomPage.INFO)
+            GamepadAction.NAVIGATE_UP, GamepadAction.NAVIGATE_DOWN -> if (page == BottomPage.RECENT) {
+                val step = if (action == GamepadAction.NAVIGATE_UP) -1 else 1
+                val next = (state.recentSelected + step).coerceIn(0, (state.recent.size - 1).coerceAtLeast(0))
+                link.update { it.copy(recentSelected = next) }
+            }
+            GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY -> if (page == BottomPage.RECENT) {
+                val filters = state.recentFilters
+                val at = filters.indexOf(state.recentFilter) + if (action == GamepadAction.PREV_CATEGORY) -1 else 1
+                filters.getOrNull(at)?.let(::pickRecentFilter)
+            }
+            GamepadAction.SELECT -> if (page == BottomPage.RECENT) {
+                val item = state.recent.getOrNull(state.recentSelected) ?: return true
+                if (!vm.holdToLaunch(item) { vm.openItem(item) }) vm.openItem(item)
+            }
+            else -> return false
+        }
+        return true
+    }
+
+    internal companion object {
+        val KEY_SWAP_SCREENS = booleanPreferencesKey("display_swap_screens")
+        const val SETTLE_MS = 150L
+    }
+}
+
+// only games and installed apps have an info screen; a settings row or a folder does not
+internal fun hasInfo(item: CrossbarItem): Boolean =
+    recentKind(item) == RecentKind.GAME || (item.isAndroidApp && item.packageName != null)

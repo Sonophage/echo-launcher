@@ -83,6 +83,8 @@ fun GameInfoScreen(
 
     launchHold: String? = null,
     onSectionPicked: (GameInfoAction?) -> Unit = {},
+    // on the bottom screen, which is touch only and has its own bar: no controller footer or shoulders
+    companion: Boolean = false,
 ) {
     val item = info.item
     val now = System.currentTimeMillis()
@@ -185,7 +187,7 @@ fun GameInfoScreen(
         }
 
         // kit screens 3-4: Home, Back, Options on the left, the action orb on the right
-        EchoHintBar(
+        if (!companion) EchoHintBar(
             items = listOfNotNull(
                 ControllerPromptItem(listOf(GamepadAction.HOME), "Home"),
                 ControllerPromptItem(GamepadAction.BACK, "Back"),
@@ -215,7 +217,7 @@ fun GameInfoScreen(
                 selected = sections.indexOf(info.open).coerceAtLeast(0),
                 onTapped = { onSectionPicked(sections[it]) },
                 u = u,
-                shoulders = true,
+                shoulders = !companion,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = StatusStripHeight + u.dp(8)).zIndex(2f),
             )
         }

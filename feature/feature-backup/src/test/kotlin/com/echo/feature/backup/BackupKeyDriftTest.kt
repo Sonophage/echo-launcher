@@ -30,6 +30,7 @@ class BackupKeyDriftTest {
         "initial_setup_step" to "the step of a wizard in progress on this device",
         "data_prep_version" to "migration marker",
         "new_defaults_v1" to "migration marker",
+        "display_swap_screens" to "which screen shows the XMB, a choice for this device's second screen",
         "open_play_session" to "a launch in progress on this device; it is settled and cleared on the next start",
         "achievements_sync_last" to "when this device last synced; a restored device has not synced yet",
 

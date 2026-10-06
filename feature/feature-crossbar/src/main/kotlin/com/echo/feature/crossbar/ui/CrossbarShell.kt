@@ -856,10 +856,10 @@ fun CrossbarShell(
             val strip = LocalContext.current
             val androidAccess = remember(notificationsOpen) { AndroidNotifications.isEnabled(strip) }
 
-            if (uiState.activeAppDrawerFilter == null &&
+            if (uiState.topDrawerFilter == null &&
                 uiState.musicBrowser == null &&
-                uiState.search == null &&
-                uiState.activeSettingsScreen == null &&
+                uiState.topSearch == null &&
+                uiState.topSettingsScreen == null &&
                 uiState.activeVideoId == null &&
                 uiState.activeAppId == null &&
                 uiState.activePhotoViewer == null &&
@@ -1140,7 +1140,7 @@ fun CrossbarShell(
                 sortRow = uiState.sortRow()?.takeIf { crossbarContext && !uiState.onLastPlayedHome }
                     ?.let { (modes, active) -> modes.map { it.label } to modes.indexOf(active) },
                 onSortPicked = { i -> uiState.sortRow()?.first?.getOrNull(i)?.let(onSortPicked) },
-                live = liveActivity.takeIf { !notificationsOpen && uiState.activeSettingsScreen == null },
+                live = liveActivity.takeIf { !notificationsOpen && uiState.topSettingsScreen == null },
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
 
@@ -1176,14 +1176,14 @@ fun CrossbarShell(
 
                 compact = !crossbarContext,
                 // Search has its own field across the top, so the island rests as its orb there too (owner, 2026-10-05)
-                minimized = uiState.activeAppDrawerFilter != null || uiState.search != null,
+                minimized = uiState.topDrawerFilter != null || uiState.topSearch != null,
                 battery = battery,
 
                 centre = if (notificationsOpen) {
                     { u, tight ->
                         PanelTabsRow(uiState.panelTab, onPanelTabTapped, u, tight, Modifier.align(Alignment.Center))
                     }
-                } else if (uiState.activeAppDrawerFilter != null && drawerTabs != null) {
+                } else if (uiState.topDrawerFilter != null && drawerTabs != null) {
                     { u, _ ->
                         DrawerSectionRow(drawerTabs!!, drawerSections, u, Modifier.align(Alignment.Center)) { drawerTabPick = it }
                     }
@@ -1283,7 +1283,7 @@ fun CrossbarShell(
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(aboveContextRail),
             ) {
                 CompositionLocalProvider(LocalDensity provides baseDensity) {
-                    val hintItem = uiState.focusedItem?.takeIf { uiState.activeSettingsScreen == null }
+                    val hintItem = uiState.focusedItem?.takeIf { uiState.topSettingsScreen == null }
                     val hintIcon = rememberAppIcon(hintItem?.packageName)
                     CrossbarHintBar(
                         prompts = promptsFor(uiState),
@@ -1304,7 +1304,7 @@ fun CrossbarShell(
             ) {
             if (uiState.colorSchemePicker == null) {
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
-                                    uiState.activeSettingsScreen?.let { screenId ->
+                                    uiState.topSettingsScreen?.let { screenId ->
                         SettingsNavHost(
                             screenId = screenId,
                             onBack = onCloseSettingsScreen,
@@ -1345,7 +1345,7 @@ fun CrossbarShell(
                 }
             }
 
-            uiState.activeAppDrawerFilter?.let { filterName ->
+            uiState.topDrawerFilter?.let { filterName ->
                 val initialFilter = runCatching { AppFilter.valueOf(filterName) }
                     .getOrDefault(AppFilter.DEFAULT)
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
@@ -1374,7 +1374,7 @@ fun CrossbarShell(
                 }
             }
 
-            uiState.search?.let { search ->
+            uiState.topSearch?.let { search ->
                 SearchScreen(
                     state = search,
                     onQueryChange = onSearchQueryChange,

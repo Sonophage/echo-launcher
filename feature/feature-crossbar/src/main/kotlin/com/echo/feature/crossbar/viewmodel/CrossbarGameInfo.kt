@@ -28,10 +28,14 @@ class CrossbarGameInfo(
         val info = GameInfoState(item)
         uiState.update { it.withGameInfoOpen(info) }
         scope.launch {
-            val loaded = withContext(Dispatchers.IO) { if (info.isApp) vm.loadAppInfo(info) else loadGameInfo(info) }
+            val loaded = load(info)
             uiState.update { s -> if (s.gameInfo?.item?.id == item.id) s.copy(gameInfo = loaded.copy(cursor = s.gameInfo.cursor, open = s.gameInfo.open)) else s }
         }
     }
+
+    // also what the bottom screen shows, so both screens describe an item the same way
+    internal suspend fun load(info: GameInfoState): GameInfoState =
+        withContext(Dispatchers.IO) { if (info.isApp) vm.loadAppInfo(info) else loadGameInfo(info) }
 
     private suspend fun loadGameInfo(info: GameInfoState): GameInfoState {
         val gid = info.item.gameId ?: return info

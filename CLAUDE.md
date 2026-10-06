@@ -56,7 +56,7 @@ changing `CLAUDE.md` or a skill. Other build edits, such as a version bump, pass
 | `:core:core-ui` | The UI kit: footer (`EchoHintBar`), context menus, panels, waves, holds, design units, theme. |
 | `:core:core-navigation` | Pure JVM navigation logic. |
 | `:discord:discord-native` | Discord rich presence through the native SDK. Needs the SDK aar (`tools/fetch-discord-sdk.sh`). |
-| `:feature:feature-crossbar` | Host. The crossbar shell, Last Played, the status strip and island, search, music, game info, app detail. |
+| `:feature:feature-crossbar` | Host. The crossbar shell, Last Played, the status strip and island, search, music, game info, app detail, the second screen's activity. |
 | `:feature:feature-library` | ROM and media scanners. |
 | `:feature:feature-launcher` | Emulator detection and launching. |
 | `:feature:feature-artwork` | Scrapers (SteamGridDB's client lives in core-data), the artwork folder, ES-DE import and export, the Artwork Studio. |

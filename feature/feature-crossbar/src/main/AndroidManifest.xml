@@ -12,4 +12,18 @@
     -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <application>
+        <!-- ECHO on a second screen (the AYN Thor's bottom screen). Its own task, kept out of Recents,
+             so it never joins the Home task MainActivity runs in. -->
+        <activity
+            android:name="com.echo.feature.crossbar.bottomscreen.BottomScreenActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.bottom"
+            android:excludeFromRecents="true"
+            android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
+    </application>
+
 </manifest>
