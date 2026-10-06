@@ -46,7 +46,9 @@ fun InitialSetupScreen(
     val state by viewModel.uiState.collectAsState()
 
     var splashDone by rememberSaveable { mutableStateOf(!firstRun) }
-    if (!splashDone) {
+    // a wizard resumed past the first step (SetupProgress) does not show the splash again
+    LaunchedEffect(state.step) { if (state.step != SetupStep.FEATURES) splashDone = true }
+    if (!splashDone && state.step == SetupStep.FEATURES) {
         WizardSplash(onBegin = { splashDone = true })
         return
     }
@@ -121,6 +123,20 @@ fun InitialSetupScreen(
                 FeaturesPage(state, onGaming = viewModel::setGaming, onMedia = viewModel::setMedia)
                 continueRow()
             }
+            SetupStep.ECHO_FOLDER -> {
+                val row = storageRow(state, StorageSlot.ARTWORK)
+                SettingsValueRow(
+                    label = "ECHO folder",
+                    value = row.value,
+                    sublabel = row.sublabel,
+                    focusKey = "echo_folder_first",
+                    onClick = {
+                        pending = StorageSlot.ARTWORK to null
+                        storagePicker.launch(row.start?.let(::pickerStartUri))
+                    },
+                )
+                continueRow()
+            }
             SetupStep.PERMISSIONS -> {
                 PermissionsPage(
                     state = state,
@@ -166,6 +182,7 @@ private const val RETROARCH_PICK_STEPS =
 
 private fun titleFor(step: SetupStep): String = when (step) {
     SetupStep.FEATURES -> "What ECHO is for"
+    SetupStep.ECHO_FOLDER -> "Your ECHO folder"
     SetupStep.PERMISSIONS -> "Permissions"
     SetupStep.STORAGE -> "Your folders"
     SetupStep.EMULATORS -> "Emulators"
@@ -174,6 +191,7 @@ private fun titleFor(step: SetupStep): String = when (step) {
 
 private fun headingFor(step: SetupStep): String = when (step) {
     SetupStep.FEATURES    -> "What is ECHO for?"
+    SetupStep.ECHO_FOLDER -> "Where does ECHO keep its folder?"
     SetupStep.PERMISSIONS -> "Let ECHO see your library."
     SetupStep.STORAGE     -> "Point ECHO at your folders."
     SetupStep.EMULATORS   -> "Link your emulators."
@@ -182,6 +200,7 @@ private fun headingFor(step: SetupStep): String = when (step) {
 
 private fun hintFor(step: SetupStep): String = when (step) {
     SetupStep.FEATURES    -> "Setup only asks about what you turn on. Libraries and Settings bring the rest back."
+    SetupStep.ECHO_FOLDER -> "It holds your artwork and your settings as files. Pick the one from an earlier install to bring them back."
     SetupStep.PERMISSIONS -> "Each one turns something on. Everything here can be changed later in Settings."
     SetupStep.STORAGE     -> "Each row opens the picker on the folder ECHO found. Tap Use this folder, then Allow."
     SetupStep.EMULATORS   -> "So ECHO only offers the cores and games you actually have."

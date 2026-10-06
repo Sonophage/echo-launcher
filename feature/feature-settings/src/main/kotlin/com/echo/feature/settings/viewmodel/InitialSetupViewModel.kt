@@ -3,6 +3,7 @@ package com.echo.feature.settings.viewmodel
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Immutable
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +12,7 @@ import com.echo.core.data.repository.CategoryRepositoryImpl
 import com.echo.core.data.repository.CoreInventory
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.data.repository.FolderLinkStatus
+import com.echo.core.data.repository.InitialSetupFlag
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.data.repository.MediaRootRepository
 import com.echo.core.data.repository.RomRootRepository
@@ -31,8 +33,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import javax.inject.Singleton
 
-enum class SetupStep { FEATURES, PERMISSIONS, STORAGE, EMULATORS, ACCOUNTS }
+// owner, 2026-10-06: the ECHO folder is its own step, straight after what ECHO is for, so a folder
+// kept from an earlier install brings its settings back before the rest of setup
+enum class SetupStep { FEATURES, ECHO_FOLDER, PERMISSIONS, STORAGE, EMULATORS, ACCOUNTS }
 
 @Immutable
 data class InitialSetupUiState(
@@ -103,10 +108,11 @@ data class InitialSetupUiState(
 internal fun reachableSetupSteps(retroArchInstalled: Boolean, vita3KInstalled: Boolean, gaming: Boolean = true): List<SetupStep> =
     SetupStep.entries.filter { it != SetupStep.EMULATORS || (gaming && (retroArchInstalled || vita3KInstalled)) }
 
+// the Your folders step; the ECHO folder (ARTWORK) has its own step
 internal fun storageSlotsFor(gaming: Boolean, media: Boolean): List<StorageSlot> = StorageSlot.entries.filter {
     when (it) {
         StorageSlot.GAMES -> gaming
-        StorageSlot.ARTWORK -> true
+        StorageSlot.ARTWORK -> false
         StorageSlot.MUSIC, StorageSlot.VIDEO, StorageSlot.PHOTOS, StorageSlot.BOOKS -> media
     }
 }
@@ -150,6 +156,22 @@ private data class ServiceIdentities(
 
 private val KEY_INITIAL_SETUP_SEEN = com.echo.core.data.repository.InitialSetupFlag.KEY_SEEN
 
+// where the first-run wizard stands. Becoming the Home app makes Android start a second ECHO in a home
+// task, with a new wizard; it opens at the saved step, not the first
+@Singleton
+class SetupProgress @Inject constructor(@ApplicationContext private val context: Context) {
+    suspend fun savedStep(): SetupStep? = savedStepIn(context.echoDataStore.data.first())
+
+    suspend fun save(step: SetupStep) {
+        context.echoDataStore.edit { it[InitialSetupFlag.KEY_STEP] = step.name }
+    }
+}
+
+// none once setup is done, so setup opened again from Settings starts at the beginning
+internal fun savedStepIn(prefs: Preferences): SetupStep? =
+    if (prefs[KEY_INITIAL_SETUP_SEEN] == true) null
+    else SetupStep.entries.firstOrNull { it.name == prefs[InitialSetupFlag.KEY_STEP] }
+
 private const val RETROARCH_FAMILY = "com.retroarch"
 
 internal const val NO_CORES_KEPT_PREVIOUS =
@@ -174,6 +196,7 @@ class InitialSetupViewModel @Inject constructor(
     private val artworkFolderSetup: ArtworkFolderSetup,
     private val storageSuggestions: StorageSuggestions,
     private val categoryRepository: CategoryRepositoryImpl,
+    private val setupProgress: SetupProgress,
 ) : ViewModel() {
     private val scratch = MutableStateFlow(InitialSetupUiState())
 
@@ -181,6 +204,9 @@ class InitialSetupViewModel @Inject constructor(
     private var featuresOnCrossbar = true to true
 
     init {
+        viewModelScope.launch {
+            setupProgress.savedStep()?.let { saved -> scratch.update { it.copy(step = saved) } }
+        }
         viewModelScope.launch {
             val all = runCatching { categoryRepository.observeAll().first() }.getOrDefault(emptyList())
             if (all.isNotEmpty()) {
@@ -329,6 +355,14 @@ class InitialSetupViewModel @Inject constructor(
         val order = reachableSteps()
         val next = order.getOrNull(order.indexOf(scratch.value.step) + 1)
         scratch.update { it.copy(step = next ?: it.step, message = null) }
+        saveStep()
+    }
+
+    // only a step the user moved to is saved: resetWizard runs when a screen closes, and the ECHO
+    // being closed must not wind the other back to the start
+    private fun saveStep() {
+        val step = scratch.value.step
+        viewModelScope.launch { setupProgress.save(step) }
     }
 
     private fun applyFeatures() {
@@ -344,6 +378,7 @@ class InitialSetupViewModel @Inject constructor(
         val idx = order.indexOf(scratch.value.step)
         if (idx <= 0) return false
         scratch.update { it.copy(step = order[idx - 1], message = null) }
+        saveStep()
         return true
     }
 

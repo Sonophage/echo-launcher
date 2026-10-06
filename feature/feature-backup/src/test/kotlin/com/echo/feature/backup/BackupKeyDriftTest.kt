@@ -27,6 +27,7 @@ class BackupKeyDriftTest {
         "settings_on_panel_v1" to "one-shot move of Settings off the crossbar that a restore must be able to re-run",
         "initial_setup_started" to
             "marks a wizard in progress on this device; the seen flag is what a restore carries",
+        "initial_setup_step" to "the step of a wizard in progress on this device",
         "data_prep_version" to "migration marker",
         "open_play_session" to "a launch in progress on this device; it is settled and cleared on the next start",
         "achievements_sync_last" to "when this device last synced; a restored device has not synced yet",

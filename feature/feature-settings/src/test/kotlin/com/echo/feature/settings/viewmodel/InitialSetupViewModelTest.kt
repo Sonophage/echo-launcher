@@ -54,6 +54,7 @@ class InitialSetupViewModelTest {
     private val launcherShortcuts =
         mockk<com.echo.feature.appbar.LauncherShortcutRepository>(relaxed = true)
     private val categories = mockk<com.echo.core.data.repository.CategoryRepositoryImpl>(relaxed = true)
+    private val setupProgress = mockk<SetupProgress>(relaxed = true)
     private lateinit var vm: InitialSetupViewModel
 
     private fun buildVm() = InitialSetupViewModel(
@@ -68,6 +69,7 @@ class InitialSetupViewModelTest {
         ArtworkFolderSetup(artworkImport),
         mockk<StorageSuggestions>(relaxed = true) { every { suggest() } returns emptyMap() },
         categories,
+        setupProgress,
     )
 
     private fun column(id: String, visible: Boolean) = com.echo.core.domain.model.Category(
@@ -90,6 +92,7 @@ class InitialSetupViewModelTest {
         every { metadataKeys.ssUsernameFlow } returns flowOf(null)
         coEvery { retroArchLink.inventory() } returns CoreInventory.Unlinked
         every { categories.observeAll() } returns flowOf(emptyList())
+        coEvery { setupProgress.savedStep() } returns null
         vm = buildVm()
     }
 
@@ -203,9 +206,9 @@ class InitialSetupViewModelTest {
         job.cancel()
     }
 
-    @Test fun `setup is five steps at most, and Emulators only shows when there is an emulator to link`() {
+    @Test fun `setup is six steps at most, and Emulators only shows when there is an emulator to link`() {
         assertEquals(
-            listOf(SetupStep.FEATURES, SetupStep.PERMISSIONS, SetupStep.STORAGE, SetupStep.ACCOUNTS),
+            listOf(SetupStep.FEATURES, SetupStep.ECHO_FOLDER, SetupStep.PERMISSIONS, SetupStep.STORAGE, SetupStep.ACCOUNTS),
             reachableSetupSteps(retroArchInstalled = false, vita3KInstalled = false),
         )
         assertEquals(SetupStep.entries, reachableSetupSteps(retroArchInstalled = true, vita3KInstalled = false))
@@ -218,7 +221,7 @@ class InitialSetupViewModelTest {
         assertEquals(SetupStep.FEATURES, vm.uiState.value.step)
         assertFalse("back on the first step means exit", vm.previousStep())
 
-        repeat(3) { vm.nextStep() }
+        repeat(4) { vm.nextStep() }
         advanceUntilIdle()
         assertEquals(SetupStep.ACCOUNTS, vm.uiState.value.step)
 
@@ -269,12 +272,17 @@ class InitialSetupViewModelTest {
 
     @Test fun `with Gaming off there is no games folder and no Emulators step, even with RetroArch installed`() {
         assertEquals(
-            listOf(SetupStep.FEATURES, SetupStep.PERMISSIONS, SetupStep.STORAGE, SetupStep.ACCOUNTS),
+            listOf(SetupStep.FEATURES, SetupStep.ECHO_FOLDER, SetupStep.PERMISSIONS, SetupStep.STORAGE, SetupStep.ACCOUNTS),
             reachableSetupSteps(retroArchInstalled = true, vita3KInstalled = true, gaming = false),
         )
-        assertEquals("a launcher only still gets the ECHO folder", listOf(StorageSlot.ARTWORK), storageSlotsFor(gaming = false, media = false))
         assertFalse(StorageSlot.MUSIC in storageSlotsFor(gaming = true, media = false))
-        assertEquals(StorageSlot.entries, storageSlotsFor(gaming = true, media = true))
+    }
+
+    // owner, 2026-10-06: the ECHO folder is its own step, before permissions, and not repeated in Your folders
+    @Test fun `the ECHO folder comes straight after what ECHO is for, and only there`() {
+        assertEquals(SetupStep.ECHO_FOLDER, reachableSetupSteps(retroArchInstalled = false, vita3KInstalled = false)[1])
+        assertEquals("a launcher only has no other folders", emptyList<StorageSlot>(), storageSlotsFor(gaming = false, media = false))
+        assertEquals(StorageSlot.entries - StorageSlot.ARTWORK, storageSlotsFor(gaming = true, media = true))
     }
 
     @Test fun `turning Media off hides the media columns and leaves Game as it was`() = runTest(dispatcher) {
@@ -290,7 +298,7 @@ class InitialSetupViewModelTest {
 
         MEDIA_CATEGORIES.forEach { coVerify { categories.setVisible(it, false) } }
         coVerify(exactly = 0) { categories.setVisible("games", any()) }
-        assertEquals(SetupStep.PERMISSIONS, vm.uiState.value.step)
+        assertEquals(SetupStep.ECHO_FOLDER, vm.uiState.value.step)
         job.cancel()
     }
 
@@ -306,5 +314,44 @@ class InitialSetupViewModelTest {
 
         coVerify(exactly = 0) { categories.setVisible(any(), any()) }
         job.cancel()
+    }
+
+    // becoming the Home app starts a second ECHO with a new wizard; it must open where the user was
+    @Test fun `a new wizard opens at the step the last one saved`() = runTest(dispatcher) {
+        coEvery { setupProgress.savedStep() } returns SetupStep.PERMISSIONS
+        vm = buildVm()
+        val job = collectState()
+        advanceUntilIdle()
+
+        assertEquals(SetupStep.PERMISSIONS, vm.uiState.value.step)
+        job.cancel()
+    }
+
+    @Test fun `moving between steps saves the step, closing the screen does not`() = runTest(dispatcher) {
+        val job = collectState()
+        vm.nextStep()
+        vm.nextStep()
+        advanceUntilIdle()
+        coVerify { setupProgress.save(SetupStep.PERMISSIONS) }
+
+        vm.previousStep()
+        advanceUntilIdle()
+        coVerify { setupProgress.save(SetupStep.ECHO_FOLDER) }
+
+        // the ECHO being closed resets its own wizard; the other must not be wound back to the start
+        vm.resetWizard()
+        advanceUntilIdle()
+        coVerify(exactly = 0) { setupProgress.save(SetupStep.FEATURES) }
+        job.cancel()
+    }
+
+    @Test fun `the saved step is dropped once setup is done`() {
+        val saved = androidx.datastore.preferences.core.mutablePreferencesOf(
+            com.echo.core.data.repository.InitialSetupFlag.KEY_STEP to SetupStep.STORAGE.name,
+        )
+        assertEquals(SetupStep.STORAGE, savedStepIn(saved))
+
+        saved[com.echo.core.data.repository.InitialSetupFlag.KEY_SEEN] = true
+        assertNull("setup opened from Settings starts at the beginning", savedStepIn(saved))
     }
 }

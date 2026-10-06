@@ -175,7 +175,7 @@ fun WizardSplash(onBegin: () -> Unit) {
                 Text("EXTENSIBLE CONSOLE HANDHELD OPERATOR", style = u.eyebrow())
                 Spacer(Modifier.height(u.dp(10)))
                 Text(
-                    "Your games, apps and media on one crossbar. Setup takes four short steps.",
+                    "Your games, apps and media on one crossbar. Setup takes a few short steps.",
                     style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.85f), fontSize = u.sp(20), fontWeight = FontWeight.Light),
                 )
             }

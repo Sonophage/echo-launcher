@@ -17,6 +17,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -33,25 +35,50 @@ class EchoFolderMirror @Inject constructor(
     private val library: PortableArtworkLibrary,
     private val reader: EchoFolderReader,
 ) {
+    private val readLock = Mutex()
+
+    // the folder whose settings and look ECHO has already read
+    private var readFolder: String? = null
+
     @OptIn(FlowPreview::class)
     fun start(scope: CoroutineScope) = scope.launch {
+        val tree = folderRepository.treeUri
+        readLock.withLock { readFolder = tree.first() }
         // the folder is read before anything is written to it, or an edit made while ECHO was closed
         // would be written over
         runCatching { reader.read(always = false) }.onFailure { Timber.w(it, "ECHO folder: reading on start failed") }
         val prefs = context.echoDataStore.data
-        val tree = folderRepository.treeUri
         launch {
             combine(tree, prefs.map { p -> EchoSettingsExport.json(p.asMap().mapKeys { it.key.name }) }) { t, json -> t to json }
                 .distinctUntilChanged()
                 .debounce(SETTLE_MS)
-                .collect { (t, json) -> liveTree(t)?.let { writeSettings(it, json) } }
+                .collect { (t, json) ->
+                    val live = liveTree(t) ?: return@collect
+                    // reading a new folder can change the settings, so they are taken again after it
+                    if (readIfNewlyLinked(t)) writeSettings(live, EchoSettingsExport.json(prefs.first().asMap().mapKeys { it.key.name }))
+                    else writeSettings(live, json)
+                }
         }
         launch {
             combine(tree, prefs.map { p -> LOOK_TRIGGERS.map { p.asMap().entries.firstOrNull { e -> e.key.name == it }?.value } }) { t, look -> t to look }
                 .distinctUntilChanged()
                 .debounce(SETTLE_MS)
-                .collect { (t, _) -> liveTree(t)?.let { syncLook(it) } }
+                .collect { (t, _) ->
+                    val live = liveTree(t) ?: return@collect
+                    readIfNewlyLinked(t)
+                    syncLook(live)
+                }
         }
+    }
+
+    // a folder linked while ECHO runs (setup, or a new pick in Settings) can hold settings.json and
+    // Look/ from an earlier install; they are applied before ECHO writes its own over them. True when
+    // it read the folder now.
+    internal suspend fun readIfNewlyLinked(tree: String?): Boolean = readLock.withLock {
+        if (tree == null || tree == readFolder) return@withLock false
+        readFolder = tree
+        runCatching { reader.read(always = true) }.onFailure { Timber.w(it, "ECHO folder: reading the new folder failed") }
+        true
     }
 
     private suspend fun liveTree(tree: String?): Uri? =

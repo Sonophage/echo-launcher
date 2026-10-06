@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.map
 import com.echo.core.domain.model.GamepadAction
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
@@ -94,6 +95,7 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         hideSystemBars()
+        if (intent?.hasCategory(Intent.CATEGORY_HOME) == true) closeOtherEchoTasks()
         lifecycleScope.launch {
             if (crossbarViewModel.firstRunWizardAsksForNotifications()) {
                 crossbarViewModel.onStartupPermissionsSettled()
@@ -189,6 +191,18 @@ class MainActivity : ComponentActivity() {
                     listener, PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, PackageManager.DONT_KILL_APP,
                 )
             }.onFailure { Timber.w(it, "Notification listener rebind failed") }
+        }
+    }
+
+    // becoming the Home app makes Android start ECHO again in a home task, beside the ECHO opened from
+    // the app list; that one is closed so there is one ECHO. Only tasks rooted in this activity, so a
+    // game ECHO started is never closed
+    private fun closeOtherEchoTasks() {
+        getSystemService(ActivityManager::class.java)?.appTasks.orEmpty().forEach { task ->
+            runCatching {
+                val info = task.taskInfo ?: return@runCatching
+                if (info.taskId != taskId && info.baseActivity?.className == MainActivity::class.java.name) task.finishAndRemoveTask()
+            }.onFailure { Timber.w(it, "Could not close another ECHO task") }
         }
     }
 
