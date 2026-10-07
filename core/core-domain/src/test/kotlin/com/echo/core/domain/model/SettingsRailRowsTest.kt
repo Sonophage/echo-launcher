@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 class SettingsRailRowsTest {
     @Test
     fun `the rail is exactly its own section's screens`() {
-        SETTINGS_CATALOG.forEach { entry ->
+        SETTINGS_CATALOG.filter { it.parent == null }.forEach { entry ->
             assertEquals(
                 settingsEntriesIn(entry.section).map { it.id },
                 settingsRailRows(entry.id).map { it.id },
@@ -18,7 +18,7 @@ class SettingsRailRowsTest {
 
     @Test
     fun `the screen you are on is always in its own rail, exactly once`() {
-        SETTINGS_CATALOG.forEach { entry ->
+        SETTINGS_CATALOG.filter { it.parent == null }.forEach { entry ->
             val ids = settingsRailRows(entry.id).map { it.id }
             assertEquals(1, ids.count { it == entry.id }, "${entry.id} in its own rail")
         }
@@ -37,6 +37,15 @@ class SettingsRailRowsTest {
         assertEquals(emptyList(), settingsRailRows("settings_initial_setup_first"))
         assertEquals(emptyList(), settingsRailRows("settings_import_pc"))
         assertEquals(emptyList(), settingsRailRows(null))
+    }
+
+    // a sub-screen opens from a row on its parent tab, so it draws no tab row of its own
+    @Test
+    fun `a sub-screen has no rail, and its parent is a tab of the same section`() {
+        SETTINGS_CATALOG.filter { it.parent != null }.forEach { entry ->
+            assertEquals(emptyList(), settingsRailRows(entry.id), "rail for ${entry.id}")
+            assertTrue(settingsEntriesIn(entry.section).any { it.id == entry.parent }, "${entry.id}'s parent is a tab")
+        }
     }
 
     @Test

@@ -77,7 +77,12 @@ class CanonicalCategoryBarTest {
         assertTrue(BuiltInCategory.SETTINGS !in bar.map { it.id })
         assertTrue(
             "with Settings hidden, the panel must still reach the category manager or nothing hidden can come back",
-            PANEL_SETTINGS.any { section -> com.echo.core.domain.model.settingsEntriesIn(section).any { it.id == "settings_categories" } },
+            // a tab of the panel's, or a row on one (owner, 2026-10-07: Categories opens from the Crossbar tab)
+            com.echo.core.domain.model.settingsEntryFor("settings_categories").let { entry ->
+                PANEL_SETTINGS.any { section ->
+                    com.echo.core.domain.model.settingsEntriesIn(section).any { it.id == entry?.id || it.id == entry?.parent }
+                }
+            },
         )
     }
 

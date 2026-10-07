@@ -304,14 +304,15 @@ class RecentAppDismissalTest {
     }
 
     @Test
-    fun `the pinned rows sit under the dated ones, in their own group`() {
+    // owner, 2026-10-07: pinned first
+    fun `the pinned rows lead the rail, in their own group above the dated ones`() {
         val now = 1_000_000_000L
         val items = listOf(
-            CrossbarItem(id = "a", title = "Skyrim", lastOpenedAt = now),
             CrossbarItem(id = pinnedRowId("g:1"), title = "Skyrim", lastOpenedAt = now, pinnedToRecent = true),
+            CrossbarItem(id = "a", title = "Skyrim", lastOpenedAt = now),
         )
         val grouped = groupRecentsByDay(items, now).map { (day, rows) -> day to rows.map { it.index } }
-        assertEquals(listOf(RecentDay.TODAY to listOf(0), RecentDay.PINNED to listOf(1)), grouped)
+        assertEquals(listOf(RecentDay.PINNED to listOf(0), RecentDay.TODAY to listOf(1)), grouped)
     }
 
     @Test

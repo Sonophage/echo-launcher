@@ -272,7 +272,7 @@ and a 2400×1504 tablet. The same build runs on both. Phones and foldables work 
 
 - **The layout sizes itself to the screen.** Screens are grouped by their smallest width: compact
   (under 600 dp, most handhelds and phones), medium (600 to 839 dp, most tablets) and expanded
-  (840 dp and up). Each group keeps its own sizes and position (*Look ▸ Layout*), so tuning the
+  (840 dp and up). Each group keeps its own sizes and position (*Look ▸ Crossbar*), so tuning the
   handheld never distorts the tablet.
 - **Touch works everywhere.** Swipe up and down to move through a column and sideways to change
   category (on Last Played, swipe right for the Recent rail), tap to select, long-press for the
@@ -508,9 +508,9 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 | <img src="docs/screenshots/settings-controller.jpg" width="420"> | <img src="docs/screenshots/glyphs-playstation.jpg" width="420"> |
 | Controller ▸ Type picks the button glyphs | The same screen with PlayStation glyphs |
 | <img src="docs/screenshots/settings-touch.jpg" width="420"> | <img src="docs/screenshots/settings-wallpaper.jpg" width="420"> |
-| Touch: the on-screen button, swipes and hints | Wallpaper & Text: wave design and style, legibility, Last Played |
+| Touch: the on-screen button, swipes and hints | Wallpaper: wave design and style, background motion |
 | <img src="docs/screenshots/settings-layout.jpg" width="420"> | <img src="docs/screenshots/settings-sound.jpg" width="420"> |
-| Layout: adjust the crossbar live, custom icons | Sound: menu sounds and your own menu music |
+| Crossbar: sizes and position, rows, Last Played, the top bar, categories and icons | Sound: menu sounds and your own menu music |
 
 ### Colour and theme — *Look ▸ Theme*
 
@@ -525,7 +525,7 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 The focused game or app also tints the wave and fills the screen with its own art;
 *Emulators ▸ Artwork ▸ Backdrop & Tint* turns that off and keeps your theme's colour and wallpaper.
 
-### Background and text — *Look ▸ Wallpaper & Text*
+### Wallpaper — *Look ▸ Wallpaper*
 
 | Setting | What it changes |
 |---|---|
@@ -534,13 +534,10 @@ The focused game or app also tints the wave and fills the screen with its own ar
 | **Wave Style** | Animated, Reduced, Static, Reduced + Static, or Off (Quick settings steps through them too) |
 | **Wave Over Wallpaper** | keep the wave drawn on top of your wallpaper |
 | **Background Motion** | the same styles for a motion wallpaper |
-| **Icon Legibility** | how icons stand off the background: None, Offset Shadow, or a dark, light or automatic contour |
-| **Apps On The Recent Shelf** · **Last Played Size** | whether apps join Last Played, and how many items it keeps |
-| **Card Art Grid** | a console card shows four covers from inside it instead of its icon |
-| **Fade By Distance** · **Text Shadow** | dim rows by distance from the cursor; shadow helper text over bright wallpaper |
-| **Show Device Notifications** · **Last Opened In The Island** | what the top bar shows |
 
-### Layout and icons — *Look ▸ Layout*
+### The crossbar — *Look ▸ Crossbar*
+
+Every setting for the crossbar itself is on this one tab.
 
 | Setting | What it changes |
 |---|---|
@@ -548,6 +545,12 @@ The focused game or app also tints the wave and fills the screen with its own ar
 | **Left and Right · Up and Down** | where the crossbar sits |
 | **Reset Layout** | every size and the position back to the start, for this screen |
 | **Classic Layout** | the PSP's own proportions, applied to this screen |
+| **Icon Legibility** | how icons stand off the background: None, Offset Shadow, or a dark, light or automatic contour |
+| **Card Art Grid** | a console card shows four covers from inside it instead of its icon |
+| **Fade By Distance** · **Text Shadow** | dim rows by distance from the cursor; shadow helper text over bright wallpaper |
+| **Apps On The Recent Shelf** · **Last Played Size** | whether apps join Last Played, and how many items it keeps |
+| **Show Device Notifications** · **Last Opened In The Island** | what the top bar shows |
+| **Categories** | opens the category manager (below) |
 | **Customize Crossbar Icons** | replace any of the 42 theme glyphs or a console's icon with your own image or GIF, live |
 
 ### Boot and launch — *Look ▸ Boot*
@@ -594,7 +597,7 @@ tap to pick, long-press for options, and hold the on-screen A to launch.
 | **Hint Delay** | how long before hints appear, from always shown to 5 seconds |
 | **Seek Step** · **Hide Controls After** | the video player's skip distance and how long its controls stay up |
 
-### Categories — *Look ▸ Categories*
+### Categories — *Look ▸ Crossbar ▸ Categories*
 
 Create your own categories (gaming for games, non-gaming for apps), rename them, change their icon,
 move them left or right, hide them, or delete the ones you made. *Home ▸ Libraries* switches whole
@@ -654,7 +657,7 @@ long-press instead.
 ### Categories
 
 The default order is **Last Played, Shelves, Game, Music, Video, Photo, Library, Network,
-Settings**. *Look ▸ Categories* creates your own (gaming for games, non-gaming for apps),
+Settings**. *Look ▸ Crossbar ▸ Categories* creates your own (gaming for games, non-gaming for apps),
 and renames, reorders, hides or deletes them. Built-in categories can be hidden but not deleted.
 
 ### Games and consoles
@@ -714,7 +717,7 @@ lets you test-launch a ROM before saving.
 
 **Last Played** keeps its order, newest first, and is never sorted. With a second screen it is the
 bottom screen's **Recent** page instead of a column (see [Dual screens](#dual-screens)).
-*Look ▸ Wallpaper & Text ▸ Last Played Size* sets how many it holds, and **≡ ▸ Remove from
+*Look ▸ Crossbar ▸ Last Played Size* sets how many it holds, and **≡ ▸ Remove from
 Recent** takes one off.
 
 **Shelves** gathers **Favorites**, the play states **Playing**, **Completed** and **Backlog**, and
@@ -803,7 +806,7 @@ Relink Folder**.
 |---|---|
 | **Library** | Media Libraries (music, video, photo and book folders) · Hidden Items |
 | **Emulators** | Library Manager · Artwork · Installed · Custom Emulators · RetroArch |
-| **Look** | Theme · Wallpaper & Text · Layout · Boot · Sound · Categories |
+| **Look** | Theme · Wallpaper · Crossbar (with Categories) · Boot · Sound |
 | **Controls** | Controller · Touch |
 | **Accounts** | Permissions · Achievements (RetroAchievements and Steam) · Artwork (SteamGridDB, ScreenScraper, IGDB, TMDB) · Discord |
 | **System** | About · Logs · Backup & Restore · Performance · Credits |
@@ -839,7 +842,7 @@ category with no folder keeps only its apps. In a media category's top column or
 | Artwork will not download | Add a key in *Accounts ▸ Artwork* and check the connection. A key saved on another install (a restored backup) cannot be read here and shows as not set: enter it again |
 | Recently Used is empty | Allow restricted settings for ECHO, then grant usage access (see [Permissions](#permissions)) |
 | No notifications in the top panel | Grant notification access in *Accounts ▸ Permissions* |
-| The interface is too big, small or off-centre | *Look ▸ Layout*: the size and position sliders |
+| The interface is too big, small or off-centre | *Look ▸ Crossbar*: the size and position sliders |
 
 For a bug report, open *System ▸ Logs*, press **≡** on a log and choose **Share**. Logs are
 redacted.

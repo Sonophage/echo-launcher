@@ -46,6 +46,14 @@ class SettingsHierarchyTest {
         )
     }
 
+    // owner, 2026-10-07: Categories opens from a row on the Crossbar tab, is not a tab, and Back returns there
+    @Test fun `a sub-screen opens from its tab, shows no tab row, and Back returns to the tab`() {
+        assertEquals("settings_layout", CrossbarViewModel.nextReturnAddress("settings_layout", "settings_categories", null))
+        assertTrue("the gate opens only catalog screens", settingsEntryFor("settings_categories") != null)
+        assertTrue(settingsRailRows("settings_categories").isEmpty())
+        assertEquals(null, com.echo.core.domain.model.settingsTabStepTarget("settings_categories", 1))
+    }
+
     @Test fun `both wizard routes are real screens, and the id list covers both`() {
         CrossbarViewModel.WIZARD_SCREEN_IDS.forEach {
             assertTrue("$it has no route", it in SETTINGS_SCREEN_ROUTES)
@@ -114,8 +122,9 @@ class SettingsHierarchyTest {
 
         // owner, 2026-10-06: Look splits into how ECHO looks and how you drive it; Performance is housekeeping
         assertEquals(
+            // owner, 2026-10-07: every crossbar setting in the Crossbar tab (settings_layout); Categories opens from it
             "Look holds what you see",
-            listOf("settings_themes", "settings_appearance", "settings_layout", "settings_boot", "settings_audio", "settings_categories"),
+            listOf("settings_themes", "settings_appearance", "settings_layout", "settings_boot", "settings_audio"),
             settingsEntriesIn(SettingsSectionId.LOOK).map { it.id },
         )
         assertEquals(

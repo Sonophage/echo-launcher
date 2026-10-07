@@ -128,6 +128,7 @@ fun SettingsNavHost(
             "settings_layout"     -> DisplaySettingsScreen(
                 onBack = onBack, section = DisplaySection.LAYOUT,
                 onOpenCustomIcons = onOpenCustomIcons,
+                onOpenCategories = { onOpenScreen("settings_categories") },
                 modifier = modifier,
             )
             "settings_boot"       -> DisplaySettingsScreen(

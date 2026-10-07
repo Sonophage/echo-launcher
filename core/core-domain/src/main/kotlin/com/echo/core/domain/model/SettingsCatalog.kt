@@ -11,7 +11,7 @@ enum class SettingsSectionId(
     LIBRARY("settings_section_library", "Library", "Media folders & hidden items"),
     EMULATORS("settings_section_emulators", "Emulators", "Library Manager, emulator profiles, RetroArch & your art"),
     // owner, 2026-10-06: Look & Feel splits in two, how ECHO looks and how you drive it; Overview is a Profile tab
-    LOOK("settings_section_look_and_feel", "Look", "Theme, wallpaper, layout, boot, sound & categories"),
+    LOOK("settings_section_look_and_feel", "Look", "Theme, wallpaper, the crossbar, boot & sound"),
     CONTROLS("settings_section_controls", "Controls", "Controller & touch"),
     // owner, 2026-10-05: every account lives here, the artwork services' too, each kind on its own tab
     ACCOUNTS("settings_section_accounts", "Accounts", "Permissions, achievements, artwork services & Discord"),
@@ -24,6 +24,8 @@ data class SettingsEntry(
     val title: String,
     val subtitle: String,
     val section: SettingsSectionId,
+    // a screen opened from a row on this tab, not a tab of its own; Back returns to it
+    val parent: String? = null,
 )
 
 val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
@@ -39,12 +41,13 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_emulators_retroarch", "RetroArch", "Core detection & linking", SettingsSectionId.EMULATORS),
 
     SettingsEntry("settings_themes", "Theme", "Colour scheme, accent & theme packs", SettingsSectionId.LOOK),
-    SettingsEntry("settings_appearance", "Wallpaper & Text", "Wallpaper, wave, legibility, Last Played & status bar", SettingsSectionId.LOOK),
-    SettingsEntry("settings_layout", "Layout", "Sizes, position & custom icons", SettingsSectionId.LOOK),
+    SettingsEntry("settings_appearance", "Wallpaper", "Wallpaper, wave & background motion", SettingsSectionId.LOOK),
+    // owner, 2026-10-07: every crossbar setting in one tab; its categories open from there
+    SettingsEntry("settings_layout", "Crossbar", "Sizes, rows, Last Played, status bar, categories & icons", SettingsSectionId.LOOK),
     SettingsEntry("settings_boot", "Boot", "Boot sequence, boot video & GameBoot", SettingsSectionId.LOOK),
 
     SettingsEntry("settings_audio", "Sound", "Menu sounds, menu music & boot audio", SettingsSectionId.LOOK),
-    SettingsEntry("settings_categories", "Categories", "Crossbar categories & the collections inside them", SettingsSectionId.LOOK),
+    SettingsEntry("settings_categories", "Categories", "Crossbar categories & the collections inside them", SettingsSectionId.LOOK, parent = "settings_layout"),
 
     SettingsEntry("settings_controller", "Controller", "Button swaps, prompts, stick, triggers & scrolling", SettingsSectionId.CONTROLS),
     SettingsEntry("settings_touch", "Touch", "On-screen button, hints & the video player", SettingsSectionId.CONTROLS),
@@ -65,8 +68,9 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
 
 const val SETTINGS_ROOT_SCREEN_ID = "settings_root"
 
+// the section's tabs; a sub-screen is not one
 fun settingsEntriesIn(section: SettingsSectionId): List<SettingsEntry> =
-    SETTINGS_CATALOG.filter { it.section == section }
+    SETTINGS_CATALOG.filter { it.section == section && it.parent == null }
 
 fun settingsEntryFor(screenId: String): SettingsEntry? =
     SETTINGS_CATALOG.firstOrNull { it.id == screenId }
@@ -74,7 +78,7 @@ fun settingsEntryFor(screenId: String): SettingsEntry? =
 fun settingsSectionFor(screenId: String): SettingsSectionId? = settingsEntryFor(screenId)?.section
 
 fun settingsRailRows(screenId: String?): List<SettingsEntry> =
-    screenId?.let(::settingsSectionFor)?.let(::settingsEntriesIn) ?: emptyList()
+    screenId?.let(::settingsEntryFor)?.takeIf { it.parent == null }?.section?.let(::settingsEntriesIn) ?: emptyList()
 
 fun settingsTabStepTarget(screenId: String?, delta: Int): String? {
     val tabs = settingsRailRows(screenId)

@@ -4674,7 +4674,7 @@ class CrossbarViewModel @Inject constructor(
             screenId.takeIf { it in WIZARD_SCREEN_IDS }
 
         internal fun nextReturnAddress(from: String?, to: String, held: String?): String? =
-            (returnAddressFor(from) ?: held)?.takeIf { it != to }
+            (returnAddressFor(from) ?: from.takeIf { it != null && com.echo.core.domain.model.settingsEntryFor(to)?.parent == it } ?: held)?.takeIf { it != to }
 
         internal val WIZARD_SCREEN_IDS: Set<String>
             get() = setOf(INITIAL_SETUP_SCREEN_ID, INITIAL_SETUP_FIRST_RUN_SCREEN_ID)

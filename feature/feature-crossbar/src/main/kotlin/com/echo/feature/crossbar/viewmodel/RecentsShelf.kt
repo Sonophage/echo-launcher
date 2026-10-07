@@ -88,7 +88,8 @@ internal fun mergeRecents(
         .map { (at, item) -> item.copy(lastOpenedAt = at.takeIf { it > 0L }) }
 }
 
-enum class RecentDay(val label: String) { TODAY("Today"), YESTERDAY("Yesterday"), EARLIER("Earlier"), PINNED("Pinned") }
+// owner, 2026-10-07: the pinned list leads the rail, above the dated groups
+enum class RecentDay(val label: String) { PINNED("Pinned"), TODAY("Today"), YESTERDAY("Yesterday"), EARLIER("Earlier") }
 
 internal fun groupRecentsByDay(
     items: List<CrossbarItem>,

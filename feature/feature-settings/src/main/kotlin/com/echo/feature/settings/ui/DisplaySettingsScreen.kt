@@ -59,6 +59,7 @@ fun DisplaySettingsScreen(
     modifier: Modifier = Modifier,
     section: DisplaySection? = null,
     onOpenCustomIcons: () -> Unit = {},
+    onOpenCategories: () -> Unit = {},
     onPreviewBootSequence: () -> Unit = {},
     onPreviewGameBoot: () -> Unit = {},
     viewModel: DisplaySettingsViewModel = hiltViewModel(),
@@ -122,8 +123,8 @@ fun DisplaySettingsScreen(
     SettingsPageScaffold(
 
         subtitle = when (section) {
-            DisplaySection.APPEARANCE  -> "Wallpaper & Text"
-            DisplaySection.LAYOUT      -> "Layout"
+            DisplaySection.APPEARANCE  -> "Wallpaper"
+            DisplaySection.LAYOUT      -> "Crossbar"
             DisplaySection.BOOT        -> "Boot"
             DisplaySection.INPUT       -> "Touch"
             DisplaySection.PERFORMANCE -> "Performance"
@@ -259,67 +260,6 @@ fun DisplaySettingsScreen(
                     )
                 }
 
-                SettingsPickerRow(
-                    label    = "Icon Legibility",
-                    sublabel = "How Crossbar icons separate from the background",
-                    options  = IconLegibilityStyle.entries.map { SettingsPickerOption(it.label) },
-                    selectedIndex = IconLegibilityStyle.entries.indexOf(state.iconLegibility),
-                    onPick   = { viewModel.setIconLegibility(IconLegibilityStyle.entries[it]) },
-                )
-
-                SettingsToggleRow(
-                    label    = "Apps On The Recent Shelf",
-
-                    sublabel = "Show recently used apps beside games, music, books and video. " +
-                        "Needs usage access; without it no app has a last-used time and none appear",
-                    checked  = state.recentsIncludeApps,
-                    onToggle = { viewModel.setRecentsIncludeApps(it) },
-                )
-
-                SettingsPickerRow(
-                    label    = "Last Played Size",
-                    sublabel = "How many games, tracks, books, videos and apps the Last Played column keeps",
-                    options  = IP.LAST_PLAYED_SIZES.map { SettingsPickerOption("$it") },
-                    selectedIndex = IP.LAST_PLAYED_SIZES.indexOf(state.interfaceChoices.lastPlayedSize),
-                    onPick   = { viewModel.setLastPlayedSize(IP.LAST_PLAYED_SIZES[it]) },
-                )
-
-                SettingsToggleRow(
-                    label    = "Card Art Grid",
-                    sublabel = "Show a console card as four covers from inside it, instead of its console icon",
-                    checked  = state.cardArtGrid,
-                    onToggle = { viewModel.setCardArtGrid(it) },
-                )
-
-                SettingsToggleRow(
-                    label    = "Fade By Distance",
-                    sublabel = "Fade rows and icons further the further they sit from the cursor — off, every unselected one dims the same",
-                    checked  = state.fadeByDistance,
-                    onToggle = { viewModel.setFadeByDistance(it) },
-                )
-
-                SettingsToggleRow(
-                    label    = "Text Shadow",
-                    sublabel = "Drop shadow behind row helper text — keeps it readable over bright wallpaper regions",
-                    checked  = state.textShadow,
-                    onToggle = { viewModel.setTextShadow(it) },
-                )
-
-                SettingsGroup("Status Bar")
-
-                SettingsToggleRow(
-                    label    = "Show Device Notifications",
-                    sublabel = "List Android's notifications in the bar and count them. Off, the bar shows only ECHO's own",
-                    checked  = state.interfaceChoices.showDeviceNotifications,
-                    onToggle = { viewModel.setShowDeviceNotifications(it) },
-                )
-
-                SettingsToggleRow(
-                    label    = "Last Opened In The Island",
-                    sublabel = "With nothing playing or running, show the last thing you opened. Off, the island stays empty",
-                    checked  = state.interfaceChoices.islandShowsRecent,
-                    onToggle = { viewModel.setIslandShowsRecent(it) },
-                )
             }
             if (section == null || section == DisplaySection.LAYOUT) {
                 // owner, 2026-10-06: every size on one screen as sliders, no live overlay; each screen size (handheld,
@@ -391,6 +331,78 @@ fun DisplaySettingsScreen(
                     },
                     enabled  = !state.classicLayoutApplied,
                     onClick  = { classicConfirmFocus = PSP_CONFIRM_CANCEL },
+                )
+
+                // owner, 2026-10-07: everything about the crossbar in one tab: sizes, rows, Last Played, the status
+                // bar, its categories and icons
+                SettingsGroup("Rows")
+                SettingsPickerRow(
+                    label    = "Icon Legibility",
+                    sublabel = "How Crossbar icons separate from the background",
+                    options  = IconLegibilityStyle.entries.map { SettingsPickerOption(it.label) },
+                    selectedIndex = IconLegibilityStyle.entries.indexOf(state.iconLegibility),
+                    onPick   = { viewModel.setIconLegibility(IconLegibilityStyle.entries[it]) },
+                )
+
+                SettingsToggleRow(
+                    label    = "Card Art Grid",
+                    sublabel = "Show a console card as four covers from inside it, instead of its console icon",
+                    checked  = state.cardArtGrid,
+                    onToggle = { viewModel.setCardArtGrid(it) },
+                )
+
+                SettingsToggleRow(
+                    label    = "Fade By Distance",
+                    sublabel = "Fade rows and icons further the further they sit from the cursor — off, every unselected one dims the same",
+                    checked  = state.fadeByDistance,
+                    onToggle = { viewModel.setFadeByDistance(it) },
+                )
+
+                SettingsToggleRow(
+                    label    = "Text Shadow",
+                    sublabel = "Drop shadow behind row helper text — keeps it readable over bright wallpaper regions",
+                    checked  = state.textShadow,
+                    onToggle = { viewModel.setTextShadow(it) },
+                )
+
+                SettingsGroup("Last Played")
+                SettingsToggleRow(
+                    label    = "Apps On The Recent Shelf",
+
+                    sublabel = "Show recently used apps beside games, music, books and video. " +
+                        "Needs usage access; without it no app has a last-used time and none appear",
+                    checked  = state.recentsIncludeApps,
+                    onToggle = { viewModel.setRecentsIncludeApps(it) },
+                )
+
+                SettingsPickerRow(
+                    label    = "Last Played Size",
+                    sublabel = "How many games, tracks, books, videos and apps the Last Played column keeps",
+                    options  = IP.LAST_PLAYED_SIZES.map { SettingsPickerOption("$it") },
+                    selectedIndex = IP.LAST_PLAYED_SIZES.indexOf(state.interfaceChoices.lastPlayedSize),
+                    onPick   = { viewModel.setLastPlayedSize(IP.LAST_PLAYED_SIZES[it]) },
+                )
+
+                SettingsGroup("Status Bar")
+
+                SettingsToggleRow(
+                    label    = "Show Device Notifications",
+                    sublabel = "List Android's notifications in the bar and count them. Off, the bar shows only ECHO's own",
+                    checked  = state.interfaceChoices.showDeviceNotifications,
+                    onToggle = { viewModel.setShowDeviceNotifications(it) },
+                )
+
+                SettingsToggleRow(
+                    label    = "Last Opened In The Island",
+                    sublabel = "With nothing playing or running, show the last thing you opened. Off, the island stays empty",
+                    checked  = state.interfaceChoices.islandShowsRecent,
+                    onToggle = { viewModel.setIslandShowsRecent(it) },
+                )
+                SettingsGroup("Categories")
+                SettingsRow(
+                    label    = "Categories",
+                    sublabel = "The crossbar's categories and the collections inside them",
+                    onClick  = onOpenCategories,
                 )
 
                 SettingsRow(
