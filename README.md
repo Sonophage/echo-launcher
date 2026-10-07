@@ -110,15 +110,16 @@ it in the colour of its art. Press LEFT, or swipe right, to bring in the **Recen
 
 The bar along the top holds the **island** (what is playing, or the last thing you opened) with the
 battery reading beside it, the time in the centre, and at the far right a second island for
-notifications: the ECHO mark with the count beside it when something is waiting, otherwise your
-profile picture. Its ring is the battery, filled to the charge; while charging, echo rings spread
-from it and a light runs round it, as they spread from the left island while music plays. A new
+notifications: your profile picture (the ECHO mark until you set one), with the count beside it
+when something is waiting. Its ring is the battery, filled to the charge; while charging, echo
+rings spread from it and the mark glows, as they spread from the left island while music plays. A new
 notification drops out of the right island as a card; press it once to see the newest, twice to open
 them all. UP from the top of a list drops the left island's card the same way: what is playing, or
 the last thing you opened. The footer leads with the screen's filter: one LT/RT mark and the word
 for the current filter or sort (a tap steps to the next). Then **Back**, the **A** action in
 the centre, and the screen's own actions on the right, with **LB** (Apps) and **RB** (Search) side
-by side as icons. **Home** has no hint; the Guide button, or Select held, goes home. Games and apps
+by side as icons. **Home** has no hint; the Guide button, or Select held, goes home. *Quick
+settings ▸ Button hints ▸ Minimal* leaves only the filter and the A action in the footer. Games and apps
 launch when you **hold A** until the ring fills, so a stray press never launches anything.
 
 | | |
@@ -220,8 +221,8 @@ Look, Controls, Accounts, System, Setup**.
 
 The **Profile** tab shows your name and picture, your games, hours and achievements, what you played
 last with its achievement progress, and your Steam, RetroAchievements and Discord accounts. Its row
-of big numbers opens **Overview**: your library at a glance, with ECHO's version, the artwork and
-cache, and every column's counts.
+of big numbers, with its **Library overview** button, opens **Overview**: your library at a glance,
+with ECHO's version, the artwork and cache, and every column's counts.
 
 | | |
 |:---:|:---:|

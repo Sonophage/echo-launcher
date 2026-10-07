@@ -92,18 +92,19 @@ fun <T> EchoContextMenuOverlay(
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Box(Modifier.fillMaxSize().clickable(onClick = onDismiss))
         val panelWidth = u.dp(RAIL_PANEL_WIDTH)
-        if (backdropArt != null) {
-            // the Recent rail's backing (owner, 2026-10-04): the art behind, blurred, under the wave and the fill
-            Box(Modifier.fillMaxSize().drawWithContent { clipRect(left = size.width - panelWidth.toPx()) { this@drawWithContent.drawContent() } }) {
-                Box(Modifier.fillMaxSize().background(PanelBase))
+        // the Recent rail's backing (owner, 2026-10-04): the art behind, blurred, under the wave and the fill.
+        // owner, 2026-10-07: every context menu wears it; with no art it is the dark base and the wave
+        Box(Modifier.fillMaxSize().drawWithContent { clipRect(left = size.width - panelWidth.toPx()) { this@drawWithContent.drawContent() } }) {
+            Box(Modifier.fillMaxSize().background(PanelBase))
+            if (backdropArt != null) {
                 AsyncImage(
                     model = rememberBlurSourceModel(backdropArt),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().blur(u.dp(24)).graphicsLayer(alpha = 0.4f),
                 )
-                LocalBackdropWave.current?.invoke()
             }
+            LocalBackdropWave.current?.invoke()
         }
         Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(panelWidth).background(RailPanelFill))
 

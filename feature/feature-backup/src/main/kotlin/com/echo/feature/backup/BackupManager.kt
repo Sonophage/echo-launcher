@@ -580,6 +580,7 @@ open class BackupManager @Inject constructor(
             booleanPreferencesKey("display_text_shadow"),
             com.echo.core.data.repository.InterfacePreferences.KEY_SHOW_DEVICE_NOTIFICATIONS,
             com.echo.core.data.repository.InterfacePreferences.KEY_ISLAND_SHOWS_RECENT,
+            com.echo.core.data.repository.InterfacePreferences.KEY_MINIMAL_HINTS,
             com.echo.core.data.repository.InterfacePreferences.KEY_RESCAN_ON_RETURN,
             booleanPreferencesKey("pref_animated_icons"),
             booleanPreferencesKey("pref_xmb_game_metadata"),

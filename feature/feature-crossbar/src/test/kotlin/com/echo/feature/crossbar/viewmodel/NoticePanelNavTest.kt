@@ -38,20 +38,20 @@ class NoticePanelNavTest {
         assertEquals("up and down have nothing to reach on one row of tiles", q, move(q, PanelMove.DOWN))
     }
 
+    // owner, 2026-10-07: four wide, as the Settings grid
     @Test fun `the library grid moves by row and column and holds at its edges`() {
-        val g = PanelCursor(tab = PanelTab.LIBRARIES, chip = 2)
-        assertEquals("right off the end of a row must not wrap onto the next row", 2, move(g, PanelMove.RIGHT).chip)
-        assertEquals(5, move(g, PanelMove.DOWN).chip)
+        val g = PanelCursor(tab = PanelTab.LIBRARIES, chip = LIBRARY_GRID_COLUMNS - 1)
+        assertEquals("right off the end of a row must not wrap onto the next row", 3, move(g, PanelMove.RIGHT).chip)
+        assertEquals(5, move(g.copy(chip = 1), PanelMove.DOWN).chip)
         assertEquals(5, move(g.copy(chip = 5), PanelMove.DOWN).chip)
-        assertEquals(1, move(g.copy(chip = 4), PanelMove.UP).chip)
-        assertEquals(3, move(g.copy(chip = 3), PanelMove.LEFT).chip)
+        assertEquals(0, move(g.copy(chip = 4), PanelMove.UP).chip)
+        assertEquals(4, move(g.copy(chip = 4), PanelMove.LEFT).chip)
     }
 
     @Test fun `a short last row of libraries cannot be stepped past`() {
-        val g = PanelCursor(tab = PanelTab.LIBRARIES, chip = 3)
+        val g = PanelCursor(tab = PanelTab.LIBRARIES, chip = 4)
         assertEquals(4, move(g, PanelMove.RIGHT, chips = 5).chip)
-        assertEquals(4, move(g.copy(chip = 4), PanelMove.RIGHT, chips = 5).chip)
-        assertEquals("down from a column with no tile below stays put", 1, move(g.copy(chip = 1), PanelMove.DOWN, chips = 4).chip)
+        assertEquals("down from a column with no tile below stays put", 1, move(g.copy(chip = 1), PanelMove.DOWN, chips = 5).chip)
     }
 
     // owner, 2026-10-05: a seventh section (Media) made the grid four wide, so it still fits in two rows

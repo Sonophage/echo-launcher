@@ -41,6 +41,7 @@ object EchoSettingsExport {
         "interface" to linkedMapOf(
             "interface_last_played_size" to Kind.INT,
             "interface_island_shows_recent" to Kind.BOOL,
+            "interface_minimal_hints" to Kind.BOOL,
             "display_recents_include_apps" to Kind.BOOL,
             "interface_show_device_notifications" to Kind.BOOL,
             "interface_context_menu_hint" to Kind.BOOL,

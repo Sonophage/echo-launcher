@@ -50,16 +50,17 @@ internal fun noticeCardStep(action: GamepadAction, cursor: Int, rows: Int): Noti
     }
 }
 
-enum class QuickSetting { WAVE, BACKDROP, ROW_ART, RECENT_APPS, SECOND_SCREEN, ANDROID_SETTINGS, LIBRARIES }
+enum class QuickSetting { WAVE, BACKDROP, ROW_ART, RECENT_APPS, MINIMAL_HINTS, SECOND_SCREEN, ANDROID_SETTINGS, LIBRARIES }
 
-val PANEL_QUICK_SETTINGS = listOf(QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.ROW_ART, QuickSetting.RECENT_APPS, QuickSetting.ANDROID_SETTINGS)
+val PANEL_QUICK_SETTINGS = listOf(QuickSetting.WAVE, QuickSetting.BACKDROP, QuickSetting.ROW_ART, QuickSetting.RECENT_APPS, QuickSetting.MINIMAL_HINTS, QuickSetting.ANDROID_SETTINGS)
 
 // owner, 2026-10-06: dual or single screen, quickly; offered only on a device with a second display
 fun quickSettingsFor(secondDisplay: Boolean): List<QuickSetting> =
     if (secondDisplay) PANEL_QUICK_SETTINGS.toMutableList().apply { add(indexOf(QuickSetting.ANDROID_SETTINGS), QuickSetting.SECOND_SCREEN) }
     else PANEL_QUICK_SETTINGS
 
-const val LIBRARY_GRID_COLUMNS = 3
+// owner, 2026-10-07: the Libraries tiles are the Settings tiles' size and grid
+const val LIBRARY_GRID_COLUMNS = 4
 
 // four across, so the seven sections fit the panel in two rows (Library made the seventh)
 const val SETTINGS_GRID_COLUMNS = 4

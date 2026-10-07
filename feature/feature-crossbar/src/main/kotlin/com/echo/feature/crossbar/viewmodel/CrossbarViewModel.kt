@@ -3377,8 +3377,16 @@ class CrossbarViewModel @Inject constructor(
                     prefs[KEY_WAVE_STYLE] = s.waveStyle.next.name
                 }
                 QuickSetting.BACKDROP -> iconDisplayPreferences.setItemBackdrop(!s.itemBackdropEnabled)
-                QuickSetting.ROW_ART -> iconDisplayPreferences.setRowCoverArt(s.iconStyle != GameIconStyle.COVER_ART)
+                // owner, 2026-10-07: Icons means icons in every column, so a folder's grid of covers goes too
+                QuickSetting.ROW_ART -> {
+                    val covers = s.iconStyle != GameIconStyle.COVER_ART
+                    iconDisplayPreferences.setRowCoverArt(covers)
+                    context.echoDataStore.edit { it[KEY_CARD_ART_GRID] = covers }
+                }
                 QuickSetting.RECENT_APPS -> context.echoDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
+                QuickSetting.MINIMAL_HINTS -> context.echoDataStore.edit {
+                    it[com.echo.core.data.repository.InterfacePreferences.KEY_MINIMAL_HINTS] = !s.interfaceChoices.minimalHints
+                }
                 QuickSetting.SECOND_SCREEN -> bottomScreen.setSecondScreenEnabled(!s.secondScreenEnabled)
                 QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
                 QuickSetting.ANDROID_SETTINGS -> {

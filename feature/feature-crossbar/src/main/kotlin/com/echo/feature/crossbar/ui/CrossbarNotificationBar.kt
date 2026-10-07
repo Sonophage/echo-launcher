@@ -57,6 +57,7 @@ import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Games
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
@@ -120,6 +121,7 @@ data class QuickSettingsState(
     val backdropOn: Boolean,
     val rowCoverArt: Boolean,
     val recentAppsOn: Boolean,
+    val minimalHints: Boolean = false,
     val chips: List<LibraryChip>,
     val secondDisplay: Boolean = false,
     val secondScreenOn: Boolean = true,
@@ -340,24 +342,26 @@ private data class RowText(val pkg: String, val title: String, val app: String, 
 
 @Composable
 private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: DesignUnits, onTapped: (QuickSetting, Int) -> Unit, modifier: Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(22))) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(16))) {
         com.echo.feature.crossbar.viewmodel.quickSettingsFor(quick.secondDisplay).forEach { setting ->
             val (label, value) = when (setting) {
                 QuickSetting.WAVE -> "Wave" to quick.wave.label
-                // owner, 2026-10-05: "Crossbar shows Art / Wallpaper" was unclear; this is what fills the background
-                QuickSetting.BACKDROP -> "Background" to if (quick.backdropOn) "Game art" else "Your theme"
+                // owner, 2026-10-05: "Crossbar shows Art / Wallpaper" was unclear; this is what fills the background.
+                // owner, 2026-10-07: named for what it does, the game's art behind the crossbar
+                QuickSetting.BACKDROP -> "Game backgrounds" to if (quick.backdropOn) "On" else "Off"
                 QuickSetting.ROW_ART -> "Game rows show" to if (quick.rowCoverArt) "Cover art" else "Icons"
                 QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
+                QuickSetting.MINIMAL_HINTS -> "Button hints" to if (quick.minimalHints) "Minimal" else "All"
                 QuickSetting.SECOND_SCREEN -> "Screens" to if (quick.secondScreenOn) "Dual" else "Single"
                 QuickSetting.ANDROID_SETTINGS -> "Android settings" to "Open"
                 QuickSetting.LIBRARIES -> "" to ""
             }
-            Tile(setting == focus, u.dp(300), u.dp(22), u.dp(28), u, Modifier.weight(1f), { onTapped(setting, 0) }) {
+            Tile(setting == focus, u.dp(300), u.dp(18), u.dp(28), u, Modifier.weight(1f), { onTapped(setting, 0) }) {
                 Icon(quickIcon(setting), null, tint = Color.White, modifier = Modifier.size(u.dp(34)))
                 Column {
                     Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(17), lineHeight = u.sp(17) * 1.2f, fontWeight = FontWeight.Light)
-                    // five tiles share the row, so a long value ("Reduced + Static", "Cover art") takes two lines
-                    Text(value, color = Color.White, fontSize = u.sp(26), lineHeight = u.sp(26) * 1.1f, fontWeight = FontWeight.ExtraLight, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    // six or seven tiles share the row, so a long value ("Reduced + Static", "Cover art") takes two lines
+                    Text(value, color = Color.White, fontSize = u.sp(22), lineHeight = u.sp(22) * 1.1f, fontWeight = FontWeight.ExtraLight, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -369,20 +373,20 @@ private fun LibraryTiles(chips: List<LibraryChip>, focus: Int, u: DesignUnits, o
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(16))) {
         Text("${chips.count { it.visible }} of ${chips.size} on the crossbar", color = Color.White.copy(alpha = 0.6f),
             fontSize = u.sp(14), fontWeight = FontWeight.Light)
-        chips.withIndex().chunked(3).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(16))) {
+        chips.withIndex().chunked(com.echo.feature.crossbar.viewmodel.LIBRARY_GRID_COLUMNS).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(18))) {
                 row.forEach { (i, chip) ->
-                    Tile(i == focus, u.dp(170), u.dp(20), u.dp(22), u,
+                    Tile(i == focus, u.dp(200), u.dp(22), u.dp(24), u,
                         Modifier.weight(1f).graphicsLayer(alpha = if (chip.visible) 1f else 0.45f), { onTapped(QuickSetting.LIBRARIES, i) }) {
-                        Icon(libraryIcon(chip.id), null, tint = Color.White, modifier = Modifier.size(u.dp(30)))
-                        Column {
-                            Text(chip.name, color = Color.White, fontSize = u.sp(22), fontWeight = FontWeight.Light)
-                            Text(if (chip.visible) "On crossbar" else "Hidden from crossbar", color = Color.White.copy(alpha = 0.6f),
-                                fontSize = u.sp(13), fontWeight = FontWeight.Light)
+                        Icon(libraryIcon(chip.id), null, tint = Color.White, modifier = Modifier.size(u.dp(32)))
+                        Column(verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                            Text(chip.name, color = Color.White, fontSize = u.sp(20), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(if (chip.visible) "On crossbar" else "Hidden from crossbar", color = Color.White.copy(alpha = 0.55f),
+                                fontSize = u.sp(13), fontWeight = FontWeight.Light, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                repeat(com.echo.feature.crossbar.viewmodel.LIBRARY_GRID_COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
@@ -505,6 +509,7 @@ private fun quickIcon(setting: QuickSetting): ImageVector = when (setting) {
     QuickSetting.BACKDROP -> Icons.Outlined.Image
     QuickSetting.ROW_ART -> Icons.Outlined.Games
     QuickSetting.RECENT_APPS -> Icons.Outlined.History
+    QuickSetting.MINIMAL_HINTS -> Icons.Outlined.SportsEsports
     QuickSetting.SECOND_SCREEN -> Icons.Outlined.Devices
     QuickSetting.ANDROID_SETTINGS -> Icons.Outlined.Settings
     QuickSetting.LIBRARIES -> Icons.Outlined.GridView

@@ -14,6 +14,8 @@ data class InterfaceChoices(
     val rescanOnReturn: Boolean = true,
     val videoSeekStepSeconds: Int = InterfacePreferences.DEFAULT_VIDEO_SEEK_STEP_SECONDS,
     val videoControlsHideMs: Int = InterfacePreferences.DEFAULT_VIDEO_CONTROLS_HIDE_MS,
+    // owner, 2026-10-07: the footer shows only the A card and the filter
+    val minimalHints: Boolean = false,
 )
 
 object InterfacePreferences {
@@ -23,6 +25,7 @@ object InterfacePreferences {
     val KEY_RESCAN_ON_RETURN = booleanPreferencesKey("library_rescan_on_return")
     val KEY_VIDEO_SEEK_STEP_SECONDS = intPreferencesKey("video_seek_step_seconds")
     val KEY_VIDEO_CONTROLS_HIDE_MS = intPreferencesKey("video_controls_hide_ms")
+    val KEY_MINIMAL_HINTS = booleanPreferencesKey("interface_minimal_hints")
 
     val LAST_PLAYED_SIZES = listOf(10, 15, 20, 30)
     const val DEFAULT_LAST_PLAYED_SIZE = 15
@@ -42,6 +45,7 @@ object InterfacePreferences {
             .oneOf(VIDEO_SEEK_STEPS_SECONDS, DEFAULT_VIDEO_SEEK_STEP_SECONDS),
         videoControlsHideMs = prefs[KEY_VIDEO_CONTROLS_HIDE_MS]
             .oneOf(VIDEO_CONTROLS_HIDE_MS, DEFAULT_VIDEO_CONTROLS_HIDE_MS),
+        minimalHints = prefs[KEY_MINIMAL_HINTS] ?: false,
     )
 
     suspend fun current(context: Context): InterfaceChoices = read(context.echoDataStore.data.first())

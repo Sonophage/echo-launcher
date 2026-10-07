@@ -14,6 +14,15 @@ class EchoHintBarTest {
     private val dpad = ControllerPromptItem.fixed(ControllerIcon.DPAD_ALL, "Scroll")
     private val play = HintAction(GamepadAction.SELECT, "Play", "Skyrim")
 
+    // owner, 2026-10-07: Minimal hints drops the fixed button hints; touch keeps Back, its only way back
+    @Test
+    fun `minimal hints keep no button hint on a controller, and only Back on touch`() {
+        val all = listOf(back, select, options, search, dpad)
+        assertEquals(all, minimalHintItems(all, minimal = false, pad = true))
+        assertEquals(emptyList<ControllerPromptItem>(), minimalHintItems(all, minimal = true, pad = true))
+        assertEquals(listOf(back), minimalHintItems(all, minimal = true, pad = false))
+    }
+
     @Test
     fun `the action tab's prompt is not drawn a second time in the row, and back closes the row`() {
         assertEquals(listOf(options, search, back), hintBarRow(listOf(back, select, options, search), play, pad = true))

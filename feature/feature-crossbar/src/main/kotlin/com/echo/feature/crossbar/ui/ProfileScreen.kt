@@ -179,9 +179,10 @@ internal fun ProfileAvatar(avatar: String?, name: String?, modifier: Modifier = 
 
 @Composable
 private fun Header(data: ProfileData, name: String, avatar: String?, u: DesignUnits, onEditName: () -> Unit, onPickAvatar: () -> Unit) {
+    // owner, 2026-10-07: the picture is about as tall as the name and what is under it, so the two balance
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(24))) {
         Box(
-            Modifier.size(u.dp(110)).border(u.dp(2), Color.White, RoundedCornerShape(u.dp(4))).padding(u.dp(2))
+            Modifier.size(u.dp(156)).border(u.dp(2), Color.White, RoundedCornerShape(u.dp(4))).padding(u.dp(2))
                 .background(Color.White.copy(alpha = 0.06f)).clickable(onClick = onPickAvatar),
             contentAlignment = Alignment.Center,
         ) {
@@ -271,8 +272,14 @@ internal fun ProfilePanel(
                 }
             }
             Spacer(Modifier.height(u.dp(24)))
-            // the big numbers open Overview, the library at a glance (owner, 2026-10-06)
-            FocusBox(focus.spot == ProfileSpot.STATS, u, { onTapped(ProfileSpot.STATS, 0) }) { Stats(data, u) }
+            // the big numbers open Overview, the library at a glance (owner, 2026-10-06); owner, 2026-10-07: a pill
+            // beside them says so
+            FocusBox(focus.spot == ProfileSpot.STATS, u, { onTapped(ProfileSpot.STATS, 0) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { Stats(data, u) }
+                    Pill("Library overview", focus.spot == ProfileSpot.STATS, GamepadAction.SELECT, u) { onTapped(ProfileSpot.STATS, 0) }
+                }
+            }
             Box(Modifier.padding(top = u.dp(18), bottom = u.dp(22)).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
             Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(u.dp(40))) {
                 if (u.square) {

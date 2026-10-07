@@ -109,7 +109,8 @@ fun EchoHintBar(
 ) {
     if (items.isEmpty() && primary == null && centre == null && filter == null) return
     val pad = LocalPadPrompts.current
-    val (always, contextual) = hintBarSides(hintBarRow(items, primary, pad))
+    val shownItems = minimalHintItems(items, LocalMinimalHints.current, pad)
+    val (always, contextual) = hintBarSides(hintBarRow(shownItems, primary, pad))
     val u = hintBarUnits()
 
     Row(
@@ -154,6 +155,13 @@ fun EchoHintBar(
         }
     }
 }
+
+// owner, 2026-10-07: Minimal hints (a quick setting) drops the footer's fixed button hints; the A card, the
+// filter and the centre card stay, as they say what is on screen. Touch keeps Back, its only way back
+val LocalMinimalHints = androidx.compose.runtime.compositionLocalOf { false }
+
+internal fun minimalHintItems(items: List<ControllerPromptItem>, minimal: Boolean, pad: Boolean): List<ControllerPromptItem> =
+    if (!minimal) items else items.filter { !pad && it.tappableAction() == GamepadAction.BACK }
 
 @Composable
 private fun Hint(item: ControllerPromptItem, u: DesignUnits, pad: Boolean, onAction: ((GamepadAction) -> Unit)?) {

@@ -609,11 +609,13 @@ fun CrossbarShell(
             CompositionLocalProvider(
                 com.echo.core.ui.components.LocalChromeScale provides com.echo.core.ui.components.ChromeScale(layoutAdjust.headerScale, layoutAdjust.footerScale),
                 LocalPadPrompts provides padPromptsShown(rememberSystemStatus().controllerConnected, uiState.lastInputWasTouch),
-                LocalMenuBackdropArt provides if (uiState.onLastPlayedHome) {
+                com.echo.core.ui.components.LocalMinimalHints provides uiState.interfaceChoices.minimalHints,
+                // behind a context menu, blurred: the focused item's art, else the wallpaper
+                LocalMenuBackdropArt provides (if (uiState.onLastPlayedHome) {
                     uiState.currentItems.getOrNull(uiState.selectedItemIndex)?.backdropArt?.firstOrNull()
                 } else {
                     uiState.focusedItemBackdrop?.takeIf { uiState.itemBackdropEnabled }
-                },
+                } ?: uiState.customWallpaperPath),
             ) {
             CompositionLocalProvider(
                 LocalDensity provides Density(baseDensity.density * uiScale * layoutAdjust.scale, baseDensity.fontScale),
@@ -1078,6 +1080,7 @@ fun CrossbarShell(
                         backdropOn = uiState.itemBackdropEnabled,
                         rowCoverArt = uiState.iconStyle == com.echo.core.ui.icons.GameIconStyle.COVER_ART,
                         recentAppsOn = uiState.recentsIncludeApps,
+                        minimalHints = uiState.interfaceChoices.minimalHints,
                         chips = uiState.libraryChips,
                         secondDisplay = uiState.secondDisplayPresent,
                         secondScreenOn = uiState.secondScreenEnabled,
