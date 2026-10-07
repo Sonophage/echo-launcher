@@ -59,6 +59,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -102,8 +104,10 @@ fun EchoHintBar(
 
     // the action orb's level 2 (kit 06): a second action, Resume on Y, left of the primary
     secondary: HintAction? = null,
+    // owner, 2026-10-06: the screen's filter (TriggerFilter) leads the footer, at its far left
+    filter: (@Composable () -> Unit)? = null,
 ) {
-    if (items.isEmpty() && primary == null && centre == null) return
+    if (items.isEmpty() && primary == null && centre == null && filter == null) return
     val pad = LocalPadPrompts.current
     val (always, contextual) = hintBarSides(hintBarRow(items, primary, pad))
     val u = hintBarUnits()
@@ -124,6 +128,7 @@ fun EchoHintBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(u.dp(28)),
         ) {
+            filter?.invoke()
             always.forEach { Hint(it, u, pad, onAction) }
             centre?.let { Box(Modifier.weight(1f, fill = false)) { it() } }
         }
@@ -162,19 +167,26 @@ private fun Hint(item: ControllerPromptItem, u: DesignUnits, pad: Boolean, onAct
         .clip(RoundedCornerShape(6.dp))
         .clickable(role = Role.Button, onClickLabel = item.label) { onAction?.invoke(tap) }
         .padding(horizontal = 4.dp)
+    val icon = item.icon
     if (pad) {
-        ControllerPromptGlyphs(
-            icons = item.fixedIcons ?: style.mappings.iconsFor(item.actions),
-            label = item.label,
-            family = style.family,
-            labelColor = HintLabel,
-            labelStyle = hintText(u),
-            glyphSize = glyphFor(u, 22, 13),
-            spacing = u.dp(8),
-            modifier = modifier,
-        )
+        Row(modifier.semantics { contentDescription = item.label }, verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(u.dp(8))) {
+            ControllerPromptGlyphs(
+                icons = item.fixedIcons ?: style.mappings.iconsFor(item.actions),
+                label = if (icon != null) "" else item.label,
+                family = style.family,
+                labelColor = HintLabel,
+                labelStyle = hintText(u),
+                glyphSize = glyphFor(u, 22, 13),
+                spacing = u.dp(8),
+            )
+            if (icon != null) androidx.compose.material3.Icon(icon, null, Modifier.size(glyphFor(u, 22, 13)), tint = HintLabel)
+        }
     } else {
-        Box(modifier, contentAlignment = Alignment.Center) { Text(item.label, color = HintLabel, style = hintText(u), maxLines = 1) }
+        Box(modifier.semantics { contentDescription = item.label }, contentAlignment = Alignment.Center) {
+            if (icon != null) androidx.compose.material3.Icon(icon, null, Modifier.size(u.dp(24)), tint = HintLabel)
+            else Text(item.label, color = HintLabel, style = hintText(u), maxLines = 1)
+        }
     }
 }
 
@@ -504,3 +516,36 @@ private val CardEnter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it 
 private val CardExit = fadeOut(tween(160)) + slideOutVertically(tween(180)) { it / 2 }
 private val HintLabel = Color.White.copy(alpha = 0.85f)
 private val TabInk = Color(0xFF1A0D05)
+
+// owner, 2026-10-06: a screen's filters, tabs or sorts in the footer's left side: one LT/RT mark and the current
+// one's word. The triggers step it; a tap steps to the next
+@Composable
+fun TriggerFilter(label: String, modifier: Modifier = Modifier, onTapped: () -> Unit) {
+    val u = hintBarUnits()
+    val pad = LocalPadPrompts.current
+    Row(
+        modifier
+            .clip(RoundedCornerShape(u.dp(8)))
+            .clickable(onClickLabel = label, onClick = onTapped)
+            .padding(horizontal = u.dp(4), vertical = u.dp(4))
+            .semantics { contentDescription = label },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(10)),
+    ) {
+        if (pad) TriggerPairGlyph(glyphFor(u, 22, 13))
+        Text(label, color = Color.White, style = hintText(u).copy(fontWeight = FontWeight.Medium), maxLines = 1)
+    }
+}
+
+// LT and RT as one mark: the two trigger glyphs overlapping, in the pad's own art and mapping
+@Composable
+fun TriggerPairGlyph(size: Dp) {
+    val style = LocalControllerPromptStyle.current
+    ControllerPromptGlyphs(
+        icons = style.mappings.iconsFor(listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY)),
+        label = "",
+        family = style.family,
+        glyphSize = size,
+        glyphSpacing = -(size * 0.45f),
+    )
+}

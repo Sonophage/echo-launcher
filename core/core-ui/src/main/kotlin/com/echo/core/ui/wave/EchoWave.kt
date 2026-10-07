@@ -65,7 +65,8 @@ internal fun ripplePhase(time: Float, source: Int, ring: Int, spec: EchoRippleSp
     return p - floor(p)
 }
 
-internal fun rippleEnvelope(phase: Float): Float = sin(PI.toFloat() * phase).coerceAtLeast(0f).pow(1.5f)
+// how bright a ring is at its phase (0 born, 1 gone): the one fade the wave and the orbs share
+fun rippleEnvelope(phase: Float): Float = sin(PI.toFloat() * phase).coerceAtLeast(0f).pow(1.5f)
 
 @Composable
 internal fun EchoWave(spec: EchoRippleSpec, time: () -> Float, alphaScale: () -> Float, ampScale: Float, tint: Color) {

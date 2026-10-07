@@ -108,14 +108,18 @@ it in the colour of its art. Press LEFT, or swipe right, to bring in the **Recen
 | <img src="docs/screenshots/last-played.jpg" width="420"> | <img src="docs/screenshots/last-played-rail.jpg" width="420"> |
 | Last Played | The Recent rail |
 
-The bar along the top holds the **island** (what is playing, or the last thing you opened), the
-section icons, battery and time, and at the far right a second island for notifications: the ECHO
-mark with the count beside it when something is waiting, otherwise your profile picture. A new
-notification drops out of it as a card; press it once to see the newest, twice to open them all.
-UP from the top of a list drops the left island's card the same way: what is playing, or the last thing
-you opened. The footer holds **Home** and **Back** on the left,
-the **A** action in the centre, and the screen's own actions on the right. Games and apps launch
-when you **hold A** until the ring fills, so a stray press never launches anything.
+The bar along the top holds the **island** (what is playing, or the last thing you opened) with the
+battery reading beside it, the time in the centre, and at the far right a second island for
+notifications: the ECHO mark with the count beside it when something is waiting, otherwise your
+profile picture. Its ring is the battery, filled to the charge; while charging, echo rings spread
+from it and a light runs round it, as they spread from the left island while music plays. A new
+notification drops out of the right island as a card; press it once to see the newest, twice to open
+them all. UP from the top of a list drops the left island's card the same way: what is playing, or
+the last thing you opened. The footer leads with the screen's filter: one LT/RT mark and the word
+for the current filter, sort or tab (a tap steps to the next). Then **Back**, the **A** action in
+the centre, and the screen's own actions on the right, with **LB** (Apps) and **RB** (Search) side
+by side as icons. **Home** has no hint; the Guide button, or Select held, goes home. Games and apps
+launch when you **hold A** until the ring fills, so a stray press never launches anything.
 
 | | |
 |:---:|:---:|
@@ -469,10 +473,10 @@ access to all of your storage.
 | Back | **B** | Esc | The Back button in the footer |
 | Options | **Y** | F3 | Long-press |
 | Resume the game that is still running | Hold **Y** | | Hold Resume, in the footer |
-| Sort, or the screen's X action | **X** | F2 | |
+| The details panel, or the screen's X action | **X** | F2 | |
 | App Drawer | **LB**, on every screen (again to close) | | Apps, in the footer |
 | Search | **RB**, on every screen (again to close) | Tab | Search, in the footer |
-| Categories, tabs, sections and filters | **LT / RT** | Page Up / Page Down | Tap |
+| Sorts and filters (the footer's left side), tabs and sections | **LT / RT** | Page Up / Page Down | Tap |
 | Seek or turn pages in the players, the reader and Artwork Studio | **LB / RB** | | |
 | Now playing / last played island | **Start** (again to put it back) | | Tap the island |
 | Notifications: the top panel | **Select** (twice when a notification is waiting) | | Tap the notification island twice; slide up to close |
@@ -565,7 +569,7 @@ GameBoot each have their own slot, and the menu music waits while they play.
 | Setting | What it changes |
 |---|---|
 | **Type** | the **button glyphs** in the footer and every hint: Generic, **Xbox**, **Nintendo**, **PlayStation**, Keyboard or Touch |
-| **A / B Swap** · **X / Y Swap** | confirm on B and back on A; options on X and sort on Y |
+| **A / B Swap** · **X / Y Swap** | confirm on B and back on A; options on X and details on Y |
 | **Stick Sensitivity** | how far the stick moves before it navigates, and before it counts as a full tilt |
 | **Trigger Sensitivity** | how far L2 and R2 pull to turn a page (High suits short or worn triggers) |
 | **Shoulder Hold Time** | how long L1 or R1 is held before it counts as a hold |

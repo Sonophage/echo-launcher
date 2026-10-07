@@ -201,10 +201,19 @@ fun GameInfoScreen(
             }
         }
 
-        // kit screens 3-4: Home, Back, Options on the left, the action orb on the right
+        // the views LT/RT walk
+        val sections = gameInfoSections(info)
+        val walk = !info.isApp && sections.size > 1
+        // kit screens 3-4: Back and the view on the left (owner, 2026-10-06: no Home hint, and the view as LT/RT and
+        // its word), the action orb in the centre, the screen's actions on the right
         if (!companion) EchoHintBar(
+            filter = if (walk) {
+                {
+                    val at = sections.indexOf(info.open).coerceAtLeast(0)
+                    com.echo.core.ui.components.TriggerFilter(gameInfoSectionLabel(sections[at])) { onSectionPicked(sections[(at + 1) % sections.size]) }
+                }
+            } else null,
             items = listOfNotNull(
-                ControllerPromptItem(listOf(GamepadAction.HOME), "Home"),
                 ControllerPromptItem(GamepadAction.BACK, "Back"),
                 ControllerPromptItem(GamepadAction.CHANGE_SORT, if (info.open == GameInfoAction.ACHIEVEMENTS) "Filter" else "Achievements")
                     .takeIf { info.achievementsStat != null },
@@ -225,15 +234,14 @@ fun GameInfoScreen(
             ),
         )
 
-        // the views LT/RT walk, shown the way Recent shows its filters
-        val sections = gameInfoSections(info)
-        if (!info.isApp && sections.size > 1) {
+        // the bottom screen has no footer and is touch only: its views stay a row of tabs to tap
+        if (companion && walk) {
             StripSections(
                 labels = sections.map(::gameInfoSectionLabel),
                 selected = sections.indexOf(info.open).coerceAtLeast(0),
                 onTapped = { onSectionPicked(sections[it]) },
                 u = u,
-                shoulders = !companion,
+                shoulders = false,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = StatusStripHeight + u.dp(8)).zIndex(2f),
             )
         }

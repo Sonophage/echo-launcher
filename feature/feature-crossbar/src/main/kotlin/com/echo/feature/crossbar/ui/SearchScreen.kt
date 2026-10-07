@@ -83,6 +83,7 @@ import com.echo.core.ui.components.ControllerPromptItem
 import com.echo.core.ui.components.HintAction
 import com.echo.core.ui.components.HintBarHeight
 import com.echo.core.ui.components.EchoHintBar
+import com.echo.core.ui.components.TriggerFilter
 import com.echo.core.ui.components.EchoSearchField
 import com.echo.core.ui.components.StatusStripHeight
 import com.echo.core.ui.design.DesignUnits
@@ -176,7 +177,6 @@ fun SearchScreen(
                         modifier = Modifier.padding(start = u.dp(16)))
                 }
             }
-            if (state.kindCounts.size > 1) KindChips(state, u, onKindPicked)
             when {
                 empty != null -> Box(Modifier.padding(horizontal = u.dp(64))) { EmptyNotice(empty, u) }
                 focused != null -> {
@@ -188,6 +188,8 @@ fun SearchScreen(
 
         if (!imeUp) {
             EchoHintBar(
+                // owner, 2026-10-06: the kind filter is the footer's, LT/RT and the current kind with its count
+                filter = searchKindFilter(state)?.let { (label, next) -> { TriggerFilter(label) { onKindPicked(next) } } },
                 items = listOf(
                     ControllerPromptItem(GamepadAction.BACK, "Close"),
                     ControllerPromptItem(GamepadAction.SELECT, "Open"),
@@ -208,29 +210,16 @@ fun SearchScreen(
     }
 }
 
-// All, then each kind the results hold with its count; LB and RB step through them
-@Composable
-private fun KindChips(state: SearchState, u: DesignUnits, onPick: (SearchKind?) -> Unit) {
-    val pad = LocalPadPrompts.current
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(6), Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-        if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = u.dp(20), spacing = 0.dp)
-        val chip: @Composable (String, Boolean, () -> Unit) -> Unit = { label, on, pick ->
-            Text(
-                label,
-                color = if (on) Color(0xFF111111) else Color.White.copy(alpha = 0.75f),
-                fontSize = u.sp(14),
-                fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
-                modifier = Modifier.clip(RoundedCornerShape(u.dp(18))).background(if (on) Color.White else Color.Transparent)
-                    .clickable(onClick = pick).padding(horizontal = u.dp(16), vertical = u.dp(7)),
-            )
-        }
-        chip("All ${state.total}", state.kind == null) { onPick(null) }
-        state.kindCounts.forEach { (kind, count) ->
-            chip("${kind.noun.replaceFirstChar { it.uppercase() }} $count", state.kind == kind) { onPick(kind) }
-        }
-        if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(20), spacing = 0.dp)
-    }
+// the kind filter's word (All, then each kind the results hold, with its count) and the kind a tap moves to
+internal fun searchKindFilter(state: SearchState): Pair<String, SearchKind?>? {
+    if (state.kindCounts.size <= 1) return null
+    val kinds = listOf<SearchKind?>(null) + state.kindCounts.map { it.first }
+    val at = kinds.indexOf(state.kind).coerceAtLeast(0)
+    val label = state.kind?.let { k -> "${k.noun.replaceFirstChar { it.uppercase() }} ${state.kindCounts.first { it.first == k }.second}" }
+        ?: "All ${state.total}"
+    return label to kinds[(at + 1) % kinds.size]
 }
+
 
 // what the selected result is: its kind, title, a pill of facts and when it was last opened on the left; what is
 // known about it and its buttons on the right

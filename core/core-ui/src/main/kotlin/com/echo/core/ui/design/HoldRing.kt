@@ -108,3 +108,55 @@ fun Modifier.echoPulse(trigger: Int, color: Color): Modifier {
         drawCircle(color.copy(alpha = 0.18f * (1 - p)), r + r * p, style = Stroke(w))
     }
 }
+
+// the brand's ring, as the echo wave draws its rings: a soft halo under a crisp line. The track runs all the
+// way round; the arc fills clockwise from the top to fraction. The halo lies just inside the line, so an orb
+// clipped to its own circle keeps it
+fun androidx.compose.ui.graphics.drawscope.DrawScope.drawEchoRing(fraction: Float, color: Color, track: Color, stroke: Float) {
+    val topLeft = Offset(stroke / 2, stroke / 2)
+    val arcSize = Size(size.width - stroke, size.height - stroke)
+    drawArc(track, 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
+    val sweep = 360f * fraction.coerceIn(0f, 1f)
+    if (sweep <= 0f) return
+    val halo = stroke * 3f
+    val inset = stroke + halo / 2
+    drawArc(color.copy(alpha = color.alpha * 0.25f), -90f, sweep, false, Offset(inset, inset),
+        Size(size.width - inset * 2, size.height - inset * 2), style = Stroke(halo, cap = StrokeCap.Round))
+    drawArc(color, -90f, sweep, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+}
+
+// kit "Echo": while active, rings keep spreading from an orb and fading out, each a halo under a line as the
+// echo wave's are, with the wave's own fade (rippleEnvelope). Drawn outside the orb, so put it before any clip
+@Composable
+fun Modifier.echoRipples(active: Boolean, color: Color, rings: Int = 3, periodMs: Long = ECHO_RIPPLE_PERIOD_MS, reach: Float = 0.8f): Modifier {
+    val time by androidx.compose.runtime.produceState(0f, active, periodMs) {
+        value = 0f
+        if (!active) return@produceState
+        while (true) {
+            androidx.compose.animation.core.withInfiniteAnimationFrameMillis { nowMs ->
+                value = (com.echo.core.ui.wave.steppedFrameMs(nowMs) % periodMs) / periodMs.toFloat()
+            }
+        }
+    }
+    if (!active) return this
+    return drawBehind {
+        val r = size.minDimension / 2
+        val w = 1.dp.toPx()
+        repeat(rings) { k ->
+            val phase = echoRipplePhase(time, k, rings)
+            val a = com.echo.core.ui.wave.rippleEnvelope(phase)
+            val radius = r + r * reach * phase
+            drawCircle(color.copy(alpha = 0.12f * a), radius, style = Stroke(w * 5))
+            drawCircle(color.copy(alpha = 0.55f * a), radius, style = Stroke(w))
+        }
+    }
+}
+
+// owner, 2026-10-06: slow, a calm echo rather than a pulse
+const val ECHO_RIPPLE_PERIOD_MS = 6000L
+
+// ring k of n, spread evenly through one period, 0 as it leaves the orb and 1 as it fades out
+fun echoRipplePhase(time: Float, ring: Int, rings: Int): Float {
+    val p = time + ring.toFloat() / rings
+    return p - kotlin.math.floor(p)
+}

@@ -296,6 +296,9 @@ internal fun AppDrawerContent(
             Column(Modifier.fillMaxWidth().padding(horizontal = u.dp(46))) {
                 WallHints(
                     u = u,
+                    // owner, 2026-10-06: the section is the footer's filter, LT/RT and its word, at the far left
+                    filter = state.activeFilter.label,
+                    onNextFilter = { onFilterSelected(state.activeFilter.stepped(1, state.sections)) },
                     action = focused?.let(::actionLabel),
                     onAction = { focused?.let(onBandLaunch) },
                     onSearch = onOpenSearch,

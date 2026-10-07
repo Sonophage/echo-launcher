@@ -110,6 +110,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.scaleIn
 import com.echo.core.ui.design.MarkPose
 import com.echo.core.ui.design.drawEchoMark
+import com.echo.core.ui.design.drawEchoRing
+import com.echo.core.ui.design.echoRipples
 import java.util.Date
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.components.ChromeScrim
@@ -149,7 +151,7 @@ data class StripLiveActivity(val art: Any?, val title: String, val detail: Strin
 
 data class BatteryReading(val level: Int = 0, val charging: Boolean = false)
 
-// one reading for the strip's percentage and the battery line along the bottom edge
+// one reading for the strip's percentage and the battery ring round the profile orb
 @Composable
 fun rememberBatteryReading(): BatteryReading {
     val context = LocalContext.current
@@ -172,7 +174,6 @@ fun rememberBatteryReading(): BatteryReading {
     return reading
 }
 
-data class StripHints(val shoulder: Boolean = false)
 
 // the newest notification, for the right-hand island's peek
 data class NoticePeek(val postedAt: Long, val title: String, val detail: String?, val packageName: String?)
@@ -197,12 +198,9 @@ private fun cardLift(origin: TransformOrigin) =
 @Composable
 fun CrossbarStatusStrip(
     // the XMB's sort as a Recent-style row (owner, 2026-10-04): the mode labels and the active one
-    sortRow: Pair<List<String>, Int>? = null,
-    onSortPicked: (Int) -> Unit = {},
 
     live: StripLiveActivity? = null,
 
-    hints: StripHints = StripHints(),
 
     onLiveAreaTapped: (() -> Unit)? = null,
 
@@ -231,8 +229,8 @@ fun CrossbarStatusStrip(
 
     compact: Boolean = false,
 
-    // the island rests as its small orb, so the bar has room for a screen's own row (owner, 2026-10-04:
-    // the app drawer's sections); a tap on it does nothing, since the card's tap is a held launch
+    // the island rests as its small orb (the drawer and Search, owner 2026-10-04); a tap on it does nothing,
+    // since the card's tap is a held launch
     minimized: Boolean = false,
 
     modifier: Modifier = Modifier,
@@ -257,6 +255,9 @@ fun CrossbarStatusStrip(
     val density = LocalDensity.current
     val u = rememberStripUnits()
     val band = if (compact) StripHeight else stripBandHeight(u)
+    // the right orb and the clock sit where they sit on the crossbar, on every screen; a compact strip's band is
+    // shorter, and centring in it lifted the right orb (owner, 2026-10-06: it jumped up in Search)
+    val rowBand = stripBandHeight(u)
 
     val fallback = menuCursorEdge()
     val stage = live?.stage
@@ -298,7 +299,7 @@ fun CrossbarStatusStrip(
         // just under each orb (owner, 2026-10-05: closer to the icon). The left orb hangs 10 from the top; the
         // right one is centred in the band
         val cardTop = u.dp(10 + 44 + 2)
-        val noticeCardTop = band / 2 + u.dp(22 + 2)
+        val noticeCardTop = rowBand / 2 + u.dp(22 + 2)
         androidx.compose.animation.AnimatedVisibility(
             visible = islandMode == IslandMode.CARD,
             enter = fadeIn(tween(200)),
@@ -327,6 +328,18 @@ fun CrossbarStatusStrip(
                 )
             }
         }
+        // owner, 2026-10-06: the battery reading sits beside the left island, level with its orb; with no island it
+        // takes the orb's place
+        Text(
+            text       = "$batteryLevel%",
+            color      = if (batteryRingLow(batteryLevel, battery.charging)) LowBatteryTint else StripPrimary.copy(alpha = 0.7f),
+            fontSize   = u.sp(13),
+            fontWeight = FontWeight.Light,
+            maxLines   = 1,
+            modifier   = Modifier.align(Alignment.TopStart)
+                .padding(start = chromeGutter() + if (islandMode != IslandMode.NONE) u.dp(44 + 22) else 0.dp, top = u.dp(10))
+                .height(u.dp(44)).wrapContentHeight(Alignment.CenterVertically),
+        )
         androidx.compose.animation.AnimatedVisibility(
             visible = islandMode == IslandMode.CARD,
             enter = cardDrop(TransformOrigin(0f, 0f)),
@@ -352,24 +365,10 @@ fun CrossbarStatusStrip(
             }
         }
 
+        // a screen's own tab row (the panel's tabs, the drawer's sections); owner, 2026-10-06: the crossbar's
+        // filters and sorts are in the footer's left side now
         val centreSlot: @Composable (Boolean) -> Unit = { tight ->
-            Box(contentAlignment = Alignment.Center) {
-                when {
-                    centre != null -> centre.invoke(this, u, tight)
-                    else -> Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(u.dp(18)),
-                    ) {
-                        sortRow?.let { (labels, active) ->
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
-                                if (LocalPadPrompts.current) ControllerPrompt(GamepadAction.CHANGE_SORT, "", glyphSize = u.dp(22), spacing = 0.dp)
-                                StripSections(labels = labels, selected = active, onTapped = onSortPicked, u = u, shoulders = false)
-                            }
-                        }
-                        if (hints.shoulder) StripHint("LB  RB", u)
-                    }
-                }
-            }
+            Box(contentAlignment = Alignment.Center) { centre?.invoke(this, u, tight) }
         }
 
         // owner, 2026-10-05: the right-hand island peeks a new notification, as the left one shows what is live.
@@ -385,72 +384,44 @@ fun CrossbarStatusStrip(
         val peeking = noticeRows.takeIf { noticeCardOut && it.isNotEmpty() }
 
         val endGutter = chromeGutter(end = true)
-        val statusSlot: @Composable (Boolean) -> Unit = { date ->
-            Row(
-                modifier = Modifier.padding(end = endGutter),
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(u.dp(22)),
-            ) {
-                // kit status corner: battery and time, then the notification island at the far right
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(14))) {
-                    Text(
-                        text       = "$batteryLevel%",
-                        color      = StripPrimary.copy(alpha = 0.7f),
-                        fontSize   = u.sp(13),
-                        fontWeight = FontWeight.Light,
-                        maxLines   = 1,
-                    )
-                    Text(
-                        text       = timeString,
-                        color      = StripPrimary,
-                        fontSize   = u.sp(13),
-                        fontWeight = FontWeight.Light,
-                        maxLines   = 1,
-                    )
-                }
-                NoticeOrb(noticeCount, profileAvatar, islandGlow, u, onNoticeIslandPressed, connected = peeking != null)
+        // the notification island at the far right; owner, 2026-10-06: the clock is the bar's centre and the battery
+        // reading sits beside the left island
+        val statusSlot: @Composable () -> Unit = {
+            Box(Modifier.padding(end = endGutter)) {
+                NoticeOrb(noticeCount, profileAvatar, islandGlow, u, onNoticeIslandPressed, connected = peeking != null, battery = battery)
             }
+        }
+        val clockSlot: @Composable () -> Unit = {
+            Text(timeString, color = StripPrimary, fontSize = u.sp(13), fontWeight = FontWeight.Light, maxLines = 1)
         }
 
         // the card drops below the bar, so the bar only ever holds the orb
-        val islandWidth = if (live == null) 0.dp else u.dp(44) + chromeGutter()
         androidx.compose.animation.AnimatedVisibility(
             visible = peeking != null,
             enter = fadeIn(tween(200)),
             exit = fadeOut(tween(160)),
             modifier = Modifier.align(Alignment.TopEnd).padding(end = endGutter).wrapContentHeight(Alignment.Top, unbounded = true),
-        ) { IslandBridge(NoticeOrbFill, orbCentreY = band / 2, cardTop = noticeCardTop, end = true, u = u) }
+        ) { IslandBridge(NoticeOrbFill, orbCentreY = rowBand / 2, cardTop = noticeCardTop, end = true, u = u) }
+        // owner, 2026-10-06: the filters (the sections and sorts LT, RT and X walk) sit in their own row under the
+        // bar, at full width, and the clock takes the bar's centre
         SubcomposeLayout(
             Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .wrapContentHeight(Alignment.Top, unbounded = true)
-                .height(band),
+                .wrapContentHeight(Alignment.Top, unbounded = true),
         ) { constraints ->
             val loose = Constraints(maxWidth = constraints.maxWidth)
-            fun probe(key: String, content: @Composable () -> Unit) =
-                subcompose(key) { Box(Modifier.clearAndSetSemantics {}) { content() } }.first().measure(loose)
-            val full = probe("full") { centreSlot(false) }
-            val tight = probe("tight") { centreSlot(true) }
-            val dated = probe("dated") { statusSlot(!compact) }
-            val bare = probe("bare") { statusSlot(false) }
             val width = constraints.maxWidth
-            val height = constraints.maxHeight
-            val fit = stripFit(
-                width = width,
-                left = islandWidth.roundToPx(),
-                gap = u.dp(18).roundToPx(),
-                centre = full.width,
-                tightCentre = tight.width,
-                dated = dated.width,
-                bare = bare.width,
-                dateRoom = !u.square,
-            )
-            val centrePlaceable = subcompose("centre") { centreSlot(!fit.labels) }.first().measure(loose)
-            val statusPlaceable = subcompose("status") { statusSlot(fit.date && !compact) }.first().measure(loose)
-            layout(width, height) {
-                centrePlaceable.place((width - centrePlaceable.width) / 2, (height - centrePlaceable.height) / 2)
-                statusPlaceable.place(width - statusPlaceable.width, (height - statusPlaceable.height) / 2)
+            val bandPx = rowBand.roundToPx()
+            val centrePlaceable = subcompose("centre") { centreSlot(false) }.first().measure(loose)
+            val clockPlaceable = subcompose("clock") { clockSlot() }.first().measure(loose)
+            val statusPlaceable = subcompose("status") { statusSlot() }.first().measure(loose)
+            // tucked just under the clock (owner, 2026-10-06: a bit higher), clear of the orbs at the sides
+            val rowTop = bandPx - u.dp(20).roundToPx()
+            layout(width, maxOf(bandPx, rowTop + centrePlaceable.height)) {
+                clockPlaceable.place((width - clockPlaceable.width) / 2, (bandPx - clockPlaceable.height) / 2)
+                statusPlaceable.place(width - statusPlaceable.width, (bandPx - statusPlaceable.height) / 2)
+                centrePlaceable.place((width - centrePlaceable.width) / 2, rowTop)
             }
         }
 
@@ -472,22 +443,38 @@ fun CrossbarStatusStrip(
 // to the left of the ECHO mark; with none, the user's picture (the mark when there is none). The orb itself
 // stays uncoloured
 @Composable
-private fun NoticeOrb(count: Int, avatar: String?, accent: Color, u: DesignUnits, onTapped: () -> Unit, connected: Boolean = false) {
+private fun NoticeOrb(
+    count: Int,
+    avatar: String?,
+    accent: Color,
+    u: DesignUnits,
+    onTapped: () -> Unit,
+    connected: Boolean = false,
+    battery: BatteryReading = BatteryReading(),
+) {
+    val shimmer = rememberChargeShimmer(battery.charging)
     Row(
         Modifier
-            .clip(RoundedCornerShape(50))
-            .clickable(onClick = onTapped)
+            // no clip: the echo rings spread past the orb, so the press shows as an unbounded round ripple
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = androidx.compose.material3.ripple(bounded = false, radius = u.dp(28)),
+                onClick = onTapped,
+            )
             .semantics { contentDescription = countLabel(count, "notification") },
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(u.dp(8)),
+        // room for the echo rings between the count and the orb
+        horizontalArrangement = Arrangement.spacedBy(u.dp(18)),
     ) {
         if (count > 0) Text(count.toString(), color = accent, fontSize = u.sp(15), fontWeight = FontWeight.Bold, maxLines = 1)
         Box(
             Modifier
                 .size(u.dp(44))
                 // the same ring and inset as the left island's orb, so the two read as a pair; joined to its card,
-                // the ring gives way so the orb and the card are one shape
-                .then(if (connected) Modifier else Modifier.border(u.dp(2), Color.White.copy(alpha = 0.18f), CircleShape))
+                // the ring gives way so the orb and the card are one shape. owner, 2026-10-06: the ring is the battery,
+                // filled to the charge, glowing with a light running round it while it charges
+                .echoRipples(battery.charging && !connected, Color.White)
+                .then(if (connected) Modifier else Modifier.drawBehind { drawBatteryRing(battery, shimmer, u.dp(2).toPx()) })
                 .padding(u.dp(5))
                 .clip(CircleShape)
                 .background(NoticeOrbFill),
@@ -497,6 +484,10 @@ private fun NoticeOrb(count: Int, avatar: String?, accent: Color, u: DesignUnits
                 AsyncImage(avatar, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             } else {
                 Canvas(Modifier.fillMaxSize()) {
+                    // the mark glows with the ring while it charges
+                    if (battery.charging) drawCircle(
+                        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.10f + 0.18f * chargePulse(shimmer)), Color.Transparent)),
+                    )
                     drawEchoMark(MarkPose(cx = size.width / 2 / density, cy = size.height / 2 / density, size = size.width * 0.8f / density))
                 }
             }
@@ -505,6 +496,45 @@ private fun NoticeOrb(count: Int, avatar: String?, accent: Color, u: DesignUnits
 }
 
 private val NoticeOrbFill = Color(0xFF12151C)
+
+// the ring's arc, clockwise from the top, for a charge level
+internal fun batteryRingSweep(level: Int): Float = 360f * level.coerceIn(0, 100) / 100f
+
+// low and not charging: the ring turns red
+internal fun batteryRingLow(level: Int, charging: Boolean): Boolean = level <= 20 && !charging
+
+// 0 to 1 round the ring while charging, on the strip's stepped frame clock; 0 when not
+@Composable
+private fun rememberChargeShimmer(charging: Boolean): Float {
+    val travel by androidx.compose.runtime.produceState(0f, charging) {
+        value = 0f
+        if (!charging) return@produceState
+        while (true) {
+            androidx.compose.animation.core.withInfiniteAnimationFrameMillis { nowMs ->
+                value = (com.echo.core.ui.wave.steppedFrameMs(nowMs) % GLINT_PERIOD_MS) / GLINT_PERIOD_MS.toFloat()
+            }
+        }
+    }
+    return travel
+}
+
+// a slow swell, twice per lap of the shimmer
+private fun chargePulse(travel: Float): Float = 0.5f + 0.5f * kotlin.math.sin(travel * 4f * Math.PI.toFloat())
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBatteryRing(battery: BatteryReading, shimmer: Float, stroke: Float) {
+    val tint = if (batteryRingLow(battery.level, battery.charging)) LowBatteryTint else Color.White
+    drawEchoRing(battery.level / 100f, tint.copy(alpha = if (battery.charging) 0.9f else 0.75f), EchoRingTrack, stroke)
+    val sweep = batteryRingSweep(battery.level)
+    if (battery.charging && sweep > 0f) {
+        // the shimmer: a short bright run of light travelling the filled arc
+        val run = minOf(48f, sweep)
+        drawArc(Color.White, -90f + (sweep - run) * shimmer, run, false, Offset(stroke / 2f, stroke / 2f),
+            androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke), style = Stroke(stroke * 1.6f, cap = StrokeCap.Round))
+    }
+}
+
+// the orbs' shared track, so the left and the right rings match
+private val EchoRingTrack = Color.White.copy(alpha = 0.15f)
 
 private fun islandCardFill(tint: Color): Color = lerp(tint, Color.Black, 0.35f)
 
@@ -768,9 +798,11 @@ private fun RestOrb(
         modifier
             .size(u.dp(44))
             .echoPulse(presses, glow)
+            // owner, 2026-10-06: the two orbs match: the brand ring, and the echo spreading while music plays
+            .echoRipples(music?.playing == true, glow)
             .clip(CircleShape)
             .clickable(onClickLabel = activity.title) { presses++; onTapped() }
-            .holdRing(progress ?: 0f, glow, if (music != null) glow.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.18f), u.dp(2))
+            .drawBehind { drawEchoRing(progress ?: 0f, glow, EchoRingTrack, u.dp(2).toPx()) }
             .padding(u.dp(5))
             .clip(CircleShape)
             .background(Brush.linearGradient(listOf(tint, lerp(tint, Color.Black, 0.6f)))),
@@ -808,31 +840,30 @@ internal fun StripSections(
     icon: (@Composable (index: Int, tint: Color, modifier: Modifier) -> Unit)? = null,
 ) {
     val pad = shoulders && LocalPadPrompts.current
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(if (icon != null) 18 else 10))) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(if (icon != null) 14 else 10))) {
         if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = u.dp(22), spacing = 0.dp)
         labels.forEachIndexed { i, label ->
             val on = i == selected
             val tint = Color.White.copy(alpha = if (on) 1f else 0.5f)
-            Column(
-                Modifier
-                    .clip(RoundedCornerShape(u.dp(8)))
-                    .clickable { onTapped(i) }
-                    .padding(horizontal = u.dp(6), vertical = u.dp(4))
-                    .semantics { contentDescription = label },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(u.dp(if (icon != null) 9 else 6)),
-            ) {
-                icon?.invoke(i, tint, Modifier.size(u.dp(22)))
-                if (sectionLabelShown(icon != null)) {
-                    Text(
-                        label,
-                        color = tint,
-                        fontSize = u.sp(14),
-                        fontWeight = if (on) FontWeight.Medium else FontWeight.Light,
-                        maxLines = 1,
-                    )
+            val word: @Composable () -> Unit = {
+                Text(label, color = tint, fontSize = u.sp(14), fontWeight = if (on) FontWeight.Medium else FontWeight.Light, maxLines = 1)
+            }
+            val tap = Modifier
+                .clip(RoundedCornerShape(u.dp(8)))
+                .clickable { onTapped(i) }
+                .padding(horizontal = u.dp(6), vertical = u.dp(4))
+                .semantics { contentDescription = label }
+            if (icon != null) {
+                // owner, 2026-10-06: an icon for every filter, and the chosen one followed by its word
+                Row(tap, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(8))) {
+                    icon(i, tint, Modifier.size(u.dp(22)))
+                    if (sectionLabelShown(hasIcon = true, selected = on)) word()
                 }
-                EchoDot(on, u)
+            } else {
+                Column(tap, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                    word()
+                    EchoDot(on, u)
+                }
             }
         }
         if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(22), spacing = 0.dp)
@@ -854,71 +885,16 @@ private fun EchoDot(on: Boolean, u: DesignUnits) {
     )
 }
 
-internal data class StripFit(val labels: Boolean, val date: Boolean)
 
-internal fun stripFit(width: Int, left: Int, gap: Int, centre: Int, tightCentre: Int, dated: Int, bare: Int, dateRoom: Boolean): StripFit {
-    fun fits(fit: StripFit): Boolean =
-        (if (fit.labels) centre else tightCentre) / 2 + gap <= width / 2 - maxOf(left, if (fit.date) dated else bare)
-    return listOf(StripFit(true, true), StripFit(true, false), StripFit(false, true), StripFit(false, false))
-        .filter { dateRoom || !it.date }
-        .firstOrNull(::fits) ?: StripFit(labels = false, date = false)
-}
+// a row of words names every tab; a row of icons names only the chosen one (owner, 2026-10-06)
+internal fun sectionLabelShown(hasIcon: Boolean, selected: Boolean): Boolean = !hasIcon || selected
 
-internal fun sectionLabelShown(hasIcon: Boolean): Boolean = !hasIcon
-
-@Composable
-internal fun BatteryLine(level: Int, charging: Boolean, glint: Boolean, modifier: Modifier = Modifier) {
-    val fill = (level / 100f).coerceIn(0f, 1f)
-    val travel by androidx.compose.runtime.produceState(0f, charging, glint) {
-        if (!charging || !glint) return@produceState
-        while (true) {
-            androidx.compose.animation.core.withInfiniteAnimationFrameMillis { nowMs ->
-                value = (com.echo.core.ui.wave.steppedFrameMs(nowMs) % GLINT_PERIOD_MS) / GLINT_PERIOD_MS.toFloat()
-            }
-        }
-    }
-    val low = level <= 20 && !charging
-    Box(
-        modifier
-            .fillMaxHeight()
-            .width(BatteryLineHeight)
-            .background(Color.White.copy(alpha = 0.10f)),
-    ) {
-        Box(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxHeight(fill)
-                .width(BatteryLineHeight)
-                .drawWithCache {
-                    val base = if (low) LowBatteryTint else Color.White
-                    val brush = if (!charging) {
-                        SolidColor(base)
-                    } else {
-                        // the glint climbs from the bottom while charging
-                        val glint = size.height * 0.22f
-                        val head = size.height - (travel * (size.height + glint * 2f) - glint)
-                        Brush.linearGradient(
-                            colors = listOf(base.copy(alpha = 0.55f), Color.White, base.copy(alpha = 0.55f)),
-                            start = Offset(0f, head),
-                            end = Offset(0f, head - glint),
-                        )
-                    }
-                    onDrawBehind { drawRect(brush) }
-                },
-        )
-    }
-}
-
-@Composable
-private fun StripHint(text: String, u: DesignUnits) {
-    Text(text, color = StripMuted, fontSize = u.sp(10), fontWeight = FontWeight.Medium)
-}
 
 private enum class IslandMode { NONE, ORB, CARD }
 
-private val BatteryLineHeight = 2.dp
 
-private const val GLINT_PERIOD_MS = 2400L
+// one lap of the charging light round the battery ring, as slow as the echo rings (owner, 2026-10-06)
+private const val GLINT_PERIOD_MS = com.echo.core.ui.design.ECHO_RIPPLE_PERIOD_MS
 
 internal val StripHeight: Dp
     @Composable @androidx.compose.runtime.ReadOnlyComposable get() = StatusStripHeight

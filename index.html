@@ -454,8 +454,8 @@ const CONTROLS = [
   { action: 'Options', pad: ['@y'], touch: ['long_press'], shot: 'game-context-menu', text: 'Y opens a thing’s options on a rail at the right edge, with the art blurred behind it. Long-press on touch. On the game still running, hold Y to resume it.' },
   { action: 'App Drawer', pad: ['bumper_left'], touchPill: 'Apps', shot: 'app-drawer', text: 'LB, on any screen, opens the App Drawer: every app as a VHS case, with a spine saying what it is. LB again closes it.' },
   { action: 'Search', pad: ['bumper_right'], touchPill: 'Search', shot: 'search', text: 'RB, on any screen, searches games, apps, music, video, photos and books together. RB again closes it.' },
-  { action: 'Sort', pad: ['@x'], touch: [], shot: 'game-list', text: 'X sorts a list, or runs the screen’s own X action: Title, Recently Played or Date Added.' },
-  { action: 'Categories and tabs', pad: ['trigger_left', 'trigger_right'], touch: ['swipe_left', 'swipe_right'], shot: 'col-shelves', text: 'LT and RT move between categories, tabs, sections and filters.' },
+  { action: 'Filters and sorts', pad: ['trigger_left', 'trigger_right'], touch: ['tap'], shot: 'game-list', text: 'LT and RT step the filters and sorts in the footer’s left side (Title, Recently Played or Date Added), and the tabs of a screen.' },
+  { action: 'Details', pad: ['@x'], touch: [], shot: 'game-hover-panel', text: 'X pages the focused game’s details beside it, or runs the screen’s own X action.' },
   { action: 'Now playing', pad: ['start'], touchPill: 'Tap island', shot: 'last-played', text: 'Start takes the controller to the island at the top left: what is playing, or what you used last. Start again gives it back.' },
   { action: 'Notifications: the top panel', pad: ['select'], touchPill: 'Tap island', shot: 'card-notifications', text: 'Select first shows the newest notification as a card; a second press opens the panel: Notifications, Profile, Quick settings, Libraries and Settings. Hold Select, or press Guide, to go Home from any screen.' }
 ];

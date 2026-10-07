@@ -258,13 +258,22 @@ internal fun WallInfo(
 internal fun actionLabel(app: InstalledApp): String = if (app.isGame || app.gameId != null) "Play" else "Open"
 
 @Composable
-internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, onSearch: () -> Unit, onBack: () -> Unit) {
+internal fun WallHints(
+    u: DesignUnits,
+    action: String?,
+    onAction: () -> Unit,
+    onSearch: () -> Unit,
+    onBack: () -> Unit,
+    filter: String? = null,
+    onNextFilter: () -> Unit = {},
+) {
     val pad = LocalPadPrompts.current
     Row(
         Modifier.fillMaxWidth().height(u.dp(72)),
         horizontalArrangement = Arrangement.spacedBy(u.dp(if (pad) 28 else 12)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        filter?.let { com.echo.core.ui.components.TriggerFilter(it, onTapped = onNextFilter) }
         if (pad && action != null) Hint(listOf(GamepadAction.SELECT), action, u, onAction)
         // the tab row already shows LT/RT
         Hint(listOf(GamepadAction.NEXT_PAGE), "Search", u, onSearch)

@@ -118,7 +118,7 @@ fun ControllerPromptGlyphs(
                 )
             }
         }
-        Text(
+        if (label.isNotEmpty()) Text(
             text = label,
             color = labelColor,
             style = labelStyle,
@@ -131,6 +131,8 @@ data class ControllerPromptItem(
     val actions: List<GamepadAction>,
     val label: String,
     val fixedIcons: List<ControllerIcon>? = null,
+    // shown in place of the label, which stays the prompt's spoken name (owner, 2026-10-06: LB and RB)
+    val icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
 ) {
     constructor(action: GamepadAction, label: String) : this(listOf(action), label)
 

@@ -1109,16 +1109,10 @@ fun CrossbarShell(
 
             val crossbarContext = uiState.stripShowsCrossbarContext
 
-            var drawerTabs by remember { mutableStateOf<AppFilter?>(null) }
-            var drawerTabPick by remember { mutableStateOf<AppFilter?>(null) }
-            var drawerSections by remember { mutableStateOf(AppFilter.entries.toList()) }
             val panelPull = rememberPanelPull(notificationsOpen)
             val battery = rememberBatteryReading()
             CompositionLocalProvider(LocalDensity provides baseDensity) {
             CrossbarStatusStrip(
-                sortRow = uiState.sortRow()?.takeIf { crossbarContext && !uiState.onLastPlayedHome }
-                    ?.let { (modes, active) -> modes.map { it.label } to modes.indexOf(active) },
-                onSortPicked = { i -> uiState.sortRow()?.first?.getOrNull(i)?.let(onSortPicked) },
                 live = liveActivity.takeIf { !notificationsOpen && uiState.topSettingsScreen == null },
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
@@ -1144,50 +1138,24 @@ fun CrossbarShell(
                 onNoticeIslandPressed = onNoticeIslandPressed,
                 onNewNotice = onNewNotice,
 
-                hints = StripHints(
-                    shoulder = uiState.panelStripOpen && crossbarContext,
-                ),
-
-                // owner, 2026-10-04: the XMB already shows its categories, so the centre carries only that
-                // category's own filter (Last Played's, through centre) or its sort
+                // owner, 2026-10-06: the strip's centre is only a screen's own tab row; the crossbar's filters and sorts
+                // are in the footer
 
                 compact = !crossbarContext,
                 // Search has its own field across the top, so the island rests as its orb there too (owner, 2026-10-05)
                 minimized = uiState.topDrawerFilter != null || uiState.topSearch != null,
                 battery = battery,
 
-                centre = if (notificationsOpen) {
-                    { u, tight ->
-                        PanelTabsRow(uiState.panelTab, onPanelTabTapped, u, tight, Modifier.align(Alignment.Center))
-                    }
-                } else if (uiState.topDrawerFilter != null && drawerTabs != null) {
-                    { u, _ ->
-                        DrawerSectionRow(drawerTabs!!, drawerSections, u, Modifier.align(Alignment.Center)) { drawerTabPick = it }
-                    }
-                } else if (uiState.onLastPlayedHome && crossbarContext) {
-                    { u, _ ->
-                        RecentFilterRow(
-                            filter = uiState.recentFilter,
-                            u = u,
-                            modifier = Modifier.align(Alignment.Center),
-                            onFilterTapped = onRecentFilterTapped,
-                            filters = uiState.recentFilters,
-                        )
-                    }
-                } else null,
+                // owner, 2026-10-06: the panel's tabs and the drawer's sections are in their footers now, as LT/RT and
+                // the current one's word
+                centre = null,
                 // owner, 2026-10-05: the panel opens by a tap on the strip, not a slide down; a slide up still closes it
                 modifier = Modifier.align(Alignment.TopCenter).zIndex(aboveContextRail),
             )
             }
 
-            // owner, 2026-10-05: the battery line stands up the left edge, filling from the bottom (it ran along
-            // the bottom edge, under the footer)
-            BatteryLine(
-                level = battery.level,
-                charging = battery.charging,
-                glint = uiState.waveShown,
-                modifier = Modifier.align(Alignment.CenterStart).zIndex(aboveContextRail + 1f),
-            )
+            // owner, 2026-10-06: the battery is the ring round the profile orb, at the strip's right; the line that
+            // stood up the left edge is gone
 
             val panelStage = uiState.panelStage()
             CompositionLocalProvider(LocalBackdropWave provides homeWave) {
@@ -1275,6 +1243,8 @@ fun CrossbarShell(
                         holding = hintItem != null && uiState.launchHold == hintItem.id,
                         resumeHolding = uiState.resumableFocus()?.let { uiState.launchHold == resumeHoldId(it.id) } == true,
                         onResume = onResumeTapped,
+                        // owner, 2026-10-06: the filters sit at the footer's left, after Home and Back, and LT/RT step them
+                        filters = crossbarFooterFilters(uiState, onRecentFilterTapped, onSortPicked, onPanelTabTapped),
                     )
                 }
             }
@@ -1345,9 +1315,6 @@ fun CrossbarShell(
                         onLaunchRom = onLaunchRomFromDrawer,
                         onGameMenu = onGameMenuFromDrawer,
                         onOpenAppSearch = onOpenAppSearch,
-                        onTabsShown = { active, sections -> drawerTabs = active; drawerSections = sections },
-                        tabPick = drawerTabPick,
-                        onTabPickConsumed = { drawerTabPick = null },
                         onOpenPermissions = { onOpenSettingsScreen("settings_permissions") },
                         modifier = Modifier.fillMaxSize(),
                     )
