@@ -2181,9 +2181,14 @@ class CrossbarViewModel @Inject constructor(
     }
 
     internal fun cycleSort() {
+        stepSort(+1)
+    }
+
+    // LT/RT walk the sorts either way, wrapping
+    internal fun stepSort(delta: Int) {
         val cycle = activeSortContext() ?: return
         val current = _uiState.value.sortModeFor(cycle)
-        applySort(cycle, cycle[(cycle.indexOf(current).coerceAtLeast(0) + 1) % cycle.size])
+        applySort(cycle, cycle[(cycle.indexOf(current).coerceAtLeast(0) + delta).mod(cycle.size)])
     }
 
     // a tap on the XMB's sort row picks that mode outright
@@ -2938,8 +2943,9 @@ class CrossbarViewModel @Inject constructor(
             GamepadAction.PREV_PAGE, GamepadAction.NEXT_PAGE, GamepadAction.HOME, GamepadAction.OPEN_NOTIFICATIONS -> Unit
             GamepadAction.OPEN_ISLAND   -> focusOrb(state)
 
+            // owner, 2026-10-06: LT/RT sort, and X pages the focused item's details panel
             GamepadAction.CHANGE_SORT -> when {
-                !state.onLastPlayedHome -> cycleSort()
+                !state.onLastPlayedHome -> stepHoverPanelPage(+1)
                 state.recentRailVisible -> state.focusedItem?.let(recents::removeFromRecent)
                 else -> state.focusedItem?.takeIf { recentKind(it) == RecentKind.GAME || recentKind(it) == RecentKind.APP }
                     ?.let(gameDetail::onOpenGameInfo)
@@ -2947,8 +2953,14 @@ class CrossbarViewModel @Inject constructor(
 
             GamepadAction.OPEN_SEARCH -> librarySearch.openSearch(SearchScope.ALL)
 
-            GamepadAction.PREV_CATEGORY -> if (state.onLastPlayedHome) recents.stepRecentFilter(-1) else stepHoverPanelPage(-1)
-            GamepadAction.NEXT_CATEGORY -> if (state.onLastPlayedHome) recents.stepRecentFilter(+1) else stepHoverPanelPage(+1)
+            GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY -> {
+                val step = if (action == GamepadAction.NEXT_CATEGORY) +1 else -1
+                when {
+                    state.onLastPlayedHome -> recents.stepRecentFilter(step)
+                    activeSortContext() != null -> stepSort(step)
+                    else -> stepHoverPanelPage(step)
+                }
+            }
         }
     }
 
