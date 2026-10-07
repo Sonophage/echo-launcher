@@ -204,7 +204,7 @@ fun CrossbarNotificationBar(
                     QuickTiles(it, quickFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(200) + PanelTabRowDrop))
                 }
                 PanelTab.LIBRARIES -> quick?.let {
-                    LibraryTiles(it.chips, chipFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(180) + PanelTabRowDrop))
+                    LibraryTiles(it.chips, chipFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(90) + PanelTabRowDrop))
                 }
                 PanelTab.SETTINGS -> SettingsTiles(settingFocus, u, onSettingTapped,
                     Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(110) + PanelTabRowDrop))
