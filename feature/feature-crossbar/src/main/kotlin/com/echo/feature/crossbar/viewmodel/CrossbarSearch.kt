@@ -109,6 +109,11 @@ class CrossbarSearch(
     private fun rebuildSearchRows() {
         val state = uiState.value.search ?: return
         val q = state.query
+        if (state.scope == SearchScope.WEB) {
+            val row = quickSearchRow(q) ?: searchNoticeItem(state.scope.emptyTitle, state.scope.emptyHint)
+            uiState.update { it.copy(search = it.search?.copy(rows = listOf(row), selectedIndex = 0)) }
+            return
+        }
         val libraryCovers = com.echo.core.domain.model.appCovers(searchGames)
         val found = buildList {
             searchApps.filter { matchesSearch(q, it.label, it.packageName) }
@@ -209,6 +214,11 @@ class CrossbarSearch(
         val state = uiState.value.search ?: return
         val row = state.rows.getOrNull(index) ?: return
         if (row.type == CrossbarItemType.EMPTY) return
+        if (state.scope == SearchScope.WEB) {
+            closeSearch()
+            vm.runQuickSearch(state.query)
+            return
+        }
         uiState.update { it.copy(search = it.search?.copy(selectedIndex = index)) }
 
         val appPackage = row.packageName?.takeIf { row.isInstalledApp }
@@ -236,7 +246,7 @@ class CrossbarSearch(
 
     // the banner's Options (owner, 2026-10-05): the row's own menu, drawn over the search
     fun onSearchOptionsAt(index: Int) {
-        val row = uiState.value.search?.rows?.getOrNull(index)?.takeUnless { it.type == CrossbarItemType.EMPTY } ?: return
+        val row = uiState.value.search?.takeUnless { it.scope == SearchScope.WEB }?.rows?.getOrNull(index)?.takeUnless { it.type == CrossbarItemType.EMPTY } ?: return
         uiState.update { it.copy(search = it.search?.copy(selectedIndex = index)) }
         vm.openContextMenuFor(row)
     }

@@ -786,8 +786,8 @@ Each column also lists its apps. Add more with its **Add** row.
   Each result says what it is. Opening one goes to its column and opens it: a game or app
   launches, a video or song plays, and a photo or book opens.
 - The **Search** row at the end of Game, Music, Video, Photo and Library searches only that library.
-- **Quick Search** in Network searches the web in your own browser, or opens an address if you
-  type one.
+- **Quick Search** in Network opens the Search screen for the web: type, then **A** or Enter
+  searches in your own browser, or opens an address if you typed one.
 
 ### Look and Controls
 

@@ -151,8 +151,6 @@ class CrossbarGames(
     fun onConfirmCollectionName(name: String) {
         val dialog = uiState.value.collectionNameDialog ?: return
         uiState.update { it.copy(collectionNameDialog = null) }
-        if (dialog.quickSearch) { vm.runQuickSearch(name); return }
-
         if (dialog.editTitleGameId != null) {
             scope.launch {
                 vm.gameRepository.updateUserTitleOverride(dialog.editTitleGameId, name.trim().ifBlank { null })

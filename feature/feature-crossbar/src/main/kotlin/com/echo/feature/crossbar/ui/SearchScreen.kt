@@ -56,6 +56,7 @@ import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Games
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material3.Icon
@@ -90,6 +91,7 @@ import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.image.rememberArtworkModel
 import com.echo.core.ui.image.rememberBlurSourceModel
 import com.echo.core.ui.theme.deriveStorefrontColors
+import com.echo.feature.crossbar.viewmodel.SearchScope
 import com.echo.feature.crossbar.viewmodel.SearchState
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarItemType
@@ -163,7 +165,8 @@ fun SearchScreen(
                     placeholder = state.scope.label,
                     onActivate = {},
                     onQueryChange = onQueryChange,
-                    onDone = {},
+                    // Quick Search runs on the keyboard's Enter too
+                    onDone = { if (state.scope == SearchScope.WEB && focused != null) onActivateAt(state.selectedIndex) },
                     colors = deriveStorefrontColors().copy(
                         searchField = Color.Black.copy(alpha = 0.45f),
                         searchBorder = Color.White.copy(alpha = 0.3f),
@@ -180,7 +183,7 @@ fun SearchScreen(
             when {
                 empty != null -> Box(Modifier.padding(horizontal = u.dp(64))) { EmptyNotice(empty, u) }
                 focused != null -> {
-                    if (!imeUp) Info(focused, u, onOpen = { onActivateAt(state.selectedIndex) }, onOptions = { onOptionsAt(state.selectedIndex) })
+                    if (!imeUp) Info(focused, u, onOpen = { onActivateAt(state.selectedIndex) }, onOptions = { onOptionsAt(state.selectedIndex) }.takeIf { state.scope != SearchScope.WEB })
                     Shelf(state, u, onActivateAt, onFocusAt, Modifier.weight(1f).fillMaxWidth())
                 }
             }
@@ -190,10 +193,10 @@ fun SearchScreen(
             EchoHintBar(
                 // owner, 2026-10-06: the kind filter is the footer's, LT/RT and the current kind with its count
                 filter = searchKindFilter(state)?.let { (label, next) -> { TriggerFilter(label) { onKindPicked(next) } } },
-                items = listOf(
+                items = listOfNotNull(
                     ControllerPromptItem(GamepadAction.BACK, "Close"),
                     ControllerPromptItem(GamepadAction.SELECT, "Open"),
-                    ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
+                    ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options").takeIf { state.scope != SearchScope.WEB },
                 ),
                 modifier = Modifier.align(Alignment.BottomCenter),
                 primary = focused?.let { HintAction(GamepadAction.SELECT, primaryVerbFor(it) ?: "Open", listOfNotNull(it.title, it.subtitle).filter { t -> t.isNotBlank() }.joinToString(" · ")) },
@@ -224,7 +227,7 @@ internal fun searchKindFilter(state: SearchState): Pair<String, SearchKind?>? {
 // what the selected result is: its kind, title, a pill of facts and when it was last opened on the left; what is
 // known about it and its buttons on the right
 @Composable
-private fun Info(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOptions: () -> Unit) {
+private fun Info(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOptions: (() -> Unit)?) {
     val (kind, detail) = kindAndDetail(row)
     Row(Modifier.fillMaxWidth().padding(horizontal = u.dp(60)), horizontalArrangement = Arrangement.spacedBy(u.dp(52))) {
         Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
@@ -248,7 +251,7 @@ private fun Info(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOption
             }
             Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
                 PanelButton(GamepadAction.SELECT, primaryVerbFor(row) ?: "Open", u, onClick = onOpen)
-                PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = onOptions)
+                onOptions?.let { PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = it) }
             }
         }
     }
@@ -432,6 +435,7 @@ private fun kindGlyph(row: CrossbarItem): ImageVector = when (row.type) {
     CrossbarItemType.PHOTO_FILE -> Icons.Outlined.Image
     CrossbarItemType.LIBRARY_BOOK -> Icons.AutoMirrored.Outlined.MenuBook
     CrossbarItemType.MUSIC_TRACK -> Icons.Outlined.MusicNote
+    CrossbarItemType.SEARCH -> Icons.Outlined.Language
     else -> if (row.isInstalledApp) Icons.Outlined.Apps else Icons.Outlined.Games
 }
 

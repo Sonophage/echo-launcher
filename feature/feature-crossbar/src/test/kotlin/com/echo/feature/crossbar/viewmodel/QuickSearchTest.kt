@@ -38,4 +38,12 @@ class QuickSearchTest {
         assertEquals(QuickSearchAction.None, quickSearchActionFor("   "))
         assertEquals(QuickSearchAction.None, quickSearchActionFor("\t\n"))
     }
+
+    // owner, 2026-10-07: Quick Search is the Search screen, its one result says what A will do
+    @Test
+    fun `the one result says whether A searches or opens, and there is none until something is typed`() {
+        assertEquals(null, quickSearchRow("  "))
+        assertEquals("cave story" to "Web  ·  Search the web", quickSearchRow("cave story")?.let { it.title to it.subtitle })
+        assertEquals("https://example.com" to "Web  ·  Open in your browser", quickSearchRow("example.com")?.let { it.title to it.subtitle })
+    }
 }

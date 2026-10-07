@@ -186,8 +186,6 @@ data class CollectionNameDialogState(
 
     val editNoteGameId: Long? = null,
 
-    val quickSearch: Boolean = false,
-
     val renameCardPlatformId: String? = null,
 
     val renameProfile: Boolean = false,
@@ -3982,14 +3980,7 @@ class CrossbarViewModel @Inject constructor(
                 return
             }
             QUICK_SEARCH_ITEM_ID -> {
-                _uiState.update {
-                    it.copy(collectionNameDialog = CollectionNameDialogState(
-                        title = "Quick Search",
-                        quickSearch = true,
-                        placeholder = "Search the web, or type an address",
-                        confirmLabel = "Search",
-                    ))
-                }
+                librarySearch.openSearch(SearchScope.WEB)
                 return
             }
             SEARCH_ITEM_ID -> {

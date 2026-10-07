@@ -38,6 +38,11 @@ enum class SearchScope(
         "Search Apps", "Installed apps and their package names",
         "No apps yet", "Nothing is installed that can be launched",
     ),
+    // Network's Quick Search: the web, not the libraries
+    WEB(
+        "Quick Search", "Search the web, or type an address",
+        "Type to search", "Search the web, or type an address",
+    ),
 }
 
 // owner, 2026-10-05: Search finds apps, plus each library whose column is on the crossbar, and its hint

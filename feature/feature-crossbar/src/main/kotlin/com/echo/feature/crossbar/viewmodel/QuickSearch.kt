@@ -28,3 +28,14 @@ private fun looksLikeHost(text: String): Boolean {
     val tld = labels.last()
     return tld.length >= 2 && tld.all { it.isLetter() }
 }
+
+// Quick Search's one result on the Search screen (owner, 2026-10-07: styled as Search, not a dialog);
+// null until something is typed
+internal fun quickSearchRow(raw: String): CrossbarItem? {
+    val (title, detail) = when (val action = quickSearchActionFor(raw)) {
+        QuickSearchAction.None -> return null
+        is QuickSearchAction.Open -> action.url to "Open in your browser"
+        is QuickSearchAction.Search -> action.query to "Search the web"
+    }
+    return CrossbarItem(id = CrossbarViewModel.QUICK_SEARCH_ITEM_ID, title = title, subtitle = "Web  ·  $detail", type = CrossbarItemType.SEARCH)
+}
