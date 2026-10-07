@@ -287,7 +287,9 @@ fun CrossbarStatusStrip(
         val islandMode = when {
             live == null -> IslandMode.NONE
             minimized -> IslandMode.ORB
-            orbLevel == 0 && !compact -> IslandMode.ORB
+            // at rest it is the orb on every screen: over Game Info or the achievements the card covered the screen
+            // (owner, 2026-10-06)
+            orbLevel == 0 -> IslandMode.ORB
             else -> IslandMode.CARD
         }
         // owner, 2026-10-05: the orb stays in the bar, and the card drops below the bar from it, as the
