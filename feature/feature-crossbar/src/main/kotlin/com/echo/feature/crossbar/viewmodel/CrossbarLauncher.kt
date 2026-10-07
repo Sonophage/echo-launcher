@@ -366,10 +366,19 @@ class CrossbarLauncher(
         uiState.update { it.copy(showBootSequence = false, bootSkipRequested = false) }
     }
 
+    // owner, 2026-10-07: the boot sound plays to its end, past the 3.5 s animation; a skip still cuts it
+    fun onBootSoundDue() {
+        uiState.update { if (it.bootSkipRequested) it else it.copy(bootSoundPlaying = true) }
+    }
+
+    fun onBootSoundEnded() {
+        uiState.update { it.copy(bootSoundPlaying = false) }
+    }
+
     // the overlay runs the animation's exit from this frame and then calls onBootSequenceComplete
     internal fun onBootButton(action: GamepadAction, state: CrossbarUiState) {
         if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
-            uiState.update { it.copy(bootSkipRequested = true) }
+            uiState.update { it.copy(bootSkipRequested = true, bootSoundPlaying = false) }
         }
     }
 

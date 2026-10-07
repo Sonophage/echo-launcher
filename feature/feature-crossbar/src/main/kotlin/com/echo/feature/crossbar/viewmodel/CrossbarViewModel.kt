@@ -518,6 +518,9 @@ data class CrossbarUiState(
     val bootVideoPath: String? = null,
     val bootAudioPath: String? = null,
 
+    // the boot sound is playing; it can run on after the animation closes
+    val bootSoundPlaying: Boolean = false,
+
     val activeGameBoot: com.echo.feature.launcher.GameBootRequest? = null,
 
     val gameBootIsPreview: Boolean = false,
@@ -858,7 +861,7 @@ data class CrossbarUiState(
 
 // the boot sequence, the launch disc or GameBoot is on screen, with its own sound; the menu music waits for it
 val CrossbarUiState.ceremonyPlaying: Boolean
-    get() = showBootSequence || discCeremony != null || activeGameBoot != null
+    get() = showBootSequence || bootSoundPlaying || discCeremony != null || activeGameBoot != null
 
 data class DiscCeremonyState(val art: Any?, val style: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.DISC)
 

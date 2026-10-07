@@ -11,6 +11,8 @@ class CeremonySoundTest {
         assertFalse(CrossbarUiState(showBootSequence = false).ceremonyPlaying)
         assertTrue(CrossbarUiState(showBootSequence = true).ceremonyPlaying)
         assertTrue(CrossbarUiState(showBootSequence = false, discCeremony = DiscCeremonyState(art = null)).ceremonyPlaying)
+        // owner, 2026-10-07: the boot sound runs on after the animation closes, and the music still waits for it
+        assertTrue(CrossbarUiState(showBootSequence = false, bootSoundPlaying = true).ceremonyPlaying)
         assertTrue(CrossbarUiState(showBootSequence = false, activeGameBoot = com.echo.feature.launcher.GameBootRequest(gameTitle = "Skyrim")).ceremonyPlaying)
     }
 }

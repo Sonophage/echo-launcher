@@ -241,6 +241,8 @@ fun CrossbarShellContainer(
         onPlatformLongPress = viewModel::onPlatformLongPress,
         onUserInteraction = viewModel::onUserInteraction,
         onBootComplete = viewModel.launching::onBootSequenceComplete,
+        onBootSoundDue = viewModel.launching::onBootSoundDue,
+        onBootSoundEnded = viewModel.launching::onBootSoundEnded,
         onSettingsLongPress = onSettingsLongPress,
 
         onCloseSettingsScreen = viewModel::onSettingsBack,
@@ -427,6 +429,8 @@ fun CrossbarShell(
     onPlatformLongPress: (Int) -> Unit = {},
     onUserInteraction: () -> Unit = {},
     onBootComplete: () -> Unit = {},
+    onBootSoundDue: () -> Unit = {},
+    onBootSoundEnded: () -> Unit = {},
     onSettingsLongPress: () -> Unit = {},
     onCloseSettingsScreen: () -> Unit = {},
     onOpenSettingsScreen: (String) -> Unit = {},
@@ -1189,12 +1193,20 @@ fun CrossbarShell(
                         onComplete = onBootComplete,
                         bootVideoPath = uiState.bootVideoPath,
                         bootAudioPath = uiState.bootAudioPath,
+                        onSoundDue = onBootSoundDue,
                         skipRequested = uiState.bootSkipRequested,
                         waveStyle = uiState.waveStyle,
                         waveTint = waveColorFor(rememberWaveAccent(uiState)),
                     )
                 } else {
                     Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                }
+            }
+
+            // outside the overlay, so a boot sound longer than the animation plays out over the home screen
+            uiState.bootAudioPath?.let { path ->
+                if (uiState.bootSoundPlaying) {
+                    OneShotAudioLayer(path = path, clipEndMs = com.echo.themekit.UiMediaLimits.BOOT_MAX_MS, onFinished = onBootSoundEnded)
                 }
             }
 

@@ -37,6 +37,8 @@ fun BootSequenceOverlay(
     modifier: Modifier = Modifier,
     bootVideoPath: String? = null,
     bootAudioPath: String? = null,
+    // the boot sound is due; the shell plays it, so it outlives this overlay
+    onSoundDue: () -> Unit = {},
     skipRequested: Boolean = false,
     waveStyle: com.echo.core.ui.wave.WaveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
     waveTint: Color = Color.White,
@@ -105,9 +107,11 @@ fun BootSequenceOverlay(
 
         if (bootAudioPath != null) {
             // with the animation, the sound starts with the first ripple
-            var soundDue by remember(useLogoAnimation) { mutableStateOf(!useLogoAnimation) }
-            LaunchedEffect(useLogoAnimation) { if (useLogoAnimation) { delay(BootRipple.SOUND_MS); soundDue = true } }
-            if (soundDue && skipAt == null) OneShotAudioLayer(path = bootAudioPath, clipEndMs = UiMediaLimits.BOOT_MAX_MS)
+            val soundDue by rememberUpdatedState(onSoundDue)
+            LaunchedEffect(useLogoAnimation) {
+                if (useLogoAnimation) delay(BootRipple.SOUND_MS)
+                if (skipAt == null) soundDue()
+            }
         }
     }
 }
