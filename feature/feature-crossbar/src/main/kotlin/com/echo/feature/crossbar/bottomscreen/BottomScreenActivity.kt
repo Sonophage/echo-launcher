@@ -44,7 +44,7 @@ class BottomScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // touch only: it never takes the controller from the top screen
-        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        takeKeys(false)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
@@ -75,6 +75,7 @@ class BottomScreenActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         link.attach(true)
+        claimKeyboard()
     }
 
     // Android moves key focus to the display an activity starts on, and this window takes no keys, so
@@ -82,7 +83,32 @@ class BottomScreenActivity : ComponentActivity() {
     // brought back to the front, which returns key focus to the top screen.
     override fun onResume() {
         super.onResume()
-        if (link.hostShown.value && !locked.open) handFocusBack()
+        if (!claimingKeyboard && link.hostShown.value && !locked.open) handFocusBack()
+    }
+
+    // the Thor shows a keyboard opened on the top screen here (ime_show_on_second), and this screen's
+    // keyboard answers to the last window focused on it: the stock launcher, under this window, unless this
+    // window takes focus once. It does on each start, then hands focus back (owner, 2026-10-07)
+    private var claimingKeyboard = false
+
+    private fun claimKeyboard() {
+        claimingKeyboard = true
+        takeKeys(true)
+        takeFocus()
+        window.decorView.postDelayed(::endKeyboardClaim, 1_000)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && claimingKeyboard) window.decorView.post(::endKeyboardClaim)
+    }
+
+    private fun endKeyboardClaim() {
+        if (!claimingKeyboard) return
+        claimingKeyboard = false
+        if (locked.open) return
+        takeKeys(false)
+        if (link.hostShown.value) handFocusBack()
     }
 
     private var locked = LockedScreenOpen(open = false, typing = false)
@@ -104,7 +130,7 @@ class BottomScreenActivity : ComponentActivity() {
     private fun onLocked(locked: LockedScreenOpen) {
         this.locked = locked
         if (locked.open) {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+            takeKeys(true)
             if (locked.typing) {
                 keyboardUp = true
                 takeFocus()
@@ -112,9 +138,18 @@ class BottomScreenActivity : ComponentActivity() {
         } else {
             // the Thor keeps its keyboard on this screen (ime_fixed): left up, it would stay over ECHO
             hideKeyboard()
-            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+            takeKeys(false)
             if (link.hostShown.value) handFocusBack()
         }
+    }
+
+    // NOT_FOCUSABLE alone also keeps the keyboard from layering over this window, and the Thor shows a
+    // keyboard opened on the top screen here (ime_show_on_second): it sat under ECHO, up but unseen
+    // (owner, 2026-10-07). With ALT_FOCUSABLE_IM beside it the window still takes no keys, and the
+    // keyboard layers above it.
+    private fun takeKeys(take: Boolean) {
+        val both = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+        window.setFlags(if (take) 0 else both, both)
     }
 
     // whether the keyboard is likely up. The Thor shows it full screen over this window, which then gets
