@@ -58,15 +58,14 @@ fun CrossbarHintBar(
     )
 }
 
-// owner, 2026-10-06: the footer's left side shows the current filter, sort or panel tab as one LT/RT mark and its
+// owner, 2026-10-06: the footer's left side shows the current filter or sort as one LT/RT mark and its
 // word; the triggers step it, a tap steps to the next. Nothing while a menu or another screen is over the crossbar
 internal fun crossbarFooterFilters(
     state: com.echo.feature.crossbar.viewmodel.CrossbarUiState,
     onRecentFilter: (com.echo.feature.crossbar.viewmodel.RecentFilter) -> Unit,
     onSort: (com.echo.feature.crossbar.viewmodel.CrossbarSortMode) -> Unit,
-    onPanelTab: (com.echo.feature.crossbar.viewmodel.PanelTab) -> Unit,
 ): (@Composable () -> Unit)? {
-    val (label, next) = footerFilter(state, onRecentFilter, onSort, onPanelTab) ?: return null
+    val (label, next) = footerFilter(state, onRecentFilter, onSort) ?: return null
     return { TriggerFilter(label, onTapped = next) }
 }
 
@@ -75,13 +74,9 @@ internal fun footerFilter(
     state: com.echo.feature.crossbar.viewmodel.CrossbarUiState,
     onRecentFilter: (com.echo.feature.crossbar.viewmodel.RecentFilter) -> Unit = {},
     onSort: (com.echo.feature.crossbar.viewmodel.CrossbarSortMode) -> Unit = {},
-    onPanelTab: (com.echo.feature.crossbar.viewmodel.PanelTab) -> Unit = {},
 ): Pair<String, () -> Unit>? {
-    if (state.notificationsOpen) {
-        val tabs = com.echo.feature.crossbar.viewmodel.PanelTab.entries
-        return state.panelTab.label to { onPanelTab(tabs[(state.panelTab.ordinal + 1) % tabs.size]) }
-    }
-    if (state.hasBlockingOverlay) return null
+    // the open panel's tabs are its own tab row (owner, 2026-10-07)
+    if (state.notificationsOpen || state.hasBlockingOverlay) return null
     if (state.onLastPlayedHome) {
         val filters = state.recentFilters
         val at = filters.indexOf(state.recentFilter).coerceAtLeast(0)

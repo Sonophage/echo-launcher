@@ -7,7 +7,6 @@ import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.move
 import com.echo.core.ui.notification.AndroidNotifications
 import com.echo.core.ui.sound.MenuSound
-import com.echo.feature.crossbar.ui.detail.DetailPanelPage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -250,9 +249,6 @@ class CrossbarPanel(
         if (!AndroidNotifications.open(key)) Timber.i("Notification $key had nothing to open")
     }
 
-    fun onPanelPageTapped(page: DetailPanelPage) = uiState.update {
-        it.copy(panelPage = page, panelPageGameId = it.hoverPanelItem?.gameId)
-    }
 
     internal fun observeAndroidNotices() {
         scope.launch {

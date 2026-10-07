@@ -34,6 +34,14 @@ class HintPromptsTest {
         selectedPlatformId = drilled,
     )
 
+    // owner, 2026-10-07: X on a game or app opens its details; a folder or settings row has none to open
+    @Test
+    fun `X offers Details on a game, and nothing on a row without details`() {
+        val game = CrossbarItem(id = "1", title = "Skyrim", gameId = 1L, isRealGame = true)
+        assertTrue(promptsFor(state(items = listOf(game))).right.any { it.action == GamepadAction.CHANGE_SORT && it.verb == "Details" })
+        assertTrue(promptsFor(state()).right.none { it.action == GamepadAction.CHANGE_SORT })
+    }
+
     @Test
     fun `the primary names what it acts on`() {
         val p = promptsFor(state()).primary

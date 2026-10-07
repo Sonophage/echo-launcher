@@ -246,7 +246,6 @@ fun CrossbarDrillFlyout(
 
     iconAnimatingAllowed: Boolean = false,
 
-    labelHiddenByPanel: Boolean,
 
 
     cardArtGrid: Boolean = true,
@@ -276,7 +275,6 @@ fun CrossbarDrillFlyout(
             onItemLongPress = onItemLongPress,
             iconAnimatingAllowed = iconAnimatingAllowed,
             cardArtGrid = cardArtGrid,
-            labelHiddenByPanel = labelHiddenByPanel,
             metadataAsSubtitle = metadataAsSubtitle,
             modifier = Modifier.fillMaxSize().padding(start = DRILL_GAME_COLUMN_LEFT),
         )
@@ -290,7 +288,6 @@ private fun CrossbarGameColumn(
     selectedIndex: Int,
     iconStyle: GameIconStyle,
     belowTopY: Dp,
-    labelHiddenByPanel: Boolean,
 
     cardArtGrid: Boolean = true,
     metadataAsSubtitle: Boolean = false,
@@ -316,7 +313,6 @@ private fun CrossbarGameColumn(
 
                 cardArtGrid = cardArtGrid,
 
-                labelHiddenByPanel = labelHiddenByPanel,
                 metadataAsSubtitle = metadataAsSubtitle,
                 iconStyle = iconStyle,
                 onClick = { onItemSelected(i) },
@@ -409,7 +405,6 @@ fun CrossbarItemList(
 
     showLabels: Boolean = true,
 
-    labelHiddenByPanel: Boolean = false,
 
     cardArtGrid: Boolean = true,
     metadataAsSubtitle: Boolean = false,
@@ -439,7 +434,6 @@ fun CrossbarItemList(
                 for (i in columnRows(sel, items.size, rowsBelow)) {
                     key(items[i].id) {
                         CrossbarVerticalListRow(
-                            labelHiddenByPanel = labelHiddenByPanel,
                             cardArtGrid = cardArtGrid,
                             metadataAsSubtitle = metadataAsSubtitle,
                             item = items[i],
@@ -486,7 +480,6 @@ private fun CrossbarVerticalListRow(
 
     textShadow: Boolean = true,
 
-    labelHiddenByPanel: Boolean,
 
     cardArtGrid: Boolean = true,
     metadataAsSubtitle: Boolean = false,
@@ -581,17 +574,10 @@ private fun CrossbarVerticalListRow(
 
             val showGameText = item.textOnly || !item.isRealGame || isSelected
 
-            val panelHidesLabel = isSelected && item.isRealGame && !item.textOnly && labelHiddenByPanel
-            val labelAlpha by animateFloatAsState(
-                targetValue = if (panelHidesLabel) 0f else 1f,
-                animationSpec = tween(220),
-                label = "crossbarRowLabelFade",
-            )
-            if (showText && showGameText && labelAlpha > 0f) {
+            if (showText && showGameText) {
                 Column(
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .alpha(labelAlpha)
                         .padding(start = CrossbarLayoutSpec.DEFAULT.itemTextStartGapDp.dp),
                 ) {
                     val titleColor = if (isSelected) PrimaryText else InactiveText

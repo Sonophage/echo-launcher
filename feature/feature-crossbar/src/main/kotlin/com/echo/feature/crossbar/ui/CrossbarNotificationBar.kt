@@ -125,26 +125,8 @@ data class QuickSettingsState(
     val secondScreenOn: Boolean = true,
 )
 
-@Composable
-fun PanelTabsRow(tab: PanelTab, onTabTapped: (PanelTab) -> Unit, u: DesignUnits, tight: Boolean, modifier: Modifier = Modifier) {
-    StripSections(
-        labels = PanelTab.entries.map { it.label },
-        selected = tab.ordinal,
-        onTapped = { onTabTapped(PanelTab.entries[it]) },
-        u = u,
-        shoulders = true,
-        modifier = modifier,
-        icon = if (tight) { i, tint, m -> Icon(panelTabGlyph(PanelTab.entries[i]), null, m, tint = tint) } else null,
-    )
-}
-
-private fun panelTabGlyph(tab: PanelTab): ImageVector = when (tab) {
-    PanelTab.NOTIFICATIONS -> Icons.Outlined.Notifications
-    PanelTab.PROFILE -> Icons.Outlined.Person
-    PanelTab.QUICK -> Icons.Outlined.Tune
-    PanelTab.LIBRARIES -> Icons.Outlined.VideoLibrary
-    PanelTab.SETTINGS -> Icons.Outlined.Settings
-}
+// how far each tab's content moves down to sit under the tab row
+private val PanelTabRowDrop = 48.dp
 
 @Composable
 fun CrossbarNotificationBar(
@@ -175,6 +157,8 @@ fun CrossbarNotificationBar(
     pull: PanelPull,
     onOpened: () -> Unit,
     onClosed: () -> Unit,
+    onTabTapped: (PanelTab) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (pull.progress.value <= 0f && !open) return
@@ -198,7 +182,7 @@ fun CrossbarNotificationBar(
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
             when (tab) {
                 // kit 11: chips, the focused notice large on the left, the rest on the right
-                PanelTab.NOTIFICATIONS -> Column(Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(56), top = u.dp(96), bottom = u.dp(80))) {
+                PanelTab.NOTIFICATIONS -> Column(Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(56), top = u.dp(96) + PanelTabRowDrop, bottom = u.dp(80))) {
                     NoticeChips(chip, allCount, u, onChipTapped)
                     val others = entries.filter { it.focus != focus }
                     if (u.square) {
@@ -213,16 +197,25 @@ fun CrossbarNotificationBar(
                         }
                     }
                 }
-                PanelTab.PROFILE -> ProfilePanel(profile, profileName, profileAvatar, profileFocus, u, onProfileTapped)
+                PanelTab.PROFILE -> ProfilePanel(profile, profileName, profileAvatar, profileFocus, u, onProfileTapped, top = u.dp(96) + PanelTabRowDrop)
                 PanelTab.QUICK -> quick?.let {
-                    QuickTiles(it, quickFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(200)))
+                    QuickTiles(it, quickFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(200) + PanelTabRowDrop))
                 }
                 PanelTab.LIBRARIES -> quick?.let {
-                    LibraryTiles(it.chips, chipFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(180)))
+                    LibraryTiles(it.chips, chipFocus, u, onQuickTapped, Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(180) + PanelTabRowDrop))
                 }
                 PanelTab.SETTINGS -> SettingsTiles(settingFocus, u, onSettingTapped,
-                    Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(110)))
+                    Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(110) + PanelTabRowDrop))
             }
+            // owner, 2026-10-07: the panel's tabs are a tab row along the top, as in Settings
+            com.echo.core.ui.components.EchoTabRow(
+                labels = PanelTab.entries.map { it.label },
+                current = tab.ordinal,
+                u = u,
+                onBack = onBack,
+                onPick = { onTabTapped(PanelTab.entries[it]) },
+                modifier = Modifier.padding(top = com.echo.core.ui.components.StatusStripHeight),
+            )
         }
     }
 }
@@ -398,7 +391,6 @@ private fun LibraryTiles(chips: List<LibraryChip>, focus: Int, u: DesignUnits, o
 @Composable
 private fun SettingsTiles(focus: Int, u: DesignUnits, onTapped: (Int) -> Unit, modifier: Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(30))) {
-        Headline("Settings", u.sp(48), 1)
         Column(verticalArrangement = Arrangement.spacedBy(u.dp(18))) {
             PANEL_SETTINGS.withIndex().chunked(SETTINGS_GRID_COLUMNS).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(18))) {

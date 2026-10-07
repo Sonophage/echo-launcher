@@ -2,38 +2,7 @@ package com.echo.feature.crossbar.ui.detail
 
 import com.echo.core.common.format.playTimeLabel
 import com.echo.core.domain.model.Game
-import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.gameMetadataLine
-
-enum class DetailPanelPage(val label: String) {
-    LOGO("Logo"),
-    INFO("Info"),
-    VIDEO("Video"),
-    GALLERY("Media"),
-}
-
-fun availablePanelPages(
-    hasVideo: Boolean,
-    hasGallery: Boolean,
-    hasInfo: Boolean,
-): List<DetailPanelPage> =
-    DetailPanelPage.entries.filter {
-        when (it) {
-            DetailPanelPage.LOGO -> true
-            DetailPanelPage.VIDEO -> hasVideo
-            DetailPanelPage.GALLERY -> hasGallery
-            DetailPanelPage.INFO -> hasInfo
-        }
-    }
-
-fun stepPanelPage(current: DetailPanelPage, pages: List<DetailPanelPage>, delta: Int): DetailPanelPage {
-    val index = pages.indexOf(current)
-    if (index < 0) return current
-    return pages[(index + delta).coerceIn(0, pages.lastIndex)]
-}
-
-fun resolvePanelPage(requested: DetailPanelPage, pages: List<DetailPanelPage>): DetailPanelPage =
-    if (requested in pages) requested else pages.first()
 
 data class DetailPanelContent(
     val title: String,
@@ -49,17 +18,7 @@ data class DetailPanelContent(
 
     val videoUri: String? = null,
     val media: List<DetailMedia> = emptyList(),
-) {
-    val pages: List<DetailPanelPage>
-        get() = availablePanelPages(
-            hasVideo = videoUri != null,
-            hasGallery = media.isNotEmpty(),
-            hasInfo = hasInfo,
-        )
-
-    val hasInfo: Boolean
-        get() = !description.isNullOrBlank() || metaLine != null || fileName != null
-}
+)
 
 fun panelFileName(romPath: String?): String? =
     romPath?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
@@ -82,21 +41,3 @@ fun detailPanelContentFor(
     videoUri = videoUri,
     media = media,
 )
-
-fun detailPanelContentFor(
-    item: CrossbarItem,
-    platformName: String,
-    videoUri: String? = null,
-): DetailPanelContent =
-    DetailPanelContent(
-        title = item.title,
-        platformName = platformName,
-
-        logoUri = item.logoUri.takeIf { item.hasVisibleLogo },
-        posterFallbackUri = item.artworkUri,
-        metaLine = item.metadataLine,
-        description = item.description,
-        fileName = panelFileName(item.romPath),
-        playTime = item.totalPlayTimeMillis.takeIf { it > 0L }?.let(::playTimeLabel),
-        videoUri = videoUri,
-    )

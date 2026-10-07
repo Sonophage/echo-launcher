@@ -116,7 +116,7 @@ from it and a light runs round it, as they spread from the left island while mus
 notification drops out of the right island as a card; press it once to see the newest, twice to open
 them all. UP from the top of a list drops the left island's card the same way: what is playing, or
 the last thing you opened. The footer leads with the screen's filter: one LT/RT mark and the word
-for the current filter, sort or tab (a tap steps to the next). Then **Back**, the **A** action in
+for the current filter or sort (a tap steps to the next). Then **Back**, the **A** action in
 the centre, and the screen's own actions on the right, with **LB** (Apps) and **RB** (Search) side
 by side as icons. **Home** has no hint; the Guide button, or Select held, goes home. Games and apps
 launch when you **hold A** until the ring fills, so a stray press never launches anything.
@@ -214,7 +214,8 @@ place.
 
 **Select** (View) or a tap on the notification island at the top right first shows the newest
 notification as a card, when there is one; a second press opens the panel: Notifications,
-Profile, Quick settings, Libraries and Settings. Settings has seven sections: **Library, Emulators,
+Profile, Quick settings, Libraries and Settings, along a tab row at the top that **LT/RT** step
+through, as in each Settings section. Settings has seven sections: **Library, Emulators,
 Look, Controls, Accounts, System, Setup**.
 
 The **Profile** tab shows your name and picture, your games, hours and achievements, what you played
@@ -344,8 +345,8 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 - **A PS3-style wave background**, drawn at 30 fps (20 when idle), optionally over your wallpaper.
 - **A launch disc.** What you open becomes a disc wearing its own cover; GameBoot plays for games.
   Every interface sound can be replaced, and there is optional looping menu music.
-- **The crossbar takes on the focused game's art and colour**, with a hover panel in place of a
-  separate details page.
+- **The crossbar takes on the focused game's art and colour**, and **X** opens a game's or app's
+  details.
 - **One context menu everywhere**, a rail on the right edge. Destructive rows ask twice.
 - **A top bar and a top panel** with media transport, device notifications and launcher
   notices.
@@ -475,7 +476,7 @@ access to all of your storage.
 | Back | **B** | Esc | The Back button in the footer |
 | Options | **Y** | F3 | Long-press |
 | Resume the game that is still running | Hold **Y** | | Hold Resume, in the footer |
-| The details panel, or the screen's X action | **X** | F2 | |
+| A game's or app's details, or the screen's X action | **X** | F2 | |
 | App Drawer | **LB**, on every screen (again to close) | | Apps, in the footer |
 | Search | **RB**, on every screen (again to close) | Tab | Search, in the footer |
 | Sorts and filters (the footer's left side), tabs and sections | **LT / RT** | Page Up / Page Down | Tap |
@@ -899,7 +900,7 @@ core/
   core-navigation/   pure navigation logic
   core-ui/           theme, wave, icons, motion wallpaper, menu sounds
 feature/
-  feature-crossbar/  the crossbar, hover panel, players, boot
+  feature-crossbar/  the crossbar, Game Info, players, boot
   feature-library/   ROM and media scanners
   feature-launcher/  emulator detection and launching
   feature-artwork/   scrapers, Artwork Studio, artwork folder, ES-DE import and export

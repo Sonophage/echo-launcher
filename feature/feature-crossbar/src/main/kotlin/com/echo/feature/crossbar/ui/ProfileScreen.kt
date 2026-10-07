@@ -1,5 +1,7 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.design.MarkPose
+import com.echo.core.ui.design.drawEchoMark
 import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.core.common.format.playTimeLabel
 import androidx.compose.foundation.Canvas
@@ -161,6 +163,20 @@ private fun Hint(action: GamepadAction, label: String, u: DesignUnits, onClick: 
     }
 }
 
+// the profile picture, or ECHO's mark when none is set. owner, 2026-10-07: the mark is the default picture
+@Composable
+internal fun ProfileAvatar(avatar: String?, name: String?, modifier: Modifier = Modifier, markScale: Float = 0.8f) {
+    if (avatar != null) {
+        AsyncImage(avatar, name, contentScale = ContentScale.Crop, modifier = modifier.fillMaxSize())
+    } else {
+        androidx.compose.foundation.Canvas(modifier.fillMaxSize()) {
+            drawEchoMark(
+                MarkPose(cx = size.width / 2 / density, cy = size.height / 2 / density, size = size.width * markScale / density),
+            )
+        }
+    }
+}
+
 @Composable
 private fun Header(data: ProfileData, name: String, avatar: String?, u: DesignUnits, onEditName: () -> Unit, onPickAvatar: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(24))) {
@@ -169,11 +185,7 @@ private fun Header(data: ProfileData, name: String, avatar: String?, u: DesignUn
                 .background(Color.White.copy(alpha = 0.06f)).clickable(onClick = onPickAvatar),
             contentAlignment = Alignment.Center,
         ) {
-            if (avatar != null) {
-                AsyncImage(avatar, name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            } else {
-                Icon(Icons.Outlined.Image, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(u.dp(30)))
-            }
+            ProfileAvatar(avatar, name, markScale = 0.6f)
         }
         Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
             Box(Modifier.clickable(onClick = onEditName)) { Headline(name, u.sp(52), 1) }
@@ -228,6 +240,7 @@ internal fun ProfilePanel(
     focus: ProfileFocus,
     u: DesignUnits,
     onTapped: (ProfileSpot, Int) -> Unit,
+    top: androidx.compose.ui.unit.Dp = u.dp(96),
 ) {
     val banner = profileBanner(data.recent)
     Box(Modifier.fillMaxSize()) {
@@ -243,7 +256,7 @@ internal fun ProfilePanel(
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.55f), 0.3f to PanelBase.copy(alpha = 0.3f), 0.55f to PanelBase.copy(alpha = 0.8f), 1f to PanelBase.copy(alpha = 0.95f))))
             }
         }
-        Column(Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(80), top = u.dp(96), bottom = u.dp(64))) {
+        Column(Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(80), top = top, bottom = u.dp(64))) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f)) {
                     Header(data, name, avatar, u, { onTapped(ProfileSpot.EDIT_NAME, 0) }, { onTapped(ProfileSpot.EDIT_PICTURE, 0) })

@@ -452,7 +452,8 @@ private fun NoticeOrb(
     connected: Boolean = false,
     battery: BatteryReading = BatteryReading(),
 ) {
-    val shimmer = rememberChargeShimmer(battery.charging)
+    // the mark's slow swell while it charges
+    val pulse = rememberChargeShimmer(battery.charging)
     Row(
         Modifier
             // no clip: the echo rings spread past the orb, so the press shows as an unbounded round ripple
@@ -474,23 +475,18 @@ private fun NoticeOrb(
                 // the ring gives way so the orb and the card are one shape. owner, 2026-10-06: the ring is the battery,
                 // filled to the charge, glowing with a light running round it while it charges
                 .echoRipples(battery.charging && !connected, Color.White)
-                .then(if (connected) Modifier else Modifier.drawBehind { drawBatteryRing(battery, shimmer, u.dp(2).toPx()) })
+                .then(if (connected) Modifier else Modifier.drawBehind { drawBatteryRing(battery, u.dp(2).toPx()) })
                 .padding(u.dp(5))
                 .clip(CircleShape)
                 .background(NoticeOrbFill),
             contentAlignment = Alignment.Center,
         ) {
-            if (count == 0 && avatar != null) {
-                AsyncImage(avatar, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            } else {
-                Canvas(Modifier.fillMaxSize()) {
-                    // the mark glows with the ring while it charges
-                    if (battery.charging) drawCircle(
-                        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.10f + 0.18f * chargePulse(shimmer)), Color.Transparent)),
-                    )
-                    drawEchoMark(MarkPose(cx = size.width / 2 / density, cy = size.height / 2 / density, size = size.width * 0.8f / density))
-                }
+            // the mark glows with the ring while it charges
+            if (battery.charging) Canvas(Modifier.fillMaxSize()) {
+                drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.10f + 0.18f * chargePulse(pulse)), Color.Transparent)))
             }
+            // owner, 2026-10-07: the orb is always the profile picture, the count beside it
+            ProfileAvatar(avatar, null)
         }
     }
 }
@@ -503,7 +499,7 @@ internal fun batteryRingSweep(level: Int): Float = 360f * level.coerceIn(0, 100)
 // low and not charging: the ring turns red
 internal fun batteryRingLow(level: Int, charging: Boolean): Boolean = level <= 20 && !charging
 
-// 0 to 1 round the ring while charging, on the strip's stepped frame clock; 0 when not
+// 0 to 1 over one period while charging, on the strip's stepped frame clock; 0 when not
 @Composable
 private fun rememberChargeShimmer(charging: Boolean): Float {
     val travel by androidx.compose.runtime.produceState(0f, charging) {
@@ -521,16 +517,11 @@ private fun rememberChargeShimmer(charging: Boolean): Float {
 // a slow swell, twice per lap of the shimmer
 private fun chargePulse(travel: Float): Float = 0.5f + 0.5f * kotlin.math.sin(travel * 4f * Math.PI.toFloat())
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBatteryRing(battery: BatteryReading, shimmer: Float, stroke: Float) {
+// the battery: the brand ring filled to the charge. While it charges the echo rings spread from the orb and
+// the mark glows; owner, 2026-10-07: no light running round the ring
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBatteryRing(battery: BatteryReading, stroke: Float) {
     val tint = if (batteryRingLow(battery.level, battery.charging)) LowBatteryTint else Color.White
-    drawEchoRing(battery.level / 100f, tint.copy(alpha = if (battery.charging) 0.9f else 0.75f), EchoRingTrack, stroke)
-    val sweep = batteryRingSweep(battery.level)
-    if (battery.charging && sweep > 0f) {
-        // the shimmer: a short bright run of light travelling the filled arc
-        val run = minOf(48f, sweep)
-        drawArc(Color.White, -90f + (sweep - run) * shimmer, run, false, Offset(stroke / 2f, stroke / 2f),
-            androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke), style = Stroke(stroke * 1.6f, cap = StrokeCap.Round))
-    }
+    drawEchoRing(batteryRingSweep(battery.level) / 360f, tint.copy(alpha = if (battery.charging) 0.9f else 0.75f), EchoRingTrack, stroke)
 }
 
 // the orbs' shared track, so the left and the right rings match
@@ -893,7 +884,7 @@ internal fun sectionLabelShown(hasIcon: Boolean, selected: Boolean): Boolean = !
 private enum class IslandMode { NONE, ORB, CARD }
 
 
-// one lap of the charging light round the battery ring, as slow as the echo rings (owner, 2026-10-06)
+// one swell of the charging glow, as slow as the echo rings (owner, 2026-10-06)
 private const val GLINT_PERIOD_MS = com.echo.core.ui.design.ECHO_RIPPLE_PERIOD_MS
 
 internal val StripHeight: Dp

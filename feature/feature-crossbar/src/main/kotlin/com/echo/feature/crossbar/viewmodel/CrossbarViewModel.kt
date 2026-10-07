@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.feature.crossbar.bottomscreen.hasInfo
 import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.components.MenuSelect
 import com.echo.core.ui.components.MenuState
@@ -43,9 +44,7 @@ import com.echo.core.domain.model.Game
 import com.echo.core.domain.model.GameContentType
 import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.crossbar.ui.detail.DetailPanelContent
-import com.echo.feature.crossbar.ui.detail.DetailPanelPage
 import com.echo.feature.crossbar.ui.detail.detailPanelContentFor
-import com.echo.feature.crossbar.ui.detail.stepPanelPage
 import com.echo.core.domain.model.HiddenPlacement
 import com.echo.core.domain.model.HideLocationType
 import com.echo.core.domain.model.PlayState
@@ -694,8 +693,6 @@ data class CrossbarUiState(
 
     val recentTopAccentArgb: Long? = null,
     val recentTopAt: Long? = null,
-    val panelPage: DetailPanelPage = DetailPanelPage.LOGO,
-    val panelPageGameId: Long? = null,
     val librarySetupComplete: Boolean = false,
     val themeColors: EchoColors = DefaultEchoColors,
 
@@ -740,30 +737,10 @@ data class CrossbarUiState(
     val focusedItem: CrossbarItem?
         get() = currentItems.getOrNull(selectedItemIndex)
 
-    val hoverPanelItem: CrossbarItem?
-        get() = focusedItem?.takeIf {
-            (it.isRealGame || onLastPlayedHome) && it.backdropArt.isNotEmpty()
-        }
-
-    val effectivePanelPage: DetailPanelPage
-        get() = if (panelStripOpen) panelPage else DetailPanelPage.LOGO
-
-    val panelStripOpen: Boolean
-        get() = panelPageGameId != null && panelPageGameId == hoverPanelItem?.gameId
-
     val onLastPlayedHome: Boolean
         get() = categories.getOrNull(selectedCategoryIndex)?.id == BuiltInCategory.RECENTLY_PLAYED &&
             !isInSubItem &&
             !(recentFilter == RecentFilter.ALL && currentItems.isEmpty())
-
-    val hoverPanelContent: DetailPanelContent?
-        get() = hoverPanelItem?.let { item ->
-            detailPanelContentFor(
-                item = item,
-                platformName = item.platformId?.let { com.echo.core.domain.model.platformLabel(it, null) }.orEmpty(),
-                videoUri = focusedGameVideo?.takeIf { it.gameId == item.gameId }?.uri,
-            )
-        }
 
     val canFilterRecents: Boolean
         get() = onLastPlayedHome
@@ -2911,12 +2888,12 @@ class CrossbarViewModel @Inject constructor(
             GamepadAction.PREV_PAGE, GamepadAction.NEXT_PAGE, GamepadAction.HOME, GamepadAction.OPEN_NOTIFICATIONS -> Unit
             GamepadAction.OPEN_ISLAND   -> focusOrb(state)
 
-            // owner, 2026-10-06: LT/RT sort, and X pages the focused item's details panel
+            // owner, 2026-10-07: X opens the focused game's or app's details (Game Info); LT/RT sort
             GamepadAction.CHANGE_SORT -> when {
-                !state.onLastPlayedHome -> stepHoverPanelPage(+1)
-                state.recentRailVisible -> state.focusedItem?.let(recents::removeFromRecent)
-                else -> state.focusedItem?.takeIf { recentKind(it) == RecentKind.GAME || recentKind(it) == RecentKind.APP }
+                state.onLastPlayedHome && state.recentRailVisible -> state.focusedItem?.let(recents::removeFromRecent)
+                state.onLastPlayedHome -> state.focusedItem?.takeIf { recentKind(it) == RecentKind.GAME || recentKind(it) == RecentKind.APP }
                     ?.let(gameDetail::onOpenGameInfo)
+                else -> state.focusedItem?.takeIf(::hasInfo)?.let(gameDetail::onOpenGameInfo)
             }
 
             GamepadAction.OPEN_SEARCH -> librarySearch.openSearch(SearchScope.ALL)
@@ -2926,7 +2903,6 @@ class CrossbarViewModel @Inject constructor(
                 when {
                     state.onLastPlayedHome -> recents.stepRecentFilter(step)
                     activeSortContext() != null -> stepSort(step)
-                    else -> stepHoverPanelPage(step)
                 }
             }
         }
@@ -2942,26 +2918,6 @@ class CrossbarViewModel @Inject constructor(
             stats.appBytes + stats.dataBytes
         }.getOrNull() else null
         return info.copy(appVersion = version, appStorageBytes = storage)
-    }
-
-    private fun stepHoverPanelPage(delta: Int) = _uiState.update { s ->
-        val content = s.hoverPanelContent ?: return@update s
-
-        if (!s.panelStripOpen) {
-            return@update s.copy(
-                panelPage = DetailPanelPage.LOGO,
-                panelPageGameId = s.hoverPanelItem?.gameId,
-            )
-        }
-
-        if (delta < 0 && s.effectivePanelPage == DetailPanelPage.LOGO) {
-            return@update s.copy(panelPageGameId = null)
-        }
-        s.copy(
-
-            panelPage = stepPanelPage(s.effectivePanelPage, content.pages, delta),
-            panelPageGameId = s.hoverPanelItem?.gameId,
-        )
     }
 
     private fun openPlatformContextMenu(platformId: String) {
@@ -4524,12 +4480,7 @@ class CrossbarViewModel @Inject constructor(
                 .map { s ->
                     val item = s.currentItems.getOrNull(s.selectedItemIndex)
 
-                    val eligible = item?.gameId != null && item.isRealGame &&
-                        !s.hasBlockingOverlay &&
-                        com.echo.feature.crossbar.ui.snapSiteFor(
-                            s.snapPlacement,
-                            s.effectivePanelPage == DetailPanelPage.VIDEO,
-                        ) != null
+                    val eligible = item?.gameId != null && item.isRealGame && !s.hasBlockingOverlay
                     if (eligible) item.gameId else null
                 }
                 .distinctUntilChanged()

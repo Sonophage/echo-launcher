@@ -10,19 +10,11 @@ data class FocusedGameVideo(
     val placement: VideoSnapPlacement = VideoSnapPlacement.ICON,
 )
 
-enum class SnapSite { TILE, BACKGROUND, PANEL }
+enum class SnapSite { TILE, BACKGROUND }
 
-fun snapSiteFor(
-    placement: VideoSnapPlacement,
-    panelShowingVideo: Boolean,
-): SnapSite? = when {
-    panelShowingVideo -> SnapSite.PANEL
-    placement == VideoSnapPlacement.BACKGROUND -> SnapSite.BACKGROUND
-    else -> SnapSite.TILE
-}
+fun snapSiteFor(placement: VideoSnapPlacement): SnapSite =
+    if (placement == VideoSnapPlacement.BACKGROUND) SnapSite.BACKGROUND else SnapSite.TILE
 
 val LocalFocusedGameVideo = compositionLocalOf<FocusedGameVideo?> { null }
-
-val LocalPanelShowingVideo = compositionLocalOf { false }
 
 val LocalCrossbarHorizontalShift = compositionLocalOf { 0.dp }

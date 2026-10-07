@@ -30,7 +30,7 @@ val DEFAULT_BINDINGS = listOf(
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_A,      GamepadAction.SELECT),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_B,      GamepadAction.BACK),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_X,      GamepadAction.CHANGE_SORT),
-    // owner, 2026-10-06: Y is always the context menu; X the screen's second action (the details panel, a view's
+    // owner, 2026-10-06: Y is always the context menu; X the screen's second action (a game's details, a view's
     // own filter), while LT/RT sort and filter
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_Y,      GamepadAction.OPEN_CONTEXT_MENU),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_UP,       GamepadAction.NAVIGATE_UP),

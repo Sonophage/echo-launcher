@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.feature.crossbar.bottomscreen.hasInfo
 import com.echo.core.domain.model.GamepadAction
 
 data class CrossbarPrompt(
@@ -102,8 +103,8 @@ fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
     // side does not repeat Filter or Sort
     val right = buildList {
         if (state.onLastPlayedHome) focused?.let { recentInfoPrompt(state, it) }?.let(::add)
-        // owner, 2026-10-06: X pages the focused item's details panel
-        if (!state.onLastPlayedHome && state.hoverPanelContent != null) add(CrossbarPrompt(GamepadAction.CHANGE_SORT, "Details"))
+        // owner, 2026-10-07: X opens the focused game's or app's details
+        if (!state.onLastPlayedHome && focused?.let(::hasInfo) == true) add(CrossbarPrompt(GamepadAction.CHANGE_SORT, "Details"))
         if (state.focusedItemHasContextMenu) add(CrossbarPrompt(GamepadAction.OPEN_CONTEXT_MENU, "Options"))
         if (!state.isInSubItem) add(CrossbarPrompt(GamepadAction.NEXT_PAGE, "Search"))
     }

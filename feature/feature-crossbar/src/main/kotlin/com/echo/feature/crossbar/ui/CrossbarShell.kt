@@ -89,10 +89,6 @@ import com.echo.core.ui.detail.EchoOverlayCard
 import com.echo.core.ui.detail.EchoOverlayTitle
 import com.echo.core.ui.detail.EchoTextPromptOverlay
 import com.echo.core.ui.image.rememberArtworkModel
-import com.echo.feature.crossbar.ui.detail.DetailPanelPage
-import com.echo.feature.crossbar.ui.detail.DetailPanelStrip
-import com.echo.feature.crossbar.ui.detail.GameDetailPanel
-import com.echo.feature.crossbar.ui.detail.resolvePanelPage
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.ui.motion.MotionWallpaperPolicy
 import com.echo.core.ui.motion.rememberAppVisible
@@ -216,7 +212,6 @@ fun CrossbarShellContainer(
         onTouchBack = viewModel::onHomeBack,
         onTouchInput = viewModel::markTouchInput,
         onCrossbarSortTapped = viewModel::onSortLabelTapped,
-        onPanelPageTapped = viewModel.panel::onPanelPageTapped,
         onRecentFilterTapped = viewModel.recents::setRecentFilter,
         onDrawerTypedCharConsumed = viewModel::onDrawerTypedCharConsumed,
         onNotificationsToggled = viewModel.panel::toggleNotifications,
@@ -400,7 +395,6 @@ fun CrossbarShell(
     onTouchBack: () -> Unit = {},
     onTouchInput: () -> Unit = {},
     onCrossbarSortTapped: () -> Unit = {},
-    onPanelPageTapped: (DetailPanelPage) -> Unit = {},
 
     onRecentFilterTapped: (RecentFilter) -> Unit = {},
 
@@ -592,8 +586,6 @@ fun CrossbarShell(
 
           LocalFocusedGameVideo provides uiState.focusedGameVideo,
 
-          LocalPanelShowingVideo provides (uiState.effectivePanelPage == DetailPanelPage.VIDEO),
-
           com.echo.core.ui.icons.LocalIconLegibility provides uiState.iconLegibility,
       ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -668,11 +660,6 @@ fun CrossbarShell(
             )
 
             val recentsListState = rememberLazyListState()
-            val panelContent = uiState.hoverPanelContent
-
-            val panelLogo = panelContent?.logoUri
-            val panelPage = panelContent?.let { resolvePanelPage(uiState.effectivePanelPage, it.pages) }
-            val panelShowingVideo = panelPage == DetailPanelPage.VIDEO
 
             val selectedItem = uiState.currentItems.getOrNull(uiState.selectedItemIndex)
             val selectedBg = uiState.focusedItemBackdrop?.takeIf { uiState.itemBackdropEnabled }
@@ -685,7 +672,7 @@ fun CrossbarShell(
             }
 
             val backgroundSnap = uiState.focusedGameVideo?.takeIf {
-                snapSiteFor(it.placement, panelShowingVideo) == SnapSite.BACKGROUND &&
+                snapSiteFor(it.placement) == SnapSite.BACKGROUND &&
                     it.gameId == selectedItem?.gameId
             }
 
@@ -850,60 +837,7 @@ fun CrossbarShell(
                         ),
                 )
             } else {
-            var pic0Visible by remember(panelLogo) { mutableStateOf(false) }
-            androidx.compose.runtime.LaunchedEffect(panelLogo) {
-                if (panelLogo != null) {
-                    kotlinx.coroutines.delay(650)
-                    pic0Visible = true
-                }
-            }
-            val pic0Alpha by androidx.compose.animation.core.animateFloatAsState(
-                targetValue = if (pic0Visible && panelLogo != null) 1f else 0f,
-                animationSpec = if (pic0Visible) tween(500) else androidx.compose.animation.core.snap(),
-                label = "pic0Fade",
-            )
-            val onLogoPage = panelPage == DetailPanelPage.LOGO
-
-            val stripOpened = uiState.panelStripOpen
-
             val metadataAsSubtitle = uiState.gameMetadataVisible
-
-            val rowLabelHidden = panelContent != null && stripOpened
-            val panelAlpha = if (onLogoPage) pic0Alpha else 1f
-
-            if (panelContent != null && panelPage != null && stripOpened &&
-                (!onLogoPage || (panelLogo != null && pic0Alpha > 0f))
-            ) {
-                BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
-                    val panelWidthFraction = if (onLogoPage) 0.30f else 0.42f
-
-                    val panelHeightFraction = if (onLogoPage) 0.38f else 0.70f
-                    val logoCenterOffset: Dp = if (uiState.drillTitle != null) {
-                        val contentTop = uiState.layoutSpec.contentTopPaddingDp.dp
-                        val crossHeight = maxHeight - contentTop
-                        val anchorTop = crossHeight * layoutAdjust.barTopFraction + CAT_BAR_HEIGHT
-                        val rowCenter = contentTop + anchorTop + ROW_HEIGHT / 2
-
-                        val halfPanel = panelHeightFraction / 2f
-                        rowCenter.coerceIn(maxHeight * halfPanel, maxHeight * (1f - halfPanel)) -
-                            maxHeight / 2
-                    } else {
-                        0.dp
-                    }
-                    GameDetailPanel(
-                        content = panelContent,
-                        page = panelPage,
-
-                        titleFallback = false,
-                        modifier = Modifier
-                            .fillMaxWidth(panelWidthFraction)
-                            .fillMaxHeight(panelHeightFraction)
-                            .offset(y = logoCenterOffset)
-                            .padding(end = 44.dp)
-                            .alpha(panelAlpha),
-                    )
-                }
-            }
 
             val fanCovers = fanCoversToDraw(
                 insideCovers = uiState.currentItems.getOrNull(uiState.selectedItemIndex)?.insideCovers.orEmpty(),
@@ -925,18 +859,6 @@ fun CrossbarShell(
                             ),
                     )
                 }
-            }
-
-            if (panelContent != null && panelPage != null && panelPage != DetailPanelPage.LOGO) {
-                DetailPanelStrip(
-                    pages = panelContent.pages,
-                    current = panelPage,
-                    onPageTapped = onPanelPageTapped,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-
-                        .padding(top = StripHeight + ControllerHintEdgeGap, end = ControllerHintEdgeGap),
-                )
             }
 
             Box(
@@ -981,7 +903,6 @@ fun CrossbarShell(
                             onItemLongPress = onItemLongPress,
 
                             onSiblingTap = { i -> if (i == uiState.drillSiblingIndex) onTouchBack() },
-                            labelHiddenByPanel = rowLabelHidden,
                             cardArtGrid = uiState.cardArtGrid,
                             metadataAsSubtitle = metadataAsSubtitle,
                             iconStyle = uiState.iconStyle,
@@ -1019,7 +940,6 @@ fun CrossbarShell(
                                 fadeByDistance = uiState.fadeByDistance,
                                 textShadow = uiState.textShadow,
                                 iconAnimatingAllowed = iconAnimatingAllowed,
-                                labelHiddenByPanel = rowLabelHidden,
                                 cardArtGrid = uiState.cardArtGrid,
                                 metadataAsSubtitle = metadataAsSubtitle,
                                 modifier = Modifier.fillMaxSize(),
@@ -1178,6 +1098,8 @@ fun CrossbarShell(
                     pull = panelPull,
                     onOpened = onNotificationsSwipedOpen,
                     onClosed = onNotificationsSwipedClosed,
+                    onTabTapped = onPanelTabTapped,
+                    onBack = onNotificationsToggled,
                     modifier = Modifier.zIndex(NotificationBarZ),
                 )
             }
@@ -1223,7 +1145,7 @@ fun CrossbarShell(
                         resumeHolding = uiState.resumableFocus()?.let { uiState.launchHold == resumeHoldId(it.id) } == true,
                         onResume = onResumeTapped,
                         // owner, 2026-10-06: the filters sit at the footer's left, after Home and Back, and LT/RT step them
-                        filters = crossbarFooterFilters(uiState, onRecentFilterTapped, onSortPicked, onPanelTabTapped),
+                        filters = crossbarFooterFilters(uiState, onRecentFilterTapped, onSortPicked),
                     )
                 }
             }

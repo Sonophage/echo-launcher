@@ -716,7 +716,13 @@ fun SettingsScaffold(
                         .dragToScroll(contentScrollState.value),
                 ) {
                 if (tabs) {
-                    SettingsTabRow(tabEntries, screenId, u, onBack = onBack, onPick = { id -> notifyTouchInput(); openTab(id) })
+                    com.echo.core.ui.components.EchoTabRow(
+                        labels = tabEntries.map { it.title },
+                        current = tabEntries.indexOfFirst { it.id == screenId }.coerceAtLeast(0),
+                        u = u,
+                        onBack = onBack,
+                        onPick = { i -> notifyTouchInput(); openTab(tabEntries[i].id) },
+                    )
                 } else if (header != null) {
                     header()
                 } else {
@@ -965,73 +971,6 @@ private fun SettingsPickerPanel(picker: SettingsPickerRequest, cursor: Int, onDi
 private val PICKER_ROW_HEIGHT = 42.dp
 private val PICKER_PADDING = 8.dp
 private val PICKER_EDGE_MARGIN = 24.dp
-
-@Composable
-private fun SettingsTabRow(
-    entries: List<com.echo.core.domain.model.SettingsEntry>,
-    currentId: String?,
-    u: DesignUnits,
-    onBack: () -> Unit,
-    onPick: (String) -> Unit,
-) {
-    val current = entries.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
-    val listState = rememberLazyListState()
-    LaunchedEffect(current) {
-        val info = listState.layoutInfo
-        val viewport = info.viewportEndOffset - info.viewportStartOffset
-        val width = info.visibleItemsInfo.firstOrNull { it.index == current }?.size ?: 0
-        listState.animateScrollToItem(current, if (viewport > width) -((viewport - width) / 2) else 0)
-    }
-    val pad = LocalPadPrompts.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusProperties { canFocus = false }
-            .padding(start = u.dp(32), end = u.dp(80), top = u.dp(12), bottom = u.dp(14)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(u.dp(64))
-                .clip(RoundedCornerShape(u.dp(32)))
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("◀", color = SettingsSubtext, fontSize = u.sp(18))
-        }
-        Spacer(Modifier.width(u.dp(16)))
-        if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = u.dp(30), spacing = 0.dp)
-        LazyRow(
-            state = listState,
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(u.dp(10), Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            itemsIndexed(entries, key = { _, row -> row.id }) { index, row ->
-                val on = index == current
-                Column(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(u.dp(8)))
-                        .clickable { onPick(row.id) }
-                        .padding(horizontal = u.dp(8), vertical = u.dp(10)),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(u.dp(8)),
-                ) {
-                    Text(
-                        text = row.title,
-                        color = Color.White.copy(alpha = if (on) 1f else 0.5f),
-                        fontSize = u.sp(15),
-                        fontWeight = if (on) FontWeight.Medium else FontWeight.Light,
-                        maxLines = 1,
-                    )
-                    val bar by animateFloatAsState(if (on) 1f else 0f, tween(250), label = "settingsTabBar")
-                    Box(Modifier.width(u.dp(22) * bar).height(u.dp(2)).clip(RoundedCornerShape(1.dp)).background(Color.White))
-                }
-            }
-        }
-        if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(30), spacing = 0.dp)
-    }
-}
 
 data class SettingsPaneText(val eyebrow: String, val title: String, val body: String?)
 
