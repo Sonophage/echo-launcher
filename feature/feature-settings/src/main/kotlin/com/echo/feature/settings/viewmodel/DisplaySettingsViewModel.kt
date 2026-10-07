@@ -148,6 +148,8 @@ data class DisplaySettingsUiState(
     val xyLayout: XYLayout = XYLayout.STANDARD,
 
     val classicLayoutApplied: Boolean = false,
+    // this screen size's crossbar layout, for Settings ▸ Layout's sliders
+    val layoutAdjust: com.echo.themekit.CrossbarLayoutAdjust = com.echo.themekit.CrossbarLayoutAdjust.DEFAULT,
 ) {
 }
 
@@ -253,6 +255,7 @@ class DisplaySettingsViewModel @Inject constructor(
             xyLayout             = transient.xyLayout,
 
             classicLayoutApplied     = ClassicCrossbarLayout.isApplied(prefs, ClassicCrossbarLayout.forWindow(context)),
+            layoutAdjust             = ClassicCrossbarLayout.current(prefs, ClassicCrossbarLayout.forWindow(context).bucketKey),
         )
     }
 
@@ -336,6 +339,11 @@ class DisplaySettingsViewModel @Inject constructor(
     fun setVideoControlsHideMs(v: Int) = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_VIDEO_CONTROLS_HIDE_MS] = v }
 
     fun applyClassicLayout() = save { ClassicCrossbarLayout.write(it, ClassicCrossbarLayout.forWindow(context)) }
+
+    fun setLayout(transform: (com.echo.themekit.CrossbarLayoutAdjust) -> com.echo.themekit.CrossbarLayoutAdjust) =
+        save { ClassicCrossbarLayout.update(it, ClassicCrossbarLayout.forWindow(context).bucketKey, transform) }
+
+    fun resetLayout() = setLayout { com.echo.themekit.CrossbarLayoutAdjust.DEFAULT }
 
     fun setShowBootSequence(v: Boolean)      = save { it[KEY_SHOW_BOOT]       = v }
     fun setShowBootOnResume(v: Boolean)      = save { it[KEY_BOOT_ON_RESUME]  = v }

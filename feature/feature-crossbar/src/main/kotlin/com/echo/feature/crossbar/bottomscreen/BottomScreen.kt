@@ -224,7 +224,6 @@ private fun SettingsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel) {
         lastInputWasTouch = ui.lastInputWasTouch,
         onTouchInteraction = crossbar::markTouchInput,
         onOpenColorSchemePicker = crossbar.look::openColorSchemePicker,
-        onOpenCrossbarLayoutAdjust = crossbar::openCrossbarLayoutAdjust,
         onOpenCustomIcons = crossbar::openCustomIcons,
         onPreviewBootSequence = crossbar.launching::previewBootSequence,
         onPreviewGameBoot = crossbar.launching::previewGameBoot,

@@ -131,6 +131,7 @@ fun ProfileScreen(
         when (profile.tab) {
             ProfileTab.ACHIEVEMENTS -> AchievementsWall(profile, u, onAction, onSet, onBadge, onFilter)
             ProfileTab.FRIENDS -> FriendsTab(profile, name, avatar, u, onAction, onFriend, onEditName, onPickAvatar)
+            ProfileTab.OVERVIEW -> com.echo.feature.settings.ui.LibraryOverview(Modifier.fillMaxSize())
         }
 
         Row(
@@ -257,7 +258,8 @@ internal fun ProfilePanel(
                 }
             }
             Spacer(Modifier.height(u.dp(24)))
-            Stats(data, u)
+            // the big numbers open Overview, the library at a glance (owner, 2026-10-06)
+            FocusBox(focus.spot == ProfileSpot.STATS, u, { onTapped(ProfileSpot.STATS, 0) }) { Stats(data, u) }
             Box(Modifier.padding(top = u.dp(18), bottom = u.dp(22)).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
             Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(u.dp(40))) {
                 if (u.square) {

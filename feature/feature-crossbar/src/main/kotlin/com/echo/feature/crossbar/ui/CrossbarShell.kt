@@ -250,7 +250,6 @@ fun CrossbarShellContainer(
 
         onCloseSettingsScreen = viewModel::onSettingsBack,
         onOpenSettingsScreen = viewModel::onOpenSettingsScreen,
-        onOpenCrossbarLayoutAdjust = viewModel::openCrossbarLayoutAdjust,
         onOpenCustomIcons = viewModel::openCustomIcons,
         onPreviewBootSequence = viewModel.launching::previewBootSequence,
         onPreviewGameBoot = viewModel.launching::previewGameBoot,
@@ -319,15 +318,6 @@ fun CrossbarShellContainer(
         onCustomColorAdjust = viewModel.look::adjustCustomColor,
         onCustomColorConfirm = viewModel.look::confirmCustomColor,
         onCustomColorCancel = viewModel.look::cancelCustomColor,
-        onCrossbarLayoutScale = viewModel::setCrossbarLayoutScale,
-        onCrossbarLayoutHorizontal = viewModel::setCrossbarLayoutHorizontal,
-        onCrossbarLayoutVertical = viewModel::setCrossbarLayoutVertical,
-        onCrossbarLayoutToggleSliders = viewModel::toggleCrossbarLayoutSliders,
-        onCrossbarLayoutReset = viewModel::resetCrossbarLayoutAdjust,
-        onCrossbarLayoutSave = viewModel::saveCrossbarLayoutAdjust,
-        onCrossbarLayoutCancel = viewModel::cancelCrossbarLayoutAdjust,
-        onCrossbarLayoutHeader = viewModel::setCrossbarLayoutHeader,
-        onCrossbarLayoutFooter = viewModel::setCrossbarLayoutFooter,
         onNamePromptTextChanged = viewModel::onNamePromptTextChanged,
         onConfirmAppRename = viewModel::onConfirmAppRename,
         onCancelAppRename = viewModel::onCancelAppRename,
@@ -446,7 +436,6 @@ fun CrossbarShell(
     onSettingsLongPress: () -> Unit = {},
     onCloseSettingsScreen: () -> Unit = {},
     onOpenSettingsScreen: (String) -> Unit = {},
-    onOpenCrossbarLayoutAdjust: () -> Unit = {},
     onOpenCustomIcons: () -> Unit = {},
     onPreviewBootSequence: () -> Unit = {},
     onPreviewGameBoot: () -> Unit = {},
@@ -529,15 +518,6 @@ fun CrossbarShell(
     onCustomColorAdjust: (Float) -> Unit = {},
     onCustomColorConfirm: () -> Unit = {},
     onCustomColorCancel: () -> Unit = {},
-    onCrossbarLayoutScale: (Float) -> Unit = {},
-    onCrossbarLayoutHorizontal: (Float) -> Unit = {},
-    onCrossbarLayoutVertical: (Float) -> Unit = {},
-    onCrossbarLayoutToggleSliders: () -> Unit = {},
-    onCrossbarLayoutReset: () -> Unit = {},
-    onCrossbarLayoutSave: () -> Unit = {},
-    onCrossbarLayoutCancel: () -> Unit = {},
-    onCrossbarLayoutHeader: (Float) -> Unit = {},
-    onCrossbarLayoutFooter: (Float) -> Unit = {},
     onNamePromptTextChanged: (String) -> Unit = {},
     onConfirmAppRename: (String) -> Unit = {},
     onCancelAppRename: () -> Unit = {},
@@ -625,8 +605,7 @@ fun CrossbarShell(
             ).coerceIn(CROSSBAR_MIN_SCALE, CROSSBAR_MAX_SCALE)
 
             val config = LocalConfiguration.current
-            val layoutAdjust = uiState.crossbarLayoutAdjust?.draft
-                ?: uiState.crossbarLayoutAdjustMap[
+            val layoutAdjust = uiState.crossbarLayoutAdjustMap[
                     com.echo.themekit.CrossbarFormFactor.forSmallestWidthDp(config.smallestScreenWidthDp).key
                 ]
                 ?: com.echo.themekit.CrossbarLayoutAdjust(
@@ -1266,7 +1245,6 @@ fun CrossbarShell(
                             lastInputWasTouch = uiState.lastInputWasTouch,
                             onTouchInteraction = onTouchInput,
                             onOpenColorSchemePicker = onOpenColorSchemePicker,
-                            onOpenCrossbarLayoutAdjust = onOpenCrossbarLayoutAdjust,
                             onOpenCustomIcons = onOpenCustomIcons,
                             onPreviewBootSequence = onPreviewBootSequence,
                             onPreviewGameBoot = onPreviewGameBoot,
@@ -1411,24 +1389,6 @@ fun CrossbarShell(
                     onChannelFraction = onCustomColorUpdate,
                     onConfirm = onCustomColorConfirm,
                     onCancel = onCustomColorCancel,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            uiState.crossbarLayoutAdjust?.let { session ->
-                CrossbarLayoutAdjustOverlay(
-                    draft = session.draft,
-                    slidersVisible = session.slidersVisible,
-                    onScale = onCrossbarLayoutScale,
-                    onHorizontal = onCrossbarLayoutHorizontal,
-                    onVertical = onCrossbarLayoutVertical,
-                    onToggleSliders = onCrossbarLayoutToggleSliders,
-                    onReset = onCrossbarLayoutReset,
-                    onSave = onCrossbarLayoutSave,
-                    onCancel = onCrossbarLayoutCancel,
-                    sizingHeader = session.sizingHeader,
-                    onHeader = onCrossbarLayoutHeader,
-                    onFooter = onCrossbarLayoutFooter,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

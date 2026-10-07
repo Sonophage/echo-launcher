@@ -12,6 +12,10 @@ import kotlinx.serialization.json.jsonPrimitive
 
 val Context.echoDataStore: DataStore<Preferences> by preferencesDataStore(name = "pfp_prefs")
 
+// the crossbar's layout per screen size (CrossbarLayoutAdjustCodec): its scale, place and the bars' sizes. The
+// crossbar reads it; Settings ▸ Layout writes it. One key, so the two cannot drift apart
+val CROSSBAR_LAYOUT_ADJUST_KEY = stringPreferencesKey("display_xmb_layout_adjust")
+
 val Context.readerDataStore: DataStore<Preferences> by preferencesDataStore(name = "reader")
 
 // the built-in reader's saved place in a book: a Readium Locator as JSON

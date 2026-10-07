@@ -106,19 +106,23 @@ class ProfileTest {
     }
 
     @Test
-    fun `the profile tab walks edit, the recent cards, showcase and friends, and comes back to the card it left`() {
+    // owner, 2026-10-06: the row of big numbers is a stop between Edit and the cards; it opens Overview
+    fun `the profile tab walks edit, the stats, the recent cards, showcase and friends, and comes back to the card it left`() {
         fun go(f: ProfileFocus, vararg moves: PanelMove, recents: Int = 3) = moves.fold(f) { acc, m -> moveProfileFocus(acc, m, recents) }
         val edit = ProfileFocus()
-        assertEquals(ProfileFocus(ProfileSpot.RECENT, 0), go(edit, PanelMove.DOWN))
-        assertEquals("down holds on the last card", ProfileFocus(ProfileSpot.RECENT, 2), go(edit, PanelMove.DOWN, PanelMove.DOWN, PanelMove.DOWN, PanelMove.DOWN))
-        val showcase = go(edit, PanelMove.DOWN, PanelMove.DOWN, PanelMove.RIGHT)
+        val stats = go(edit, PanelMove.DOWN)
+        assertEquals(ProfileSpot.STATS, stats.spot)
+        assertEquals(ProfileFocus(ProfileSpot.RECENT, 0), go(stats, PanelMove.DOWN))
+        assertEquals("down holds on the last card", ProfileFocus(ProfileSpot.RECENT, 2), go(stats, PanelMove.DOWN, PanelMove.DOWN, PanelMove.DOWN, PanelMove.DOWN))
+        val showcase = go(stats, PanelMove.DOWN, PanelMove.DOWN, PanelMove.RIGHT)
         assertEquals(ProfileSpot.SHOWCASE, showcase.spot)
         assertEquals("left from the showcase returns to the card you came from", ProfileFocus(ProfileSpot.RECENT, 1), go(showcase, PanelMove.LEFT))
         assertEquals(ProfileSpot.FRIENDS, go(showcase, PanelMove.RIGHT).spot)
-        assertEquals(ProfileSpot.EDIT, go(showcase, PanelMove.RIGHT, PanelMove.UP).spot)
-        assertEquals(ProfileSpot.EDIT, go(edit, PanelMove.DOWN, PanelMove.UP).spot)
-        assertEquals("with nothing played, down skips to the showcase", ProfileSpot.SHOWCASE, go(edit, PanelMove.DOWN, recents = 0).spot)
-        assertEquals(ProfileSpot.SHOWCASE, go(edit, PanelMove.DOWN, PanelMove.LEFT, recents = 0).spot)
+        assertEquals("up from the columns is the stats", ProfileSpot.STATS, go(showcase, PanelMove.RIGHT, PanelMove.UP).spot)
+        assertEquals(ProfileSpot.STATS, go(stats, PanelMove.DOWN, PanelMove.UP).spot)
+        assertEquals("and up again is Edit", ProfileSpot.EDIT, go(stats, PanelMove.UP).spot)
+        assertEquals("with nothing played, down from the stats skips to the showcase", ProfileSpot.SHOWCASE, go(stats, PanelMove.DOWN, recents = 0).spot)
+        assertEquals(ProfileSpot.SHOWCASE, go(stats, PanelMove.DOWN, PanelMove.LEFT, recents = 0).spot)
         val choice = ProfileFocus(ProfileSpot.EDIT_NAME)
         assertEquals(ProfileSpot.EDIT_PICTURE, go(choice, PanelMove.RIGHT).spot)
         assertEquals(ProfileSpot.EDIT_NAME, go(choice, PanelMove.RIGHT, PanelMove.LEFT).spot)

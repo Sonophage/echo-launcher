@@ -56,10 +56,10 @@ fun Modifier.menuBackdrop(): Modifier = background(
 )
 
 fun panelSectionTint(section: SettingsSectionId?): Color = when (section) {
-    SettingsSectionId.OVERVIEW -> Color(0xFF2C5FD8)
     SettingsSectionId.LIBRARY -> Color(0xFFB5303C)
     SettingsSectionId.EMULATORS -> Color(0xFF2C7A55)
-    SettingsSectionId.LOOK_AND_FEEL -> Color(0xFF8E4FB8)
+    SettingsSectionId.LOOK -> Color(0xFF8E4FB8)
+    SettingsSectionId.CONTROLS -> Color(0xFF2C5FD8)
     SettingsSectionId.ACCOUNTS -> Color(0xFF2A8A9A)
     SettingsSectionId.SYSTEM -> Color(0xFF4A5470)
     SettingsSectionId.SETUP -> Color(0xFFC0632A)

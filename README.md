@@ -214,11 +214,13 @@ place.
 
 **Select** (View) or a tap on the notification island at the top right first shows the newest
 notification as a card, when there is one; a second press opens the panel: Notifications,
-Profile, Quick settings, Libraries and Settings. Settings has seven sections: **Overview, Library, Emulators,
-Look & Feel, Accounts, System, Setup**.
+Profile, Quick settings, Libraries and Settings. Settings has seven sections: **Library, Emulators,
+Look, Controls, Accounts, System, Setup**.
 
 The **Profile** tab shows your name and picture, your games, hours and achievements, what you played
-last with its achievement progress, and your Steam, RetroAchievements and Discord accounts.
+last with its achievement progress, and your Steam, RetroAchievements and Discord accounts. Its row
+of big numbers opens **Overview**: your library at a glance, with ECHO's version, the artwork and
+cache, and every column's counts.
 
 | | |
 |:---:|:---:|
@@ -227,7 +229,7 @@ last with its achievement progress, and your Steam, RetroAchievements and Discor
 | <img src="docs/screenshots/panel-quick-settings.jpg" width="420"> | <img src="docs/screenshots/panel-libraries.jpg" width="420"> |
 | Quick settings | Libraries: which columns are on the crossbar |
 | <img src="docs/screenshots/settings-home.jpg" width="420"> | <img src="docs/screenshots/settings-overview.jpg" width="420"> |
-| Settings | Overview: your library at a glance |
+| Settings | Overview, from the Profile tab: your library at a glance |
 | <img src="docs/screenshots/settings-library.jpg" width="420"> | <img src="docs/screenshots/settings-emulators.jpg" width="420"> |
 | Library: media folders and hidden items | Emulators: the Library Manager |
 | <img src="docs/screenshots/settings-system.jpg" width="420"> | <img src="docs/screenshots/settings-boot.jpg" width="420"> |
@@ -270,12 +272,12 @@ and a 2400×1504 tablet. The same build runs on both. Phones and foldables work 
 
 - **The layout sizes itself to the screen.** Screens are grouped by their smallest width: compact
   (under 600 dp, most handhelds and phones), medium (600 to 839 dp, most tablets) and expanded
-  (840 dp and up). Each group keeps its own **Adjust Crossbar Layout** tuning, so tuning the handheld
-  never distorts the tablet.
+  (840 dp and up). Each group keeps its own sizes and position (*Look ▸ Layout*), so tuning the
+  handheld never distorts the tablet.
 - **Touch works everywhere.** Swipe up and down to move through a column and sideways to change
   category (on Last Played, swipe right for the Recent rail), tap to select, long-press for the
   options menu, and press and hold the A button to launch. With touch, the footer shows a **Back**
-  button, since ECHO hides Android's own. *Look & Feel ▸ Touch* sets how far a swipe travels per
+  button, since ECHO hides Android's own. *Controls ▸ Touch* sets how far a swipe travels per
   step.
 - **A controller is optional on a tablet** and works the same as on a handheld when one is paired.
 
@@ -485,10 +487,10 @@ access to all of your storage.
 | Give the controller to the other screen (two screens) | **B** on the companion returns it to the XMB | | Tap that screen |
 
 - **D-pad ◀ backs out** of a folder, flyout or settings page wherever LEFT is not already doing
-  something. Turn it off with *Look & Feel ▸ Controller ▸ Left Backs Out*.
-- *Look & Feel ▸ Controller* swaps A/B and X/Y, and **Type** picks the button glyphs drawn in the
+  something. Turn it off with *Controls ▸ Controller ▸ Left Backs Out*.
+- *Controls ▸ Controller* swaps A/B and X/Y, and **Type** picks the button glyphs drawn in the
   footer and hints: Generic, **Xbox**, **Nintendo**, **PlayStation**, Keyboard or Touch.
-- Every control has a touch equivalent; *Look & Feel ▸ Touch* sets swipe distance, the on-screen
+- Every control has a touch equivalent; *Controls ▸ Touch* sets swipe distance, the on-screen
   button and whether hints can be tapped. See [Make it yours](#make-it-yours).
 - **B with the on-screen keyboard up hides the keyboard**; the next B goes back.
 
@@ -502,7 +504,7 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> | <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> |
-| Look & Feel | Colour Scheme, previewed on the live crossbar |
+| Look | Colour Scheme, previewed on the live crossbar |
 | <img src="docs/screenshots/settings-controller.jpg" width="420"> | <img src="docs/screenshots/glyphs-playstation.jpg" width="420"> |
 | Controller ▸ Type picks the button glyphs | The same screen with PlayStation glyphs |
 | <img src="docs/screenshots/settings-touch.jpg" width="420"> | <img src="docs/screenshots/settings-wallpaper.jpg" width="420"> |
@@ -510,7 +512,7 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 | <img src="docs/screenshots/settings-layout.jpg" width="420"> | <img src="docs/screenshots/settings-sound.jpg" width="420"> |
 | Layout: adjust the crossbar live, custom icons | Sound: menu sounds and your own menu music |
 
-### Colour and theme — *Look & Feel ▸ Theme*
+### Colour and theme — *Look ▸ Theme*
 
 | Setting | What it changes |
 |---|---|
@@ -523,7 +525,7 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 The focused game or app also tints the wave and fills the screen with its own art;
 *Emulators ▸ Artwork ▸ Backdrop & Tint* turns that off and keeps your theme's colour and wallpaper.
 
-### Background and text — *Look & Feel ▸ Wallpaper & Text*
+### Background and text — *Look ▸ Wallpaper & Text*
 
 | Setting | What it changes |
 |---|---|
@@ -538,15 +540,17 @@ The focused game or app also tints the wave and fills the screen with its own ar
 | **Fade By Distance** · **Text Shadow** | dim rows by distance from the cursor; shadow helper text over bright wallpaper |
 | **Show Device Notifications** · **Last Opened In The Island** | what the top bar shows |
 
-### Layout and icons — *Look & Feel ▸ Layout*
+### Layout and icons — *Look ▸ Layout*
 
 | Setting | What it changes |
 |---|---|
-| **Adjust Crossbar Layout** | scale and move the crossbar over the live screen with the d-pad or sliders, kept separately for each screen size |
+| **Crossbar Size · Top Bar Size · Footer Size** | sliders, 5% steps, kept separately for each screen size |
+| **Left and Right · Up and Down** | where the crossbar sits |
+| **Reset Layout** | every size and the position back to the start, for this screen |
 | **Classic Layout** | the PSP's own proportions, applied to this screen |
 | **Customize Crossbar Icons** | replace any of the 42 theme glyphs or a console's icon with your own image or GIF, live |
 
-### Boot and launch — *Look & Feel ▸ Boot*
+### Boot and launch — *Look ▸ Boot*
 
 <p align="center"><img src="docs/screenshots/boot-sequence.jpg" alt="The boot sequence: a line of light collapses to a point, then the ECHO mark gathers with the wave behind it" width="840"></p>
 <p align="center"><img src="docs/screenshots/launch-lens.jpg" alt="The Lens launch: the cover spins inside the ECHO ring, then opens over the screen" width="840"></p>
@@ -558,13 +562,13 @@ The focused game or app also tints the wave and fills the screen with its own ar
 | **Launch Disc** · **Launch Disc Style** | the cover becomes a spinning disc between choosing an app or media and it opening; **Disc** or **Lens** (the art spins inside the ECHO ring, then opens like a lens) |
 | **GameBoot** · **GameBoot Style** · **GameBoot Video** | the same for games, or your own clip |
 
-### Sound — *Look & Feel ▸ Sound*
+### Sound — *Look ▸ Sound*
 
 **Menu Sounds** on or off, a sound for every slot below, and looping **Menu Music** of your own.
 ECHO ships with no sounds, so the interface is silent until you add some; the boot, launch disc and
 GameBoot each have their own slot, and the menu music waits while they play.
 
-### Controller — *Look & Feel ▸ Controller*
+### Controller — *Controls ▸ Controller*
 
 | Setting | What it changes |
 |---|---|
@@ -577,7 +581,7 @@ GameBoot each have their own slot, and the menu music waits while they play.
 | **Left Backs Out** | LEFT leaves folders, flyouts and settings pages |
 | **Reset All Controller Settings** | back to the defaults |
 
-### Touch — *Look & Feel ▸ Touch*
+### Touch — *Controls ▸ Touch*
 
 ECHO works with no controller at all: swipe through a column, swipe sideways to change category,
 tap to pick, long-press for options, and hold the on-screen A to launch.
@@ -590,13 +594,13 @@ tap to pick, long-press for options, and hold the on-screen A to launch.
 | **Hint Delay** | how long before hints appear, from always shown to 5 seconds |
 | **Seek Step** · **Hide Controls After** | the video player's skip distance and how long its controls stay up |
 
-### Categories — *Look & Feel ▸ Categories*
+### Categories — *Look ▸ Categories*
 
 Create your own categories (gaming for games, non-gaming for apps), rename them, change their icon,
 move them left or right, hide them, or delete the ones you made. *Home ▸ Libraries* switches whole
 columns on and off.
 
-### Performance — *Look & Feel ▸ Performance*
+### Performance — *System ▸ Performance*
 
 **Thermal Throttle Awareness** lowers background quality when the device runs hot, **Battery Saver
 Mode** freezes the background under Battery Saver, and **Rescan On Return** looks for new and
@@ -650,7 +654,7 @@ long-press instead.
 ### Categories
 
 The default order is **Last Played, Shelves, Game, Music, Video, Photo, Library, Network,
-Settings**. *Look & Feel ▸ Categories* creates your own (gaming for games, non-gaming for apps),
+Settings**. *Look ▸ Categories* creates your own (gaming for games, non-gaming for apps),
 and renames, reorders, hides or deletes them. Built-in categories can be hidden but not deleted.
 
 ### Games and consoles
@@ -663,7 +667,7 @@ one **Memory Card** per console, **Folders** (your ROM roots) and **Search**.
 - **Manage a card** from its **≡** menu or Library Manager: rename, change emulator, hide, scan,
   update metadata, scrape missing artwork, or remove. ROM files are never deleted.
 - **Rescanning**: there is no file watcher. Rescan a card, use Library Manager's **Scan All
-  Consoles** or **Re-Scan All (Remove Missing)**, or turn on *Look & Feel ▸ Performance ▸ Rescan On
+  Consoles** or **Re-Scan All (Remove Missing)**, or turn on *System ▸ Performance ▸ Rescan On
   Return*, which checks for new and missing games when you come back, at most every five minutes.
   A console whose folder cannot be read is skipped, so an unmounted SD card never empties a library.
 - **Android games**: **Find Games** on the Android card's menu, or **≡ ▸ Mark as Game** on an app.
@@ -710,7 +714,7 @@ lets you test-launch a ROM before saving.
 
 **Last Played** keeps its order, newest first, and is never sorted. With a second screen it is the
 bottom screen's **Recent** page instead of a column (see [Dual screens](#dual-screens)).
-*Look & Feel ▸ Wallpaper & Text ▸ Last Played Size* sets how many it holds, and **≡ ▸ Remove from
+*Look ▸ Wallpaper & Text ▸ Last Played Size* sets how many it holds, and **≡ ▸ Remove from
 Recent** takes one off.
 
 **Shelves** gathers **Favorites**, the play states **Playing**, **Completed** and **Backlog**, and
@@ -782,9 +786,9 @@ Each column also lists its apps. Add more with its **Add** row.
 - **Quick Search** in Network searches the web in your own browser, or opens an address if you
   type one.
 
-### Look & Feel
+### Look and Controls
 
-Every look and feel setting is described in [Make it yours](#make-it-yours).
+Every Look and Controls setting is described in [Make it yours](#make-it-yours).
 
 ### Backup and restore
 
@@ -797,12 +801,12 @@ Relink Folder**.
 
 | Section | Holds |
 |---|---|
-| **Overview** | Library, artwork and build cards |
 | **Library** | Media Libraries (music, video, photo and book folders) · Hidden Items |
 | **Emulators** | Library Manager · Artwork · Installed · Custom Emulators · RetroArch |
-| **Look & Feel** | Theme · Wallpaper & Text · Layout · Boot · Sound · Categories · Controller · Touch · Performance |
+| **Look** | Theme · Wallpaper & Text · Layout · Boot · Sound · Categories |
+| **Controls** | Controller · Touch |
 | **Accounts** | Permissions · Achievements (RetroAchievements and Steam) · Artwork (SteamGridDB, ScreenScraper, IGDB, TMDB) · Discord |
-| **System** | About · Logs · Backup & Restore · Credits |
+| **System** | About · Logs · Backup & Restore · Performance · Credits |
 | **Setup** | Setup Wizard |
 
 Media folders are in **Library ▸ Media Libraries**, and on each column's **Folders** row. A media
@@ -835,7 +839,7 @@ category with no folder keeps only its apps. In a media category's top column or
 | Artwork will not download | Add a key in *Accounts ▸ Artwork* and check the connection. A key saved on another install (a restored backup) cannot be read here and shows as not set: enter it again |
 | Recently Used is empty | Allow restricted settings for ECHO, then grant usage access (see [Permissions](#permissions)) |
 | No notifications in the top panel | Grant notification access in *Accounts ▸ Permissions* |
-| The interface is too big, small or off-centre | *Look & Feel ▸ Layout ▸ Adjust Crossbar Layout* |
+| The interface is too big, small or off-centre | *Look ▸ Layout*: the size and position sliders |
 
 For a bug report, open *System ▸ Logs*, press **≡** on a log and choose **Share**. Logs are
 redacted.

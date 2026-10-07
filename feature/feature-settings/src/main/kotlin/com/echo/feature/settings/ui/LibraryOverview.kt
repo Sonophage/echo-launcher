@@ -61,9 +61,10 @@ import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.Photo
 
+// owner, 2026-10-06: the library at a glance, a tab of the Profile screen (it was Settings ▸ Overview): ECHO's
+// version and artwork, the big numbers, then recently played, the games and the media
 @Composable
-fun OverviewSettingsScreen(
-    onBack: () -> Unit,
+fun LibraryOverview(
     modifier: Modifier = Modifier,
     viewModel: OverviewSettingsViewModel = hiltViewModel(),
 ) {
@@ -77,38 +78,14 @@ fun OverviewSettingsScreen(
 
     val density = LocalDensity.current
     val window = LocalWindowInfo.current.containerSize
-    // sized from the whole window like the panel kit, not from this half of the page
+    // sized from the whole window like the panel kit
     val u = panelDesignUnits(window.width / density.density, window.height / density.density, density)
-    val banner = c.lastPlayed.firstOrNull()?.artUri
 
-    // owner, 2026-10-05: in the Profile page's language: the last-played art behind the page, a header with an
-    // icon and chips, big numbers, a rule, then cards with art and icons
-    SettingsPageScaffold(
-        subtitle = "Overview",
-        onBack = onBack,
-        modifier = modifier,
-        // owner, 2026-10-05: the columns stretch the full width, so the page has no help pane
-        fullWidth = true,
-        backdrop = banner?.let { art ->
-            {
-                // owner, 2026-10-05: an opaque base, so the wallpaper no longer shows through the game's art
-                Box(Modifier.fillMaxSize().background(PanelBase)) {
-                    AsyncImage(
-                        model = rememberArtworkModel(art),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        alignment = BiasAlignment(0f, -0.4f),
-                        modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.85f),
-                    )
-                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to PanelBase.copy(alpha = 0.55f), 0.3f to PanelBase.copy(alpha = 0.3f), 0.55f to PanelBase.copy(alpha = 0.8f), 1f to PanelBase.copy(alpha = 0.95f))))
-                }
-            }
-        },
-    ) {
+    Box(modifier) {
         val scrollState = rememberScrollState()
-        LocalSettingsScrollStateRegistrar.current(scrollState)
         // the same left edge as the settings rows (their 40dp, plus the rail row's own inset)
-        Column(Modifier.fillMaxSize().verticalScroll(scrollState).padding(start = 40.dp + u.dp(14), end = 26.dp, bottom = 14.dp)) {
+        // the Profile screen's own margins and its top, under the bar
+        Column(Modifier.fillMaxSize().verticalScroll(scrollState).padding(start = u.dp(80), end = u.dp(80), top = u.dp(96), bottom = u.dp(64))) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(24))) {
                 val icon = rememberAppIcon(context.packageName)?.bitmap
                 Box(Modifier.size(u.dp(96)).clip(RoundedCornerShape(u.dp(14))).background(Color.White.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {

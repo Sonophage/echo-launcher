@@ -12,7 +12,8 @@ const val DEFAULT_PROFILE_NAME = "Player"
 
 const val BADGE_COLUMNS = 6
 
-enum class ProfileTab { ACHIEVEMENTS, FRIENDS }
+// owner, 2026-10-06: Overview (the library at a glance) moved here from Settings
+enum class ProfileTab { ACHIEVEMENTS, FRIENDS, OVERVIEW }
 
 enum class BadgeFilter(val label: String) { ALL("All"), UNLOCKED("Unlocked"), LOCKED("Locked") }
 
@@ -105,6 +106,7 @@ fun stepProfile(state: ProfileState, action: GamepadAction): ProfileState = when
         }
     }
     ProfileTab.ACHIEVEMENTS -> stepAchievements(state, action)
+    ProfileTab.OVERVIEW -> state
 }
 
 private fun stepAchievements(state: ProfileState, action: GamepadAction): ProfileState {
@@ -152,7 +154,8 @@ fun profileBanner(recent: List<Game>): String? =
 
 const val RECENTLY_PLAYED_COUNT = 3
 
-enum class ProfileSpot { EDIT, EDIT_NAME, EDIT_PICTURE, RECENT, SHOWCASE, FRIENDS }
+// STATS is the row of big numbers, which opens Overview (owner, 2026-10-06)
+enum class ProfileSpot { EDIT, EDIT_NAME, EDIT_PICTURE, STATS, RECENT, SHOWCASE, FRIENDS }
 
 data class ProfileFocus(val spot: ProfileSpot = ProfileSpot.EDIT, val recent: Int = 0) {
     val choosing: Boolean get() = spot == ProfileSpot.EDIT_NAME || spot == ProfileSpot.EDIT_PICTURE
@@ -162,8 +165,14 @@ fun moveProfileFocus(focus: ProfileFocus, move: PanelMove, recents: Int): Profil
     val last = (recents - 1).coerceAtLeast(0)
     val at = focus.recent.coerceIn(0, last)
     val body = if (recents > 0) ProfileFocus(ProfileSpot.RECENT, at) else focus.copy(spot = ProfileSpot.SHOWCASE)
+    val stats = focus.copy(spot = ProfileSpot.STATS)
     return when (focus.spot) {
-        ProfileSpot.EDIT -> if (move == PanelMove.DOWN) body else focus
+        ProfileSpot.EDIT -> if (move == PanelMove.DOWN) stats else focus
+        ProfileSpot.STATS -> when (move) {
+            PanelMove.UP -> focus.copy(spot = ProfileSpot.EDIT)
+            PanelMove.DOWN -> body
+            else -> focus
+        }
         ProfileSpot.EDIT_NAME -> when (move) {
             PanelMove.RIGHT -> focus.copy(spot = ProfileSpot.EDIT_PICTURE)
             PanelMove.DOWN -> body
@@ -175,7 +184,7 @@ fun moveProfileFocus(focus: ProfileFocus, move: PanelMove, recents: Int): Profil
             else -> focus
         }
         ProfileSpot.RECENT -> when (move) {
-            PanelMove.UP -> if (at > 0) focus.copy(recent = at - 1) else focus.copy(spot = ProfileSpot.EDIT)
+            PanelMove.UP -> if (at > 0) focus.copy(recent = at - 1) else stats
             PanelMove.DOWN -> focus.copy(recent = (at + 1).coerceAtMost(last))
             PanelMove.RIGHT -> focus.copy(spot = ProfileSpot.SHOWCASE)
             else -> focus
@@ -183,12 +192,12 @@ fun moveProfileFocus(focus: ProfileFocus, move: PanelMove, recents: Int): Profil
         ProfileSpot.SHOWCASE -> when (move) {
             PanelMove.LEFT -> if (recents > 0) body else focus
             PanelMove.RIGHT -> focus.copy(spot = ProfileSpot.FRIENDS)
-            PanelMove.UP -> focus.copy(spot = ProfileSpot.EDIT)
+            PanelMove.UP -> stats
             else -> focus
         }
         ProfileSpot.FRIENDS -> when (move) {
             PanelMove.LEFT -> focus.copy(spot = ProfileSpot.SHOWCASE)
-            PanelMove.UP -> focus.copy(spot = ProfileSpot.EDIT)
+            PanelMove.UP -> stats
             else -> focus
         }
     }

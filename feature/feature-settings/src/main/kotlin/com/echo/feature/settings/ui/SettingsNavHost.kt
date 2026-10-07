@@ -11,7 +11,6 @@ import com.echo.core.domain.model.SETTINGS_ROOT_SCREEN_ID
 
 val SETTINGS_SCREEN_ROUTES: Set<String> = setOf(
     SETTINGS_ROOT_SCREEN_ID,
-    "settings_overview",
     "settings_media_libraries",
     "settings_initial_setup",
     "settings_initial_setup_first",
@@ -60,7 +59,6 @@ fun SettingsNavHost(
 
     onPromptTapped: ((GamepadAction) -> Unit)? = null,
     onOpenColorSchemePicker: () -> Unit = {},
-    onOpenCrossbarLayoutAdjust: () -> Unit = {},
     onOpenCustomIcons: () -> Unit = {},
     onPreviewBootSequence: () -> Unit = {},
     onPreviewGameBoot: () -> Unit = {},
@@ -129,7 +127,6 @@ fun SettingsNavHost(
             )
             "settings_layout"     -> DisplaySettingsScreen(
                 onBack = onBack, section = DisplaySection.LAYOUT,
-                onOpenCrossbarLayoutAdjust = onOpenCrossbarLayoutAdjust,
                 onOpenCustomIcons = onOpenCustomIcons,
                 modifier = modifier,
             )
@@ -152,7 +149,6 @@ fun SettingsNavHost(
             "settings_controller" -> ControllerSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_backup"     -> BackupSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_logs"       -> LogsSettingsScreen(onBack = onBack, modifier = modifier)
-            "settings_overview"   -> OverviewSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_media_libraries" -> MediaLibrariesScreen(onBack = onBack, modifier = modifier)
             "settings_permissions" -> PermissionsSettingsScreen(onBack = onBack, modifier = modifier)
             "settings_accounts"   -> AccountsSettingsScreen(onBack = onBack, modifier = modifier)

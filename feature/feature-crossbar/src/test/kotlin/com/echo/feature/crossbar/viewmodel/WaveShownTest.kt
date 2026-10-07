@@ -10,7 +10,7 @@ class WaveShownTest {
         val crossbar = CrossbarUiState(showBootSequence = false)
         assertTrue(crossbar.waveShown)
         assertFalse(crossbar.copy(notificationsOpen = true).waveShown)
-        assertFalse(crossbar.copy(activeSettingsScreen = "settings_overview").waveShown)
+        assertFalse(crossbar.copy(activeSettingsScreen = "settings_about").waveShown)
         assertFalse(crossbar.copy(activeAppDrawerFilter = "RECENT").waveShown)
         assertFalse(crossbar.copy(musicPlayerVisible = true).waveShown)
     }

@@ -1,5 +1,7 @@
 package com.echo.feature.settings.ui
 
+import com.echo.themekit.CrossbarLayoutAdjust
+import kotlin.math.roundToInt
 import com.echo.core.domain.model.ControllerHintPolicy
 import com.echo.core.domain.model.IconLegibilityStyle
 import com.echo.core.data.repository.InterfacePreferences as IP
@@ -56,7 +58,6 @@ fun DisplaySettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     section: DisplaySection? = null,
-    onOpenCrossbarLayoutAdjust: () -> Unit = {},
     onOpenCustomIcons: () -> Unit = {},
     onPreviewBootSequence: () -> Unit = {},
     onPreviewGameBoot: () -> Unit = {},
@@ -321,28 +322,70 @@ fun DisplaySettingsScreen(
                 )
             }
             if (section == null || section == DisplaySection.LAYOUT) {
-                SettingsGroup("Crossbar Layout")
-                Text(
-                    text     = "Position the Crossbar live for this screen — scale it, and shift the crossbar " +
-                        "up/down and left/right — over the real interface. Each screen size (handheld, " +
-                        "foldable, tablet) keeps its own tuning.",
-                    color    = SettingsSubtext,
-                    fontSize = 12.sp,
-
-                    style    = androidx.compose.ui.text.TextStyle(shadow = SettingsTextShadow),
-                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 4.dp),
+                // owner, 2026-10-06: every size on one screen as sliders, no live overlay; each screen size (handheld,
+                // foldable, tablet) keeps its own
+                SettingsGroup("Sizes")
+                val layout = state.layoutAdjust
+                val percent: (Float) -> String = { "${(it * 100).roundToInt()}%" }
+                SettingsSliderRow(
+                    label = "Crossbar Size",
+                    sublabel = "The crossbar's icons, rows and text",
+                    focusKey = "layout_scale",
+                    value = layout.scale,
+                    onValueChange = { v -> viewModel.setLayout { it.copy(scale = v) } },
+                    valueRange = CrossbarLayoutAdjust.SCALE_MIN..CrossbarLayoutAdjust.SCALE_MAX,
+                    steps = sliderSteps(CrossbarLayoutAdjust.SCALE_MIN, CrossbarLayoutAdjust.SCALE_MAX, 0.05f),
+                    valueFormatter = percent,
                 )
-
+                SettingsSliderRow(
+                    label = "Top Bar Size",
+                    sublabel = "The islands, the battery reading and the clock",
+                    focusKey = "layout_header",
+                    value = layout.headerScale,
+                    onValueChange = { v -> viewModel.setLayout { it.copy(headerScale = v) } },
+                    valueRange = CrossbarLayoutAdjust.CHROME_MIN..CrossbarLayoutAdjust.CHROME_MAX,
+                    steps = sliderSteps(CrossbarLayoutAdjust.CHROME_MIN, CrossbarLayoutAdjust.CHROME_MAX, 0.05f),
+                    valueFormatter = percent,
+                )
+                SettingsSliderRow(
+                    label = "Footer Size",
+                    sublabel = "The filter, the buttons and the A card",
+                    focusKey = "layout_footer",
+                    value = layout.footerScale,
+                    onValueChange = { v -> viewModel.setLayout { it.copy(footerScale = v) } },
+                    valueRange = CrossbarLayoutAdjust.CHROME_MIN..CrossbarLayoutAdjust.CHROME_MAX,
+                    steps = sliderSteps(CrossbarLayoutAdjust.CHROME_MIN, CrossbarLayoutAdjust.CHROME_MAX, 0.05f),
+                    valueFormatter = percent,
+                )
+                SettingsGroup("Crossbar Position")
+                SettingsSliderRow(
+                    label = "Left and Right",
+                    focusKey = "layout_left",
+                    value = layout.barLeftFraction,
+                    onValueChange = { v -> viewModel.setLayout { it.copy(barLeftFraction = v) } },
+                    valueRange = CrossbarLayoutAdjust.LEFT_MIN..CrossbarLayoutAdjust.LEFT_MAX,
+                    steps = sliderSteps(CrossbarLayoutAdjust.LEFT_MIN, CrossbarLayoutAdjust.LEFT_MAX, 0.01f),
+                    valueFormatter = { "${(it * 100).roundToInt()}" },
+                )
+                SettingsSliderRow(
+                    label = "Up and Down",
+                    focusKey = "layout_top",
+                    value = layout.barTopFraction,
+                    onValueChange = { v -> viewModel.setLayout { it.copy(barTopFraction = v) } },
+                    valueRange = CrossbarLayoutAdjust.TOP_MIN..CrossbarLayoutAdjust.TOP_MAX,
+                    steps = sliderSteps(CrossbarLayoutAdjust.TOP_MIN, CrossbarLayoutAdjust.TOP_MAX, 0.01f),
+                    valueFormatter = { "${(it * 100).roundToInt()}" },
+                )
                 SettingsRow(
-                    label    = "Adjust Crossbar Layout",
-                    sublabel = "Live editor — scale + reposition the crossbar with the D-pad or sliders",
-                    onClick  = onOpenCrossbarLayoutAdjust,
+                    label    = "Reset Layout",
+                    sublabel = "Every size and the position back to the start, for this screen",
+                    onClick  = { viewModel.resetLayout() },
                 )
 
                 SettingsRow(
                     label    = "Classic Layout",
                     sublabel = if (state.classicLayoutApplied) {
-                        "Applied to this screen. Change the layout with Adjust Crossbar Layout to use it again"
+                        "Applied to this screen. Move a slider above to leave it"
                     } else {
                         "Apply the PSP's own proportions to this screen"
                     },
@@ -662,3 +705,6 @@ private fun UiMediaSlot.isAssignedIn(state: DisplaySettingsUiState): Boolean = w
     UiMediaSlot.GAMEBOOT_VIDEO -> state.gameBootVideoAssigned
     else -> false
 }
+
+// the stops between a slider's ends for a step size, as SettingsSliderRow counts them (the ends not included)
+internal fun sliderSteps(min: Float, max: Float, step: Float): Int = (((max - min) / step).roundToInt() - 1).coerceAtLeast(0)

@@ -35,7 +35,7 @@ object EchoSettingsExport {
             "display_wave_style" to Kind.TEXT,
             "display_wave_over_wallpaper" to Kind.BOOL,
             "display_icon_legibility" to Kind.TEXT,
-            "display_xmb_layout_adjust" to Kind.JSON,
+            com.echo.core.data.datastore.CROSSBAR_LAYOUT_ADJUST_KEY.name to Kind.JSON,
             "theme_layout_spec" to Kind.JSON,
         ),
         "interface" to linkedMapOf(

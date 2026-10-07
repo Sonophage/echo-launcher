@@ -181,6 +181,10 @@ class CrossbarPanel(
                 uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.FRIENDS)) }
                 openProfile(ProfileTab.FRIENDS, fromPanel = true)
             }
+            ProfileSpot.STATS -> {
+                uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.STATS)) }
+                openProfile(ProfileTab.OVERVIEW, fromPanel = true)
+            }
         }
     }
 

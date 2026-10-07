@@ -112,12 +112,16 @@ class SettingsHierarchyTest {
             settingsEntriesIn(SettingsSectionId.EMULATORS).map { it.id },
         )
 
+        // owner, 2026-10-06: Look splits into how ECHO looks and how you drive it; Performance is housekeeping
         assertEquals(
-            listOf(
-                "settings_themes", "settings_appearance", "settings_layout", "settings_boot",
-                "settings_audio", "settings_categories", "settings_controller", "settings_touch", "settings_performance",
-            ),
-            settingsEntriesIn(SettingsSectionId.LOOK_AND_FEEL).map { it.id },
+            "Look holds what you see",
+            listOf("settings_themes", "settings_appearance", "settings_layout", "settings_boot", "settings_audio", "settings_categories"),
+            settingsEntriesIn(SettingsSectionId.LOOK).map { it.id },
+        )
+        assertEquals(
+            "Controls holds how you drive it",
+            listOf("settings_controller", "settings_touch"),
+            settingsEntriesIn(SettingsSectionId.CONTROLS).map { it.id },
         )
         assertEquals(
             "Accounts holds what signs in or grants access",
@@ -127,7 +131,7 @@ class SettingsHierarchyTest {
         )
         assertEquals(
             "System holds the launcher's own housekeeping",
-            listOf("settings_about", "settings_logs", "settings_backup", "settings_credits"),
+            listOf("settings_about", "settings_logs", "settings_backup", "settings_performance", "settings_credits"),
             settingsEntriesIn(SettingsSectionId.SYSTEM).map { it.id },
         )
         assertEquals(
@@ -181,20 +185,26 @@ class SettingsHierarchyTest {
         assertTrue("settings_app_visibility route missing", SETTINGS_SCREEN_ROUTES.contains("settings_app_visibility"))
     }
 
-    @Test fun `Hidden Games is not reachable from Look and Feel`() {
-        val interfaceIds = settingsEntriesIn(SettingsSectionId.LOOK_AND_FEEL).map { it.id }
+    @Test fun `Hidden Games is not reachable from Look`() {
+        val interfaceIds = settingsEntriesIn(SettingsSectionId.LOOK).map { it.id }
         assertFalse(interfaceIds.contains("settings_app_visibility"))
     }
 
-    @Test fun `Sound is present under Look and Feel via its own route`() {
-        val ids = settingsEntriesIn(SettingsSectionId.LOOK_AND_FEEL).map { it.id }
-        assertTrue("Sound missing from Look & Feel", ids.contains("settings_audio"))
+    @Test fun `Sound is present under Look via its own route`() {
+        val ids = settingsEntriesIn(SettingsSectionId.LOOK).map { it.id }
+        assertTrue("Sound missing from Look", ids.contains("settings_audio"))
         assertTrue("settings_audio route missing", SETTINGS_SCREEN_ROUTES.contains("settings_audio"))
     }
 
     @Test fun `the audio row is titled Sound and names music as well as sounds`() {
-        val row = settingsEntriesIn(SettingsSectionId.LOOK_AND_FEEL).first { it.id == "settings_audio" }
+        val row = settingsEntriesIn(SettingsSectionId.LOOK).first { it.id == "settings_audio" }
         assertEquals("Sound", row.title)
         assertEquals("Menu sounds, menu music & boot audio", row.subtitle)
+    }
+
+    // owner, 2026-10-06: Overview is a tab of the Profile screen, no longer a Settings page
+    @Test fun `Overview has left Settings`() {
+        assertFalse("settings_overview" in SETTINGS_SCREEN_ROUTES)
+        assertTrue(com.echo.core.domain.model.SETTINGS_CATALOG.none { it.id == "settings_overview" })
     }
 }

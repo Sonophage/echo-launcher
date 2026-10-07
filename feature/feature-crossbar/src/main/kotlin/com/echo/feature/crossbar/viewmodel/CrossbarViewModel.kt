@@ -222,15 +222,6 @@ data class CustomColorPickerState(
     val selectedChannel: Int = 0,
 )
 
-data class CrossbarLayoutAdjustSession(
-    val draft: com.echo.themekit.CrossbarLayoutAdjust,
-    val original: com.echo.themekit.CrossbarLayoutAdjust,
-    val bucketKey: String,
-    val slidersVisible: Boolean = false,
-    // which band LB and RB size: the footer, or (after Y) the top bar
-    val sizingHeader: Boolean = false,
-)
-
 data class CustomIconSession(
     val groups: List<com.echo.themekit.IconSlot.Group>,
     val groupIndex: Int = 0,
@@ -725,7 +716,6 @@ data class CrossbarUiState(
 
     val crossbarLayoutAdjustMap: Map<String, com.echo.themekit.CrossbarLayoutAdjust> = emptyMap(),
 
-    val crossbarLayoutAdjust: CrossbarLayoutAdjustSession? = null,
 ) {
     val isInSubItem: Boolean
         get() = drillOutStep != null
@@ -871,7 +861,6 @@ data class CrossbarUiState(
             activePhotoViewer != null ||
             colorSchemePicker != null ||
             customColorPicker != null ||
-            crossbarLayoutAdjust != null ||
             customIconSession != null ||
             saveThemeNameDialog != null ||
             renameAppTarget != null ||
@@ -2669,29 +2658,6 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
-        if (state.crossbarLayoutAdjust != null) {
-            when (action) {
-                GamepadAction.NAVIGATE_LEFT  -> nudgeCrossbarLayoutHorizontal(-1)
-                GamepadAction.NAVIGATE_RIGHT -> nudgeCrossbarLayoutHorizontal(+1)
-                GamepadAction.NAVIGATE_UP    -> nudgeCrossbarLayoutVertical(-1)
-                GamepadAction.NAVIGATE_DOWN  -> nudgeCrossbarLayoutVertical(+1)
-                GamepadAction.PREV_CATEGORY  -> nudgeCrossbarLayoutScale(-1)
-                GamepadAction.NEXT_CATEGORY  -> nudgeCrossbarLayoutScale(+1)
-                GamepadAction.OPEN_ISLAND    -> resetCrossbarLayoutAdjust()
-                GamepadAction.PREV_PAGE      -> nudgeCrossbarChrome(-1)
-                GamepadAction.NEXT_PAGE      -> nudgeCrossbarChrome(+1)
-                GamepadAction.OPEN_CONTEXT_MENU -> state.crossbarLayoutAdjust.let { s ->
-                    _uiState.update { it.copy(crossbarLayoutAdjust = s.copy(sizingHeader = !s.sizingHeader)) }
-                }
-
-                GamepadAction.CHANGE_SORT       -> toggleCrossbarLayoutSliders()
-                GamepadAction.SELECT         -> saveCrossbarLayoutAdjust()
-                GamepadAction.BACK           -> cancelCrossbarLayoutAdjust()
-                else -> Unit
-            }
-            return
-        }
-
         if (state.musicPlayerVisible) {
             music.onPlayerButton(action, state)
             return
@@ -4267,67 +4233,6 @@ class CrossbarViewModel @Inject constructor(
         _uiState.update { it.copy(pendingDrawerAction = null) }
     }
 
-    fun openCrossbarLayoutAdjust() {
-        val swDp = context.resources.configuration.smallestScreenWidthDp
-        val bucket = com.echo.themekit.CrossbarFormFactor.forSmallestWidthDp(swDp).key
-        val s = _uiState.value
-        val seed = s.crossbarLayoutAdjustMap[bucket] ?: com.echo.themekit.CrossbarLayoutAdjust(
-            scale = 1f,
-            barLeftFraction = 0f,
-            barTopFraction = s.layoutSpec.barTopFraction,
-        )
-        _uiState.update {
-            it.withSettingsClosed().copy(
-                crossbarLayoutAdjust = CrossbarLayoutAdjustSession(draft = seed, original = seed, bucketKey = bucket),
-            )
-        }
-    }
-
-    private fun updateAdjustDraft(transform: (com.echo.themekit.CrossbarLayoutAdjust) -> com.echo.themekit.CrossbarLayoutAdjust) {
-        val session = _uiState.value.crossbarLayoutAdjust ?: return
-        val next = com.echo.themekit.CrossbarLayoutAdjustCodec.sanitize(transform(session.draft))
-        _uiState.update { it.copy(crossbarLayoutAdjust = session.copy(draft = next)) }
-    }
-
-    fun nudgeCrossbarLayoutHorizontal(dir: Int) = updateAdjustDraft { it.copy(barLeftFraction = it.barLeftFraction + dir * 0.01f) }
-    fun nudgeCrossbarLayoutVertical(dir: Int) = updateAdjustDraft { it.copy(barTopFraction = it.barTopFraction + dir * 0.01f) }
-    fun nudgeCrossbarLayoutScale(dir: Int) = updateAdjustDraft { it.copy(scale = it.scale + dir * 0.02f) }
-
-    private fun nudgeCrossbarChrome(dir: Int) = updateAdjustDraft {
-        if (_uiState.value.crossbarLayoutAdjust?.sizingHeader == true) it.copy(headerScale = it.headerScale + dir * 0.05f)
-        else it.copy(footerScale = it.footerScale + dir * 0.05f)
-    }
-
-    fun setCrossbarLayoutHeader(v: Float) = updateAdjustDraft { it.copy(headerScale = v) }
-    fun setCrossbarLayoutFooter(v: Float) = updateAdjustDraft { it.copy(footerScale = v) }
-
-    fun setCrossbarLayoutScale(v: Float) = updateAdjustDraft { it.copy(scale = v) }
-    fun setCrossbarLayoutHorizontal(v: Float) = updateAdjustDraft { it.copy(barLeftFraction = v) }
-    fun setCrossbarLayoutVertical(v: Float) = updateAdjustDraft { it.copy(barTopFraction = v) }
-
-    fun toggleCrossbarLayoutSliders() {
-        val session = _uiState.value.crossbarLayoutAdjust ?: return
-        _uiState.update { it.copy(crossbarLayoutAdjust = session.copy(slidersVisible = !session.slidersVisible)) }
-    }
-
-    fun resetCrossbarLayoutAdjust() = updateAdjustDraft { com.echo.themekit.CrossbarLayoutAdjust() }
-
-    fun saveCrossbarLayoutAdjust() {
-        val session = _uiState.value.crossbarLayoutAdjust ?: return
-        val map = _uiState.value.crossbarLayoutAdjustMap.toMutableMap()
-        map[session.bucketKey] = session.draft
-        viewModelScope.launch {
-            context.echoDataStore.edit {
-                it[KEY_CROSSBAR_LAYOUT_ADJUST] = com.echo.themekit.CrossbarLayoutAdjustCodec.encode(map)
-            }
-            _uiState.update { it.copy(crossbarLayoutAdjust = null) }
-        }
-    }
-
-    fun cancelCrossbarLayoutAdjust() {
-        _uiState.update { it.copy(crossbarLayoutAdjust = null) }
-    }
-
     private val customIconGroups: List<com.echo.themekit.IconSlot.Group> =
     listOf(
         com.echo.themekit.IconSlot.Group.CATEGORY_BAR,
@@ -4753,7 +4658,7 @@ class CrossbarViewModel @Inject constructor(
         internal const val WAVE_IDLE_MS = 12_000L
 
         internal const val IDLE_HINT_POLL_MS  = 500L
-        internal val KEY_CROSSBAR_LAYOUT_ADJUST = stringPreferencesKey("display_xmb_layout_adjust")
+        internal val KEY_CROSSBAR_LAYOUT_ADJUST = com.echo.core.data.datastore.CROSSBAR_LAYOUT_ADJUST_KEY
         private val KEY_SETUP_COMPLETE    = booleanPreferencesKey("library_setup_complete")
 
         private val KEY_INITIAL_SETUP_SEEN = com.echo.core.data.repository.InitialSetupFlag.KEY_SEEN
