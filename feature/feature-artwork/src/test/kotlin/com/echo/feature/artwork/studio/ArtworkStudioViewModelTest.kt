@@ -306,7 +306,8 @@ class ArtworkStudioViewModelTest {
             advanceUntilIdle()
 
             assertTrue(vm.uiState.value.includeNsfw)
-            coVerify(exactly = 2) { steamGridDb.getArt(any(), any(), any(), any(), any()) }
+            // the tile's grids, once each way; the slot probe asks for the other slots' art besides
+            coVerify(exactly = 2) { steamGridDb.getArt(any(), SgdbArtType.GRID, any(), SGDB_PORTRAIT_GRIDS, any()) }
 
             vm.selectSource(sources.indexOf(StudioSource.IGDB))
             advanceUntilIdle()
@@ -334,7 +335,7 @@ class ArtworkStudioViewModelTest {
 
         assertFalse(vm.uiState.value.includeNsfw)
         assertTrue(vm.uiState.value.queue.isEmpty())
-        coVerify(exactly = 1) { steamGridDb.getArt(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 1) { steamGridDb.getArt(any(), SgdbArtType.GRID, any(), SGDB_PORTRAIT_GRIDS, any()) }
     }
 
     @Test
@@ -749,6 +750,62 @@ class ArtworkStudioViewModelTest {
         assertTrue(vm.uiState.value.selection.isEmpty())
         coVerify(exactly = 0) { routingStore.studioAppendFromUrl(any(), any(), any(), any(), any()) }
     }
+
+    // owner, 2026-10-07: the studio still made you cycle through the manual and video with none there
+    @Test
+    fun `the triggers skip a slot ScreenScraper has nothing for, before it is ever visited`() =
+        runTest(testDispatcher) {
+            coEvery { ssMediaCatalog.mediasFor(any(), any()) } returns listOf("mixrbv2", "fanart", "ss", "wheel").map {
+                com.echo.feature.artwork.api.SsCachedMedia(type = it, region = "us", url = "ss-$it", format = "png")
+            }
+            val vm = loadedOn(StudioSource.SCREENSCRAPER)
+
+            val walked = (1..STUDIO_TABS.size).map {
+                vm.handleGamepadAction(GamepadAction.NEXT_CATEGORY)
+                advanceUntilIdle()
+                STUDIO_TABS[vm.uiState.value.tabIndex].kind
+            }
+
+            assertEquals(
+                "no manual, tile video or preview video to land on",
+                emptySet<ArtworkKind>(),
+                walked.toSet() intersect setOf(ArtworkKind.MANUAL, ArtworkKind.VIDEO, ArtworkKind.ICON1),
+            )
+            assertEquals(setOf(ArtworkKind.ICON, ArtworkKind.BACKGROUND, ArtworkKind.SCREENSHOT, ArtworkKind.LOGO), walked.toSet())
+        }
+
+    // owner, 2026-10-07: the studio always opens on the Tile, whatever tab the last game was left on
+    @Test
+    fun `opening the studio lands on the Tile, not the tab the last game was left on`() =
+        runTest(testDispatcher) {
+            val vm = loadedOn(StudioSource.SCREENSCRAPER)
+            vm.selectTab(STUDIO_TABS.indexOfFirst { it.kind == ArtworkKind.MANUAL })
+            advanceUntilIdle()
+
+            coEvery { gameRepository.getById(2L) } returns game.copy(id = 2L)
+            vm.load(2L)
+            advanceUntilIdle()
+            vm.selectSource(vm.sourcesForTab().indexOf(StudioSource.STEAMGRIDDB))
+            advanceUntilIdle()
+
+            assertEquals(ArtworkKind.ICON, STUDIO_TABS[vm.uiState.value.tabIndex].kind)
+        }
+
+    // owner, 2026-10-07: SteamGridDB, IGDB and ScreenScraper alike hide a slot they have nothing for
+    @Test
+    fun `SteamGridDB hides a slot with no art before it is visited`() =
+        runTest(testDispatcher) {
+            coEvery { steamGridDb.getArt(any(), any(), any(), any(), any()) } answers {
+                val type = secondArg<SgdbArtType>()
+                Result.success(if (type == SgdbArtType.HERO) emptyList() else listOf(SgdbArtItem(id = 1L, url = "art-$type")))
+            }
+            val vm = loadedOn(StudioSource.STEAMGRIDDB)
+
+            val shown = vm.uiState.value.visibleSlots.map { it.kind }
+            assertTrue("no heroes, so no Background", ArtworkKind.BACKGROUND !in shown)
+            assertTrue(ArtworkKind.LOGO in shown)
+            assertTrue("SteamGridDB has no manual or video", ArtworkKind.MANUAL !in shown && ArtworkKind.VIDEO !in shown)
+        }
 
     @Test
     fun `stepping past the last slot offers the review instead of wrapping to the first`() =
@@ -1186,7 +1243,8 @@ class ArtworkStudioViewModelTest {
         }
 
         coVerify(exactly = 0) { igdbApi.fetchGameInfo(any(), any()) }
-        coVerify(exactly = 3) { igdbApi.fetchGameInfoById(55L) }
+        // one answer serves every tab, the background probe's included
+        coVerify(exactly = 1) { igdbApi.fetchGameInfoById(55L) }
         coVerify(exactly = 1) {
             matchEvidence.searchByTitle(com.echo.feature.artwork.match.MatchProvider.IGDB, any(), any())
         }
@@ -1516,7 +1574,8 @@ class ArtworkStudioViewModelTest {
             matchEvidence.searchByTitle(com.echo.feature.artwork.match.MatchProvider.STEAMGRIDDB, any(), any())
         }
 
-        coVerify(exactly = 1) { steamGridDb.getArt(77L, SgdbArtType.GRID, any(), any(), any()) }
+        // the tile's portrait grids once; the screenshot slot's plain grids are a different question
+        coVerify(exactly = 1) { steamGridDb.getArt(77L, SgdbArtType.GRID, any(), SGDB_PORTRAIT_GRIDS, any()) }
         coVerify(exactly = 1) { steamGridDb.getArt(77L, SgdbArtType.HERO, any(), any(), any()) }
         coVerify(exactly = 1) { steamGridDb.getArt(77L, SgdbArtType.LOGO, any(), any(), any()) }
     }

@@ -40,7 +40,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.outlined.Folder
 import coil3.compose.AsyncImage
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.ControllerPrompt
@@ -409,6 +411,8 @@ private fun StudioProviderCardView(
         titleAlpha = if (card.pickable) dim else dim * 0.6f,
         onClick = onClick,
         modifier = modifier,
+        leading = { d -> SourceMark(card.source, 24.dp, d) },
+        emptyArt = { d -> SourceMark(card.source, 72.dp, d * 0.5f) },
     ) { d ->
         Text(
             card.scansFor,
@@ -637,4 +641,44 @@ internal fun <T : Any> StudioMenu(
         },
         onDismiss = onDismiss,
     )
+}
+
+// owner, 2026-10-07: each provider is shown by a monogram drawn in ECHO's style, not the site's own logo
+internal fun sourceMonogram(source: StudioSource): String? = when (source) {
+    StudioSource.SCREENSCRAPER -> "SS"
+    StudioSource.STEAMGRIDDB -> "SGDB"
+    StudioSource.IGDB -> "IGDB"
+    StudioSource.LOCAL -> null
+}
+
+private fun sourceTint(source: StudioSource): Color = when (source) {
+    StudioSource.SCREENSCRAPER -> Color(0xFF2F6FB3)
+    StudioSource.STEAMGRIDDB -> Color(0xFF3A4A8C)
+    StudioSource.IGDB -> Color(0xFF7B4FD6)
+    StudioSource.LOCAL -> Color(0xFF4A5568)
+}
+
+// a rounded tile in the provider's tint with its monogram, or a folder for Local File
+@Composable
+private fun SourceMark(source: StudioSource, size: Dp, dim: Float) {
+    val shape = RoundedCornerShape(size * 0.24f)
+    Box(
+        Modifier.size(size).clip(shape)
+            .background(sourceTint(source).copy(alpha = 0.85f * dim))
+            .border(1.dp, Color.White.copy(alpha = 0.25f * dim), shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        val mark = sourceMonogram(source)
+        if (mark != null) {
+            Text(
+                mark, color = Color.White.copy(alpha = dim), fontWeight = FontWeight.ExtraBold, maxLines = 1, softWrap = false,
+                fontSize = (size.value * if (mark.length > 2) 0.26f else 0.4f).sp, letterSpacing = 0.02.em,
+            )
+        } else {
+            androidx.compose.material3.Icon(
+                androidx.compose.material.icons.Icons.Outlined.Folder, null,
+                tint = Color.White.copy(alpha = dim), modifier = Modifier.size(size * 0.55f),
+            )
+        }
+    }
 }

@@ -3,7 +3,9 @@ package com.echo.core.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -42,6 +44,8 @@ fun EchoArtCard(
     emptyArt: @Composable BoxScope.(dim: Float) -> Unit = { dim ->
         Text("no sample yet", color = Color.White.copy(alpha = 0.18f * dim + 0.06f), fontSize = 9.sp)
     },
+    // drawn before the title, as a provider's mark
+    leading: (@Composable (dim: Float) -> Unit)? = null,
     footer: @Composable ColumnScope.(dim: Float) -> Unit,
 ) {
     val dim = if (lit) 1f else 0.38f
@@ -57,12 +61,15 @@ fun EchoArtCard(
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(14.dp),
     ) {
-        Text(
-            title,
-            color = Color.White.copy(alpha = titleAlpha),
-            fontSize = 14.sp, fontWeight = FontWeight.Bold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            leading?.invoke(dim)
+            Text(
+                title,
+                color = Color.White.copy(alpha = titleAlpha),
+                fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
         Spacer(Modifier.height(8.dp))
         Box(
             Modifier

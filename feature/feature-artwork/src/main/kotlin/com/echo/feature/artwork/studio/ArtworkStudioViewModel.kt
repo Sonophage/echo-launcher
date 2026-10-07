@@ -569,8 +569,13 @@ class ArtworkStudioViewModel @Inject constructor(
     private var gridSlotDp: Pair<Float, Float>? = null
 
     fun load(gameId: Long) {
+        // owner, 2026-10-07: the studio always opens on the Tile, whatever tab it was last left on
+        val tile = capacityFor(0)
         _uiState.update { s ->
             s.copy(
+                tabIndex = 0,
+                gridColumns = tile?.columns ?: s.gridColumns,
+                gridRows = tile?.rows ?: s.gridRows,
                 closed = false, selection = emptyMap(), removals = emptyMap(),
                 providerPickerOpen = true, reviewOpen = false,
                 leavePromptOpen = false, replacePromptOpen = false,
@@ -597,6 +602,7 @@ class ArtworkStudioViewModel @Inject constructor(
             return
         }
         this.gameId = gameId
+        _uiState.update { it.copy(emptySlots = emptySet()) }
 
         cancelLoad()
         cancelBackgroundResolutions()
@@ -604,6 +610,7 @@ class ArtworkStudioViewModel @Inject constructor(
             val game = gameRepository.getById(gameId)
             refreshProviderAvailability()
             resultCache.clear()
+            providerMemo.clear()
 
             val seed = game?.displayTitle.orEmpty()
             _uiState.update {
@@ -665,6 +672,7 @@ class ArtworkStudioViewModel @Inject constructor(
 
     private fun loadResults() {
         loadJob?.cancel()
+        probeJob?.cancel()
         val token = ++generation
         val state = _uiState.value
         val kind = tab().kind
@@ -681,6 +689,7 @@ class ArtworkStudioViewModel @Inject constructor(
             activeKey = key
             resultCache[key]?.let { cached ->
                 showPage(cached, pageIndex = 0, key = key, token = token)
+                probeSlots(state, source, known.match)
                 return
             }
             if (source == StudioSource.LOCAL) {
@@ -707,6 +716,7 @@ class ArtworkStudioViewModel @Inject constructor(
             var key = requestKey(state, source, kind, match)
             activeKey = key
             browse(source, kind, state.query, match, key, token, romLookup)
+            probeSlots(state, source, match)
             if (source != StudioSource.SCREENSCRAPER || !refreshSsIdentityAfterBrowse()) return@launch
 
             match = resolveMatch(MatchProvider.SCREENSCRAPER, state.query, token)
@@ -715,6 +725,7 @@ class ArtworkStudioViewModel @Inject constructor(
             key = movedKey
             activeKey = key
             browse(source, kind, state.query, match, key, token)
+            probeSlots(state, source, match)
         }
     }
 
@@ -741,6 +752,8 @@ class ArtworkStudioViewModel @Inject constructor(
 
             forgetMatches(MatchProvider.SCREENSCRAPER)
         }
+        // the lookup's media are the game's, so the slot probe does not ask for them again by id
+        providerMemo[listOf("ss", gameId, stored.ssId)] = Answer(medias)
         return SsRomLookup(stored.ssId, medias)
     }
 
@@ -758,17 +771,68 @@ class ArtworkStudioViewModel @Inject constructor(
             showPage(cached, pageIndex = 0, key = key, token = token)
             return
         }
-        val fetched = when (source) {
-            StudioSource.SCREENSCRAPER -> ssResults(kind, match, romLookup)
-            StudioSource.STEAMGRIDDB   -> sgdbResults(kind, query, match)
-            StudioSource.IGDB          -> igdbResults(kind, query, match)
-            StudioSource.LOCAL         -> emptyList()
-        }
+        val fetched = fetchResults(source, kind, query, match, romLookup)
 
         currentCoroutineContext().ensureActive()
 
         resultCache[key] = fetched
         showPage(fetched, pageIndex = 0, key = key, token = token)
+    }
+
+    private suspend fun fetchResults(
+        source: StudioSource,
+        kind: ArtworkKind,
+        query: String,
+        match: GameMatch?,
+        romLookup: SsRomLookup? = null,
+    ): List<StudioArt> = when (source) {
+        StudioSource.SCREENSCRAPER -> ssResults(kind, match, romLookup)
+        StudioSource.STEAMGRIDDB   -> sgdbResults(kind, query, match)
+        StudioSource.IGDB          -> igdbResults(kind, query, match)
+        StudioSource.LOCAL         -> emptyList()
+    }
+
+    private var probeJob: kotlinx.coroutines.Job? = null
+
+    // a provider's answers for this game, "nothing found" included, so the probe asks each question once, not
+    // once per slot; a call that throws is not kept, so the next visit asks again
+    private class Answer(val value: Any?)
+
+    private val providerMemo = HashMap<Any, Answer>()
+
+    private suspend fun <T> memo(key: Any, fetch: suspend () -> T): T {
+        @Suppress("UNCHECKED_CAST")
+        providerMemo[key]?.let { return it.value as T }
+        val answer = fetch()
+        // a cancelled call's answer is not the provider's answer
+        currentCoroutineContext().ensureActive()
+        providerMemo[key] = Answer(answer)
+        return answer
+    }
+
+    // owner, 2026-10-07: every other slot the source serves is fetched once in the background, so a slot it has
+    // nothing for leaves the row before it is ever visited. Results land in the cache the slot then opens from
+    private fun probeSlots(state: ArtworkStudioUiState, source: StudioSource, match: GameMatch?) {
+        if (source == StudioSource.LOCAL) return
+        probeJob?.cancel()
+        probeJob = viewModelScope.launch {
+            for (tab in STUDIO_TABS) {
+                if (!servesKind(source, tab.kind)) continue
+                val key = requestKey(state, source, tab.kind, match)
+                val results = resultCache[key] ?: try {
+                    fetchResults(source, tab.kind, state.query, match).also { resultCache[key] = it }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w(e, "Studio slot probe failed for %s", tab.kind)
+                    continue
+                }
+                _uiState.update { s ->
+                    if (s.source != source) s
+                    else s.copy(emptySlots = if (results.isEmpty()) s.emptySlots + tab.kind else s.emptySlots - tab.kind)
+                }
+            }
+        }
     }
 
     private fun showPage(
@@ -844,7 +908,7 @@ class ArtworkStudioViewModel @Inject constructor(
             ?.takeIf { it.provider == MatchProvider.SCREENSCRAPER }
             ?.providerGameId?.toLongOrNull()
         val usesLookup = romLookup != null && (matchedSsId == null || matchedSsId == romLookup.ssId)
-        val medias = (if (usesLookup) romLookup.medias else ssMediaCatalog.mediasFor(gameId, matchedSsId))
+        val medias = (if (usesLookup) romLookup.medias else memo(listOf("ss", gameId, matchedSsId)) { ssMediaCatalog.mediasFor(gameId, matchedSsId) })
             ?: return emptyList()
         return screenScraperTiles(kind, types, medias)
     }
@@ -868,16 +932,14 @@ class ArtworkStudioViewModel @Inject constructor(
             ?: firstSgdbHit(query, game.platformId)
             ?: return emptyList()
 
+        val nsfw = _uiState.value.includeNsfw
         return types.flatMap { type ->
-            steamGridDb.getArt(
-                gameId = sgdbId,
-                type = type,
-                dimensions = sgdbGridDimensions(kind, type),
-                includeNsfw = _uiState.value.includeNsfw,
-            ).getOrElse {
-                Timber.w(it, "SGDB browse failed")
-                emptyList()
-            }.map { art ->
+            val dimensions = sgdbGridDimensions(kind, type)
+            runCatching {
+                memo(listOf("sgdb", sgdbId, type, dimensions, nsfw)) {
+                    steamGridDb.getArt(gameId = sgdbId, type = type, dimensions = dimensions, includeNsfw = nsfw).getOrThrow()
+                }
+            }.onFailure { Timber.w(it, "SGDB browse failed") }.getOrDefault(emptyList()).map { art ->
                 StudioArt(
                     url = art.url,
                     thumb = art.thumb,
@@ -909,8 +971,10 @@ class ArtworkStudioViewModel @Inject constructor(
             ?.takeIf { it.provider == MatchProvider.IGDB }
             ?.providerGameId?.toLongOrNull()
         val info = runCatching {
-            if (matchedId != null) igdbApi.fetchGameInfoById(matchedId)
-            else igdbApi.fetchGameInfo(game.platformId, query)
+            memo(listOf("igdb", matchedId, game.platformId, query)) {
+                if (matchedId != null) igdbApi.fetchGameInfoById(matchedId)
+                else igdbApi.fetchGameInfo(game.platformId, query)
+            }
         }
             .onFailure { Timber.w(it, "IGDB browse failed") }.getOrNull()
             ?: return emptyList()
@@ -951,17 +1015,17 @@ class ArtworkStudioViewModel @Inject constructor(
         loadResults()
     }
 
+    // steps through the slots shown, so a hidden one (nothing to offer) is never landed on
     fun cycleTab(delta: Int) {
         val s = _uiState.value
-        if (delta > 0) {
-            val visible = s.visibleSlots
-            val here = visible.indexOfFirst { it.kind == STUDIO_TABS[s.tabIndex].kind }
-            if (here >= 0 && here == visible.lastIndex && s.reviewSummary.hasChanges) {
-                applyChanges()
-                return
-            }
+        val visible = s.visibleSlots
+        val here = visible.indexOfFirst { it.kind == STUDIO_TABS[s.tabIndex].kind }
+        if (delta > 0 && here >= 0 && here == visible.lastIndex && s.reviewSummary.hasChanges) {
+            applyChanges()
+            return
         }
-        selectTab((s.tabIndex + delta).mod(STUDIO_TABS.size))
+        val next = visible[(here + delta).mod(visible.size)]
+        selectTab(STUDIO_TABS.indexOfFirst { it.kind == next.kind })
     }
 
     override fun selectSource(index: Int) {

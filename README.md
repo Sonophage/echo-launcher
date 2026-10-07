@@ -740,7 +740,9 @@ delay, toggles **Animated Icons**, and clears the cache.
 
 The **Artwork Studio** (**≡ ▸ Metadata ▸ Artwork**) has seven tabs: Tile, Tile Video, Background,
 Screenshot, Manual, Preview Video and Logo. Each pulls from ScreenScraper, SteamGridDB, IGDB or a
-local file. Preview a candidate, then press **Start** to apply. **≡** on a slot crops or
+local file. The studio opens on the Tile, and a tab the provider has nothing for is hidden, so a
+game with no manual or video never shows them; Local File keeps all seven, since a file can fill any
+slot. Preview a candidate, then press **Start** to apply. **≡** on a slot crops or
 repositions it, restores the previous image, or clears it. Crops keep the untouched original, so
 you can re-crop without loss.
 
