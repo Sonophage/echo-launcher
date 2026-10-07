@@ -43,6 +43,19 @@ class EchoThemeStoreTest {
         File(context.filesDir, "wallpaper").deleteRecursively()
     }
 
+    // owner, 2026-10-07: .pfptheme is renamed .echo-theme; a theme saved before the rename stays in the list
+    @Test
+    fun `a theme saved as pfptheme before the rename is still listed and applies`() = runTest {
+        val dir = File(context.filesDir, "pfpthemes").apply { mkdirs() }
+        File(dir, "pfp_1.pfptheme").writeBytes(bundleBytes(name = "Old", accent = "#00FF00"))
+
+        val store = EchoThemeStore(context)
+
+        assertEquals(listOf("Old"), store.themes.value.map { it.name })
+        assertTrue(echoThemeFile("pfp_1").isFile, "the file is renamed to .echo-theme")
+        assertTrue(store.apply("pfp_1"))
+    }
+
     @Test
     fun `wave-only bundle with no wallpaper imports successfully`() = runTest {
         val store = EchoThemeStore(context)
@@ -230,7 +243,7 @@ class EchoThemeStoreTest {
         return uri
     }
 
-    private fun echoThemeFile(id: String) = File(File(context.filesDir, "pfpthemes"), "$id.pfptheme")
+    private fun echoThemeFile(id: String) = File(File(context.filesDir, "pfpthemes"), "$id.echo-theme")
     private fun wallpaperSidecar(id: String) = File(File(context.filesDir, "pfpthemes"), "$id.wallpaper.jpg")
 
     private companion object {

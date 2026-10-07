@@ -23,7 +23,12 @@ data class EchoThemeManifest(
     val created: String? = null,
 ) {
     companion object {
-        const val MANIFEST_TYPE = "pfptheme"
+        // owner, 2026-10-07: the format is .echo-theme. A bundle marked pfptheme, from before the rename,
+        // still reads; it is written back as echo-theme
+        const val MANIFEST_TYPE = "echo-theme"
+        const val LEGACY_MANIFEST_TYPE = "pfptheme"
+
+        fun isThemeManifest(type: String): Boolean = type == MANIFEST_TYPE || type == LEGACY_MANIFEST_TYPE
 
         const val SCHEMA_VERSION = 3
         const val ICON_COLOR_AUTO = "auto"

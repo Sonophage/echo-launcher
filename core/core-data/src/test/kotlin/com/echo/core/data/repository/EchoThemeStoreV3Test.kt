@@ -115,7 +115,7 @@ class EchoThemeStoreV3Test {
         File(themeDir, "item_playlist.png").writeBytes(pngBytes())
 
         val saved = assertNotNull(store.saveCurrentLook("My Look"))
-        val bundle = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${saved.id}.pfptheme").readBytes()))
+        val bundle = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${saved.id}.echo-theme").readBytes()))
 
         assertEquals("gif", bundle.icons["catbar_games"]?.extension, "the user pick wins, verbatim gif")
         assertEquals(setOf("catbar_games", "item_playlist"), bundle.icons.keys, "theme icon fills the slot the user left alone")
@@ -137,7 +137,7 @@ class EchoThemeStoreV3Test {
         }
 
         val saved = assertNotNull(store.saveCurrentLook("Full Look"))
-        val bundle = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${saved.id}.pfptheme").readBytes()))
+        val bundle = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${saved.id}.echo-theme").readBytes()))
 
         assertNotNull(bundle.wallpaper, "the current wallpaper travels")
         assertEquals("#FF72B1", bundle.manifest.accentColor)
@@ -155,7 +155,7 @@ class EchoThemeStoreV3Test {
         }
 
         val saved = assertNotNull(store.saveCurrentLook("No Adjust"))
-        val bundle = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${saved.id}.pfptheme").readBytes()))
+        val bundle = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${saved.id}.echo-theme").readBytes()))
 
         assertNull(bundle.manifest.layout, "Adjust XMB Layout scale/offset is device-specific and must not ship")
     }
@@ -165,7 +165,7 @@ class EchoThemeStoreV3Test {
         val store = EchoThemeStore(context)
 
         val saved = assertNotNull(store.saveCurrentLook("Stock"))
-        val bundle = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${saved.id}.pfptheme").readBytes()))
+        val bundle = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${saved.id}.echo-theme").readBytes()))
 
         assertNull(bundle.wallpaper)
         assertTrue(bundle.icons.isEmpty())
@@ -209,7 +209,7 @@ class EchoThemeStoreV3Test {
     private fun mp4Bytes(): ByteArray = "ftypmp42".toByteArray() + ByteArray(12) { it.toByte() }
 
     private fun register(bytes: ByteArray): Uri {
-        val uri = Uri.parse("content://test/${System.nanoTime()}.pfptheme")
+        val uri = Uri.parse("content://test/${System.nanoTime()}.echo-theme")
         org.robolectric.Shadows.shadowOf(context.contentResolver).registerInputStream(uri, java.io.ByteArrayInputStream(bytes))
         return uri
     }

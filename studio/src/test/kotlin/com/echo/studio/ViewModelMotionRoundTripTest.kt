@@ -47,7 +47,7 @@ class ViewModelMotionRoundTripTest {
             assertTrue(state.motionFile?.isFile == true, "motion must be set on confirm")
             assertEquals("clip.mp4", state.motionFileName)
 
-            val bundleFile = File(dir, "out.pfptheme")
+            val bundleFile = File(dir, "out.echo-theme")
             vm.exportTo(bundleFile) { null }
             vm.awaitIdle()
             val roundTripped = EchoThemeCodec.read(bundleFile)
@@ -66,7 +66,7 @@ class ViewModelMotionRoundTripTest {
             vm.openFile(bundleFile)
             vm.awaitIdle()
             assertTrue(vm.state.value.motionFile?.isFile == true, "opening a motion theme must restore motion")
-            val reExport = File(dir, "re.pfptheme")
+            val reExport = File(dir, "re.echo-theme")
             vm.exportTo(reExport) { null }
             vm.awaitIdle()
             val reopened = EchoThemeCodec.read(reExport)
@@ -217,7 +217,7 @@ class ViewModelMotionRoundTripTest {
         val dir = createTempDirectory("studio-motion-big").toFile()
         try {
             val payload = ByteArray(40 * 1024 * 1024) { (it and 0xFF).toByte() }
-            val bundleFile = File(dir, "big.pfptheme")
+            val bundleFile = File(dir, "big.echo-theme")
             bundleFile.outputStream().use { out ->
                 EchoThemeCodec.write(
                     com.echo.themekit.EchoThemeBundle(
@@ -236,7 +236,7 @@ class ViewModelMotionRoundTripTest {
             assertTrue(vm.state.value.motionFile?.isFile == true, "motion must be spilled to a scratch file")
 
             vm.update { it.copy(wallpaperPng = ByteArray(16)) }
-            val reExport = File(dir, "big-re.pfptheme")
+            val reExport = File(dir, "big-re.echo-theme")
             vm.exportTo(reExport) { null }
             vm.awaitIdle()
             val motion = EchoThemeCodec.read(reExport)?.motion

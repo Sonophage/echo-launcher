@@ -13,7 +13,11 @@ import java.util.zip.ZipOutputStream
 import kotlinx.serialization.json.Json
 
 object EchoThemeCodec {
-    const val FILE_EXTENSION = "pfptheme"
+    const val FILE_EXTENSION = "echo-theme"
+    const val LEGACY_FILE_EXTENSION = "pfptheme"
+
+    // the extensions a theme file is opened by
+    val READABLE_EXTENSIONS = setOf(FILE_EXTENSION, LEGACY_FILE_EXTENSION)
     private const val ENTRY_MANIFEST = "manifest.json"
     private const val ENTRY_WALLPAPER = "wallpaper.png"
     private const val ENTRY_PREVIEW = "preview.png"
@@ -41,7 +45,7 @@ object EchoThemeCodec {
     fun write(bundle: EchoThemeBundle, out: OutputStream) {
         ZipOutputStream(out).use { zip ->
             zip.putNextEntry(ZipEntry(ENTRY_MANIFEST))
-            zip.write(json.encodeToString(EchoThemeManifest.serializer(), bundle.manifest).toByteArray())
+            zip.write(json.encodeToString(EchoThemeManifest.serializer(), bundle.manifest.copy(manifest = EchoThemeManifest.MANIFEST_TYPE)).toByteArray())
             zip.closeEntry()
             bundle.wallpaper?.let { zip.writeEntry(ENTRY_WALLPAPER, it) }
             bundle.preview?.let { zip.writeEntry(ENTRY_PREVIEW, it) }
@@ -122,7 +126,7 @@ object EchoThemeCodec {
         }
 
         val m = manifest ?: return null
-        if (m.manifest != EchoThemeManifest.MANIFEST_TYPE) return null
+        if (!EchoThemeManifest.isThemeManifest(m.manifest)) return null
         return EchoThemeBundle(
             manifest = m,
             wallpaper = wallpaper,
@@ -158,7 +162,7 @@ object EchoThemeCodec {
         } catch (e: ZipLimitExceededException) {
             return null
         }
-        return manifest?.takeIf { it.manifest == EchoThemeManifest.MANIFEST_TYPE }
+        return manifest?.takeIf { EchoThemeManifest.isThemeManifest(it.manifest) }
     }
 
     private fun motionFrom(source: () -> InputStream, ext: String): ThemeMotion =

@@ -53,7 +53,7 @@ fun StudioApp(viewModel: StudioViewModel, window: Frame) {
                 ) {
                     OutlinedButton(onClick = viewModel::newTheme) { Text("New") }
                     OutlinedButton(onClick = {
-                        FileDialogs.openFile(window, "Open theme", setOf(EchoThemeCodec.FILE_EXTENSION))
+                        FileDialogs.openFile(window, "Open theme", EchoThemeCodec.READABLE_EXTENSIONS)
                             ?.let(viewModel::openFile)
                     }) { Text("Open…") }
                     OutlinedButton(onClick = {

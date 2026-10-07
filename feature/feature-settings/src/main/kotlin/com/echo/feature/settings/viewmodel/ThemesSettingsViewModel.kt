@@ -153,7 +153,7 @@ class ThemesSettingsViewModel @Inject constructor(
         EchoThemeStore.ImportResult.TooLarge -> "That theme is too large to import"
         EchoThemeStore.ImportResult.OutOfMemory ->
             "Not enough memory to import that theme — its motion wallpaper is too big"
-        EchoThemeStore.ImportResult.NotABundle -> "Not a valid .pfptheme file"
+        EchoThemeStore.ImportResult.NotABundle -> "Not a valid ECHO theme file"
         EchoThemeStore.ImportResult.DamagedWallpaper -> "That theme's wallpaper is damaged"
         is EchoThemeStore.ImportResult.NotSaved -> "Could not save the imported theme"
     }

@@ -147,6 +147,21 @@ class EchoThemeCodecV3Test {
         assertEquals(setOf("catbar_music"), decoded.icons.keys)
     }
 
+    // owner, 2026-10-07: .pfptheme is renamed .echo-theme; every theme already made or shared keeps opening
+    @Test
+    fun `a theme is written as echo-theme and one marked pfptheme still reads`() {
+        assertEquals("echo-theme", EchoThemeCodec.FILE_EXTENSION)
+        assertTrue("pfptheme" in EchoThemeCodec.READABLE_EXTENSIONS)
+        val legacy = zip("manifest.json" to """{"manifest":"pfptheme","schemaVersion":3,"name":"Old","accentColor":"#FF0000"}""".toByteArray())
+        assertNotNull(EchoThemeCodec.read(legacy), "a .pfptheme from before the rename opens")
+
+        val rewritten = EchoThemeCodec.write(EchoThemeBundle(manifest.copy(manifest = "pfptheme"), null, null))
+        assertEquals("echo-theme", assertNotNull(EchoThemeCodec.read(rewritten)).manifest.manifest)
+
+        val stranger = zip("manifest.json" to """{"manifest":"zip","name":"Other","accentColor":"#FF0000"}""".toByteArray())
+        assertNull(EchoThemeCodec.read(stranger), "another tool's manifest.json is not a theme")
+    }
+
     @Test
     fun `v2-shaped bundle still reads unchanged`() {
         val v2 = zip(

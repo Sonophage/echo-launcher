@@ -167,7 +167,7 @@ class StudioViewModel(private val scope: CoroutineScope) {
 
     fun openFile(file: File) {
         when (file.extension.lowercase()) {
-            EchoThemeCodec.FILE_EXTENSION -> openEchoTheme(file)
+            in EchoThemeCodec.READABLE_EXTENSIONS -> openEchoTheme(file)
             else -> _state.update { it.copy(dialog = StudioDialog.Error("Unsupported file type: .${file.extension}")) }
         }
     }
@@ -175,7 +175,7 @@ class StudioViewModel(private val scope: CoroutineScope) {
     private fun openEchoTheme(file: File) = runBusy {
         val bundle = EchoThemeCodec.read(file)
         if (bundle == null) {
-            _state.update { it.copy(dialog = StudioDialog.Error("${file.name} is not a valid .pfptheme bundle")) }
+            _state.update { it.copy(dialog = StudioDialog.Error("${file.name} is not a valid ECHO theme")) }
         } else {
             hydrate(bundle, "Opened ${file.name}")
         }

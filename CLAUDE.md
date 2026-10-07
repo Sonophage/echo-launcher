@@ -3,7 +3,7 @@
 ECHO is an Android home-screen launcher for handhelds, written in Kotlin and Jetpack Compose. It is
 driven by a game controller and by touch. The app id is `com.echo.launcher`; debug builds are
 `com.echo.launcher.debug` and install beside it. `studio/` is Theme Studio, a desktop editor for
-`.pfptheme` themes.
+`.echo-theme` themes.
 
 Open work and recent decisions are in the handoff, outside this repo:
 `~/Documents/repositories/sonophage/the-grid/echo-launcher/HANDOFF.md`.
@@ -46,9 +46,9 @@ changing `CLAUDE.md` or a skill. Other build edits, such as a version bump, pass
 | Module | Owns |
 |---|---|
 | `:app` | `MainActivity` (the HOME activity), the application class, Hilt wiring. No tests: put logic in a module. |
-| `:studio` | Theme Studio, the desktop `.pfptheme` editor (Compose Desktop). |
+| `:studio` | Theme Studio, the desktop `.echo-theme` editor (Compose Desktop). |
 | `:baselineprofile` | Generates the startup baseline profile. Not shipped. |
-| `:core:theme-kit` | Pure JVM. The `.pfptheme` codec, colour cascade, icon slots, crossbar layout, `ArgbImage`, accent and wallpaper metrics. Shared with Studio, so no Android. |
+| `:core:theme-kit` | Pure JVM. The `.echo-theme` codec, colour cascade, icon slots, crossbar layout, `ArgbImage`, accent and wallpaper metrics. Shared with Studio, so no Android. |
 | `:core:core-archive` | Pure JVM. Bounded ZIP reading for themes and backups. |
 | `:core:core-common` | Small shared utilities: formatting, logging, keystore secrets. |
 | `:core:core-domain` | Models and repository interfaces. |

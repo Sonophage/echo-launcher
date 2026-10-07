@@ -39,7 +39,7 @@ class ViewModelIconRoundTripTest {
             )
         }
 
-        val file = File.createTempFile("studio-roundtrip", ".pfptheme")
+        val file = File.createTempFile("studio-roundtrip", ".echo-theme")
         try {
             vm.exportTo(file) { null }
             vm.awaitIdle()

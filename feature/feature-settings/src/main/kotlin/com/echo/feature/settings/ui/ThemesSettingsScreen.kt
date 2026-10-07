@@ -320,12 +320,12 @@ private fun ThemesSettingsContent(
                 SettingsGroup("Install")
                 SettingsRow(
                     label    = "Save Current Look as Theme",
-                    sublabel = "Bundle your icons, wallpaper, colors and motion into a shareable .pfptheme",
+                    sublabel = "Bundle your icons, wallpaper, colors and motion into a shareable .echo-theme",
                     onClick  = { showSaveNameDialog = true },
                 )
                 SettingsRow(
-                    label    = "Import Theme (.pfptheme)",
-                    sublabel = "A theme shared from PlayFieldPortal",
+                    label    = "Import Theme (.echo-theme)",
+                    sublabel = "A theme shared from ECHO or Theme Studio",
                     onClick  = if (state.isInstalling) null else ({ echoPicker.launch(arrayOf("*/*")) }),
                 )
 

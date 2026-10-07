@@ -47,7 +47,7 @@ class ViewModelIconGifTest {
             assertTrue(gifBytes.contentEquals(staged.iconOverrides["catbar_games"]), "gif bytes must be preserved, not re-encoded")
             assertEquals("gif", staged.iconExtensions["catbar_games"])
 
-            val bundleFile = File(dir, "out.pfptheme")
+            val bundleFile = File(dir, "out.echo-theme")
             vm.exportTo(bundleFile) { null }
             vm.awaitIdle()
             val reopened = EchoThemeCodec.read(bundleFile)

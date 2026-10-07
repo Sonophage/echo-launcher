@@ -36,6 +36,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
+private const val THEME_EXT = EchoThemeCodec.FILE_EXTENSION
+
 @Singleton
 class EchoThemeStore @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -49,6 +51,14 @@ class EchoThemeStore @Inject constructor(
     )
 
     private val dir = File(context.filesDir, "pfpthemes")
+
+    // themes saved before the rename to .echo-theme are renamed once, so the store keeps listing them
+    init {
+        dir.listFiles { f -> f.name.endsWith(".${EchoThemeCodec.LEGACY_FILE_EXTENSION}") }.orEmpty().forEach { old ->
+            val renamed = File(dir, old.name.removeSuffix(EchoThemeCodec.LEGACY_FILE_EXTENSION) + THEME_EXT)
+            if (!renamed.exists() && !old.renameTo(renamed)) Timber.w("EchoThemeStore: could not rename %s", old.name)
+        }
+    }
 
     private val _themes = MutableStateFlow(scan())
     val themes: StateFlow<List<SavedTheme>> = _themes.asStateFlow()
@@ -74,7 +84,7 @@ class EchoThemeStore @Inject constructor(
     suspend fun apply(id: String): Boolean = withContext(Dispatchers.IO) {
         val wallpaperSidecar = File(dir, "$id.wallpaper.jpg")
 
-        val bundle = runCatching { EchoThemeCodec.read(File(dir, "$id.pfptheme")) }.getOrNull()
+        val bundle = runCatching { EchoThemeCodec.read(File(dir, "$id.$THEME_EXT")) }.getOrNull()
             ?: return@withContext false
 
         val destDir = File(context.filesDir, "wallpaper").apply { mkdirs() }
@@ -172,18 +182,18 @@ class EchoThemeStore @Inject constructor(
     }
 
     suspend fun delete(id: String): Unit = withContext(Dispatchers.IO) {
-        listOf("$id.pfptheme", "$id.preview.jpg", "$id.wallpaper.jpg")
+        listOf("$id.$THEME_EXT", "$id.preview.jpg", "$id.wallpaper.jpg")
             .forEach { File(dir, it).delete() }
         _themes.value = scan()
     }
 
     suspend fun exportForShare(id: String): File? = withContext(Dispatchers.IO) {
-        val src = File(dir, "$id.pfptheme")
+        val src = File(dir, "$id.$THEME_EXT")
         if (!src.isFile) return@withContext null
         val name = _themes.value.firstOrNull { it.id == id }?.name ?: id
         val safe = name.replace(Regex("[^A-Za-z0-9 _-]"), "").trim().ifBlank { id }.replace(' ', '_')
         runCatching {
-            val out = File(File(context.cacheDir, "shared_themes").apply { mkdirs() }, "$safe.pfptheme")
+            val out = File(File(context.cacheDir, "shared_themes").apply { mkdirs() }, "$safe.$THEME_EXT")
             src.copyTo(out, overwrite = true)
             out
         }.onFailure { Timber.w(it, "EchoThemeStore: export failed") }.getOrNull()
@@ -243,7 +253,7 @@ class EchoThemeStore @Inject constructor(
         }
         val bundle = parsed ?: run {
             staging.delete()
-            Timber.w("EchoThemeStore: %d bytes are not a .pfptheme bundle", copied)
+            Timber.w("EchoThemeStore: %d bytes are not a theme bundle", copied)
             return@withContext ImportResult.NotABundle
         }
 
@@ -260,7 +270,7 @@ class EchoThemeStore @Inject constructor(
             val id = "pfp_${System.currentTimeMillis()}"
             val name = bundle.manifest.name.ifBlank { nextDefaultName() }
 
-            val stored = File(dir, "$id.pfptheme")
+            val stored = File(dir, "$id.$THEME_EXT")
             if (!staging.renameTo(stored)) {
                 staging.copyTo(stored, overwrite = true)
                 staging.delete()
@@ -362,7 +372,7 @@ class EchoThemeStore @Inject constructor(
             dir.mkdirs()
             val id = "pfp_${System.currentTimeMillis()}"
 
-            FileOutputStream(File(dir, "$id.pfptheme")).use { out ->
+            FileOutputStream(File(dir, "$id.$THEME_EXT")).use { out ->
                 EchoThemeCodec.write(
                     EchoThemeBundle(
                         manifest = manifest,
@@ -428,7 +438,7 @@ class EchoThemeStore @Inject constructor(
             val previewBytes = ByteArrayOutputStream()
                 .also { preview.compress(Bitmap.CompressFormat.PNG, 90, it) }.toByteArray()
 
-            FileOutputStream(File(dir, "$id.pfptheme")).use { out ->
+            FileOutputStream(File(dir, "$id.$THEME_EXT")).use { out ->
                 EchoThemeCodec.write(EchoThemeBundle(manifest, wallpaperPng, previewBytes), out)
             }
             FileOutputStream(File(dir, "$id.wallpaper.jpg")).use { wallpaper.compress(Bitmap.CompressFormat.JPEG, 92, it) }
@@ -441,10 +451,10 @@ class EchoThemeStore @Inject constructor(
     }
 
     private fun scan(): List<SavedTheme> =
-        dir.listFiles { f -> f.name.endsWith(".pfptheme") }.orEmpty()
+        dir.listFiles { f -> f.name.endsWith(".$THEME_EXT") }.orEmpty()
             .sortedByDescending { it.lastModified() }
             .mapNotNull { file ->
-                val id = file.name.removeSuffix(".pfptheme")
+                val id = file.name.removeSuffix(".$THEME_EXT")
 
                 val manifest = runCatching { EchoThemeCodec.readManifest(file) }
                     .onFailure { Timber.w(it, "EchoThemeStore: could not read %s", file.name) }

@@ -522,8 +522,8 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 | **Color Scheme** | 13 schemes (Original, which changes with the month, Classic Blue, Sunset Orange, Fresh Green, Royal Purple, Crimson Red, Silver, Sakura Pink, Golden Amber, Aqua Teal, Midnight Navy, Charcoal, Black), previewed live |
 | **Icon Color** | one tint for every crossbar glyph: 8 swatches or a **Custom Theme Color** |
 | **Color from Wallpaper** | takes the scheme from your wallpaper |
-| **Save Current Look as Theme** | bundles icons, wallpaper, colours and motion into a shareable `.pfptheme`; **Import Theme** loads one, **Reset to Default** clears it |
-| **Theme Studio** | a desktop editor for `.pfptheme` files (Windows, Linux, macOS), built from `studio/` |
+| **Save Current Look as Theme** | bundles icons, wallpaper, colours and motion into a shareable `.echo-theme`; **Import Theme** loads one (an older `.pfptheme` too), **Reset to Default** clears it |
+| **Theme Studio** | a desktop editor for `.echo-theme` files (Windows, Linux, macOS), built from `studio/` |
 
 The focused game or app also tints the wave and fills the screen with its own art;
 *Emulators ▸ Artwork ▸ Backdrop & Tint* turns that off and keeps your theme's colour and wallpaper.
@@ -895,7 +895,7 @@ Features depend on core, never the other way; `app` wires everything with Hilt.
 app/                 MainActivity (the HOME activity), application, Hilt module
 studio/              Theme Studio, desktop companion (Windows / Linux / macOS)
 core/
-  theme-kit/         pure-JVM theme core shared with Theme Studio: the .pfptheme codec,
+  theme-kit/         pure-JVM theme core shared with Theme Studio: the .echo-theme codec,
                      colour cascade, icon slots, layout, media limits
   core-archive/      bounded ZIP reading for themes, backups and the codec
   core-common/       shared utilities
