@@ -154,6 +154,8 @@ class PortableArtworkLibrary @Inject constructor(
                 !child.name.equals(ArtworkLibraryManifest.DIR_ARTWORK, ignoreCase = true) &&
                 !child.name.equals(ArtworkLibraryManifest.DIR_IMPORT, ignoreCase = true) &&
                 !child.name.equals(ArtworkLibraryManifest.DIR_GAMES, ignoreCase = true) &&
+                // a theme named like a media folder must not carry Themes/ off into Artwork/
+                !child.name.equals(DIR_THEMES, ignoreCase = true) &&
                 listChildren(treeUri, child.documentId)
                     .any { it.isDirectory && ArtworkPathResolver.isMediaDirName(it.name) }
         }
@@ -346,7 +348,8 @@ class PortableArtworkLibrary @Inject constructor(
     // the ECHO folder beside the artwork (owner, 2026-10-04): Look/ for the look as files, and a README
     // that says what ECHO reads. Creates what is missing and never removes anything.
     suspend fun ensureEchoLayout(treeUri: Uri): Boolean = withContext(Dispatchers.IO) {
-        val made = ECHO_LOOK_DIRS.all { ensureDirPath(treeUri, listOf(DIR_LOOK, it)) != null }
+        val made = ECHO_LOOK_DIRS.all { ensureDirPath(treeUri, listOf(DIR_LOOK, it)) != null } &&
+            ensureDirPath(treeUri, listOf(DIR_THEMES)) != null
         val root = DocumentsContract.getTreeDocumentId(treeUri)
         val readme = writeRootText(treeUri, ECHO_README, "text/plain", ECHO_README_TEXT)
         made && readme
@@ -369,6 +372,52 @@ class PortableArtworkLibrary @Inject constructor(
     suspend fun filesIn(treeUri: Uri, segments: List<String>): List<SafChild> = withContext(Dispatchers.IO) {
         val dir = resolveExistingPath(treeUri, segments) ?: return@withContext emptyList()
         listChildren(treeUri, dir).filter { !it.isDirectory }
+    }
+
+    // the folders in [segments] under the folder, or none when it is not there
+    suspend fun dirsIn(treeUri: Uri, segments: List<String>): List<SafChild> = withContext(Dispatchers.IO) {
+        val dir = resolveExistingPath(treeUri, segments) ?: return@withContext emptyList()
+        listChildren(treeUri, dir).filter { it.isDirectory }
+    }
+
+    data class FolderFiles(val files: Map<String, ByteArray>, val newest: Long)
+
+    // every file under [segments], by its path below it ('/'-separated, [maxDepth] folders deep at most),
+    // with the newest change among them; null when the folder is missing, unreadable or over [maxBytes]
+    suspend fun readFolder(treeUri: Uri, segments: List<String>, maxBytes: Long, maxDepth: Int = 3): FolderFiles? = withContext(Dispatchers.IO) {
+        val root = resolveExistingPath(treeUri, segments) ?: return@withContext null
+        val files = linkedMapOf<String, ByteArray>()
+        var total = 0L
+        var newest = 0L
+        fun walk(docId: String, prefix: String, depth: Int): Boolean {
+            for (child in listChildren(treeUri, docId)) {
+                val path = prefix + child.name
+                if (child.isDirectory) {
+                    if (depth < maxDepth && !walk(child.documentId, "$path/", depth + 1)) return false
+                    continue
+                }
+                // a provider may not report a size, so the bytes read are counted too
+                if (total + (child.sizeBytes ?: 0L) > maxBytes) return false
+                val bytes = resolver.openInputStream(child.uri)
+                    ?.use { with(com.echo.core.data.repository.SafeMedia) { it.readCapped(maxBytes - total) } } ?: return false
+                total += bytes.size
+                files[path] = bytes
+                newest = maxOf(newest, child.lastModified ?: 0L)
+            }
+            return true
+        }
+        runCatching { if (walk(root, "", 0)) FolderFiles(files, newest) else null }
+            .onFailure { Timber.w(it, "Could not read ${segments.joinToString("/")}") }.getOrNull()
+    }
+
+    // writes [bytes] to [segments]/[name], replacing a file of that name
+    suspend fun writeBytes(treeUri: Uri, segments: List<String>, name: String, bytes: ByteArray): Boolean = withContext(Dispatchers.IO) {
+        val dir = ensureDirPath(treeUri, segments) ?: return@withContext false
+        val target = findChild(treeUri, dir, name)?.uri ?: runCatching {
+            DocumentsContract.createDocument(resolver, DocumentsContract.buildDocumentUriUsingTree(treeUri, dir), "application/octet-stream", name)
+        }.getOrNull() ?: return@withContext false
+        runCatching { resolver.openOutputStream(target, "wt")?.use { it.write(bytes) } != null }
+            .onFailure { Timber.w(it, "Could not write $name") }.getOrDefault(false)
     }
 
     // whether the folder's file holds the same bytes as [file]
@@ -619,6 +668,7 @@ class PortableArtworkLibrary @Inject constructor(
 }
 
 const val DIR_LOOK = "Look"
+const val DIR_THEMES = "Themes"
 val ECHO_LOOK_DIRS = listOf("Icons", "Sounds", "Fonts", "Boot", "Wallpapers")
 const val ECHO_README = "README.txt"
 
@@ -634,6 +684,10 @@ private val ECHO_README_TEXT = """
                    and Icons (your custom icons). Put a .ttf or .otf font in Fonts to change ECHO's
                    font. A file you change here is kept: ECHO only copies over a file that is
                    missing or older than its own.
+    Themes/        One folder per theme: theme.json (its name and colours), Icons (console icons in
+                   Icons/Consoles) and Wallpaper. ECHO writes each theme you save here, and reads in a
+                   theme folder you add or change. A theme deleted in ECHO keeps its folder here; ECHO
+                   reads it again only after you change it.
     settings.json  How ECHO looks and behaves: colours, wave, layout, controls and default players.
                    ECHO writes it when a setting changes.
 

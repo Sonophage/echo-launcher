@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 // install. ECHO's fresh settings must not be written over it before it is read.
 class EchoFolderMirrorTest {
     private val reader = mockk<EchoFolderReader>(relaxed = true)
-    private val mirror = EchoFolderMirror(mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), reader)
+    private val mirror = EchoFolderMirror(mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), reader, mockk(relaxed = true), mockk(relaxed = true))
 
     @Test
     fun `a newly linked folder is read in full once, before anything is written to it`() = runTest {

@@ -34,6 +34,8 @@ class EchoFolderMirror @Inject constructor(
     private val folderRepository: ArtworkFolderRepository,
     private val library: PortableArtworkLibrary,
     private val reader: EchoFolderReader,
+    private val themeFolders: ThemeFolderSync,
+    private val themeStore: com.echo.core.data.repository.EchoThemeStore,
 ) {
     private val readLock = Mutex()
 
@@ -67,6 +69,17 @@ class EchoFolderMirror @Inject constructor(
                     val live = liveTree(t) ?: return@collect
                     readIfNewlyLinked(t)
                     syncLook(live)
+                }
+        }
+        launch {
+            combine(tree, themeStore.themes) { t, themes -> t to themes }
+                .distinctUntilChanged()
+                .debounce(SETTLE_MS)
+                .collect { (t, _) ->
+                    val live = liveTree(t) ?: return@collect
+                    readIfNewlyLinked(t)
+                    library.ensureEchoLayout(live)
+                    Timber.i("ECHO folder: ${themeFolders.writeOut(live)} theme folders written")
                 }
         }
     }

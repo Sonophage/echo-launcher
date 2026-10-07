@@ -35,19 +35,21 @@ class EchoFolderReader @Inject constructor(
     private val stillWallpaper: StillWallpaper,
     private val motionWallpaper: com.echo.core.data.wallpaper.MotionWallpaper,
     private val customIcons: com.echo.core.data.repository.CustomIconStore,
+    private val themeFolders: ThemeFolderSync,
 ) {
     data class Report(
         val settings: Int, val sounds: Int, val wallpaper: Boolean, val skipped: List<String>,
-        val folderMissing: Boolean = false, val icons: Int = 0, val font: Boolean = false,
+        val folderMissing: Boolean = false, val icons: Int = 0, val font: Boolean = false, val themes: Int = 0,
     ) {
         fun message(): String = when {
             folderMissing -> "ECHO has no folder it can read. Link the ECHO folder first."
-            settings == 0 && sounds == 0 && icons == 0 && !wallpaper && !font -> "The ECHO folder matches ECHO; nothing to apply."
+            settings == 0 && sounds == 0 && icons == 0 && themes == 0 && !wallpaper && !font -> "The ECHO folder matches ECHO; nothing to apply."
             else -> listOfNotNull(
                 "$settings setting${if (settings == 1) "" else "s"}".takeIf { settings > 0 },
                 "$sounds sound${if (sounds == 1) "" else "s"}".takeIf { sounds > 0 },
                 "$icons icon${if (icons == 1) "" else "s"}".takeIf { icons > 0 },
                 "the font".takeIf { font },
+                "$themes theme${if (themes == 1) "" else "s"}".takeIf { themes > 0 },
                 "the wallpaper".takeIf { wallpaper },
             ).joinToString(", ", prefix = "Applied ", postfix = " from the ECHO folder.")
         } + if (skipped.isNotEmpty()) " Skipped: ${skipped.joinToString()}." else ""
@@ -63,8 +65,9 @@ class EchoFolderReader @Inject constructor(
             ?: return Report(0, 0, false, emptyList(), folderMissing = true)
         val (settings, skipped) = readSettings(tree, always)
         rejected.clear()
-        return Report(settings, readSounds(tree), readWallpaper(tree), skipped, icons = readIcons(tree), font = readFont(tree))
-            .let { it.copy(skipped = it.skipped + rejected) }
+        val themes = themeFolders.readIn(tree)
+        return Report(settings, readSounds(tree), readWallpaper(tree), skipped, icons = readIcons(tree), font = readFont(tree), themes = themes.themes)
+            .let { it.copy(skipped = it.skipped + rejected + themes.rejected) }
             .also { Timber.i("ECHO folder read: ${it.message()}") }
     }
 

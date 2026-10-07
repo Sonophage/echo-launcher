@@ -182,9 +182,37 @@ class EchoThemeStore @Inject constructor(
     }
 
     suspend fun delete(id: String): Unit = withContext(Dispatchers.IO) {
-        listOf("$id.$THEME_EXT", "$id.preview.jpg", "$id.wallpaper.jpg")
-            .forEach { File(dir, it).delete() }
+        // ECHO never deletes in the ECHO folder, so the theme's folder there stays; its name is kept so the
+        // folder is not read back in until it changes
+        _themes.value.firstOrNull { it.id == id }?.let { dismiss(folderName(it)) }
+        removeFiles(id)
         _themes.value = scan()
+    }
+
+    private fun removeFiles(id: String) =
+        listOf("$id.$THEME_EXT", "$id.preview.jpg", "$id.wallpaper.jpg").forEach { File(dir, it).delete() }
+
+    // the stored .echo-theme file of a saved theme
+    fun bundleFile(id: String): File? = File(dir, "$id.$THEME_EXT").takeIf { it.isFile }
+
+    // the theme's folder name in ECHO/Themes
+    fun folderName(theme: SavedTheme): String = com.echo.themekit.EchoThemeFolder.folderName(theme.name, theme.id)
+
+    // when the theme with this folder name was deleted in ECHO, or null
+    fun dismissedAt(folder: String): Long? = readDismissed()[folder]
+
+    private fun dismiss(name: String) = writeDismissed(readDismissed() + (name to System.currentTimeMillis()))
+
+    private fun undismiss(name: String) = readDismissed().let { if (name in it) writeDismissed(it - name) }
+
+    private fun readDismissed(): Map<String, Long> =
+        runCatching { File(dir, DISMISSED_FILE).readLines() }.getOrDefault(emptyList())
+            .mapNotNull { line -> line.split('\t').takeIf { it.size == 2 }?.let { (n, t) -> t.toLongOrNull()?.let { n to it } } }
+            .toMap()
+
+    private fun writeDismissed(names: Map<String, Long>) {
+        dir.mkdirs()
+        File(dir, DISMISSED_FILE).writeText(names.entries.joinToString("") { (n, t) -> "$n\t$t\n" })
     }
 
     suspend fun exportForShare(id: String): File? = withContext(Dispatchers.IO) {
@@ -218,13 +246,17 @@ class EchoThemeStore @Inject constructor(
     suspend fun importBundle(uri: Uri): SavedTheme? =
         (importBundleDetailed(uri) as? ImportResult.Success)?.theme
 
-    suspend fun importBundleDetailed(uri: Uri): ImportResult = withContext(Dispatchers.IO) {
+    suspend fun importBundleDetailed(uri: Uri): ImportResult = importBundleDetailed { context.contentResolver.openInputStream(uri) }
+
+    // a theme from [open], such as one read from the ECHO folder. With [replacing], that saved theme is
+    // removed once this one is stored: a theme edited in its folder takes the place of the old copy.
+    suspend fun importBundleDetailed(replacing: String? = null, open: () -> java.io.InputStream?): ImportResult = withContext(Dispatchers.IO) {
         dir.mkdirs()
         val staging = File(dir, "import_${System.currentTimeMillis()}.tmp")
         val copied = try {
-            val stream = context.contentResolver.openInputStream(uri)
+            val stream = open()
             if (stream == null) {
-                Timber.w("EchoThemeStore: no stream for %s", uri)
+                Timber.w("EchoThemeStore: no stream to import")
                 return@withContext ImportResult.Unreadable(null)
             }
             stream.use { input ->
@@ -271,6 +303,8 @@ class EchoThemeStore @Inject constructor(
             val name = bundle.manifest.name.ifBlank { nextDefaultName() }
 
             val stored = File(dir, "$id.$THEME_EXT")
+            replacing?.let(::removeFiles)
+            undismiss(com.echo.themekit.EchoThemeFolder.folderName(name, id))
             if (!staging.renameTo(stored)) {
                 staging.copyTo(stored, overwrite = true)
                 staging.delete()
@@ -494,6 +528,9 @@ class EchoThemeStore @Inject constructor(
     }
 
     companion object {
+        // names of themes deleted in ECHO, so their folder in the ECHO folder is not read back in
+        private const val DISMISSED_FILE = "folder-dismissed.txt"
+
         private val KEY_CUSTOM_WALLPAPER = stringPreferencesKey("display_custom_wallpaper")
 
         private val KEY_MOTION_WALLPAPER = stringPreferencesKey("display_motion_wallpaper")
