@@ -24,6 +24,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +45,9 @@ import com.echo.core.data.repository.EchoThemeStore
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.ControllerPromptItem
 import com.echo.core.ui.components.EchoHintBar
+import com.echo.core.ui.components.chose
+import com.echo.core.ui.components.MenuSelect
+import com.echo.core.ui.components.EchoContextMenuOverlay
 import com.echo.core.ui.components.HintAction
 import com.echo.core.ui.design.PanelBase
 import com.echo.core.ui.design.panelDesignUnits
@@ -55,20 +62,13 @@ internal data class StoreCard(val id: String, val name: String, val subtitle: St
 internal fun EchoThemeStore.SavedTheme.card() =
     StoreCard(id, name, author?.let { "by $it" } ?: "${parts.size} parts", heroPath ?: previewPath, accentArgb)
 
-// the theme store (owner, 2026-10-07): each theme as a card headed by its hero picture
+// one row of the store's grid: [columns] cards across, the last row padded so cards keep their width
 @Composable
-internal fun ThemeStoreCardRow(
-    cards: List<StoreCard>,
-    focusedIndex: Int?,
-    onOpen: (String) -> Unit,
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 48.dp, vertical = 10.dp),
-    ) {
+private fun StoreCardRow(cards: List<StoreCard>, columns: Int, focusedIndex: Int?, onOpen: (String) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 48.dp, vertical = 10.dp)) {
         cards.forEachIndexed { index, card ->
             val focused = focusedIndex == index
-            Column(modifier = Modifier.width(240.dp).clickable { onOpen(card.id) }) {
+            Column(modifier = Modifier.weight(1f).clickable { onOpen(card.id) }) {
                 Box(
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp))
                         .background(Color(card.accentArgb?.let { it and 0xFFFFFFFFL } ?: 0xFF20304AL))
@@ -76,10 +76,149 @@ internal fun ThemeStoreCardRow(
                 ) {
                     card.image?.let { AsyncImage(model = it, contentDescription = card.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                 }
-                Text(card.name, color = if (focused) SettingsAccent else Color.White, fontSize = 14.sp, maxLines = 1,
+                Text(card.name, color = if (focused) SettingsAccent else Color.White, fontSize = 15.sp, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
                 Text(card.subtitle, color = SettingsSubtext, fontSize = 12.sp, maxLines = 1)
             }
+        }
+        repeat(columns - cards.size) { Spacer(Modifier.weight(1f)) }
+    }
+}
+
+// the store's tab under Look (owner, 2026-10-07: its own tab, a full panel): saved themes and the online
+// store's, each as a grid of hero cards. A card opens the theme's page; each grid row is one stop for the
+// controller, LEFT and RIGHT move along it
+@Composable
+fun ThemeStoreScreen(
+    onBack: () -> Unit,
+    onOpenMix: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: ThemesSettingsViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsState()
+    var shot by remember { mutableIntStateOf(0) }
+    // the grid row the controller is on (section to row) and the column within it
+    var focusedRow by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    var column by remember { mutableIntStateOf(0) }
+    // Y on a saved theme: Apply, Share, Remove
+    var menu by remember { mutableStateOf<ThemeMenu?>(null) }
+    var menuIndex by remember { mutableIntStateOf(0) }
+    val columns = 4
+    val saved = state.savedThemes.map { it.card() }
+    val online = state.online.orEmpty().map { t ->
+        StoreCard(t.id, t.name, if (state.savedThemes.any { it.name == t.name }) "Downloaded" else "Online", t.heroUrl)
+    }
+    fun rowOf(section: String) = if (section == "saved") saved else online
+    fun open(section: String, id: String) {
+        shot = 0
+        if (section == "saved") viewModel.openThemePage(id) else viewModel.openOnlinePage(id)
+    }
+    fun openMenu(theme: EchoThemeStore.SavedTheme) {
+        menuIndex = 0
+        menu = ThemeMenu(theme.name, listOf(
+            ThemeMenuOption("Apply") { viewModel.applySavedTheme(theme.id) },
+            ThemeMenuOption("Share") { viewModel.shareSavedTheme(theme.id) },
+            ThemeMenuOption("Remove", destructive = true) { viewModel.deleteSavedTheme(theme.id) },
+        ))
+    }
+
+    Box(modifier) {
+        SettingsPageScaffold(
+            subtitle = "Store",
+            onBack = onBack,
+            fullWidth = true,
+            modifier = Modifier.fillMaxSize(),
+            helperFooterItems = SettingsDefaultHelperItems + ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
+            onInterceptAction = { action ->
+                val page = state.page
+                val row = focusedRow
+                val m = menu
+                when {
+                    m != null -> {
+                        when (action) {
+                            GamepadAction.NAVIGATE_UP -> menuIndex = (menuIndex - 1).coerceAtLeast(0)
+                            GamepadAction.NAVIGATE_DOWN -> menuIndex = (menuIndex + 1).coerceAtMost(m.options.size - 1)
+                            GamepadAction.SELECT -> { m.options.getOrNull(menuIndex)?.action?.invoke(); menu = null }
+                            GamepadAction.BACK, GamepadAction.OPEN_CONTEXT_MENU -> menu = null
+                            else -> Unit
+                        }
+                        true
+                    }
+                    page != null -> {
+                        val shots = page.screenshots.size
+                        when (action) {
+                            GamepadAction.BACK -> viewModel.closeThemePage()
+                            GamepadAction.SELECT -> viewModel.pageAction()
+                            GamepadAction.NAVIGATE_RIGHT -> if (shots > 0) shot = (shot + 1) % shots
+                            GamepadAction.NAVIGATE_LEFT -> if (shots > 0) shot = (shot - 1 + shots) % shots
+                            else -> Unit
+                        }
+                        true
+                    }
+                    row != null && row.first == "saved" && action == GamepadAction.OPEN_CONTEXT_MENU -> {
+                        state.savedThemes.getOrNull(row.second * columns + column)?.let(::openMenu); true
+                    }
+                    row != null && action == GamepadAction.NAVIGATE_LEFT -> { column = (column - 1).coerceAtLeast(0); true }
+                    row != null && action == GamepadAction.NAVIGATE_RIGHT -> {
+                        val size = rowOf(row.first).chunked(columns).getOrNull(row.second)?.size ?: 1
+                        column = (column + 1).coerceAtMost(size - 1); true
+                    }
+                    else -> false
+                }
+            },
+        ) {
+            val scroll = rememberScrollState()
+            LocalSettingsScrollStateRegistrar.current(scroll)
+            Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
+                @Composable
+                fun grid(section: String, cards: List<StoreCard>) {
+                    cards.chunked(columns).forEachIndexed { r, rowCards ->
+                        FocusableStrip(
+                            onFocusChange = { focused ->
+                                if (focused) { focusedRow = section to r; column = column.coerceIn(0, rowCards.size - 1) }
+                                else if (focusedRow == section to r) focusedRow = null
+                            },
+                            onSelect = { rowCards.getOrNull(column)?.let { open(section, it.id) } },
+                        ) { stripFocused ->
+                            StoreCardRow(rowCards, columns, if (stripFocused) column else null) { open(section, it) }
+                        }
+                    }
+                }
+                SettingsGroup("On this device")
+                if (saved.isEmpty()) SettingsRow(label = "No saved themes yet", sublabel = "Download one below, or save your current look under Theme", onClick = null)
+                else grid("saved", saved)
+                SettingsRow(label = "Mix", sublabel = "Take the icons, wallpaper, sounds, wave and buttons from different themes", onClick = onOpenMix)
+
+                SettingsGroup("Online")
+                when {
+                    online.isNotEmpty() -> grid("online", online)
+                    state.onlineFailed -> SettingsRow(label = "The online store could not be reached", sublabel = "Check the connection, then try again", onClick = viewModel::refreshOnline)
+                    state.online == null -> SettingsRow(label = "Loading the online store", sublabel = null, onClick = null)
+                    else -> SettingsRow(label = "No themes online yet", sublabel = null, onClick = null)
+                }
+                state.installMessage?.let { SettingsRow(label = it, sublabel = "Tap to dismiss", onClick = viewModel::dismissMessage) }
+            }
+        }
+
+        menu?.let { m ->
+            EchoContextMenuOverlay(
+                state = menuStateFor(m, menuIndex),
+                onRowActivated = { index ->
+                    (menuStateFor(m, menuIndex).chose(index) as? MenuSelect.Run)?.action?.action?.invoke()
+                    menu = null
+                },
+                onDismiss = { menu = null },
+            )
+        }
+
+        state.page?.let {
+            ThemePageOverlay(
+                page = it,
+                shot = shot,
+                onAction = viewModel::pageAction,
+                onBack = viewModel::closeThemePage,
+                onShot = { i -> shot = i },
+            )
         }
     }
 }

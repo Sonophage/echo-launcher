@@ -41,8 +41,9 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_emulators_retroarch", "RetroArch", "Core detection & linking", SettingsSectionId.EMULATORS),
 
     SettingsEntry("settings_themes", "Theme", "Colour scheme, accent & theme packs", SettingsSectionId.LOOK),
-    // owner, 2026-10-07: each part of the look from any theme; opens from Theme
-    SettingsEntry("settings_theme_mix", "Mix", "Each part of the look from any theme", SettingsSectionId.LOOK, parent = "settings_themes"),
+    // owner, 2026-10-07: the theme store is its own tab, a full panel; Mix opens from it
+    SettingsEntry("settings_theme_store", "Store", "Saved and online themes, and Mix", SettingsSectionId.LOOK),
+    SettingsEntry("settings_theme_mix", "Mix", "Each part of the look from any theme", SettingsSectionId.LOOK, parent = "settings_theme_store"),
     SettingsEntry("settings_appearance", "Wallpaper", "Wallpaper, wave & background motion", SettingsSectionId.LOOK),
     // owner, 2026-10-07: every crossbar setting in one tab; its categories open from there
     SettingsEntry("settings_layout", "Crossbar", "Sizes, rows, Last Played, status bar, categories & icons", SettingsSectionId.LOOK),

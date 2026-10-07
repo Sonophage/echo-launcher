@@ -68,7 +68,6 @@ fun ThemesSettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenColorSchemePicker: () -> Unit = {},
-    onOpenMix: () -> Unit = {},
     viewModel: ThemesSettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -79,20 +78,11 @@ fun ThemesSettingsScreen(
         onOpenColorSchemePicker = onOpenColorSchemePicker,
         onSetAccentFromWallpaper = { viewModel.setAccentFromWallpaper(it) },
         onImportEchoTheme = { viewModel.importEchoTheme(it) },
-        onApplySavedTheme = { viewModel.applySavedTheme(it) },
-        onShareSavedTheme = { viewModel.shareSavedTheme(it) },
-        onDeleteSavedTheme = { viewModel.deleteSavedTheme(it) },
         onSetIconColor = { viewModel.setIconColor(it) },
         onClearAccentOverride = { viewModel.clearAccentOverride() },
         onResetTheme = { viewModel.resetTheme() },
         onDismissMessage = { viewModel.dismissMessage() },
         onSaveCurrentLook = { viewModel.saveCurrentLookAsTheme(it) },
-        onOpenThemePage = viewModel::openThemePage,
-        onOpenOnlinePage = viewModel::openOnlinePage,
-        onPageAction = viewModel::pageAction,
-        onRefreshOnline = viewModel::refreshOnline,
-        onCloseThemePage = viewModel::closeThemePage,
-        onOpenMix = onOpenMix,
         modifier = modifier
     )
 }
@@ -104,24 +94,13 @@ private fun ThemesSettingsContent(
     onOpenColorSchemePicker: () -> Unit,
     onSetAccentFromWallpaper: (Boolean) -> Unit,
     onImportEchoTheme: (Uri) -> Unit,
-    onApplySavedTheme: (String) -> Unit,
-    onShareSavedTheme: (String) -> Unit,
-    onDeleteSavedTheme: (String) -> Unit,
     onSetIconColor: (Long?) -> Unit,
     onClearAccentOverride: () -> Unit,
     onResetTheme: () -> Unit,
     onDismissMessage: () -> Unit,
     onSaveCurrentLook: (String) -> Unit = {},
-    onOpenThemePage: (String) -> Unit = {},
-    onOpenOnlinePage: (String) -> Unit = {},
-    onPageAction: () -> Unit = {},
-    onRefreshOnline: () -> Unit = {},
-    onCloseThemePage: () -> Unit = {},
-    onOpenMix: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var shot by remember { mutableIntStateOf(0) }
-    val page = state.page
     val echoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { onImportEchoTheme(it) } }
 
     var showSaveNameDialog by remember { mutableStateOf(false) }
@@ -144,12 +123,6 @@ private fun ThemesSettingsContent(
         )
     }
 
-    var menu by remember { mutableStateOf<ThemeMenu?>(null) }
-    var menuIndex by remember { mutableIntStateOf(0) }
-    var myThemesFocused by remember { mutableStateOf(false) }
-    var cardIndex by remember { mutableIntStateOf(0) }
-    var onlineFocused by remember { mutableStateOf(false) }
-    var onlineIndex by remember { mutableIntStateOf(0) }
     var iconStripFocused by remember { mutableStateOf(false) }
     val iconStripRequester = remember { FocusRequester() }
     var iconIndex by remember { mutableIntStateOf(0) }
@@ -169,35 +142,13 @@ private fun ThemesSettingsContent(
         customPicker = true
     }
 
-    fun openMenuForSavedTheme(theme: EchoThemeStore.SavedTheme) {
-        menuIndex = 0
-        menu = ThemeMenu(theme.name, listOf(
-            ThemeMenuOption("Open")   { shot = 0; onOpenThemePage(theme.id) },
-            ThemeMenuOption("Apply")  { onApplySavedTheme(theme.id) },
-            ThemeMenuOption("Share")  { onShareSavedTheme(theme.id) },
-            ThemeMenuOption("Remove", destructive = true) { onDeleteSavedTheme(theme.id) },
-        ))
-    }
-
     Box(modifier = modifier) {
         SettingsPageScaffold(
             subtitle = "Themes",
             onBack   = onBack,
             modifier = Modifier.fillMaxSize(),
             onInterceptAction = { action ->
-                val m = menu
                 when {
-                    page != null -> {
-                        val shots = page.screenshots.size
-                        when (action) {
-                            GamepadAction.BACK -> onCloseThemePage()
-                            GamepadAction.SELECT -> onPageAction()
-                            GamepadAction.NAVIGATE_RIGHT -> if (shots > 0) shot = (shot + 1) % shots
-                            GamepadAction.NAVIGATE_LEFT -> if (shots > 0) shot = (shot - 1 + shots) % shots
-                            else -> Unit
-                        }
-                        true
-                    }
                     customPicker -> {
                         when (action) {
                             GamepadAction.NAVIGATE_UP   -> pickerChannel = (pickerChannel + 2) % 3
@@ -221,29 +172,6 @@ private fun ThemesSettingsContent(
                         }
                         true
                     }
-                    m != null -> {
-                        when (action) {
-                            GamepadAction.NAVIGATE_UP   -> menuIndex = (menuIndex - 1).coerceAtLeast(0)
-                            GamepadAction.NAVIGATE_DOWN -> menuIndex = (menuIndex + 1).coerceAtMost(m.options.size - 1)
-                            GamepadAction.SELECT        -> { m.options.getOrNull(menuIndex)?.action?.invoke(); menu = null }
-                            GamepadAction.BACK,
-                            GamepadAction.OPEN_CONTEXT_MENU      -> menu = null
-                            else -> Unit
-                        }
-                        true
-                    }
-                    onlineFocused && action == GamepadAction.NAVIGATE_LEFT -> {
-                        onlineIndex = (onlineIndex - 1).coerceAtLeast(0); true
-                    }
-                    onlineFocused && action == GamepadAction.NAVIGATE_RIGHT -> {
-                        onlineIndex = (onlineIndex + 1).coerceAtMost((state.online.orEmpty().size - 1).coerceAtLeast(0)); true
-                    }
-                    myThemesFocused && action == GamepadAction.NAVIGATE_LEFT -> {
-                        cardIndex = (cardIndex - 1).coerceAtLeast(0); true
-                    }
-                    myThemesFocused && action == GamepadAction.NAVIGATE_RIGHT -> {
-                        cardIndex = (cardIndex + 1).coerceAtMost((state.savedThemes.size - 1).coerceAtLeast(0)); true
-                    }
                     iconStripFocused && action == GamepadAction.NAVIGATE_LEFT -> {
                         iconIndex = (iconIndex - 1).coerceAtLeast(0)
                         runCatching { iconStripRequester.requestFocus() }
@@ -252,12 +180,6 @@ private fun ThemesSettingsContent(
                     iconStripFocused && action == GamepadAction.NAVIGATE_RIGHT -> {
                         iconIndex = (iconIndex + 1).coerceAtMost(customIndex)
                         runCatching { iconStripRequester.requestFocus() }
-                        true
-                    }
-                    action == GamepadAction.OPEN_CONTEXT_MENU -> {
-                        if (myThemesFocused) {
-                            state.savedThemes.getOrNull(cardIndex)?.let { openMenuForSavedTheme(it) }
-                        }
                         true
                     }
                     else -> false
@@ -322,60 +244,6 @@ private fun ThemesSettingsContent(
                     onToggle = onSetAccentFromWallpaper,
                 )
 
-                // owner, 2026-10-07: the theme store. A opens a theme's page; Y has Apply, Share and Remove
-                SettingsGroup("Theme Store")
-
-                if (state.savedThemes.isNotEmpty()) {
-                    FocusableStrip(
-                        onFocusChange = { focused ->
-                            myThemesFocused = focused
-                            if (focused) cardIndex = cardIndex.coerceIn(0, state.savedThemes.size - 1)
-                        },
-                        onSelect = {
-                            state.savedThemes.getOrNull(cardIndex)?.let { shot = 0; onOpenThemePage(it.id) }
-                        },
-                    ) { stripFocused ->
-                        ThemeStoreCardRow(
-                            cards        = state.savedThemes.map { it.card() },
-                            focusedIndex = if (stripFocused) cardIndex else null,
-                            onOpen       = { shot = 0; onOpenThemePage(it) },
-                        )
-                    }
-                }
-
-                // the online store: the echo-themes catalog
-                SettingsGroup("Online")
-                val online = state.online
-                when {
-                    online != null && online.isNotEmpty() -> FocusableStrip(
-                        onFocusChange = { focused ->
-                            onlineFocused = focused
-                            if (focused) onlineIndex = onlineIndex.coerceIn(0, online.size - 1)
-                        },
-                        onSelect = { online.getOrNull(onlineIndex)?.let { shot = 0; onOpenOnlinePage(it.id) } },
-                    ) { stripFocused ->
-                        ThemeStoreCardRow(
-                            cards = online.map { t ->
-                                StoreCard(t.id, t.name, if (state.savedThemes.any { it.name == t.name }) "Downloaded" else "Online", t.heroUrl)
-                            },
-                            focusedIndex = if (stripFocused) onlineIndex else null,
-                            onOpen = { shot = 0; onOpenOnlinePage(it) },
-                        )
-                    }
-                    state.onlineFailed -> SettingsRow(
-                        label = "The online store could not be reached",
-                        sublabel = "Check the connection, then try again",
-                        onClick = onRefreshOnline,
-                    )
-                    online == null -> SettingsRow(label = "Loading the online store", sublabel = null, onClick = null)
-                    else -> SettingsRow(label = "No themes online yet", sublabel = null, onClick = null)
-                }
-                SettingsRow(
-                    label    = "Mix",
-                    sublabel = "Take the icons, wallpaper, sounds, wave and buttons from different themes",
-                    onClick  = onOpenMix,
-                )
-
                 SettingsGroup("Active Theme")
                 SettingsValueRow(label = "Current Theme", value = state.activeThemeName)
                 SettingsRow(
@@ -412,27 +280,6 @@ private fun ThemesSettingsContent(
             }
         }
 
-        page?.let {
-            ThemePageOverlay(
-                page = it,
-                shot = shot,
-                onAction = onPageAction,
-                onBack = onCloseThemePage,
-                onShot = { i -> shot = i },
-            )
-        }
-
-        menu?.let { m ->
-            EchoContextMenuOverlay(
-                state          = menuStateFor(m, menuIndex),
-                onRowActivated = { index ->
-                    (menuStateFor(m, menuIndex).chose(index) as? MenuSelect.Run)?.action?.action?.invoke()
-                    menu = null
-                },
-                onDismiss      = { menu = null },
-            )
-        }
-
         if (customPicker) {
             HsvColorPickerDialog(
                 title = "Custom Icon Color",
@@ -460,19 +307,19 @@ private fun ThemesSettingsContent(
     }
 }
 
-private data class ThemeMenuOption(val label: String, val destructive: Boolean = false, val action: () -> Unit)
+internal data class ThemeMenuOption(val label: String, val destructive: Boolean = false, val action: () -> Unit)
 
 // The overlay draws rows through rowsShown(), which moves destructive rows last.
 // Resolve the tap against the drawn rows, not against m.options.
-private fun menuStateFor(m: ThemeMenu, selected: Int) = MenuState(
+internal fun menuStateFor(m: ThemeMenu, selected: Int) = MenuState(
     title = m.title,
     rows = m.options.map { MenuRow(it, it.label, isDestructive = it.destructive, confirms = false) },
     selectedIndex = selected.coerceIn(0, (m.options.size - 1).coerceAtLeast(0)),
 )
-private data class ThemeMenu(val title: String, val options: List<ThemeMenuOption>)
+internal data class ThemeMenu(val title: String, val options: List<ThemeMenuOption>)
 
 @Composable
-private fun FocusableStrip(
+internal fun FocusableStrip(
     focusRequester: FocusRequester? = null,
     onFocusChange: (Boolean) -> Unit,
     onSelect: () -> Unit,
@@ -557,9 +404,6 @@ fun ThemesSettingsScreenPreview() {
             onOpenColorSchemePicker = {},
             onSetAccentFromWallpaper = {},
             onImportEchoTheme = {},
-            onApplySavedTheme = {},
-            onShareSavedTheme = {},
-            onDeleteSavedTheme = {},
             onSetIconColor = {},
     onClearAccentOverride = {},
     onResetTheme = {},

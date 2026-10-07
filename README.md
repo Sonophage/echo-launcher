@@ -523,6 +523,15 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 | <img src="docs/screenshots/settings-layout.jpg" width="420"> | <img src="docs/screenshots/settings-sound.jpg" width="420"> |
 | Crossbar: sizes and position, rows, Last Played, the top bar, categories and icons | Sound: menu sounds and your own menu music |
 
+### Theme store — *Look ▸ Store*
+
+A full panel of themes, each card headed by its hero picture: **On this device** (your saved themes)
+and **Online** (the [echo-themes](https://github.com/Sonophage/echo-themes) store). A card opens the
+theme's page: its details from its README, the parts it has, its screenshots (**LEFT/RIGHT**), and **A**
+to apply it, or to download an online theme first. **Y** on a saved theme has Apply, Share and Remove.
+**Mix** takes each part of the look (icons, wallpaper, colours and layout, wave, sounds, boot, game
+start, buttons) from any saved theme that has it; *Look ▸ Theme* then shows **Mixed**.
+
 ### Colour and theme — *Look ▸ Theme*
 
 | Setting | What it changes |
@@ -530,8 +539,6 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 | **Color Scheme** | 13 schemes (Original, which changes with the month, Classic Blue, Sunset Orange, Fresh Green, Royal Purple, Crimson Red, Silver, Sakura Pink, Golden Amber, Aqua Teal, Midnight Navy, Charcoal, Black), previewed live |
 | **Icon Color** | one tint for every crossbar glyph: 8 swatches or a **Custom Theme Color** |
 | **Color from Wallpaper** | takes the scheme from your wallpaper |
-| **Theme Store** | every saved theme as a card with its hero picture; selecting one opens its page (details, the parts it has, screenshots) and **A** applies it |
-| **Mix** | each part of the look (icons, wallpaper, colours and layout, wave, sounds, boot, game start, buttons) from any saved theme that has it; Theme then shows **Mixed** |
 | **Save Current Look as Theme** | bundles icons, wallpaper, colours, motion, sounds, boot and game-start media, the wave design and the button set into a shareable `.echo-theme`, and a folder in [`Themes/`](#the-echo-folder); **Import Theme** loads one (an older `.pfptheme` too), **Reset to Default** clears it |
 | **Theme Studio** | a desktop editor for `.echo-theme` files (Windows, Linux, macOS), built from `studio/` |
 

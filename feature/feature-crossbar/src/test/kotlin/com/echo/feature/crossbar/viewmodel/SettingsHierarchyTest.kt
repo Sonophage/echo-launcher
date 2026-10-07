@@ -124,7 +124,8 @@ class SettingsHierarchyTest {
         assertEquals(
             // owner, 2026-10-07: every crossbar setting in the Crossbar tab (settings_layout); Categories opens from it
             "Look holds what you see",
-            listOf("settings_themes", "settings_appearance", "settings_layout", "settings_boot", "settings_audio"),
+            // owner, 2026-10-07: the theme store is its own tab, after Theme
+            listOf("settings_themes", "settings_theme_store", "settings_appearance", "settings_layout", "settings_boot", "settings_audio"),
             settingsEntriesIn(SettingsSectionId.LOOK).map { it.id },
         )
         assertEquals(
