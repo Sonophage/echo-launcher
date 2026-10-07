@@ -29,7 +29,13 @@ class CrossbarGameInfo(
         uiState.update { it.withGameInfoOpen(info) }
         scope.launch {
             val loaded = load(info)
-            uiState.update { s -> if (s.gameInfo?.item?.id == item.id) s.copy(gameInfo = loaded.copy(cursor = s.gameInfo.cursor, open = s.gameInfo.open)) else s }
+            // it opens on its first view (achievements, when the game has them) unless one was picked meanwhile
+            uiState.update { s ->
+                val shown = s.gameInfo ?: return@update s
+                if (shown.item.id != item.id) return@update s
+                val untouched = shown.open == null && shown.cursor == null
+                s.copy(gameInfo = loaded.copy(cursor = shown.cursor, open = if (untouched) loaded.firstSection() else shown.open))
+            }
         }
     }
 
@@ -45,8 +51,11 @@ class CrossbarGameInfo(
             .map { com.echo.feature.crossbar.ui.detail.DetailMedia(it, isVideo = false) }
         val video = if (vm.videoSnapsAllowed()) vm.artworkStore.find(gid, ArtworkKind.ICON1) ?: vm.artworkStore.find(gid, ArtworkKind.VIDEO) else null
         val set = runCatching { vm.achievementController.observeSetForGame(gid).first() }.getOrNull()
+        val achievements = set?.let { runCatching { vm.achievementController.observeAchievements(it.provider, it.providerGameId).first() }.getOrNull() }
         return info.copy(
             content = detailPanelContentFor(game, platform, media, video),
+            achievementSet = set,
+            achievements = achievements.orEmpty(),
             achievementsStat = set?.takeIf { it.total > 0 }?.let { "${it.unlocked}/${it.total}" },
             videoUri = vm.artworkStore.find(gid, ArtworkKind.VIDEO) ?: vm.artworkStore.find(gid, ArtworkKind.ICON1),
             manualPath = vm.artworkStore.find(gid, ArtworkKind.MANUAL),
@@ -66,15 +75,41 @@ class CrossbarGameInfo(
             openGameInfoSection(stepGameInfoSection(info, if (action == GamepadAction.NEXT_CATEGORY) 1 else -1))
             return
         }
-        if (info.open != null) {
-            when (action) {
-                GamepadAction.BACK -> closeGameInfoPanel()
-                GamepadAction.NAVIGATE_UP -> scrollGameInfo(-1)
-                GamepadAction.NAVIGATE_DOWN -> scrollGameInfo(+1)
+        // owner, 2026-10-06: the views sit under the band, so the screen's buttons stay what they are (A plays,
+        // X opens the achievements, B leaves); only the video covers the screen, and B ends it
+        when (info.open) {
+            GameInfoAction.VIDEO -> {
+                if (action == GamepadAction.BACK) closeGameInfoPanel()
+                return
+            }
+            GameInfoAction.INFO -> if (action == GamepadAction.NAVIGATE_UP || action == GamepadAction.NAVIGATE_DOWN) {
+                scrollGameInfo(if (action == GamepadAction.NAVIGATE_UP) -1 else +1)
+                return
+            }
+            GameInfoAction.MANUAL -> if (action == GamepadAction.SELECT) {
+                onGameInfoAction(GameInfoAction.MANUAL)
+                return
+            }
+            // owner, 2026-10-06: the d-pad hovers the badges, X filters them, A on a badge opens the wall
+            GameInfoAction.ACHIEVEMENTS -> when (action) {
+                GamepadAction.CHANGE_SORT -> {
+                    setAchievementFilter(BadgeFilter.entries[(info.achievementFilter.ordinal + 1) % BadgeFilter.entries.size])
+                    return
+                }
+                in GAME_INFO_CURSOR_MOVES -> {
+                    onGameInfoCursor(stepGameInfoCursor(info.cursor, info.badgesInView.size, action))
+                    return
+                }
+                GamepadAction.SELECT -> if (info.cursor != null) {
+                    vm.panel.openProfile(ProfileTab.ACHIEVEMENTS, info.item.gameId)
+                    return
+                }
                 else -> Unit
             }
-            return
+            else -> Unit
         }
+        // the screenshot cursor belongs to the screenshots view
+        if (info.open != null && action in GAME_INFO_CURSOR_MOVES) return
         when (action) {
             GamepadAction.BACK -> closeGameInfo()
             GamepadAction.SELECT -> {
@@ -97,6 +132,17 @@ class CrossbarGameInfo(
         }
     }
 
+    fun setAchievementFilter(filter: BadgeFilter) {
+        val info = uiState.value.gameInfo ?: return
+        if (info.achievementFilter == filter) return
+        menuSound.play(MenuSound.SCROLL)
+        uiState.update { it.copy(gameInfo = it.gameInfo?.copy(achievementFilter = filter, cursor = info.cursor?.let { 0 })) }
+    }
+
+    private val GAME_INFO_CURSOR_MOVES = setOf(
+        GamepadAction.NAVIGATE_UP, GamepadAction.NAVIGATE_DOWN, GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT,
+    )
+
     fun onGameInfoAction(action: GameInfoAction) {
         val info = uiState.value.gameInfo ?: return
         uiState.update { it.copy(gameInfo = it.gameInfo?.copy(cursor = null)) }
@@ -107,6 +153,7 @@ class CrossbarGameInfo(
                 menuSound.play(MenuSound.SELECT)
                 openManualFor(it)
             }
+            GameInfoAction.ACHIEVEMENTS -> vm.panel.openProfile(ProfileTab.ACHIEVEMENTS, info.item.gameId)
             GameInfoAction.INFO, GameInfoAction.VIDEO -> {
                 menuSound.play(MenuSound.SELECT)
                 uiState.update { it.copy(gameInfo = it.gameInfo?.copy(open = action, infoScroll = 0)) }

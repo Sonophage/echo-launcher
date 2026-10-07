@@ -27,6 +27,8 @@ data class ProfileData(
     val totals: AchievementTotals? = null,
     val sets: List<AchievementSet> = emptyList(),
     val badges: Map<String, List<Achievement>> = emptyMap(),
+    // each set's game art, for a set with no icon of its own (Steam sets have none)
+    val setArt: Map<Long, String> = emptyMap(),
     val platforms: Map<Long, String> = emptyMap(),
     val raLinked: Boolean = false,
     val steamLinked: Boolean = false,
@@ -108,7 +110,8 @@ fun stepProfile(state: ProfileState, action: GamepadAction): ProfileState = when
 private fun stepAchievements(state: ProfileState, action: GamepadAction): ProfileState {
     val sets = state.data.sets.size
     if (sets == 0) return state
-    if (action == GamepadAction.OPEN_CONTEXT_MENU) {
+    // the filter is X, as sorting and filtering are everywhere (owner, 2026-10-06)
+    if (action == GamepadAction.CHANGE_SORT) {
         return state.copy(filter = BadgeFilter.entries[(state.filter.ordinal + 1) % BadgeFilter.entries.size], badge = 0)
     }
     val count = state.visibleBadges.size

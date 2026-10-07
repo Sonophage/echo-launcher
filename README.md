@@ -141,7 +141,9 @@ folders they scan.
 
 A focused game fills the background with its own art and shows its details beside the tile.
 **Y** opens its options on a panel at the right edge, with the art blurred behind it;
-anything destructive asks twice. **Game Info** shows play time, platform, screenshots and video.
+anything destructive asks twice. **Game Info** shows play time, platform and last played, and LT/RT
+walk its views: **Achievements** (first, when the game has them: the d-pad hovers a badge, X filters,
+A on a badge opens the full wall), **Screenshots**, **Info**, **Video** and **Manual**.
 
 | | |
 |:---:|:---:|

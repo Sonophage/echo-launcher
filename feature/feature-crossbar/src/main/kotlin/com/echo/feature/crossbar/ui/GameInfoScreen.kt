@@ -3,6 +3,15 @@ package com.echo.feature.crossbar.ui
 import com.echo.core.ui.components.StatusStripHeight
 import androidx.compose.ui.zIndex
 import com.echo.feature.crossbar.viewmodel.gameInfoSectionLabel
+import com.echo.feature.crossbar.viewmodel.BadgeFilter
+import com.echo.feature.crossbar.viewmodel.badgesInView
+import com.echo.feature.crossbar.viewmodel.filterBadges
+import com.echo.feature.crossbar.viewmodel.RarityTier
+import com.echo.feature.crossbar.viewmodel.rarityTier
+import com.echo.core.ui.design.PanelButton
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import com.echo.feature.crossbar.viewmodel.gameInfoSections
 import com.echo.core.ui.components.ControllerPromptItem
 import com.echo.core.ui.components.HintAction
@@ -83,6 +92,7 @@ fun GameInfoScreen(
 
     launchHold: String? = null,
     onSectionPicked: (GameInfoAction?) -> Unit = {},
+    onAchievementFilter: (BadgeFilter) -> Unit = {},
     // on the bottom screen, which is touch only and has its own bar: no controller footer or shoulders
     companion: Boolean = false,
 ) {
@@ -160,13 +170,18 @@ fun GameInfoScreen(
             }
         }
 
+        // owner, 2026-10-06: the view LT/RT pick (achievements, the info, the manual) takes the screenshots' place
+        // under the band; only the video plays over the whole screen
         Column(
-            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(440) + drop).fillMaxWidth(),
+            Modifier.padding(start = u.dp(80), end = u.dp(80), top = u.dp(440) + drop, bottom = u.dp(80)).fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
             val media = info.content?.media.orEmpty()
             val description = info.content?.description?.takeIf { it.isNotBlank() }
             when {
+                info.open == GameInfoAction.ACHIEVEMENTS -> AchievementsView(info, u, onOpenAll = { onAction(GamepadAction.SELECT) }, onFilter = onAchievementFilter)
+                info.open == GameInfoAction.INFO -> info.content?.let { InfoView(info, it, u, onScrollMax) }
+                info.open == GameInfoAction.MANUAL -> ManualView(u) { onAction(GamepadAction.SELECT) }
                 info.isApp && notices.isNotEmpty() -> {
                     SectionLabel("Recent from ${item.title}", u)
                     CardRow(notices.size, info.cursor, u, onCardFocused) { index, focused ->
@@ -191,7 +206,8 @@ fun GameInfoScreen(
             items = listOfNotNull(
                 ControllerPromptItem(listOf(GamepadAction.HOME), "Home"),
                 ControllerPromptItem(GamepadAction.BACK, "Back"),
-                ControllerPromptItem(GamepadAction.CHANGE_SORT, "Achievements").takeIf { info.achievementsStat != null },
+                ControllerPromptItem(GamepadAction.CHANGE_SORT, if (info.open == GameInfoAction.ACHIEVEMENTS) "Filter" else "Achievements")
+                    .takeIf { info.achievementsStat != null },
                 ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options"),
             ),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -223,7 +239,6 @@ fun GameInfoScreen(
         }
 
         when (info.open) {
-            GameInfoAction.INFO -> info.content?.let { InfoSheet(info, it, now, u, onClosePanel, onScrollMax) }
             GameInfoAction.VIDEO -> info.videoUri?.let { uri ->
                 Box(
                     Modifier.fillMaxSize().background(Color.Black)
@@ -238,59 +253,94 @@ fun GameInfoScreen(
 }
 
 
+// the about text, scrolled with up and down, and the facts under it
 @Composable
-private fun InfoSheet(info: GameInfoState, content: DetailPanelContent, now: Long, u: DesignUnits, onClose: () -> Unit, onScrollMax: (Int) -> Unit) {
+private fun ColumnScope.InfoView(info: GameInfoState, content: DetailPanelContent, u: DesignUnits, onScrollMax: (Int) -> Unit) {
     val scroll = rememberScrollState()
     val step = with(LocalDensity.current) { u.dp(120).roundToPx() }
     LaunchedEffect(scroll.maxValue, step) { onScrollMax(scroll.maxValue / step + if (scroll.maxValue % step > 0) 1 else 0) }
     LaunchedEffect(info.infoScroll) { scroll.animateScrollTo(info.infoScroll * step) }
-    val facts = listOfNotNull(
-        GameInfoStat("Platform", content.platformName).takeIf { content.platformName.isNotBlank() },
-        content.playTime?.let { GameInfoStat("Play time", it) },
-        info.item.lastOpenedAt?.let { GameInfoStat("Last played", relativeTime(now, it)) },
-        content.fileName?.let { GameInfoStat("File", it) },
+    // the band above already shows the play time, the platform and when it was last played
+    val facts = listOfNotNull(content.fileName?.let { GameInfoStat("File", it) })
+    SectionLabel("About", u)
+    content.metaLine?.let { Meta(it, u.sp(15), maxLines = 1) }
+    Text(
+        content.description?.takeIf { it.isNotBlank() } ?: "No description available.",
+        color = Color.White.copy(alpha = 0.85f),
+        fontSize = u.sp(15),
+        lineHeight = u.sp(22),
+        fontWeight = FontWeight.Light,
+        modifier = Modifier.weight(1f, fill = false).verticalScroll(scroll),
     )
-    Box(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            Modifier
-                .padding(vertical = u.dp(48))
-                .width(u.dp(900))
-                .clip(RoundedCornerShape(u.dp(22)))
-                .background(PanelBase)
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
-                .padding(u.dp(36)),
-            verticalArrangement = Arrangement.spacedBy(u.dp(16)),
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
-                Eyebrow("About", u)
-                Headline(content.title, u.sp(36), 2)
-                content.metaLine?.let { Meta(it, u.sp(15), maxLines = 2) }
-            }
-            Text(
-                content.description?.takeIf { it.isNotBlank() } ?: "No description available.",
-                color = Color.White.copy(alpha = 0.85f),
-                fontSize = u.sp(15),
-                lineHeight = u.sp(22),
-                fontWeight = FontWeight.Light,
-                modifier = Modifier.weight(1f, fill = false).verticalScroll(scroll),
-            )
-            if (facts.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
-                    facts.forEach { fact ->
-                        Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
-                            Text(fact.value, color = Color.White, fontSize = u.sp(18), fontWeight = FontWeight.ExtraLight,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(fact.label, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1)
-                        }
-                    }
+    if (facts.isNotEmpty()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
+            facts.forEach { fact ->
+                Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
+                    Text(fact.value, color = Color.White, fontSize = u.sp(18), fontWeight = FontWeight.ExtraLight,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(fact.label, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1)
                 }
             }
         }
     }
+}
+
+// the game's achievements: the tiers, the filters, and the badges, latest unlocked first. The d-pad hovers a
+// badge, whose details stand where the ring is; X filters; A on a badge, or a tap, opens the full wall
+@Composable
+private fun AchievementsView(info: GameInfoState, u: DesignUnits, onOpenAll: () -> Unit, onFilter: (BadgeFilter) -> Unit) {
+    val set = info.achievementSet ?: return
+    val all = info.achievements
+    val shown = info.badgesInView
+    val hovered = info.cursor?.let { shown.getOrNull(it) }
+    val row = rememberLazyListState()
+    LaunchedEffect(info.cursor) { info.cursor?.takeIf { it in shown.indices }?.let { row.animateScrollToItem((it - 2).coerceAtLeast(0)) } }
+    Row(horizontalArrangement = Arrangement.spacedBy(u.dp(24))) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(12))) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(18))) {
+                SectionLabel("Achievements", u)
+                RarityTier.entries.forEach { tier ->
+                    val inTier = all.filter { rarityTier(it.globalPercent) == tier }
+                    if (inTier.isNotEmpty()) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                            Box(Modifier.size(u.dp(8)).clip(CircleShape).background(tierColor(tier)))
+                            Text("${tier.label} ${inTier.count { it.isUnlocked }}/${inTier.size}", color = Color.White.copy(alpha = 0.75f),
+                                fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1)
+                        }
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                BadgeFilter.entries.forEach { f ->
+                    val n = filterBadges(all, f).size
+                    val on = f == info.achievementFilter
+                    Column(
+                        Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(u.dp(8))).clickable { onFilter(f) }
+                            .padding(horizontal = u.dp(10), vertical = u.dp(4)),
+                        verticalArrangement = Arrangement.spacedBy(u.dp(4)),
+                    ) {
+                        Text("${f.label} $n", color = Color.White.copy(alpha = if (on) 1f else 0.5f), fontSize = u.sp(14),
+                            fontWeight = if (on) FontWeight.Medium else FontWeight.Light, maxLines = 1)
+                        Box(Modifier.width(if (on) u.dp(18) else 0.dp).height(u.dp(2)).background(Color.White))
+                    }
+                }
+            }
+            LazyRow(state = row, horizontalArrangement = Arrangement.spacedBy(u.dp(12)), contentPadding = PaddingValues(u.dp(4))) {
+                items(shown.size) { i -> Badge(shown[i], focused = i == info.cursor, u = u, onClick = onOpenAll) }
+            }
+        }
+        Box(Modifier.width(u.dp(440)), contentAlignment = Alignment.CenterEnd) {
+            if (hovered != null) DetailCard(hovered, u) else Ring(set, u)
+        }
+    }
+}
+
+// the manual opens in its own viewer
+@Composable
+private fun ManualView(u: DesignUnits, onOpen: () -> Unit) {
+    SectionLabel("Manual", u)
+    Meta("The game's manual, in the viewer.", u.sp(15), maxLines = 1)
+    PanelButton(GamepadAction.SELECT, "Open the manual", u, onClick = onOpen)
 }
 
 @Composable

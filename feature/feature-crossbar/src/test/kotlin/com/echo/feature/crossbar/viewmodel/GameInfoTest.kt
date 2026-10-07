@@ -68,16 +68,50 @@ class GameInfoTest {
     }
 
     @Test
-    fun `LT and RT walk screenshots, info and video, skipping what the game lacks, and wrap`() {
+    fun `LT and RT walk screenshots, info, video and the manual, skipping what the game lacks, and wrap`() {
         val full = GameInfoState(CrossbarItem(id = "g", title = "Ico", gameId = 1L),
             content = DetailPanelContent(title = "Ico", platformName = "PS2"), videoUri = "/v.mp4", manualPath = "/m.pdf")
         assertEquals(GameInfoAction.INFO, stepGameInfoSection(full, +1))
         assertEquals(GameInfoAction.VIDEO, stepGameInfoSection(full.copy(open = GameInfoAction.INFO), +1))
-        assertEquals("RT past the last wraps to the screenshots", null, stepGameInfoSection(full.copy(open = GameInfoAction.VIDEO), +1))
-        assertEquals("LT from the screenshots wraps to the last", GameInfoAction.VIDEO, stepGameInfoSection(full, -1))
-        assertEquals("the manual opens its own viewer, so it is not a section", 3, gameInfoSections(full).size)
+        assertEquals("the manual is a view of its own now", GameInfoAction.MANUAL, stepGameInfoSection(full.copy(open = GameInfoAction.VIDEO), +1))
+        assertEquals("RT past the last wraps to the screenshots", null, stepGameInfoSection(full.copy(open = GameInfoAction.MANUAL), +1))
+        assertEquals("LT from the screenshots wraps to the last", GameInfoAction.MANUAL, stepGameInfoSection(full, -1))
 
-        val noVideo = full.copy(videoUri = null)
+        val noVideo = full.copy(videoUri = null, manualPath = null)
         assertEquals(null, stepGameInfoSection(noVideo.copy(open = GameInfoAction.INFO), +1))
+    }
+
+    private fun set(total: Int) = com.echo.core.domain.achievement.AchievementSet(
+        provider = com.echo.core.domain.achievement.AchievementProvider.STEAM, providerGameId = "489830", gameId = 1L,
+        title = "Skyrim", iconUrl = null, total = total, unlocked = 7, points = 0, earnedPoints = 0, mastered = false,
+        lastSyncedAt = null, lastPlayedAt = null,
+    )
+
+    // owner, 2026-10-06: achievements first, then screenshots, meta, video, and the manual when there is one
+    @Test
+    fun `a game with achievements opens on them, in the owner's order`() {
+        val full = GameInfoState(CrossbarItem(id = "g", title = "Skyrim", gameId = 1L),
+            content = DetailPanelContent(title = "Skyrim", platformName = "PC"), videoUri = "/v.mp4", manualPath = "/m.pdf",
+            achievementSet = set(75))
+        assertEquals(
+            listOf(GameInfoAction.ACHIEVEMENTS, null, GameInfoAction.INFO, GameInfoAction.VIDEO, GameInfoAction.MANUAL),
+            gameInfoSections(full),
+        )
+        assertEquals(GameInfoAction.ACHIEVEMENTS, full.firstSection())
+        assertEquals("no set, no Achievements view: it opens on the screenshots", null, full.copy(achievementSet = null).firstSection())
+        assertEquals("an empty set is no achievements", null, full.copy(achievementSet = set(0)).firstSection())
+    }
+
+    private fun badge(id: String, unlockedAt: Long?) = com.echo.core.domain.achievement.Achievement(
+        id = id, name = id, description = "", iconUrl = null, isHidden = false,
+        isUnlocked = unlockedAt != null, unlockedAt = unlockedAt, globalPercent = null, points = null,
+    )
+
+    @Test
+    fun `the view shows the latest unlocked first, then what comes next, through the wall's filter`() {
+        val all = listOf(badge("a", 10L), badge("b", null), badge("c", 30L), badge("d", null), badge("e", 20L))
+        assertEquals(listOf("c", "e", "a", "b", "d"), gameInfoBadges(all, BadgeFilter.ALL).map { it.id })
+        assertEquals(listOf("c", "e", "a"), gameInfoBadges(all, BadgeFilter.UNLOCKED).map { it.id })
+        assertEquals(listOf("b", "d"), gameInfoBadges(all, BadgeFilter.LOCKED).map { it.id })
     }
 }

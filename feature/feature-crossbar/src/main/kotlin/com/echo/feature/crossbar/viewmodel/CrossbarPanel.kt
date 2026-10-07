@@ -49,7 +49,7 @@ class CrossbarPanel(
     private fun profileData(): Flow<ProfileData> {
         val achievements = combine(vm.achievementController.observeSets(), vm.achievementController.observeAllAchievements()) { sets, all ->
             sets to sets.associate { set -> setKey(set) to all[set.provider to set.providerGameId].orEmpty() }
-        }
+        }.map { (sets, badges) -> Triple(sets, badges, setArt(sets)) }
         val accounts = combine(
             vm.achievementCredentials.raUsernameFlow,
             vm.achievementCredentials.steamId64Flow,
@@ -75,7 +75,7 @@ class CrossbarPanel(
             vm.achievementController.observeTotals(),
             accounts,
             vm.platformDao.observeAll(),
-        ) { (stats, recent), (sets, badges), totals, acc, platforms ->
+        ) { (stats, recent), (sets, badges, art), totals, acc, platforms ->
             val platformOf = platforms.associate { it.id to it.shortName }
             acc.copy(
                 games = stats.games,
@@ -84,10 +84,18 @@ class CrossbarPanel(
                 totals = totals,
                 sets = sets,
                 badges = badges,
+                setArt = art,
                 platforms = sets.mapNotNull { set -> set.gameId?.let { id -> platformOf[set.platformId]?.let { id to it } } }.toMap(),
             )
         }
     }
+
+    private suspend fun setArt(sets: List<com.echo.core.domain.achievement.AchievementSet>): Map<Long, String> =
+        sets.mapNotNull { it.gameId }.distinct().mapNotNull { id ->
+            runCatching { vm.gameRepository.getById(id) }.getOrNull()
+                ?.let { game -> listOfNotNull(game.iconUri, game.artworkUri).firstOrNull { it.isNotBlank() } }
+                ?.let { id to it }
+        }.toMap()
 
     internal fun handleProfileInput(p: ProfileState, action: GamepadAction) {
         when {

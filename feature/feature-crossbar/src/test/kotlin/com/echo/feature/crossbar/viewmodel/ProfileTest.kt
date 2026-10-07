@@ -75,7 +75,9 @@ class ProfileTest {
         assertEquals(secondRow, stepProfile(secondRow, GamepadAction.NAVIGATE_DOWN))
         assertEquals(false, stepProfile(grid, GamepadAction.NAVIGATE_UP).inGrid)
 
-        assertEquals(BadgeFilter.UNLOCKED, stepProfile(grid, GamepadAction.OPEN_CONTEXT_MENU).filter)
+        // owner, 2026-10-06: X filters, as everywhere; Y is the context menu and leaves the filter alone
+        assertEquals(BadgeFilter.UNLOCKED, stepProfile(grid, GamepadAction.CHANGE_SORT).filter)
+        assertEquals(BadgeFilter.ALL, stepProfile(grid, GamepadAction.OPEN_CONTEXT_MENU).filter)
     }
 
     @Test

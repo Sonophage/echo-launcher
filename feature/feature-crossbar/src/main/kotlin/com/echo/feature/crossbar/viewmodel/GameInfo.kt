@@ -16,6 +16,11 @@ data class GameInfoState(
     val cursor: Int? = null,
     val videoUri: String? = null,
     val manualPath: String? = null,
+    // the game's achievement set and its achievements, for the Achievements view
+    val achievementSet: com.echo.core.domain.achievement.AchievementSet? = null,
+    val achievements: List<com.echo.core.domain.achievement.Achievement> = emptyList(),
+    // the Achievements view's filter, as the wall's
+    val achievementFilter: BadgeFilter = BadgeFilter.ALL,
     val open: GameInfoAction? = null,
     val infoScroll: Int = 0,
     val infoScrollMax: Int = 0,
@@ -25,7 +30,7 @@ data class GameInfoState(
     fun scrolledBy(delta: Int): GameInfoState = copy(infoScroll = (infoScroll + delta).coerceIn(0, infoScrollMax))
 }
 
-enum class GameInfoAction { PLAY, INFO, VIDEO, MANUAL, OPTIONS }
+enum class GameInfoAction { PLAY, INFO, VIDEO, MANUAL, OPTIONS, ACHIEVEMENTS }
 
 fun gameInfoActions(info: GameInfoState): List<GameInfoAction> = listOfNotNull(
     GameInfoAction.PLAY,
@@ -37,9 +42,26 @@ fun gameInfoActions(info: GameInfoState): List<GameInfoAction> = listOfNotNull(
 
 
 // owner, 2026-10-04: LT/RT walk Game Info's views; null is the screenshots page itself.
-// The manual opens its own viewer, so it stays in Options
-fun gameInfoSections(info: GameInfoState): List<GameInfoAction?> =
-    listOf<GameInfoAction?>(null) + gameInfoActions(info).filter { it == GameInfoAction.INFO || it == GameInfoAction.VIDEO }
+// owner, 2026-10-06: achievements first, then screenshots, the info, the video and the manual, each only
+// when the game has it. The manual's view opens its viewer on A.
+fun gameInfoSections(info: GameInfoState): List<GameInfoAction?> = listOfNotNull(
+    GameInfoAction.ACHIEVEMENTS.takeIf { info.hasAchievements },
+) + listOf<GameInfoAction?>(null) + gameInfoActions(info).filter {
+    it == GameInfoAction.INFO || it == GameInfoAction.VIDEO || it == GameInfoAction.MANUAL
+}
+
+val GameInfoState.hasAchievements: Boolean get() = !isApp && (achievementSet?.total ?: 0) > 0
+
+// the view Game Info opens on: achievements, when the game has them
+fun GameInfoState.firstSection(): GameInfoAction? = gameInfoSections(this).first()
+
+// the badges Game Info's Achievements view shows, through the wall's filter: the latest unlocked first, then
+// the next locked in the set's own order, so a glance shows what was earned and what comes next
+fun gameInfoBadges(all: List<com.echo.core.domain.achievement.Achievement>, filter: BadgeFilter): List<com.echo.core.domain.achievement.Achievement> =
+    filterBadges(all.filter { it.isUnlocked }.sortedByDescending { it.unlockedAt ?: 0L } + all.filter { !it.isUnlocked }, filter)
+
+val GameInfoState.badgesInView: List<com.echo.core.domain.achievement.Achievement>
+    get() = gameInfoBadges(achievements, achievementFilter)
 
 fun stepGameInfoSection(info: GameInfoState, delta: Int): GameInfoAction? {
     val sections = gameInfoSections(info)
@@ -50,6 +72,7 @@ fun gameInfoSectionLabel(section: GameInfoAction?): String = when (section) {
     null -> "Screenshots"
     GameInfoAction.INFO -> "Info"
     GameInfoAction.VIDEO -> "Video"
+    GameInfoAction.ACHIEVEMENTS -> "Achievements"
     else -> section.name.lowercase().replaceFirstChar { it.uppercase() }
 }
 

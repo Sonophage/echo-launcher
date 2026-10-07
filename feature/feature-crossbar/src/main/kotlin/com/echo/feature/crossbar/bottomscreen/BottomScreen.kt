@@ -41,6 +41,7 @@ import com.echo.feature.crossbar.ui.SearchScreen
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoAction
+import com.echo.feature.crossbar.viewmodel.firstSection
 import com.echo.feature.crossbar.viewmodel.SearchScope
 import com.echo.feature.settings.ui.SettingsNavHost
 import androidx.compose.runtime.collectAsState
@@ -111,7 +112,8 @@ fun BottomScreen(
             }
             if (info != null) {
                 // Info's sections (the sheet, the video) open here without touching the top screen
-                var open by remember(info.item.id) { mutableStateOf<GameInfoAction?>(null) }
+                // it opens on achievements, as the top screen's Game Info does
+                var open by remember(info.item.id, info.achievementSet) { mutableStateOf(info.firstSection()) }
                 GameInfoScreen(
                     info = info.copy(open = open),
                     androidNotices = emptyList(),

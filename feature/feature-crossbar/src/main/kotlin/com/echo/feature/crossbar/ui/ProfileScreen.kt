@@ -138,7 +138,7 @@ fun ProfileScreen(
             horizontalArrangement = Arrangement.spacedBy(u.dp(8)),
         ) {
             if (profile.tab == ProfileTab.ACHIEVEMENTS && profile.data.sets.isNotEmpty()) {
-                Hint(GamepadAction.OPEN_CONTEXT_MENU, "Filter", u) { onAction(GamepadAction.OPEN_CONTEXT_MENU) }
+                Hint(GamepadAction.CHANGE_SORT, "Filter", u) { onAction(GamepadAction.CHANGE_SORT) }
             }
             Hint(GamepadAction.BACK, "Back", u) { onAction(GamepadAction.BACK) }
         }
@@ -416,7 +416,7 @@ private fun AchievementsWall(
     val badges = profile.visibleBadges
     val now = System.currentTimeMillis()
     Column(Modifier.fillMaxSize().padding(start = u.dp(80), end = u.dp(80), top = u.dp(84), bottom = u.dp(64))) {
-        CoverStrip(data.sets, profile.set, !profile.inGrid, u, onSet)
+        CoverStrip(data.sets, data.setArt, profile.set, !profile.inGrid, u, onSet)
         Row(Modifier.fillMaxWidth().padding(top = u.dp(18)), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
                 val eyebrow = listOfNotNull(
@@ -482,7 +482,7 @@ private fun AchievementsWall(
 }
 
 @Composable
-private fun CoverStrip(sets: List<AchievementSet>, at: Int, focused: Boolean, u: DesignUnits, onSet: (Int) -> Unit) {
+private fun CoverStrip(sets: List<AchievementSet>, art: Map<Long, String>, at: Int, focused: Boolean, u: DesignUnits, onSet: (Int) -> Unit) {
     val state = rememberLazyListState()
     LaunchedEffect(at) { state.animateScrollToItem((at - 2).coerceAtLeast(0)) }
     LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(u.dp(10)), contentPadding = PaddingValues(vertical = u.dp(4), horizontal = u.dp(4))) {
@@ -496,7 +496,16 @@ private fun CoverStrip(sets: List<AchievementSet>, at: Int, focused: Boolean, u:
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Outlined.EmojiEvents, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(u.dp(24)))
-                sets[i].iconUrl?.let { AsyncImage(it, sets[i].title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                // a Steam set has no icon: the tile shows the game's art from the library, else Steam's box art,
+                // instead of a bare "Steam"
+                val gameArt = sets[i].gameId?.let(art::get)
+                val steamArt = sets[i].takeIf { it.provider == AchievementProvider.STEAM }
+                    ?.let { com.echo.feature.artwork.api.steamAppArt(it.providerGameId)?.boxArtUrl }
+                when {
+                    sets[i].iconUrl != null -> AsyncImage(sets[i].iconUrl, sets[i].title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    gameArt != null -> AsyncImage(rememberArtworkModel(gameArt), sets[i].title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    steamArt != null -> AsyncImage(steamArt, sets[i].title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                }
                 Text(if (sets[i].provider == AchievementProvider.STEAM) "Steam" else "RA", color = Color.White, fontSize = u.sp(9),
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = u.dp(3)).clip(RoundedCornerShape(u.dp(4)))
                         .background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = u.dp(4)))
@@ -506,7 +515,7 @@ private fun CoverStrip(sets: List<AchievementSet>, at: Int, focused: Boolean, u:
 }
 
 @Composable
-private fun Ring(set: AchievementSet, u: DesignUnits) {
+internal fun Ring(set: AchievementSet, u: DesignUnits) {
     val fraction = if (set.total > 0) set.unlocked.toFloat() / set.total else 0f
     Box(Modifier.size(u.dp(120)), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
@@ -525,7 +534,7 @@ private fun Ring(set: AchievementSet, u: DesignUnits) {
 }
 
 @Composable
-private fun Badge(a: Achievement, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
+internal fun Badge(a: Achievement, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
     val shape = RoundedCornerShape(u.dp(16))
     val tier = tierColor(rarityTier(a.globalPercent))
     Box(
@@ -554,7 +563,7 @@ private fun BadgeIcon(a: Achievement, size: Dp, u: DesignUnits) {
 }
 
 @Composable
-private fun DetailCard(a: Achievement, u: DesignUnits) {
+internal fun DetailCard(a: Achievement, u: DesignUnits) {
     val tier = rarityTier(a.globalPercent)
     val secret = a.isHidden && !a.isUnlocked
     Column(
@@ -703,7 +712,7 @@ private fun percent(p: Double?): String = p?.let { "%.1f%%".format(it) } ?: ""
 
 private fun unlockDate(at: Long): String = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(at))
 
-private fun tierColor(tier: RarityTier): Color = when (tier) {
+internal fun tierColor(tier: RarityTier): Color = when (tier) {
     RarityTier.LEGENDARY -> Color(0xFFE8A93A)
     RarityTier.EPIC -> Color(0xFFA77BE8)
     RarityTier.RARE -> Color(0xFF4C8DF0)
