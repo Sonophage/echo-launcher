@@ -103,4 +103,14 @@ class CrossbarNavGesturesTest {
         assertEquals("the end still clamps to the list", 19, columnRows(17, 20, rowsBelow = 4).last)
         assertTrue("an empty list draws no rows", columnRows(0, 0, rowsBelow = 4).isEmpty())
     }
+
+    // owner, 2026-10-06: inside a category the column fills the screen, the passed rows standing above the
+    // cursor; the root keeps only the cursor and below (the test above)
+    @Test fun `inside a category the rows already passed are drawn above the cursor`() {
+        val rows = drillColumnRows(10, 40, rowsAbove = 2, rowsBelow = 4)
+        assertTrue("rows above the cursor are drawn", rows.first < 10)
+        assertEquals("as many as fill the top, plus the glide's lead", 10 - 2 - GLIDE_MAX_LEAD_ROWS, rows.first)
+        assertEquals("the top clamps to the list", 0, drillColumnRows(1, 40, rowsAbove = 2, rowsBelow = 4).first)
+        assertTrue("an empty list draws no rows", drillColumnRows(0, 0, rowsAbove = 2, rowsBelow = 4).isEmpty())
+    }
 }

@@ -304,9 +304,10 @@ private fun CrossbarGameColumn(
         val sel = selectedIndex.coerceIn(0, items.lastIndex)
 
         val rowsBelow = ((maxHeight.value - belowTopY.value) / ROW_HEIGHT.value).toInt() + 2
+        val rowsAbove = (belowTopY.value / ROW_HEIGHT.value).toInt() + 1
         val glide = rememberGlidePosition(sel)
 
-        for (i in columnRows(sel, items.size, rowsBelow)) {
+        for (i in drillColumnRows(sel, items.size, rowsAbove, rowsBelow)) {
             CrossbarVerticalListRow(
                 item = items[i],
                 isSelected = i == selectedIndex,
@@ -321,6 +322,8 @@ private fun CrossbarGameColumn(
                 onClick = { onItemSelected(i) },
                 onLongPress = { onItemLongPress(i) },
                 showIcon = true,
+                // dimmed by how far each row is from the cursor, above it as below
+                distance = kotlin.math.abs(i - sel),
 
                 iconAnimatingAllowed = iconAnimatingAllowed,
                 modifier = Modifier
@@ -1164,6 +1167,11 @@ const val GLIDE_STIFFNESS = 700f
 
 fun columnRows(selected: Int, size: Int, rowsBelow: Int): IntRange =
     selected until minOf(size, selected + rowsBelow + GLIDE_MAX_LEAD_ROWS)
+
+// owner, 2026-10-06: inside a category the column fills the screen's height, the rows already passed
+// standing above the cursor; the root's column shows only the cursor and what is below it (columnRows)
+fun drillColumnRows(selected: Int, size: Int, rowsAbove: Int, rowsBelow: Int): IntRange =
+    maxOf(0, selected - rowsAbove - GLIDE_MAX_LEAD_ROWS) until minOf(size, selected + rowsBelow + GLIDE_MAX_LEAD_ROWS)
 
 fun glideStart(current: Float, target: Int, maxLead: Int = GLIDE_MAX_LEAD_ROWS): Float =
     current.coerceIn(target - maxLead.toFloat(), target + maxLead.toFloat())
