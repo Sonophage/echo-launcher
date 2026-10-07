@@ -88,6 +88,12 @@ data class StudioState(
 
     val iconBitmaps: Map<String, ImageBitmap> = emptyMap(),
     val source: EchoThemeSource? = null,
+    // parts Studio does not edit, kept as opened so an export does not drop them (owner, 2026-10-07): the
+    // sounds and boot and game-start media, the console icons, and the wave design, game-start styles and
+    // button set
+    val keptMedia: Map<String, com.echo.themekit.ThemeImage> = emptyMap(),
+    val keptSysicons: Map<String, com.echo.themekit.ThemeImage> = emptyMap(),
+    val keptManifest: EchoThemeManifest? = null,
     val busy: Boolean = false,
     val statusMessage: String? = null,
     val dialog: StudioDialog? = null,
@@ -231,6 +237,9 @@ class StudioViewModel(private val scope: CoroutineScope) {
                 layout = manifest.layout?.let(CrossbarLayoutSpecCodec::sanitize)
                     ?: com.echo.themekit.CrossbarLayoutSpec.DEFAULT,
                 source = manifest.source,
+                keptMedia = bundle.media,
+                keptSysicons = bundle.sysicons,
+                keptManifest = manifest,
                 statusMessage = status,
             )
         }
@@ -431,6 +440,10 @@ class StudioViewModel(private val scope: CoroutineScope) {
             layout = state.layout.takeUnless { it == com.echo.themekit.CrossbarLayoutSpec.DEFAULT },
             source = state.source ?: EchoThemeSource(type = EchoThemeSource.TYPE_USER_CREATED),
             created = today.toString(),
+            waveDesign = state.keptManifest?.waveDesign,
+            gameBootStyle = state.keptManifest?.gameBootStyle,
+            launchDiscStyle = state.keptManifest?.launchDiscStyle,
+            buttonSet = state.keptManifest?.buttonSet,
         )
 
     fun exportTo(file: File, renderPreview: suspend (StudioState) -> ByteArray?) = runBusy {
@@ -451,6 +464,8 @@ class StudioViewModel(private val scope: CoroutineScope) {
                 ThemeImage(png, snapshot.iconExtensions[key] ?: "png")
             },
             motion = motion,
+            sysicons = snapshot.keptSysicons,
+            media = snapshot.keptMedia,
         )
         runCatching { file.outputStream().use { EchoThemeCodec.write(bundle, it) } }
             .onSuccess { _state.update { it.copy(statusMessage = "Exported ${file.name}") } }

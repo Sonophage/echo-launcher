@@ -3,8 +3,10 @@ package com.echo.feature.artwork.portable
 import android.net.Uri
 import com.echo.core.data.repository.EchoThemeStore
 import com.echo.core.data.repository.SafeMedia
+import com.echo.themekit.EchoThemeBundle
 import com.echo.themekit.EchoThemeCodec
 import com.echo.themekit.EchoThemeFolder
+import com.echo.themekit.EchoThemeTemplate
 import javax.inject.Inject
 import javax.inject.Singleton
 import timber.log.Timber
@@ -37,6 +39,17 @@ class ThemeFolderSync @Inject constructor(
         return written
     }
 
+    // writes Themes/Template, the example theme. Its READMEs are ECHO's and follow ECHO's slots; its theme.json
+    // is written only when missing, so an edit there is kept
+    suspend fun writeTemplate(tree: Uri) {
+        val existing = library.filesIn(tree, listOf(DIR_THEMES, TEMPLATE)).map { it.name }.toSet()
+        for ((path, bytes) in EchoThemeTemplate.files()) {
+            val parts = path.split('/')
+            if (path == EchoThemeFolder.MANIFEST && path in existing) continue
+            library.writeBytesIfChanged(tree, listOf(DIR_THEMES, TEMPLATE) + parts.dropLast(1), parts.last(), bytes)
+        }
+    }
+
     // reads in each theme folder that is new or changed
     suspend fun readIn(tree: Uri): ReadResult {
         var applied = 0
@@ -48,7 +61,7 @@ class ThemeFolderSync @Inject constructor(
             if (folder.files.keys.none { it.equals(EchoThemeFolder.MANIFEST, ignoreCase = true) }) continue
             val saved = store.themes.value.firstOrNull { store.folderName(it).equals(dir.name, ignoreCase = true) }
             if (!wanted(dir.name, folder, saved)) continue
-            val bundle = EchoThemeFolder.toBundle(folder.files)
+            val bundle = runCatching { EchoThemeFolder.toBundle(folder.files) }.getOrNull()
             if (bundle == null) { rejected += "Themes/${dir.name} (theme.json is not a theme ECHO can read)"; continue }
             val named = bundle.copy(manifest = bundle.manifest.copy(name = dir.name))
             val bytes = EchoThemeCodec.write(named)
@@ -63,13 +76,9 @@ class ThemeFolderSync @Inject constructor(
     private fun wanted(name: String, folder: PortableArtworkLibrary.FolderFiles, saved: EchoThemeStore.SavedTheme?): Boolean {
         val file = saved?.let { store.bundleFile(it.id) }
         return shouldReadThemeFolder(folder.newest, saved != null, store.dismissedAt(name), file?.lastModified()) {
-            val current = runCatching { EchoThemeCodec.read(file!!) }.getOrNull()?.let(EchoThemeFolder::toFiles)
-            current != null && sameFiles(current, folder.files)
+            runCatching { EchoThemeCodec.read(file!!) }.getOrNull()?.let { sameTheme(folder.files, name, it) } ?: false
         }
     }
-
-    private fun sameFiles(a: Map<String, ByteArray>, b: Map<String, ByteArray>): Boolean =
-        a.keys == b.keys && a.all { (k, v) -> v.contentEquals(b.getValue(k)) }
 
     companion object {
         // the example theme ECHO writes for people to copy; never read in as a theme
@@ -91,4 +100,14 @@ internal fun shouldReadThemeFolder(
     storedModified == null -> true
     folderNewest <= storedModified -> false
     else -> !sameAsStored()
+}
+
+// whether a theme folder holds the theme ECHO stored for it. Both go through the codec, so what has no place in
+// a theme (a README, notes) and the case of the folders' names do not count, and the folder's name is the
+// theme's name as it is when read in; every byte of every part does count
+internal fun sameTheme(folderFiles: Map<String, ByteArray>, folderName: String, stored: EchoThemeBundle): Boolean {
+    val fromFolder = runCatching { EchoThemeFolder.toBundle(folderFiles) }.getOrNull() ?: return false
+    val a = EchoThemeFolder.toFiles(fromFolder.copy(manifest = fromFolder.manifest.copy(name = folderName)))
+    val b = EchoThemeFolder.toFiles(stored)
+    return a.keys == b.keys && a.all { (k, v) -> v.contentEquals(b.getValue(k)) }
 }

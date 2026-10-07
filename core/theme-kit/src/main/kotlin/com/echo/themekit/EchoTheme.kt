@@ -21,6 +21,12 @@ data class EchoThemeManifest(
     val source: EchoThemeSource? = null,
 
     val created: String? = null,
+
+    // parts a theme may set (owner, 2026-10-07); null leaves the person's own setting as it is
+    val waveDesign: String? = null,
+    val gameBootStyle: String? = null,
+    val launchDiscStyle: String? = null,
+    val buttonSet: String? = null,
 ) {
     companion object {
         // owner, 2026-10-07: the format is .echo-theme. A bundle marked pfptheme, from before the rename,
@@ -35,6 +41,13 @@ data class EchoThemeManifest(
         const val WAVE_ANIMATED = "animated"
         const val WAVE_STATIC = "static"
         const val WAVE_REDUCED = "reduced"
+
+        // the values each part takes. They mirror enums theme-kit cannot see; a test beside each enum
+        // fails when they drift: WaveDesign (core-ui), GameBootStyle (core-data), ControllerDisplayType
+        // (core-domain, the four that are button sets)
+        val WAVE_DESIGNS = setOf("PSP", "ECHO_RINGS", "ECHO_ARCS")
+        val GAME_START_STYLES = setOf("DISC", "LENS")
+        val BUTTON_SETS = setOf("GENERIC", "XBOX", "NINTENDO", "PLAYSTATION")
     }
 }
 
@@ -94,9 +107,13 @@ data class EchoThemeBundle(
     val sysicons: Map<String, ThemeImage> = emptyMap(),
 
     val motion: ThemeMotion? = null,
+
+    // sounds, boot and game-start media by ECHO's media slot key (ThemeMedia.FOLDERS)
+    val media: Map<String, ThemeImage> = emptyMap(),
 ) {
     override fun equals(other: Any?): Boolean =
         other is EchoThemeBundle &&
+            media == other.media &&
             manifest == other.manifest &&
             wallpaper.contentEquals(other.wallpaper) &&
             preview.contentEquals(other.preview) &&
@@ -111,6 +128,7 @@ data class EchoThemeBundle(
         for ((key, image) in icons) h = 31 * h + (key.hashCode() xor image.hashCode())
         for ((key, image) in sysicons) h = 31 * h + (key.hashCode() xor image.hashCode())
         motion?.let { h = 31 * h + it.hashCode() }
+        for ((key, file) in media) h = 31 * h + (key.hashCode() xor file.hashCode())
         return h
     }
 }

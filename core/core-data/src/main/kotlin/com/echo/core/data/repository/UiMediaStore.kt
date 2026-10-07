@@ -74,19 +74,40 @@ class UiMediaStore @Inject constructor(
                 else UiMediaLimits.MSG_UNSUPPORTED_FORMAT_AUDIO,
             )
         }
-        val spec = slot.limits
-
         val knownSize = runCatching {
             context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length }
         }.getOrNull()?.takeIf { it > 0 }
+        store(slot, ext, knownSize, { context.contentResolver.openInputStream(uri) }) { recordDisplayName(slot, uri) }
+    }
+
+    // a file ECHO already holds, such as a sound from a theme; [displayName] is what Settings shows for it
+    suspend fun importFile(slot: UiMediaSlot, file: File, displayName: String): ImportResult = withContext(Dispatchers.IO) {
+        val ext = file.extension.lowercase().takeIf { it in storedExtensions }
+            ?: return@withContext ImportResult(
+                false,
+                if (slot.kind == UiMediaKind.VIDEO) UiMediaLimits.MSG_UNSUPPORTED_FORMAT_VIDEO else UiMediaLimits.MSG_UNSUPPORTED_FORMAT_AUDIO,
+            )
+        store(slot, ext, file.length(), { file.inputStream() }) {
+            context.echoDataStore.edit { prefs -> prefs[displayNameKey(slot)] = displayName }
+        }
+    }
+
+    private suspend fun store(
+        slot: UiMediaSlot,
+        ext: String,
+        knownSize: Long?,
+        open: () -> java.io.InputStream?,
+        named: suspend () -> Unit,
+    ): ImportResult {
+        val spec = slot.limits
         if (knownSize != null && knownSize > spec.maxBytes) {
-            return@withContext ImportResult(false, UiMediaLimits.tooLarge(spec))
+            return ImportResult(false, UiMediaLimits.tooLarge(spec))
         }
 
         dir.mkdirs()
         val staged = File(dir, "staging_${System.currentTimeMillis()}.$ext")
         val copied = runCatching {
-            context.contentResolver.openInputStream(uri)?.use { input ->
+            open()?.use { input ->
 
                 staged.outputStream().use { output ->
                     with(SafeMedia) { input.copyCappedTo(output, spec.maxBytes) }
@@ -95,13 +116,13 @@ class UiMediaStore @Inject constructor(
         }.getOrNull()
         if (copied == null) {
             runCatching { staged.delete() }
-            return@withContext ImportResult(false, UiMediaLimits.MSG_UNDECODABLE)
+            return ImportResult(false, UiMediaLimits.MSG_UNDECODABLE)
         }
 
         val rejection = validateImported(staged, spec)
         if (rejection != null) {
             runCatching { staged.delete() }
-            return@withContext ImportResult(false, rejection)
+            return ImportResult(false, rejection)
         }
 
         for (candidateExt in storedExtensions) {
@@ -113,9 +134,9 @@ class UiMediaStore @Inject constructor(
             staged.delete()
         }
 
-        recordDisplayName(slot, uri)
+        named()
         context.echoDataStore.edit { prefs -> prefs.bumpUiMediaStamp() }
-        ImportResult(true)
+        return ImportResult(true)
     }
 
     suspend fun clear(slot: UiMediaSlot): Boolean = withContext(Dispatchers.IO) {

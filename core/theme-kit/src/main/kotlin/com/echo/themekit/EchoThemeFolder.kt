@@ -7,9 +7,9 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 // a theme as a folder (owner, 2026-10-07): ECHO/Themes/<name>/ holds theme.json, Icons/ (console icons in
-// Icons/Consoles/) and Wallpaper/. Each file is one entry of the .echo-theme zip, so a folder theme is read
-// through EchoThemeCodec with the same limits and checks as a file. Paths use '/' and are relative to the
-// theme's folder.
+// Icons/Consoles/), Wallpaper/, and Sounds/, Boot/ and GameStart/ for media named after its slot. Each file
+// is one entry of the .echo-theme zip, so a folder theme is read through EchoThemeCodec with the same limits
+// and checks as a file. Paths use '/' and are relative to the theme's folder.
 object EchoThemeFolder {
     const val MANIFEST = "theme.json"
 
@@ -18,6 +18,8 @@ object EchoThemeFolder {
         entry == "manifest.json" -> MANIFEST
         entry.startsWith("icons/") -> leaf(entry.removePrefix("icons/"))?.let { "Icons/$it" }
         entry.startsWith("sysicons/") -> leaf(entry.removePrefix("sysicons/"))?.let { "Icons/Consoles/$it" }
+        entry.startsWith("media/") -> leaf(entry.removePrefix("media/"))
+            ?.let { name -> ThemeMedia.FOLDERS[name.substringBeforeLast('.')]?.let { "$it/$name" } }
         else -> leaf(entry)?.let { "Wallpaper/$it" }
     }
 
@@ -30,6 +32,8 @@ object EchoThemeFolder {
             parts.size == 3 && parts[0].equals("Icons", true) && parts[1].equals("Consoles", true) -> "sysicons/${parts[2]}"
             parts.size == 2 && parts[0].equals("Icons", true) -> "icons/${parts[1]}"
             parts.size == 2 && parts[0].equals("Wallpaper", true) -> parts[1]
+            // a media file is placed only in its own slot's folder; anything else there (a README) has no place
+            parts.size == 2 && ThemeMedia.FOLDERS[parts[1].substringBeforeLast('.')]?.equals(parts[0], true) == true -> "media/${parts[1]}"
             else -> null
         }.takeIf { parts.last().isNotEmpty() }
     }
@@ -51,8 +55,10 @@ object EchoThemeFolder {
     fun toBundle(files: Map<String, ByteArray>): EchoThemeBundle? {
         val packed = ByteArrayOutputStream()
         ZipOutputStream(packed).use { zip ->
+            val written = mutableSetOf<String>()
             for ((path, bytes) in files) {
-                val entry = entryName(path) ?: continue
+                // two paths can name one entry (Icons/ beside icons/); the first is kept
+                val entry = entryName(path)?.takeIf { written.add(it) } ?: continue
                 zip.putNextEntry(ZipEntry(entry))
                 zip.write(bytes)
                 zip.closeEntry()

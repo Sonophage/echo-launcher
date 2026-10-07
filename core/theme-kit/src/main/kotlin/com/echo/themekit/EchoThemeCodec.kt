@@ -24,6 +24,7 @@ object EchoThemeCodec {
     private const val ICONS_PREFIX = "icons/"
     private const val SYSICONS_PREFIX = "sysicons/"
     private const val MOTION_PREFIX = "motion."
+    private const val MEDIA_PREFIX = "media/"
 
     val ICON_EXTENSIONS = setOf("png", "gif")
     val MOTION_EXTENSIONS = setOf("mp4", "webm", "gif")
@@ -61,6 +62,10 @@ object EchoThemeCodec {
                 }
             }
 
+            for ((key, file) in bundle.media.toSortedMap()) {
+                if (ThemeMedia.isMedia(key, file.extension)) zip.writeEntry("$MEDIA_PREFIX$key.${file.extension.lowercase()}", file.bytes)
+            }
+
             bundle.motion?.let { motion ->
                 val ext = motion.extension.lowercase()
                 if (ext in MOTION_EXTENSIONS) {
@@ -83,6 +88,7 @@ object EchoThemeCodec {
         val icons = mutableMapOf<String, ThemeImage>()
         val sysicons = mutableMapOf<String, ThemeImage>()
         var motionExtension: String? = null
+        val media = mutableMapOf<String, ThemeImage>()
 
         try {
             BoundedZipReader.read(input, BUNDLE_LIMITS) { entry ->
@@ -115,6 +121,12 @@ object EchoThemeCodec {
                                 ?.let { sysicons[platformId] = ThemeImage(it, ext) }
                         }
                     }
+                    entry.name.startsWith(MEDIA_PREFIX) -> {
+                        val name = entry.name.removePrefix(MEDIA_PREFIX)
+                        val key = name.substringBeforeLast('.')
+                        val ext = name.substringAfterLast('.', "").lowercase()
+                        if (ThemeMedia.isMedia(key, ext)) media[key] = ThemeImage(entry.readBytes(), ext)
+                    }
                     entry.name.startsWith(MOTION_PREFIX) -> {
                         val ext = entry.name.removePrefix(MOTION_PREFIX).lowercase()
                         if (ext in MOTION_EXTENSIONS) motionExtension = ext
@@ -134,6 +146,7 @@ object EchoThemeCodec {
             icons = icons,
             sysicons = sysicons,
             motion = motionExtension?.let { ext -> reopen?.invoke(ext) },
+            media = media,
         )
     }
 

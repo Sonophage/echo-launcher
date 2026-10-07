@@ -46,7 +46,7 @@ class EchoThemeStoreV3Test {
 
     @Test
     fun `applying a v3 bundle writes gif sysicon files and sets the motion wallpaper`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         val saved = requireNotNull(store.importBundle(register(v3BundleBytes())))
 
         assertTrue(store.apply(saved.id))
@@ -64,7 +64,7 @@ class EchoThemeStoreV3Test {
 
     @Test
     fun `applying a v3 bundle still clears a previous motion wallpaper when it carries none`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         context.echoDataStore.edit { it[KEY_MOTION_WALLPAPER] = "/old/wallpaper.mp4" }
 
         val saved = requireNotNull(
@@ -93,7 +93,7 @@ class EchoThemeStoreV3Test {
 
     @Test
     fun `applying a theme never deletes a user pick`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         val userDir = File(context.filesDir, CustomIconStore.CUSTOM_ICONS_DIR).apply { mkdirs() }
         File(userDir, "catbar_music.png").writeBytes(pngBytes())
@@ -107,7 +107,7 @@ class EchoThemeStoreV3Test {
 
     @Test
     fun `saveCurrentLook flattens user pick over applied theme icon per slot`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         val customDir = File(context.filesDir, CustomIconStore.CUSTOM_ICONS_DIR).apply { mkdirs() }
         File(customDir, "catbar_games.gif").writeBytes(gifBytes())
         val themeDir = File(context.filesDir, EchoThemeStore.THEME_ICONS_DIR).apply { mkdirs() }
@@ -124,7 +124,7 @@ class EchoThemeStoreV3Test {
 
     @Test
     fun `saveCurrentLook captures wallpaper accent icon color wave style and layout`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         val wallpaper = File(context.filesDir, "wallpaper").apply { mkdirs() }.resolve("w.jpg")
         wallpaper.writeBytes(pngBytes())
         val layoutJson = CrossbarLayoutSpecCodec.encode(CrossbarLayoutSpec(barTopFraction = 0.2f))
@@ -149,7 +149,7 @@ class EchoThemeStoreV3Test {
 
     @Test
     fun `saveCurrentLook excludes the device-specific CrossbarLayoutAdjust`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         context.echoDataStore.edit {
             it[stringPreferencesKey("display_xmb_layout_adjust")] = """{"gameTopFraction":0.5}"""
         }
@@ -162,7 +162,7 @@ class EchoThemeStoreV3Test {
 
     @Test
     fun `saveCurrentLook of the stock look yields a wave-only theme`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         val saved = assertNotNull(store.saveCurrentLook("Stock"))
         val bundle = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${saved.id}.echo-theme").readBytes()))
@@ -174,7 +174,7 @@ class EchoThemeStoreV3Test {
 
     @Test
     fun `saveCurrentLook round-trips through apply`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         val customDir = File(context.filesDir, CustomIconStore.CUSTOM_ICONS_DIR).apply { mkdirs() }
         File(customDir, "status_bluetooth.png").writeBytes(pngBytes())
 

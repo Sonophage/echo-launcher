@@ -53,6 +53,21 @@ class EchoThemeFolderTest {
     }
 
     @Test
+    fun `notes in several folders, or one folder written in two cases, do not break a theme`() {
+        val files = mapOf(
+            "theme.json" to """{"manifest":"echo-theme","name":"Notes","accentColor":"#00FF00"}""".toByteArray(),
+            "Sounds/README.txt" to "a".toByteArray(),
+            "Boot/README.txt" to "b".toByteArray(),
+            "Icons/catbar_music.png" to png,
+            "icons/catbar_music.png" to png,
+            "Boot/sound_back.wav" to "RIFF".toByteArray(),
+        )
+        val theme = assertNotNull(EchoThemeFolder.toBundle(files))
+        assertEquals(setOf("catbar_music"), theme.icons.keys)
+        assertTrue(theme.media.isEmpty(), "a sound in another slot's folder has no place")
+    }
+
+    @Test
     fun `a folder without theme json is not a theme`() {
         assertNull(EchoThemeFolder.toBundle(mapOf("Icons/catbar_games.png" to png)))
     }

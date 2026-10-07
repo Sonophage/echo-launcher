@@ -41,6 +41,7 @@ private const val THEME_EXT = EchoThemeCodec.FILE_EXTENSION
 @Singleton
 class EchoThemeStore @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val uiMedia: UiMediaStore,
 ) {
     data class SavedTheme(
         val id: String,
@@ -139,6 +140,21 @@ class EchoThemeStore @Inject constructor(
         }
         val appliedName = _themes.value.firstOrNull { it.id == id }?.name ?: "Custom Theme"
 
+        // the theme's sounds, boot and game-start media; a slot it leaves out keeps the person's own
+        // (owner, 2026-10-07)
+        for ((key, file) in bundle.media) {
+            val slot = com.echo.core.domain.model.UiMediaSlot.fromKey(key) ?: continue
+            val staged = File(context.cacheDir, "theme-media/$key.${file.extension}")
+            val result = runCatching {
+                staged.parentFile?.mkdirs()
+                staged.writeBytes(file.bytes)
+                uiMedia.importFile(slot, staged, appliedName)
+            }.getOrNull()
+            staged.delete()
+            if (result?.ok != true) Timber.w("EchoThemeStore: the theme's %s was not applied: %s", key, result?.message)
+        }
+        val parts = bundle.manifest
+
         val luma = if (wallpaperOk) WallpaperLuminanceProbe.survey(dest.absolutePath) else null
         context.echoDataStore.edit { prefs ->
             prefs[KEY_APPLIED_THEME_NAME] = appliedName
@@ -157,6 +173,11 @@ class EchoThemeStore @Inject constructor(
             } else {
                 prefs.remove(KEY_THEME_ICONS_STAMP)
             }
+            // set only when the theme names one ECHO knows; otherwise the person's own stays
+            parts.waveDesign?.takeIf { it in EchoThemeManifest.WAVE_DESIGNS }?.let { prefs[KEY_WAVE_DESIGN] = it }
+            parts.gameBootStyle?.takeIf { it in EchoThemeManifest.GAME_START_STYLES }?.let { prefs[KEY_GAMEBOOT_STYLE] = it }
+            parts.launchDiscStyle?.takeIf { it in EchoThemeManifest.GAME_START_STYLES }?.let { prefs[KEY_LAUNCH_DISC_STYLE] = it }
+            parts.buttonSet?.takeIf { it in EchoThemeManifest.BUTTON_SETS }?.let { prefs[KEY_BUTTON_SET] = it }
         }
         true
     }
@@ -395,7 +416,16 @@ class EchoThemeStore @Inject constructor(
                 ?.takeUnless { it == com.echo.themekit.CrossbarLayoutSpec.DEFAULT },
             source = EchoThemeSource(type = EchoThemeSource.TYPE_USER_CREATED),
             created = LocalDate.now().toString(),
+            waveDesign = prefs[KEY_WAVE_DESIGN]?.takeIf { it in EchoThemeManifest.WAVE_DESIGNS },
+            gameBootStyle = prefs[KEY_GAMEBOOT_STYLE]?.takeIf { it in EchoThemeManifest.GAME_START_STYLES },
+            launchDiscStyle = prefs[KEY_LAUNCH_DISC_STYLE]?.takeIf { it in EchoThemeManifest.GAME_START_STYLES },
+            buttonSet = prefs[KEY_BUTTON_SET]?.takeIf { it in EchoThemeManifest.BUTTON_SETS },
         )
+
+        // the sounds, boot and game-start media in use
+        val media = com.echo.core.domain.model.UiMediaSlot.entries.mapNotNull { slot ->
+            uiMedia.pathFor(slot)?.let(::File)?.takeIf { it.isFile }?.let { slot.key to ThemeImage(it.readBytes(), it.extension.lowercase()) }
+        }.toMap()
 
         val preview = wallpaperBitmap?.let { downscale(it, maxEdge = 480) }
         val previewBytes = preview?.let {
@@ -415,6 +445,7 @@ class EchoThemeStore @Inject constructor(
                         icons = icons,
                         sysicons = sysicons,
                         motion = motion,
+                        media = media,
                     ),
                     out,
                 )
@@ -528,6 +559,13 @@ class EchoThemeStore @Inject constructor(
     }
 
     companion object {
+        // the parts a theme may set; their owners keep the same keys (GameBootPreferences,
+        // LaunchDiscPreferences, ControllerLayoutRepository, the wave design in Display settings)
+        private val KEY_WAVE_DESIGN = stringPreferencesKey("display_wave_design")
+        private val KEY_GAMEBOOT_STYLE = stringPreferencesKey("display_gameboot_style")
+        private val KEY_LAUNCH_DISC_STYLE = stringPreferencesKey("display_launch_disc_style")
+        private val KEY_BUTTON_SET = stringPreferencesKey("controller_display_type")
+
         // names of themes deleted in ECHO, so their folder in the ECHO folder is not read back in
         private const val DISMISSED_FILE = "folder-dismissed.txt"
 

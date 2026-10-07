@@ -49,7 +49,7 @@ class EchoThemeStoreTest {
         val dir = File(context.filesDir, "pfpthemes").apply { mkdirs() }
         File(dir, "pfp_1.pfptheme").writeBytes(bundleBytes(name = "Old", accent = "#00FF00"))
 
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         assertEquals(listOf("Old"), store.themes.value.map { it.name })
         assertTrue(echoThemeFile("pfp_1").isFile, "the file is renamed to .echo-theme")
@@ -58,7 +58,7 @@ class EchoThemeStoreTest {
 
     @Test
     fun `wave-only bundle with no wallpaper imports successfully`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         val saved = store.importBundle(register(bundleBytes(name = "Red", accent = "#FF0000")))
 
@@ -72,7 +72,7 @@ class EchoThemeStoreTest {
 
     @Test
     fun `wave-only bundle with a preview writes a preview sidecar`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         val saved = requireNotNull(
             store.importBundle(register(bundleBytes("Red", "#FF0000", preview = pngBytes()))),
@@ -84,7 +84,7 @@ class EchoThemeStoreTest {
 
     @Test
     fun `bundle with a wallpaper still imports`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         val saved = requireNotNull(
             store.importBundle(
@@ -98,14 +98,14 @@ class EchoThemeStoreTest {
 
     @Test
     fun `non-bundle bytes are rejected as invalid`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         assertNull(store.importBundle(register("not a zip".toByteArray())))
     }
 
     @Test
     fun `a successful import reports Success carrying the theme`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         val result = store.importBundleDetailed(register(bundleBytes("Red", "#FF0000")))
 
@@ -115,7 +115,7 @@ class EchoThemeStoreTest {
 
     @Test
     fun `non-bundle bytes report NotABundle specifically`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         val result = store.importBundleDetailed(register("not a zip".toByteArray()))
 
@@ -124,7 +124,7 @@ class EchoThemeStoreTest {
 
     @Test
     fun `a stream that fails mid-read reports Unreadable, not a bad bundle`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         val uri = Uri.parse("content://test/broken.pfptheme")
         shadowOf(context.contentResolver).registerInputStream(uri, failingStream())
@@ -137,7 +137,7 @@ class EchoThemeStoreTest {
 
     @Test
     fun `applying a wave-only theme clears a previous wallpaper and sets the accent`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         context.echoDataStore.edit { it[KEY_CUSTOM_WALLPAPER] = "/old/wallpaper.jpg" }
         val saved = requireNotNull(store.importBundle(register(bundleBytes("Red", "#FF0000"))))
@@ -151,7 +151,7 @@ class EchoThemeStoreTest {
 
     @Test
     fun `applying a wallpaper theme sets the custom wallpaper pref`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         val saved = requireNotNull(
             store.importBundle(
                 register(bundleBytes("Blue", "#0000FF", wallpaper = pngBytes(), preview = pngBytes())),
@@ -167,7 +167,7 @@ class EchoThemeStoreTest {
 
     @Test
     fun `applying a wave-only theme clears a previous motion wallpaper too`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         context.echoDataStore.edit {
             it[KEY_CUSTOM_WALLPAPER] = "/old/wallpaper.jpg"
@@ -184,7 +184,7 @@ class EchoThemeStoreTest {
 
     @Test
     fun `resetApplied clears both wallpaper keys`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         context.echoDataStore.edit {
             it[KEY_CUSTOM_WALLPAPER] = "/old/wallpaper.jpg"
             it[KEY_MOTION_WALLPAPER] = "/old/wallpaper.mp4"
@@ -199,7 +199,7 @@ class EchoThemeStoreTest {
 
     @Test
     fun `applying a theme applies its wave style and reset clears the override`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         val saved = requireNotNull(
             store.importBundle(
                 register(bundleBytes("Static", "#FF0000", waveStyle = EchoThemeManifest.WAVE_STATIC)),

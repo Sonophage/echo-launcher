@@ -34,7 +34,7 @@ class EchoThemeStoreTextColorTest {
 
     @Test
     fun `a bundle carrying a text colour applies it`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         val saved = requireNotNull(store.importBundle(register(bundle(textColor = "#FF8800"))))
 
         assertTrue(store.apply(saved.id))
@@ -43,7 +43,7 @@ class EchoThemeStoreTextColorTest {
 
     @Test
     fun `applying a bundle without a text colour removes the previous theme's`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
 
         context.echoDataStore.edit { it[KEY_TEXT_COLOR] = 0xFFFF8800L }
 
@@ -58,7 +58,7 @@ class EchoThemeStoreTextColorTest {
 
     @Test
     fun `a malformed text colour is treated as auto rather than applied`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         context.echoDataStore.edit { it[KEY_TEXT_COLOR] = 0xFFFF8800L }
 
         val saved = requireNotNull(store.importBundle(register(bundle(textColor = "not-a-colour"))))
@@ -69,7 +69,7 @@ class EchoThemeStoreTextColorTest {
 
     @Test
     fun `resetting the applied theme clears the text colour`() = runTest {
-        val store = EchoThemeStore(context)
+        val store = EchoThemeStore(context, UiMediaStore(context))
         context.echoDataStore.edit { it[KEY_TEXT_COLOR] = 0xFFFF8800L }
 
         store.resetApplied()

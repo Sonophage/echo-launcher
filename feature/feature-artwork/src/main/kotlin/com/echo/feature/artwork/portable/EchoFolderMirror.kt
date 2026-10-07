@@ -79,6 +79,7 @@ class EchoFolderMirror @Inject constructor(
                     val live = liveTree(t) ?: return@collect
                     readIfNewlyLinked(t)
                     library.ensureEchoLayout(live)
+                    themeFolders.writeTemplate(live)
                     Timber.i("ECHO folder: ${themeFolders.writeOut(live)} theme folders written")
                 }
         }

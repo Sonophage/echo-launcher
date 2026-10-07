@@ -410,6 +410,14 @@ class PortableArtworkLibrary @Inject constructor(
             .onFailure { Timber.w(it, "Could not read ${segments.joinToString("/")}") }.getOrNull()
     }
 
+    // writes [bytes] to [segments]/[name] unless the file there already holds them
+    suspend fun writeBytesIfChanged(treeUri: Uri, segments: List<String>, name: String, bytes: ByteArray): Boolean = withContext(Dispatchers.IO) {
+        val current = resolveExistingPath(treeUri, segments)?.let { findChild(treeUri, it, name) }
+            ?.takeIf { it.sizeBytes == bytes.size.toLong() }
+            ?.let { runCatching { resolver.openInputStream(it.uri)?.use { s -> s.readBytes() } }.getOrNull() }
+        current?.contentEquals(bytes) == true || writeBytes(treeUri, segments, name, bytes)
+    }
+
     // writes [bytes] to [segments]/[name], replacing a file of that name
     suspend fun writeBytes(treeUri: Uri, segments: List<String>, name: String, bytes: ByteArray): Boolean = withContext(Dispatchers.IO) {
         val dir = ensureDirPath(treeUri, segments) ?: return@withContext false
@@ -684,10 +692,12 @@ private val ECHO_README_TEXT = """
                    and Icons (your custom icons). Put a .ttf or .otf font in Fonts to change ECHO's
                    font. A file you change here is kept: ECHO only copies over a file that is
                    missing or older than its own.
-    Themes/        One folder per theme: theme.json (its name and colours), Icons (console icons in
-                   Icons/Consoles) and Wallpaper. ECHO writes each theme you save here, and reads in a
-                   theme folder you add or change. A theme deleted in ECHO keeps its folder here; ECHO
-                   reads it again only after you change it.
+    Themes/        One folder per theme: theme.json (colours, wave, game start and button set), Icons
+                   (console icons in Icons/Consoles), Wallpaper, Sounds, Boot and GameStart. Every
+                   part is optional. Template shows every file a theme takes: copy it, rename the
+                   copy and fill it. ECHO writes each theme you save here, and reads in a theme folder
+                   you add or change. A theme deleted in ECHO keeps its folder here; ECHO reads it
+                   again only after you change it.
     settings.json  How ECHO looks and behaves: colours, wave, layout, controls and default players.
                    ECHO writes it when a setting changes.
 
