@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.echo.core.data.repository.EchoThemeStore
+import com.echo.core.data.repository.ThemeCatalogRepository
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.ControllerPromptItem
 import com.echo.core.ui.components.EchoHintBar
@@ -106,7 +107,12 @@ fun ThemeStoreScreen(
     val columns = 4
     val saved = state.savedThemes.map { it.card() }
     val online = state.online.orEmpty().map { t ->
-        StoreCard(t.id, t.name, if (state.savedThemes.any { it.name == t.name }) "Downloaded" else "Online", t.heroUrl)
+        val standing = ThemeCatalogRepository.standing(state.savedThemes.firstOrNull { it.name == t.name }, t)
+        StoreCard(t.id, t.name, when (standing) {
+            ThemeCatalogRepository.Standing.NEW -> "Online"
+            ThemeCatalogRepository.Standing.CURRENT -> "Downloaded"
+            ThemeCatalogRepository.Standing.UPDATE -> "Update"
+        }, t.heroUrl)
     }
     fun rowOf(section: String) = if (section == "saved") saved else online
     fun open(section: String, id: String) {

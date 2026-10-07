@@ -67,9 +67,12 @@ data class ThemePage(
     val savedId: String? = null,
     val online: CatalogTheme? = null,
     val busy: Boolean = false,
+    // the online store has a newer file than the one saved
+    val update: Boolean = false,
 ) {
     val actionLabel: String get() = when {
-        busy -> "Downloading"
+        busy -> if (update) "Updating" else "Downloading"
+        update -> "Update"
         savedId != null -> "Apply"
         else -> "Download"
     }
@@ -177,7 +180,8 @@ class ThemesSettingsViewModel @Inject constructor(
     fun openOnlinePage(id: String) {
         val theme = uiState.value.online?.firstOrNull { it.id == id } ?: return
         val saved = uiState.value.savedThemes.firstOrNull { it.name == theme.name }
-        _extra.update { it.copy(page = ThemePage(name = theme.name, hero = theme.heroUrl, screenshots = theme.screenshotUrls, savedId = saved?.id, online = theme)) }
+        val update = ThemeCatalogRepository.standing(saved, theme) == ThemeCatalogRepository.Standing.UPDATE
+        _extra.update { it.copy(page = ThemePage(name = theme.name, hero = theme.heroUrl, screenshots = theme.screenshotUrls, savedId = saved?.id, online = theme, update = update)) }
         viewModelScope.launch {
             val readme = catalog.readme(theme) ?: return@launch
             _extra.update { e ->
@@ -191,13 +195,16 @@ class ThemesSettingsViewModel @Inject constructor(
     fun pageAction() {
         val page = uiState.value.page ?: return
         if (page.busy) return
-        page.savedId?.let { applySavedTheme(it); closeThemePage(); return }
+        page.savedId?.takeIf { !page.update }?.let { applySavedTheme(it); closeThemePage(); return }
         val online = page.online ?: return
         _extra.update { it.copy(page = page.copy(busy = true)) }
         viewModelScope.launch {
             when (val result = catalog.install(online)) {
                 is ThemeCatalogRepository.Install.Done -> _extra.update { e ->
-                    e.copy(page = e.page?.copy(busy = false, savedId = result.theme.id, parts = result.theme.parts), installMessage = "Downloaded \"${result.theme.name}\"")
+                    e.copy(
+                        page = e.page?.copy(busy = false, update = false, savedId = result.theme.id, parts = result.theme.parts),
+                        installMessage = "${if (page.update) "Updated" else "Downloaded"} \"${result.theme.name}\"",
+                    )
                 }
                 is ThemeCatalogRepository.Install.Failed -> _extra.update { e -> e.copy(page = e.page?.copy(busy = false), installMessage = result.reason) }
             }

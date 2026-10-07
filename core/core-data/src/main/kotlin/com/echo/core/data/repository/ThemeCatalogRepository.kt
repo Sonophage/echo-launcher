@@ -54,7 +54,8 @@ class ThemeCatalogRepository @Inject constructor(
         theme.readmeUrl?.let { fetch(it, EchoThemeCodec.MAX_README_BYTES.toLong()) }?.let { ThemeReadme.parse(it.decodeToString()) }
     }
 
-    // downloads, checks and stores [theme]; a theme of the same name already saved is replaced
+    // downloads, checks and stores [theme]; a theme of the same name already saved is replaced, which is how an
+    // update is installed
     suspend fun install(theme: CatalogTheme): Install = withContext(Dispatchers.IO) {
         val bytes = fetch(theme.archiveUrl, theme.size.coerceAtMost(SafeMedia.MAX_THEME_FILE_BYTES))
             ?: return@withContext Install.Failed("Could not download ${theme.name}")
@@ -66,7 +67,7 @@ class ThemeCatalogRepository @Inject constructor(
         val packed = EchoThemeCodec.write(bundle.copy(manifest = bundle.manifest.copy(name = theme.name)))
         val replacing = store.themes.value.firstOrNull { it.name == theme.name }?.id
         when (val result = store.importBundleDetailed(replacing) { packed.inputStream() }) {
-            is EchoThemeStore.ImportResult.Success -> Install.Done(result.theme)
+            is EchoThemeStore.ImportResult.Success -> Install.Done(store.markFromCatalog(result.theme.id, theme.sha256) ?: result.theme)
             else -> Install.Failed("Could not store ${theme.name}")
         }
     }
@@ -81,7 +82,19 @@ class ThemeCatalogRepository @Inject constructor(
     private fun sha256(bytes: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
+    // where an online theme stands on this device (owner, 2026-10-07: an online theme can be updated)
+    enum class Standing { NEW, CURRENT, UPDATE }
+
     companion object {
+        // a theme saved under the online theme's name is current when it was downloaded as the file the catalog
+        // names now; otherwise the catalog has a newer one. A saved theme from elsewhere with that name is
+        // replaced by an update too
+        fun standing(saved: EchoThemeStore.SavedTheme?, theme: CatalogTheme): Standing = when {
+            saved == null -> Standing.NEW
+            saved.catalogSha == theme.sha256 -> Standing.CURRENT
+            else -> Standing.UPDATE
+        }
+
         const val INDEX_URL = "https://sonophage.github.io/echo-themes/index.json"
         private const val MAX_INDEX_BYTES = 512L * 1024
     }

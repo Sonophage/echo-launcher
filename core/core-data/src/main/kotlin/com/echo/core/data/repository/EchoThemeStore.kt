@@ -60,6 +60,8 @@ class EchoThemeStore @Inject constructor(
         val version: String? = null,
         val description: String? = null,
         val parts: Set<ThemePart> = emptySet(),
+        // the online store's checksum of the file this theme was downloaded as; null for a theme from elsewhere
+        val catalogSha: String? = null,
     )
 
     // a theme's store page: its README and its screenshots, unpacked to files
@@ -247,7 +249,7 @@ class EchoThemeStore @Inject constructor(
     }
 
     private fun removeFiles(id: String) {
-        listOf("$id.$THEME_EXT", "$id.preview.jpg", "$id.wallpaper.jpg", "$id.$META").forEach { File(dir, it).delete() }
+        listOf("$id.$THEME_EXT", "$id.preview.jpg", "$id.wallpaper.jpg", "$id.$META", "$id.$CATALOG").forEach { File(dir, it).delete() }
         dir.listFiles { f -> f.name.startsWith("$id.hero.") }.orEmpty().forEach { it.delete() }
     }
 
@@ -263,6 +265,14 @@ class EchoThemeStore @Inject constructor(
         val shotsDir = File(context.cacheDir, "theme-shots/$id").apply { deleteRecursively(); mkdirs() }
         val shots = bundle.screenshots.map { (name, image) -> File(shotsDir, name).apply { writeBytes(image.bytes) }.absolutePath }
         ThemeDetails(ThemeReadme.parse(bundle.readme), shots)
+    }
+
+    // records that [id] was downloaded from the online store as the file with checksum [sha256], so the store
+    // can tell when the catalog has a newer one
+    suspend fun markFromCatalog(id: String, sha256: String): SavedTheme? = withContext(Dispatchers.IO) {
+        File(dir, "$id.$CATALOG").writeText(sha256)
+        _themes.value = scan()
+        _themes.value.firstOrNull { it.id == id }
     }
 
     // the hero and the metadata the store lists, written beside the theme so the list does not open every
@@ -282,8 +292,10 @@ class EchoThemeStore @Inject constructor(
         if (!metaFile.isFile) runCatching { EchoThemeCodec.read(file) }.getOrNull()?.let { writeSidecars(id, it) }
         val meta = runCatching { org.json.JSONObject(metaFile.readText()) }.getOrNull()
         val hero = dir.listFiles { f -> f.name.startsWith("$id.hero.") }.orEmpty().firstOrNull()
+        val catalogSha = runCatching { File(dir, "$id.$CATALOG").takeIf { it.isFile }?.readText()?.trim() }.getOrNull()
         return {
             copy(
+                catalogSha = catalogSha,
                 heroPath = hero?.absolutePath,
                 author = meta?.optString("author")?.takeIf { it.isNotEmpty() },
                 version = meta?.optString("version")?.takeIf { it.isNotEmpty() },
@@ -654,6 +666,7 @@ class EchoThemeStore @Inject constructor(
         // which theme each part came from, as PART=name lines (owner, 2026-10-07: the Mix screen)
         val KEY_PART_SOURCES = stringPreferencesKey("theme_part_sources")
         private const val META = "meta.json"
+        private const val CATALOG = "catalog-sha256"
 
         internal fun encodeSources(sources: Map<ThemePart, String>): String =
             sources.entries.joinToString("\n") { (part, name) -> "${part.name}=${name.replace('\n', ' ')}" }

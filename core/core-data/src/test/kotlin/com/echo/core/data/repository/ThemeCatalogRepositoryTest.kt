@@ -38,8 +38,8 @@ class ThemeCatalogRepositoryTest {
     @Before
     fun clear() { File(context.filesDir, "pfpthemes").deleteRecursively() }
 
-    private fun repo(served: ByteArray, sha: String = sha256(archive)): ThemeCatalogRepository {
-        val index = """{"format":1,"themes":[{"id":"Wild","name":"Wild","archive":"themes/Wild.zip","sha256":"$sha","size":${archive.size}}]}"""
+    private fun repo(served: ByteArray, sha: String = sha256(archive), size: Int = archive.size): ThemeCatalogRepository {
+        val index = """{"format":1,"themes":[{"id":"Wild","name":"Wild","archive":"themes/Wild.zip","sha256":"$sha","size":$size}]}"""
         val http = HttpClient(MockEngine { request ->
             when (request.url.encodedPath) {
                 "/echo-themes/index.json" -> respond(index)
@@ -65,6 +65,33 @@ class ThemeCatalogRepositoryTest {
         val r = repo(tampered)
         assertIs<ThemeCatalogRepository.Install.Failed>(r.install(assertNotNull(r.load()).single()))
         assertEquals(emptyList(), EchoThemeStore(context, UiMediaStore(context)).themes.value)
+    }
+
+    // owner, 2026-10-07: a theme downloaded from the store can be updated when the store has a newer file
+    @Test
+    fun `a newer file in the catalog is an update, and installing it replaces the saved theme`() = runTest {
+        val first = repo(archive)
+        val theme = assertNotNull(first.load()).single()
+        val done = assertIs<ThemeCatalogRepository.Install.Done>(first.install(theme))
+        assertEquals(theme.sha256, done.theme.catalogSha)
+        assertEquals(ThemeCatalogRepository.Standing.CURRENT, ThemeCatalogRepository.standing(done.theme, theme))
+
+        val newer = ByteArrayOutputStream().also { out ->
+            ZipOutputStream(out).use { z ->
+                z.putNextEntry(ZipEntry("Wild/theme.json"))
+                z.write("""{"manifest":"echo-theme","name":"Wild","accentColor":"#123456","buttonSet":"XBOX"}""".toByteArray())
+                z.closeEntry()
+            }
+        }.toByteArray()
+        val second = repo(newer, sha256(newer), size = newer.size)
+        val offered = assertNotNull(second.load()).single()
+        val saved = EchoThemeStore(context, UiMediaStore(context)).themes.value.single()
+        assertEquals(ThemeCatalogRepository.Standing.UPDATE, ThemeCatalogRepository.standing(saved, offered))
+
+        val updated = assertIs<ThemeCatalogRepository.Install.Done>(second.install(offered))
+        val all = EchoThemeStore(context, UiMediaStore(context)).themes.value
+        assertEquals(listOf("Wild"), all.map { it.name }, "the update replaces the old copy")
+        assertEquals(offered.sha256, updated.theme.catalogSha)
     }
 
     private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
