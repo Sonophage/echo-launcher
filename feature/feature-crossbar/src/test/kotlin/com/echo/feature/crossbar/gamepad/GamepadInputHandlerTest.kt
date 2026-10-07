@@ -11,6 +11,7 @@ import com.echo.core.domain.model.GamepadMappings
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -420,6 +421,45 @@ class GamepadInputHandlerTest {
             assertEquals(GamepadAction.PREV_PAGE, awaitItem())
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_R1, KeyEvent.ACTION_DOWN))
             assertEquals(GamepadAction.NEXT_PAGE, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // owner, 2026-10-06: a hard press rocks the d-pad onto a diagonal and back (down, down-right, down). It
+    // must stay one move down: the sideways blip changed category on the crossbar
+    @Test
+    fun `a hard press that rocks onto the diagonal and back moves once`() = runTest {
+        handler.scope = backgroundScope
+        handler.clock = { currentTime }
+        handler.actions.test {
+            handler.onMotionEvent(motionEvent(hatY = 1f))
+            assertEquals(GamepadAction.NAVIGATE_DOWN, awaitItem())
+            // a press as long as the Konker's recorded taps (80 to 120 ms), short of the repeat
+            advanceTimeBy(30)
+            handler.onMotionEvent(motionEvent(hatX = 1f, hatY = 1f))
+            advanceTimeBy(CHORD_SETTLE_MS - 20)
+            handler.onMotionEvent(motionEvent(hatY = 1f))
+            advanceTimeBy(30)
+            handler.onMotionEvent(motionEvent())
+            advanceTimeBy(500)
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // cce564af: a direction pressed while another is held must still be reachable (left while scrolling up)
+    @Test
+    fun `a second direction held past the settle time still counts`() = runTest {
+        handler.scope = backgroundScope
+        handler.clock = { currentTime }
+        handler.actions.test {
+            handler.onMotionEvent(motionEvent(hatY = -1f))
+            assertEquals(GamepadAction.NAVIGATE_UP, awaitItem())
+            advanceTimeBy(100)
+            handler.onMotionEvent(motionEvent(hatX = -1f, hatY = -1f))
+            advanceTimeBy(CHORD_SETTLE_MS + 1)
+            assertEquals(GamepadAction.NAVIGATE_LEFT, awaitItem())
+            handler.onMotionEvent(motionEvent())
             cancelAndIgnoreRemainingEvents()
         }
     }

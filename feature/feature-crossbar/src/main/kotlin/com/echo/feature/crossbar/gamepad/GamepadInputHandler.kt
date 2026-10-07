@@ -30,6 +30,10 @@ private const val HAT_DEAD_ZONE = 0.5f
 
 private const val DUPLICATE_WINDOW_MS = 80L
 
+// a second d-pad direction pressed while one is held counts only once it has lasted this long: a hard press
+// rocks onto the diagonal and back in less, and must stay one move (owner, 2026-10-06)
+internal const val CHORD_SETTLE_MS = 80L
+
 private const val STICK_FULL_TILT_RAMP_FACTOR = 2
 
 // owner, 2026-10-06: a press of Select opens the notifications, holding it is Home
@@ -105,6 +109,9 @@ class GamepadInputHandler @Inject constructor(
     @Volatile private var stickMagnitude: Float = 0f
 
     private var prevHatX: Float = 0f
+
+    // a second direction waiting out CHORD_SETTLE_MS
+    private var chordJob: Job? = null
     private var prevHatY: Float = 0f
 
     private val lastDirectionalEmitAt = mutableMapOf<GamepadAction, Long>()
@@ -178,18 +185,34 @@ class GamepadInputHandler @Inject constructor(
 
         stickMagnitude = if (motionAction != null) maxOf(abs(x), abs(y), abs(hatX), abs(hatY)) else 0f
 
-        if (motionAction != lastStickAction) {
-            cancelRepeat()
-            lastStickAction = motionAction
-            if (motionAction != null && !isDuplicateDirection(motionAction)) {
-                startRepeat(motionAction)
-                emit(motionAction, physical = true)
+        val diagonal = abs(hatX) > HAT_DEAD_ZONE && abs(hatY) > HAT_DEAD_ZONE
+        val s = scope
+        if (diagonal && lastStickAction != null && motionAction != lastStickAction && s != null) {
+            // the held direction goes on until the new one has lasted; a rock back cancels it
+            if (chordJob == null) chordJob = s.launch {
+                delay(CHORD_SETTLE_MS)
+                chordJob = null
+                steer(motionAction)
             }
+        } else {
+            chordJob?.cancel()
+            chordJob = null
+            steer(motionAction)
         }
 
         prevHatX = hatX
         prevHatY = hatY
         return motionAction != null || triggersFired
+    }
+
+    private fun steer(motionAction: GamepadAction?) {
+        if (motionAction == lastStickAction) return
+        cancelRepeat()
+        lastStickAction = motionAction
+        if (motionAction != null && !isDuplicateDirection(motionAction)) {
+            startRepeat(motionAction)
+            emit(motionAction, physical = true)
+        }
     }
 
     private fun handleTriggers(event: MotionEvent): Boolean {
