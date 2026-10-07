@@ -448,14 +448,14 @@ const FACE = {
 };
 const CONTROLS = [
   { action: 'Move', pad: ['dpad_all'], touch: ['swipe_all'], shot: 'col-game-cards', text: 'D-pad or left stick. Up and down move through a column, sideways changes category. On touch, swipe, or tap.' },
-  { action: 'Open', pad: ['@a'], touch: ['tap'], shot: 'game-hover-panel', text: 'A focused game fills the background with its own art and shows its details beside the tile.' },
+  { action: 'Open', pad: ['@a'], touch: ['tap'], shot: 'game-hover-panel', text: 'A focused game fills the background with its own art, with its title and facts beside the tile.' },
   { action: 'Hold to launch', pad: ['@a'], touch: ['tap'], pill: 'Hold', shot: 'launch-lens', text: 'Hold A until the ring fills, so a stray press never launches anything. On touch, hold the A button on screen.' },
   { action: 'Back', pad: ['@b'], touchPill: 'Back', shot: 'game-console', text: 'B backs out. With touch, the footer shows a Back button, since ECHO hides Android’s own.' },
   { action: 'Options', pad: ['@y'], touch: ['long_press'], shot: 'game-context-menu', text: 'Y opens a thing’s options on a rail at the right edge, with the art blurred behind it. Long-press on touch. On the game still running, hold Y to resume it.' },
   { action: 'App Drawer', pad: ['bumper_left'], touchPill: 'Apps', shot: 'app-drawer', text: 'LB, on any screen, opens the App Drawer: every app as a VHS case, with a spine saying what it is. LB again closes it.' },
   { action: 'Search', pad: ['bumper_right'], touchPill: 'Search', shot: 'search', text: 'RB, on any screen, searches games, apps, music, video, photos and books together. RB again closes it.' },
   { action: 'Filters and sorts', pad: ['trigger_left', 'trigger_right'], touch: ['tap'], shot: 'game-list', text: 'LT and RT step the filters and sorts in the footer’s left side (Title, Recently Played or Date Added), and the tabs of a screen.' },
-  { action: 'Details', pad: ['@x'], touch: [], shot: 'game-hover-panel', text: 'X opens the focused game’s or app’s details, or runs the screen’s own X action.' },
+  { action: 'Details', pad: ['@x'], touch: [], shot: 'game-info', text: 'X opens the focused game’s or app’s details, or runs the screen’s own X action.' },
   { action: 'Now playing', pad: ['start'], touchPill: 'Tap island', shot: 'last-played', text: 'Start takes the controller to the island at the top left: what is playing, or what you used last. Start again gives it back.' },
   { action: 'Notifications: the top panel', pad: ['select'], touchPill: 'Tap island', shot: 'card-notifications', text: 'Select first shows the newest notification as a card; a second press opens the panel: Notifications, Profile, Quick settings, Libraries and Settings. Hold Select, or press Guide, to go Home from any screen.' }
 ];
