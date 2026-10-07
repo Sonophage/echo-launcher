@@ -290,4 +290,37 @@ class RecentAppDismissalTest {
         assertEquals("recentapp_com.discord", id)
         assertTrue(id.startsWith(CrossbarViewModel.RECENT_APP_ID_PREFIX))
     }
+
+    // owner, 2026-10-06: a pinned list under Recent, games and apps, in the order they were pinned
+    @Test
+    fun `pins toggle on and off, keep their order, and survive a round trip through storage`() {
+        val pinned = togglePin(togglePin(emptyList(), "g:1"), "a:com.discord")
+        assertEquals(listOf("g:1", "a:com.discord"), pinned)
+        assertEquals(listOf("a:com.discord"), togglePin(pinned, "g:1"))
+        assertEquals(pinned, parsePins(pinned.joinToString("\n")))
+        assertEquals("a stray blank line or a repeat is no pin", listOf("g:1"), parsePins("g:1\n\ng:1"))
+        assertEquals("g:7", pinKey(CrossbarItem(id = "x", title = "Ico", gameId = 7L)))
+        assertEquals("a:com.discord", pinKey(CrossbarItem(id = "y", title = "Discord", packageName = "com.discord")))
+    }
+
+    @Test
+    fun `the pinned rows sit under the dated ones, in their own group`() {
+        val now = 1_000_000_000L
+        val items = listOf(
+            CrossbarItem(id = "a", title = "Skyrim", lastOpenedAt = now),
+            CrossbarItem(id = pinnedRowId("g:1"), title = "Skyrim", lastOpenedAt = now, pinnedToRecent = true),
+        )
+        val grouped = groupRecentsByDay(items, now).map { (day, rows) -> day to rows.map { it.index } }
+        assertEquals(listOf(RecentDay.TODAY to listOf(0), RecentDay.PINNED to listOf(1)), grouped)
+    }
+
+    @Test
+    fun `a filter shows the pinned rows of its own kind`() {
+        val game = CrossbarItem(id = pinnedRowId("g:1"), title = "Ico", gameId = 1L, pinnedToRecent = true)
+        val app = CrossbarItem(id = pinnedRowId("a:com.discord"), title = "Discord", packageName = "com.discord", isAndroidApp = true, pinnedToRecent = true)
+        assertEquals(listOf(game, app), pinnedForFilter(listOf(game, app), RecentFilter.ALL))
+        assertEquals(listOf(game), pinnedForFilter(listOf(game, app), RecentFilter.GAMES))
+        assertEquals(listOf(app), pinnedForFilter(listOf(game, app), RecentFilter.APPS))
+        assertEquals(emptyList<CrossbarItem>(), pinnedForFilter(listOf(game, app), RecentFilter.MUSIC))
+    }
 }

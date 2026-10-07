@@ -45,6 +45,7 @@ internal fun gameContextMenuItems(
         }
 
         add(CrossbarContextMenuItem("shelves", "Shelves", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+        pinKey(item)?.let { add(recentPinRow(it in state.recentPins)) }
         if (onRecentShelf) add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
 
         if (inGamingCategory) {
@@ -92,15 +93,22 @@ internal fun gameContextMenuItems(
     }
 }
 
+// owner, 2026-10-06: a game or app pins to, or unpins from, the list under Recent
+internal fun recentPinRow(pinned: Boolean): CrossbarContextMenuItem =
+    if (pinned) CrossbarContextMenuItem("unpin_recent", "Unpin from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true)
+    else CrossbarContextMenuItem("pin_recent", "Pin to Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true)
+
 internal fun appContextMenuItems(
     state: CrossbarUiState,
     categoryId: String?,
     onRecentShelf: Boolean,
+    packageName: String? = null,
 ): List<CrossbarContextMenuItem> = buildList {
     add(CrossbarContextMenuItem("launch", "Launch"))
 
     add(CrossbarContextMenuItem("mark_game", "Mark as Game", group = MenuGroup.LIBRARY))
     add(CrossbarContextMenuItem("favorite", "Add to Favorites", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+    packageName?.let { add(recentPinRow("a:$it" in state.recentPins)) }
     if (onRecentShelf) {
         // Remove clears it until it is used again; Hide keeps it off the panel until unhidden (owner, 2026-10-05)
         add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))

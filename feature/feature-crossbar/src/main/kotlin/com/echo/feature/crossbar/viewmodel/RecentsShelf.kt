@@ -88,7 +88,7 @@ internal fun mergeRecents(
         .map { (at, item) -> item.copy(lastOpenedAt = at.takeIf { it > 0L }) }
 }
 
-enum class RecentDay(val label: String) { TODAY("Today"), YESTERDAY("Yesterday"), EARLIER("Earlier") }
+enum class RecentDay(val label: String) { TODAY("Today"), YESTERDAY("Yesterday"), EARLIER("Earlier"), PINNED("Pinned") }
 
 internal fun groupRecentsByDay(
     items: List<CrossbarItem>,
@@ -97,6 +97,7 @@ internal fun groupRecentsByDay(
 ): List<Pair<RecentDay, List<IndexedValue<CrossbarItem>>>> {
     val today = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
     val byDay = items.withIndex().groupBy { (_, item) ->
+        if (item.pinnedToRecent) return@groupBy RecentDay.PINNED
         when (item.lastOpenedAt?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }) {
             today -> RecentDay.TODAY
             today.minusDays(1) -> RecentDay.YESTERDAY
@@ -104,6 +105,28 @@ internal fun groupRecentsByDay(
         }
     }
     return RecentDay.entries.mapNotNull { day -> byDay[day]?.let { day to it } }
+}
+
+// owner, 2026-10-06: games and apps pinned under Recent, in the order they were pinned. A pin is "g:<game id>"
+// or "a:<package>"; a pinned row's id is its own, so it never clashes with the same item's recent row
+internal fun pinKey(item: CrossbarItem): String? = when {
+    item.gameId != null -> "g:${item.gameId}"
+    item.packageName != null -> "a:${item.packageName}"
+    else -> null
+}
+
+internal fun parsePins(raw: String?): List<String> = raw?.split('\n')?.filter { it.isNotBlank() }?.distinct().orEmpty()
+
+internal fun togglePin(pins: List<String>, key: String): List<String> = if (key in pins) pins - key else pins + key
+
+internal fun pinnedRowId(key: String): String = "pin:$key"
+
+// the pinned rows a filter shows: all of them under All, else those of the filter's kind
+internal fun pinnedForFilter(pinned: List<CrossbarItem>, filter: RecentFilter): List<CrossbarItem> = when (filter) {
+    RecentFilter.ALL -> pinned
+    RecentFilter.GAMES -> pinned.filter { recentKind(it) == RecentKind.GAME }
+    RecentFilter.APPS -> pinned.filter { recentKind(it) == RecentKind.APP }
+    else -> emptyList()
 }
 
 // an app on the Recent shelf; the menu offers "Remove from Recent" only to ids that start this way

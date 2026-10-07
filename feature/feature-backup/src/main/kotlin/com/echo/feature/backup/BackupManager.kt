@@ -490,9 +490,11 @@ open class BackupManager @Inject constructor(
 
         stringPreferencesKey("profile_name"),
         stringPreferencesKey("profile_avatar_uri"),
+        // the games and apps pinned under Recent (owner, 2026-10-06)
+        stringPreferencesKey("recent_pins"),
 
         stringPreferencesKey("display_icon_legibility"),
-        stringPreferencesKey("display_xmb_layout_adjust"),
+        com.echo.core.data.datastore.CROSSBAR_LAYOUT_ADJUST_KEY,
         stringPreferencesKey("pref_video_snap_placement"),
 
         stringPreferencesKey("theme_applied_name"),

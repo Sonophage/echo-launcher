@@ -26,6 +26,43 @@ class CrossbarRecents(
     private val scope: CoroutineScope,
     private val menuSound: com.echo.core.ui.sound.MenuSoundPlayer,
 ) {
+    // the stored pins, for the menus to know what is pinned
+    private val pins: Flow<List<String>> =
+        vm.context.echoDataStore.data.map { parsePins(it[CrossbarViewModel.KEY_RECENT_PINS]) }.distinctUntilChanged()
+
+    init {
+        scope.launch { pins.collect { list -> uiState.update { it.copy(recentPins = list) } } }
+    }
+
+    // pins or unpins a game or app under Recent (owner, 2026-10-06)
+    internal fun togglePinned(key: String) {
+        menuSound.play(MenuSound.SELECT)
+        scope.launch {
+            vm.context.echoDataStore.edit { prefs ->
+                prefs[CrossbarViewModel.KEY_RECENT_PINS] = togglePin(parsePins(prefs[CrossbarViewModel.KEY_RECENT_PINS]), key).joinToString("\n")
+            }
+        }
+    }
+
+    // each pin as a row: a game as the library shows it, an app by its label; a pin whose game or app is gone
+    // is left out
+    private fun pinnedRows(): Flow<List<CrossbarItem>> = combine(pins, vm.appCategoryRepository.changes().onStart { emit(Unit) }) { list, _ -> list }
+        .map { list ->
+            val apps = if (list.any { it.startsWith("a:") }) vm.appCategoryRepository.visibleInstalledApps().associateBy { it.packageName } else emptyMap()
+            list.mapNotNull { key ->
+                val row = when {
+                    key.startsWith("g:") -> key.removePrefix("g:").toLongOrNull()
+                        ?.let { id -> runCatching { vm.gameRepository.getById(id) }.getOrNull() }
+                        ?.let { game -> with(vm) { listOf(game).toCrossbarItems() }.firstOrNull() }
+                    key.startsWith("a:") -> apps[key.removePrefix("a:")]?.let { app ->
+                        CrossbarItem(id = key, title = app.label, subtitle = "App", packageName = app.packageName, isAndroidApp = true)
+                    }
+                    else -> null
+                }
+                row?.copy(id = pinnedRowId(key), pinnedToRecent = true)
+            }
+        }
+
     internal fun dismissAppFromRecents(packageName: String) {
         scope.launch {
             vm.context.echoDataStore.edit { prefs ->
@@ -261,8 +298,12 @@ class CrossbarRecents(
             vm.videoRepository.observeRecentlyWatched(),
 
             recentFilterAndApps(filter),
-        ) { games, tracks, books, videos, filterAndApps ->
-            val (shownFilter, appRows, limit) = filterAndApps
+        ) { games, tracks, books, videos, filterAndApps -> filterAndApps.first to Triple(games, tracks, Triple(books, videos, filterAndApps)) }
+            .combine(pinnedRows()) { (shown, rest), pinned -> Triple(shown, rest, pinned) }
+            .map { (shownFilter, rest, pinned) ->
+            val (games, tracks, more) = rest
+            val (books, videos, filterAndApps) = more
+            val (_, appRows, limit) = filterAndApps
 
             val visibleGames = with(vm) { games.notHiddenAt(HideLocationType.RECENTS) }
             val music = tracks.recentMusicRows()
@@ -276,7 +317,7 @@ class CrossbarRecents(
                 apps   = appRows,
                 filter = shownFilter,
                 limit  = limit,
-            ), tracks)
+            ) + pinnedForFilter(pinned, shownFilter), tracks)
         }
 
     internal suspend fun loadColumn(keepCursorOnRow: Boolean) {

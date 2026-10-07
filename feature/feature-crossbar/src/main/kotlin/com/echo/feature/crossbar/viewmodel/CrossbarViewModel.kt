@@ -667,6 +667,8 @@ data class CrossbarUiState(
     val recentFilter: RecentFilter = RecentFilter.ALL,
 
     val recentFilters: List<RecentFilter> = listOf(RecentFilter.ALL),
+    // the games and apps pinned under Recent, as pinKey keys, oldest pin first
+    val recentPins: List<String> = emptyList(),
 
     val recentRailVisible: Boolean = false,
 
@@ -1171,6 +1173,8 @@ internal fun gameMetadataLine(
 data class CrossbarItem(
     val id: String,
     val title: String,
+    // a row of Recent's pinned list (owner, 2026-10-06)
+    val pinnedToRecent: Boolean = false,
     val artworkUri: String? = null,
     val iconUri: String? = null,
     val logoUri: String? = null,
@@ -3036,7 +3040,7 @@ class CrossbarViewModel @Inject constructor(
         val pkg = item.packageName ?: return
         val categoryId = categoryIdOverride ?: currentCategory()?.id
 
-        val items = appContextMenuItems(_uiState.value, categoryId, onRecentShelf = item.id.startsWith(RECENT_APP_ID_PREFIX))
+        val items = appContextMenuItems(_uiState.value, categoryId, onRecentShelf = item.id.startsWith(RECENT_APP_ID_PREFIX), packageName = pkg)
         _uiState.update { it.copy(
             activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = pkg, categoryContext = categoryId)
         )}
@@ -3199,6 +3203,7 @@ class CrossbarViewModel @Inject constructor(
                     }
                 } else when (itemId) {
                     "launch"    -> launching.launchAppWithDisc(pkg, selectedItemArt())
+                    "pin_recent", "unpin_recent" -> { closeContextMenu(); recents.togglePinned("a:$pkg") }
                     "edit_app"  -> openAppDetail(menu.gameId, pkg)
 
                     "mark_game" -> appAction {
@@ -4817,6 +4822,7 @@ class CrossbarViewModel @Inject constructor(
         internal val RECENTLY_PLAYED_LIMIT = com.echo.core.data.repository.InterfacePreferences.LAST_PLAYED_SIZES.max()
 
         internal val KEY_RECENT_APP_DISMISSALS = stringSetPreferencesKey("recent_app_dismissals")
+        internal val KEY_RECENT_PINS = androidx.datastore.preferences.core.stringPreferencesKey("recent_pins")
         internal const val ADD_MENU_ITEM_ID = "add_menu"
         internal const val QUICK_SEARCH_ITEM_ID = "quick_search"
         internal const val SEARCH_ITEM_ID = "library_search"

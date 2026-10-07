@@ -332,6 +332,7 @@ class CrossbarGames(
             "favorite"               -> toggleGameFavorite(gameId, true)
             "unfavorite"             -> toggleGameFavorite(gameId, false)
 
+            "pin_recent", "unpin_recent" -> { vm.closeContextMenu(); vm.recents.togglePinned("g:$gameId") }
             "remove_from_recent"     -> {
                 val gid = gameId
                 vm.appAction { vm.gameRepository.clearLastPlayed(gid) }
