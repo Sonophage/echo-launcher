@@ -72,8 +72,6 @@ dependencies {
     implementation(project(":feature:feature-backup"))
     // RomScanner, PlatformExtensionMap, DiscImageResolver
     implementation(project(":feature:feature-library"))
-    // ThemeRepository, XmbThemeLoader
-    implementation(project(":feature:feature-themes"))
     // InstalledAppRepository, AppCategoryRepository — powers the Hidden Apps manager
     implementation(project(":feature:feature-appbar"))
     // RetroAchievements and Steam accounts, sync and the Steam import worker

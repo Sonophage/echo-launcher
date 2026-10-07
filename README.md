@@ -908,7 +908,6 @@ feature/
   feature-library/   ROM and media scanners
   feature-launcher/  emulator detection and launching
   feature-artwork/   scrapers, Artwork Studio, artwork folder, ES-DE import and export
-  feature-themes/    theme loading and built-in themes
   feature-settings/  Settings screens
   feature-appbar/    App Drawer and app classification
   feature-backup/    backup and restore

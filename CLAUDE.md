@@ -60,7 +60,6 @@ changing `CLAUDE.md` or a skill. Other build edits, such as a version bump, pass
 | `:feature:feature-library` | ROM and media scanners. |
 | `:feature:feature-launcher` | Emulator detection and launching. |
 | `:feature:feature-artwork` | Scrapers (SteamGridDB's client lives in core-data), the artwork folder, ES-DE import and export, the Artwork Studio. |
-| `:feature:feature-themes` | Theme loading and built-in themes. |
 | `:feature:feature-settings` | Host. Settings screens, the setup wizard, the permissions catalogue. |
 | `:feature:feature-appbar` | The app drawer and app classification. |
 | `:feature:feature-backup` | Backup and restore. |

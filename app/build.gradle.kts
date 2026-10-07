@@ -119,7 +119,6 @@ dependencies {
     implementation(project(":feature:feature-library"))
     implementation(project(":feature:feature-launcher"))
     implementation(project(":feature:feature-artwork"))
-    implementation(project(":feature:feature-themes"))
     implementation(project(":feature:feature-settings"))
     implementation(project(":feature:feature-appbar"))
     implementation(project(":feature:feature-backup"))
