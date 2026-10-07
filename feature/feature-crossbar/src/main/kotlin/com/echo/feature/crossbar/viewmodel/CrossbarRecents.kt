@@ -196,7 +196,7 @@ class CrossbarRecents(
             }
             RecentLaunch.ALBUM -> item.musicGroupKey?.let {
                 menuSound.play(MenuSound.SELECT)
-                vm.music.openMusicBrowser(MusicBrowserView.Album(item.title, it))
+                vm.music.openAlbumOnCrossbar(item.title, it)
             }
             null -> Unit
         }

@@ -678,7 +678,8 @@ private fun CrossbarItemLeadingIcon(
     }
 
     when {
-        item.type == CrossbarItemType.MUSIC_TRACK -> {
+        // an artist or album row shows its first track's cover, as a track row does
+        item.type == CrossbarItemType.MUSIC_TRACK || item.type == CrossbarItemType.MUSIC_GROUP -> {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.width(LEADING_ICON_SLOT),

@@ -179,12 +179,13 @@ its **icon slot**; the main art is used only when the icon slot is empty.
 
 ### Music, video, photos and books
 
-Songs, Artists, Albums and Playlists open a fullscreen browser, and music keeps playing in the
-background with its controls on the island. The built-in video player seeks with LEFT and RIGHT
-and keeps speed, subtitles, audio track and screen mode under **Options**. The photo viewer zooms,
-pans and rotates, and any photo can become the wallpaper with its EXIF data stripped. Books open in
-the built-in reader: two pages side by side or one, text size, typeface and page colour, contents
-and bookmarks, and it keeps your place.
+Songs, Artists, Albums and Playlists open in the column, as All Games does (an artist leads to their
+tracks, an album to its tracks), and music keeps playing in the background with its controls on the
+island. The built-in video player seeks with LEFT and RIGHT and keeps speed, subtitles, audio track
+and screen mode under **Options**. The photo viewer zooms, pans and rotates, and any photo can
+become the wallpaper with its EXIF data stripped. Books open in the built-in reader: two pages side
+by side or one, text size, typeface and page colour, contents and bookmarks, and it keeps your
+place.
 
 | | |
 |:---:|:---:|

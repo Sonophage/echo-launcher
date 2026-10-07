@@ -47,9 +47,6 @@ class StatusStripVisibilityTest {
         val fullscreen = mapOf(
             "boot" to crossbar().copy(showBootSequence = true),
             "video player" to crossbar().copy(activeVideoId = "v1"),
-            "music browser" to crossbar().copy(
-                musicBrowser = MusicBrowserState(view = MusicBrowserView.AllMusic, title = "All Tracks"),
-            ),
             "music player" to crossbar().copy(musicPlayerVisible = true),
         )
         fullscreen.forEach { (name, state) ->

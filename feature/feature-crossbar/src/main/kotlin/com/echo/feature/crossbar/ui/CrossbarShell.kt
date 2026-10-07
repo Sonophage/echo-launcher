@@ -343,12 +343,6 @@ fun CrossbarShellContainer(
         onSearchFocusedAt = viewModel.librarySearch::onSearchFocusedAt,
         onSearchOptionsAt = viewModel.librarySearch::onSearchOptionsAt,
         onSearchKindPicked = viewModel.librarySearch::pickSearchKind,
-        onMusicBrowserQueryChange = viewModel.music::onMusicBrowserQueryChange,
-        onMusicBrowserActivatedAt = viewModel.music::onMusicBrowserActivatedAt,
-        onMusicBrowserLongPressAt = viewModel.music::onMusicBrowserLongPressAt,
-        onMusicBrowserBack = viewModel.music::onMusicBrowserBack,
-        onMusicBrowserSortTapped = viewModel.music::onMusicBrowserSortTapped,
-        onMusicBrowserOptionsTapped = viewModel.music::onMusicBrowserOptionsTapped,
         onAppPickerTileTapped = viewModel.appPickerSection::onAppPickerTileTapped,
         onAppPickerTouchBrowse = viewModel.appPickerSection::onAppPickerTouchBrowse,
         onAppPickerHeaderBack = viewModel.appPickerSection::onAppPickerHeaderBack,
@@ -556,12 +550,6 @@ fun CrossbarShell(
     onSearchFocusedAt: (Int) -> Unit = {},
     onSearchOptionsAt: (Int) -> Unit = {},
     onSearchKindPicked: (com.echo.feature.crossbar.viewmodel.SearchKind?) -> Unit = {},
-    onMusicBrowserQueryChange: (String) -> Unit = {},
-    onMusicBrowserActivatedAt: (Int) -> Unit = {},
-    onMusicBrowserLongPressAt: (Int) -> Unit = {},
-    onMusicBrowserBack: () -> Unit = {},
-    onMusicBrowserSortTapped: () -> Unit = {},
-    onMusicBrowserOptionsTapped: () -> Unit = {},
     onMusicTrackPickerActivatedAt: (Int) -> Unit = {},
     onMusicTrackPickerConfirm: () -> Unit = {},
     onMusicTrackPickerDismiss: () -> Unit = {},
@@ -852,7 +840,6 @@ fun CrossbarShell(
             val androidAccess = remember(notificationsOpen) { AndroidNotifications.isEnabled(strip) }
 
             if (uiState.topDrawerFilter == null &&
-                uiState.musicBrowser == null &&
                 uiState.topSearch == null &&
                 uiState.topSettingsScreen == null &&
                 uiState.activeVideoId == null &&
@@ -1376,19 +1363,6 @@ fun CrossbarShell(
                     onOptionsAt = onSearchOptionsAt,
                     onKindPicked = onSearchKindPicked,
                     waveStyle = uiState.waveStyle,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            uiState.musicBrowser?.let { browser ->
-                MusicBrowserScreen(
-                    state = browser,
-                    onQueryChange = onMusicBrowserQueryChange,
-                    onActivateAt = onMusicBrowserActivatedAt,
-                    onLongPressAt = onMusicBrowserLongPressAt,
-                    onBack = onMusicBrowserBack,
-                    onSortTapped = onMusicBrowserSortTapped,
-                    onOptionsTapped = onMusicBrowserOptionsTapped,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

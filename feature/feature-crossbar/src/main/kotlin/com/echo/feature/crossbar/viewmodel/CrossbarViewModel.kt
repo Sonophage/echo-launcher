@@ -343,33 +343,17 @@ sealed interface MusicNav {
     data object AllMusic : MusicNav
     data object Playlists : MusicNav
     data class Playlist(val id: Long, val name: String) : MusicNav
+
+    // owner, 2026-10-06: Artists and Albums drill on the crossbar like All Games, not in a browser
+    data object Artists : MusicNav
+    data object Albums : MusicNav
+    data class Artist(val name: String, val key: String) : MusicNav
+    data class Album(val name: String, val key: String) : MusicNav
 }
 
-sealed interface MusicBrowserView {
-    data object AllMusic : MusicBrowserView
-    data object Playlists : MusicBrowserView
-    data class Playlist(val id: Long, val name: String) : MusicBrowserView
-
-    data object Artists : MusicBrowserView
-    data object Albums : MusicBrowserView
-    data class Artist(val name: String, val key: String) : MusicBrowserView
-    data class Album(val name: String, val key: String) : MusicBrowserView
-}
-
-internal val MusicBrowserView.listsGroups: Boolean
-    get() = this == MusicBrowserView.Artists || this == MusicBrowserView.Albums
-
-data class MusicBrowserState(
-    val view: MusicBrowserView,
-    val title: String,
-    val query: String = "",
-    val rows: List<CrossbarItem> = emptyList(),
-    val selectedIndex: Int = 0,
-
-    val sortLabel: String? = null,
-
-    val scrollToTopToken: Int = 0,
-)
+// a column of tracks, which the music sorts order
+internal val MusicNav.listsTracks: Boolean
+    get() = this == MusicNav.AllMusic || this is MusicNav.Playlist || this is MusicNav.Artist || this is MusicNav.Album
 
 data class SearchState(
     val scope: SearchScope,
@@ -635,7 +619,6 @@ data class CrossbarUiState(
 
     val musicTrackPicker: MusicTrackPickerState? = null,
 
-    val musicBrowser: MusicBrowserState? = null,
     val search: SearchState? = null,
 
     // a second screen is showing ECHO (the AYN Thor's bottom screen)
@@ -852,7 +835,7 @@ data class CrossbarUiState(
     val waveShown: Boolean
         get() = !chromeOverlay && !notificationsOpen && !showBootSequence && !onLastPlayedHome &&
             artworkStudioGameId == null && manualViewer == null && metadataPreview == null &&
-            activeVideoId == null && activePhotoViewer == null && musicBrowser == null &&
+            activeVideoId == null && activePhotoViewer == null &&
             musicTrackPicker == null && !musicPlayerVisible
 
     // owner, 2026-10-06: with a second screen, the App Drawer, Search and Settings open there whatever
@@ -895,7 +878,6 @@ data class CrossbarUiState(
             collectionNameDialog != null ||
             playlistNameDialog != null ||
             musicTrackPicker != null ||
-            musicBrowser != null ||
             musicPlayerVisible ||
             infoDialog != null ||
             launchRecovery != null ||
@@ -1099,7 +1081,7 @@ fun CrossbarUiState.activeSortModes(): List<CrossbarSortMode>? {
     val cat = categories.getOrNull(selectedCategoryIndex) ?: return null
     return when {
         cat.id == BuiltInCategory.MUSIC &&
-            (musicNav == MusicNav.AllMusic || musicNav is MusicNav.Playlist) -> MUSIC_SORTS
+            musicNav.listsTracks -> MUSIC_SORTS
 
         cat.id == BuiltInCategory.VIDEO &&
             (videoNav == VideoNav.AllVideos || videoNav == VideoNav.Favorites ||
@@ -1300,7 +1282,7 @@ enum class GlobalStep { APPS, SEARCH, CLOSE_SEARCH, NOTIFICATIONS, HOME }
 internal fun globalStep(action: GamepadAction, s: CrossbarUiState): GlobalStep? {
     val keepsItsButtons = s.activePhotoViewer != null || s.activeVideoId != null || s.metadataPreview != null ||
         s.manualViewer != null || s.artworkStudioGameId != null || s.showBootSequence || s.activeGameBoot != null ||
-        s.musicBrowser != null || s.customIconSession != null || s.saveThemeNameDialog != null
+        s.customIconSession != null || s.saveThemeNameDialog != null
     if (keepsItsButtons) return null
     return when (action) {
         // LB in the drawer closes it, as RB in Search closes Search; from the drawer's own search, back to it
@@ -2069,11 +2051,6 @@ class CrossbarViewModel @Inject constructor(
         return apps.map { it.toCrossbarItem(gameRepository.getAppEntry(it.packageName)) }
     }
 
-    internal fun browserNoResultsItem(): CrossbarItem = CrossbarItem(
-        id = EMPTY_CATEGORY_ITEM_ID, title = "No matches", subtitle = "Try a different search.",
-        type = CrossbarItemType.EMPTY,
-    )
-
     fun enterOpensAppDrawer(): Boolean = _uiState.value.enterOpensAppDrawer
 
     fun onTypedCharacter(ch: String): Boolean {
@@ -2204,20 +2181,6 @@ class CrossbarViewModel @Inject constructor(
     }
 
     internal fun cycleSort() {
-        _uiState.value.musicBrowser?.let { browser ->
-            if (browser.view is MusicBrowserView.Playlists || browser.view.listsGroups) return
-            val next = MUSIC_SORTS[(MUSIC_SORTS.indexOf(_uiState.value.musicSortMode).coerceAtLeast(0) + 1) % MUSIC_SORTS.size]
-            menuSound.play(MenuSound.SYSTEM_BROWSE)
-            _uiState.update { it.copy(
-                musicSortMode = next,
-                musicBrowser = it.musicBrowser?.copy(
-                    selectedIndex = 0,
-                    scrollToTopToken = browser.scrollToTopToken + 1,
-                ),
-            )}
-            music.rebuildBrowserTrackRows()
-            return
-        }
         val cycle = activeSortContext() ?: return
         val current = _uiState.value.sortModeFor(cycle)
         applySort(cycle, cycle[(cycle.indexOf(current).coerceAtLeast(0) + 1) % cycle.size])
@@ -2254,9 +2217,13 @@ class CrossbarViewModel @Inject constructor(
         val s = _uiState.value
 
         val musicTitle = when (val nav = s.musicNav) {
-            MusicNav.AllMusic    -> "Music"
+            MusicNav.AllMusic    -> "Songs"
             MusicNav.Playlists   -> "Playlist"
             is MusicNav.Playlist -> nav.name
+            MusicNav.Artists     -> "Artists"
+            MusicNav.Albums      -> "Albums"
+            is MusicNav.Artist   -> nav.name
+            is MusicNav.Album    -> nav.name
             MusicNav.Folders     -> "Folders"
             MusicNav.Root        -> null
         }
@@ -2313,15 +2280,14 @@ class CrossbarViewModel @Inject constructor(
                 val pls = music.musicPlaylistSiblings()
                 if (pls.isNotEmpty()) return pls to pls.indexOfFirst { it.playlistId == nav.id }.coerceAtLeast(0)
             }
-            val sibs = _uiState.value.musicRootSections().filter {
-                it.type == CrossbarItemType.PLAYLIST || it.type == CrossbarItemType.MEMORY_CARD
+            val sibs = _uiState.value.musicRootSections().filter { it.id in MUSIC_DRILL_ROOTS }
+            val root = when (s.musicNav) {
+                MusicNav.AllMusic -> ALL_MUSIC_ITEM_ID
+                MusicNav.Artists, is MusicNav.Artist -> MUSIC_ARTISTS_ITEM_ID
+                MusicNav.Albums, is MusicNav.Album -> MUSIC_ALBUMS_ITEM_ID
+                else -> PLAYLISTS_ITEM_ID
             }
-            val idx = sibs.indexOfFirst { sib ->
-                when (s.musicNav) {
-                    MusicNav.AllMusic  -> sib.type == CrossbarItemType.MEMORY_CARD
-                    else               -> sib.type == CrossbarItemType.PLAYLIST
-                }
-            }.coerceAtLeast(0)
+            val idx = sibs.indexOfFirst { it.id == root }.coerceAtLeast(0)
             return sibs to idx
         }
 
@@ -2794,11 +2760,6 @@ class CrossbarViewModel @Inject constructor(
 
         if (state.search != null) {
             librarySearch.onButton(action, state)
-            return
-        }
-
-        if (state.musicBrowser != null) {
-            music.onBrowserButton(action, state)
             return
         }
 
@@ -3912,7 +3873,7 @@ class CrossbarViewModel @Inject constructor(
 
     private fun backOutOfDrill(s: CrossbarUiState): Boolean {
         when (s.drillOutStep) {
-            DrillOutStep.MUSIC -> music.closeMusicView()
+            DrillOutStep.MUSIC -> music.backOutOfMusicView()
 
             DrillOutStep.VIDEO_LIBRARY -> video.openVideoView(VideoNav.Libraries)
             DrillOutStep.VIDEO_PLAYLIST -> video.openVideoView(VideoNav.Playlists)
@@ -3963,7 +3924,7 @@ class CrossbarViewModel @Inject constructor(
             CrossbarItemType.MUSIC_GROUP -> {
                 item.musicGroupKey?.let {
                     menuSound.play(MenuSound.SELECT)
-                    music.openMusicBrowser(MusicBrowserView.Album(item.title, it))
+                    music.openAlbumOnCrossbar(item.title, it)
                 }
                 return true
             }
@@ -4901,6 +4862,9 @@ class CrossbarViewModel @Inject constructor(
         internal const val ALL_MUSIC_ITEM_ID = "all_music"
         internal const val NOW_PLAYING_ITEM_ID = "now_playing"
         internal const val PLAYLISTS_ITEM_ID = "playlists"
+
+        // the Music rows that drill into the column, shown as the drill flyout's siblings
+        internal val MUSIC_DRILL_ROOTS by lazy { setOf(ALL_MUSIC_ITEM_ID, MUSIC_ARTISTS_ITEM_ID, MUSIC_ALBUMS_ITEM_ID, PLAYLISTS_ITEM_ID) }
         internal const val MUSIC_ARTISTS_ITEM_ID = "music_artists"
         internal const val MUSIC_ALBUMS_ITEM_ID = "music_albums"
         internal const val ADD_MUSIC_APPS_ITEM_ID = "add_music_apps"

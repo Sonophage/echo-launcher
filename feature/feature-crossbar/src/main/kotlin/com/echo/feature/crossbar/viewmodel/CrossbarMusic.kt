@@ -34,9 +34,6 @@ class CrossbarMusic(
     @Volatile
     private var defaultMusicPlayer: String? = null
 
-    private var musicBrowserJob: Job? = null
-    private var browserRawTracks: List<MusicTrack> = emptyList()
-    private var browserRawPlaylists: List<com.echo.core.domain.model.Playlist> = emptyList()
     internal fun observeMusic() {
         scope.launch {
             musicRepository.observeFolders().collect { folders ->
@@ -177,97 +174,28 @@ class CrossbarMusic(
         MusicNav.AllMusic    -> "all"
         MusicNav.Playlists   -> "playlists"
         is MusicNav.Playlist -> "playlist_${nav.id}"
+        MusicNav.Artists     -> "artists"
+        MusicNav.Albums      -> "albums"
+        is MusicNav.Artist   -> "artist_${nav.key}"
+        is MusicNav.Album    -> "album_${nav.key}"
     }
 
-    internal fun openMusicBrowser(view: MusicBrowserView) {
-        musicBrowserJob?.cancel()
-        val title = when (view) {
-            MusicBrowserView.AllMusic    -> "Songs"
-            MusicBrowserView.Playlists   -> "Playlists"
-            MusicBrowserView.Artists     -> "Artists"
-            MusicBrowserView.Albums      -> "Albums"
-            is MusicBrowserView.Playlist -> view.name
-            is MusicBrowserView.Artist   -> view.name
-            is MusicBrowserView.Album    -> view.name
-        }
-        uiState.update { it.copy(musicBrowser = MusicBrowserState(view = view, title = title)) }
-        musicBrowserJob = scope.launch {
-            when (view) {
-                MusicBrowserView.AllMusic -> musicRepository.observeAllTracks().collect { tracks ->
-                    browserRawTracks = tracks; rebuildBrowserTrackRows()
-                }
-                is MusicBrowserView.Playlist -> musicRepository.observePlaylistTracks(view.id).collect { tracks ->
-                    browserRawTracks = tracks; rebuildBrowserTrackRows()
-                }
-                MusicBrowserView.Playlists -> musicRepository.observePlaylists().collect { playlists ->
-                    browserRawPlaylists = playlists; rebuildBrowserPlaylistRows()
-                }
-
-                MusicBrowserView.Artists, MusicBrowserView.Albums ->
-                    musicRepository.observeAllTracks().collect { tracks ->
-                        browserRawTracks = tracks; rebuildBrowserGroupRows()
-                    }
-                is MusicBrowserView.Artist -> musicRepository.observeAllTracks().collect { tracks ->
-
-                    browserRawTracks = tracks.tracksByArtistKey(view.key)
-                    rebuildBrowserTrackRows()
-                }
-                is MusicBrowserView.Album -> musicRepository.observeAllTracks().collect { tracks ->
-                    browserRawTracks = tracks.filter { it.album.musicGroupKey() == view.key }
-                    rebuildBrowserTrackRows()
-                }
-            }
-        }
+    // B inside an artist or album goes back to the list it came from; elsewhere to the root
+    internal fun backOutOfMusicView() = when (uiState.value.musicNav) {
+        is MusicNav.Artist -> openMusicView(MusicNav.Artists)
+        is MusicNav.Album -> openMusicView(MusicNav.Albums)
+        else -> closeMusicView()
     }
 
-    private fun MusicTrack.matchesQuery(q: String): Boolean =
-        displayTitle.lowercase().contains(q) ||
-            artist?.lowercase()?.contains(q) == true ||
-            album?.lowercase()?.contains(q) == true
-
-    internal fun rebuildBrowserTrackRows() {
-        val state = uiState.value.musicBrowser ?: return
-        val isPlaylist = state.view is MusicBrowserView.Playlist
-        val q = state.query.trim().lowercase()
-        val sorted = browserRawTracks.trackSorted(uiState.value.musicSortMode)
-        val filtered = if (q.isBlank()) sorted else sorted.filter { it.matchesQuery(q) }
-        currentMusicTracks = filtered
-        val baseRows = when {
-            filtered.isNotEmpty() -> filtered.toMusicItems()
-            q.isNotBlank()        -> listOf(vm.browserNoResultsItem())
-            isPlaylist            -> listOf(emptyPlaylistItem())
-            else                  -> listOf(emptyAllMusicItem())
-        }
-        val rows = if (isPlaylist) baseRows + addTracksItem() else baseRows
-
-        val label = uiState.value.musicSortMode.label
-        uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
-            rows = rows,
-            selectedIndex = state.selectedIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0)),
-            sortLabel = label,
-        )) }
+    // an album from Last Played or Search opens in Music's column
+    internal fun openAlbumOnCrossbar(name: String, key: String) {
+        val music = uiState.value.categories.indexOfFirst { it.id == BuiltInCategory.MUSIC }
+        if (music < 0) return
+        if (uiState.value.selectedCategoryIndex != music) vm.onCategorySelected(music)
+        openMusicView(MusicNav.Album(name, key))
     }
 
-    private fun rebuildBrowserGroupRows() {
-        val state = uiState.value.musicBrowser ?: return
-        val q = state.query.trim().lowercase()
-        val prefix = if (state.view == MusicBrowserView.Artists) "art" else "alb"
-        val groups = if (state.view == MusicBrowserView.Artists) browserRawTracks.artistGroups()
-                     else browserRawTracks.albumGroups()
-        val filtered = if (q.isBlank()) groups else groups.filter { it.name.lowercase().contains(q) }
-        val rows = when {
-            filtered.isNotEmpty() -> filtered.map { it.toBrowserItem(prefix) }
-            q.isNotBlank()        -> listOf(vm.browserNoResultsItem())
-            else                  -> listOf(emptyAllMusicItem())
-        }
-        uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
-            rows = rows,
-            selectedIndex = state.selectedIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0)),
-            sortLabel = null,
-        )) }
-    }
-
-    private fun MusicGroup.toBrowserItem(prefix: String): CrossbarItem = CrossbarItem(
+    private fun MusicGroup.toGroupRow(prefix: String): CrossbarItem = CrossbarItem(
         id            = "mg_${prefix}_$key",
         title         = name,
         subtitle      = subtitle,
@@ -276,136 +204,8 @@ class CrossbarMusic(
         type          = CrossbarItemType.MUSIC_GROUP,
     )
 
-    private fun rebuildBrowserPlaylistRows() {
-        val state = uiState.value.musicBrowser ?: return
-        val q = state.query.trim().lowercase()
-        val filtered = if (q.isBlank()) browserRawPlaylists
-                       else browserRawPlaylists.filter { it.name.lowercase().contains(q) }
-        val rows = playlistRootItems(filtered)
-        uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
-            rows = rows,
-            selectedIndex = state.selectedIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0)),
-            sortLabel = null,
-        )) }
-    }
-
-    fun onMusicBrowserQueryChange(query: String) {
-        vm.markTouchInput()
-        val state = uiState.value.musicBrowser ?: return
-        uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(
-            query = query, selectedIndex = 0,
-            scrollToTopToken = state.scrollToTopToken + 1,
-        )) }
-        when {
-            state.view is MusicBrowserView.Playlists -> rebuildBrowserPlaylistRows()
-            state.view.listsGroups -> rebuildBrowserGroupRows()
-            else -> rebuildBrowserTrackRows()
-        }
-    }
-
-    internal fun moveMusicBrowser(delta: Int) {
-        val b = uiState.value.musicBrowser ?: return
-        val next = (b.selectedIndex + delta).coerceIn(0, (b.rows.size - 1).coerceAtLeast(0))
-        if (next != b.selectedIndex) {
-            uiState.update { it.copy(musicBrowser = b.copy(selectedIndex = next)) }
-            menuSound.play(MenuSound.SCROLL)
-        }
-    }
-
-    internal fun activateMusicBrowser() {
-        val b = uiState.value.musicBrowser ?: return
-        handleMusicBrowserRow(b.rows.getOrNull(b.selectedIndex) ?: return)
-    }
-
-    fun onMusicBrowserActivatedAt(index: Int) {
-        vm.markTouchInput()
-        uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(selectedIndex = index)) }
-        activateMusicBrowser()
-    }
-
-    private fun handleMusicBrowserRow(item: CrossbarItem) {
-        when {
-            item.type == CrossbarItemType.EMPTY -> Unit
-            item.id == CrossbarViewModel.CREATE_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreatePlaylist() }
-            item.id == CrossbarViewModel.ADD_TRACKS_ITEM_ID -> {
-                menuSound.play(MenuSound.SELECT)
-                (uiState.value.musicBrowser?.view as? MusicBrowserView.Playlist)?.let { openMusicTrackPicker(it.id) }
-            }
-            item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
-                menuSound.play(MenuSound.SELECT)
-                openMusicBrowser(MusicBrowserView.Playlist(item.playlistId, item.title))
-            }
-            item.type == CrossbarItemType.MUSIC_GROUP && item.musicGroupKey != null -> {
-                menuSound.play(MenuSound.SELECT)
-                openMusicBrowser(
-                    if (uiState.value.musicBrowser?.view == MusicBrowserView.Artists)
-                        MusicBrowserView.Artist(item.title, item.musicGroupKey)
-                    else MusicBrowserView.Album(item.title, item.musicGroupKey)
-                )
-            }
-            item.type == CrossbarItemType.MUSIC_TRACK -> { menuSound.play(MenuSound.SELECT); openMusicPlayerForItem(item) }
-        }
-    }
-
-    internal fun openMusicBrowserContextMenu() {
-        val b = uiState.value.musicBrowser ?: return
-        val item = b.rows.getOrNull(b.selectedIndex) ?: return
-        when {
-            item.type == CrossbarItemType.MUSIC_TRACK -> openMusicTrackContextMenu(item)
-            item.type == CrossbarItemType.PLAYLIST && item.playlistId != null ->
-                openPlaylistRowContextMenu(item.playlistId, item.title)
-        }
-    }
-
-    fun onMusicBrowserLongPressAt(index: Int) {
-        vm.markTouchInput()
-        uiState.update { it.copy(musicBrowser = it.musicBrowser?.copy(selectedIndex = index)) }
-        openMusicBrowserContextMenu()
-    }
-
-    fun onMusicBrowserBack() {
-        vm.markTouchInput()
-        val b = uiState.value.musicBrowser ?: return
-        menuSound.play(MenuSound.BACK)
-        when (b.view) {
-            is MusicBrowserView.Playlist -> openMusicBrowser(MusicBrowserView.Playlists)
-            is MusicBrowserView.Artist -> openMusicBrowser(MusicBrowserView.Artists)
-            is MusicBrowserView.Album -> openMusicBrowser(MusicBrowserView.Albums)
-            else -> closeMusicBrowser()
-        }
-    }
-
-    private fun closeMusicBrowser() {
-        musicBrowserJob?.cancel(); musicBrowserJob = null
-        val view = uiState.value.musicBrowser?.view
-        browserRawTracks = emptyList(); browserRawPlaylists = emptyList()
-        uiState.update { it.copy(musicBrowser = null) }
-
-        if (vm.currentCategory()?.id == BuiltInCategory.MUSIC && uiState.value.musicNav == MusicNav.Root) {
-            val targetId = when (view) {
-                is MusicBrowserView.Playlists, is MusicBrowserView.Playlist -> CrossbarViewModel.PLAYLISTS_ITEM_ID
-                is MusicBrowserView.Artists, is MusicBrowserView.Artist -> CrossbarViewModel.MUSIC_ARTISTS_ITEM_ID
-                is MusicBrowserView.Albums, is MusicBrowserView.Album -> CrossbarViewModel.MUSIC_ALBUMS_ITEM_ID
-                else -> CrossbarViewModel.ALL_MUSIC_ITEM_ID
-            }
-            val idx = uiState.value.currentItems.indexOfFirst { it.id == targetId }
-            if (idx >= 0) uiState.update { it.copy(selectedItemIndex = idx) }
-        }
-    }
-
-    fun onMusicBrowserSortTapped() {
-        vm.markTouchInput()
-        vm.cycleSort()
-    }
-
-    fun onMusicBrowserOptionsTapped() {
-        vm.markTouchInput()
-        openMusicBrowserContextMenu()
-    }
-
     private fun currentPlaylistContextId(): Long? =
-        (uiState.value.musicBrowser?.view as? MusicBrowserView.Playlist)?.id
-            ?: (uiState.value.musicNav as? MusicNav.Playlist)?.id
+        (uiState.value.musicNav as? MusicNav.Playlist)?.id
 
     internal fun handleMusicSelection(item: CrossbarItem): Boolean = when {
         item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.librarySearch.openSearch(SearchScope.MUSIC); true }
@@ -417,10 +217,18 @@ class CrossbarMusic(
             true
         }
 
-        item.id == CrossbarViewModel.PLAYLISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Playlists); true }
-        item.id == CrossbarViewModel.ALL_MUSIC_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.AllMusic); true }
-        item.id == CrossbarViewModel.MUSIC_ARTISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Artists); true }
-        item.id == CrossbarViewModel.MUSIC_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicBrowser(MusicBrowserView.Albums); true }
+        item.id == CrossbarViewModel.PLAYLISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicView(MusicNav.Playlists); true }
+        item.id == CrossbarViewModel.ALL_MUSIC_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicView(MusicNav.AllMusic); true }
+        item.id == CrossbarViewModel.MUSIC_ARTISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicView(MusicNav.Artists); true }
+        item.id == CrossbarViewModel.MUSIC_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicView(MusicNav.Albums); true }
+        item.type == CrossbarItemType.MUSIC_GROUP && item.musicGroupKey != null -> {
+            menuSound.play(MenuSound.SELECT)
+            openMusicView(
+                if (uiState.value.musicNav == MusicNav.Artists) MusicNav.Artist(item.title, item.musicGroupKey)
+                else MusicNav.Album(item.title, item.musicGroupKey)
+            )
+            true
+        }
         item.id == CrossbarViewModel.ADD_MUSIC_FOLDER_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
             vm.folders.openMediaFolders(MediaRootKind.MUSIC)
@@ -769,17 +577,6 @@ class CrossbarMusic(
         }
     }
 
-    internal fun onBrowserButton(action: GamepadAction, state: CrossbarUiState) {
-        when (action) {
-            GamepadAction.NAVIGATE_UP    -> moveMusicBrowser(-1)
-            GamepadAction.NAVIGATE_DOWN  -> moveMusicBrowser(+1)
-            GamepadAction.SELECT         -> activateMusicBrowser()
-            GamepadAction.BACK           -> onMusicBrowserBack()
-            GamepadAction.OPEN_CONTEXT_MENU     -> openMusicBrowserContextMenu()
-            GamepadAction.CHANGE_SORT    -> vm.cycleSort()
-            else -> Unit
-        }
-    }
     internal fun onPlaylistPickerItem(itemId: String, menu: CrossbarContextMenu) {
         val trackId = menu.playlistPickerTrackId ?: return
         val keepIndex = menu.selectedIndex
@@ -818,6 +615,21 @@ class CrossbarMusic(
                 musicRepository.observePlaylists().collect { playlists ->
                     uiState.update { it.copy(currentItems = playlistRootItems(playlists), musicPlaylists = playlists) }
                 }
+            }
+            MusicNav.Artists, MusicNav.Albums -> {
+                clearMusicTrackCache()
+                val artists = nav == MusicNav.Artists
+                musicRepository.observeAllTracks().collect { tracks ->
+                    val groups = if (artists) tracks.artistGroups() else tracks.albumGroups()
+                    val rows = groups.map { it.toGroupRow(if (artists) "art" else "alb") }
+                    uiState.update { it.copy(currentItems = rows.ifEmpty { listOf(emptyAllMusicItem()) }) }
+                }
+            }
+            is MusicNav.Artist -> musicRepository.observeAllTracks().collect { tracks ->
+                setMusicTrackItems(tracks.tracksByArtistKey(nav.key), emptyAllMusicItem())
+            }
+            is MusicNav.Album -> musicRepository.observeAllTracks().collect { tracks ->
+                setMusicTrackItems(tracks.filter { it.album.musicGroupKey() == nav.key }, emptyAllMusicItem())
             }
         }
     }
