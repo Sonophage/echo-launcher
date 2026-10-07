@@ -258,7 +258,7 @@ internal fun WallInfo(
 internal fun actionLabel(app: InstalledApp): String = if (app.isGame || app.gameId != null) "Play" else "Open"
 
 @Composable
-internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, filters: Boolean, onNextFilter: () -> Unit, onSearch: () -> Unit, onBack: () -> Unit) {
+internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, onSearch: () -> Unit, onBack: () -> Unit) {
     val pad = LocalPadPrompts.current
     Row(
         Modifier.fillMaxWidth().height(u.dp(72)),
@@ -266,9 +266,8 @@ internal fun WallHints(u: DesignUnits, action: String?, onAction: () -> Unit, fi
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (pad && action != null) Hint(listOf(GamepadAction.SELECT), action, u, onAction)
-        // the tab row already shows LT/RT; the footer names what the bumpers do here
-        if (pad && filters) Hint(listOf(GamepadAction.PREV_PAGE, GamepadAction.NEXT_PAGE), "Filter", u, onNextFilter)
-        Hint(listOf(GamepadAction.OPEN_SEARCH), "Search", u, onSearch)
+        // the tab row already shows LT/RT
+        Hint(listOf(GamepadAction.NEXT_PAGE), "Search", u, onSearch)
         Hint(listOf(GamepadAction.BACK), "Back", u, onBack)
     }
 }

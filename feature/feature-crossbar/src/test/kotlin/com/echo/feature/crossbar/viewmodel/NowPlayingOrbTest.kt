@@ -19,10 +19,12 @@ class NowPlayingOrbTest {
     }
 
     @Test
-    fun `B and down always put the orb back to rest, so the crossbar is one press away`() {
+    fun `B, down and Start always put the orb back to rest, so the crossbar is one press away`() {
         listOf(music, recent).forEach { kind ->
             assertEquals(OrbStep.Level(0), orbStep(GamepadAction.BACK, 2, kind))
             assertEquals(OrbStep.Level(0), orbStep(GamepadAction.NAVIGATE_DOWN, 1, kind))
+            // owner, 2026-10-06: Start brings the controller to the orb, so Start again must give it back
+            assertEquals(OrbStep.Level(0), orbStep(GamepadAction.OPEN_ISLAND, 1, kind))
         }
     }
 

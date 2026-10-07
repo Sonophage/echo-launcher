@@ -31,7 +31,7 @@ internal fun AppPickerHintBar(
             ControllerPromptItem.fixed(ControllerIcon.DPAD_ALL, "Navigate"),
             ControllerPromptItem(GamepadAction.SELECT, "Toggle"),
             ControllerPromptItem(GamepadAction.CHANGE_SORT, "Search"),
-            ControllerPromptItem(GamepadAction.HOME, "Apply"),
+            ControllerPromptItem(GamepadAction.OPEN_ISLAND, "Apply"),
             ControllerPromptItem(GamepadAction.BACK, "Cancel"),
         )
     }

@@ -80,7 +80,7 @@ fun MusicTrackPicker(
             onAction = { action ->
                 when (action) {
                     GamepadAction.SELECT -> onActivateAt(state.selectedIndex)
-                    GamepadAction.HOME -> onConfirm()
+                    GamepadAction.HOME, GamepadAction.OPEN_ISLAND -> onConfirm()
                     GamepadAction.BACK -> onDismiss()
                     else -> Unit
                 }
@@ -203,7 +203,7 @@ private fun MusicTrackPickerHintBar(
         items = listOf(
             ControllerPromptItem.fixed(ControllerIcon.DPAD_ALL, "Navigate"),
             ControllerPromptItem(GamepadAction.SELECT, "Toggle"),
-            ControllerPromptItem(GamepadAction.HOME, "Add"),
+            ControllerPromptItem(GamepadAction.OPEN_ISLAND, "Add"),
             ControllerPromptItem(GamepadAction.BACK, "Cancel"),
         ),
         modifier = modifier,

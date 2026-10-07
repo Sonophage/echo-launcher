@@ -103,8 +103,8 @@ class GamepadLayoutTest {
     }
 
     @Test
-    fun `STANDARD puts search on the north face and sort on the west`() {
-        assertEquals(GamepadAction.OPEN_SEARCH, standard.actionFor(KeyEvent.KEYCODE_BUTTON_Y))
+    fun `STANDARD puts the context menu on the north face and sort on the west`() {
+        assertEquals(GamepadAction.OPEN_CONTEXT_MENU, standard.actionFor(KeyEvent.KEYCODE_BUTTON_Y))
         assertEquals(GamepadAction.CHANGE_SORT, standard.actionFor(KeyEvent.KEYCODE_BUTTON_X))
     }
 
@@ -112,7 +112,7 @@ class GamepadLayoutTest {
     fun `SWAPPED exchanges the two secondary actions and nothing else`() {
         val swapped = layout(ConfirmBackLayout.STANDARD, XYLayout.SWAPPED)
         assertEquals(GamepadAction.CHANGE_SORT, swapped.actionFor(KeyEvent.KEYCODE_BUTTON_Y))
-        assertEquals(GamepadAction.OPEN_SEARCH, swapped.actionFor(KeyEvent.KEYCODE_BUTTON_X))
+        assertEquals(GamepadAction.OPEN_CONTEXT_MENU, swapped.actionFor(KeyEvent.KEYCODE_BUTTON_X))
         assertEquals(
             standard.actionFor(KeyEvent.KEYCODE_BUTTON_A),
             swapped.actionFor(KeyEvent.KEYCODE_BUTTON_A),

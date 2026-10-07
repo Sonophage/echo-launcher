@@ -10,6 +10,7 @@ import com.echo.core.domain.model.GamepadBinding
 import com.echo.core.domain.model.GamepadMappings
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -107,7 +108,42 @@ class GamepadInputHandlerTest {
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_A, KeyEvent.ACTION_UP))
             assertEquals(GamepadAction.SELECT, awaitItem())
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_Y, KeyEvent.ACTION_UP))
-            assertEquals(GamepadAction.OPEN_SEARCH, awaitItem())
+            assertEquals("Y held resumes the running game", GamepadAction.OPEN_CONTEXT_MENU, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // owner, 2026-10-06: Select opens the notifications, and holding it is Home, for systems that keep the
+    // guide button for themselves. A hold must not open the notifications on the way.
+    @Test
+    fun `a press of Select is the notifications, and Select held is Home and nothing else`() = runTest {
+        handler.scope = backgroundScope
+        handler.actions.test {
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.ACTION_DOWN))
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.ACTION_UP))
+            assertEquals(GamepadAction.OPEN_NOTIFICATIONS, awaitItem())
+
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.ACTION_DOWN))
+            advanceTimeBy(SELECT_HOLD_MS + 1)
+            assertEquals(GamepadAction.HOME, awaitItem())
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.ACTION_UP))
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // owner, 2026-10-06: the bumpers are Apps (LB) and Search (RB), Y the context menu, Start the island
+    @Test
+    fun `the bumpers, Y and Start send what the owner's map says`() = runTest {
+        handler.actions.test {
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_L1, KeyEvent.ACTION_DOWN))
+            assertEquals("LB is Apps", GamepadAction.PREV_PAGE, awaitItem())
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_R1, KeyEvent.ACTION_DOWN))
+            assertEquals("RB is Search", GamepadAction.NEXT_PAGE, awaitItem())
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_Y, KeyEvent.ACTION_DOWN))
+            assertEquals(GamepadAction.OPEN_CONTEXT_MENU, awaitItem())
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.ACTION_DOWN))
+            assertEquals(GamepadAction.OPEN_ISLAND, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }

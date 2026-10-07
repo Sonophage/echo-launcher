@@ -22,9 +22,10 @@ sealed interface OrbStep {
     data object RestAndPass : OrbStep
 }
 
-// owner's mapping (2026-10-04): left/right skip, X play/pause, A expands, B or down rests; R1 also skips at level 2
+// owner's mapping (2026-10-04): left/right skip, X play/pause, A expands, B or down rests; R1 also skips at level 2.
+// owner, 2026-10-06: Start brings the controller to the orb, and Start again rests it
 internal fun orbStep(action: GamepadAction, level: Int, kind: OrbKind): OrbStep = when (action) {
-    GamepadAction.BACK, GamepadAction.NAVIGATE_DOWN -> OrbStep.Level(0)
+    GamepadAction.BACK, GamepadAction.NAVIGATE_DOWN, GamepadAction.OPEN_ISLAND -> OrbStep.Level(0)
     GamepadAction.NAVIGATE_UP -> OrbStep.Stay
     else -> when (kind) {
         OrbKind.MUSIC -> when (action) {

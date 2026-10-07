@@ -82,7 +82,7 @@ fun GamePickerScreen(
                 GamepadAction.SELECT -> viewModel.activateSelection()
                 GamepadAction.OPEN_CONTEXT_MENU -> viewModel.toggleSelectedPlatform()
                 GamepadAction.BACK -> cancelAndClear()
-                GamepadAction.HOME -> confirmAndClear()
+                GamepadAction.HOME, GamepadAction.OPEN_ISLAND -> confirmAndClear()
                 else -> {}
             }
             onGamepadActionConsumed()
@@ -147,7 +147,7 @@ fun GamePickerScreen(
                     GamepadAction.BACK -> cancelAndClear()
                     GamepadAction.SELECT -> viewModel.activateSelection()
                     GamepadAction.OPEN_CONTEXT_MENU -> viewModel.toggleSelectedPlatform()
-                    GamepadAction.HOME -> confirmAndClear()
+                    GamepadAction.HOME, GamepadAction.OPEN_ISLAND -> confirmAndClear()
                     else -> Unit
                 }
             },
@@ -168,7 +168,7 @@ private fun GamePickerHintBar(
             ControllerPromptItem(GamepadAction.SELECT, "Toggle"),
 
             ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Expand / Collapse"),
-            ControllerPromptItem(GamepadAction.HOME, "Add"),
+            ControllerPromptItem(GamepadAction.OPEN_ISLAND, "Add"),
             ControllerPromptItem(GamepadAction.BACK, "Cancel"),
         ),
         modifier = modifier,

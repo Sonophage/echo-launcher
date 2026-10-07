@@ -160,6 +160,6 @@ class NotificationSheetTest {
         val prompts = promptsFor(s)
         assertEquals(GamepadAction.SELECT, prompts.primary?.action)
         assertTrue(prompts.right.any { it.action == GamepadAction.CHANGE_SORT && it.verb == "Dismiss" })
-        assertTrue(prompts.right.any { it.action == GamepadAction.OPEN_SEARCH && it.verb.startsWith("Clear all") })
+        assertTrue(prompts.right.any { it.action == GamepadAction.OPEN_CONTEXT_MENU && it.verb.startsWith("Clear all") })
     }
 }

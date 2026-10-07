@@ -26,9 +26,9 @@ class KitButtonsMigrationTest {
     fun `a mapping saved before the kit gets the kit's buttons, or the hints would lie about the pad`() {
         val m = oldSaved(KeyEvent.KEYCODE_BUTTON_Y, KeyEvent.KEYCODE_BUTTON_X).withKitButtons()
         assertEquals(GamepadAction.HOME, m.actionFor(KeyEvent.KEYCODE_BUTTON_MODE))
-        assertEquals(GamepadAction.OPEN_CONTEXT_MENU, m.actionFor(KeyEvent.KEYCODE_BUTTON_START))
-        assertEquals(GamepadAction.HOME, m.actionFor(KeyEvent.KEYCODE_BUTTON_SELECT))
-        assertEquals(GamepadAction.OPEN_SEARCH, m.actionFor(KeyEvent.KEYCODE_BUTTON_Y))
+        assertEquals(GamepadAction.OPEN_ISLAND, m.actionFor(KeyEvent.KEYCODE_BUTTON_START))
+        assertEquals(GamepadAction.OPEN_NOTIFICATIONS, m.actionFor(KeyEvent.KEYCODE_BUTTON_SELECT))
+        assertEquals(GamepadAction.OPEN_CONTEXT_MENU, m.actionFor(KeyEvent.KEYCODE_BUTTON_Y))
         assertEquals("the hint draws Home as the guide button", ControllerIcon.SYSTEM, m.iconFor(GamepadAction.HOME))
     }
 
@@ -38,7 +38,7 @@ class KitButtonsMigrationTest {
             KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_Y,
             listOf(GamepadBinding(KeyEvent.KEYCODE_BUTTON_THUMBL, GamepadAction.CHANGE_SORT)),
         ).withKitButtons()
-        assertEquals(GamepadAction.OPEN_SEARCH, m.actionFor(KeyEvent.KEYCODE_BUTTON_X))
+        assertEquals(GamepadAction.OPEN_CONTEXT_MENU, m.actionFor(KeyEvent.KEYCODE_BUTTON_X))
         assertEquals(GamepadAction.CHANGE_SORT, m.actionFor(KeyEvent.KEYCODE_BUTTON_Y))
         assertEquals(GamepadAction.CHANGE_SORT, m.actionFor(KeyEvent.KEYCODE_BUTTON_THUMBL))
     }
@@ -58,5 +58,44 @@ class KitButtonsMigrationTest {
         assertEquals(GamepadAction.PREV_PAGE, m.actionFor(KeyEvent.KEYCODE_BUTTON_L1))
         assertEquals(GamepadAction.NEXT_PAGE, m.actionFor(KeyEvent.KEYCODE_BUTTON_R1))
         assertEquals("migrating twice changes nothing", m.bindings, m.withKitButtons().bindings)
+    }
+
+    // what controller_mappings_v1 held under the 2026-10-04 map: Y Search, Start Options, Select Home
+    private fun savedBeforeSplit(searchKey: Int, sortKey: Int) = GamepadMappings(
+        listOf(
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_A, GamepadAction.SELECT),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_B, GamepadAction.BACK),
+            GamepadBinding(sortKey, GamepadAction.CHANGE_SORT),
+            GamepadBinding(searchKey, GamepadAction.OPEN_SEARCH),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_L2, GamepadAction.PREV_CATEGORY),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_R2, GamepadAction.NEXT_CATEGORY),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_L1, GamepadAction.PREV_PAGE),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_R1, GamepadAction.NEXT_PAGE),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_MODE, GamepadAction.HOME),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_START, GamepadAction.OPEN_CONTEXT_MENU),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.HOME),
+        ),
+    )
+
+    // owner, 2026-10-06: Y the context menu, Start the island, Select the notifications. A saved mapping
+    // that kept the old roles would leave the pad disagreeing with every hint ECHO draws.
+    @Test
+    fun `a mapping saved under the old map moves Search, Options and Home to the new buttons`() {
+        val m = savedBeforeSplit(KeyEvent.KEYCODE_BUTTON_Y, KeyEvent.KEYCODE_BUTTON_X).withKitButtons()
+        assertEquals(GamepadAction.OPEN_CONTEXT_MENU, m.actionFor(KeyEvent.KEYCODE_BUTTON_Y))
+        assertEquals(GamepadAction.CHANGE_SORT, m.actionFor(KeyEvent.KEYCODE_BUTTON_X))
+        assertEquals(GamepadAction.OPEN_ISLAND, m.actionFor(KeyEvent.KEYCODE_BUTTON_START))
+        assertEquals(GamepadAction.OPEN_NOTIFICATIONS, m.actionFor(KeyEvent.KEYCODE_BUTTON_SELECT))
+        assertEquals("the guide button stays Home", GamepadAction.HOME, m.actionFor(KeyEvent.KEYCODE_BUTTON_MODE))
+        m.bindings.forEach { assertEquals("key ${it.keyCode} matches a fresh install", GamepadMappings().actionFor(it.keyCode), it.action) }
+        assertEquals("migrating twice changes nothing", m.bindings, m.withKitButtons().bindings)
+    }
+
+    @Test
+    fun `a swapped X and Y stays swapped through the move`() {
+        val m = savedBeforeSplit(KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_Y).withKitButtons()
+        assertEquals(GamepadAction.OPEN_CONTEXT_MENU, m.actionFor(KeyEvent.KEYCODE_BUTTON_X))
+        assertEquals(GamepadAction.CHANGE_SORT, m.actionFor(KeyEvent.KEYCODE_BUTTON_Y))
+        assertEquals(gamepadMappingsFor(ConfirmBackLayout.STANDARD, XYLayout.SWAPPED).actionFor(KeyEvent.KEYCODE_BUTTON_X), m.actionFor(KeyEvent.KEYCODE_BUTTON_X))
     }
 }

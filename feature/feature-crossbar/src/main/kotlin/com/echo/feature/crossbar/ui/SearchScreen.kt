@@ -213,7 +213,7 @@ fun SearchScreen(
 private fun KindChips(state: SearchState, u: DesignUnits, onPick: (SearchKind?) -> Unit) {
     val pad = LocalPadPrompts.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(6), Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-        if (pad) ControllerPrompt(GamepadAction.PREV_PAGE, "", glyphSize = u.dp(20), spacing = 0.dp)
+        if (pad) ControllerPrompt(GamepadAction.PREV_CATEGORY, "", glyphSize = u.dp(20), spacing = 0.dp)
         val chip: @Composable (String, Boolean, () -> Unit) -> Unit = { label, on, pick ->
             Text(
                 label,
@@ -228,7 +228,7 @@ private fun KindChips(state: SearchState, u: DesignUnits, onPick: (SearchKind?) 
         state.kindCounts.forEach { (kind, count) ->
             chip("${kind.noun.replaceFirstChar { it.uppercase() }} $count", state.kind == kind) { onPick(kind) }
         }
-        if (pad) ControllerPrompt(GamepadAction.NEXT_PAGE, "", glyphSize = u.dp(20), spacing = 0.dp)
+        if (pad) ControllerPrompt(GamepadAction.NEXT_CATEGORY, "", glyphSize = u.dp(20), spacing = 0.dp)
     }
 }
 

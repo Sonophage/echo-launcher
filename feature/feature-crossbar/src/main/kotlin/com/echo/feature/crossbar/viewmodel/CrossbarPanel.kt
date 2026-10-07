@@ -423,7 +423,8 @@ class CrossbarPanel(
         vm.runStageButton(GamepadAction.SELECT)
     }
 
-    // kit 11: LB/RB step the notifications chips (All, Messages, System)
+    // kit 11: the notifications chips (All, Messages, System); left and right step them (owner, 2026-10-06:
+    // the bumpers are Apps and Search everywhere)
     fun stepNoticeChip(delta: Int) {
         val chips = NoticeChip.entries
         uiState.update { s -> s.copy(noticeChip = chips[(s.noticeChip.ordinal + delta).mod(chips.size)], noticeCursor = 0) }
@@ -441,15 +442,16 @@ class CrossbarPanel(
         when (action) {
             GamepadAction.NAVIGATE_UP   -> movePanelCursor(PanelMove.UP)
             GamepadAction.NAVIGATE_DOWN -> movePanelCursor(PanelMove.DOWN)
-            GamepadAction.NAVIGATE_LEFT  -> movePanelCursor(PanelMove.LEFT)
-            GamepadAction.NAVIGATE_RIGHT -> movePanelCursor(PanelMove.RIGHT)
+            GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT ->
+                if (state.panelTab == PanelTab.NOTIFICATIONS) stepNoticeChip(if (action == GamepadAction.NAVIGATE_RIGHT) 1 else -1)
+                else movePanelCursor(if (action == GamepadAction.NAVIGATE_RIGHT) PanelMove.RIGHT else PanelMove.LEFT)
             GamepadAction.PREV_CATEGORY -> movePanelCursor(PanelMove.PREV_TAB)
             GamepadAction.NEXT_CATEGORY -> movePanelCursor(PanelMove.NEXT_TAB)
-            GamepadAction.PREV_PAGE,
-            GamepadAction.NEXT_PAGE -> if (state.panelTab == PanelTab.NOTIFICATIONS) stepNoticeChip(if (action == GamepadAction.NEXT_PAGE) 1 else -1)
+            // LB Apps, RB Search: the panel closes for them
+            GamepadAction.PREV_PAGE -> { closeNotifications(); vm.onOpenAppDrawer() }
+            GamepadAction.NEXT_PAGE -> { closeNotifications(); vm.librarySearch.openSearch(SearchScope.ALL) }
             GamepadAction.SELECT,
             GamepadAction.CHANGE_SORT,
-            GamepadAction.OPEN_SEARCH,
             GamepadAction.OPEN_CONTEXT_MENU -> when (state.panelTab) {
                 PanelTab.NOTIFICATIONS -> vm.runStageButton(action)
                 PanelTab.PROFILE -> runPanelProfile(action)
@@ -458,6 +460,7 @@ class CrossbarPanel(
                 PanelTab.SETTINGS -> if (action == GamepadAction.SELECT) openPanelSetting(state.panelSetting)
             }
             GamepadAction.BACK,
+            GamepadAction.OPEN_NOTIFICATIONS,
             GamepadAction.HOME               -> if (action == GamepadAction.BACK && state.panelTab == PanelTab.PROFILE && state.panelProfile.choosing) {
                 menuSound.play(MenuSound.BACK)
                 uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.EDIT)) }

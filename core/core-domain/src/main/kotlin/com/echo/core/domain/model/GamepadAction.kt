@@ -28,6 +28,10 @@ enum class GamepadAction {
     PREV_PAGE,
     NEXT_PAGE,
     HOME,
+
+    // owner, 2026-10-06: Start opens the island (now playing or last played), Select the notifications
+    OPEN_ISLAND,
+    OPEN_NOTIFICATIONS,
 }
 
 val GamepadAction.isDirectional: Boolean

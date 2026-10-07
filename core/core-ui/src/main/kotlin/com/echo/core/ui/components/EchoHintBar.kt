@@ -81,6 +81,8 @@ data class HintAction(
     // over 0, A must be held this long; holding is true while the ring fills
     val holdMs: Long = 0L,
     val holding: Boolean = false,
+    // what a finger on the card does, when it is not what the button does (Y held is Resume, a tap of Y Options)
+    val onTouch: (() -> Unit)? = null,
 )
 
 fun primaryHint(items: List<ControllerPromptItem>, detail: String? = null): HintAction? =
@@ -339,9 +341,9 @@ private fun ActionCard(
                     .clip(RoundedCornerShape(u.dp(10)))
                     .then(
                         if (second.holdMs > 0L && onAction != null) {
-                            Modifier.pressAndHold(second.holdMs, second.label, { secondPressing = it }) { onAction(second.action) }
+                            Modifier.pressAndHold(second.holdMs, second.label, { secondPressing = it }) { second.onTouch?.invoke() ?: onAction(second.action) }
                         } else {
-                            Modifier.clickable(enabled = onAction != null, role = Role.Button, onClickLabel = second.label) { onAction?.invoke(second.action) }
+                            Modifier.clickable(enabled = onAction != null, role = Role.Button, onClickLabel = second.label) { second.onTouch?.invoke() ?: onAction?.invoke(second.action) }
                         }
                     )
                     .then(if (!pad && second.holdMs > 0L) Modifier.holdOutline(secondProgress, Color.White, u.dp(2)) else Modifier)

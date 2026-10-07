@@ -1292,6 +1292,36 @@ internal fun CrossbarUiState.withDrawerAndSearchClosed(): CrossbarUiState = copy
     search = null,
 )
 
+enum class GlobalStep { APPS, SEARCH, CLOSE_SEARCH, NOTIFICATIONS, HOME }
+
+// owner, 2026-10-06: the same buttons on every screen but the players and editors, which keep the bumpers
+// for paging and seeking: LB Apps, RB Search, Select the notifications, Home (the guide button, or Select
+// held) back to the crossbar. Null leaves the press to the screen.
+internal fun globalStep(action: GamepadAction, s: CrossbarUiState): GlobalStep? {
+    val keepsItsButtons = s.activePhotoViewer != null || s.activeVideoId != null || s.metadataPreview != null ||
+        s.manualViewer != null || s.artworkStudioGameId != null || s.showBootSequence || s.activeGameBoot != null ||
+        s.musicBrowser != null || s.customIconSession != null || s.saveThemeNameDialog != null
+    if (keepsItsButtons) return null
+    return when (action) {
+        // LB in the drawer closes it, as RB in Search closes Search; from the drawer's own search, back to it
+        GamepadAction.PREV_PAGE -> GlobalStep.APPS.takeUnless { s.activeAppDrawerFilter != null && s.search == null }
+        GamepadAction.NEXT_PAGE -> when {
+            s.search != null -> GlobalStep.CLOSE_SEARCH
+            // in the drawer, Search is the drawer's own
+            s.activeAppDrawerFilter != null -> null
+            else -> GlobalStep.SEARCH
+        }
+        GamepadAction.OPEN_NOTIFICATIONS -> GlobalStep.NOTIFICATIONS.takeIf { s.statusStripVisible }
+        // the first-run wizard is not left this way
+        GamepadAction.HOME -> GlobalStep.HOME.takeUnless { s.activeSettingsScreen in CrossbarViewModel.WIZARD_SCREEN_IDS }
+        else -> null
+    }
+}
+
+// Game Info, Profile and an app's page draw above the drawer and Search, so they close for them
+internal fun CrossbarUiState.withScreensOverCrossbarClosed(): CrossbarUiState =
+    copy(gameInfo = null, profile = null, activeAppId = null, pendingAppDetailAction = null)
+
 internal fun CrossbarUiState.withSettingsOpen(screenId: String): CrossbarUiState = withDrawerAndSearchClosed().copy(
     activeSettingsScreen = screenId,
     gameInfo = null,
@@ -1401,7 +1431,7 @@ class CrossbarViewModel @Inject constructor(
 
     internal fun startLaunchHold(item: CrossbarItem, launch: () -> Unit) = launchHold.start(item.id, launch)
 
-    internal fun releaseLaunchHold() = launchHold.release()
+    internal fun releaseLaunchHold() { launchHold.release() }
 
     // starts the launch ring when a pad A press would leave ECHO; false means act now
     internal fun holdToLaunch(item: CrossbarItem, launch: () -> Unit): Boolean {
@@ -1411,10 +1441,10 @@ class CrossbarViewModel @Inject constructor(
         return true
     }
 
-    // Y Resume is a launch too, so it takes the same hold, on Y
+    // Resume is a launch too, so it takes the same hold, on Y; Y let go early opens the menu instead
     private fun holdToResume(item: CrossbarItem, resume: () -> Unit): Boolean {
-        if (heldFromPad != GamepadAction.OPEN_SEARCH) return false
-        holdButton = GamepadAction.OPEN_SEARCH
+        if (heldFromPad != GamepadAction.OPEN_CONTEXT_MENU) return false
+        holdButton = GamepadAction.OPEN_CONTEXT_MENU
         launchHold.start(resumeHoldId(item.id), resume)
         return true
     }
@@ -2478,6 +2508,12 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
+    // a finger on the footer's Resume card
+    fun resumeFocusedGame() {
+        markTouchInput()
+        _uiState.value.resumableFocus()?.gameId?.let(launching::resumeGame)
+    }
+
     fun onPromptTapped(action: GamepadAction) {
         markTouchInput()
         dispatchGamepadAction(action)
@@ -2495,7 +2531,7 @@ class CrossbarViewModel @Inject constructor(
                 markControllerInput()
                 onUserInteraction()
                 if (action != holdButton) launchHold.release()
-                heldFromPad = action.takeIf { it == GamepadAction.SELECT || it == GamepadAction.OPEN_SEARCH }
+                heldFromPad = action.takeIf { it == GamepadAction.SELECT || it == GamepadAction.OPEN_CONTEXT_MENU }
                 try {
                     dispatchGamepadAction(action)
                 } finally {
@@ -2505,7 +2541,7 @@ class CrossbarViewModel @Inject constructor(
         }
         viewModelScope.launch {
             gamepadInputHandler.holdReleases.collect { released ->
-                if (released == holdButton) launchHold.release()
+                if (released == holdButton && launchHold.release() && released == GamepadAction.OPEN_CONTEXT_MENU) openContextMenuForFocusedItem()
                 if (released == GamepadAction.SELECT && _uiState.value.activeAppDrawerFilter != null) {
                     _uiState.update { it.copy(drawerSelectReleases = it.drawerSelectReleases + 1) }
                 }
@@ -2628,6 +2664,7 @@ class CrossbarViewModel @Inject constructor(
                 GamepadAction.NAVIGATE_DOWN,
                 GamepadAction.SELECT,
                 GamepadAction.HOME,
+                GamepadAction.OPEN_ISLAND,
                 GamepadAction.BACK,
                 GamepadAction.OPEN_CONTEXT_MENU -> _uiState.update { it.copy(pendingGamePickerAction = action) }
                 else -> Unit
@@ -2669,10 +2706,10 @@ class CrossbarViewModel @Inject constructor(
                 GamepadAction.NAVIGATE_DOWN  -> nudgeCrossbarLayoutVertical(+1)
                 GamepadAction.PREV_CATEGORY  -> nudgeCrossbarLayoutScale(-1)
                 GamepadAction.NEXT_CATEGORY  -> nudgeCrossbarLayoutScale(+1)
-                GamepadAction.OPEN_CONTEXT_MENU -> resetCrossbarLayoutAdjust()
+                GamepadAction.OPEN_ISLAND    -> resetCrossbarLayoutAdjust()
                 GamepadAction.PREV_PAGE      -> nudgeCrossbarChrome(-1)
                 GamepadAction.NEXT_PAGE      -> nudgeCrossbarChrome(+1)
-                GamepadAction.OPEN_SEARCH    -> state.crossbarLayoutAdjust.let { s ->
+                GamepadAction.OPEN_CONTEXT_MENU -> state.crossbarLayoutAdjust.let { s ->
                     _uiState.update { it.copy(crossbarLayoutAdjust = s.copy(sizingHeader = !s.sizingHeader)) }
                 }
 
@@ -2751,7 +2788,9 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
-        if (state.noticeCardPinned && action != GamepadAction.HOME && panel.onNoticeCardButton(action, state)) return
+        if (globalButton(action, state)) return
+
+        if (state.noticeCardPinned && action != GamepadAction.OPEN_NOTIFICATIONS && panel.onNoticeCardButton(action, state)) return
 
         if (state.search != null) {
             librarySearch.onButton(action, state)
@@ -2770,11 +2809,6 @@ class CrossbarViewModel @Inject constructor(
 
         if (state.activeGameBoot != null) {
             launching.onGameBootButton(action, state)
-            return
-        }
-
-        if (action == GamepadAction.HOME && state.statusStripVisible) {
-            panel.pressNoticeIsland()
             return
         }
 
@@ -2803,6 +2837,10 @@ class CrossbarViewModel @Inject constructor(
                 _uiState.update { it.copy(pendingAppDetailAction = action) }
                 return
             }
+            state.activeAppDrawerFilter != null -> {
+                _uiState.update { it.copy(pendingDrawerAction = action) }
+                return
+            }
             state.activeSettingsScreen != null -> {
                 Timber.d("Gamepad → settings(${state.activeSettingsScreen}): $action")
 
@@ -2821,10 +2859,6 @@ class CrossbarViewModel @Inject constructor(
                     GamepadAction.SELECT -> _uiState.update { it.copy(pendingSettingsAction = action) }
                     else -> Unit
                 }
-                return
-            }
-            state.activeAppDrawerFilter != null -> {
-                _uiState.update { it.copy(pendingDrawerAction = action) }
                 return
             }
             state.saveThemeNameDialog != null -> {
@@ -2929,15 +2963,19 @@ class CrossbarViewModel @Inject constructor(
                     return
                 }
 
-                if (!backOutOfDrill(state)) onOpenAppDrawer()
+                // owner, 2026-10-06: B is only ever Back; at the root there is nothing to go back to
+                backOutOfDrill(state)
             }
 
-            GamepadAction.OPEN_CONTEXT_MENU -> openContextMenuForFocusedItem()
+            // on the game that is running, Y held resumes it; a tap of Y opens its menu when let go
+            GamepadAction.OPEN_CONTEXT_MENU -> {
+                val running = state.resumableFocus()
+                if (running == null || !holdToResume(running) { running.gameId?.let(launching::resumeGame) }) openContextMenuForFocusedItem()
+            }
 
-            // the crossbar does not page, so its bumpers open Search (LB) and Apps (RB)
-            GamepadAction.PREV_PAGE     -> librarySearch.openSearch(SearchScope.ALL)
-            GamepadAction.NEXT_PAGE     -> onOpenAppDrawer()
-            GamepadAction.HOME          -> panel.pressNoticeIsland()
+            // LB, RB, Select and Home are taken by globalButton before the crossbar sees them
+            GamepadAction.PREV_PAGE, GamepadAction.NEXT_PAGE, GamepadAction.HOME, GamepadAction.OPEN_NOTIFICATIONS -> Unit
+            GamepadAction.OPEN_ISLAND   -> focusOrb(state)
 
             GamepadAction.CHANGE_SORT -> when {
                 !state.onLastPlayedHome -> cycleSort()
@@ -2946,10 +2984,7 @@ class CrossbarViewModel @Inject constructor(
                     ?.let(gameDetail::onOpenGameInfo)
             }
 
-            GamepadAction.OPEN_SEARCH -> state.resumableFocus()?.let { item ->
-                val resume = { item.gameId?.let(launching::resumeGame); Unit }
-                if (!holdToResume(item, resume)) resume()
-            } ?: librarySearch.openSearch(SearchScope.ALL)
+            GamepadAction.OPEN_SEARCH -> librarySearch.openSearch(SearchScope.ALL)
 
             GamepadAction.PREV_CATEGORY -> if (state.onLastPlayedHome) recents.stepRecentFilter(-1) else stepHoverPanelPage(-1)
             GamepadAction.NEXT_CATEGORY -> if (state.onLastPlayedHome) recents.stepRecentFilter(+1) else stepHoverPanelPage(+1)
@@ -3519,6 +3554,38 @@ class CrossbarViewModel @Inject constructor(
     }
 
     // true when the orb took the press
+    // Start: the island takes the controller, as up from the top of a list does; nothing when it is empty
+    private fun focusOrb(state: CrossbarUiState) {
+        if (state.orbKind() == null) return
+        menuSound.play(MenuSound.SCROLL)
+        _uiState.update { it.copy(orbLevel = 1) }
+    }
+
+    // the press as globalStep decides it; true when it was taken here
+    private fun globalButton(action: GamepadAction, state: CrossbarUiState): Boolean {
+        when (globalStep(action, state) ?: return false) {
+            GlobalStep.APPS -> {
+                _uiState.update { it.withScreensOverCrossbarClosed().copy(search = null) }
+                onOpenAppDrawer()
+            }
+            GlobalStep.SEARCH -> {
+                _uiState.update { it.withScreensOverCrossbarClosed() }
+                librarySearch.openSearch(SearchScope.ALL)
+            }
+            GlobalStep.CLOSE_SEARCH -> librarySearch.closeSearch()
+            GlobalStep.NOTIFICATIONS -> panel.pressNoticeIsland()
+            GlobalStep.HOME -> {
+                menuSound.play(MenuSound.BACK)
+                if (state.activeAppId != null) onCloseAppDetail()
+                _uiState.update {
+                    it.withScreensOverCrossbarClosed().withDrawerAndSearchClosed().withSettingsClosed()
+                        .copy(notificationsOpen = false, orbLevel = 0)
+                }
+            }
+        }
+        return true
+    }
+
     private fun orbPressHandled(action: GamepadAction, state: CrossbarUiState): Boolean {
         if (state.orbLevel == 0) return false
         val kind = state.orbKind()

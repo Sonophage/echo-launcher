@@ -32,6 +32,9 @@ private const val DUPLICATE_WINDOW_MS = 80L
 
 private const val STICK_FULL_TILT_RAMP_FACTOR = 2
 
+// owner, 2026-10-06: a press of Select opens the notifications, holding it is Home
+internal const val SELECT_HOLD_MS = 500L
+
 internal data class RepeatTuning(
     val initialDelayMs: Long,
     val baseIntervalMs: Long,
@@ -90,6 +93,9 @@ class GamepadInputHandler @Inject constructor(
 
     private var repeatJob: Job? = null
 
+    // Select is down and has not yet become Home
+    private var notificationsJob: Job? = null
+
     private var leftTriggerDown = false
     private var rightTriggerDown = false
     private val tabOwner = mutableMapOf<GamepadAction, TabSource>()
@@ -132,6 +138,10 @@ class GamepadInputHandler @Inject constructor(
                         tabPress(action, TabSource.KEY)
                         return true
                     }
+                    if (action == GamepadAction.OPEN_NOTIFICATIONS) {
+                        armHomeHold()
+                        return true
+                    }
                     emit(action, physical = true)
                 }
                 true
@@ -139,7 +149,8 @@ class GamepadInputHandler @Inject constructor(
             KeyEvent.ACTION_UP -> {
                 if (action.isDirectional()) cancelRepeat()
                 if (action.isShoulder()) tabRelease(action, TabSource.KEY)
-                if (action == GamepadAction.SELECT || action == GamepadAction.OPEN_SEARCH) _holdReleases.tryEmit(action)
+                if (action == GamepadAction.SELECT || action == GamepadAction.OPEN_CONTEXT_MENU) _holdReleases.tryEmit(action)
+                if (action == GamepadAction.OPEN_NOTIFICATIONS) releaseHomeHold()
                 true
             }
             else -> false
@@ -295,6 +306,25 @@ class GamepadInputHandler @Inject constructor(
         val now = clock()
         val last = lastDirectionalEmitAt[action]
         return last != null && now - last < DUPLICATE_WINDOW_MS
+    }
+
+    // with no scope to time the hold, a press is the notifications at once
+    private fun armHomeHold() {
+        val s = scope ?: run { emit(GamepadAction.OPEN_NOTIFICATIONS, physical = true); return }
+        notificationsJob?.cancel()
+        notificationsJob = s.launch {
+            delay(SELECT_HOLD_MS)
+            notificationsJob = null
+            emit(GamepadAction.HOME, physical = true)
+        }
+    }
+
+    // let go before the hold time: it was a press
+    private fun releaseHomeHold() {
+        val job = notificationsJob ?: return
+        notificationsJob = null
+        job.cancel()
+        emit(GamepadAction.OPEN_NOTIFICATIONS, physical = true)
     }
 
     private fun armShoulderHold(action: GamepadAction) {

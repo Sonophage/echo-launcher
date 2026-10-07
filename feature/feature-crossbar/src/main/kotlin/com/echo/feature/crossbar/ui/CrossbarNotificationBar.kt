@@ -230,7 +230,7 @@ fun CrossbarNotificationBar(
 @Composable
 private fun NoticeChips(chip: NoticeChip, allCount: Int, u: DesignUnits, onTapped: (NoticeChip) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
-        if (LocalPadPrompts.current) ControllerPrompt(GamepadAction.PREV_PAGE, "", glyphSize = u.dp(22), spacing = 0.dp)
+        if (LocalPadPrompts.current) ControllerPrompt(GamepadAction.NAVIGATE_LEFT, "", glyphSize = u.dp(22), spacing = 0.dp)
         NoticeChip.entries.forEach { c ->
             val on = c == chip
             Text(
@@ -245,7 +245,7 @@ private fun NoticeChips(chip: NoticeChip, allCount: Int, u: DesignUnits, onTappe
                     .padding(horizontal = u.dp(18), vertical = u.dp(8)),
             )
         }
-        if (LocalPadPrompts.current) ControllerPrompt(GamepadAction.NEXT_PAGE, "", glyphSize = u.dp(22), spacing = 0.dp)
+        if (LocalPadPrompts.current) ControllerPrompt(GamepadAction.NAVIGATE_RIGHT, "", glyphSize = u.dp(22), spacing = 0.dp)
     }
 }
 

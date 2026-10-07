@@ -24,6 +24,7 @@ fun CrossbarHintBar(
     holdMs: Long = 0L,
     holding: Boolean = false,
     resumeHolding: Boolean = false,
+    onResume: () -> Unit = {},
 ) {
     EchoHintBar(
         items = buildList {
@@ -42,7 +43,7 @@ fun CrossbarHintBar(
                 else listOfNotNull(p.target, p.detail).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null }
             HintAction(p.action, p.verb, detail, holdMs, holding)
         },
-        secondary = prompts.resume?.let { HintAction(it.action, it.verb, it.target, LAUNCH_HOLD_MS, resumeHolding) },
+        secondary = prompts.resume?.let { HintAction(it.action, it.verb, it.target, LAUNCH_HOLD_MS, resumeHolding, onTouch = onResume) },
     )
 }
 

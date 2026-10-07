@@ -30,24 +30,23 @@ val DEFAULT_BINDINGS = listOf(
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_A,      GamepadAction.SELECT),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_B,      GamepadAction.BACK),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_X,      GamepadAction.CHANGE_SORT),
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_Y,      GamepadAction.OPEN_SEARCH),
+    // owner, 2026-10-06: Y is always the context menu, X sort
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_Y,      GamepadAction.OPEN_CONTEXT_MENU),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_UP,       GamepadAction.NAVIGATE_UP),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_DOWN,     GamepadAction.NAVIGATE_DOWN),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_LEFT,     GamepadAction.NAVIGATE_LEFT),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_RIGHT,    GamepadAction.NAVIGATE_RIGHT),
-    // owner, 2026-10-04: tabs and filters on the triggers; the bumpers take what the triggers did
-    // (paging, seeking), and at the crossbar LB is Search and RB is Apps
+    // owner, 2026-10-04: tabs and filters on the triggers. owner, 2026-10-06: the bumpers are LB Apps and RB
+    // Search on every screen; only the players and editors (video, reader, Artwork Studio) page or seek with them
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_L2,     GamepadAction.PREV_CATEGORY),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_R2,     GamepadAction.NEXT_CATEGORY),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_L1,     GamepadAction.PREV_PAGE),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_R1,     GamepadAction.NEXT_PAGE),
-    // the kit's buttons (owner, 2026-10-04): the guide button is Home, the menu button Options, Y search.
-    // MODE comes before SELECT so the hint draws Home with the guide glyph, the Echo mark.
+    // the guide button is Home (owner, 2026-10-04). owner, 2026-10-06: Start opens the island, Select the
+    // notifications, and holding Select is Home, for systems that keep the guide button for themselves
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_MODE,   GamepadAction.HOME),
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_START,  GamepadAction.OPEN_CONTEXT_MENU),
-
-    // View is Home too, for systems that keep the guide button for themselves
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.HOME),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_START,  GamepadAction.OPEN_ISLAND),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.OPEN_NOTIFICATIONS),
     GamepadBinding(KeyEvent.KEYCODE_ENTER,         GamepadAction.SELECT),
     GamepadBinding(KeyEvent.KEYCODE_BACK,          GamepadAction.BACK),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_CENTER,   GamepadAction.SELECT),
@@ -68,7 +67,7 @@ fun gamepadMappingsFor(
         ConfirmBackLayout.STANDARD -> KeyEvent.KEYCODE_BUTTON_A
         ConfirmBackLayout.REVERSED -> KeyEvent.KEYCODE_BUTTON_B
     }
-    val searchKey = when (xy) {
+    val contextKey = when (xy) {
         XYLayout.STANDARD -> KeyEvent.KEYCODE_BUTTON_Y
         XYLayout.SWAPPED -> KeyEvent.KEYCODE_BUTTON_X
     }
@@ -81,8 +80,8 @@ fun gamepadMappingsFor(
                 )
                 KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_Y -> GamepadBinding(
                     binding.keyCode,
-                    if (binding.keyCode == searchKey) {
-                        GamepadAction.OPEN_SEARCH
+                    if (binding.keyCode == contextKey) {
+                        GamepadAction.OPEN_CONTEXT_MENU
                     } else {
                         GamepadAction.CHANGE_SORT
                     },
@@ -96,7 +95,25 @@ fun gamepadMappingsFor(
 // mappings saved before the kit's buttons have Options on a face button and Home on Start. Moves
 // those three roles to where DEFAULT_BINDINGS has them and keeps every other choice (A/B and X/Y swaps,
 // remapped keys). A mapping that already binds the guide button is taken as current.
-fun GamepadMappings.withKitButtons(): GamepadMappings = withKitFaceButtons().withTriggerTabs()
+fun GamepadMappings.withKitButtons(): GamepadMappings = withKitFaceButtons().withTriggerTabs().withMenuButtonsSplit()
+
+// mappings saved before 2026-10-06 have Search on a face button, Options on Start and Home on Select: the face
+// button becomes the context menu, Start the island and Select the notifications. A mapping that already
+// binds either new action is taken as current.
+private fun GamepadMappings.withMenuButtonsSplit(): GamepadMappings {
+    if (bindings.any { it.action == GamepadAction.OPEN_ISLAND || it.action == GamepadAction.OPEN_NOTIFICATIONS }) return this
+    return GamepadMappings(
+        bindings.map { b ->
+            when {
+                (b.keyCode == KeyEvent.KEYCODE_BUTTON_X || b.keyCode == KeyEvent.KEYCODE_BUTTON_Y) &&
+                    b.action == GamepadAction.OPEN_SEARCH -> b.copy(action = GamepadAction.OPEN_CONTEXT_MENU)
+                b.keyCode == KeyEvent.KEYCODE_BUTTON_START && b.action == GamepadAction.OPEN_CONTEXT_MENU -> b.copy(action = GamepadAction.OPEN_ISLAND)
+                b.keyCode == KeyEvent.KEYCODE_BUTTON_SELECT && b.action == GamepadAction.HOME -> b.copy(action = GamepadAction.OPEN_NOTIFICATIONS)
+                else -> b
+            }
+        },
+    )
+}
 
 // mappings saved before the triggers took the tabs: the bumpers and triggers trade places
 private fun GamepadMappings.withTriggerTabs(): GamepadMappings {
@@ -137,9 +154,11 @@ fun GamepadAction.displayLabel(): String = when (this) {
     GamepadAction.OPEN_SEARCH       -> "Search Your Libraries"
     GamepadAction.PREV_CATEGORY     -> "Previous Tab / Filter"
     GamepadAction.NEXT_CATEGORY     -> "Next Tab / Filter"
-    GamepadAction.PREV_PAGE         -> "Previous Page (Search on the crossbar)"
-    GamepadAction.NEXT_PAGE         -> "Next Page (Apps on the crossbar)"
-    GamepadAction.HOME              -> "Home (Confirm in pickers)"
+    GamepadAction.PREV_PAGE         -> "Apps (Previous Page in players)"
+    GamepadAction.NEXT_PAGE         -> "Search (Next Page in players)"
+    GamepadAction.HOME              -> "Home"
+    GamepadAction.OPEN_ISLAND       -> "Now Playing Island (Confirm in pickers)"
+    GamepadAction.OPEN_NOTIFICATIONS -> "Notifications (hold for Home)"
 }
 
 fun Int.keycodeDisplayName(): String = when (this) {

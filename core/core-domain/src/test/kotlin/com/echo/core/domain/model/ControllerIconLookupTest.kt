@@ -60,18 +60,21 @@ class ControllerIconLookupTest {
     }
 
     @Test
-    fun `search follows the X-Y setting, as Options did before the kit's buttons`() {
-        assertEquals(ControllerIcon.FACE_NORTH, standard.iconFor(GamepadAction.OPEN_SEARCH))
+    // owner, 2026-10-06: Y is always the context menu
+    fun `Options follows the X-Y setting`() {
+        assertEquals(ControllerIcon.FACE_NORTH, standard.iconFor(GamepadAction.OPEN_CONTEXT_MENU))
 
         val swapped = mappings(ConfirmBackLayout.STANDARD, XYLayout.SWAPPED)
-        assertEquals(ControllerIcon.FACE_WEST, swapped.iconFor(GamepadAction.OPEN_SEARCH))
+        assertEquals(ControllerIcon.FACE_WEST, swapped.iconFor(GamepadAction.OPEN_CONTEXT_MENU))
     }
 
+    // owner, 2026-10-06: Start is the island and Select the notifications
     @Test
-    fun `Options sits on the menu button under every layout, as the kit's hint row draws it`() {
+    fun `the island sits on Start and the notifications on Select under every layout`() {
         for (confirmBack in ConfirmBackLayout.entries) {
             for (xy in XYLayout.entries) {
-                assertEquals(ControllerIcon.START, mappings(confirmBack, xy).iconFor(GamepadAction.OPEN_CONTEXT_MENU))
+                assertEquals(ControllerIcon.START, mappings(confirmBack, xy).iconFor(GamepadAction.OPEN_ISLAND))
+                assertEquals(ControllerIcon.SELECT, mappings(confirmBack, xy).iconFor(GamepadAction.OPEN_NOTIFICATIONS))
             }
         }
     }
@@ -89,7 +92,7 @@ class ControllerIconLookupTest {
         val both = mappings(ConfirmBackLayout.REVERSED, XYLayout.SWAPPED)
         assertEquals(ControllerIcon.FACE_EAST, both.iconFor(GamepadAction.SELECT))
         assertEquals(ControllerIcon.FACE_SOUTH, both.iconFor(GamepadAction.BACK))
-        assertEquals(ControllerIcon.FACE_WEST, both.iconFor(GamepadAction.OPEN_SEARCH))
+        assertEquals(ControllerIcon.FACE_WEST, both.iconFor(GamepadAction.OPEN_CONTEXT_MENU))
         assertEquals(ControllerIcon.FACE_NORTH, both.iconFor(GamepadAction.CHANGE_SORT))
     }
 

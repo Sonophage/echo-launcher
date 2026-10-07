@@ -155,7 +155,7 @@ private fun StudioPickStatus(
                 CrossbarHeaderPill(label = "Apply ›", onClick = onApply)
             } else {
                 ControllerPrompt(
-                    action = GamepadAction.HOME,
+                    action = GamepadAction.OPEN_ISLAND,
                     label = "Apply",
                     glyphSize = 12.dp,
                     labelColor = Color.White.copy(alpha = 0.6f),

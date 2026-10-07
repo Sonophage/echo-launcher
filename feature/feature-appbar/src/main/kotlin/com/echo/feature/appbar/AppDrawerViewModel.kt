@@ -233,15 +233,6 @@ class AppDrawerViewModel @Inject constructor(
     }
 
     // owner, 2026-10-04: LB/RB walk the Games tab's system filters
-    fun stepSystemChip(delta: Int): Boolean {
-        val state = _uiState.value
-        if (!state.showSystemChips) return false
-        val chips = state.systemChips
-        val at = chips.indexOfFirst { it.id == state.systemFilter }.coerceAtLeast(0)
-        selectSystem(chips[(at + delta).mod(chips.size)].id)
-        return true
-    }
-
     fun onSystemChipTapped(id: String?) {
         _uiState.update { it.copy(usingTouch = true) }
         selectSystem(id)

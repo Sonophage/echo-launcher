@@ -262,7 +262,7 @@ internal fun ArtworkStudioContent(
                         ) {
                             if (!showTouchControls) {
                                 ControllerPrompt(
-                                    action = GamepadAction.HOME,
+                                    action = GamepadAction.OPEN_ISLAND,
                                     label = "",
                                     glyphSize = 12.dp,
                                     labelColor = Color.White.copy(alpha = 0.5f),

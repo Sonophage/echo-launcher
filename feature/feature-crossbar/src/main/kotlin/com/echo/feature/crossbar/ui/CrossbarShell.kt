@@ -268,6 +268,7 @@ fun CrossbarShellContainer(
         onThemeShareConsumed = viewModel.look::onThemeShareConsumed,
         onSettingsActionConsumed = viewModel::consumeSettingsAction,
         onPromptTapped = viewModel::onPromptTapped,
+        onResumeTapped = viewModel::resumeFocusedGame,
         onCloseAppDrawer = viewModel::onCloseAppDrawer,
         onAddAppToOpenCategory = viewModel::addAppToOpenCategory,
         onLaunchRomFromDrawer = viewModel.launching::launchGameFromDrawer,
@@ -469,6 +470,7 @@ fun CrossbarShell(
     onSettingsActionConsumed: () -> Unit = {},
 
     onPromptTapped: (com.echo.core.domain.model.GamepadAction) -> Unit = {},
+    onResumeTapped: () -> Unit = {},
 
 
     onCloseAppDrawer: () -> Unit = {},
@@ -1283,6 +1285,7 @@ fun CrossbarShell(
                         holdMs = holdMsFor(hintItem.takeIf { !uiState.hasBlockingOverlay }),
                         holding = hintItem != null && uiState.launchHold == hintItem.id,
                         resumeHolding = uiState.resumableFocus()?.let { uiState.launchHold == resumeHoldId(it.id) } == true,
+                        onResume = onResumeTapped,
                     )
                 }
             }

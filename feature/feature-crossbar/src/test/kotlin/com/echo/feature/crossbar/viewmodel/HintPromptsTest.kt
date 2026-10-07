@@ -72,9 +72,10 @@ class HintPromptsTest {
     }
 
     @Test
-    fun `the root offers Apps on RB, not on BACK, so a touch back arrow only ever goes back`() {
+    // owner, 2026-10-06: LB is Apps and B is only ever Back
+    fun `the root offers Apps on LB, not on BACK, so a touch back arrow only ever goes back`() {
         assertEquals("Apps", promptsFor(state()).back.verb)
-        assertEquals(GamepadAction.NEXT_PAGE, promptsFor(state()).back.action)
+        assertEquals(GamepadAction.PREV_PAGE, promptsFor(state()).back.action)
         assertEquals("Back", promptsFor(state(drilled = "psp")).back.verb)
         assertEquals(GamepadAction.BACK, promptsFor(state(drilled = "psp")).back.action)
     }
@@ -94,7 +95,7 @@ class HintPromptsTest {
 
     @Test
     fun `Search is offered at the root and withdrawn inside a drill`() {
-        assertTrue(promptsFor(state()).right.any { it.verb == "Search" })
+        assertTrue("RB is Search", promptsFor(state()).right.any { it.verb == "Search" && it.action == GamepadAction.NEXT_PAGE })
         assertTrue(promptsFor(state(drilled = "psp")).right.none { it.verb == "Search" })
     }
 
@@ -147,13 +148,13 @@ class LastPlayedPromptsTest {
     }
 
     @Test
+    // owner, 2026-10-06: Y is the context menu, so Resume is Y held and a tap of Y still opens the menu
     fun `the game ECHO just sent away splits the orb into Y Resume and A Play, a new session`() {
         val back = promptsFor(home(skyrim).copy(resumeGameId = 1L))
         assertEquals("Resume", back.resume?.verb)
-        assertEquals(GamepadAction.OPEN_SEARCH, back.resume?.action)
+        assertEquals(GamepadAction.OPEN_CONTEXT_MENU, back.resume?.action)
         assertEquals("Play", back.primary?.verb)
         assertEquals("New session", back.primary?.target)
-        assertTrue("Y cannot be Search and Resume at once", back.right.none { it.action == GamepadAction.OPEN_SEARCH })
 
         val other = promptsFor(home(skyrim).copy(resumeGameId = 2L))
         assertNull("another game's session is not this one's to resume", other.resume)

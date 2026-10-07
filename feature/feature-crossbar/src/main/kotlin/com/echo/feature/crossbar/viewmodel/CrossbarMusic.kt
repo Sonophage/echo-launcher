@@ -741,7 +741,7 @@ class CrossbarMusic(
             GamepadAction.NAVIGATE_UP   -> moveMusicTrackPicker(-1)
             GamepadAction.NAVIGATE_DOWN -> moveMusicTrackPicker(+1)
             GamepadAction.SELECT        -> activateMusicTrackPicker()
-            GamepadAction.HOME          -> confirmMusicTrackPicker()
+            GamepadAction.HOME, GamepadAction.OPEN_ISLAND -> confirmMusicTrackPicker()
             GamepadAction.BACK,
             GamepadAction.OPEN_CONTEXT_MENU    -> closeMusicTrackPicker()
             else -> Unit

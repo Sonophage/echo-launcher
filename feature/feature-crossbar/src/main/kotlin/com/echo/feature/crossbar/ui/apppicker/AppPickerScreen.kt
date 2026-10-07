@@ -133,7 +133,7 @@ fun AppPickerScreen(
                             if (state.confirmingRemovals) onConfirmRemoval()
                             else onTileTapped(state.focusedIndex)
                         GamepadAction.CHANGE_SORT -> onSearchToggle(true)
-                        GamepadAction.HOME -> onApply()
+                        GamepadAction.HOME, GamepadAction.OPEN_ISLAND -> onApply()
                         else -> Unit
                     }
                 },

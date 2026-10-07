@@ -2366,9 +2366,12 @@ class ArtworkStudioViewModel @Inject constructor(
 
             GamepadAction.CHANGE_SORT, GamepadAction.OPEN_SEARCH -> openSearch()
 
-            GamepadAction.HOME -> applyChanges()
+            // Start applies (owner, 2026-10-06: Select is the notifications now); the guide button too
+            GamepadAction.HOME, GamepadAction.OPEN_ISLAND -> applyChanges()
 
             GamepadAction.OPEN_CONTEXT_MENU -> openActions()
+
+            GamepadAction.OPEN_NOTIFICATIONS -> Unit
         }
     }
 }

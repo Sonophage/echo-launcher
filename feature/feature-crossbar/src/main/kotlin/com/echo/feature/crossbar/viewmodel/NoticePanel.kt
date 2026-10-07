@@ -275,7 +275,7 @@ data class StageAction(val button: GamepadAction, val label: String, val command
 fun stageActions(stage: PanelStage, clearable: Int): List<StageAction> = buildList {
     fun a(label: String, command: StageCommand) = add(StageAction(GamepadAction.SELECT, label, command))
     fun x(label: String, command: StageCommand) = add(StageAction(GamepadAction.CHANGE_SORT, label, command))
-    fun y(label: String, command: StageCommand) = add(StageAction(GamepadAction.OPEN_SEARCH, label, command))
+    fun y(label: String, command: StageCommand) = add(StageAction(GamepadAction.OPEN_CONTEXT_MENU, label, command))
     val clearAll = { if (clearable > 0) y("Clear all $clearable", StageCommand.CLEAR_ALL) }
     // the panel shows notices only; what is playing or was last played is on the orb
     when (stage) {

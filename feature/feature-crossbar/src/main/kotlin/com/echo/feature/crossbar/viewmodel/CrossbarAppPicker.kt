@@ -211,7 +211,7 @@ class CrossbarAppPicker(
                 } else toggleFocusedApp()
             }
 
-            GamepadAction.HOME -> requestApplyAppPicker()
+            GamepadAction.HOME, GamepadAction.OPEN_ISLAND -> requestApplyAppPicker()
             GamepadAction.CHANGE_SORT -> uiState.update { s ->
                 s.copy(appPicker = s.appPicker?.let { p ->
                     (if (p.searchActive) closeAppPickerSearch(p) else p.copy(searchActive = true)).clampFocus()

@@ -118,12 +118,11 @@ fun AppDrawerScreen(
 
                 pendingGamepadAction == GamepadAction.BACK ->
                     if (state.letterFilter != null) viewModel.clearLetterFilter() else closeDrawer()
-                pendingGamepadAction == GamepadAction.OPEN_SEARCH -> onOpenAppSearch("")
-                // LB/RB walk the Games tab's system filters; elsewhere LB searches and RB (Apps) shuts the drawer
-                (pendingGamepadAction == GamepadAction.PREV_PAGE || pendingGamepadAction == GamepadAction.NEXT_PAGE) &&
-                    viewModel.stepSystemChip(if (pendingGamepadAction == GamepadAction.NEXT_PAGE) 1 else -1) -> Unit
-                pendingGamepadAction == GamepadAction.PREV_PAGE -> onOpenAppSearch("")
-                pendingGamepadAction == GamepadAction.NEXT_PAGE -> closeDrawer()
+                // owner, 2026-10-06: RB is Search, the drawer's own here; LB (Apps) shuts the drawer. The Games
+                // tab's system filters are the chip row above the wall, reached with up
+                pendingGamepadAction == GamepadAction.OPEN_SEARCH ||
+                    pendingGamepadAction == GamepadAction.NEXT_PAGE -> onOpenAppSearch("")
+                pendingGamepadAction == GamepadAction.PREV_PAGE -> closeDrawer()
                 else -> viewModel.handleGamepadAction(pendingGamepadAction)
             }
             onGamepadActionConsumed()
@@ -205,7 +204,6 @@ fun AppDrawerScreen(
         onMenuRowActivated = viewModel::onMenuRowActivated,
         onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
-        onNextSystemFilter = { viewModel.stepSystemChip(1) },
         onSystemChip = { id ->
             onTouchInteraction()
             viewModel.onSystemChipTapped(id)
@@ -236,7 +234,6 @@ internal fun AppDrawerContent(
     onBandLaunch: (InstalledApp) -> Unit = { onAppLaunched(it.packageName) },
     onBandOptions: (InstalledApp) -> Unit = onAppMenu,
     onMenuRowActivated: (Int) -> Unit = {},
-    onNextSystemFilter: () -> Unit = {},
 
     onLetterRailTouch: (Int) -> Unit = {},
     onLetterRailReleased: () -> Unit = {},
@@ -301,8 +298,6 @@ internal fun AppDrawerContent(
                     u = u,
                     action = focused?.let(::actionLabel),
                     onAction = { focused?.let(onBandLaunch) },
-                    filters = state.showSystemChips,
-                    onNextFilter = onNextSystemFilter,
                     onSearch = onOpenSearch,
                     onBack = onBack,
                 )

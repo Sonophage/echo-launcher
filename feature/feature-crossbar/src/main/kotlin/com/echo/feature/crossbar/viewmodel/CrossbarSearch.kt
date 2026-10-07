@@ -262,7 +262,8 @@ class CrossbarSearch(
         when (action) {
             GamepadAction.NAVIGATE_LEFT,
             GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action))
-            GamepadAction.PREV_PAGE, GamepadAction.NEXT_PAGE -> stepKind(if (action == GamepadAction.PREV_PAGE) -1 else 1)
+            // the kinds are filters, so the triggers (owner, 2026-10-06)
+            GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY -> stepKind(if (action == GamepadAction.PREV_CATEGORY) -1 else 1)
             GamepadAction.SELECT        -> onSearchActivatedAt(state.search?.selectedIndex ?: return)
             GamepadAction.OPEN_CONTEXT_MENU -> onSearchOptionsAt(state.search?.selectedIndex ?: return)
             GamepadAction.BACK          -> closeSearch()
