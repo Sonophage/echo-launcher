@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug builds only. The same policy as app/src/main/res/xml/network_security_config.xml (keep the two in
+  step): no cleartext, system CAs, and user CAs for a dev proxy, which the main file grants through
+  <debug-overrides> and this file grants directly, as it is only ever in a debug build. It adds plain HTTP to
+  127.0.0.1, so the theme store can be tested against a local server through `adb reverse`
+  (owner, 2026-10-07). Release builds use the main file and deny all cleartext.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

@@ -74,6 +74,24 @@ object EchoThemeFolder {
         return EchoThemeCodec.read(packed.toByteArray())
     }
 
+    // the theme in a zip of its folder, as the online store serves it. The files may sit in one top folder
+    // (Aurora/theme.json) or at the zip's root; the zip is read with the codec's limits. Null when it is not
+    // a theme
+    fun fromArchive(input: java.io.InputStream): EchoThemeBundle? {
+        val files = linkedMapOf<String, ByteArray>()
+        try {
+            com.echo.core.archive.BoundedZipReader.read(input, EchoThemeCodec.BUNDLE_LIMITS) { entry ->
+                if (!entry.isDirectory) files[entry.name] = entry.readBytes()
+            }
+        } catch (e: com.echo.core.archive.ZipLimitExceededException) {
+            return null
+        }
+        val top = files.keys.map { it.substringBefore('/') }.toSet().singleOrNull()
+            ?.takeIf { files.keys.all { k -> '/' in k } }
+        val inner = if (top != null) files.mapKeys { it.key.removePrefix("$top/") } else files
+        return runCatching { toBundle(inner) }.getOrNull()
+    }
+
     // a folder name for a theme: its name without the characters file systems refuse, or [fallback]
     fun folderName(themeName: String, fallback: String): String =
         themeName.replace(Regex("""[\\/:*?"<>|\u0000-\u001f]"""), "").trim().trimEnd('.').ifBlank { fallback }

@@ -427,7 +427,8 @@ class EchoThemeStore @Inject constructor(
                 }
             }
             _themes.value = scan()
-            SavedTheme(
+            // the listed entry, which carries the store's details; the plain one if the list could not read it
+            _themes.value.firstOrNull { it.id == id } ?: SavedTheme(
                 id,
                 name,
                 bundle.manifest.accentColor.toAccentArgbOrNull(),
@@ -542,7 +543,8 @@ class EchoThemeStore @Inject constructor(
             wallpaperBitmap?.recycle()
 
             _themes.value = scan()
-            SavedTheme(
+            // the listed entry, which carries the store's details; the plain one if the list could not read it
+            _themes.value.firstOrNull { it.id == id } ?: SavedTheme(
                 id,
                 manifest.name,
                 manifest.accentColor.toAccentArgbOrNull(),
@@ -593,7 +595,8 @@ class EchoThemeStore @Inject constructor(
             if (preview !== wallpaper) preview.recycle()
 
             _themes.value = scan()
-            SavedTheme(id, name, accentArgb, File(dir, "$id.preview.jpg").absolutePath)
+            // the listed entry, which carries the store's details; the plain one if the list could not read it
+            _themes.value.firstOrNull { it.id == id } ?: SavedTheme(id, name, accentArgb, File(dir, "$id.preview.jpg").absolutePath)
         }.onFailure { Timber.w(it, "EchoThemeStore: save failed") }.getOrNull()
     }
 

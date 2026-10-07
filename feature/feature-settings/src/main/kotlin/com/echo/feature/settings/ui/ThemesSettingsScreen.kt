@@ -88,6 +88,9 @@ fun ThemesSettingsScreen(
         onDismissMessage = { viewModel.dismissMessage() },
         onSaveCurrentLook = { viewModel.saveCurrentLookAsTheme(it) },
         onOpenThemePage = viewModel::openThemePage,
+        onOpenOnlinePage = viewModel::openOnlinePage,
+        onPageAction = viewModel::pageAction,
+        onRefreshOnline = viewModel::refreshOnline,
         onCloseThemePage = viewModel::closeThemePage,
         onOpenMix = onOpenMix,
         modifier = modifier
@@ -110,6 +113,9 @@ private fun ThemesSettingsContent(
     onDismissMessage: () -> Unit,
     onSaveCurrentLook: (String) -> Unit = {},
     onOpenThemePage: (String) -> Unit = {},
+    onOpenOnlinePage: (String) -> Unit = {},
+    onPageAction: () -> Unit = {},
+    onRefreshOnline: () -> Unit = {},
     onCloseThemePage: () -> Unit = {},
     onOpenMix: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -142,6 +148,8 @@ private fun ThemesSettingsContent(
     var menuIndex by remember { mutableIntStateOf(0) }
     var myThemesFocused by remember { mutableStateOf(false) }
     var cardIndex by remember { mutableIntStateOf(0) }
+    var onlineFocused by remember { mutableStateOf(false) }
+    var onlineIndex by remember { mutableIntStateOf(0) }
     var iconStripFocused by remember { mutableStateOf(false) }
     val iconStripRequester = remember { FocusRequester() }
     var iconIndex by remember { mutableIntStateOf(0) }
@@ -180,10 +188,10 @@ private fun ThemesSettingsContent(
                 val m = menu
                 when {
                     page != null -> {
-                        val shots = page.details?.screenshotPaths.orEmpty().size
+                        val shots = page.screenshots.size
                         when (action) {
                             GamepadAction.BACK -> onCloseThemePage()
-                            GamepadAction.SELECT -> { onApplySavedTheme(page.theme.id); onCloseThemePage() }
+                            GamepadAction.SELECT -> onPageAction()
                             GamepadAction.NAVIGATE_RIGHT -> if (shots > 0) shot = (shot + 1) % shots
                             GamepadAction.NAVIGATE_LEFT -> if (shots > 0) shot = (shot - 1 + shots) % shots
                             else -> Unit
@@ -223,6 +231,12 @@ private fun ThemesSettingsContent(
                             else -> Unit
                         }
                         true
+                    }
+                    onlineFocused && action == GamepadAction.NAVIGATE_LEFT -> {
+                        onlineIndex = (onlineIndex - 1).coerceAtLeast(0); true
+                    }
+                    onlineFocused && action == GamepadAction.NAVIGATE_RIGHT -> {
+                        onlineIndex = (onlineIndex + 1).coerceAtMost((state.online.orEmpty().size - 1).coerceAtLeast(0)); true
                     }
                     myThemesFocused && action == GamepadAction.NAVIGATE_LEFT -> {
                         cardIndex = (cardIndex - 1).coerceAtLeast(0); true
@@ -322,11 +336,39 @@ private fun ThemesSettingsContent(
                         },
                     ) { stripFocused ->
                         ThemeStoreCardRow(
-                            themes       = state.savedThemes,
+                            cards        = state.savedThemes.map { it.card() },
                             focusedIndex = if (stripFocused) cardIndex else null,
                             onOpen       = { shot = 0; onOpenThemePage(it) },
                         )
                     }
+                }
+
+                // the online store: the echo-themes catalog
+                SettingsGroup("Online")
+                val online = state.online
+                when {
+                    online != null && online.isNotEmpty() -> FocusableStrip(
+                        onFocusChange = { focused ->
+                            onlineFocused = focused
+                            if (focused) onlineIndex = onlineIndex.coerceIn(0, online.size - 1)
+                        },
+                        onSelect = { online.getOrNull(onlineIndex)?.let { shot = 0; onOpenOnlinePage(it.id) } },
+                    ) { stripFocused ->
+                        ThemeStoreCardRow(
+                            cards = online.map { t ->
+                                StoreCard(t.id, t.name, if (state.savedThemes.any { it.name == t.name }) "Downloaded" else "Online", t.heroUrl)
+                            },
+                            focusedIndex = if (stripFocused) onlineIndex else null,
+                            onOpen = { shot = 0; onOpenOnlinePage(it) },
+                        )
+                    }
+                    state.onlineFailed -> SettingsRow(
+                        label = "The online store could not be reached",
+                        sublabel = "Check the connection, then try again",
+                        onClick = onRefreshOnline,
+                    )
+                    online == null -> SettingsRow(label = "Loading the online store", sublabel = null, onClick = null)
+                    else -> SettingsRow(label = "No themes online yet", sublabel = null, onClick = null)
                 }
                 SettingsRow(
                     label    = "Mix",
@@ -374,7 +416,7 @@ private fun ThemesSettingsContent(
             ThemePageOverlay(
                 page = it,
                 shot = shot,
-                onApply = { onApplySavedTheme(it.theme.id); onCloseThemePage() },
+                onAction = onPageAction,
                 onBack = onCloseThemePage,
                 onShot = { i -> shot = i },
             )

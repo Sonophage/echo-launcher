@@ -15,6 +15,8 @@ import com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE
 import com.echo.core.data.wallpaper.ThemeAccent.followWallpaperAccent
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe
 import com.echo.themekit.ThemePart
+import com.echo.themekit.CatalogTheme
+import com.echo.core.data.repository.ThemeCatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,9 +48,39 @@ data class ThemesSettingsUiState(
     val partSources: Map<ThemePart, String> = emptyMap(),
     // the theme whose store page is open
     val page: ThemePage? = null,
+    // the online store's themes; null while loading or when it could not be reached
+    val online: List<CatalogTheme>? = null,
+    val onlineFailed: Boolean = false,
 )
 
-data class ThemePage(val theme: EchoThemeStore.SavedTheme, val details: EchoThemeStore.ThemeDetails?)
+// a theme's store page, for a saved theme or an online one. A applies a saved theme ([savedId]); an online
+// theme not yet saved is downloaded first
+data class ThemePage(
+    val name: String,
+    val author: String? = null,
+    val version: String? = null,
+    val description: String? = null,
+    val parts: Set<ThemePart> = emptySet(),
+    val hero: String? = null,
+    val body: String? = null,
+    val screenshots: List<String> = emptyList(),
+    val savedId: String? = null,
+    val online: CatalogTheme? = null,
+    val busy: Boolean = false,
+) {
+    val actionLabel: String get() = when {
+        busy -> "Downloading"
+        savedId != null -> "Apply"
+        else -> "Download"
+    }
+}
+
+internal fun pageOf(theme: EchoThemeStore.SavedTheme, details: EchoThemeStore.ThemeDetails?) = ThemePage(
+    name = theme.name, author = theme.author, version = theme.version,
+    description = details?.readme?.description ?: theme.description, parts = theme.parts,
+    hero = theme.heroPath ?: theme.previewPath, body = details?.readme?.body,
+    screenshots = details?.screenshotPaths.orEmpty(), savedId = theme.id,
+)
 
 // owner, 2026-10-07: with parts taken from more than one theme, the look in use is a mix, not the last theme applied
 internal fun activeThemeLabel(applied: String?, sources: Map<ThemePart, String>): String = when {
@@ -60,7 +92,17 @@ internal fun activeThemeLabel(applied: String?, sources: Map<ThemePart, String>)
 class ThemesSettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val themeStore: EchoThemeStore,
+    private val catalog: ThemeCatalogRepository,
 ) : ViewModel() {
+    init { refreshOnline() }
+
+    fun refreshOnline() {
+        viewModelScope.launch {
+            val themes = catalog.load()
+            _extra.update { it.copy(online = themes, onlineFailed = themes == null) }
+        }
+    }
+
     private val _extra = MutableStateFlow(ThemesSettingsUiState())
 
     val uiState: StateFlow<ThemesSettingsUiState> = combine(
@@ -124,10 +166,41 @@ class ThemesSettingsViewModel @Inject constructor(
     // the theme store's page for one theme: its hero, README and screenshots
     fun openThemePage(id: String) {
         val theme = uiState.value.savedThemes.firstOrNull { it.id == id } ?: return
-        _extra.update { it.copy(page = ThemePage(theme, null)) }
+        _extra.update { it.copy(page = pageOf(theme, null)) }
         viewModelScope.launch {
             val details = themeStore.details(id)
-            _extra.update { e -> if (e.page?.theme?.id == id) e.copy(page = ThemePage(theme, details)) else e }
+            _extra.update { e -> if (e.page?.savedId == id) e.copy(page = pageOf(theme, details)) else e }
+        }
+    }
+
+    // an online theme's page: its hero and screenshots from the store, its details from its README
+    fun openOnlinePage(id: String) {
+        val theme = uiState.value.online?.firstOrNull { it.id == id } ?: return
+        val saved = uiState.value.savedThemes.firstOrNull { it.name == theme.name }
+        _extra.update { it.copy(page = ThemePage(name = theme.name, hero = theme.heroUrl, screenshots = theme.screenshotUrls, savedId = saved?.id, online = theme)) }
+        viewModelScope.launch {
+            val readme = catalog.readme(theme) ?: return@launch
+            _extra.update { e ->
+                val page = e.page?.takeIf { it.online?.id == id } ?: return@update e
+                e.copy(page = page.copy(author = readme.author, version = readme.version, description = readme.description, body = readme.body))
+            }
+        }
+    }
+
+    // A on a page: apply a saved theme, or download an online one first
+    fun pageAction() {
+        val page = uiState.value.page ?: return
+        if (page.busy) return
+        page.savedId?.let { applySavedTheme(it); closeThemePage(); return }
+        val online = page.online ?: return
+        _extra.update { it.copy(page = page.copy(busy = true)) }
+        viewModelScope.launch {
+            when (val result = catalog.install(online)) {
+                is ThemeCatalogRepository.Install.Done -> _extra.update { e ->
+                    e.copy(page = e.page?.copy(busy = false, savedId = result.theme.id, parts = result.theme.parts), installMessage = "Downloaded \"${result.theme.name}\"")
+                }
+                is ThemeCatalogRepository.Install.Failed -> _extra.update { e -> e.copy(page = e.page?.copy(busy = false), installMessage = result.reason) }
+            }
         }
     }
 

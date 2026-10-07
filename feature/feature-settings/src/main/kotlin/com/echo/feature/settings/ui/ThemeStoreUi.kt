@@ -49,10 +49,16 @@ import com.echo.feature.settings.viewmodel.ThemePage
 import com.echo.feature.settings.viewmodel.ThemesSettingsViewModel
 import com.echo.themekit.ThemePart
 
-// the theme store (owner, 2026-10-07): each saved theme as a card headed by its hero picture
+// a card in the theme store: a saved theme or an online one
+internal data class StoreCard(val id: String, val name: String, val subtitle: String, val image: String?, val accentArgb: Long? = null)
+
+internal fun EchoThemeStore.SavedTheme.card() =
+    StoreCard(id, name, author?.let { "by $it" } ?: "${parts.size} parts", heroPath ?: previewPath, accentArgb)
+
+// the theme store (owner, 2026-10-07): each theme as a card headed by its hero picture
 @Composable
 internal fun ThemeStoreCardRow(
-    themes: List<EchoThemeStore.SavedTheme>,
+    cards: List<StoreCard>,
     focusedIndex: Int?,
     onOpen: (String) -> Unit,
 ) {
@@ -60,43 +66,39 @@ internal fun ThemeStoreCardRow(
         horizontalArrangement = Arrangement.spacedBy(18.dp),
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 48.dp, vertical = 10.dp),
     ) {
-        themes.forEachIndexed { index, theme ->
+        cards.forEachIndexed { index, card ->
             val focused = focusedIndex == index
-            Column(modifier = Modifier.width(240.dp).clickable { onOpen(theme.id) }) {
+            Column(modifier = Modifier.width(240.dp).clickable { onOpen(card.id) }) {
                 Box(
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp))
-                        .background(Color(theme.accentArgb?.let { it and 0xFFFFFFFFL } ?: 0xFF20304AL))
+                        .background(Color(card.accentArgb?.let { it and 0xFFFFFFFFL } ?: 0xFF20304AL))
                         .border(if (focused) 3.dp else 1.dp, if (focused) SettingsAccent else Color(0x55FFFFFF), RoundedCornerShape(10.dp)),
                 ) {
-                    (theme.heroPath ?: theme.previewPath)?.let { path ->
-                        AsyncImage(model = path, contentDescription = theme.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    }
+                    card.image?.let { AsyncImage(model = it, contentDescription = card.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                 }
-                Text(theme.name, color = if (focused) SettingsAccent else Color.White, fontSize = 14.sp, maxLines = 1,
+                Text(card.name, color = if (focused) SettingsAccent else Color.White, fontSize = 14.sp, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
-                Text(theme.author?.let { "by $it" } ?: "${theme.parts.size} parts", color = SettingsSubtext, fontSize = 12.sp, maxLines = 1)
+                Text(card.subtitle, color = SettingsSubtext, fontSize = 12.sp, maxLines = 1)
             }
         }
     }
 }
 
 // a theme's store page: its hero, metadata, the parts it has, its screenshots and its README. LEFT and RIGHT
-// step the screenshots; A applies the whole theme
+// step the screenshots; A applies a saved theme or downloads an online one
 @Composable
 internal fun ThemePageOverlay(
     page: ThemePage,
     shot: Int,
-    onApply: () -> Unit,
+    onAction: () -> Unit,
     onBack: () -> Unit,
     onShot: (Int) -> Unit,
 ) {
-    val theme = page.theme
-    val readme = page.details?.readme
-    val shots = page.details?.screenshotPaths.orEmpty()
+    val shots = page.screenshots
     BoxWithConstraints(Modifier.fillMaxSize().background(PanelBase).clickable(enabled = false) {}) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Box(Modifier.fillMaxWidth().fillMaxHeight(0.62f)) {
-            (theme.heroPath ?: theme.previewPath)?.let {
+            page.hero?.let {
                 AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             }
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Transparent, 0.3f to PanelBase.copy(alpha = 0.6f), 0.7f to PanelBase.copy(alpha = 0.95f), 1f to PanelBase)))
@@ -104,20 +106,20 @@ internal fun ThemePageOverlay(
         Row(Modifier.fillMaxSize().padding(start = u.dp(64), end = u.dp(48), top = u.dp(220), bottom = u.dp(84))) {
             Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) {
                 Text("THEME", style = u.eyebrow())
-                Text(theme.name, style = EchoTextStyle.copy(color = Color.White, fontSize = u.sp(40), fontWeight = FontWeight.SemiBold))
-                listOfNotNull(theme.author?.let { "by $it" }, theme.version?.let { "version $it" }).takeIf { it.isNotEmpty() }?.let {
+                Text(page.name, style = EchoTextStyle.copy(color = Color.White, fontSize = u.sp(40), fontWeight = FontWeight.SemiBold))
+                listOfNotNull(page.author?.let { "by $it" }, page.version?.let { "version $it" }).takeIf { it.isNotEmpty() }?.let {
                     Text(it.joinToString("  ·  "), style = EchoTextStyle.copy(color = SettingsSubtext, fontSize = u.sp(15)))
                 }
-                (readme?.description ?: theme.description)?.let {
+                page.description?.let {
                     Text(it, style = EchoTextStyle.copy(color = Color.White, fontSize = u.sp(17)), modifier = Modifier.padding(top = u.dp(14)))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(u.dp(8)), modifier = Modifier.padding(top = u.dp(16))) {
-                    ThemePart.entries.filter { it in theme.parts }.forEach { part ->
+                    ThemePart.entries.filter { it in page.parts }.forEach { part ->
                         Text(part.label, style = EchoTextStyle.copy(color = Color.White, fontSize = u.sp(12)),
                             modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.12f)).padding(horizontal = u.dp(12), vertical = u.dp(5)))
                     }
                 }
-                readme?.body?.takeIf { it.isNotBlank() }?.let {
+                page.body?.takeIf { it.isNotBlank() }?.let {
                     Text(readmeText(it),
                         style = EchoTextStyle.copy(color = SettingsSubtext, fontSize = u.sp(14)), modifier = Modifier.padding(top = u.dp(18)))
                 }
@@ -146,11 +148,11 @@ internal fun ThemePageOverlay(
                 ControllerPromptItem(GamepadAction.BACK, "Back"),
                 ControllerPromptItem(GamepadAction.NAVIGATE_RIGHT, "Screenshots").takeIf { shots.size > 1 },
             ),
-            primary = HintAction(GamepadAction.SELECT, "Apply"),
+            primary = HintAction(GamepadAction.SELECT, page.actionLabel),
             onAction = { action ->
                 when (action) {
                     GamepadAction.BACK -> onBack()
-                    GamepadAction.SELECT -> onApply()
+                    GamepadAction.SELECT -> onAction()
                     GamepadAction.NAVIGATE_RIGHT -> if (shots.isNotEmpty()) onShot((shot + 1) % shots.size)
                     else -> Unit
                 }
