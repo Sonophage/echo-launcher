@@ -210,7 +210,12 @@
       const iw = this.bg.naturalWidth, ih = this.bg.naturalHeight, s = Math.max(w / iw, h / ih);
       c.save(); c.globalAlpha = alpha; c.drawImage(this.bg, (w - iw * s) / 2, (h - ih * s) / 2, iw * s, ih * s); c.restore();
     }
-    crop() { const iw = this.bg.naturalWidth, ih = this.bg.naturalHeight, sx = .27 * iw, sy = .515 * ih, sh = .195 * ih; return { x: sx + (.474 * iw - sx - sh) / 2, y: sy, s: sh }; }
+    // the cover's square in the background shot: crop="x y size" as fractions of its width, height and height
+    crop() {
+      const iw = this.bg.naturalWidth, ih = this.bg.naturalHeight, c = (this.getAttribute('crop') || '').split(/\s+/).map(Number);
+      if (c.length === 3 && c.every(n => n >= 0)) return { x: c[0] * iw, y: c[1] * ih, s: c[2] * ih };
+      const sx = .27 * iw, sy = .515 * ih, sh = .195 * ih; return { x: sx + (.474 * iw - sx - sh) / 2, y: sy, s: sh };
+    }
     art(c, x, y, size, round) { // the Skyrim tile from the hover panel, square-cropped
       if (!this.bg.naturalWidth) return; const k = this.crop();
       c.save(); c.beginPath(); if (round) c.arc(x, y, size / 2, 0, Math.PI * 2); else { const r = size * .0343; c.roundRect(x - size / 2, y - size / 2, size, size, r); } c.clip();

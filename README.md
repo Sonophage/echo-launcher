@@ -94,7 +94,7 @@ tablet, used every day.
 
 ## A tour
 
-*Shot on an AYANEO Pocket FIT Elite (1920×1080) with a real library, on ECHO 2.2 to 2.7. Game
+*Shot on an AYANEO Pocket FIT Elite (1920×1080) with a real library, on ECHO 2.9. Game
 artwork, wallpaper art, book covers and app icons belong to their owners.*
 
 ### Home
@@ -144,7 +144,8 @@ folders they scan.
 
 ### Games
 
-A focused game fills the background with its own art and shows its details beside the tile.
+A focused game fills the background with its own art, with its title and facts beside the tile;
+**X** opens its details.
 **Y** opens its options on a panel at the right edge, with the art blurred behind it;
 anything destructive asks twice. **Game Info** shows play time, platform and last played, and LT/RT
 walk its views: **Achievements** (first, when the game has them: the d-pad hovers a badge, X filters,

@@ -10,6 +10,16 @@ Only when the owner asks. Run every check; read results from the tools, not from
 1. Run the gate (see `CLAUDE.md`). Stop on any failure.
 2. Bump `versionCode` (+1) and `versionName` in `app/build.gradle.kts`. Commit alone as
    `chore(release): <version>`.
+   If this release retakes the README and site screenshots, also point the site at them: every
+   screenshot path in `index.html` and `docs.html` carries `?v=<version>` (and `index.html` has
+   `const V`), so browsers fetch the new images instead of a cached copy. Bump them together and
+   check none is left behind:
+
+   ```sh
+   sed -i -E "s/\?v=[0-9.]+/?v=<v>/g; s/const V = '[0-9.]+'/const V = '<v>'/" index.html docs.html
+   grep -ohE "docs/screenshots/[a-z0-9-]+\.jpg[^\"' )]*" index.html docs.html | grep -vc "?v=<v>"   # 0
+   ```
+
 3. Build: `./gradlew assembleRelease assembleDebug`. The APKs are copied to
    `dist/ECHO-<version>.apk` and `debug/ECHO-<version>-debug.apk`.
 4. Read the APKs, not their names:
