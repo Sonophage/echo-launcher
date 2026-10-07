@@ -693,7 +693,8 @@ private val ECHO_README_TEXT = """
                    font. A file you change here is kept: ECHO only copies over a file that is
                    missing or older than its own.
     Themes/        One folder per theme: theme.json (colours, wave, game start and button set), Icons
-                   (console icons in Icons/Consoles), Wallpaper, Sounds, Boot and GameStart. Every
+                   (console icons in Icons/Consoles), Wallpaper, Sounds, Boot and GameStart, and for
+                   the theme store a README.md and a Preview folder (hero and screenshots). Every
                    part is optional. Template shows every file a theme takes: copy it, rename the
                    copy and fill it. ECHO writes each theme you save here, and reads in a theme folder
                    you add or change. A theme deleted in ECHO keeps its folder here; ECHO reads it

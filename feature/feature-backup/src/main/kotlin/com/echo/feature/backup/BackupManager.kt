@@ -498,6 +498,7 @@ open class BackupManager @Inject constructor(
         stringPreferencesKey("pref_video_snap_placement"),
 
         stringPreferencesKey("theme_applied_name"),
+        stringPreferencesKey("theme_part_sources"),
         stringPreferencesKey("theme_layout_spec"),
 
             stringPreferencesKey("controller_scroll_speed"),

@@ -12,10 +12,14 @@ import java.util.zip.ZipOutputStream
 // and checks as a file. Paths use '/' and are relative to the theme's folder.
 object EchoThemeFolder {
     const val MANIFEST = "theme.json"
+    const val README = "README.md"
 
     // the folder path for a zip entry, or null for an entry with no place in the folder
     fun folderPath(entry: String): String? = when {
         entry == "manifest.json" -> MANIFEST
+        entry == "readme.md" -> README
+        entry.startsWith("preview/screenshots/") -> leaf(entry.removePrefix("preview/screenshots/"))?.let { "Preview/Screenshots/$it" }
+        entry.startsWith("preview/") -> leaf(entry.removePrefix("preview/"))?.let { "Preview/$it" }
         entry.startsWith("icons/") -> leaf(entry.removePrefix("icons/"))?.let { "Icons/$it" }
         entry.startsWith("sysicons/") -> leaf(entry.removePrefix("sysicons/"))?.let { "Icons/Consoles/$it" }
         entry.startsWith("media/") -> leaf(entry.removePrefix("media/"))
@@ -29,6 +33,9 @@ object EchoThemeFolder {
         val parts = path.split('/')
         return when {
             parts.size == 1 && parts[0].equals(MANIFEST, ignoreCase = true) -> "manifest.json"
+            parts.size == 1 && parts[0].equals(README, ignoreCase = true) -> "readme.md"
+            parts.size == 3 && parts[0].equals("Preview", true) && parts[1].equals("Screenshots", true) -> "preview/screenshots/${parts[2]}"
+            parts.size == 2 && parts[0].equals("Preview", true) && parts[1].startsWith("hero.", true) -> "preview/${parts[1].lowercase()}"
             parts.size == 3 && parts[0].equals("Icons", true) && parts[1].equals("Consoles", true) -> "sysicons/${parts[2]}"
             parts.size == 2 && parts[0].equals("Icons", true) -> "icons/${parts[1]}"
             parts.size == 2 && parts[0].equals("Wallpaper", true) -> parts[1]

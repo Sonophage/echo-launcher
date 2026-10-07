@@ -260,7 +260,9 @@ manager:
 - `Themes/`: one folder per theme. A theme folder holds `theme.json` (colours, wave design,
   game-start styles and button set), `Icons/` (console icons in `Icons/Consoles/`), `Wallpaper/`,
   `Sounds/`, `Boot/` and `GameStart/`, and every part is optional: a theme with only `Sounds/` is a
-  sound pack. `Template/` names every file a theme takes; copy it, rename the copy and fill it.
+  sound pack. For the theme store, `README.md` holds its details (author, version, description,
+  tags, between two `---` lines) and its page text, and `Preview/` its `hero.jpg` and up to eight
+  `Screenshots/`. `Template/` names every file a theme takes; copy it, rename the copy and fill it.
   ECHO writes each theme you save here and reads in a theme folder you add or change. A theme
   deleted in ECHO keeps its folder, and ECHO reads it again only after it changes.
 - `settings.json`: how ECHO looks and behaves: colours, wave, layout, controls and default players.
@@ -528,6 +530,8 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 | **Color Scheme** | 13 schemes (Original, which changes with the month, Classic Blue, Sunset Orange, Fresh Green, Royal Purple, Crimson Red, Silver, Sakura Pink, Golden Amber, Aqua Teal, Midnight Navy, Charcoal, Black), previewed live |
 | **Icon Color** | one tint for every crossbar glyph: 8 swatches or a **Custom Theme Color** |
 | **Color from Wallpaper** | takes the scheme from your wallpaper |
+| **Theme Store** | every saved theme as a card with its hero picture; selecting one opens its page (details, the parts it has, screenshots) and **A** applies it |
+| **Mix** | each part of the look (icons, wallpaper, colours and layout, wave, sounds, boot, game start, buttons) from any saved theme that has it; Theme then shows **Mixed** |
 | **Save Current Look as Theme** | bundles icons, wallpaper, colours, motion, sounds, boot and game-start media, the wave design and the button set into a shareable `.echo-theme`, and a folder in [`Themes/`](#the-echo-folder); **Import Theme** loads one (an older `.pfptheme` too), **Reset to Default** clears it |
 | **Theme Studio** | a desktop editor for `.echo-theme` files (Windows, Linux, macOS), built from `studio/` |
 

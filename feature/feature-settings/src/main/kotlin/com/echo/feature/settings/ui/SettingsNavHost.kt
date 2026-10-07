@@ -17,6 +17,7 @@ val SETTINGS_SCREEN_ROUTES: Set<String> = setOf(
     "settings_library",
     "settings_import_pc",
     "settings_categories",
+    "settings_theme_mix",
     "settings_artwork",
     "settings_artwork_sources",
     "settings_emulators",
@@ -120,8 +121,10 @@ fun SettingsNavHost(
             "settings_themes"     -> ThemesSettingsScreen(
                 onBack = onBack,
                 onOpenColorSchemePicker = onOpenColorSchemePicker,
+                onOpenMix = { onOpenScreen("settings_theme_mix") },
                 modifier = modifier,
             )
+            "settings_theme_mix"  -> ThemeMixScreen(onBack = onBack, modifier = modifier)
             "settings_appearance" -> DisplaySettingsScreen(
                 onBack = onBack, section = DisplaySection.APPEARANCE, modifier = modifier,
             )

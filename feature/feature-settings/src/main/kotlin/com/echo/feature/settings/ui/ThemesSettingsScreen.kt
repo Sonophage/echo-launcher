@@ -68,6 +68,7 @@ fun ThemesSettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenColorSchemePicker: () -> Unit = {},
+    onOpenMix: () -> Unit = {},
     viewModel: ThemesSettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -86,6 +87,9 @@ fun ThemesSettingsScreen(
         onResetTheme = { viewModel.resetTheme() },
         onDismissMessage = { viewModel.dismissMessage() },
         onSaveCurrentLook = { viewModel.saveCurrentLookAsTheme(it) },
+        onOpenThemePage = viewModel::openThemePage,
+        onCloseThemePage = viewModel::closeThemePage,
+        onOpenMix = onOpenMix,
         modifier = modifier
     )
 }
@@ -105,8 +109,13 @@ private fun ThemesSettingsContent(
     onResetTheme: () -> Unit,
     onDismissMessage: () -> Unit,
     onSaveCurrentLook: (String) -> Unit = {},
+    onOpenThemePage: (String) -> Unit = {},
+    onCloseThemePage: () -> Unit = {},
+    onOpenMix: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    var shot by remember { mutableIntStateOf(0) }
+    val page = state.page
     val echoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { onImportEchoTheme(it) } }
 
     var showSaveNameDialog by remember { mutableStateOf(false) }
@@ -155,6 +164,7 @@ private fun ThemesSettingsContent(
     fun openMenuForSavedTheme(theme: EchoThemeStore.SavedTheme) {
         menuIndex = 0
         menu = ThemeMenu(theme.name, listOf(
+            ThemeMenuOption("Open")   { shot = 0; onOpenThemePage(theme.id) },
             ThemeMenuOption("Apply")  { onApplySavedTheme(theme.id) },
             ThemeMenuOption("Share")  { onShareSavedTheme(theme.id) },
             ThemeMenuOption("Remove", destructive = true) { onDeleteSavedTheme(theme.id) },
@@ -169,6 +179,17 @@ private fun ThemesSettingsContent(
             onInterceptAction = { action ->
                 val m = menu
                 when {
+                    page != null -> {
+                        val shots = page.details?.screenshotPaths.orEmpty().size
+                        when (action) {
+                            GamepadAction.BACK -> onCloseThemePage()
+                            GamepadAction.SELECT -> { onApplySavedTheme(page.theme.id); onCloseThemePage() }
+                            GamepadAction.NAVIGATE_RIGHT -> if (shots > 0) shot = (shot + 1) % shots
+                            GamepadAction.NAVIGATE_LEFT -> if (shots > 0) shot = (shot - 1 + shots) % shots
+                            else -> Unit
+                        }
+                        true
+                    }
                     customPicker -> {
                         when (action) {
                             GamepadAction.NAVIGATE_UP   -> pickerChannel = (pickerChannel + 2) % 3
@@ -287,7 +308,8 @@ private fun ThemesSettingsContent(
                     onToggle = onSetAccentFromWallpaper,
                 )
 
-                SettingsGroup("My Themes")
+                // owner, 2026-10-07: the theme store. A opens a theme's page; Y has Apply, Share and Remove
+                SettingsGroup("Theme Store")
 
                 if (state.savedThemes.isNotEmpty()) {
                     FocusableStrip(
@@ -296,18 +318,21 @@ private fun ThemesSettingsContent(
                             if (focused) cardIndex = cardIndex.coerceIn(0, state.savedThemes.size - 1)
                         },
                         onSelect = {
-                            state.savedThemes.getOrNull(cardIndex)?.let { onApplySavedTheme(it.id) }
+                            state.savedThemes.getOrNull(cardIndex)?.let { shot = 0; onOpenThemePage(it.id) }
                         },
                     ) { stripFocused ->
-                        SavedThemeCardRow(
+                        ThemeStoreCardRow(
                             themes       = state.savedThemes,
                             focusedIndex = if (stripFocused) cardIndex else null,
-                            onApply      = onApplySavedTheme,
-                            onDelete     = onDeleteSavedTheme,
-                            onShare      = onShareSavedTheme,
+                            onOpen       = { shot = 0; onOpenThemePage(it) },
                         )
                     }
                 }
+                SettingsRow(
+                    label    = "Mix",
+                    sublabel = "Take the icons, wallpaper, sounds, wave and buttons from different themes",
+                    onClick  = onOpenMix,
+                )
 
                 SettingsGroup("Active Theme")
                 SettingsValueRow(label = "Current Theme", value = state.activeThemeName)
@@ -343,6 +368,16 @@ private fun ThemesSettingsContent(
                     )
                 }
             }
+        }
+
+        page?.let {
+            ThemePageOverlay(
+                page = it,
+                shot = shot,
+                onApply = { onApplySavedTheme(it.theme.id); onCloseThemePage() },
+                onBack = onCloseThemePage,
+                onShot = { i -> shot = i },
+            )
         }
 
         menu?.let { m ->
@@ -456,26 +491,6 @@ private fun FocusableStrip(
             }
             .focusable(),
     ) { content(isFocused) }
-}
-
-@Composable
-private fun SavedThemeCardRow(themes: List<EchoThemeStore.SavedTheme>, focusedIndex: Int? = null, onApply: (String) -> Unit, onDelete: (String) -> Unit, onShare: (String) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 48.dp, vertical = 10.dp)) {
-        themes.forEachIndexed { index, theme ->
-            val cardFocused = focusedIndex == index
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(modifier = Modifier.size(width = 168.dp, height = 96.dp).clip(RoundedCornerShape(10.dp)).background(Color(theme.accentArgb?.let { it and 0xFFFFFFFFL } ?: 0xFF20304AL)).border(width = if (cardFocused) 3.dp else 1.dp, color = if (cardFocused) SettingsAccent else Color(0x55FFFFFF), shape = RoundedCornerShape(10.dp)).clickable { onApply(theme.id) }) {
-                    theme.previewPath?.let { path -> AsyncImage(model = path, contentDescription = theme.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                    theme.accentArgb?.let { accent -> Box(modifier = Modifier.padding(6.dp).size(14.dp).clip(CircleShape).background(Color(accent and 0xFFFFFFFFL)).border(1.dp, Color(0x88FFFFFF), CircleShape).align(Alignment.TopEnd)) }
-                }
-                Text(text = theme.name, color = if (cardFocused) SettingsAccent else SettingsSubtext, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = "Share", color = SettingsAccent, fontSize = 12.sp, modifier = Modifier.clickable { onShare(theme.id) }.padding(horizontal = 10.dp, vertical = 8.dp))
-                    Text(text = "Remove", color = SettingsAccent, fontSize = 12.sp, modifier = Modifier.clickable { onDelete(theme.id) }.padding(horizontal = 10.dp, vertical = 8.dp))
-                }
-            }
-        }
-    }
 }
 
 @Composable

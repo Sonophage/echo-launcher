@@ -25,6 +25,14 @@ object EchoThemeCodec {
     private const val SYSICONS_PREFIX = "sysicons/"
     private const val MOTION_PREFIX = "motion."
     private const val MEDIA_PREFIX = "media/"
+    private const val HERO = "preview/hero."
+    private const val SCREENSHOTS_PREFIX = "preview/screenshots/"
+    private const val ENTRY_README = "readme.md"
+
+    val PICTURE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
+    const val MAX_SCREENSHOTS = 8
+    const val MAX_PICTURE_BYTES = 8 * 1024 * 1024
+    const val MAX_README_BYTES = 64 * 1024
 
     val ICON_EXTENSIONS = setOf("png", "gif")
     val MOTION_EXTENSIONS = setOf("mp4", "webm", "gif")
@@ -62,6 +70,13 @@ object EchoThemeCodec {
                 }
             }
 
+            bundle.hero?.takeIf { it.extension.lowercase() in PICTURE_EXTENSIONS }
+                ?.let { zip.writeEntry("$HERO${it.extension.lowercase()}", it.bytes) }
+            for ((name, shot) in bundle.screenshots.toSortedMap().entries.take(MAX_SCREENSHOTS)) {
+                if (isScreenshotName(name)) zip.writeEntry("$SCREENSHOTS_PREFIX$name", shot.bytes)
+            }
+            bundle.readme?.toByteArray()?.takeIf { it.size <= MAX_README_BYTES }?.let { zip.writeEntry(ENTRY_README, it) }
+
             for ((key, file) in bundle.media.toSortedMap()) {
                 if (ThemeMedia.isMedia(key, file.extension)) zip.writeEntry("$MEDIA_PREFIX$key.${file.extension.lowercase()}", file.bytes)
             }
@@ -89,6 +104,9 @@ object EchoThemeCodec {
         val sysicons = mutableMapOf<String, ThemeImage>()
         var motionExtension: String? = null
         val media = mutableMapOf<String, ThemeImage>()
+        var hero: ThemeImage? = null
+        val screenshots = sortedMapOf<String, ThemeImage>()
+        var readme: String? = null
 
         try {
             BoundedZipReader.read(input, BUNDLE_LIMITS) { entry ->
@@ -121,6 +139,18 @@ object EchoThemeCodec {
                                 ?.let { sysicons[platformId] = ThemeImage(it, ext) }
                         }
                     }
+                    entry.name.startsWith(HERO) -> {
+                        val ext = entry.name.removePrefix(HERO).lowercase()
+                        if (ext in PICTURE_EXTENSIONS) entry.readBytes().takeIf { it.size <= MAX_PICTURE_BYTES }?.let { hero = ThemeImage(it, ext) }
+                    }
+                    entry.name.startsWith(SCREENSHOTS_PREFIX) -> {
+                        val name = entry.name.removePrefix(SCREENSHOTS_PREFIX)
+                        if (isScreenshotName(name) && screenshots.size < MAX_SCREENSHOTS) {
+                            entry.readBytes().takeIf { it.size <= MAX_PICTURE_BYTES }
+                                ?.let { screenshots[name] = ThemeImage(it, name.substringAfterLast('.').lowercase()) }
+                        }
+                    }
+                    entry.name == ENTRY_README -> readme = entry.readBytes().takeIf { it.size <= MAX_README_BYTES }?.decodeToString()
                     entry.name.startsWith(MEDIA_PREFIX) -> {
                         val name = entry.name.removePrefix(MEDIA_PREFIX)
                         val key = name.substringBeforeLast('.')
@@ -147,6 +177,9 @@ object EchoThemeCodec {
             sysicons = sysicons,
             motion = motionExtension?.let { ext -> reopen?.invoke(ext) },
             media = media,
+            hero = hero,
+            screenshots = screenshots,
+            readme = readme,
         )
     }
 
@@ -191,6 +224,10 @@ object EchoThemeCodec {
             }
             written
         }
+
+    // a screenshot's file name: a picture, with no folder in it
+    private fun isScreenshotName(name: String): Boolean =
+        name.isNotBlank() && '/' !in name && name.substringAfterLast('.', "").lowercase() in PICTURE_EXTENSIONS
 
     private fun ZipOutputStream.writeEntry(name: String, data: ByteArray) {
         putNextEntry(ZipEntry(name))

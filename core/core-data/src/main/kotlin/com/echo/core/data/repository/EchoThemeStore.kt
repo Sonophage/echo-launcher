@@ -21,6 +21,11 @@ import com.echo.themekit.EchoThemeManifest
 import com.echo.themekit.EchoThemeSource
 import com.echo.themekit.ThemeImage
 import com.echo.themekit.ThemeMotion
+import com.echo.themekit.ThemeMedia
+import com.echo.themekit.ThemePart
+import com.echo.themekit.ThemeReadme
+import com.echo.themekit.parts
+import kotlinx.coroutines.flow.map
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -49,7 +54,16 @@ class EchoThemeStore @Inject constructor(
         val accentArgb: Long?,
 
         val previewPath: String?,
+        // for the theme store (owner, 2026-10-07): the hero picture, README metadata and the parts it has
+        val heroPath: String? = null,
+        val author: String? = null,
+        val version: String? = null,
+        val description: String? = null,
+        val parts: Set<ThemePart> = emptySet(),
     )
+
+    // a theme's store page: its README and its screenshots, unpacked to files
+    data class ThemeDetails(val readme: ThemeReadme, val screenshotPaths: List<String>)
 
     private val dir = File(context.filesDir, "pfpthemes")
 
@@ -82,19 +96,25 @@ class EchoThemeStore @Inject constructor(
         ).also { if (scaled !== bitmap) bitmap.recycle() }
     }
 
-    suspend fun apply(id: String): Boolean = withContext(Dispatchers.IO) {
+    // applies the theme, or only [parts] of it from the Mix screen. A whole theme sets what it has and clears
+    // the wallpaper, icons and colours it leaves out; a part ECHO has only one of (sounds, boot, game start,
+    // wave design, buttons) keeps the person's own when the theme leaves it out
+    suspend fun apply(id: String, parts: Set<ThemePart> = ThemePart.entries.toSet()): Boolean = withContext(Dispatchers.IO) {
+        val whole = parts.size == ThemePart.entries.size
         val wallpaperSidecar = File(dir, "$id.wallpaper.jpg")
 
         val bundle = runCatching { EchoThemeCodec.read(File(dir, "$id.$THEME_EXT")) }.getOrNull()
             ?: return@withContext false
 
+        val wallpaperPart = ThemePart.WALLPAPER in parts
         val destDir = File(context.filesDir, "wallpaper").apply { mkdirs() }
         val dest = File(destDir, "wallpaper_theme_${System.currentTimeMillis()}.jpg")
-        val wallpaperOk = wallpaperSidecar.isFile && runCatching { wallpaperSidecar.copyTo(dest, overwrite = true) }.isSuccess
+        val wallpaperOk = wallpaperPart && wallpaperSidecar.isFile && runCatching { wallpaperSidecar.copyTo(dest, overwrite = true) }.isSuccess
 
+        val iconsPart = ThemePart.ICONS in parts
         val iconsDir = File(context.filesDir, THEME_ICONS_DIR)
-        iconsDir.deleteRecursively()
-        val iconEntries: Map<String, com.echo.themekit.ThemeImage> = buildMap {
+        if (iconsPart) iconsDir.deleteRecursively()
+        val iconEntries: Map<String, com.echo.themekit.ThemeImage> = if (!iconsPart) emptyMap() else buildMap {
             putAll(bundle.icons)
             for ((platformId, image) in bundle.sysicons) put("sysicon_$platformId", image)
         }
@@ -106,7 +126,7 @@ class EchoThemeStore @Inject constructor(
             }
         }
 
-        val motionDest = bundle.motion?.let { motion ->
+        val motionDest = bundle.motion?.takeIf { wallpaperPart }?.let { motion ->
             runCatching {
                 val motionDir = File(context.filesDir, "wallpaper").apply { mkdirs() }
                 val dest = File(motionDir, "wallpaper_theme_${System.currentTimeMillis()}.${motion.extension.lowercase()}")
@@ -142,7 +162,9 @@ class EchoThemeStore @Inject constructor(
 
         // the theme's sounds, boot and game-start media; a slot it leaves out keeps the person's own
         // (owner, 2026-10-07)
+        val mediaParts = mapOf(ThemeMedia.SOUNDS to ThemePart.SOUNDS, ThemeMedia.BOOT to ThemePart.BOOT, ThemeMedia.GAME_START to ThemePart.GAME_START)
         for ((key, file) in bundle.media) {
+            if (mediaParts[ThemeMedia.FOLDERS[key]] !in parts) continue
             val slot = com.echo.core.domain.model.UiMediaSlot.fromKey(key) ?: continue
             val staged = File(context.cacheDir, "theme-media/$key.${file.extension}")
             val result = runCatching {
@@ -153,31 +175,44 @@ class EchoThemeStore @Inject constructor(
             staged.delete()
             if (result?.ok != true) Timber.w("EchoThemeStore: the theme's %s was not applied: %s", key, result?.message)
         }
-        val parts = bundle.manifest
+        val parts0 = bundle.manifest
 
         val luma = if (wallpaperOk) WallpaperLuminanceProbe.survey(dest.absolutePath) else null
+        val sources = partSources().toMutableMap()
+        if (whole) sources.clear()
+        bundle.parts().filter { it in parts }.forEach { sources[it] = appliedName }
+
         context.echoDataStore.edit { prefs ->
-            prefs[KEY_APPLIED_THEME_NAME] = appliedName
-            prefs[KEY_WAVE_STYLE] = waveStyle
+            if (whole) prefs[KEY_APPLIED_THEME_NAME] = appliedName
+            prefs[KEY_PART_SOURCES] = encodeSources(sources)
+            if (ThemePart.WAVE in parts) prefs[KEY_WAVE_STYLE] = waveStyle
 
-            if (motionDest != null) prefs[KEY_MOTION_WALLPAPER] = motionDest.absolutePath else prefs.remove(KEY_MOTION_WALLPAPER)
-            if (wallpaperOk) prefs[KEY_CUSTOM_WALLPAPER] = dest.absolutePath else prefs.remove(KEY_CUSTOM_WALLPAPER)
-            prefs.setWallpaperLuma(luma)
+            if (wallpaperPart) {
+                if (motionDest != null) prefs[KEY_MOTION_WALLPAPER] = motionDest.absolutePath else prefs.remove(KEY_MOTION_WALLPAPER)
+                if (wallpaperOk) prefs[KEY_CUSTOM_WALLPAPER] = dest.absolutePath else prefs.remove(KEY_CUSTOM_WALLPAPER)
+                prefs.setWallpaperLuma(luma)
+            }
 
-            if (accent != null) prefs[KEY_ACCENT_OVERRIDE] = accent else prefs.remove(KEY_ACCENT_OVERRIDE)
-            if (iconColor != null) prefs[KEY_ICON_COLOR] = iconColor else prefs.remove(KEY_ICON_COLOR)
-            if (textColor != null) prefs[KEY_TEXT_COLOR] = textColor else prefs.remove(KEY_TEXT_COLOR)
-            if (layoutJson != null) prefs[KEY_THEME_LAYOUT] = layoutJson else prefs.remove(KEY_THEME_LAYOUT)
-            if (iconEntries.isNotEmpty()) {
-                prefs[KEY_THEME_ICONS_STAMP] = System.currentTimeMillis()
-            } else {
-                prefs.remove(KEY_THEME_ICONS_STAMP)
+            if (ThemePart.COLOURS in parts) {
+                if (accent != null) prefs[KEY_ACCENT_OVERRIDE] = accent else prefs.remove(KEY_ACCENT_OVERRIDE)
+                if (iconColor != null) prefs[KEY_ICON_COLOR] = iconColor else prefs.remove(KEY_ICON_COLOR)
+                if (textColor != null) prefs[KEY_TEXT_COLOR] = textColor else prefs.remove(KEY_TEXT_COLOR)
+                if (layoutJson != null) prefs[KEY_THEME_LAYOUT] = layoutJson else prefs.remove(KEY_THEME_LAYOUT)
+            }
+            if (iconsPart) {
+                if (iconEntries.isNotEmpty()) {
+                    prefs[KEY_THEME_ICONS_STAMP] = System.currentTimeMillis()
+                } else {
+                    prefs.remove(KEY_THEME_ICONS_STAMP)
+                }
             }
             // set only when the theme names one ECHO knows; otherwise the person's own stays
-            parts.waveDesign?.takeIf { it in EchoThemeManifest.WAVE_DESIGNS }?.let { prefs[KEY_WAVE_DESIGN] = it }
-            parts.gameBootStyle?.takeIf { it in EchoThemeManifest.GAME_START_STYLES }?.let { prefs[KEY_GAMEBOOT_STYLE] = it }
-            parts.launchDiscStyle?.takeIf { it in EchoThemeManifest.GAME_START_STYLES }?.let { prefs[KEY_LAUNCH_DISC_STYLE] = it }
-            parts.buttonSet?.takeIf { it in EchoThemeManifest.BUTTON_SETS }?.let { prefs[KEY_BUTTON_SET] = it }
+            if (ThemePart.WAVE in parts) parts0.waveDesign?.takeIf { it in EchoThemeManifest.WAVE_DESIGNS }?.let { prefs[KEY_WAVE_DESIGN] = it }
+            if (ThemePart.GAME_START in parts) {
+                parts0.gameBootStyle?.takeIf { it in EchoThemeManifest.GAME_START_STYLES }?.let { prefs[KEY_GAMEBOOT_STYLE] = it }
+                parts0.launchDiscStyle?.takeIf { it in EchoThemeManifest.GAME_START_STYLES }?.let { prefs[KEY_LAUNCH_DISC_STYLE] = it }
+            }
+            if (ThemePart.BUTTONS in parts) parts0.buttonSet?.takeIf { it in EchoThemeManifest.BUTTON_SETS }?.let { prefs[KEY_BUTTON_SET] = it }
         }
         true
     }
@@ -196,6 +231,7 @@ class EchoThemeStore @Inject constructor(
             prefs.remove(KEY_THEME_LAYOUT)
             prefs.remove(KEY_THEME_ICONS_STAMP)
             prefs.remove(KEY_APPLIED_THEME_NAME)
+            prefs.remove(KEY_PART_SOURCES)
         }
 
         File(context.filesDir, THEME_ICONS_DIR).deleteRecursively()
@@ -210,8 +246,54 @@ class EchoThemeStore @Inject constructor(
         _themes.value = scan()
     }
 
-    private fun removeFiles(id: String) =
-        listOf("$id.$THEME_EXT", "$id.preview.jpg", "$id.wallpaper.jpg").forEach { File(dir, it).delete() }
+    private fun removeFiles(id: String) {
+        listOf("$id.$THEME_EXT", "$id.preview.jpg", "$id.wallpaper.jpg", "$id.$META").forEach { File(dir, it).delete() }
+        dir.listFiles { f -> f.name.startsWith("$id.hero.") }.orEmpty().forEach { it.delete() }
+    }
+
+    // which theme each part in use came from, by part; a part set by hand or by no theme is absent
+    suspend fun partSources(): Map<ThemePart, String> = decodeSources(context.echoDataStore.data.first()[KEY_PART_SOURCES])
+
+    val partSourcesFlow: kotlinx.coroutines.flow.Flow<Map<ThemePart, String>> =
+        context.echoDataStore.data.map { decodeSources(it[KEY_PART_SOURCES]) }
+
+    // the README and the screenshots of a saved theme, the screenshots unpacked under the cache
+    suspend fun details(id: String): ThemeDetails? = withContext(Dispatchers.IO) {
+        val bundle = bundleFile(id)?.let { runCatching { EchoThemeCodec.read(it) }.getOrNull() } ?: return@withContext null
+        val shotsDir = File(context.cacheDir, "theme-shots/$id").apply { deleteRecursively(); mkdirs() }
+        val shots = bundle.screenshots.map { (name, image) -> File(shotsDir, name).apply { writeBytes(image.bytes) }.absolutePath }
+        ThemeDetails(ThemeReadme.parse(bundle.readme), shots)
+    }
+
+    // the hero and the metadata the store lists, written beside the theme so the list does not open every
+    // theme. The list writes them for a theme that has none: a new one, or one stored before the store
+    private fun writeSidecars(id: String, bundle: EchoThemeBundle) {
+        dir.listFiles { f -> f.name.startsWith("$id.hero.") }.orEmpty().forEach { it.delete() }
+        bundle.hero?.let { File(dir, "$id.hero.${it.extension.lowercase()}").writeBytes(it.bytes) }
+        val readme = ThemeReadme.parse(bundle.readme)
+        val meta = org.json.JSONObject()
+            .put("author", readme.author).put("version", readme.version).put("description", readme.description)
+            .put("parts", org.json.JSONArray(bundle.parts().map { it.name }))
+        File(dir, "$id.$META").writeText(meta.toString())
+    }
+
+    private fun readSidecars(id: String, file: File): SavedTheme.() -> SavedTheme {
+        val metaFile = File(dir, "$id.$META")
+        if (!metaFile.isFile) runCatching { EchoThemeCodec.read(file) }.getOrNull()?.let { writeSidecars(id, it) }
+        val meta = runCatching { org.json.JSONObject(metaFile.readText()) }.getOrNull()
+        val hero = dir.listFiles { f -> f.name.startsWith("$id.hero.") }.orEmpty().firstOrNull()
+        return {
+            copy(
+                heroPath = hero?.absolutePath,
+                author = meta?.optString("author")?.takeIf { it.isNotEmpty() },
+                version = meta?.optString("version")?.takeIf { it.isNotEmpty() },
+                description = meta?.optString("description")?.takeIf { it.isNotEmpty() },
+                parts = meta?.optJSONArray("parts")?.let { a ->
+                    (0 until a.length()).mapNotNull { i -> runCatching { ThemePart.valueOf(a.getString(i)) }.getOrNull() }.toSet()
+                }.orEmpty(),
+            )
+        }
+    }
 
     // the stored .echo-theme file of a saved theme
     fun bundleFile(id: String): File? = File(dir, "$id.$THEME_EXT").takeIf { it.isFile }
@@ -529,7 +611,7 @@ class EchoThemeStore @Inject constructor(
                     name = manifest.name,
                     accentArgb = manifest.accentColor.toAccentArgbOrNull(),
                     previewPath = File(dir, "$id.preview.jpg").takeIf { it.isFile }?.absolutePath,
-                )
+                ).let(readSidecars(id, file))
             }
 
     private fun nextDefaultName(): String {
@@ -565,6 +647,19 @@ class EchoThemeStore @Inject constructor(
         private val KEY_GAMEBOOT_STYLE = stringPreferencesKey("display_gameboot_style")
         private val KEY_LAUNCH_DISC_STYLE = stringPreferencesKey("display_launch_disc_style")
         private val KEY_BUTTON_SET = stringPreferencesKey("controller_display_type")
+
+        // which theme each part came from, as PART=name lines (owner, 2026-10-07: the Mix screen)
+        val KEY_PART_SOURCES = stringPreferencesKey("theme_part_sources")
+        private const val META = "meta.json"
+
+        internal fun encodeSources(sources: Map<ThemePart, String>): String =
+            sources.entries.joinToString("\n") { (part, name) -> "${part.name}=${name.replace('\n', ' ')}" }
+
+        fun decodeSources(text: String?): Map<ThemePart, String> =
+            text.orEmpty().lines().mapNotNull { line ->
+                val i = line.indexOf('=').takeIf { it > 0 } ?: return@mapNotNull null
+                runCatching { ThemePart.valueOf(line.substring(0, i)) }.getOrNull()?.let { it to line.substring(i + 1) }
+            }.toMap()
 
         // names of themes deleted in ECHO, so their folder in the ECHO folder is not read back in
         private const val DISMISSED_FILE = "folder-dismissed.txt"

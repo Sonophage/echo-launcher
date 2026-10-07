@@ -99,6 +99,52 @@ class EchoThemeStorePartsTest {
         assertEquals(null, bundle.manifest.buttonSet, "a setting the person never chose is not carried")
     }
 
+    // owner, 2026-10-07: the Mix screen takes each part from any theme
+    @Test
+    fun `mixing takes one part from another theme and leaves the rest`() = runTest {
+        val store = EchoThemeStore(context, media)
+        val a = assertNotNull(store.importBundle(register(theme(
+            EchoThemeManifest(name = "Arcs", accentColor = "#112233", waveDesign = "ECHO_ARCS"),
+            media = mapOf("sound_back" to ThemeImage(wav(), "wav")),
+        ))))
+        val b = assertNotNull(store.importBundle(register(theme(
+            EchoThemeManifest(name = "Rings", accentColor = "#445566", waveDesign = "ECHO_RINGS"),
+            media = mapOf("sound_select" to ThemeImage(wav(), "wav")),
+        ))))
+        assertTrue(store.apply(a.id))
+        assertTrue(store.apply(b.id, setOf(com.echo.themekit.ThemePart.SOUNDS)))
+
+        val prefs = context.echoDataStore.data.first()
+        assertEquals("ECHO_ARCS", prefs[stringPreferencesKey("display_wave_design")], "the wave stays the first theme's")
+        assertEquals("Arcs", prefs[stringPreferencesKey("theme_applied_name")])
+        assertNotNull(media.pathFor(UiMediaSlot.SOUND_SELECT), "the second theme's sounds are in use")
+        assertEquals("Rings", store.partSources()[com.echo.themekit.ThemePart.SOUNDS])
+        assertEquals("Arcs", store.partSources()[com.echo.themekit.ThemePart.WAVE])
+        assertEquals("Arcs", store.partSources()[com.echo.themekit.ThemePart.COLOURS])
+    }
+
+    @Test
+    fun `the store lists a theme's hero, metadata and parts, and its page has the screenshots`() = runTest {
+        val store = EchoThemeStore(context, media)
+        val jpg = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte()) + ByteArray(16)
+        val saved = assertNotNull(store.importBundle(register(EchoThemeCodec.write(EchoThemeBundle(
+            EchoThemeManifest(name = "Aurora", accentColor = "#7C5CFF", buttonSet = "XBOX"), wallpaper = null, preview = null,
+            hero = ThemeImage(jpg, "jpg"),
+            screenshots = mapOf("01.jpg" to ThemeImage(jpg, "jpg")),
+            readme = "---\nauthor: Seth\nversion: 2\ndescription: Night sky\n---\nBody",
+        )))))
+
+        val listed = store.themes.value.single { it.id == saved.id }
+        assertNotNull(listed.heroPath)
+        assertEquals("Seth", listed.author)
+        assertEquals("Night sky", listed.description)
+        assertEquals(setOf(com.echo.themekit.ThemePart.COLOURS, com.echo.themekit.ThemePart.BUTTONS), listed.parts)
+        val details = assertNotNull(store.details(saved.id))
+        assertEquals("Body", details.readme.body)
+        assertEquals(1, details.screenshotPaths.size)
+        assertTrue(File(details.screenshotPaths.single()).isFile)
+    }
+
     private fun theme(manifest: EchoThemeManifest, media: Map<String, ThemeImage>) =
         EchoThemeCodec.write(EchoThemeBundle(manifest, wallpaper = null, preview = null, media = media))
 

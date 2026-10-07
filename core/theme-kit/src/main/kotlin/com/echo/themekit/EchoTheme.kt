@@ -110,9 +110,18 @@ data class EchoThemeBundle(
 
     // sounds, boot and game-start media by ECHO's media slot key (ThemeMedia.FOLDERS)
     val media: Map<String, ThemeImage> = emptyMap(),
+
+    // for the theme store (owner, 2026-10-07): the picture that heads its page, screenshots by file name,
+    // and README.md, whose front matter is the theme's metadata (ThemeReadme)
+    val hero: ThemeImage? = null,
+    val screenshots: Map<String, ThemeImage> = emptyMap(),
+    val readme: String? = null,
 ) {
     override fun equals(other: Any?): Boolean =
         other is EchoThemeBundle &&
+            hero == other.hero &&
+            screenshots == other.screenshots &&
+            readme == other.readme &&
             media == other.media &&
             manifest == other.manifest &&
             wallpaper.contentEquals(other.wallpaper) &&
@@ -129,6 +138,7 @@ data class EchoThemeBundle(
         for ((key, image) in sysicons) h = 31 * h + (key.hashCode() xor image.hashCode())
         motion?.let { h = 31 * h + it.hashCode() }
         for ((key, file) in media) h = 31 * h + (key.hashCode() xor file.hashCode())
+        h = 31 * h + (hero?.hashCode() ?: 0) + screenshots.hashCode() + (readme?.hashCode() ?: 0)
         return h
     }
 }

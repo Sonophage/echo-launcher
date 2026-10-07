@@ -8,6 +8,8 @@ object EchoThemeTemplate {
     fun files(): Map<String, ByteArray> = linkedMapOf(
         EchoThemeFolder.MANIFEST to manifestJson(),
         "README.txt" to README.trimIndent(),
+        EchoThemeFolder.README to STORE_README.trimIndent(),
+        "Preview/README.txt" to PREVIEW.trimIndent(),
         "Icons/README.txt" to icons(),
         "Icons/Consoles/README.txt" to consoles(),
         "Wallpaper/README.txt" to WALLPAPER.trimIndent(),
@@ -50,8 +52,29 @@ object EchoThemeTemplate {
         Sounds/      Interface sounds and menu music.
         Boot/        The boot animation and its sound.
         GameStart/   GameBoot and the launch disc.
+        README.md    The theme's page in ECHO's theme store. The lines between the two --- lines
+                     are its details (author, version, description, tags); the text after them is
+                     shown on the page.
+        Preview/     hero.jpg heads the theme's card and page; Screenshots/ holds up to
+                     ${EchoThemeCodec.MAX_SCREENSHOTS} pictures for its page.
 
         Every part is optional: a theme with only Sounds is a sound pack.
+    """
+
+    private val STORE_README = """
+        ---
+        author: Your name
+        version: 1.0
+        description: One line, shown on the theme's card and at the top of its page.
+        tags: dark, calm
+        ---
+
+        What your theme is, shown on its page in ECHO's theme store.
+    """
+
+    private val PREVIEW = """
+        hero.jpg       the picture on the theme's card and at the top of its page (or hero.png, hero.webp)
+        Screenshots/   up to ${EchoThemeCodec.MAX_SCREENSHOTS} pictures (.jpg, .png, .webp) for its page, shown in name order
     """
 
     private val WALLPAPER = """

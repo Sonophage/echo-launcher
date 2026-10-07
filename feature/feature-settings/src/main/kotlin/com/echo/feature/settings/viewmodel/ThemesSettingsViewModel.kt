@@ -14,6 +14,7 @@ import com.echo.core.data.wallpaper.ThemeAccent
 import com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE
 import com.echo.core.data.wallpaper.ThemeAccent.followWallpaperAccent
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe
+import com.echo.themekit.ThemePart
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +41,20 @@ data class ThemesSettingsUiState(
     val iconColorArgb: Long? = null,
 
     val savedThemes: List<EchoThemeStore.SavedTheme> = emptyList(),
+
+    // which theme each part in use came from (the Mix screen)
+    val partSources: Map<ThemePart, String> = emptyMap(),
+    // the theme whose store page is open
+    val page: ThemePage? = null,
 )
+
+data class ThemePage(val theme: EchoThemeStore.SavedTheme, val details: EchoThemeStore.ThemeDetails?)
+
+// owner, 2026-10-07: with parts taken from more than one theme, the look in use is a mix, not the last theme applied
+internal fun activeThemeLabel(applied: String?, sources: Map<ThemePart, String>): String = when {
+    sources.values.toSet().size > 1 -> "Mixed"
+    else -> sources.values.firstOrNull() ?: applied ?: "Default"
+}
 
 @HiltViewModel
 class ThemesSettingsViewModel @Inject constructor(
@@ -55,7 +69,11 @@ class ThemesSettingsViewModel @Inject constructor(
         _extra,
     ) { prefs, saved, extra ->
         extra.copy(
-            activeThemeName    = prefs[EchoThemeStore.KEY_APPLIED_THEME_NAME] ?: "Default",
+            partSources        = EchoThemeStore.decodeSources(prefs[EchoThemeStore.KEY_PART_SOURCES]),
+            activeThemeName    = activeThemeLabel(
+                prefs[EchoThemeStore.KEY_APPLIED_THEME_NAME],
+                EchoThemeStore.decodeSources(prefs[EchoThemeStore.KEY_PART_SOURCES]),
+            ),
             accentOverrideArgb = prefs[KEY_ACCENT_OVERRIDE],
             accentFromWallpaper = prefs[ThemeAccent.KEY_ACCENT_FROM_WALLPAPER] == true,
             hasWallpaper       = prefs[WallpaperLuminanceProbe.KEY_WALLPAPER_ACCENT] != null,
@@ -100,6 +118,25 @@ class ThemesSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val ok = themeStore.apply(id)
             if (!ok) _extra.update { it.copy(installMessage = "Could not apply the theme") }
+        }
+    }
+
+    // the theme store's page for one theme: its hero, README and screenshots
+    fun openThemePage(id: String) {
+        val theme = uiState.value.savedThemes.firstOrNull { it.id == id } ?: return
+        _extra.update { it.copy(page = ThemePage(theme, null)) }
+        viewModelScope.launch {
+            val details = themeStore.details(id)
+            _extra.update { e -> if (e.page?.theme?.id == id) e.copy(page = ThemePage(theme, details)) else e }
+        }
+    }
+
+    fun closeThemePage() = _extra.update { it.copy(page = null) }
+
+    // one part of a theme, from the Mix screen
+    fun applyPart(id: String, part: ThemePart) {
+        viewModelScope.launch {
+            if (!themeStore.apply(id, setOf(part))) _extra.update { it.copy(installMessage = "Could not apply the theme's ${part.label.lowercase()}") }
         }
     }
 
