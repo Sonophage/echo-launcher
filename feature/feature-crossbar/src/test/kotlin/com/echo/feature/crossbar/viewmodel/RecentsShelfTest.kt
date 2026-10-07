@@ -324,4 +324,15 @@ class RecentAppDismissalTest {
         assertEquals(listOf(app), pinnedForFilter(listOf(game, app), RecentFilter.APPS))
         assertEquals(emptyList<CrossbarItem>(), pinnedForFilter(listOf(game, app), RecentFilter.MUSIC))
     }
+
+    // owner, 2026-10-07: taking a game off Recent leaves its play history alone, and it comes back once played again
+    @Test
+    fun `a game taken off Recent stays off until it is played again`() {
+        val g = com.echo.core.domain.model.Game(id = 7L, title = "Skyrim", platformId = "pc", lastPlayedAt = 1_000L)
+        val dismissed = parseRecentDismissals(withRecentDismissal(emptySet(), gameDismissalKey(7L), 2_000L))
+        assertTrue(notDismissedGames(listOf(g), dismissed).isEmpty())
+        assertEquals(listOf(7L), notDismissedGames(listOf(g.copy(lastPlayedAt = 3_000L)), dismissed).map { it.id })
+        assertEquals("an app's dismissal is not a game's", listOf(7L),
+            notDismissedGames(listOf(g), parseRecentDismissals(withRecentDismissal(emptySet(), "7", 2_000L))).map { it.id })
+    }
 }

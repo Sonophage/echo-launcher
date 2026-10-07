@@ -174,3 +174,10 @@ internal fun withRecentDismissal(raw: Set<String>, packageName: String, at: Long
 
 internal fun dismissedFromRecents(lastUsedAt: Long, dismissedAt: Long?): Boolean =
     dismissedAt != null && lastUsedAt <= dismissedAt
+
+// owner, 2026-10-07: a game taken off Recent keeps its play history (Profile and Overview read it), so it is
+// dismissed the way an app is, until it is played again, rather than having its last played cleared
+internal fun gameDismissalKey(gameId: Long): String = "g:$gameId"
+
+internal fun notDismissedGames(games: List<com.echo.core.domain.model.Game>, dismissals: Map<String, Long>) =
+    games.filterNot { dismissedFromRecents(it.lastPlayedAt ?: 0L, dismissals[gameDismissalKey(it.id)]) }

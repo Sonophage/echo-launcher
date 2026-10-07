@@ -63,15 +63,29 @@ class CrossbarRecents(
             }
         }
 
-    internal fun dismissAppFromRecents(packageName: String) {
+    internal fun dismissAppFromRecents(packageName: String) = dismissFromRecents(packageName)
+
+    internal fun dismissGameFromRecents(gameId: Long) = dismissFromRecents(gameDismissalKey(gameId))
+
+    // an app by its package, a game by gameDismissalKey; both come back once used again
+    private fun dismissFromRecents(key: String) {
         scope.launch {
             vm.context.echoDataStore.edit { prefs ->
                 prefs[CrossbarViewModel.KEY_RECENT_APP_DISMISSALS] = withRecentDismissal(
-                    prefs[CrossbarViewModel.KEY_RECENT_APP_DISMISSALS].orEmpty(), packageName, System.currentTimeMillis(),
+                    prefs[CrossbarViewModel.KEY_RECENT_APP_DISMISSALS].orEmpty(), key, System.currentTimeMillis(),
                 )
             }
         }
     }
+
+    private fun recentDismissals(): Flow<Map<String, Long>> =
+        vm.context.echoDataStore.data
+            .map { parseRecentDismissals(it[CrossbarViewModel.KEY_RECENT_APP_DISMISSALS].orEmpty()) }
+            .distinctUntilChanged()
+
+    // the games Last Played shows: played, and not taken off it since
+    private fun recentGames(): Flow<List<com.echo.core.domain.model.Game>> =
+        combine(vm.gameRepository.observeRecentlyPlayed(CrossbarViewModel.RECENTLY_PLAYED_LIMIT), recentDismissals(), ::notDismissedGames)
 
     internal fun emptyRecentItem(): CrossbarItem = CrossbarItem(
         id       = CrossbarViewModel.EMPTY_CATEGORY_ITEM_ID,
@@ -135,10 +149,7 @@ class CrossbarRecents(
             item.type == CrossbarItemType.LIBRARY_BOOK -> vm.bookshelf.handleBookAction(item.id.removePrefix("book_"), "book_remove_recent")
             item.type == CrossbarItemType.MUSIC_TRACK -> vm.music.handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null)
             item.isRecentAlbum -> vm.music.removeAlbumFromRecent(item.musicGroupKey!!)
-            item.gameId != null -> {
-                val gid = item.gameId
-                vm.appAction { vm.gameRepository.clearLastPlayed(gid) }
-            }
+            item.gameId != null -> dismissGameFromRecents(item.gameId)
             item.packageName != null -> dismissAppFromRecents(item.packageName)
         }
     }
@@ -176,7 +187,7 @@ class CrossbarRecents(
     internal fun observeRecentTop() {
         scope.launch {
             combine(
-                vm.gameRepository.observeRecentlyPlayed(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
+                recentGames(),
                 vm.musicRepository.observeRecentlyPlayedTracks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
                 vm.bookshelf.observeRecentBookRows(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
                 vm.videoRepository.observeRecentlyWatched(),
@@ -292,7 +303,7 @@ class CrossbarRecents(
     // screen the bottom screen's Recent page (owner, 2026-10-06), so both read the same list
     internal fun recentRows(filter: Flow<RecentFilter>): Flow<RecentRows> =
         combine(
-            vm.gameRepository.observeRecentlyPlayed(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
+            recentGames(),
             vm.musicRepository.observeRecentlyPlayedTracks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
             vm.bookshelf.observeRecentBookRows(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
             vm.videoRepository.observeRecentlyWatched(),

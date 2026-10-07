@@ -331,10 +331,7 @@ class CrossbarGames(
             "unfavorite"             -> toggleGameFavorite(gameId, false)
 
             "pin_recent", "unpin_recent" -> { vm.closeContextMenu(); vm.recents.togglePinned("g:$gameId") }
-            "remove_from_recent"     -> {
-                val gid = gameId
-                vm.appAction { vm.gameRepository.clearLastPlayed(gid) }
-            }
+            "remove_from_recent"     -> { vm.closeContextMenu(); vm.recents.dismissGameFromRecents(gameId) }
             "add_category"           -> menu.categoryContext?.let { vm.openGameCategoryPicker(gameId, it, "add") }
             "move_category"          -> menu.categoryContext?.let { vm.openGameCategoryPicker(gameId, it, "move") }
             "remove_category"        -> menu.categoryContext?.let { cat ->
