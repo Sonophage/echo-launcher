@@ -140,7 +140,7 @@ folders they scan.
 ### Games
 
 A focused game fills the background with its own art and shows its details beside the tile.
-**Menu (≡)** opens its options on a panel at the right edge, with the art blurred behind it;
+**Y** opens its options on a panel at the right edge, with the art blurred behind it;
 anything destructive asks twice. **Game Info** shows play time, platform, screenshots and video.
 
 | | |
@@ -156,16 +156,16 @@ anything destructive asks twice. **Game Info** shows play time, platform, screen
 
 ### The App Drawer and Search
 
-The **App Drawer** (RB) lists the focused app's details on the left (its name, kind, what is known
+The **App Drawer** (LB) lists the focused app's details on the left (its name, kind, what is known
 about it, **Open** and **Options**) and every app as a VHS case in three columns on the right, two
 whole rows at a time, with a spine saying what it is. A game's cover keeps its own shape on the case's
 ribbed plastic, so square Game Boy boxes and tall Switch covers both show whole. Its sections (Recently Used, Apps, Emulators, Games) are icons in the top
 bar; LT and RT move between them. The Games tab has a chip per system, Steam Games included, and a
-game's **≡** opens the same menu as on the crossbar.
+game's **Y** opens the same menu as on the crossbar.
 
-**Search** (Y or LB) puts every result on one shelf: the likeliest match stands in the middle as the
-same VHS case the drawer uses, the rest as spines fanning out to both sides, and left and right slide along it. LB and
-RB filter by kind (Games, Apps, Music, Video, Books). A newly installed app shows up straight away.
+**Search** (RB) puts every result on one shelf: the likeliest match stands in the middle as the
+same VHS case the drawer uses, the rest as spines fanning out to both sides, and left and right slide along it. LT and
+RT filter by kind (Games, Apps, Music, Video, Books). A newly installed app shows up straight away.
 
 A game's cover, everywhere it shows (the crossbar's cover rows, the drawer, Search and GameBoot), is
 its **icon slot**; the main art is used only when the icon slot is empty.
@@ -205,7 +205,7 @@ and bookmarks, and it keeps your place.
 
 ### The top panel and Settings
 
-**Home** (the Guide or View button) or a tap on the notification island at the top right first shows the newest
+**Select** (View) or a tap on the notification island at the top right first shows the newest
 notification as a card, when there is one; a second press opens the panel: Notifications,
 Profile, Quick settings, Libraries and Settings. Settings has seven sections: **Overview, Library, Emulators,
 Look & Feel, Accounts, System, Setup**.
@@ -464,13 +464,17 @@ access to all of your storage.
 | Open | **A** | Enter | Tap |
 | Launch a game or app | Hold **A** | Hold Enter | Hold the A button |
 | Back | **B** | Esc | The Back button in the footer |
-| Options | **Menu (≡)** | F3 | Long-press |
+| Options | **Y** | F3 | Long-press |
+| Resume the game that is still running | Hold **Y** | | Hold Resume, in the footer |
 | Sort, or the screen's X action | **X** | F2 | |
-| Search | **Y**, or **LB** on the crossbar | Tab | Search, in the footer |
-| App Drawer | **RB** on the crossbar, or **B** at the top level | | Apps, in the footer |
+| App Drawer | **LB**, on every screen (again to close) | | Apps, in the footer |
+| Search | **RB**, on every screen (again to close) | Tab | Search, in the footer |
 | Categories, tabs, sections and filters | **LT / RT** | Page Up / Page Down | Tap |
-| Page or seek in lists and players | **LB / RB** | | |
-| Home: the top panel | **Guide** or **View** (twice when a notification is waiting) | | Tap the notification island twice; slide up to close |
+| Seek or turn pages in the players, the reader and Artwork Studio | **LB / RB** | | |
+| Now playing / last played island | **Start** (again to put it back) | | Tap the island |
+| Notifications: the top panel | **Select** (twice when a notification is waiting) | | Tap the notification island twice; slide up to close |
+| Home: back to the crossbar from any screen | **Guide**, or hold **Select** | | |
+| Confirm in pickers (Add, Apply) | **Start** | | The button in the footer |
 | Give the controller to the other screen (two screens) | **B** on the companion returns it to the XMB | | Tap that screen |
 
 - **D-pad ◀ backs out** of a folder, flyout or settings page wherever LEFT is not already doing
@@ -486,7 +490,7 @@ access to all of your storage.
 ## Make it yours
 
 Nearly everything ECHO draws or plays can be changed, and most of it previews live on the crossbar.
-Paths are in *Settings*; **≡** is the Menu button (long-press on touch).
+Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 
 | | |
 |:---:|:---:|
@@ -558,7 +562,7 @@ GameBoot each have their own slot, and the menu music waits while they play.
 | Setting | What it changes |
 |---|---|
 | **Type** | the **button glyphs** in the footer and every hint: Generic, **Xbox**, **Nintendo**, **PlayStation**, Keyboard or Touch |
-| **A / B Swap** · **X / Y Swap** | confirm on B and back on A; search on X and sort on Y |
+| **A / B Swap** · **X / Y Swap** | confirm on B and back on A; options on X and sort on Y |
 | **Stick Sensitivity** | how far the stick moves before it navigates, and before it counts as a full tilt |
 | **Trigger Sensitivity** | how far L2 and R2 pull to turn a page (High suits short or worn triggers) |
 | **Shoulder Hold Time** | how long L1 or R1 is held before it counts as a hold |
@@ -633,7 +637,7 @@ finished in time never holds the game back.
 
 ## Guide
 
-In the menu paths below, **≡** is the **Menu** button, which opens a thing's options. On touch,
+In the menu paths below, **≡** is the **Y** button, which opens a thing's options. On touch,
 long-press instead.
 
 ### Categories
@@ -721,7 +725,7 @@ delay, toggles **Animated Icons**, and clears the cache.
 
 The **Artwork Studio** (**≡ ▸ Metadata ▸ Artwork**) has seven tabs: Tile, Tile Video, Background,
 Screenshot, Manual, Preview Video and Logo. Each pulls from ScreenScraper, SteamGridDB, IGDB or a
-local file. Preview a candidate, then press **Home** (Guide or View) to apply. **≡** on a slot crops or
+local file. Preview a candidate, then press **Start** to apply. **≡** on a slot crops or
 repositions it, restores the previous image, or clears it. Crops keep the untouched original, so
 you can re-crop without loss.
 
@@ -764,7 +768,7 @@ Each column also lists its apps. Add more with its **Add** row.
 
 ### Search
 
-- **Y**, or **LB** on the crossbar, searches games, apps, music, video, photos and books together.
+- **RB**, on any screen, searches games, apps, music, video, photos and books together.
   Each result says what it is. Opening one goes to its column and opens it: a game or app
   launches, a video or song plays, and a photo or book opens.
 - The **Search** row at the end of Game, Music, Video, Photo and Library searches only that library.
