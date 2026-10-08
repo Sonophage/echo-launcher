@@ -1,6 +1,7 @@
 package com.echo.feature.crossbar.bottomscreen
 
 import com.echo.core.domain.model.HideLocationType
+import com.echo.feature.crossbar.viewmodel.currentCategoryOrNull
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
@@ -50,6 +51,15 @@ class CrossbarBottomScreen(
             }.collectLatest { item ->
                 val info = item?.let { vm.gameDetail.load(GameInfoState(it)) }
                 link.update { it.copy(focused = info) }
+            }
+        }
+        // the companion follows the crossbar's column: Recent narrows to its kind, and the Music column shows the
+        // remote while something plays
+        scope.launch {
+            uiState.map { it.currentCategoryOrNull() }.distinctUntilChanged { a, b -> a?.id == b?.id }.collect { category ->
+                val state = link.state.value
+                pickRecentFilter(recentFilterFor(category?.id, category?.isGamingCategory == true, state.recentFilters))
+                if (category?.id == com.echo.core.domain.model.BuiltInCategory.MUSIC && state.music) showPage(BottomPage.MUSIC)
             }
         }
         // music starting turns the companion into its remote; music ending takes the page away

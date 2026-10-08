@@ -46,6 +46,20 @@ fun BottomScreenState.pages(): List<BottomPage> = listOfNotNull(
     BottomPage.MUSIC.takeIf { music },
 )
 
+// the companion fits the crossbar's column (owner, 2026-10-08): Recent shows that column's kind, when Recent holds
+// any; any other column, or a kind with nothing in it, shows All. A gaming column of your own counts as games
+fun recentFilterFor(categoryId: String?, gaming: Boolean, shown: List<com.echo.feature.crossbar.viewmodel.RecentFilter>): com.echo.feature.crossbar.viewmodel.RecentFilter {
+    val kind = when {
+        categoryId == com.echo.core.domain.model.BuiltInCategory.MUSIC -> com.echo.feature.crossbar.viewmodel.RecentFilter.MUSIC
+        categoryId == com.echo.core.domain.model.BuiltInCategory.VIDEO -> com.echo.feature.crossbar.viewmodel.RecentFilter.VIDEO
+        categoryId == com.echo.core.domain.model.BuiltInCategory.LIBRARY -> com.echo.feature.crossbar.viewmodel.RecentFilter.BOOKS
+        categoryId == com.echo.core.domain.model.BuiltInCategory.ANDROID -> com.echo.feature.crossbar.viewmodel.RecentFilter.APPS
+        gaming -> com.echo.feature.crossbar.viewmodel.RecentFilter.GAMES
+        else -> null
+    }
+    return kind?.takeIf { it in shown } ?: com.echo.feature.crossbar.viewmodel.RecentFilter.ALL
+}
+
 // left and right walk the pages there are, round the ends
 fun BottomScreenState.steppedPage(delta: Int): BottomPage {
     val all = pages()

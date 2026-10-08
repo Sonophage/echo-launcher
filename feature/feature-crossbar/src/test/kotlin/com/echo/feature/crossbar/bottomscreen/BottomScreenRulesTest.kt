@@ -6,6 +6,7 @@ import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.SearchScope
 import com.echo.feature.crossbar.viewmodel.SearchState
 import com.echo.feature.crossbar.viewmodel.GameInfoState
+import com.echo.feature.crossbar.viewmodel.RecentFilter as F
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -109,5 +110,17 @@ class BottomScreenRulesTest {
         assertEquals(BottomPage.INFO, playing.steppedPage(1))
         assertEquals(BottomPage.RECENT, playing.steppedPage(-1))
         assertEquals("music stopped: its page goes", BottomPage.RECENT, playing.copy(music = false).shownPage())
+    }
+
+    // owner, 2026-10-08: the companion fits the crossbar's column
+    @Test
+    fun `Recent narrows to the column's kind, and to All when that kind holds nothing`() {
+        val stocked = listOf(F.ALL, F.GAMES, F.MUSIC, F.APPS)
+        assertEquals(F.MUSIC, recentFilterFor("music", gaming = false, shown = stocked))
+        assertEquals(F.GAMES, recentFilterFor("games", gaming = true, shown = stocked))
+        assertEquals("a gaming column of your own", F.GAMES, recentFilterFor("my_rpgs", gaming = true, shown = stocked))
+        assertEquals(F.APPS, recentFilterFor("android", gaming = false, shown = stocked))
+        assertEquals("no recent video: All", F.ALL, recentFilterFor("videos", gaming = false, shown = stocked))
+        assertEquals("Photos has no kind of its own", F.ALL, recentFilterFor("photos", gaming = false, shown = stocked))
     }
 }
