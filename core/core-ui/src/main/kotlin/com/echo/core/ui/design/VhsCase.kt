@@ -36,6 +36,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import coil3.compose.AsyncImage
@@ -97,7 +98,9 @@ fun VhsCoverArt(model: Any?, u: DesignUnits) {
 // an app's cover: its colour with ECHO's echo rings, its icon large and faint and again small and sharp, and its
 // name. Without an icon, glyph stands in for it
 @Composable
-fun VhsAppFace(label: String, icon: AppIconArt?, tint: Color, u: DesignUnits, glyph: @Composable () -> Unit) {
+// [iconMin] keeps the app's icon from shrinking with the screen below that size (the App Drawer on a small
+// handheld, owner 2026-10-07)
+fun VhsAppFace(label: String, icon: AppIconArt?, tint: Color, u: DesignUnits, iconMin: Dp = 0.dp, glyph: @Composable () -> Unit) {
     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(u.dp(4))).background(tint)) {
         Box(Modifier.fillMaxSize().coverRings()) {
             icon?.let { Image(it.bitmap, null, Modifier.align(Alignment.BottomEnd).offset(u.dp(30), u.dp(18)).size(u.dp(130)).rotate(-14f).graphicsLayer(alpha = 0.16f)) }
@@ -107,7 +110,7 @@ fun VhsAppFace(label: String, icon: AppIconArt?, tint: Color, u: DesignUnits, gl
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
-            if (icon != null) Image(icon.bitmap, null, Modifier.size(u.dp(72)).shadow(u.dp(8), RoundedCornerShape(u.dp(18))))
+            if (icon != null) Image(icon.bitmap, null, Modifier.size(maxOf(u.dp(72), iconMin)).shadow(u.dp(8), RoundedCornerShape(u.dp(18))))
             else glyph()
             Text(label.uppercase(), color = Color.White, fontSize = u.sp(13), fontWeight = FontWeight.ExtraBold, letterSpacing = 0.04.em,
                 lineHeight = u.sp(15), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)

@@ -188,11 +188,15 @@ private fun AppCase(app: InstalledApp, height: Dp, focused: Boolean, dimmed: Boo
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
         if (app.art != null) VhsCoverArt(app.art, u)
-        else VhsAppFace(app.label, icon, tint, u) {
+        // owner, 2026-10-07: on a small screen the logos stay big enough to read (72 design units is ~44dp on
+        // the Konker)
+        else VhsAppFace(app.label, icon, tint, u, iconMin = DRAWER_ICON_MIN) {
             Text(initialOf(app.label).toString(), color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(40), fontWeight = FontWeight.ExtraLight)
         }
     }
 }
+
+private val DRAWER_ICON_MIN = 64.dp
 
 // the left column: the app's tile, name and kind, a pill with what it is, what is known about it, when it was
 // last used, and its buttons
