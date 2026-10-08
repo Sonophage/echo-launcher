@@ -11,7 +11,7 @@ import java.util.concurrent.Executors
 
 class EchoFileLoggingTree(private val logsDir: File) : Timber.Tree() {
     private val executor = Executors.newSingleThreadExecutor { r ->
-        Thread(r, "pfp-file-log").apply { priority = Thread.MIN_PRIORITY }
+        Thread(r, "echo-file-log").apply { priority = Thread.MIN_PRIORITY }
     }
     private val lineTime = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US)
     private var currentFile: File? = null
@@ -61,7 +61,8 @@ class EchoFileLoggingTree(private val logsDir: File) : Timber.Tree() {
 
     private fun openSessionFile(): File? = try {
         logsDir.mkdirs()
-        val name = "pfp-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.log"
+        // the user sees this name in System ▸ Logs; older pfp- files age out through prune(), which goes by .log
+        val name = "echo-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.log"
         File(logsDir, name).also {
             currentFile = it
             bytesWritten = 0L
