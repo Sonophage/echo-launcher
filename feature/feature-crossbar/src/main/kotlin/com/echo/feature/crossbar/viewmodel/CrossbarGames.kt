@@ -99,10 +99,6 @@ class CrossbarGames(
         type     = CrossbarItemType.EMPTY,
     )
 
-    internal fun moveCard(platformId: String, up: Boolean) {
-        vm.appAction { memoryCardRepository.move(platformId, up) }
-    }
-
     internal fun promptRenameCard(platformId: String) {
         val card = vm.enabledCards.firstOrNull { it.platformId == platformId } ?: return
         vm.closeContextMenu()

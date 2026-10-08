@@ -82,6 +82,15 @@ fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
         )
     }
 
+    // Move (owner, 2026-10-07): A drops the lifted row or column where it is, B puts it back
+    state.moving?.let { session ->
+        return CrossbarPrompts(
+            primary = CrossbarPrompt(GamepadAction.SELECT, "Drop", session.title),
+            back = CrossbarPrompt(GamepadAction.BACK, "Cancel"),
+            right = emptyList(),
+        )
+    }
+
     state.activeContextMenu?.let { menu ->
         val row = menu.selectedIndex?.let { state.menuRows().getOrNull(it) }
         val primaryVerb = primaryVerbFor(focused)

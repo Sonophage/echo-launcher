@@ -86,6 +86,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -597,6 +598,8 @@ data class CrossbarUiState(
 
     val activeContextMenu: CrossbarContextMenu? = null,
 
+    val moving: MoveSession? = null,
+
     val colorSchemePicker: ColorSchemePickerState? = null,
     val customColorPicker: CustomColorPickerState? = null,
 
@@ -762,7 +765,7 @@ data class CrossbarUiState(
         }
 
     val overlayKeepsChrome: Boolean
-        get() = (activeContextMenu != null || notificationsOpen) && !otherBlockingOverlay
+        get() = (activeContextMenu != null || notificationsOpen || moving != null) && !otherBlockingOverlay
 
     // the notifications under the current chip; what is playing or was last played lives on the orb
     val noticeEntries: List<PanelEntry>
@@ -797,7 +800,7 @@ data class CrossbarUiState(
             !onLastPlayedHome
 
     val hasBlockingOverlay: Boolean
-        get() = otherBlockingOverlay || activeContextMenu != null || notificationsOpen
+        get() = otherBlockingOverlay || activeContextMenu != null || notificationsOpen || moving != null
 
     private val otherBlockingOverlay: Boolean
         get() = chromeOverlay || fullscreenOverlay
@@ -1036,6 +1039,8 @@ fun CrossbarItem.hasContextMenu(state: CrossbarUiState): Boolean {
         ) -> true
         isRecentAlbum -> true
         movableInColumn && state.columnOrderKey() != null -> true
+        // every row of a column that can move offers Move Column (owner, 2026-10-07)
+        state.currentItems.getOrNull(state.selectedItemIndex)?.id == id && state.columnMovable() -> true
         mediaRootKind != null && type == CrossbarItemType.MEDIA_ROOT -> true
         type == CrossbarItemType.MEDIA_ROOT -> true
         gameId != null -> true
@@ -1357,6 +1362,7 @@ class CrossbarViewModel @Inject constructor(
     val uiState: StateFlow<CrossbarUiState> = _uiState.asStateFlow()
 
     internal val gameActions = CrossbarGames(this, _uiState, viewModelScope, memoryCardRepository, menuSound)
+    internal val move = CrossbarMove(this, _uiState, viewModelScope, context, categoryRepository, memoryCardRepository, menuSound)
 
     internal val artworkTools = CrossbarArtwork(this, _uiState, viewModelScope, artworkRepository, menuSound)
 
@@ -1876,21 +1882,6 @@ class CrossbarViewModel @Inject constructor(
                     columnOrders = orders
                     loadItemsForCategory(currentCategory())
                 }
-        }
-    }
-
-    // owner, 2026-10-05: Move Up and Move Down put an app or folder row where the owner wants it in the column
-    private fun moveInColumn(delta: Int) {
-        val state = _uiState.value
-        val key = state.columnOrderKey() ?: return
-        val item = state.currentItems.getOrNull(state.selectedItemIndex)?.takeIf { it.movableInColumn } ?: return
-        val ids = state.currentItems.filter { it.movableInColumn }.map { it.id }
-        val next = movedOrder(ids, item.id, delta)
-        if (next == ids) return
-        menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(selectedItemIndex = (it.selectedItemIndex + delta).coerceIn(0, it.currentItems.lastIndex)) }
-        viewModelScope.launch {
-            context.echoDataStore.edit { it[stringPreferencesKey(COLUMN_ORDER_PREFIX + key)] = next.joinToString("\n") }
         }
     }
 
@@ -2640,6 +2631,11 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
+        if (state.moving != null) {
+            move.onButton(action, state.moving)
+            return
+        }
+
         if (state.musicPlayerVisible) {
             music.onPlayerButton(action, state)
             return
@@ -3050,8 +3046,11 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
-        // the menu stays open, so each press moves the row one more place
-        if (itemId == COLUMN_MOVE_UP || itemId == COLUMN_MOVE_DOWN) return moveInColumn(if (itemId == COLUMN_MOVE_UP) -1 else 1)
+        if (itemId == MOVE_ROW || itemId == MOVE_COLUMN) {
+            closeContextMenu()
+            move.lift(column = itemId == MOVE_COLUMN)
+            return
+        }
 
         if (menu.isAddMenu) {
             val row = currentAddActions().firstOrNull { it.id == itemId }
@@ -3136,8 +3135,6 @@ class CrossbarViewModel @Inject constructor(
                 "clear_emulator_overrides" -> launching.clearPlatformEmulatorOverrides(menu.platformId)
                 "rename_card"      -> gameActions.promptRenameCard(menu.platformId)
                 "card_rom_directory" -> folders.openRomFolders()
-                "card_move_up"     -> gameActions.moveCard(menu.platformId, up = true)
-                "card_move_down"   -> gameActions.moveCard(menu.platformId, up = false)
                 "find_games"       -> appPickerSection.openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
                 "import_pc_games"  -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
                 "scan_roms"        -> folders.scanCard(menu.platformId)
@@ -3343,13 +3340,30 @@ class CrossbarViewModel @Inject constructor(
     // the one place an item's Options menu is chosen: the crossbar, a long press, Search's banner and the drawer
     internal fun openContextMenuFor(item: CrossbarItem?) {
         val before = _uiState.value.activeContextMenu
+        // the focused row of the crossbar also offers Move (when it can move) and Move Column
+        val moveRows = item?.let { move.menuRows(_uiState.value, it) }.orEmpty()
         openItemMenu(item)
-        // in a column the owner can order, every app and folder row also offers Move Up and Move Down
-        if (item == null || !item.movableInColumn || _uiState.value.columnOrderKey() == null) return
-        _uiState.update { s ->
-            val opened = s.activeContextMenu?.takeIf { it !== before }
-            s.copy(activeContextMenu = opened?.copy(state = opened.state.copy(rows = opened.state.rows + columnMoveRows()))
-                ?: CrossbarContextMenu(state = MenuState(title = item.title, rows = columnMoveRows())))
+        if (item == null || moveRows.isEmpty()) return
+        fun CrossbarContextMenu.withMove() = copy(state = state.copy(rows = state.rows + moveRows))
+        val now = _uiState.value.activeContextMenu
+        if (now != null && now !== before) {
+            _uiState.update { it.copy(activeContextMenu = now.withMove()) }
+            return
+        }
+        // some menus are built in a coroutine (a system's reads its emulators first): add the rows when it
+        // opens. ponytail: a row with no menu of its own waits MENU_WAIT_MS before its Move-only menu shows
+        viewModelScope.launch {
+            val opened = withTimeoutOrNull(MENU_WAIT_MS) {
+                _uiState.first { it.activeContextMenu != null && it.activeContextMenu !== before }.activeContextMenu
+            }
+            _uiState.update { s ->
+                when {
+                    opened != null && s.activeContextMenu === opened -> s.copy(activeContextMenu = opened.withMove())
+                    opened == null && s.activeContextMenu == null && s.moving == null ->
+                        s.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = moveRows)))
+                    else -> s
+                }
+            }
         }
     }
 

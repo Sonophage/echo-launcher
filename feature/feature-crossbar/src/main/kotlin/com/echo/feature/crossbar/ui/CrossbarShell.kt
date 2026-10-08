@@ -948,6 +948,7 @@ fun CrossbarShell(
                                 iconAnimatingAllowed = iconAnimatingAllowed,
                                 cardArtGrid = uiState.cardArtGrid,
                                 metadataAsSubtitle = metadataAsSubtitle,
+                                liftedSelected = uiState.moving?.column == false,
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }
@@ -966,6 +967,7 @@ fun CrossbarShell(
                             drilledIn = uiState.drillTitle != null,
                             fadeByDistance = uiState.fadeByDistance,
                             iconAnimatingAllowed = iconAnimatingAllowed,
+                            liftedSelected = uiState.moving?.column == true,
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .offset(y = barTop)

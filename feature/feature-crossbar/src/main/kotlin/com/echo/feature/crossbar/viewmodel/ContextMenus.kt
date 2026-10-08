@@ -266,8 +266,6 @@ internal fun platformContextMenuItems(
 
     if (pinned) add(CrossbarContextMenuItem("unpin", "Unpin", group = MenuGroup.CATEGORY))
     else add(CrossbarContextMenuItem("pin", "Pin To Top", group = MenuGroup.CATEGORY))
-    add(CrossbarContextMenuItem("card_move_up", "Move Up", group = MenuGroup.CATEGORY))
-    add(CrossbarContextMenuItem("card_move_down", "Move Down", group = MenuGroup.CATEGORY))
 
     add(CrossbarContextMenuItem("hide", "Hide From Games", group = MenuGroup.REMOVE))
 

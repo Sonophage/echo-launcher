@@ -83,6 +83,15 @@ class CategoryRepositoryImpl @Inject constructor(
         return id
     }
 
+    // the columns in the order the crossbar shows them; columns it does not show keep their places
+    suspend fun reorder(shownIds: List<String>) = moveLock.withLock {
+        val all = categoryDao.getAll()
+            .filterNot { it.id in LEGACY_APP_PSEUDO_IDS }
+            .sortedBy { it.position }
+            .map { it.id }
+        reorderedKeepingHidden(all, shownIds).forEachIndexed { position, id -> categoryDao.updatePosition(id, position) }
+    }
+
     suspend fun move(id: String, up: Boolean): Boolean = moveLock.withLock {
         val ordered = categoryDao.getAll()
             .filterNot { it.id in LEGACY_APP_PSEUDO_IDS }

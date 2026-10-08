@@ -108,6 +108,12 @@ class MemoryCardRepository @Inject constructor(
         memoryCardDao.updateScanResult(platformId, scannedAt, gameDao.countGamesByPlatform(platformId))
     }
 
+    // the systems in the order the Games column shows them; disabled systems keep their places
+    suspend fun reorder(shownIds: List<String>) {
+        val all = memoryCardDao.getAll().map { it.platformId }
+        reorderedKeepingHidden(all, shownIds).forEachIndexed { order, id -> memoryCardDao.setSortOrder(id, order) }
+    }
+
     suspend fun move(platformId: String, up: Boolean): Boolean {
         val ordered = memoryCardDao.getAll()
         val index = ordered.indexOfFirst { it.platformId == platformId }

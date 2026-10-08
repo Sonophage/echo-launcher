@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -97,6 +98,8 @@ fun CrossbarCategoryBar(
     fadeByDistance: Boolean = true,
 
     iconAnimatingAllowed: Boolean = false,
+    // Move: the selected column is lifted above the bar
+    liftedSelected: Boolean = false,
 ) {
     val listState = rememberLazyListState()
 
@@ -139,7 +142,8 @@ fun CrossbarCategoryBar(
                     onLongPress = { onCategoryLongPress(index) },
                     fadeByDistance = fadeByDistance,
                     iconAnimatingAllowed = iconAnimatingAllowed,
-                    modifier = Modifier.width(ItemSlotWidth),
+                    modifier = Modifier.width(ItemSlotWidth)
+                        .offset(y = if (liftedSelected && index == selectedIndex) (-14).dp else 0.dp),
                 )
             }
         }

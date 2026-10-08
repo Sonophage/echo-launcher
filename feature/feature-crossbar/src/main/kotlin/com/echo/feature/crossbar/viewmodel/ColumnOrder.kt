@@ -11,22 +11,7 @@ internal fun orderedColumn(items: List<CrossbarItem>, order: List<String>): List
         .map { it.value }
 }
 
-// the column's ids with `id` swapped one place up (delta -1) or down (+1); unchanged at either end
-internal fun movedOrder(ids: List<String>, id: String, delta: Int): List<String> {
-    val at = ids.indexOf(id)
-    val to = at + delta
-    if (at < 0 || to !in ids.indices) return ids
-    return ids.toMutableList().apply { this[at] = this[to].also { this[to] = this[at] } }
-}
-
 internal const val COLUMN_ORDER_PREFIX = "column_order_"
-internal const val COLUMN_MOVE_UP = "column_move_up"
-internal const val COLUMN_MOVE_DOWN = "column_move_down"
-
-internal fun columnMoveRows(): List<CrossbarContextMenuItem> = listOf(
-    CrossbarContextMenuItem(COLUMN_MOVE_UP, "Move Up", group = com.echo.core.ui.components.MenuGroup.CATEGORY, pinnedToRoot = true, confirms = false),
-    CrossbarContextMenuItem(COLUMN_MOVE_DOWN, "Move Down", group = com.echo.core.ui.components.MenuGroup.CATEGORY, pinnedToRoot = true, confirms = false),
-)
 
 // apps and the category's own rows move; add rows, search, placeholders and single files (a Resume row)
 // stay where the column puts them

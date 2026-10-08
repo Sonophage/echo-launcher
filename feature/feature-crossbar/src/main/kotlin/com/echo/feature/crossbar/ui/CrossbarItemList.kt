@@ -416,6 +416,8 @@ fun CrossbarItemList(
     textShadow: Boolean = true,
 
     iconAnimatingAllowed: Boolean = false,
+    // Move: the selected row is lifted, shifted right of the column
+    liftedSelected: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth().fillMaxHeight().clipToBounds()) {
@@ -450,7 +452,8 @@ fun CrossbarItemList(
                             distance = i - sel,
                             textShadow = textShadow,
                             iconAnimatingAllowed = iconAnimatingAllowed,
-                            modifier = Modifier.fillMaxWidth().height(ROW_HEIGHT),
+                            modifier = Modifier.fillMaxWidth().height(ROW_HEIGHT)
+                                .offset(x = if (liftedSelected && i == selectedIndex) LIFT_SHIFT else 0.dp),
                         )
                     }
                 }
@@ -458,6 +461,8 @@ fun CrossbarItemList(
         }
     }
 }
+
+private val LIFT_SHIFT = 28.dp
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

@@ -22,14 +22,6 @@ class ColumnOrderTest {
         assertEquals("no saved order leaves the column as built", column, orderedColumn(column, emptyList()))
     }
 
-    @Test
-    fun `moving swaps a row with its neighbour and stops at either end`() {
-        val ids = listOf("a", "b", "c")
-        assertEquals(listOf("b", "a", "c"), movedOrder(ids, "b", -1))
-        assertEquals(listOf("a", "c", "b"), movedOrder(ids, "b", +1))
-        assertEquals(ids, movedOrder(ids, "a", -1))
-        assertEquals(ids, movedOrder(ids, "c", +1))
-    }
 
     @Test
     fun `add rows, search and placeholders do not move`() {
