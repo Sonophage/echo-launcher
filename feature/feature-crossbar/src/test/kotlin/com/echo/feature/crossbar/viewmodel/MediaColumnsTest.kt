@@ -374,6 +374,21 @@ class MediaColumnsTest {
         assertEquals(900L, rows.single().first)
     }
 
+    // owner, 2026-10-08: the Thor crashed when one album was played in two separate runs: two rows, one id
+    @Test
+    fun `an album played in two separate runs makes two rows with their own ids`() {
+        val rows = listOf(
+            played("1", "Aerial", album = "Paper Radio", at = 900),
+            played("2", "Static", album = "Paper Radio", at = 890),
+            played("3", "Foghorn", album = "Longitudes", at = 800),
+            played("4", "Kite", album = "Paper Radio", at = 700),
+            played("5", "Signal", album = "Paper Radio", at = 690),
+        ).recentMusicRows()
+        assertEquals(listOf("Paper Radio", "Foghorn", "Paper Radio"), rows.map { it.second.title })
+        assertEquals("every row's id is its own", rows.size, rows.map { it.second.id }.toSet().size)
+        assertTrue("both are still recent albums", rows.filter { it.second.type == CrossbarItemType.MUSIC_GROUP }.all { it.second.isRecentAlbum })
+    }
+
     @Test
     fun `only CONSECUTIVE tracks collapse`() {
         val rows = listOf(

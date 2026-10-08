@@ -406,6 +406,9 @@ internal fun List<MusicTrack>.toMusicItems(): List<CrossbarItem> = map { track -
 
 internal fun List<MusicTrack>.recentMusicRows(): List<Pair<Long, CrossbarItem>> {
     val rows = mutableListOf<Pair<Long, CrossbarItem>>()
+    // an album played in two separate runs makes two rows; the second gets its own id, as a list may not hold
+    // one key twice (the Thor crashed on "mg_alb_paper radio")
+    val runsOfAlbum = mutableMapOf<String, Int>()
     var i = 0
     while (i < size) {
         val key = this[i].album.musicGroupKey()
@@ -419,8 +422,9 @@ internal fun List<MusicTrack>.recentMusicRows(): List<Pair<Long, CrossbarItem>> 
             (run[0].lastPlayedAt ?: 0L) to run.toMusicItems().single()
         } else {
             val name = run.firstNotNullOfOrNull { it.album?.trim()?.ifBlank { null } } ?: "Album"
+            val nth = runsOfAlbum.merge(key, 1, Int::plus)!!
             run.maxOf { it.lastPlayedAt ?: 0L } to CrossbarItem(
-                id            = "$RECENT_ALBUM_ID_PREFIX$key",
+                id            = "$RECENT_ALBUM_ID_PREFIX$key" + if (nth > 1) "#$nth" else "",
                 title         = name,
                 subtitle      = countLabel(run.size, "track", "tracks"),
                 coverUri      = run.firstNotNullOfOrNull { it.artUri },
