@@ -59,6 +59,26 @@ class EchoThemeCodecV3Test {
         assertTrue(a.contentEquals(b), "same entries in different insertion order must produce identical bytes")
     }
 
+    // the byte check above only failed when two writes straddled a clock tick; this one fails every time
+    // an entry is written with the clock's time
+    @Test
+    fun `every entry carries the fixed time, not the clock's`() {
+        val bytes = EchoThemeCodec.write(
+            EchoThemeBundle(
+                manifest = manifest,
+                wallpaper = null,
+                preview = null,
+                icons = mapOf("catbar_games" to ThemeImage(gifBytes(), "gif")),
+                sysicons = emptyMap(),
+            ),
+        )
+        val times = java.util.zip.ZipInputStream(bytes.inputStream()).use { zip ->
+            generateSequence { zip.nextEntry }.map { it.time }.toList()
+        }
+        assertTrue(times.isNotEmpty(), "the theme must have entries")
+        assertTrue(times.all { it == EchoThemeCodec.ENTRY_TIME }, "entry times $times")
+    }
+
     @Test
     fun `write still drops unregistered icon keys but accepts console keys`() {
         val written = EchoThemeCodec.write(

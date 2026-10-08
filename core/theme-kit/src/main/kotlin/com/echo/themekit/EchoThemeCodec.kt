@@ -53,7 +53,7 @@ object EchoThemeCodec {
 
     fun write(bundle: EchoThemeBundle, out: OutputStream) {
         ZipOutputStream(out).use { zip ->
-            zip.putNextEntry(ZipEntry(ENTRY_MANIFEST))
+            zip.putNextEntry(stampedEntry(ENTRY_MANIFEST))
             zip.write(json.encodeToString(EchoThemeManifest.serializer(), bundle.manifest.copy(manifest = EchoThemeManifest.MANIFEST_TYPE)).toByteArray())
             zip.closeEntry()
             bundle.wallpaper?.let { zip.writeEntry(ENTRY_WALLPAPER, it) }
@@ -84,7 +84,7 @@ object EchoThemeCodec {
             bundle.motion?.let { motion ->
                 val ext = motion.extension.lowercase()
                 if (ext in MOTION_EXTENSIONS) {
-                    zip.putNextEntry(ZipEntry("$MOTION_PREFIX$ext"))
+                    zip.putNextEntry(stampedEntry("$MOTION_PREFIX$ext"))
                     motion.copyTo(zip)
                     zip.closeEntry()
                 }
@@ -229,8 +229,15 @@ object EchoThemeCodec {
     private fun isScreenshotName(name: String): Boolean =
         name.isNotBlank() && '/' !in name && name.substringAfterLast('.', "").lowercase() in PICTURE_EXTENSIONS
 
+    // every entry carries one fixed time, so the same theme always writes the same bytes; a clock time made
+    // two writes differ whenever they straddled a 2-second DOS tick
+    internal fun stampedEntry(name: String): ZipEntry = ZipEntry(name).apply { time = ENTRY_TIME }
+
+    // 1980-01-01, the first moment a zip's DOS time can hold
+    internal const val ENTRY_TIME = 315_532_800_000L
+
     private fun ZipOutputStream.writeEntry(name: String, data: ByteArray) {
-        putNextEntry(ZipEntry(name))
+        putNextEntry(stampedEntry(name))
         write(data)
         closeEntry()
     }
