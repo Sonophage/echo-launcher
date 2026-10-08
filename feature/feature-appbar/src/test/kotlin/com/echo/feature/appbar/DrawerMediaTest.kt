@@ -53,4 +53,21 @@ class DrawerMediaTest {
         assertTrue(AppDrawerUiState(activeFilter = AppFilter.GAMES, systemChips = one, chipsByGenre = true).showSystemChips)
         assertEquals(false, AppDrawerUiState(activeFilter = AppFilter.GAMES, systemChips = one).showSystemChips)
     }
+
+    // owner, 2026-10-08: the info column shows an album's artist and genre, and a game's achievements
+    @Test
+    fun `the info column names the artist and genre, and counts achievements only when there are some`() {
+        assertEquals("BLACKPINK  ·  K-Pop", mediaByline(albums.first().media!!))
+        assertEquals("Vela Quartet", mediaByline(albums[1].media!!))
+        assertEquals("12/40", achievementsLabel(12, 40))
+        assertNull(achievementsLabel(0, 0))
+        assertNull(achievementsLabel(null, null))
+    }
+
+    @Test
+    fun `an album or video plays, a book reads, an app opens`() {
+        assertEquals("Play", com.echo.feature.appbar.appdrawer.actionLabel(albums.first()))
+        assertEquals("Read", com.echo.feature.appbar.appdrawer.actionLabel(bookCases(listOf(Book(id = "b", libraryId = "l", uri = "u", displayName = "b.epub"))).single()))
+        assertEquals("Open", com.echo.feature.appbar.appdrawer.actionLabel(InstalledApp("com.a", "A", null, isGame = false, isEmulator = false)))
+    }
 }

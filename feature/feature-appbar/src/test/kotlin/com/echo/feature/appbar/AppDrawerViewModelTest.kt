@@ -44,7 +44,7 @@ class AppDrawerViewModelTest {
 
             mockk(relaxed = true),
             mockk(relaxed = true),
-            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
     }
 
     @After
@@ -74,7 +74,7 @@ class AppDrawerViewModelTest {
         every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf(listOf(
             game(1, "psp", "Role Playing Game"), game(2, "psp", "Action"), game(3, "snes", "Action RPG")))
         val platforms = mockk<com.echo.core.data.database.dao.PlatformDao>(relaxed = true)
-        viewModel = AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), platforms, appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+        viewModel = AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), platforms, appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.setFilter(AppFilter.GAMES)
         viewModel.setGenreFilter(com.echo.core.domain.model.GameGenre.RPG)
@@ -232,7 +232,7 @@ class AppDrawerViewModelTest {
 
             mockk(relaxed = true),
             mockk(relaxed = true),
-            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertFalse(viewModel.uiState.value.allApps.any { it.packageName == "com.example.browser" })
@@ -267,7 +267,7 @@ class AppDrawerViewModelTest {
 
             mockk(relaxed = true),
             mockk(relaxed = true),
-            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
     }
 
     // owner, 2026-10-05: an empty section is not shown, and LT/RT step over it
@@ -480,7 +480,7 @@ class AppDrawerViewModelTest {
 
     private fun drawerOver(apps: List<InstalledApp>): AppDrawerViewModel {
         coEvery { repository.getInstalledApps() } returns apps
-        return AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+        return AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
     }
 
     private fun pick(vm: AppDrawerViewModel, letter: Char) {

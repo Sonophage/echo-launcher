@@ -210,6 +210,7 @@ internal fun WallInfo(
 ) {
     val game = app.isGame || app.gameId != null
     val kind = when {
+        app.media != null -> app.media.kind.label
         app.isEmulator -> "Emulator"
         game -> "Game"
         else -> "App"
@@ -229,11 +230,16 @@ internal fun WallInfo(
         Text(app.label, color = Color.White, fontSize = u.sp(30), lineHeight = u.sp(33), fontWeight = FontWeight.Bold,
             maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(kind.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(12), letterSpacing = 0.2.em))
+        // an album's artist, a book's author, and its genre
+        app.media?.let { m -> com.echo.feature.appbar.mediaByline(m) }?.let {
+            Text(it, color = Color.White.copy(alpha = 0.85f), fontSize = u.sp(16), fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
         val pillRight = when {
             app.playTimeMillis > 0L -> playTimeLabel(app.playTimeMillis)
             else -> null
         }
-        Row(
+        // the kind pill names the system or kind; a media case says its kind above already
+        if (app.media == null) Row(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(u.dp(20))).background(Color.Black.copy(alpha = 0.6f))
                 .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(u.dp(20))).padding(horizontal = u.dp(16), vertical = u.dp(8)),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -244,6 +250,10 @@ internal fun WallInfo(
         (details?.description ?: details?.facts)?.let {
             Text("ABOUT", style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(12), letterSpacing = 0.2.em))
             Text(it, color = Color.White, fontSize = u.sp(15), lineHeight = u.sp(22), fontWeight = FontWeight.Medium, maxLines = 5, overflow = TextOverflow.Ellipsis)
+        }
+        // owner, 2026-10-08: achievements under the details
+        details?.achievements?.let {
+            Text("ACHIEVEMENTS  $it", style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.8f), fontSize = u.sp(13), letterSpacing = 0.15.em))
         }
         if (app.lastUsedAt > 0L) {
             Text("${if (game) "Played" else "Used"} ${relativeTime(System.currentTimeMillis(), app.lastUsedAt).lowercase()}",
@@ -256,7 +266,11 @@ internal fun WallInfo(
     }
 }
 
-internal fun actionLabel(app: InstalledApp): String = if (app.isGame || app.gameId != null) "Play" else "Open"
+internal fun actionLabel(app: InstalledApp): String = when {
+    app.media?.kind == com.echo.feature.appbar.MediaKind.BOOK -> "Read"
+    app.media != null || app.isGame || app.gameId != null -> "Play"
+    else -> "Open"
+}
 
 @Composable
 internal fun SystemChipRow(

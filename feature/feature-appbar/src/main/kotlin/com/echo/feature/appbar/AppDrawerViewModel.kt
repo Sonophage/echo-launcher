@@ -80,7 +80,8 @@ enum class AppMenuAction(val label: String, val group: MenuGroup) {
     UNINSTALL("Uninstall", MenuGroup.REMOVE),
 }
 
-data class GameDetails(val gameId: Long, val facts: String?, val description: String?)
+// achievements: "12/40" once the game's set has synced (owner, 2026-10-08: shown under the details)
+data class GameDetails(val gameId: Long, val facts: String?, val description: String?, val achievements: String? = null)
 
 // the line under a game's title: year, genre, developer, players, as many as are known
 fun gameFacts(game: com.echo.core.domain.model.Game): String? =
@@ -194,6 +195,7 @@ class AppDrawerViewModel @Inject constructor(
     private val musicRepository: com.echo.core.domain.repository.MusicRepository,
     private val videoRepository: com.echo.core.domain.repository.VideoRepository,
     private val bookRepository: com.echo.core.domain.repository.BookRepository,
+    private val achievementSets: com.echo.core.data.database.dao.AccountAchievementSetDao,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AppDrawerUiState())
     val uiState: StateFlow<AppDrawerUiState> = _uiState.asStateFlow()
@@ -534,8 +536,11 @@ class AppDrawerViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collectLatest { gameId ->
                     val game = gameId?.let { runCatching { gameRepository.getById(it) }.getOrNull() }
+                    val set = gameId?.let { runCatching { achievementSets.observeSetForGame(it).first() }.getOrNull() }
                     _uiState.update {
-                        it.copy(gameDetails = game?.let { g -> GameDetails(g.id, gameFacts(g), g.description?.takeIf { d -> d.isNotBlank() }) })
+                        it.copy(gameDetails = game?.let { g ->
+                            GameDetails(g.id, gameFacts(g), g.description?.takeIf { d -> d.isNotBlank() }, achievementsLabel(set?.unlocked, set?.total))
+                        })
                     }
                 }
         }

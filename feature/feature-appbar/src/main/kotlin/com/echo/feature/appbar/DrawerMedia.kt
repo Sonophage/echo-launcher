@@ -60,6 +60,14 @@ internal fun mediaChips(cases: List<InstalledApp>, byGenre: Boolean): List<Syste
 internal fun List<InstalledApp>.ofMediaChip(id: String?, byGenre: Boolean): List<InstalledApp> =
     if (id == null) this else filter { (if (byGenre) it.media?.genre else it.media?.maker) == id }
 
+// "12/40", or nothing when the game has no set or the set is empty
+internal fun achievementsLabel(unlocked: Int?, total: Int?): String? =
+    if (unlocked != null && total != null && total > 0) "$unlocked/$total" else null
+
+// owner, 2026-10-08: the info column names an album's artist (a book's author) and its genre
+internal fun mediaByline(media: DrawerMedia): String? =
+    listOfNotNull(media.maker, media.genre).joinToString("  ·  ").ifEmpty { null }
+
 // what X says it will do in a media section
 internal fun mediaGroupingHint(section: AppFilter, byGenre: Boolean): String? = when (section) {
     AppFilter.MUSIC -> if (byGenre) "Group by Artist" else "Group by Genre"
