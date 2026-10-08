@@ -114,7 +114,6 @@ import com.echo.feature.appbar.AppDrawerScreen
 import com.echo.feature.appbar.AppFilter
 import com.echo.feature.settings.ui.SettingsNavHost
 import com.echo.feature.crossbar.preview.PreviewData
-import com.echo.feature.crossbar.ui.app.AppDetailScreen
 import com.echo.feature.artwork.studio.ArtworkStudioScreen
 import com.echo.feature.crossbar.ui.detail.ManualViewerOverlay
 import com.echo.feature.crossbar.ui.detail.MetadataPreviewPanel
@@ -291,7 +290,6 @@ fun CrossbarShellContainer(
         onVideoDetailActionConsumed = viewModel.video::consumeVideoDetailAction,
         onClosePhotoViewer = viewModel.gallery::onClosePhotoViewer,
         onPhotoViewerActionConsumed = viewModel.gallery::consumePhotoViewerAction,
-        onCloseAppDetail = viewModel::onCloseAppDetail,
         onGameInfoCardFocused = viewModel.gameDetail::onGameInfoCursor,
         onGameInfoNoticeTapped = viewModel.gameDetail::onGameInfoNoticeTapped,
         onGameInfoPanelClose = viewModel.gameDetail::closeGameInfoPanel,
@@ -303,7 +301,6 @@ fun CrossbarShellContainer(
         onProfileFriend = viewModel.panel::onProfileFriendTapped,
         onProfileEditName = viewModel.panel::editProfileName,
         onProfilePickAvatar = viewModel.panel::pickProfileAvatar,
-        onAppDetailActionConsumed = viewModel::consumeAppDetailAction,
         onContextMenuItemActivated = viewModel::onContextMenuItemActivatedAt,
         onContextMenuDismiss = viewModel::closeContextMenu,
         onOpenColorSchemePicker = viewModel.look::openColorSchemePicker,
@@ -482,7 +479,6 @@ fun CrossbarShell(
     onVideoDetailActionConsumed: () -> Unit = {},
     onClosePhotoViewer: () -> Unit = {},
     onPhotoViewerActionConsumed: () -> Unit = {},
-    onCloseAppDetail: () -> Unit = {},
     onGameInfoCardFocused: (Int) -> Unit = {},
     onGameInfoNoticeTapped: (String) -> Unit = {},
     onGameInfoPanelClose: () -> Unit = {},
@@ -494,7 +490,6 @@ fun CrossbarShell(
     onProfileFriend: (Int) -> Unit = {},
     onProfileEditName: () -> Unit = {},
     onProfilePickAvatar: () -> Unit = {},
-    onAppDetailActionConsumed: () -> Unit = {},
     onContextMenuItemActivated: (Int) -> Unit = {},
     onContextMenuDismiss: () -> Unit = {},
     onMusicPlayPause: () -> Unit = {},
@@ -816,7 +811,6 @@ fun CrossbarShell(
                 uiState.topSearch == null &&
                 uiState.topSettingsScreen == null &&
                 uiState.activeVideoId == null &&
-                uiState.activeAppId == null &&
                 // Custom Icons is a side rail now, so the crossbar stays drawn behind it and shows each pick live
                 uiState.activePhotoViewer == null
             ) {
@@ -1522,18 +1516,6 @@ fun CrossbarShell(
                     onToggleField = onMetadataField,
                     onApply = onMetadataApply,
                     onClose = onCloseMetadata,
-                )
-            }
-
-            uiState.activeAppId?.let { appId ->
-                AppDetailScreen(
-                    gameId = appId,
-                    onBack = onCloseAppDetail,
-                    pendingGamepadAction = uiState.pendingAppDetailAction,
-                    onGamepadActionConsumed = onAppDetailActionConsumed,
-                    showTouchControls = uiState.resolvedShowTouchButton,
-                    onTouchInput = onTouchInput,
-                    modifier = Modifier.fillMaxSize(),
                 )
             }
 

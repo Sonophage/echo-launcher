@@ -43,7 +43,12 @@ class ItemMenuTest {
         val menu = appContextMenuItems(state(), categoryId = null, onRecentShelf = false)
         val shown = com.echo.core.ui.components.MenuState(title = "Spotify", rows = menu).rowsShown().mapNotNull { it.action }
         listOf("launch", "favorite").forEach { assertTrue("'$it' is not on the app menu's first level: $shown", it in shown) }
-        assertTrue("Edit App Details is gone from the app menu", menu.any { it.action == "edit_app" })
+        // owner, 2026-10-08: Artwork through Artwork Studio replaces the old Edit App Details
+        assertTrue("Artwork is on the app menu", menu.any { it.action == "app_artwork" })
+        assertTrue("the old editor is gone", menu.none { it.action == "edit_app" })
+        val withPackage = appContextMenuItems(state(), categoryId = null, onRecentShelf = true, packageName = "com.spotify.music")
+        assertTrue("App Info and Uninstall are offered", withPackage.any { it.action == "app_info" } && withPackage.any { it.action == "uninstall" })
+        assertTrue("Uninstall asks first", withPackage.first { it.action == "uninstall" }.isDestructive)
     }
 
     @Test

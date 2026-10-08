@@ -570,9 +570,6 @@ data class CrossbarUiState(
 
 
 
-    val activeAppId: Long? = null,
-
-    val pendingAppDetailAction: GamepadAction? = null,
 
     val videoNav: VideoNav = VideoNav.Root,
     val videoLibraries: List<com.echo.core.domain.model.VideoLibrary> = emptyList(),
@@ -830,7 +827,6 @@ data class CrossbarUiState(
             appPicker != null ||
             gamePickerCategoryId != null ||
             topDrawerFilter != null ||
-            activeAppId != null ||
             gameInfo != null ||
             profile != null ||
             topSearch != null
@@ -1282,7 +1278,7 @@ internal fun globalStep(action: GamepadAction, s: CrossbarUiState): GlobalStep? 
 
 // Game Info, Profile and an app's page draw above the drawer and Search, so they close for them
 internal fun CrossbarUiState.withScreensOverCrossbarClosed(): CrossbarUiState =
-    copy(gameInfo = null, profile = null, activeAppId = null, pendingAppDetailAction = null)
+    copy(gameInfo = null, profile = null)
 
 internal fun CrossbarUiState.withSettingsOpen(screenId: String): CrossbarUiState = withDrawerAndSearchClosed().copy(
     activeSettingsScreen = screenId,
@@ -2754,10 +2750,6 @@ class CrossbarViewModel @Inject constructor(
                 _uiState.update { it.copy(pendingArtworkStudioAction = action) }
                 return
             }
-            state.activeAppId != null -> {
-                _uiState.update { it.copy(pendingAppDetailAction = action) }
-                return
-            }
             state.activeAppDrawerFilter != null -> {
                 _uiState.update { it.copy(pendingDrawerAction = action) }
                 return
@@ -3181,7 +3173,9 @@ class CrossbarViewModel @Inject constructor(
                 } else when (itemId) {
                     "launch"    -> launching.launchAppWithDisc(pkg, selectedItemArt())
                     "pin_recent", "unpin_recent" -> { closeContextMenu(); recents.togglePinned("a:$pkg") }
-                    "edit_app"  -> openAppDetail(menu.gameId, pkg)
+                    "app_artwork" -> viewModelScope.launch { artworkTools.openArtworkStudio(ensureAppShortcut(pkg)) }
+                    "app_info"  -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg) }
+                    "uninstall" -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.uninstall(context, pkg) }
 
                     "mark_game" -> appAction {
                         val existing = gameRepository.getAppEntry(pkg)
@@ -3390,6 +3384,10 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
+    // a Recent item's Options from the second screen (owner, 2026-10-08): its own menu, with no Move, which
+    // belongs to the crossbar's focused row
+    internal fun openRecentItemMenu(item: CrossbarItem) = openItemMenu(item)
+
     private fun openItemMenu(item: CrossbarItem?) {
         when {
             item?.mediaRootUri != null && item.mediaRootKind == null -> folders.openRomRootContextMenu(item)
@@ -3522,7 +3520,6 @@ class CrossbarViewModel @Inject constructor(
             GlobalStep.NOTIFICATIONS -> panel.pressNoticeIsland()
             GlobalStep.HOME -> {
                 menuSound.play(MenuSound.BACK)
-                if (state.activeAppId != null) onCloseAppDetail()
                 _uiState.update {
                     it.withScreensOverCrossbarClosed().withDrawerAndSearchClosed().withSettingsClosed()
                         .copy(notificationsOpen = false, orbLevel = 0)
@@ -4102,17 +4099,6 @@ class CrossbarViewModel @Inject constructor(
 
     internal val MANUAL_MAX_SCROLL_STEPS_ = 20
 
-    internal fun openAppDetail(knownGameId: Long?, packageName: String) {
-        if (knownGameId != null) {
-            _uiState.update { it.copy(activeAppId = knownGameId) }
-            return
-        }
-        viewModelScope.launch {
-            val id = ensureAppShortcut(packageName)
-            _uiState.update { it.copy(activeAppId = id) }
-        }
-    }
-
     internal suspend fun ensureAppShortcut(packageName: String): Long {
         gameRepository.getAppEntry(packageName)?.let { return it.id }
         val label = runCatching {
@@ -4130,16 +4116,6 @@ class CrossbarViewModel @Inject constructor(
                 contentType   = GameContentType.ANDROID_APP,
             )
         )
-    }
-
-    fun onCloseAppDetail() {
-        _uiState.update { it.copy(activeAppId = null, pendingAppDetailAction = null) }
-
-        loadItemsForCategory(currentCategory(), keepCursorOnRow = true)
-    }
-
-    fun consumeAppDetailAction() {
-        _uiState.update { it.copy(pendingAppDetailAction = null) }
     }
 
     fun onOpenSettingsScreen(screenId: String) {

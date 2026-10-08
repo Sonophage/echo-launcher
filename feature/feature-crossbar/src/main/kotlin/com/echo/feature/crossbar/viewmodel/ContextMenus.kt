@@ -85,8 +85,10 @@ internal fun gameContextMenuItems(
         if (inMissingBucket) {
             add(CrossbarContextMenuItem("remove_missing", "Remove permanently", isDestructive = true, group = MenuGroup.REMOVE))
         } else if (item.platformId == PlatformIds.ANDROID && item.packageName != null) {
+            add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.SETTINGS))
             add(CrossbarContextMenuItem("unmark_game", "Unmark as Game", group = MenuGroup.REMOVE))
             add(CrossbarContextMenuItem("remove_app", "Remove from Library", isDestructive = true, group = MenuGroup.REMOVE))
+            add(CrossbarContextMenuItem("uninstall", "Uninstall", isDestructive = true, group = MenuGroup.REMOVE))
         } else {
             add(CrossbarContextMenuItem("remove_game", "Remove from Library", isDestructive = true, group = MenuGroup.REMOVE))
         }
@@ -115,8 +117,10 @@ internal fun appContextMenuItems(
         add(CrossbarContextMenuItem("hide_from_recent", "Hide from Recent", group = MenuGroup.REMOVE))
     }
 
-    add(CrossbarContextMenuItem("edit_app", "Edit App Details", group = MenuGroup.SETTINGS))
+    // owner, 2026-10-08: art through Artwork Studio, as a game's; the old app editor changed little but the title
+    add(CrossbarContextMenuItem("app_artwork", "Artwork", group = MenuGroup.METADATA))
     add(CrossbarContextMenuItem("rename", "Rename Shortcut", group = MenuGroup.SETTINGS))
+    if (packageName != null) add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.SETTINGS))
 
     add(CrossbarContextMenuItem("move", "Move to Category", group = MenuGroup.CATEGORY))
     add(CrossbarContextMenuItem("add", "Add to Category", group = MenuGroup.CATEGORY))
@@ -129,6 +133,7 @@ internal fun appContextMenuItems(
         }
     }
     add(CrossbarContextMenuItem("hide_everywhere", "Hide Everywhere", group = MenuGroup.REMOVE))
+    if (packageName != null) add(CrossbarContextMenuItem("uninstall", "Uninstall", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
 internal fun videoFileContextMenuItems(

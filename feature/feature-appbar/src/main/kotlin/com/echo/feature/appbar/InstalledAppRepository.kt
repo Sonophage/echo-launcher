@@ -123,24 +123,9 @@ class InstalledAppRepository @Inject constructor(
 
     fun hasUsageAccess(): Boolean = com.echo.core.data.permission.UsageAccess.isGranted(context)
 
-    fun openAppInfo(packageName: String) {
-        val intent = Intent(
-            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-            Uri.fromParts("package", packageName, null),
-        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        runCatching { context.startActivity(intent) }
-            .onFailure { Timber.w(it, "Could not open app info for $packageName") }
-    }
+    fun openAppInfo(packageName: String) = com.echo.core.data.apps.AppSystemActions.openAppInfo(context, packageName)
 
-    fun uninstallApp(packageName: String) {
-        if (packageName == context.packageName) return
-        val intent = Intent(
-            Intent.ACTION_DELETE,
-            Uri.fromParts("package", packageName, null),
-        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        runCatching { context.startActivity(intent) }
-            .onFailure { Timber.w(it, "Could not launch uninstall for $packageName") }
-    }
+    fun uninstallApp(packageName: String) = com.echo.core.data.apps.AppSystemActions.uninstall(context, packageName)
 
     fun openUsageAccessSettings() {
         val intent = com.echo.core.data.permission.UsageAccess.settingsIntent()

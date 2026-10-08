@@ -173,6 +173,11 @@ class CrossbarBottomScreen(
                 val item = state.recent.getOrNull(state.recentSelected) ?: return true
                 if (!vm.holdToLaunch(item) { vm.openItem(item) }) vm.openItem(item)
             }
+            // Y on Recent opens that item's Options (Artwork, App Info, Uninstall for an app), not the crossbar's
+            GamepadAction.OPEN_CONTEXT_MENU -> {
+                if (page != BottomPage.RECENT) return false
+                state.recent.getOrNull(state.recentSelected)?.let(vm::openRecentItemMenu)
+            }
             else -> return false
         }
         return true
