@@ -46,6 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -74,7 +75,9 @@ import com.echo.feature.settings.viewmodel.ThemesSettingsViewModel
 import com.echo.themekit.ThemePart
 
 // a card in the theme store: a saved theme or an online one
-internal data class StoreCard(val id: String, val name: String, val subtitle: String, val image: String?, val accentArgb: Long? = null)
+internal data class StoreCard(val id: String, val name: String, val subtitle: String, val image: String?, val accentArgb: Long? = null,
+    // the theme's wallpaper, for the hero above the shelves; the card itself shows [image]
+    val wallpaper: String? = null)
 
 internal fun EchoThemeStore.SavedTheme.card() =
     StoreCard(id, name, author?.let { "by $it" } ?: "${parts.size} parts", heroPath ?: previewPath, accentArgb)
@@ -150,7 +153,7 @@ fun ThemeStoreScreen(
             ThemeCatalogRepository.Standing.NEW -> "New"
             ThemeCatalogRepository.Standing.CURRENT -> "Downloaded"
             ThemeCatalogRepository.Standing.UPDATE -> "Update"
-        }, t.heroUrl)
+        }, t.heroUrl, wallpaper = t.wallpaperUrl)
     }
     fun shelf(section: String) = if (section == "saved") saved else online
     fun open(section: String, id: String) {
@@ -309,7 +312,7 @@ fun ThemeStoreScreen(
 private fun StoreHero(card: StoreCard, online: Boolean) {
     Box(Modifier.fillMaxWidth().height(150.dp)) {
         Box(Modifier.fillMaxSize().background(Color(card.accentArgb?.let { it and 0xFFFFFFFFL } ?: 0xFF20304AL)))
-        card.image?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        (card.wallpaper ?: card.image)?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to PanelBase.copy(alpha = 0.9f), 0.6f to PanelBase.copy(alpha = 0.35f), 1f to Color.Transparent)))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to PanelBase)))
         Column(Modifier.align(Alignment.BottomStart).padding(start = 48.dp, bottom = 22.dp, end = 48.dp)) {
@@ -343,7 +346,11 @@ internal fun ThemePageOverlay(
     val shots = page.screenshots
     BoxWithConstraints(Modifier.fillMaxSize().background(PanelBase).clickable(enabled = false) {}) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
-        page.backdrop?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        // blurred, so the details and the rail read over it (owner, 2026-10-07)
+        page.backdrop?.let {
+            AsyncImage(model = com.echo.core.ui.image.rememberBlurSourceModel(it), contentDescription = null, contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().blur(u.dp(24)))
+        }
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to PanelBase.copy(alpha = 0.92f), 0.55f to PanelBase.copy(alpha = 0.45f), 1f to PanelBase.copy(alpha = 0.2f))))
 
         Column(

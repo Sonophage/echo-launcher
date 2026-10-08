@@ -18,6 +18,7 @@ class ThemeCatalogTest {
             {"format": 1, "themes": [
               {"id": "PSP", "name": "PSP", "archive": "themes/PSP.zip", "sha256": "$sha", "size": 10,
                "hero": "themes/PSP/Preview/hero.jpg", "readme": "themes/PSP/README.md",
+               "wallpaper": "themes/PSP/Wallpaper/wallpaper.png",
                "screenshots": ["themes/PSP/Preview/Screenshots/01.jpg", "file:///etc/passwd"]},
               {"id": "NoSum", "archive": "themes/x.zip", "sha256": "nope", "size": 10},
               {"id": "Local", "archive": "file:///sdcard/x.zip", "sha256": "$sha", "size": 10}
@@ -28,6 +29,8 @@ class ThemeCatalogTest {
         val psp = themes.single()
         assertEquals("https://sonophage.github.io/echo-themes/themes/PSP.zip", psp.archiveUrl)
         assertEquals("https://sonophage.github.io/echo-themes/themes/PSP/Preview/hero.jpg", psp.heroUrl)
+        // the page's backdrop is the theme's wallpaper, resolved like every other address
+        assertEquals("https://sonophage.github.io/echo-themes/themes/PSP/Wallpaper/wallpaper.png", psp.wallpaperUrl)
         assertEquals(listOf("https://sonophage.github.io/echo-themes/themes/PSP/Preview/Screenshots/01.jpg"), psp.screenshotUrls)
     }
 

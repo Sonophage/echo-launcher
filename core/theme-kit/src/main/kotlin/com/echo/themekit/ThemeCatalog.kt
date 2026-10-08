@@ -21,6 +21,8 @@ object ThemeCatalog {
         val sha256: String = "",
         val size: Long = 0,
         val hero: String? = null,
+        // the theme's own still wallpaper, behind its store page (owner, 2026-10-07)
+        val wallpaper: String? = null,
         val readme: String? = null,
         val screenshots: List<String> = emptyList(),
     )
@@ -47,6 +49,7 @@ object ThemeCatalog {
                 sha256 = e.sha256.lowercase().takeIf { SHA256.matches(it) } ?: return@mapNotNull null,
                 size = e.size.takeIf { it > 0 } ?: return@mapNotNull null,
                 heroUrl = resolve(e.hero),
+                wallpaperUrl = resolve(e.wallpaper),
                 readmeUrl = resolve(e.readme),
                 screenshotUrls = e.screenshots.mapNotNull(::resolve).take(EchoThemeCodec.MAX_SCREENSHOTS),
             )
@@ -63,4 +66,5 @@ data class CatalogTheme(
     val heroUrl: String?,
     val readmeUrl: String?,
     val screenshotUrls: List<String>,
+    val wallpaperUrl: String? = null,
 )

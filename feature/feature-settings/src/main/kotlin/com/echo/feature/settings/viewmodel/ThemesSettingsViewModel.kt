@@ -204,9 +204,9 @@ class ThemesSettingsViewModel @Inject constructor(
         val saved = uiState.value.savedThemes.firstOrNull { it.name == theme.name }
         val update = ThemeCatalogRepository.standing(saved, theme) == ThemeCatalogRepository.Standing.UPDATE
         // ponytail: an online theme's parts are unknown until it is downloaded, so all are offered; the
-        // store's index could list them
+        // store's index could list them. Its backdrop is the index's wallpaper, else its hero
         _extra.update { it.copy(page = ThemePage(name = theme.name, hero = theme.heroUrl, screenshots = theme.screenshotUrls, savedId = saved?.id, online = theme, update = update,
-            parts = saved?.parts ?: ThemePart.entries.toSet(), backdrop = saved?.let { s -> themeStore.wallpaperPath(s.id) } ?: theme.heroUrl)) }
+            parts = saved?.parts ?: ThemePart.entries.toSet(), backdrop = saved?.let { s -> themeStore.wallpaperPath(s.id) } ?: theme.wallpaperUrl ?: theme.heroUrl)) }
         viewModelScope.launch {
             val readme = catalog.readme(theme) ?: return@launch
             _extra.update { e ->
