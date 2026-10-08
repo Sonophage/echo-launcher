@@ -1007,6 +1007,17 @@ internal fun List<Game>.gameSorted(mode: CrossbarSortMode): List<Game> = when (m
     else                      -> sortedBy { it.displayTitle.lowercase() }
 }
 
+// the Shelves column's rows: one per shelf card, with its covers
+internal fun CrossbarUiState.shelfRows(): List<CrossbarItem> = shelfCards.map { card ->
+    CrossbarItem(
+        id       = card.cardId,
+        title    = card.title,
+        subtitle = countLabel(card.count, "game", "games"),
+        insideCovers = shelfFanCovers[card.cardId].orEmpty(),
+        type     = CrossbarItemType.SHELF,
+    )
+}
+
 internal fun cursorAfterRefresh(previous: List<CrossbarItem>, previousIndex: Int, next: List<CrossbarItem>): Int {
     val selectedId = previous.getOrNull(previousIndex)?.id
     val kept = selectedId?.let { id -> next.indexOfFirst { it.id == id } } ?: -1
@@ -1713,15 +1724,7 @@ class CrossbarViewModel @Inject constructor(
                     var keepCursor = keepCursorOnRow
                     when (val shelf = shelfCardFor(_uiState.value.selectedPlatformId)) {
                         null -> _uiState.update { s ->
-                            val items = s.shelfCards.map { card ->
-                                CrossbarItem(
-                                    id       = card.cardId,
-                                    title    = card.title,
-                                    subtitle = countLabel(card.count, "game", "games"),
-                                    insideCovers = s.shelfFanCovers[card.cardId].orEmpty(),
-                                    type     = CrossbarItemType.SHELF,
-                                )
-                            }
+                            val items = s.shelfRows()
                             s.copy(
                                 currentItems = items,
                                 selectedItemIndex = s.selectedItemIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0)),
@@ -2400,6 +2403,13 @@ class CrossbarViewModel @Inject constructor(
                 }
             }.coerceAtLeast(0)
             return sibs to idx
+        }
+
+        // inside a shelf, the shelves are the siblings, with their covers (owner, 2026-10-08: a blank card stood
+        // in for the shelf)
+        if (category?.id == BuiltInCategory.SHELVES) {
+            val sibs = s.shelfRows()
+            sibs.indexOfFirst { it.id == s.selectedPlatformId }.takeIf { it >= 0 }?.let { return sibs to it }
         }
 
         val parent = CrossbarItem(id = "drill_parent", title = computeDrillTitle().orEmpty(), type = CrossbarItemType.COLLECTION)
