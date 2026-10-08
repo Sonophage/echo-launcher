@@ -528,11 +528,13 @@ fun DisplaySettingsScreen(
                     onPick   = { viewModel.setTouchSensitivity(viewModel.touchSensitivityOptions[it].first) },
                 )
 
-                SettingsToggleRow(
+                SettingsPickerRow(
                     label    = "Button Hints",
-                    sublabel = "Show the on-screen button prompts, and let them be tapped",
-                    checked  = state.contextMenuHintEnabled,
-                    onToggle = { viewModel.setContextMenuHintEnabled(it) },
+                    sublabel = "The on-screen button prompts, which can be tapped. Minimal keeps the A card " +
+                        "and the filter",
+                    options  = com.echo.core.data.repository.ButtonHints.entries.map { SettingsPickerOption(it.label) },
+                    selectedIndex = state.buttonHints.ordinal,
+                    onPick   = { viewModel.setButtonHints(com.echo.core.data.repository.ButtonHints.entries[it]) },
                 )
 
                 SettingsSliderRow(
@@ -544,7 +546,7 @@ fun DisplaySettingsScreen(
                     onValueChange = viewModel::setContextMenuHintDelaySeconds,
                     valueRange = ControllerHintPolicy.DELAY_RANGE,
                     steps     = ControllerHintPolicy.DELAY_STEPS,
-                    enabled  = state.contextMenuHintEnabled,
+                    enabled  = state.buttonHints != com.echo.core.data.repository.ButtonHints.OFF,
                     valueFormatter = { formatHintDelay(it) },
                 )
 

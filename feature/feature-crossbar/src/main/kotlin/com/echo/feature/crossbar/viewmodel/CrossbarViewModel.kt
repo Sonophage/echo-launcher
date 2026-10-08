@@ -3416,7 +3416,9 @@ class CrossbarViewModel @Inject constructor(
                 }
                 QuickSetting.RECENT_APPS -> context.echoDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
                 QuickSetting.MINIMAL_HINTS -> context.echoDataStore.edit {
-                    it[com.echo.core.data.repository.InterfacePreferences.KEY_MINIMAL_HINTS] = !s.interfaceChoices.minimalHints
+                    with(com.echo.core.data.repository.InterfacePreferences) {
+                        it.setButtonHints(buttonHintsOf(s.contextMenuHintEnabled, s.interfaceChoices.minimalHints).next)
+                    }
                 }
                 QuickSetting.SECOND_SCREEN -> bottomScreen.setSecondScreenEnabled(!s.secondScreenEnabled)
                 QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
@@ -4704,7 +4706,7 @@ class CrossbarViewModel @Inject constructor(
 
         private val KEY_TOUCH_NAV_BUTTON  = stringPreferencesKey("interface_touch_nav_button")
 
-        private val KEY_CONTEXT_MENU_HINT = booleanPreferencesKey("interface_context_menu_hint")
+        private val KEY_CONTEXT_MENU_HINT = com.echo.core.data.repository.InterfacePreferences.KEY_BUTTON_HINTS_ON
         private val KEY_CONTEXT_MENU_HINT_DELAY_SECONDS =
             floatPreferencesKey("interface_context_menu_hint_delay_seconds")
 

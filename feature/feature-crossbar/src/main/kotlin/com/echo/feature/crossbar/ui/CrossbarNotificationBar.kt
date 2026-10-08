@@ -121,7 +121,7 @@ data class QuickSettingsState(
     val backdropOn: Boolean,
     val rowCoverArt: Boolean,
     val recentAppsOn: Boolean,
-    val minimalHints: Boolean = false,
+    val buttonHints: com.echo.core.data.repository.ButtonHints = com.echo.core.data.repository.ButtonHints.ALL,
     val chips: List<LibraryChip>,
     val secondDisplay: Boolean = false,
     val secondScreenOn: Boolean = true,
@@ -351,7 +351,7 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
                 QuickSetting.BACKDROP -> "Game backgrounds" to if (quick.backdropOn) "On" else "Off"
                 QuickSetting.ROW_ART -> "Game rows show" to if (quick.rowCoverArt) "Cover art" else "Icons"
                 QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
-                QuickSetting.MINIMAL_HINTS -> "Button hints" to if (quick.minimalHints) "Minimal" else "All"
+                QuickSetting.MINIMAL_HINTS -> "Button hints" to quick.buttonHints.label
                 QuickSetting.SECOND_SCREEN -> "Screens" to if (quick.secondScreenOn) "Dual" else "Single"
                 QuickSetting.ANDROID_SETTINGS -> "Android settings" to "Open"
                 QuickSetting.LIBRARIES -> "" to ""

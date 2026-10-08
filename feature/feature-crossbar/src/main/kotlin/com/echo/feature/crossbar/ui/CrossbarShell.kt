@@ -1107,7 +1107,9 @@ fun CrossbarShell(
                         backdropOn = uiState.itemBackdropEnabled,
                         rowCoverArt = uiState.iconStyle == com.echo.core.ui.icons.GameIconStyle.COVER_ART,
                         recentAppsOn = uiState.recentsIncludeApps,
-                        minimalHints = uiState.interfaceChoices.minimalHints,
+                        buttonHints = com.echo.core.data.repository.InterfacePreferences.buttonHintsOf(
+                            uiState.contextMenuHintEnabled, uiState.interfaceChoices.minimalHints,
+                        ),
                         chips = uiState.libraryChips,
                         secondDisplay = uiState.secondDisplayPresent,
                         secondScreenOn = uiState.secondScreenEnabled,

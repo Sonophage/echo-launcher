@@ -34,4 +34,25 @@ class InterfacePreferencesTest {
         assertEquals(true, InterfacePreferences.DEFAULT_VIDEO_SEEK_STEP_SECONDS in InterfacePreferences.VIDEO_SEEK_STEPS_SECONDS)
         assertEquals(true, InterfacePreferences.DEFAULT_VIDEO_CONTROLS_HIDE_MS in InterfacePreferences.VIDEO_CONTROLS_HIDE_MS)
     }
+
+    @Test
+    fun `Button hints reads what the two old settings held, so nobody's choice changes`() {
+        assertEquals("nothing stored: all hints, as before", ButtonHints.ALL, InterfacePreferences.buttonHints(preferencesOf()))
+        val offWasMinimal = preferencesOf(
+            InterfacePreferences.KEY_BUTTON_HINTS_ON to false,
+            InterfacePreferences.KEY_MINIMAL_HINTS to true,
+        )
+        assertEquals("hints turned off stay off", ButtonHints.OFF, InterfacePreferences.buttonHints(offWasMinimal))
+        assertEquals(ButtonHints.MINIMAL, InterfacePreferences.buttonHints(preferencesOf(InterfacePreferences.KEY_MINIMAL_HINTS to true)))
+    }
+
+    @Test
+    fun `each Button hints choice writes back as itself, and the panel tile steps through all three`() {
+        ButtonHints.entries.forEach { hints ->
+            val prefs = mutablePreferencesOf().apply { with(InterfacePreferences) { setButtonHints(hints) } }
+            assertEquals(hints, InterfacePreferences.buttonHints(prefs))
+        }
+        assertEquals(ButtonHints.entries.toSet(), generateSequence(ButtonHints.ALL) { it.next }.take(3).toSet())
+        assertEquals(ButtonHints.ALL, ButtonHints.OFF.next)
+    }
 }

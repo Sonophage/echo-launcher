@@ -54,7 +54,6 @@ private val KEY_WAVE_OVER_WALLPAPER = booleanPreferencesKey("display_wave_over_w
 
 private val KEY_TOUCH_NAV_BUTTON   = stringPreferencesKey("interface_touch_nav_button")
 
-private val KEY_CONTEXT_MENU_HINT  = booleanPreferencesKey("interface_context_menu_hint")
 private val KEY_CONTEXT_MENU_HINT_DELAY_SECONDS = floatPreferencesKey("interface_context_menu_hint_delay_seconds")
 
 private val KEY_TOUCH_SENSITIVITY  = stringPreferencesKey("interface_touch_sensitivity")
@@ -123,7 +122,7 @@ data class DisplaySettingsUiState(
 
     val motionWallpaperPath: String? = null,
     val wallpaperMessage: String? = null,
-    val contextMenuHintEnabled: Boolean = ControllerHintPolicy.DEFAULT_ENABLED,
+    val buttonHints: com.echo.core.data.repository.ButtonHints = com.echo.core.data.repository.ButtonHints.ALL,
     val wallpaperImporting: Boolean = false,
     val wallpaperPreviewVisible: Boolean = false,
 
@@ -215,7 +214,7 @@ class DisplaySettingsViewModel @Inject constructor(
             recentsIncludeApps   = prefs[KEY_RECENTS_INCLUDE_APPS] ?: false,
             textShadow           = prefs[KEY_TEXT_SHADOW] ?: true,
             interfaceChoices     = com.echo.core.data.repository.InterfacePreferences.read(prefs),
-            contextMenuHintEnabled = prefs[KEY_CONTEXT_MENU_HINT] ?: ControllerHintPolicy.DEFAULT_ENABLED,
+            buttonHints          = com.echo.core.data.repository.InterfacePreferences.buttonHints(prefs),
             contextMenuHintDelaySeconds = ControllerHintPolicy.clampDelay(
                 prefs[KEY_CONTEXT_MENU_HINT_DELAY_SECONDS] ?: ControllerHintPolicy.DEFAULT_DELAY_SECONDS
             ),
@@ -332,7 +331,9 @@ class DisplaySettingsViewModel @Inject constructor(
     fun setThermalThrottleAware(v: Boolean)  = save { it[KEY_THERMAL_AWARE]   = v }
     fun setRespectBatterySaver(v: Boolean)   = save { it[KEY_RESPECT_BATTERY] = v }
     fun setWaveOverWallpaper(v: Boolean)     = save { it[KEY_WAVE_OVER_WALLPAPER] = v }
-    fun setContextMenuHintEnabled(v: Boolean) = save { it[KEY_CONTEXT_MENU_HINT] = v }
+    fun setButtonHints(v: com.echo.core.data.repository.ButtonHints) = save {
+        with(com.echo.core.data.repository.InterfacePreferences) { it.setButtonHints(v) }
+    }
     fun setContextMenuHintDelaySeconds(v: Float) = save {
         it[KEY_CONTEXT_MENU_HINT_DELAY_SECONDS] = ControllerHintPolicy.clampDelay(v)
     }
