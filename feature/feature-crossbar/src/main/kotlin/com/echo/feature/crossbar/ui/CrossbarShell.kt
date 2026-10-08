@@ -818,9 +818,8 @@ fun CrossbarShell(
                 uiState.topSettingsScreen == null &&
                 uiState.activeVideoId == null &&
                 uiState.activeAppId == null &&
-                uiState.activePhotoViewer == null &&
-
-                uiState.customIconSession == null
+                // Custom Icons is a side rail now, so the crossbar stays drawn behind it and shows each pick live
+                uiState.activePhotoViewer == null
             ) {
             val onLastPlayedHome = uiState.onLastPlayedHome
             if (onLastPlayedHome) {
