@@ -46,12 +46,15 @@ released; it becomes the next release's notes.
 - The Libraries tab drops its "6 of 6 on the crossbar" line.
 - **Button hints** is one setting, All / Minimal / Off, in Controls ▸ Touch and the panel.
 - **Game Rows Show** (Cover art / Icons) replaces Card Art Grid in Settings and matches the panel's tile.
-- Settings moved: Boot Sound to Boot, the video player to **Library ▸ Video Player**, Rescan On Return
+- Settings moved: Boot Sound, Launch Disc Sound and GameBoot Sound to Boot, the video player to **Library ▸ Video Player**, Rescan On Return
   to Library Manager, and Reset Emulator Configuration onto Emulators ▸ Installed.
 - Library Manager asks before removing an app or a file extension.
 - Every settings screen uses ECHO's own controls: text fields open the side-rail prompt, Add PC Game is
   a rail menu (Test Launch now reachable by controller), progress shows as rows, and the confirms match.
 - The App Drawer's footer matches every other screen's.
+- Move shows B Cancel and A Drop while a row or column is lifted.
+- A new install starts with icons in the game rows and on the console cards.
+- Log files are named `echo-<date>.log`.
 
 ### PC games
 - **DroidDeck** is a PC launcher: its Steam games launch on its own link, and its exported files
