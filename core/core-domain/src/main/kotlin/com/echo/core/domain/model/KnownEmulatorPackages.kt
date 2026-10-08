@@ -3,6 +3,7 @@ package com.echo.core.domain.model
 object PcRuntimes {
     val PACKAGES: Map<String, String> = mapOf(
         "app.gamenative"      to "GameNative",
+        "com.droiddeck.launcher" to "DroidDeck",
         "gamehub.lite"        to "GameHub Lite",
         "banner.hub"          to "BannerHub",
         "com.xiaoji.egggame"  to "EggNS",

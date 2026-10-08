@@ -89,6 +89,19 @@ class PcLauncherAdapterTest {
         assertEquals("STEAM", intent.getStringExtra("game_source"))
     }
 
+    // DroidDeck 0.3.1 (GameLaunchIntent.kt) reads app_id as an Int and refuses any game_source but
+    // STEAM. A Long id or another store would open DroidDeck without starting the game.
+    @Test
+    fun `droiddeck launches a steam app_id through its own activity`() {
+        val adapter = PcLauncherAdapters.forType(PcLauncherType.DROIDDECK)!!
+        val intent = adapter.buildLaunchIntent("com.droiddeck.launcher", "620", null)!!
+        assertEquals("com.droiddeck.launcher.LAUNCH_GAME", intent.action)
+        assertEquals("com.droiddeck.launcher.MainActivity", intent.component?.className)
+        assertEquals(620, intent.getIntExtra("app_id", -1))
+        assertEquals("STEAM", intent.getStringExtra("game_source"))
+        assertEquals(listOf("STEAM"), adapter.sources)
+    }
+
     @Test
     fun `winlator and manual have no id adapter`() {
         assertNull(PcLauncherAdapters.forType(PcLauncherType.WINLATOR))

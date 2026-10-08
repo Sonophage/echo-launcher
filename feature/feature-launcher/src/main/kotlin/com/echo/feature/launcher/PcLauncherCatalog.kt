@@ -4,7 +4,7 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 import java.util.concurrent.ConcurrentHashMap
 
-enum class PcLauncherType { WINLATOR, GAMEHUB_LITE, BANNERHUB_V6, GAMENATIVE, MANUAL }
+enum class PcLauncherType { WINLATOR, GAMEHUB_LITE, BANNERHUB_V6, GAMENATIVE, DROIDDECK, MANUAL }
 
 enum class GameHubGeneration { V5, V6 }
 
@@ -37,6 +37,7 @@ object PcLauncherCatalog {
         PcLauncherDef(PcLauncherType.GAMEHUB_LITE, "GameHub Lite", GAMEHUB_FAMILY_PACKAGES),
         PcLauncherDef(PcLauncherType.WINLATOR,     "Winlator",     listOf("com.winlator", "com.winlator.cmod")),
         PcLauncherDef(PcLauncherType.GAMENATIVE,   "GameNative",   listOf("app.gamenative")),
+        PcLauncherDef(PcLauncherType.DROIDDECK,    "DroidDeck",    listOf("com.droiddeck.launcher")),
     )
 
     private val byPackage: Map<String, PcLauncherDef> =

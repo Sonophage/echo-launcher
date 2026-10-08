@@ -59,16 +59,20 @@ private class GameHubFamilyAdapter(
     }
 }
 
-private class GameNativeAdapter : PcLauncherAdapter {
-    override val type = PcLauncherType.GAMENATIVE
-    override val idPrompt = "Steam App ID (or store app id) for the installed game"
+// DroidDeck reads GameNative's launch intent on purpose, so one adapter serves both. It runs
+// Steam only: any other game_source is refused.
+private class GameNativeAdapter(
+    override val type: PcLauncherType = PcLauncherType.GAMENATIVE,
+    private val activity: String = "app.gamenative.MainActivity",
+    override val sources: List<String> = listOf("STEAM", "EPIC", "GOG", "AMAZON"),
+    override val idPrompt: String = "Steam App ID (or store app id) for the installed game",
+) : PcLauncherAdapter {
     override val requiresIntegerId = true
-    override val sources = listOf("STEAM", "EPIC", "GOG", "AMAZON")
 
     override fun buildLaunchIntent(packageName: String, gameId: String, source: String?): Intent? {
         val id = gameId.trim().toIntOrNull()?.takeIf { it > 0 } ?: return null
         return Intent().apply {
-            component = ComponentName(packageName, "app.gamenative.MainActivity")
+            component = ComponentName(packageName, activity)
             action = "$packageName.LAUNCH_GAME"
             putExtra("app_id", id)
             putExtra("game_source", source?.takeIf { it.isNotBlank() } ?: "STEAM")
@@ -84,6 +88,12 @@ object PcLauncherAdapters {
             pm?.let { PcLauncherCatalog.gameHubGeneration(pkg, it) } ?: GameHubGeneration.V6
         }
         PcLauncherType.GAMENATIVE   -> GameNativeAdapter()
+        PcLauncherType.DROIDDECK    -> GameNativeAdapter(
+            type     = PcLauncherType.DROIDDECK,
+            activity = "com.droiddeck.launcher.MainActivity",
+            sources  = listOf("STEAM"),
+            idPrompt = "Steam App ID for the installed game",
+        )
 
         PcLauncherType.WINLATOR,
         PcLauncherType.MANUAL       -> null
