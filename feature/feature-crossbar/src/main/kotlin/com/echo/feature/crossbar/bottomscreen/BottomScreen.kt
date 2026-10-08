@@ -85,6 +85,16 @@ fun BottomScreen(
                 .then(if (driven) Modifier.border(3.dp, Color.White.copy(alpha = 0.55f)) else Modifier),
         ) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
+            // a menu asked for here (Y on Recent, a game's Options in the App Drawer) opens here, over the page
+            val companionMenu: @Composable () -> Unit = {
+                ui.activeContextMenu?.takeIf { ui.menuOnCompanion }?.let { menu ->
+                    com.echo.core.ui.components.EchoContextMenuOverlay(
+                        state = menu.state,
+                        onRowActivated = crossbar::onContextMenuItemActivatedAt,
+                        onDismiss = crossbar::closeContextMenu,
+                    )
+                }
+            }
             when (locked) {
                 LockedScreen.SETTINGS -> {
                     SettingsHere(ui, crossbar)
@@ -92,6 +102,9 @@ fun BottomScreen(
                 }
                 LockedScreen.APPS -> {
                     AppsHere(ui, crossbar, u)
+                    // owner, 2026-10-08: a game's Options from the drawer showed nowhere, as this branch
+                    // returned before the menu was drawn
+                    companionMenu()
                     return@BoxWithConstraints
                 }
                 LockedScreen.SEARCH -> {
@@ -199,14 +212,7 @@ fun BottomScreen(
                 // the XMB and this screen change places (owner, 2026-10-06)
                 PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.bottomScreen.toggleSwap() }
             }
-            // a menu asked for here (Y on Recent) opens here, over the page
-            ui.activeContextMenu?.takeIf { ui.menuOnCompanion }?.let { menu ->
-                com.echo.core.ui.components.EchoContextMenuOverlay(
-                    state = menu.state,
-                    onRowActivated = crossbar::onContextMenuItemActivatedAt,
-                    onDismiss = crossbar::closeContextMenu,
-                )
-            }
+            companionMenu()
         }
     }
 }
