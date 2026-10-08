@@ -165,7 +165,7 @@ fun CrossbarNotificationBar(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     // the media a player holds, pinned first above the notifications (owner, 2026-10-08, design 4a)
-    media: PanelStage.Music? = null,
+    media: PanelStage? = null,
     // the focused stage's buttons, the footer's own, so a tap does what the button does
     actions: List<com.echo.feature.crossbar.viewmodel.StageAction> = emptyList(),
     onStageButton: (GamepadAction) -> Unit = {},
@@ -263,6 +263,7 @@ private fun FocusedNotice(
     onStageButton: (GamepadAction) -> Unit,
 ) {
     if (stage is PanelStage.Music) return MediaStage(stage, u, actions, onStageButton)
+    if (stage is PanelStage.Video || stage is PanelStage.Book) return OpenedStage(stage, u, actions, onStageButton)
     val now = System.currentTimeMillis()
     val (app, sub, title, text) = when (stage) {
         is PanelStage.Android -> NoticeCardText(stage.notice.appLabel, relativeTime(now, stage.notice.postedAt), stage.notice.title ?: stage.notice.appLabel, stage.notice.text)
@@ -333,37 +334,78 @@ private fun MediaStage(
     }
 }
 
-// the pinned row: what plays, above the notifications, lit while it has the controller
+// designs 4b and 4c: the video in a wide frame or the book's cover, how far it got, and the way back in
 @Composable
-private fun PinnedMediaRow(media: PanelStage.Music, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
+private fun OpenedStage(
+    stage: PanelStage,
+    u: DesignUnits,
+    actions: List<com.echo.feature.crossbar.viewmodel.StageAction>,
+    onStageButton: (GamepadAction) -> Unit,
+) {
+    val video = stage as? PanelStage.Video
+    val book = stage as? PanelStage.Book
+    val progress = video?.progress ?: book?.progress
+    Column(Modifier.fillMaxWidth().padding(top = u.dp(8)), verticalArrangement = Arrangement.spacedBy(u.dp(22))) {
+        Eyebrow(if (video != null) "From Recent · Video" else "From Recent · Book", u)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(28))) {
+            if (video != null) Art(video.art, u.dp(320), u.dp(180), u.dp(14), Icons.Outlined.Movie, u)
+            else Art(book?.cover, u.dp(150), u.dp(220), u.dp(10), Icons.AutoMirrored.Outlined.MenuBook, u)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
+                Headline(video?.title ?: book?.title.orEmpty(), u.sp(46), 2)
+                Meta(video?.detail ?: book?.detail ?: "", u.sp(18), maxLines = 2)
+                (video?.progressLabel ?: progress?.let { "${(it * 100).toInt()}% read" })?.let { Text(it, color = Faint, fontSize = u.sp(14)) }
+            }
+        }
+        progress?.let { p ->
+            Box(Modifier.fillMaxWidth().height(u.dp(4)).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.15f))) {
+                Box(Modifier.fillMaxWidth(p.coerceIn(0f, 1f)).fillMaxHeight().background(Color.White))
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
+            actions.forEach { a -> com.echo.core.ui.design.PanelButton(a.button, a.label, u) { onStageButton(a.button) } }
+        }
+    }
+}
+
+// the pinned row: what plays or was just open, above the notifications, lit while it has the controller
+@Composable
+private fun PinnedMediaRow(stage: PanelStage, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
+    val music = stage as? PanelStage.Music
+    val (title, sub, art, tint) = when (stage) {
+        is PanelStage.Video -> PinnedText(stage.title, listOfNotNull("Video", stage.progressLabel).joinToString(" · "), stage.art, VideoTint)
+        is PanelStage.Book -> PinnedText(stage.title, listOfNotNull("Book", stage.detail).joinToString(" · "), stage.cover, BookTint)
+        else -> PinnedText(music?.title.orEmpty(), listOfNotNull(music?.app ?: "Now playing", music?.artist).joinToString(" · "), music?.art, MusicTint)
+    }
     val shape = RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))
     Row(
         Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(Brush.horizontalGradient(listOf(MusicTint.copy(alpha = 0.55f), MusicTint.copy(alpha = 0.18f))))
+            .background(Brush.horizontalGradient(listOf(tint.copy(alpha = 0.55f), tint.copy(alpha = 0.18f))))
             .border(u.dp(if (focused) 2 else 1), Color.White.copy(alpha = if (focused) 1f else 0.2f), shape)
             .clickable(onClick = onClick)
             .padding(start = u.dp(14), end = u.dp(18), top = u.dp(12), bottom = u.dp(12)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
     ) {
-        Art(media.art, u.dp(42), u.dp(42), u.dp(10), Icons.Outlined.MusicNote, u)
+        Art(art, u.dp(42), u.dp(42), u.dp(10), stageGlyph(stage), u)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
-            Text(media.title, color = Color.White, fontSize = u.sp(15), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(listOfNotNull(media.app ?: "Now playing", media.artist).joinToString(" · "), color = Color.White.copy(alpha = 0.7f),
+            Text(title, color = Color.White, fontSize = u.sp(15), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(sub, color = Color.White.copy(alpha = 0.7f),
                 fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Icon(Icons.Filled.PlayArrow, null, tint = Color.White.copy(alpha = if (media.playing) 1f else 0.6f), modifier = Modifier.size(u.dp(20)))
+        Icon(Icons.Filled.PlayArrow, null, tint = Color.White.copy(alpha = if (music?.playing != false) 1f else 0.6f), modifier = Modifier.size(u.dp(20)))
     }
 }
+
+private data class PinnedText(val title: String, val sub: String, val art: Any?, val tint: Color)
 
 private data class NoticeCardText(val app: String, val sub: String, val title: String, val text: String?)
 
 @Composable
 private fun NoticeList(
     entries: List<PanelEntry>,
-    media: PanelStage.Music?,
+    media: PanelStage?,
     mediaFocused: Boolean,
     androidAccessGranted: Boolean,
     u: DesignUnits,

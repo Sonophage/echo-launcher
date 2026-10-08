@@ -232,7 +232,7 @@ class CrossbarRecents(
             RecentLaunch.APP   -> item.packageName?.let { vm.launching.launchAppWithDisc(it, item.shelfCoverArt) }
             RecentLaunch.VIDEO -> {
                 menuSound.play(MenuSound.SELECT)
-                uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
+                uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_"), activeVideoAutoPlay = true) }
             }
             RecentLaunch.BOOK  -> {
                 menuSound.play(MenuSound.SELECT)

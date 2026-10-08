@@ -260,12 +260,13 @@ class CrossbarMusic(
 
     internal fun openMusicPlayerForItem(item: CrossbarItem) {
         val trackId = item.id.removePrefix("mt_")
-        val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
-        if (currentMusicTracks.isEmpty()) return
-        val track = currentMusicTracks[startIndex]
+        val browsing = currentMusicTracks
         scope.launch {
-            vm.launching.awaitDiscHandOff(track.artUri)
-            musicPlayer.setQueue(currentMusicTracks, startIndex)
+            // a track opened from Recent is not in the list the crossbar browses: queue it with its album
+            val library = if (browsing.any { it.id == trackId }) emptyList() else musicRepository.observeAllTracks().first()
+            val (queue, startIndex) = musicQueueFor(trackId, browsing, library) ?: return@launch
+            vm.launching.awaitDiscHandOff(queue[startIndex].artUri)
+            musicPlayer.setQueue(queue, startIndex)
             vm.showMusicPlayer()
         }
     }
@@ -633,4 +634,16 @@ class CrossbarMusic(
             }
         }
     }
+}
+
+// the queue a track plays in: the list the crossbar browses when it holds the track; otherwise the track's album
+// from the library, in track order, or the track alone. Null when the track is nowhere (owner, 2026-10-08:
+// A on a Recent track did nothing because only the browsed list was searched)
+internal fun musicQueueFor(trackId: String, browsing: List<MusicTrack>, library: List<MusicTrack>): Pair<List<MusicTrack>, Int>? {
+    browsing.indexOfFirst { it.id == trackId }.takeIf { it >= 0 }?.let { return browsing to it }
+    val track = library.firstOrNull { it.id == trackId } ?: return null
+    val album = track.album?.takeIf { it.isNotBlank() }
+        ?.let { name -> library.filter { it.album == name && it.folderId == track.folderId }.sortedWith(compareBy({ it.trackNumber ?: Int.MAX_VALUE }, { it.displayTitle })) }
+        ?: listOf(track)
+    return album to album.indexOfFirst { it.id == trackId }
 }

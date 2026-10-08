@@ -264,8 +264,11 @@ fun PanelStage.islandProgress(positionMs: Long): Float? = when (this) {
 }
 
 // owner, 2026-10-08: the media a player holds, playing or paused, is the panel's first row and its stage
-// (design 4a); the last thing played, with no player holding it, stays on the orb
-fun CrossbarUiState.pinnedMedia(): PanelStage.Music? = (mediaStage() as? PanelStage.Music)?.takeIf { it.loaded }
+// (design 4a); with no music loaded, the video or book last opened takes the row (4b, 4c), so stepping away from
+// it or a notice arriving while it is open leaves it one press away. A game or app stays on the orb
+fun CrossbarUiState.pinnedMedia(): PanelStage? =
+    (mediaStage() as? PanelStage.Music)?.takeIf { it.loaded }
+        ?: recentStage()?.takeIf { it is PanelStage.Video || it is PanelStage.Book }
 
 fun CrossbarUiState.panelStage(): PanelStage = when (val focus = focusedNotice) {
     NoticeFocus.Media -> pinnedMedia()
@@ -287,6 +290,9 @@ fun stageActions(stage: PanelStage, clearable: Int): List<StageAction> = buildLi
     fun y(label: String, command: StageCommand) = add(StageAction(GamepadAction.OPEN_CONTEXT_MENU, label, command))
     val clearAll = { if (clearable > 0) y("Clear all $clearable", StageCommand.CLEAR_ALL) }
     when (stage) {
+        // designs 4b and 4c: A goes back in where it was left
+        is PanelStage.Video -> a(if (stage.progress != null) "Resume" else "Play", StageCommand.LAUNCH_RECENT)
+        is PanelStage.Book -> a("Continue reading", StageCommand.LAUNCH_RECENT)
         // design 4a: A plays or pauses, X skips, Y opens the player (ECHO's, or the app's)
         is PanelStage.Music -> {
             a(if (stage.playing) "Pause" else "Play", StageCommand.PLAY_PAUSE)

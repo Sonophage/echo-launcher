@@ -29,11 +29,25 @@ class PanelMediaTest {
     }
 
     @Test
-    fun `a paused track stays pinned, the last thing played with no player does not`() {
+    fun `a paused track stays pinned, the last track played with no player does not`() {
         assertTrue(NoticeFocus.Media in state(playing = false).noticeFocusables)
         val recentOnly = state(playing = null, recent = CrossbarItem(id = "mt_x", title = "Old song", type = CrossbarItemType.MUSIC_TRACK))
         assertNull(recentOnly.pinnedMedia())
         assertEquals(listOf(NoticeFocus.Notice("k1")), recentOnly.noticeFocusables)
+    }
+
+    // owner, 2026-10-08: the video or book just open is pinned too (4b, 4c), so stepping away or a notice arriving
+    // while it is open leaves it one press away; a game stays on the orb
+    @Test
+    fun `the video or book last opened is pinned with its way back in, a game is not`() {
+        val video = state(playing = null, recent = CrossbarItem(id = "vid_1", title = "Harbour Lights", type = CrossbarItemType.VIDEO_FILE, progressFraction = 0.4f))
+        assertEquals(NoticeFocus.Media, video.noticeFocusables.first())
+        assertEquals(listOf("Resume"), stageActions(video.panelStage(), clearable = 0).map { it.label })
+        val book = state(playing = null, recent = CrossbarItem(id = "book_1", title = "Annihilation", type = CrossbarItemType.LIBRARY_BOOK))
+        assertEquals(listOf("Continue reading"), stageActions(book.panelStage(), clearable = 0).map { it.label })
+        val game = state(playing = null, recent = CrossbarItem(id = "7", title = "Crisis Core", gameId = 7))
+        assertNull(game.pinnedMedia())
+        assertTrue("music a player holds beats the video", state(playing = true, recent = video.recentTop).pinnedMedia() is PanelStage.Music)
     }
 
     @Test
