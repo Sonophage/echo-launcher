@@ -66,6 +66,23 @@ fun CrossbarBackground(
     }
 }
 
+// owner, 2026-10-08: the selected item's colour reached the screen only through the wave, so with the wave off the
+// crossbar and Recent lost it. Without the wave, the colour rises from the bottom as a soft wash instead
+@Composable
+fun AccentWash(accentArgb: Long?, modifier: Modifier = Modifier) {
+    val target = accentWashColor(accentArgb)
+    val color by androidx.compose.animation.animateColorAsState(target, androidx.compose.animation.core.tween(600), label = "accentWash")
+    Box(modifier.fillMaxSize().background(
+        androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Transparent, 0.45f to color.copy(alpha = color.alpha * 0.35f), 1f to color),
+    ))
+}
+
+// the wash's colour at its strongest: the accent at a third, or nothing when there is none
+fun accentWashColor(accentArgb: Long?): Color =
+    accentArgb?.let { Color(it or 0xFF000000L).copy(alpha = ACCENT_WASH_ALPHA) } ?: Color.Transparent
+
+const val ACCENT_WASH_ALPHA = 0.32f
+
 private fun waveTintFrom(accentArgb: Long): Color =
     lerp(Color(accentArgb or 0xFF000000L), Color.White, 0.62f)
 

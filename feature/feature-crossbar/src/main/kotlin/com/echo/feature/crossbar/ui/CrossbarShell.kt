@@ -762,12 +762,17 @@ fun CrossbarShell(
                     speedScale = { waveSpeed },
                     glowScale = { waveGlow },
                 )
+            } else if (!uiState.waveStyle.drawsWave) {
+                AccentWash(waveAccent)
             }
             // Last Played draws its own art over the background, so it draws the wave itself: over that art, under its icons
             val homeWaveStyle = if (powerThrottled) uiState.waveStyle.frozen else uiState.waveStyle
-            val homeWave: (@Composable () -> Unit)? = if (homeWaveStyle.drawsWave) {
+            // with the wave off, Recent and the panels still take the selected item's colour, as a wash
+            val homeWave: (@Composable () -> Unit) = if (homeWaveStyle.drawsWave) {
                 { WaveOverlay(homeWaveStyle, waveAccent, Modifier.fillMaxSize(), speedScale = { waveSpeed }, glowScale = { waveGlow }) }
-            } else null
+            } else {
+                { AccentWash(waveAccent) }
+            }
 
             val chromeFade by animateFloatAsState(
                 if (uiState.activeContextMenu != null) 0f else 1f,
