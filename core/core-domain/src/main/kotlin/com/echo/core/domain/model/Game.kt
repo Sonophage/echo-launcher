@@ -24,6 +24,7 @@ data class Game(
     val publisher: String?        = null,
     val releaseYear: Int?         = null,
     val genre: String?            = null,
+    val genreOverride: String?    = null,
 
     val players: String?          = null,
     val ageRating: String?        = null,

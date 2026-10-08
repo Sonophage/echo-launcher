@@ -31,4 +31,14 @@ class FooterFilterTest {
         assertEquals("the last kind wraps to All", "Apps 2" to null, searchKindFilter(all.copy(kind = SearchKind.APPS)))
         assertNull("one kind is nothing to filter", searchKindFilter(all.copy(kindCounts = counts.take(1))))
     }
+
+    // owner, 2026-10-08: a genre filter in force reads beside the sort, so a short game list explains itself
+    @Test
+    fun `a game list names the genre it is filtered to beside its sort`() {
+        val games = com.echo.core.domain.model.Category(id = com.echo.core.domain.model.BuiltInCategory.GAMES, name = "Game",
+            iconKey = "ic_games", type = com.echo.core.domain.model.CategoryType.BUILT_IN, position = 2, isGamingCategory = true)
+        val state = CrossbarUiState(showBootSequence = false, categories = listOf(games), selectedCategoryIndex = 0, selectedPlatformId = "psp")
+        assertEquals("Title", footerFilter(state)?.first)
+        assertEquals("Title · RPG", footerFilter(state.copy(genreFilter = com.echo.core.domain.model.GameGenre.RPG))?.first)
+    }
 }

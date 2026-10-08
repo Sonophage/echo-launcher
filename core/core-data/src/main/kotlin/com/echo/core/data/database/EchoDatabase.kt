@@ -71,7 +71,7 @@ import com.echo.core.data.database.entity.VideoLibraryEntity
 import com.echo.core.data.database.entity.VideoPlaylistEntity
 import com.echo.core.data.database.entity.VideoPlaylistItemEntity
 
-const val ECHO_DATABASE_VERSION = 57
+const val ECHO_DATABASE_VERSION = 58
 
 @Database(
     entities = [
@@ -1303,6 +1303,13 @@ abstract class EchoDatabase : RoomDatabase() {
             }
         }
 
+        // owner, 2026-10-08: a genre the owner picked, kept apart from the scraped one so a re-scrape never undoes it
+        val MIGRATION_57_58 = object : Migration(57, 58) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `games` ADD COLUMN `genre_override` TEXT DEFAULT NULL")
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -1360,6 +1367,7 @@ abstract class EchoDatabase : RoomDatabase() {
             MIGRATION_54_55,
             MIGRATION_55_56,
             MIGRATION_56_57,
+            MIGRATION_57_58,
         )
     }
 }

@@ -126,6 +126,9 @@ data class AppDrawerUiState(
 
     val systemFilter: String? = null,
 
+    // the crossbar's genre filter, which the Games section follows (owner, 2026-10-08)
+    val genreFilter: com.echo.core.domain.model.GameGenre? = null,
+
     val chipFocus: Boolean = false,
 
 ) {
@@ -216,8 +219,15 @@ class AppDrawerViewModel @Inject constructor(
                     playTimeMillis = game.totalPlayTimeMillis,
                     platformId = game.platformId,
                     platformName = names[game.platformId],
+                    genre = com.echo.core.domain.model.effectiveGenre(game.genre, game.genreOverride),
                 )
             }
+    }
+
+    fun setGenreFilter(genre: com.echo.core.domain.model.GameGenre?) {
+        if (genre == _uiState.value.genreFilter) return
+        _uiState.update { it.copy(genreFilter = genre, selectedIndex = 0) }
+        applyFilter()
     }
 
     fun setFilter(filter: AppFilter) {
@@ -592,6 +602,7 @@ class AppDrawerViewModel @Inject constructor(
         val system = state.systemFilter?.takeIf { id -> chips.any { it.id == id } }
 
         val inTab = tabApps.ofSystem(system)
+            .let { if (state.activeFilter == AppFilter.GAMES) it.ofGenre(state.genreFilter) else it }
             .let { apps ->
                 if (state.activeFilter == AppFilter.RECENT) {
                     apps.sortedByDescending { it.lastUsedAt }

@@ -240,6 +240,7 @@ private fun AppsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel, u: Design
             onTabPickConsumed = { pick = null },
             onOpenPermissions = { crossbar.onOpenSettingsScreen("settings_permissions") },
             heroOnOtherScreen = true,
+            genreFilter = ui.genreFilter,
             onFocusedApp = { app, launch, options -> crossbar.bottomScreen.drawerFocused(app?.let { DrawerFocus(it, launch, options) }) },
             modifier = Modifier.fillMaxSize(),
         )

@@ -1248,6 +1248,7 @@ fun CrossbarShell(
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
                     AppDrawerScreen(
                         initialFilter = initialFilter,
+                        genreFilter = uiState.genreFilter,
                         onBack = onCloseAppDrawer,
                         pendingGamepadAction = uiState.pendingDrawerAction,
                         selectReleases = uiState.drawerSelectReleases,

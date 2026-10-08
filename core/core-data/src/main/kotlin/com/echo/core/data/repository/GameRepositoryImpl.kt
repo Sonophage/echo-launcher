@@ -116,6 +116,7 @@ class GameRepositoryImpl @Inject constructor(
         val merged = entity.copy(
             dateAdded = entity.dateAdded ?: existing?.dateAdded ?: System.currentTimeMillis(),
             playState = entity.playState ?: existing?.playState,
+            genreOverride = entity.genreOverride ?: existing?.genreOverride,
         )
         return gameDao.upsert(merged)
     }
@@ -130,6 +131,9 @@ class GameRepositoryImpl @Inject constructor(
 
     override suspend fun setPlayState(id: Long, state: com.echo.core.domain.model.PlayState?) =
         gameDao.setPlayState(id, state?.name)
+
+    override suspend fun setGenreOverride(id: Long, genre: com.echo.core.domain.model.GameGenre?) =
+        gameDao.setGenreOverride(id, genre?.name)
 
     override suspend fun updateFavoriteSortOrder(id: Long, order: Int) =
         gameDao.updateFavoriteSortOrder(id, order)

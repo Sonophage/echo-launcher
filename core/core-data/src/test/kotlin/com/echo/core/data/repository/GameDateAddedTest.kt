@@ -25,11 +25,11 @@ class GameDateAddedTest {
         dateAdded = dateAdded,
     )
 
-    private fun entityWith(dateAdded: Long? = null, playState: String? = null) = GameEntity(
+    private fun entityWith(dateAdded: Long? = null, playState: String? = null, genreOverride: String? = null) = GameEntity(
         id = 7, title = "Crisis Core", platformId = "psp", romPath = "/roms/cc.iso",
         packageName = null, emulatorPackage = null, artworkUri = null, logoUri = null, description = null, developer = null, publisher = null,
         releaseYear = null, genre = null, steamGridDbId = null,
-        dateAdded = dateAdded, playState = playState,
+        dateAdded = dateAdded, playState = playState, genreOverride = genreOverride,
     )
 
     private suspend fun written(block: suspend () -> Unit): GameEntity {
@@ -69,6 +69,14 @@ class GameDateAddedTest {
         coEvery { dao.getById(7L) } returns entityWith(dateAdded = 5L, playState = "COMPLETED")
         val entity = written { repo.upsert(game(id = 7)) }
         assertEquals("COMPLETED", entity.playState)
+    }
+
+    // owner, 2026-10-08: a genre the owner picked survives the rescan and re-scrape that rewrite the row
+    @Test
+    fun `a rescan does not clear a genre the user picked`() = runTest {
+        coEvery { dao.getById(7L) } returns entityWith(dateAdded = 5L, genreOverride = "PUZZLE")
+        val entity = written { repo.upsert(game(id = 7)) }
+        assertEquals("PUZZLE", entity.genreOverride)
     }
 
     @Test

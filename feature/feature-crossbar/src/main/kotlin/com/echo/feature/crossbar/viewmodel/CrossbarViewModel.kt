@@ -449,6 +449,8 @@ data class CrossbarUiState(
     val videoSortMode: CrossbarSortMode = CrossbarSortMode.TITLE,
     val bookSortMode: CrossbarSortMode = CrossbarSortMode.TITLE,
     val sortLabel: String? = null,
+    // the one genre the game lists show, or null for all (owner, 2026-10-08)
+    val genreFilter: com.echo.core.domain.model.GameGenre? = null,
 
     val musicPlayerVisible: Boolean = false,
     val musicPlayback: com.echo.feature.crossbar.music.MusicPlaybackState =
@@ -1176,6 +1178,8 @@ data class CrossbarItem(
     val romPath: String? = null,
 
     val totalPlayTimeMillis: Long = 0L,
+    // a game's genre: its edit, else what the scraped text reads as (owner, 2026-10-08)
+    val genre: com.echo.core.domain.model.GameGenre? = null,
 
     val insideCovers: List<String> = emptyList(),
     val gameId: Long? = null,
@@ -2403,12 +2407,48 @@ class CrossbarViewModel @Inject constructor(
         type     = CrossbarItemType.EMPTY,
     )
 
-    internal fun publishGameItems(items: List<CrossbarItem>, keepCursorOnRow: Boolean) = _uiState.update {
-        if (!keepCursorOnRow) it.copy(currentItems = items)
-        else it.copy(
-            currentItems = items,
-            selectedItemIndex = cursorAfterRefresh(it.currentItems, it.selectedItemIndex, items),
-        )
+    // the game list as built, before the genre filter, so changing the filter needs no reload
+    private var builtGameItems: List<CrossbarItem> = emptyList()
+
+    internal fun publishGameItems(items: List<CrossbarItem>, keepCursorOnRow: Boolean) {
+        builtGameItems = items
+        _uiState.update {
+            val shown = items.withGenre(it.genreFilter)
+            if (!keepCursorOnRow) it.copy(currentItems = shown)
+            else it.copy(
+                currentItems = shown,
+                selectedItemIndex = cursorAfterRefresh(it.currentItems, it.selectedItemIndex, shown),
+            )
+        }
+    }
+
+    // owner, 2026-10-08: the game lists show one genre, or all; it holds from system to system until cleared
+    internal fun setGenreFilter(genre: com.echo.core.domain.model.GameGenre?) {
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update { it.copy(genreFilter = genre) }
+        publishGameItems(builtGameItems, keepCursorOnRow = false)
+    }
+
+    // the game's genre from the library, so the drawer's Options, whose game is not in the column, filter too
+    internal fun filterByGenreOf(gameId: Long) {
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            com.echo.core.domain.model.effectiveGenre(game.genre, game.genreOverride)?.let(::setGenreFilter)
+        }
+    }
+
+    internal fun openGenrePickerMenu(gameId: Long) {
+        viewModelScope.launch {
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val current = com.echo.core.domain.model.GameGenre.fromName(game.genreOverride)
+            val items = buildList {
+                add(CrossbarContextMenuItem("genre_pick_scraped", game.genre?.takeIf { it.isNotBlank() }?.let { "As scraped · $it" } ?: "As scraped · none", checked = current == null))
+                com.echo.core.domain.model.GameGenre.entries.forEach { g ->
+                    add(CrossbarContextMenuItem("genre_pick_${g.name}", g.label, checked = current == g))
+                }
+            }
+            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Genre", rows = items), gameId = gameId)) }
+        }
     }
 
     internal fun List<com.echo.core.domain.model.Game>.toCrossbarItems() = map { g ->
@@ -2419,7 +2459,8 @@ class CrossbarViewModel @Inject constructor(
             iconUri      = g.iconUri,
             logoUri      = g.logoUri,
             subtitle     = gameMetaLabel(g),
-            metadataLine = gameMetadataLine(g.releaseYear, g.genre, g.developer, g.players),
+            metadataLine = gameMetadataLine(g.releaseYear, com.echo.core.domain.model.GameGenre.fromName(g.genreOverride)?.label ?: g.genre, g.developer, g.players),
+            genre        = com.echo.core.domain.model.effectiveGenre(g.genre, g.genreOverride),
             description  = g.description,
             romPath      = g.romPath,
             totalPlayTimeMillis = g.totalPlayTimeMillis,

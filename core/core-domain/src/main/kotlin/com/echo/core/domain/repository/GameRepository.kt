@@ -49,6 +49,9 @@ interface GameRepository {
     suspend fun setFavorite(id: Long, isFavorite: Boolean)
 
     suspend fun setPlayState(id: Long, state: PlayState?)
+
+    // null puts back the scraped genre
+    suspend fun setGenreOverride(id: Long, genre: com.echo.core.domain.model.GameGenre?)
     suspend fun updateFavoriteSortOrder(id: Long, order: Int)
     suspend fun updateNote(id: Long, note: String?)
     suspend fun updateBoxArt(id: Long, uri: String?)

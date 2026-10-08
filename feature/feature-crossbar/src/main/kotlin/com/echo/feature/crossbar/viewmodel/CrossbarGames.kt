@@ -305,6 +305,10 @@ class CrossbarGames(
         } else if (itemId == "shelf_favorite") {
             val onShelf = menu.items.firstOrNull { it.action == "shelf_favorite" }?.checked == true
             toggleGameFavorite(gameId, !onShelf)
+        } else if (itemId.startsWith("genre_pick_")) {
+            val gid = gameId
+            val choice = itemId.removePrefix("genre_pick_")
+            vm.appAction { vm.gameRepository.setGenreOverride(gid, com.echo.core.domain.model.GameGenre.fromName(choice)) }
         } else if (itemId.startsWith("pstate_")) {
             val gid = gameId
             val choice = itemId.removePrefix("pstate_")
@@ -320,6 +324,9 @@ class CrossbarGames(
         } else when (itemId) {
 
             "play"                   -> vm.launching.launchGameDirectly(gameId)
+            "edit_genre"             -> vm.openGenrePickerMenu(gameId)
+            "genre_only"             -> vm.filterByGenreOf(gameId)
+            "genre_all"              -> vm.setGenreFilter(null)
             "game_info"              -> uiState.value.currentItems.firstOrNull { it.gameId == gameId }?.let(vm.gameDetail::onOpenGameInfo)
             "info_about"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.INFO) }
             "info_video"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.VIDEO) }

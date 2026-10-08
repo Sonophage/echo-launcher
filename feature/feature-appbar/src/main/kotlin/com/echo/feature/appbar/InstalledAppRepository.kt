@@ -44,6 +44,9 @@ data class InstalledApp(
     val platformId: String? = null,
 
     val platformName: String? = null,
+
+    // a library game's genre (owner, 2026-10-08), for the Games section's genre filter
+    val genre: com.echo.core.domain.model.GameGenre? = null,
 )
 
 @Singleton

@@ -31,4 +31,15 @@ class SystemFilterTest {
         assertEquals(listOf("com.a", "com.b", "com.c"), games.ofSystem(systemChips(games)[1].id).map { it.packageName })
         assertEquals(games, games.ofSystem(null))
     }
+
+    // owner, 2026-10-08: the Games section follows the crossbar's genre filter, and its footer names it
+    @Test
+    fun `the Games section narrows to the genre and says so`() {
+        val rpg = rom(4, "psp", "PSP").copy(genre = com.echo.core.domain.model.GameGenre.RPG)
+        val list = games + rpg
+        assertEquals(listOf("rom:4"), list.ofGenre(com.echo.core.domain.model.GameGenre.RPG).map { it.packageName })
+        assertEquals(list, list.ofGenre(null))
+        assertEquals("Games · RPG", sectionLabel(AppFilter.GAMES, com.echo.core.domain.model.GameGenre.RPG))
+        assertEquals("Apps is not a games list", "Apps", sectionLabel(AppFilter.APPS, com.echo.core.domain.model.GameGenre.RPG))
+    }
 }

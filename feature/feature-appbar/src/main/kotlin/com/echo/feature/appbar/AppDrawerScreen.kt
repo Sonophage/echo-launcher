@@ -97,9 +97,13 @@ fun AppDrawerScreen(
     // the focused app, and the drawer's own Launch and Options for it, for the other screen's hero
     onFocusedApp: (app: InstalledApp?, launch: () -> Unit, options: () -> Unit) -> Unit = { _, _, _ -> },
 
+    // the crossbar's genre filter: the Games section shows that genre only (owner, 2026-10-08)
+    genreFilter: com.echo.core.domain.model.GameGenre? = null,
+
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(genreFilter) { viewModel.setGenreFilter(genreFilter) }
     val focusedApp = state.visibleApps.getOrNull(state.selectedIndex).takeIf { !state.chipFocus }
     LaunchedEffect(focusedApp) {
         onFocusedApp(focusedApp, { focusedApp?.let { viewModel.launchApp(it.packageName) } }, { focusedApp?.let(viewModel::openAppMenu) })
@@ -317,7 +321,7 @@ internal fun AppDrawerContent(
                 primary = focused?.let { com.echo.core.ui.components.HintAction(GamepadAction.SELECT, actionLabel(it)) },
                 filter = {
                     com.echo.core.ui.components.TriggerFilter(
-                        state.activeFilter.label,
+                        sectionLabel(state.activeFilter, state.genreFilter),
                         onTapped = { onFilterSelected(state.activeFilter.stepped(1, state.sections)) },
                     )
                 },

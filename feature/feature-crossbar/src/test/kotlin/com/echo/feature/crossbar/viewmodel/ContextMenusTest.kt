@@ -336,7 +336,7 @@ class ContextMenusTest {
     fun `the rows that were behind Details are in the menu itself, as one group`() {
         val rows = gameContextMenuItems(game(), state(), 1, false, null)
         val wasBehindDetails = listOf(
-            "detail_title", "detail_note", "detail_ARTWORK",
+            "detail_title", "detail_note", "edit_genre", "detail_ARTWORK",
             "detail_METADATA", "detail_MANUAL", "detail_REFRESH",
         )
 

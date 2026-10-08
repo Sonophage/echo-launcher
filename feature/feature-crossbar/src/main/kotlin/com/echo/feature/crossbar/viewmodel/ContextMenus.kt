@@ -45,6 +45,8 @@ internal fun gameContextMenuItems(
         }
 
         add(CrossbarContextMenuItem("shelves", "Shelves", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+        // owner, 2026-10-08: filter the game lists by this game's genre, or clear the filter
+        genreFilterRow(item.genre, state.genreFilter)?.let(::add)
         pinKey(item)?.let { add(recentPinRow(it in state.recentPins)) }
         if (onRecentShelf) add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
 
@@ -71,6 +73,7 @@ internal fun gameContextMenuItems(
 
         add(CrossbarContextMenuItem("detail_title", "Edit Title", group = MenuGroup.METADATA))
         add(CrossbarContextMenuItem("detail_note", "Edit Note", group = MenuGroup.METADATA))
+        add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.METADATA))
         add(CrossbarContextMenuItem("detail_ARTWORK", "Artwork", group = MenuGroup.METADATA))
         add(CrossbarContextMenuItem("detail_METADATA", "Update Metadata", group = MenuGroup.METADATA))
         add(CrossbarContextMenuItem("detail_MANUAL", "Manual", group = MenuGroup.METADATA))
@@ -356,3 +359,13 @@ internal fun mediaFoldersContextMenuItems(kind: MediaRootKind): List<CrossbarCon
         else -> Unit
     }
 }
+
+internal fun genreFilterRow(itemGenre: com.echo.core.domain.model.GameGenre?, active: com.echo.core.domain.model.GameGenre?): CrossbarContextMenuItem? = when {
+    active != null -> CrossbarContextMenuItem("genre_all", "Show All Genres", group = MenuGroup.LIBRARY, pinnedToRoot = true)
+    itemGenre != null -> CrossbarContextMenuItem("genre_only", "Show Only ${itemGenre.label}", group = MenuGroup.LIBRARY, pinnedToRoot = true)
+    else -> null
+}
+
+// a filtered game list keeps its other rows (headers, Add Games); a game shows when it is the genre
+internal fun List<CrossbarItem>.withGenre(genre: com.echo.core.domain.model.GameGenre?): List<CrossbarItem> =
+    if (genre == null) this else filter { it.gameId == null || it.genre == genre }

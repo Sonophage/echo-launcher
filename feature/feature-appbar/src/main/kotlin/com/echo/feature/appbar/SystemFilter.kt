@@ -15,4 +15,12 @@ internal fun systemChips(games: List<InstalledApp>): List<SystemChip> =
 internal fun List<InstalledApp>.ofSystem(id: String?): List<InstalledApp> =
     if (id == null) this else filter { it.systemId == id }
 
+// the Games section narrowed to one genre; null keeps them all
+internal fun List<InstalledApp>.ofGenre(genre: com.echo.core.domain.model.GameGenre?): List<InstalledApp> =
+    if (genre == null) this else filter { it.genre == genre }
+
+// the footer's word: the section, and the genre it is narrowed to
+internal fun sectionLabel(filter: AppFilter, genre: com.echo.core.domain.model.GameGenre?): String =
+    listOfNotNull(filter.label, genre?.takeIf { filter == AppFilter.GAMES }?.label).joinToString(" · ")
+
 private const val ANDROID_LABEL = "Android"

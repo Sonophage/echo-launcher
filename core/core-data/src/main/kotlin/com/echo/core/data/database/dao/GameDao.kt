@@ -203,6 +203,9 @@ interface GameDao {
     @Query("UPDATE games SET play_state = :state WHERE id = :id")
     suspend fun setPlayState(id: Long, state: String?)
 
+    @Query("UPDATE games SET genre_override = :genre WHERE id = :id")
+    suspend fun setGenreOverride(id: Long, genre: String?)
+
     @Query("UPDATE games SET favorite_sort_order = :order WHERE id = :id")
     suspend fun updateFavoriteSortOrder(id: Long, order: Int)
 

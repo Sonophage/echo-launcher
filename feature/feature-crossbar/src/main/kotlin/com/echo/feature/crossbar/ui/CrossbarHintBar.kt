@@ -84,7 +84,9 @@ internal fun footerFilter(
     }
     val (modes, active) = state.sortRow() ?: return null
     val at = modes.indexOf(active).coerceAtLeast(0)
-    return modes[at].label to { onSort(modes[(at + 1) % modes.size]) }
+    // a genre filter in force shows beside the sort, so a short list explains itself (owner, 2026-10-08)
+    val genre = state.genreFilter?.takeIf { state.categories.getOrNull(state.selectedCategoryIndex)?.isGamingCategory == true }
+    return listOfNotNull(modes[at].label, genre?.label).joinToString(" · ") to { onSort(modes[(at + 1) % modes.size]) }
 }
 
 private fun CrossbarPrompt.item() =

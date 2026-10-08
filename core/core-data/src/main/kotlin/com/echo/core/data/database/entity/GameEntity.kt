@@ -75,6 +75,10 @@ data class GameEntity(
 
     val genre: String?,
 
+    // a GameGenre name the owner picked; the scraped genre stays in genre
+    @ColumnInfo(name = "genre_override")
+    val genreOverride: String? = null,
+
     val players: String? = null,
 
     @ColumnInfo(name = "age_rating")
@@ -183,6 +187,7 @@ fun GameEntity.toDomain() = Game(
     publisher = publisher,
     releaseYear = releaseYear,
     genre = genre,
+    genreOverride = genreOverride,
     players = players,
     ageRating = ageRating,
     franchise = franchise,
@@ -233,6 +238,7 @@ fun Game.toEntity() = GameEntity(
     publisher = publisher,
     releaseYear = releaseYear,
     genre = genre,
+    genreOverride = genreOverride,
     players = players,
     ageRating = ageRating,
     franchise = franchise,
