@@ -99,6 +99,38 @@ class EchoThemeStorePartsTest {
         assertEquals(null, bundle.manifest.buttonSet, "a setting the person never chose is not carried")
     }
 
+    // owner, 2026-10-07: applying a theme saves the look in use first, so a theme never costs you your own look
+    @Test
+    fun `applying a theme saves your own look first, once, however many themes you try`() = runTest {
+        context.echoDataStore.edit { it[com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE] = 0x00AA33 }
+        val store = EchoThemeStore(context, media)
+        val a = assertNotNull(store.importBundle(register(theme(EchoThemeManifest(name = "Arcs", accentColor = "#112233"), media = emptyMap()))))
+        val b = assertNotNull(store.importBundle(register(theme(EchoThemeManifest(name = "Rings", accentColor = "#445566"), media = emptyMap()))))
+
+        assertTrue(store.apply(a.id))
+        assertTrue(store.apply(b.id))
+
+        val kept = store.themes.value.filter { it.name.startsWith("Before ") }
+        assertEquals(listOf("Before Arcs"), kept.map { it.name }, "trying a second theme does not save the first one again")
+        val bundle = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${kept.single().id}.echo-theme")))
+        assertEquals("#00AA33", bundle.manifest.accentColor, "the saved look is the one in use before the theme")
+    }
+
+    @Test
+    fun `a look changed after a theme is saved again, and the default look is not saved`() = runTest {
+        val store = EchoThemeStore(context, media)
+        val a = assertNotNull(store.importBundle(register(theme(EchoThemeManifest(name = "Arcs", accentColor = "#112233"), media = emptyMap()))))
+        val b = assertNotNull(store.importBundle(register(theme(EchoThemeManifest(name = "Rings", accentColor = "#445566"), media = emptyMap()))))
+
+        assertTrue(store.apply(a.id))
+        assertEquals(emptyList(), store.themes.value.filter { it.name.startsWith("Before ") }.map { it.name },
+            "the default look comes back with Reset, so it is not saved")
+
+        context.echoDataStore.edit { it[com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE] = 0x00AA33 }
+        assertTrue(store.apply(b.id))
+        assertEquals(listOf("Before Rings"), store.themes.value.filter { it.name.startsWith("Before ") }.map { it.name })
+    }
+
     // owner, 2026-10-07: a theme's store page takes each part on its own
     @Test
     fun `mixing takes one part from another theme and leaves the rest`() = runTest {

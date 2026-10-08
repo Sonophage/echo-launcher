@@ -89,6 +89,8 @@ class EchoThemeStore @Inject constructor(
 
         val bundle = runCatching { EchoThemeCodec.read(File(dir, "$id.$THEME_EXT")) }.getOrNull()
             ?: return@withContext false
+        val appliedName = _themes.value.firstOrNull { it.id == id }?.name ?: "Custom Theme"
+        keepLookBefore(appliedName)
 
         val wallpaperPart = ThemePart.WALLPAPER in parts
         val destDir = File(context.filesDir, "wallpaper").apply { mkdirs() }
@@ -142,7 +144,6 @@ class EchoThemeStore @Inject constructor(
             EchoThemeManifest.WAVE_REDUCED -> WAVE_STYLE_REDUCED
             else -> WAVE_STYLE_ANIMATED
         }
-        val appliedName = _themes.value.firstOrNull { it.id == id }?.name ?: "Custom Theme"
 
         // the theme's sounds, boot and game-start media; a slot it leaves out keeps the person's own
         // (owner, 2026-10-07)
@@ -198,8 +199,24 @@ class EchoThemeStore @Inject constructor(
             }
             if (ThemePart.BUTTONS in parts) parts0.buttonSet?.takeIf { it in EchoThemeManifest.BUTTON_SETS }?.let { prefs[KEY_BUTTON_SET] = it }
         }
+        runCatching { currentLook("").use { appliedPrint.writeText(it.print()) } }
+            .onFailure { Timber.w(it, "EchoThemeStore: could not record the applied look") }
         true
     }
+
+    // owner, 2026-10-07: applying a theme first saves the look in use as "Before <theme>" on the device shelf.
+    // Skipped when the look is still what the last apply left, so trying theme after theme saves your own look
+    // once, not every theme tried; and skipped for the default look, which Reset brings back.
+    // ponytail: a look changed only in a part a theme cannot carry (sort order, folder art) saves nothing.
+    private suspend fun keepLookBefore(themeName: String) {
+        runCatching {
+            currentLook("Before $themeName").use { look ->
+                if (!look.isDefault && look.print() != appliedPrint.takeIf { it.isFile }?.readText()) save(look)
+            }
+        }.onFailure { Timber.w(it, "EchoThemeStore: could not keep the look before applying") }
+    }
+
+    private val appliedPrint get() = File(dir, "applied-look.sha256")
 
     suspend fun resetApplied(): Unit = withContext(Dispatchers.IO) {
         context.echoDataStore.edit { prefs ->
@@ -440,6 +457,33 @@ class EchoThemeStore @Inject constructor(
     }
 
     suspend fun saveCurrentLook(name: String): SavedTheme? = withContext(Dispatchers.IO) {
+        runCatching { currentLook(name).use { save(it) } }
+            .onFailure { Timber.w(it, "EchoThemeStore: saveCurrentLook failed") }.getOrNull()
+    }
+
+    // the look in use, as a theme: what Save as Theme writes, and what an apply keeps first
+    private class Look(val bundle: EchoThemeBundle, val wallpaper: Bitmap?, val preview: Bitmap?) : java.io.Closeable {
+        val isDefault: Boolean get() = bundle.wallpaper == null && bundle.motion == null && bundle.icons.isEmpty() &&
+            bundle.sysicons.isEmpty() && bundle.media.isEmpty() && bundle.manifest.accentColor.isBlank()
+
+        // the look's content without its name or date, so the same look gives the same print
+        fun print(): String {
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val sink = object : java.io.OutputStream() {
+                override fun write(b: Int) = digest.update(b.toByte())
+                override fun write(b: ByteArray, off: Int, len: Int) = digest.update(b, off, len)
+            }
+            EchoThemeCodec.write(bundle.copy(manifest = bundle.manifest.copy(name = "", created = null)), sink)
+            return digest.digest().joinToString("") { "%02x".format(it) }
+        }
+
+        override fun close() {
+            if (preview !== wallpaper) preview?.recycle()
+            wallpaper?.recycle()
+        }
+    }
+
+    private suspend fun currentLook(name: String): Look {
         val prefs = context.echoDataStore.data.first()
 
         val customDir = File(context.filesDir, CustomIconStore.CUSTOM_ICONS_DIR)
@@ -505,43 +549,39 @@ class EchoThemeStore @Inject constructor(
         val previewBytes = preview?.let {
             ByteArrayOutputStream().also { out -> it.compress(Bitmap.CompressFormat.PNG, 90, out) }.toByteArray()
         }
+        val bundle = EchoThemeBundle(
+            manifest = manifest,
+            wallpaper = wallpaperPng,
+            preview = previewBytes,
+            icons = icons,
+            sysicons = sysicons,
+            motion = motion,
+            media = media,
+        )
+        return Look(bundle, wallpaperBitmap, preview)
+    }
 
-        return@withContext runCatching {
-            dir.mkdirs()
-            val id = "pfp_${System.currentTimeMillis()}"
+    private fun save(look: Look): SavedTheme {
+        dir.mkdirs()
+        val id = "pfp_${System.currentTimeMillis()}"
+        val manifest = look.bundle.manifest
 
-            FileOutputStream(File(dir, "$id.$THEME_EXT")).use { out ->
-                EchoThemeCodec.write(
-                    EchoThemeBundle(
-                        manifest = manifest,
-                        wallpaper = wallpaperPng,
-                        preview = previewBytes,
-                        icons = icons,
-                        sysicons = sysicons,
-                        motion = motion,
-                        media = media,
-                    ),
-                    out,
-                )
-            }
-            wallpaperBitmap?.let {
-                FileOutputStream(File(dir, "$id.wallpaper.jpg")).use { out -> it.compress(Bitmap.CompressFormat.JPEG, 92, out) }
-            }
-            preview?.let {
-                FileOutputStream(File(dir, "$id.preview.jpg")).use { out -> it.compress(Bitmap.CompressFormat.JPEG, 88, out) }
-                if (it !== wallpaperBitmap) it.recycle()
-            }
-            wallpaperBitmap?.recycle()
+        FileOutputStream(File(dir, "$id.$THEME_EXT")).use { out -> EchoThemeCodec.write(look.bundle, out) }
+        look.wallpaper?.let {
+            FileOutputStream(File(dir, "$id.wallpaper.jpg")).use { out -> it.compress(Bitmap.CompressFormat.JPEG, 92, out) }
+        }
+        look.preview?.let {
+            FileOutputStream(File(dir, "$id.preview.jpg")).use { out -> it.compress(Bitmap.CompressFormat.JPEG, 88, out) }
+        }
 
-            _themes.value = scan()
-            // the listed entry, which carries the store's details; the plain one if the list could not read it
-            _themes.value.firstOrNull { it.id == id } ?: SavedTheme(
-                id,
-                manifest.name,
-                manifest.accentColor.toAccentArgbOrNull(),
-                File(dir, "$id.preview.jpg").takeIf { f -> f.isFile }?.absolutePath,
-            )
-        }.onFailure { Timber.w(it, "EchoThemeStore: saveCurrentLook failed") }.getOrNull()
+        _themes.value = scan()
+        // the listed entry, which carries the store's details; the plain one if the list could not read it
+        return _themes.value.firstOrNull { it.id == id } ?: SavedTheme(
+            id,
+            manifest.name,
+            manifest.accentColor.toAccentArgbOrNull(),
+            File(dir, "$id.preview.jpg").takeIf { f -> f.isFile }?.absolutePath,
+        )
     }
 
     private fun iconsOrSysicons(
