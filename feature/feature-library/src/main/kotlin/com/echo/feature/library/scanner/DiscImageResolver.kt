@@ -22,11 +22,6 @@ class DiscImageResolver @Inject constructor(
         val requiresUserAssignment: List<File>,
     )
 
-    fun resolveFolder(folder: File): FolderResolution {
-        val allFiles = folder.walkTopDown().filter { it.isFile }.toList()
-        return resolveFiles(allFiles)
-    }
-
     fun resolveFiles(files: List<File>): FolderResolution {
         val resolvedDiscs      = mutableListOf<ResolvedDisc>()
         val suppressedPaths    = mutableSetOf<String>()

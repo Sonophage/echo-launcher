@@ -1,7 +1,6 @@
 package com.echo.core.data.repository
 
 import com.echo.core.data.database.dao.CategoryDao
-import com.echo.core.data.database.entity.CategoryItemEntity
 import com.echo.core.data.database.entity.toDomain
 import com.echo.core.data.database.entity.toEntity
 import com.echo.core.domain.model.BUILT_IN_CATEGORIES
@@ -91,12 +90,6 @@ class CategoryRepositoryImpl @Inject constructor(
             .map { it.id }
         reorderedKeepingHidden(all, shownIds).forEachIndexed { position, id -> categoryDao.updatePosition(id, position) }
     }
-
-    suspend fun addItemToCategory(categoryId: String, itemId: String, itemType: String, order: Int = 0) =
-        categoryDao.addItem(CategoryItemEntity(categoryId, itemId, itemType, order))
-
-    suspend fun removeItemFromCategory(categoryId: String, itemId: String) =
-        categoryDao.removeItem(categoryId, itemId)
 
     suspend fun seedBuiltInCategories() {
         categoryDao.insertAll(builtInCategories().map { it.toEntity() })

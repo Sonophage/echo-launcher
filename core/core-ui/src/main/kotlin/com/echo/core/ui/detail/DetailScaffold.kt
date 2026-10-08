@@ -3,7 +3,6 @@ package com.echo.core.ui.detail
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -21,13 +20,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -52,10 +50,7 @@ import com.echo.core.ui.components.StatusStripHeight
 
 internal val DetailTextPrimary: Color @Composable @ReadOnlyComposable get() = detailPalette().textPrimary
 internal val DetailTextMuted: Color @Composable @ReadOnlyComposable get() = detailPalette().textMuted
-internal val DetailRowFill: Color @Composable @ReadOnlyComposable get() = detailPalette().rowFill
-internal val DetailRowEdge: Color @Composable @ReadOnlyComposable get() = detailPalette().rowEdge
 internal val DetailDivider: Color @Composable @ReadOnlyComposable get() = detailPalette().divider
-internal val DetailFocusEdge: Color @Composable @ReadOnlyComposable get() = detailPalette().focus
 
 val DetailButtonRest = Color.White.copy(alpha = 0.13f)
 
@@ -220,19 +215,3 @@ fun EchoDetailHelperFooter(
         EchoHintBar(items = items, modifier = Modifier.alpha(alpha), onAction = onAction)
     }
 }
-
-@Composable
-internal fun Modifier.detailFocusRing(
-    focused: Boolean,
-    edge: Color,
-    fill: Color,
-    shape: RoundedCornerShape,
-    strong: Boolean = false,
-): Modifier = this
-    .background(if (focused) fill else Color.Transparent, shape)
-    .border(
-        width = if (focused) (if (strong) 2.dp else 1.5.dp) else 1.dp,
-        color = if (focused) edge else DetailRowEdge,
-        shape = shape,
-    )
-

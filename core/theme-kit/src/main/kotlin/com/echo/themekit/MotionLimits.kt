@@ -10,8 +10,6 @@ object MotionLimits {
 
     const val MAX_BYTES = 60L * 1024 * 1024
 
-    const val ADVISORY_MAX_FPS = 30
-
     const val MSG_UNSUPPORTED_FORMAT = "Unsupported format — use MP4, WebM, or GIF"
     const val MSG_TOO_LARGE_RESOLUTION = "Video is too large — 1080p or smaller"
     const val MSG_TOO_LONG = "Clip is too long — 60 seconds or less"

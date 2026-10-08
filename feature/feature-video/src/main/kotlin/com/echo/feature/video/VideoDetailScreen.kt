@@ -80,7 +80,6 @@ import androidx.compose.runtime.ReadOnlyComposable
 import com.echo.core.ui.theme.LocalEchoTextColors
 
 private val PageBg = Color(0xFF06060C)
-private val ActionFill = Color(0xFF1B1B26)
 
 private val TextPrimary: Color @Composable @ReadOnlyComposable get() = LocalEchoTextColors.current.primary
 

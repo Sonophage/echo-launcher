@@ -10,8 +10,3 @@ val ArtworkType.displayLabel: String
 
 data class DetailMedia(val uri: String, val isVideo: Boolean)
 
-data class ArtPickerItem(
-    val url: String,
-    val thumbUrl: String? = null,
-    val label: String? = null,
-)

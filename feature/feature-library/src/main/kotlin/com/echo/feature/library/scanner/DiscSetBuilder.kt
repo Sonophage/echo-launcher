@@ -63,7 +63,6 @@ class DiscSetBuilder @Inject constructor() {
         val candidates = games.mapNotNull { game -> game.candidate() }
         if (candidates.isEmpty()) return games
 
-        val byPath = candidates.associateBy { it.game.romPath!! }
         val byBasename = candidates.groupBy { it.basename }
         val byFolderBasename = candidates.groupBy { it.folder to it.basename }
 
