@@ -21,4 +21,15 @@ class GameGroupingTest {
         assertEquals(GameGrouping.SYSTEM, GameGrouping.fromName(null))
         assertEquals(GameGrouping.GENRE, GameGrouping.fromName("GENRE"))
     }
+
+    @Test
+    fun `a game's Options from the App Drawer offer the other grouping, from the crossbar they do not`() {
+        val game = CrossbarItem(id = "1", title = "Crisis Core", gameId = 1)
+        val base = CrossbarUiState(showBootSequence = false)
+        val inDrawer = gameContextMenuItems(game, base.copy(activeAppDrawerFilter = "GAMES"), 1, false, null).map { it.action }
+        assertEquals(true, "group_by_genre" in inDrawer)
+        val grouped = gameContextMenuItems(game, base.copy(activeAppDrawerFilter = "GAMES", gameGrouping = GameGrouping.GENRE), 1, false, null).map { it.action }
+        assertEquals(true, "group_by_system" in grouped)
+        assertEquals(false, "group_by_genre" in gameContextMenuItems(game, base, 1, false, null).map { it.action })
+    }
 }

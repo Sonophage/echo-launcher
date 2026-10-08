@@ -329,6 +329,8 @@ class CrossbarGames(
             "edit_genre"             -> vm.openGenrePickerMenu(gameId)
             "genre_only"             -> vm.filterByGenreOf(gameId)
             "genre_all"              -> vm.setGenreFilter(null)
+            "group_by_genre"         -> vm.setGameGrouping(GameGrouping.GENRE)
+            "group_by_system"        -> vm.setGameGrouping(GameGrouping.SYSTEM)
             "game_info"              -> vm.openGameInfoFor(gameId)
             "info_about"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.INFO) }
             "info_video"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.VIDEO) }

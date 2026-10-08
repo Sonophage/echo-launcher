@@ -47,6 +47,8 @@ internal fun gameContextMenuItems(
         add(CrossbarContextMenuItem("shelves", "Shelves", group = MenuGroup.LIBRARY, pinnedToRoot = true))
         // owner, 2026-10-08: filter the game lists by this game's genre, or clear the filter
         genreFilterRow(item.genre, state.genreFilter)?.let(::add)
+        // owner, 2026-10-08: the drawer's Games buttons switch between systems and genres from here
+        if (state.activeAppDrawerFilter != null) add(groupingRow(state.gameGrouping))
         pinKey(item)?.let { add(recentPinRow(it in state.recentPins)) }
         if (onRecentShelf) add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
 
@@ -291,6 +293,10 @@ internal fun allGamesContextMenuItems(grouping: GameGrouping = GameGrouping.SYST
     CrossbarContextMenuItem("import_pc_games", "Import PC Games"),
     CrossbarContextMenuItem("library_manager", "Manage Library", group = MenuGroup.SETTINGS),
 )
+
+internal fun groupingRow(grouping: GameGrouping): CrossbarContextMenuItem =
+    if (grouping == GameGrouping.GENRE) CrossbarContextMenuItem("group_by_system", "Group by System", group = MenuGroup.LIBRARY, pinnedToRoot = true)
+    else CrossbarContextMenuItem("group_by_genre", "Group by Genre", group = MenuGroup.LIBRARY, pinnedToRoot = true)
 
 enum class GameGrouping {
     SYSTEM, GENRE;
