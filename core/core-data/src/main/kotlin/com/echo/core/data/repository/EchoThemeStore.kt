@@ -244,8 +244,8 @@ class EchoThemeStore @Inject constructor(
     }
 
     suspend fun delete(id: String): Unit = withContext(Dispatchers.IO) {
-        // ECHO never deletes in the ECHO folder, so the theme's folder there stays; its name is kept so the
-        // folder is not read back in until it changes
+        // the theme's folder in the ECHO folder is deleted by ThemeFolderSync (owner, 2026-10-07); its name is
+        // kept here as well, so a folder that could not be deleted is not read back in until it changes
         _themes.value.firstOrNull { it.id == id }?.let { dismiss(folderName(it)) }
         removeFiles(id)
         _themes.value = scan()

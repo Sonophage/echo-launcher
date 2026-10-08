@@ -65,6 +65,11 @@ import com.echo.core.ui.components.ControllerPromptItem
 import com.echo.core.ui.components.EchoHintBar
 import com.echo.core.ui.components.chose
 import com.echo.core.ui.components.MenuSelect
+import com.echo.core.ui.components.back
+import com.echo.core.ui.components.at
+import com.echo.core.ui.components.moved
+import com.echo.core.ui.components.MenuRow
+import com.echo.core.ui.components.MenuState
 import com.echo.core.ui.components.EchoContextMenuOverlay
 import com.echo.core.ui.components.HintAction
 import com.echo.core.ui.design.PanelBase
@@ -142,9 +147,15 @@ fun ThemeStoreScreen(
     var column by remember { mutableIntStateOf(0) }
     var savePrompt by remember { mutableStateOf(false) }
     var saveName by remember { mutableStateOf("") }
-    // Y on a saved theme: Apply, Share, Remove
-    var menu by remember { mutableStateOf<ThemeMenu?>(null) }
-    var menuIndex by remember { mutableIntStateOf(0) }
+    // Y on a saved theme: Apply, Share, Remove. Remove deletes files, so it asks first (the kit's confirm)
+    var menu by remember { mutableStateOf<MenuState<ThemeMenuOption>?>(null) }
+    fun choose(state: MenuState<ThemeMenuOption>, index: Int) {
+        when (val picked = state.chose(index)) {
+            is MenuSelect.Run -> { picked.action.action(); menu = null }
+            is MenuSelect.Replace -> menu = picked.state
+            else -> Unit
+        }
+    }
     val saved = listOf(StoreCard(CURRENT_LOOK_ID, state.activeThemeName, "Your look", null, state.accentOverrideArgb)) +
         state.savedThemes.map { t -> t.card().copy(subtitle = if (t.name == state.activeThemeName) "In use" else t.card().subtitle) }
     val online = state.online.orEmpty().map { t ->
@@ -165,12 +176,12 @@ fun ThemeStoreScreen(
         }
     }
     fun openMenu(theme: EchoThemeStore.SavedTheme) {
-        menuIndex = 0
-        menu = ThemeMenu(theme.name, listOf(
+        val options = listOf(
             ThemeMenuOption("Apply") { viewModel.applySavedTheme(theme.id) },
             ThemeMenuOption("Share") { viewModel.shareSavedTheme(theme.id) },
-            ThemeMenuOption("Remove", destructive = true) { viewModel.deleteSavedTheme(theme.id) },
-        ))
+            ThemeMenuOption("Remove and delete its folder", destructive = true) { viewModel.deleteSavedTheme(theme.id) },
+        )
+        menu = MenuState(title = theme.name, rows = options.map { MenuRow(it, it.label, isDestructive = it.destructive) }, selectedIndex = 0)
     }
     // the hero shows the card in focus; before any is focused, the newest online theme
     val featured = focusedShelf?.let { shelf(it).getOrNull(column) }
@@ -191,10 +202,11 @@ fun ThemeStoreScreen(
                     savePrompt -> false
                     m != null -> {
                         when (action) {
-                            GamepadAction.NAVIGATE_UP -> menuIndex = (menuIndex - 1).coerceAtLeast(0)
-                            GamepadAction.NAVIGATE_DOWN -> menuIndex = (menuIndex + 1).coerceAtMost(m.options.size - 1)
-                            GamepadAction.SELECT -> { m.options.getOrNull(menuIndex)?.action?.invoke(); menu = null }
-                            GamepadAction.BACK, GamepadAction.OPEN_CONTEXT_MENU -> menu = null
+                            GamepadAction.NAVIGATE_UP -> menu = m.moved(-1)
+                            GamepadAction.NAVIGATE_DOWN -> menu = m.moved(+1)
+                            GamepadAction.SELECT -> m.selectedIndex?.let { choose(m, it) }
+                            GamepadAction.BACK -> menu = m.back()
+                            GamepadAction.OPEN_CONTEXT_MENU -> menu = null
                             else -> Unit
                         }
                         true
@@ -266,11 +278,8 @@ fun ThemeStoreScreen(
 
         menu?.let { m ->
             EchoContextMenuOverlay(
-                state = menuStateFor(m, menuIndex),
-                onRowActivated = { index ->
-                    (menuStateFor(m, menuIndex).chose(index) as? MenuSelect.Run)?.action?.action?.invoke()
-                    menu = null
-                },
+                state = m,
+                onRowActivated = { index -> if (index == m.selectedIndex) choose(m, index) else menu = m.at(index) },
                 onDismiss = { menu = null },
             )
         }

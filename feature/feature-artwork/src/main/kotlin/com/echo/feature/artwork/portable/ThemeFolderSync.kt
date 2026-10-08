@@ -13,7 +13,8 @@ import timber.log.Timber
 
 // keeps ECHO/Themes in step with ECHO's saved themes (owner, 2026-10-07): one folder per theme. A saved theme
 // with no folder there is written out; a folder ECHO does not have, or one changed since ECHO wrote it, is read
-// in, and the folder's name becomes the theme's name. Nothing in the folder is ever deleted.
+// in, and the folder's name becomes the theme's name. The only deletion is a theme's own folder when the theme is
+// removed (owner, 2026-10-07: remove means remove and delete).
 @Singleton
 class ThemeFolderSync @Inject constructor(
     private val library: PortableArtworkLibrary,
@@ -37,6 +38,14 @@ class ThemeFolderSync @Inject constructor(
             if (ok) written++ else Timber.w("ECHO folder: could not write Themes/$folder")
         }
         return written
+    }
+
+    // deletes the folder of a removed theme; false when it was there and could not be deleted. Template, the
+    // example ECHO writes, is never deleted
+    suspend fun deleteFolder(tree: Uri, name: String): Boolean {
+        if (isProtectedThemeFolder(name)) return false
+        val dir = library.dirsIn(tree, listOf(DIR_THEMES)).firstOrNull { it.name.equals(name, ignoreCase = true) } ?: return true
+        return library.deleteUri(dir.uri)
     }
 
     // writes Themes/Template, the example theme. Its READMEs are ECHO's and follow ECHO's slots; its theme.json
@@ -85,6 +94,10 @@ class ThemeFolderSync @Inject constructor(
         const val TEMPLATE = "Template"
     }
 }
+
+// a folder that no theme removal may delete: the example theme, or a name that is not one folder
+internal fun isProtectedThemeFolder(name: String): Boolean =
+    name.isBlank() || name.equals(ThemeFolderSync.TEMPLATE, ignoreCase = true) || '/' in name || name == "." || name == ".."
 
 // whether a theme folder is read in: when ECHO has no theme of its name, unless ECHO deleted that theme after the
 // folder last changed; or when the folder changed after ECHO stored its theme and holds something different.

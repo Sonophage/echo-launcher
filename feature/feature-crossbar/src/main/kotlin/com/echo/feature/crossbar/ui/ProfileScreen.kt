@@ -500,7 +500,8 @@ private fun CoverStrip(sets: List<AchievementSet>, art: Map<Long, String>, at: I
     LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(u.dp(10)), contentPadding = PaddingValues(vertical = u.dp(4), horizontal = u.dp(4))) {
         items(sets.size) { i ->
             val on = i == at
-            val shape = RoundedCornerShape(u.dp(16))
+            // owner, 2026-10-07: the games in the strip are round; the badges below keep their corners
+            val shape = CircleShape
             Box(
                 Modifier.size(u.dp(STRIP_TILE)).graphicsLayer(alpha = if (on) 1f else 0.55f).clip(shape).background(PanelCardFill)
                     .then(if (on) Modifier.border(u.dp(if (focused) 2.5f else 1.5f), Color.White.copy(alpha = if (focused) 1f else 0.6f), shape)
@@ -582,8 +583,7 @@ internal fun Ring(set: AchievementSet, u: DesignUnits) {
 
 @Composable
 internal fun Badge(a: Achievement, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
-    // owner, 2026-10-07: achievement badges are round
-    val shape = CircleShape
+    val shape = RoundedCornerShape(u.dp(16))
     val tier = tierColor(rarityTier(a.globalPercent))
     Box(
         Modifier.size(u.dp(BADGE_SIZE)).clip(shape).background(if (focused) PanelCardFocusFill else PanelCardFill)
@@ -601,7 +601,7 @@ internal fun Badge(a: Achievement, focused: Boolean, u: DesignUnits, onClick: ()
 
 @Composable
 private fun BadgeIcon(a: Achievement, size: Dp, u: DesignUnits) {
-    Box(Modifier.size(size).clip(CircleShape), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size).clip(RoundedCornerShape(u.dp(8))), contentAlignment = Alignment.Center) {
         Box(Modifier.fillMaxSize().graphicsLayer(alpha = if (a.isUnlocked) 1f else 0.3f), contentAlignment = Alignment.Center) {
             Icon(Icons.Outlined.EmojiEvents, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.fillMaxSize(0.6f))
             a.iconUrl?.let { AsyncImage(it, a.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
@@ -620,7 +620,7 @@ internal fun DetailCard(a: Achievement, u: DesignUnits) {
         verticalArrangement = Arrangement.spacedBy(u.dp(16)),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(16))) {
-            Box(Modifier.size(u.dp(72)).border(u.dp(2), Color.White.copy(alpha = 0.5f), CircleShape), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(u.dp(72)).border(u.dp(2), Color.White.copy(alpha = 0.5f), RoundedCornerShape(u.dp(16))), contentAlignment = Alignment.Center) {
                 BadgeIcon(a, u.dp(56), u)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(4))) {

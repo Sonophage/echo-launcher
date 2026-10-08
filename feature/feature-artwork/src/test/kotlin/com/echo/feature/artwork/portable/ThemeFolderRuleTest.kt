@@ -58,4 +58,17 @@ class ThemeFolderRuleTest {
             sameTheme(folder + ("Sounds/sound_back.wav" to "RIFF1111WAVE".toByteArray()), "Dusk", stored),
         )
     }
+
+    // owner, 2026-10-07: Remove deletes the theme's folder; it must never reach the example theme or step out
+    // of ECHO/Themes through an odd name
+    @Test
+    fun `only a theme's own folder can be deleted`() {
+        assertFalse(isProtectedThemeFolder("Ryoku"))
+        assertFalse(isProtectedThemeFolder("My Look"))
+        assertTrue(isProtectedThemeFolder("Template"))
+        assertTrue(isProtectedThemeFolder("template"))
+        assertTrue(isProtectedThemeFolder(""))
+        assertTrue(isProtectedThemeFolder(".."))
+        assertTrue(isProtectedThemeFolder("a/b"))
+    }
 }
