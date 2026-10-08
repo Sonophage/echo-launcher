@@ -174,6 +174,9 @@ class MainActivity : ComponentActivity() {
     private fun holdRootFocus() {
         findViewById<android.view.ViewGroup>(android.R.id.content)?.getChildAt(0)?.let { root ->
             root.isFocusableInTouchMode = true
+            // a focused view with no focus state of its own gets Android's default highlight, which on the
+            // root is a light wash over the whole screen (the Thor's grey top screen after a prompt closed)
+            root.defaultFocusHighlightEnabled = false
             if (!root.hasFocus()) root.requestFocus()
         }
     }
