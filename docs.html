@@ -197,6 +197,9 @@ footer a{color:var(--soft)}
           <tr><td>Filters, sorts and tabs</td><td><kbd>LT</kbd> / <kbd>RT</kbd></td><td>Page Up / Down</td><td>Tap</td></tr>
           <tr><td>Seek or turn pages (players, reader, Artwork Studio)</td><td><kbd>LB</kbd> / <kbd>RB</kbd></td><td></td><td></td></tr>
           <tr><td>The island (now playing / last opened)</td><td><kbd>Select</kbd>; again to put it back</td><td></td><td>Tap the island</td></tr>
+          <tr><td>Open the player for what is playing</td><td><kbd>Select</kbd> twice</td><td></td><td>Double-tap the island</td></tr>
+          <tr><td>Group by system or genre (App Drawer); artist, album or genre (Music); author, title or genre (Books)</td><td><kbd>X</kbd></td><td></td><td></td></tr>
+          <tr><td>Swap the two screens</td><td><kbd>L3</kbd> or <kbd>R3</kbd></td><td></td><td>Swap, on the companion's bar</td></tr>
           <tr><td>Notifications and the top panel</td><td><kbd>Start</kbd> (twice when a notification is waiting)</td><td></td><td>Tap the right island twice</td></tr>
           <tr><td>Home, from any screen</td><td><kbd>Guide</kbd>, or hold <kbd>Start</kbd></td><td></td><td></td></tr>
         </table></div>
@@ -223,7 +226,7 @@ footer a{color:var(--soft)}
 
       <section id="top-bar" data-group="Using ECHO">
         <h2>The top bar and footer</h2>
-        <p>The <strong>left island</strong> shows what is playing, or the last thing you opened, with the battery reading beside it. <kbd>Start</kbd> or UP from the top of a list brings its card out. The time is in the centre.</p>
+        <p>The <strong>left island</strong> shows what is playing, or the last thing you opened, with the battery reading beside it. <kbd>Select</kbd> or UP from the top of a list brings its card out; <kbd>Select</kbd> twice, or a double tap, opens the player for what is playing. The time is in the centre.</p>
         <p>The <strong>right island</strong> is your profile picture (the ECHO mark until you set one), with the notification count beside it. Its ring is the battery, filled to the charge and red at 20% or below; while it charges, echo rings spread from it. A new notification drops out of it as a card: <kbd>Select</kbd> once shows the newest, twice opens the panel.</p>
         <div class="shots">
           <figure><img src="docs/screenshots/card-notifications.jpg?v=2.9.0" alt="The notification card" loading="lazy"><figcaption>A notification card</figcaption></figure>
@@ -234,7 +237,7 @@ footer a{color:var(--soft)}
 
       <section id="crossbar" data-group="Using ECHO">
         <h2>The crossbar</h2>
-        <p>Categories run across; everything inside a category runs down. Media columns list their apps first (Spotify under Music, Stremio under Video), then their library rows, ending with a <strong>Folders</strong> row. Inside a category the list uses the full height of the screen.</p>
+        <p>Categories run across; everything inside a category runs down. Media columns list their apps first (Spotify under Music, Stremio under Video), then their library rows, ending with the column's own settings row (<strong>Music Settings</strong>, <strong>Video Settings</strong>). With the wave off, the focused art's colour still washes the crossbar. Inside a category the list uses the full height of the screen.</p>
         <div class="shots">
           <figure><img src="docs/screenshots/col-shelves.jpg?v=2.9.0" alt="Shelves" loading="lazy"><figcaption>Shelves: Playing, Backlog, Completed, Favorites</figcaption></figure>
           <figure><img src="docs/screenshots/col-game.jpg?v=2.9.0" alt="Emulation" loading="lazy"><figcaption>Games: All Games, then a card per console</figcaption></figure>
@@ -246,12 +249,13 @@ footer a{color:var(--soft)}
 
       <section id="games" data-group="Using ECHO">
         <h2>Games and consoles</h2>
-        <p>The Game column holds <strong>All Games</strong>, <strong>Missing</strong> (only when some files cannot be found), one <strong>card per console</strong>, <strong>Folders</strong> and <strong>Search</strong>. <kbd>LT</kbd>/<kbd>RT</kbd> sort a list by Title, Recently Played or Date Added.</p>
+        <p>The Game column holds <strong>All Games</strong>, <strong>Missing</strong> (only when some files cannot be found), one <strong>card per console</strong> (or one folder per genre, with <strong>Group by Genre</strong>), its settings row and <strong>Search</strong>. <kbd>LT</kbd>/<kbd>RT</kbd> sort a list by Title, Recently Played or Date Added.</p>
         <div class="shots">
           <figure><img src="docs/screenshots/col-game-cards.jpg?v=2.9.0" alt="Console cards" loading="lazy"><figcaption>A console card shows four covers from inside it</figcaption></figure>
           <figure><img src="docs/screenshots/game-hover-panel.jpg?v=2.9.0" alt="A focused game" loading="lazy"><figcaption>A focused game fills the screen with its art</figcaption></figure>
           <figure><img src="docs/screenshots/game-context-menu.jpg?v=2.9.0" alt="A game's options" loading="lazy"><figcaption>≡: a game's options, on a rail at the right</figcaption></figure>
           <figure><img src="docs/screenshots/context-menu-confirm.jpg?v=2.9.0" alt="Confirm" loading="lazy"><figcaption>Anything destructive asks twice, with Cancel first</figcaption></figure>
+          <figure><img src="docs/screenshots/game-metadata.jpg?v=2.9.0" alt="Metadata" loading="lazy"><figcaption>≡ ▸ Metadata: title, note, genre, artwork, manual</figcaption></figure>
         </div>
         <ul>
           <li><strong>Add a console by hand</strong>: <em class="path">Emulators ▸ Library Manager ▸ Add Console</em>, choose the platform and emulator, scan.</li>
@@ -259,6 +263,7 @@ footer a{color:var(--soft)}
           <li><strong>Rescanning</strong>: rescan a card, use Library Manager's <strong>Scan All Consoles</strong>, or turn on <em class="path">System ▸ Performance ▸ Rescan On Return</em>. A folder that cannot be read is skipped, so an unmounted SD card never empties a library.</li>
           <li><strong>Android games</strong>: <strong>Find Games</strong> on the Android system, or <strong>≡ ▸ Mark as Game</strong> on an app. <strong>PC games</strong>: the PC system's <strong>Import PC Games</strong>.</li>
           <li><strong>Shelves</strong>: set Playing, Completed, Backlog or Favorite from a game's <strong>≡ ▸ Shelves</strong>.</li>
+          <li><strong>Genres</strong>: every game has one, from the scrapers or set with <strong>≡ ▸ Metadata ▸ Edit Genre</strong>. <strong>≡ ▸ Show Only &lt;genre&gt;</strong> filters the game lists and the drawer's Games, and the footer names it; <strong>Show All Genres</strong> clears it. <strong>Group by Genre</strong> on All Games' options turns the system folders into genre folders.</li>
         </ul>
       </section>
 
@@ -312,19 +317,20 @@ footer a{color:var(--soft)}
 
       <section id="media" data-group="Using ECHO">
         <h2>Music, video, photos and books</h2>
-        <p>Each media column scans one or more folders. Add, rescan, relink or remove them from the column's <strong>Folders</strong> row, which also picks the default player, viewer or reader app.</p>
+        <p>Each media column scans one or more folders. Add, rescan, relink or remove them from the column's settings row (<strong>Music Settings</strong> and so on), which also picks the default player, viewer or reader app.</p>
         <div class="shots">
           <figure><img src="docs/screenshots/music-songs.jpg?v=2.9.0" alt="Songs" loading="lazy"><figcaption>Songs, in the column</figcaption></figure>
           <figure><img src="docs/screenshots/music-player.jpg?v=2.9.0" alt="Music player" loading="lazy"><figcaption>The music player</figcaption></figure>
           <figure><img src="docs/screenshots/video-detail.jpg?v=2.9.0" alt="A video's page" loading="lazy"><figcaption>A video's page: resume or start over</figcaption></figure>
           <figure><img src="docs/screenshots/video-player-options.jpg?v=2.9.0" alt="Video options" loading="lazy"><figcaption>Speed, subtitles, audio track, screen mode</figcaption></figure>
           <figure><img src="docs/screenshots/photo-viewer.jpg?v=2.9.0" alt="Photo viewer" loading="lazy"><figcaption>The photo viewer</figcaption></figure>
+          <figure><img src="docs/screenshots/photo-wallpaper-frame.jpg?v=2.9.0" alt="Framing a wallpaper" loading="lazy"><figcaption>Move and zoom a photo before it becomes the wallpaper</figcaption></figure>
           <figure><img src="docs/screenshots/reader-options.jpg?v=2.9.0" alt="Reader options" loading="lazy"><figcaption>The book reader's options</figcaption></figure>
         </div>
         <ul>
-          <li><strong>Music</strong>: Songs, Artists, Albums and Playlists open in the column like All Games. Music keeps playing in the background, with its controls on the island and in the notification.</li>
-          <li><strong>Video</strong>: libraries with thumbnails, Recently Watched, and the built-in player (LEFT/RIGHT seek, Options for speed and tracks) or an external app. Resume picks up where you stopped.</li>
-          <li><strong>Photo</strong>: albums, the viewer (zoom, pan, rotate, slideshow), and <strong>Set as Wallpaper</strong> with EXIF stripped. Location data is never read.</li>
+          <li><strong>Music</strong>: Songs, Artists, Albums, Genres and Playlists open in the column like All Games. Genres come from the files; <strong>Edit Genre</strong> changes a track, a book or a whole album, and rescans keep it. Music keeps playing in the background, with its controls on the island and in the notification.</li>
+          <li><strong>Video</strong>: libraries with thumbnails, Recently Watched, and the built-in player (LEFT/RIGHT seek, Options for speed and tracks) or an external app. <kbd>A</kbd> plays a video at once (its page is <strong>≡ ▸ Details</strong>), Resume picks up where you stopped, and <strong>≡ ▸ Set as Wallpaper</strong> makes it the moving wallpaper.</li>
+          <li><strong>Photo</strong>: albums, the viewer (zoom, pan, rotate, slideshow), and <strong>Set as Wallpaper</strong> with EXIF stripped, framed first with the d-pad or a drag and zoomed with <kbd>LT</kbd>/<kbd>RT</kbd> or a pinch. Location data is never read.</li>
           <li><strong>Books</strong>: EPUB, PDF and CBZ by series, in the built-in reader (contents, bookmarks, your place kept; EPUB adds two-page layout, text size, typeface and page colour) or a reader app.</li>
         </ul>
       </section>
@@ -339,13 +345,13 @@ footer a{color:var(--soft)}
           <li><strong>Search</strong> (<kbd>RB</kbd>, any screen) finds games, apps, music, video, photos and books together. The likeliest match stands in the middle; <kbd>LT</kbd>/<kbd>RT</kbd> filter by kind. Opening a result goes to its column and opens it.</li>
           <li>The <strong>Search</strong> row at the end of Game, Music, Video, Photo and Library searches only that library.</li>
           <li><strong>Quick Search</strong> in Network searches the web: type, then <kbd>A</kbd> or Enter. An address opens in your browser.</li>
-          <li>The <strong>App Drawer</strong> (<kbd>LB</kbd>) shows every app as a VHS case, with Recently Used, Apps, Emulators and Games sections that <kbd>LT</kbd>/<kbd>RT</kbd> step through.</li>
+          <li>The <strong>App Drawer</strong> (<kbd>LB</kbd>) shows every app as a VHS case, with Recently Used, Apps, Emulators and Games sections, and Music (albums), Videos and Books when those libraries have something, that <kbd>LT</kbd>/<kbd>RT</kbd> step through. <kbd>X</kbd> groups Games by system or genre, Music by artist, album or genre, and Books by author, title or genre. A game's details show its achievements and last earned badges.</li>
         </ul>
       </section>
 
       <section id="panel" data-group="Using ECHO">
         <h2>The top panel</h2>
-        <p><kbd>Start</kbd> (twice when a notification is waiting), or two taps on the right island, opens the panel. Its tabs run along the top, and <kbd>LT</kbd>/<kbd>RT</kbd> step through them.</p>
+        <p><kbd>Start</kbd> (twice when a notification is waiting), or two taps on the right island, opens the panel. Its tabs run along the top, and <kbd>LT</kbd>/<kbd>RT</kbd> step through them. Notifications pins what is playing at the top, or the video or book you just had open, with its art, progress and buttons.</p>
         <div class="shots">
           <figure><img src="docs/screenshots/panel-notifications.jpg?v=2.9.0" alt="Notifications" loading="lazy"><figcaption>Notifications</figcaption></figure>
           <figure><img src="docs/screenshots/panel-profile.jpg?v=2.9.0" alt="Profile" loading="lazy"><figcaption>Profile</figcaption></figure>
@@ -405,10 +411,10 @@ footer a{color:var(--soft)}
         <h3>Wallpaper</h3>
         <div class="tbl"><table>
           <tr><th>Setting</th><th>What it changes</th></tr>
-          <tr><td>Choose Wallpaper</td><td>A still picture, or a motion wallpaper (MP4, WebM, animated GIF or WebP).</td></tr>
+          <tr><td>Choose Wallpaper</td><td>A still picture, or a motion wallpaper (MP4, WebM, animated GIF or WebP). A photo or video in your library can also be set from its options.</td></tr>
           <tr><td>Wave Design · Wave Style</td><td>PSP, Echo Rings or Echo Arcs; Animated, Reduced, Static, Reduced + Static or Off.</td></tr>
           <tr><td>Wave Over Wallpaper</td><td>Keep the wave drawn on top of your wallpaper.</td></tr>
-          <tr><td>Background Motion</td><td>The same styles for a motion wallpaper.</td></tr>
+          <tr><td>Background Motion</td><td>The same styles for a motion wallpaper, set apart from the wave: turning the wave off leaves a video wallpaper playing.</td></tr>
         </table></div>
         <h3>Crossbar</h3>
         <p>Every setting for the crossbar itself is on this one tab.</p>
@@ -430,8 +436,9 @@ footer a{color:var(--soft)}
           <tr><th>Setting</th><th>What it changes</th></tr>
           <tr><td>Show Boot Sequence (and on Resume)</td><td>The line of light that becomes the ECHO mark; A or B skips it. <strong>Boot Video</strong> plays your own clip instead.</td></tr>
           <tr><td>Launch Disc · Launch Disc Style</td><td>Between choosing an app or media and it opening: <strong>Disc</strong> (the cover spins as a disc) or <strong>Lens</strong> (the art spins inside the ECHO ring, then opens).</td></tr>
-          <tr><td>GameBoot · Style · Video</td><td>The same for games, or your own clip.</td></tr>
+          <tr><td>GameBoot · Style · Video</td><td>The same for games, or your own clip; <kbd>X</kbd> on GameBoot Video previews it in the style you chose.</td></tr>
         </table></div>
+        <figure class="wide" style="margin-top:20px"><img src="docs/screenshots/launch-lens.jpg?v=2.9.0" alt="The Lens launch" loading="lazy"><figcaption>The Lens: the cover spins inside the ECHO ring, then opens over the screen</figcaption></figure>
         <h3>Sound</h3>
         <p><strong>Menu Sounds</strong> on or off, a sound for every slot, and looping <strong>Menu Music</strong> of your own. ECHO ships with no sounds, so the interface is silent until you add some; the menu music waits while boot, launch and GameBoot sounds play.</p>
         <div class="tbl"><table>
@@ -500,16 +507,17 @@ footer a{color:var(--soft)}
         <p>On a handheld with a second screen, such as the <strong>AYN Thor</strong>, the XMB stays on the top screen and the bottom screen is a <strong>companion</strong>. Devices with one screen are unchanged.</p>
         <ul>
           <li><strong>Info</strong> follows the XMB's cursor: the focused game's details, play time, achievements and screenshots. While a game you launched is running, it shows that game and a <strong>Resume</strong> button.</li>
-          <li><strong>Recent</strong> is Last Played, with its filters; with a second screen it leaves the XMB and lives here.</li>
-          <li><strong>The App Drawer, Search and Settings open on the bottom screen.</strong> The controller still drives them.</li>
-          <li><strong>Tap a screen to give it the controller</strong>; on the companion, <kbd>B</kbd> hands it back. <strong>Swap</strong> puts the XMB on the bottom. <em class="path">Quick settings ▸ Screens</em> switches between Dual and Single.</li>
+          <li><strong>Recent</strong> is Last Played, with its filters; with a second screen it leaves the XMB and lives here. It follows the crossbar's column (Music shows recent music), and RIGHT closes its list to show the selected item in full.</li>
+          <li><strong>A session clock</strong> counts while a game you launched runs, and while music plays the companion is its <strong>remote</strong> (<kbd>A</kbd> play/pause, up and down skip; <kbd>B</kbd> goes to Recent, <kbd>Y</kbd> has Stop &amp; Close).</li>
+          <li><strong>The App Drawer, Search and Settings open on the bottom screen.</strong> The controller still drives them. The other screen shows the drawer's focused game as Recent does, and Search's results while you type below. A menu opens on the screen that asked for it, and the theme store shows the theme in focus on the other screen.</li>
+          <li><strong>Tap a screen to give it the controller</strong>; on the companion, <kbd>B</kbd> hands it back. <strong>Swap</strong> (or <kbd>L3</kbd> / <kbd>R3</kbd>) puts the XMB on the bottom. <em class="path">Quick settings ▸ Screens</em> switches between Dual and Single.</li>
           <li>Games open on the main screen; DS and 3DS emulators keep the bottom screen while a game runs. <a href="https://github.com/dakingeman/inlay">Inlay</a> is a gamepad keyboard that works well here.</li>
         </ul>
       </section>
 
       <section id="backup" data-group="More">
         <h2>Backup and restore</h2>
-        <p><em class="path">System ▸ Backup &amp; Restore</em> writes your library and settings to a <code>.pfpbackup</code> file in a folder you choose. Android's cloud backup is off, so this is how you move to a new device. Android does not carry folder access across, so after a restore relink each folder from its column's <strong>Folders ▸ ≡ ▸ Relink Folder</strong>.</p>
+        <p><em class="path">System ▸ Backup &amp; Restore</em> writes your library and settings to a <code>.pfpbackup</code> file in a folder you choose. Android's cloud backup is off, so this is how you move to a new device. Android does not carry folder access across, so after a restore relink each folder from its column's settings row, <strong>≡ ▸ Relink Folder</strong>.</p>
       </section>
 
       <section id="privacy" data-group="More">
@@ -528,7 +536,7 @@ footer a{color:var(--soft)}
           <tr><td>Home does not open ECHO</td><td><em class="path">Android Settings ▸ Apps ▸ Default apps ▸ Home app</em></td></tr>
           <tr><td>A console shows no new games</td><td><strong>≡ ▸ Scan This Console</strong>, or turn on Rescan On Return.</td></tr>
           <tr><td>A game will not launch</td><td>Check the emulator is installed, then <strong>≡ ▸ Settings ▸ Change Emulator</strong> and the card's Default Emulator.</td></tr>
-          <tr><td>Games or media went missing after a reinstall or restore</td><td>Relink the folder: <strong>Folders ▸ ≡ ▸ Relink Folder</strong>.</td></tr>
+          <tr><td>Games or media went missing after a reinstall or restore</td><td>Relink the folder from the column's settings row: <strong>≡ ▸ Relink Folder</strong>.</td></tr>
           <tr><td>Artwork will not download</td><td>Add a key in <em class="path">Accounts ▸ Artwork</em> and check the connection. A key saved on another install cannot be read here: enter it again.</td></tr>
           <tr><td>Recently Used is empty</td><td>Allow restricted settings for ECHO, then grant usage access (<a href="#permissions">Permissions</a>).</td></tr>
           <tr><td>No notifications in the top panel</td><td>Grant notification access in <em class="path">Accounts ▸ Permissions</em>.</td></tr>

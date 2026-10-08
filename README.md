@@ -60,10 +60,15 @@ tablet, used every day.
   a boot sequence, a launch disc and GameBoot, menu music and a slot for every interface sound.
 - **A built-in book reader** for EPUB, PDF and CBZ, and built-in music, video and photo players.
 - **Artwork that looks like a shelf**: box covers fetched from ScreenScraper, SteamGridDB, IGDB and
-  Steam, shown as VHS cases in the App Drawer and Search.
+  Steam, shown as VHS cases in the App Drawer and Search. The drawer holds your albums, videos and
+  books on the same shelf.
+- **Genres** for games, music and books: edit them, filter by one, or group the Game column and the
+  App Drawer by genre instead of by system.
+- **What is playing stays in reach**: pinned at the top of Notifications, one double press of the
+  island away, and a video can be your wallpaper.
 - **Two screens on dual-screen handhelds** such as the AYN Thor: the XMB on one, a companion on
-  the other with the focused game's details, Last Played, the App Drawer, Search and Settings. See
-  [Dual screens](#dual-screens).
+  the other with the focused game's details, Last Played, a music remote, a session clock, the App
+  Drawer, Search and Settings. See [Dual screens](#dual-screens).
 - **A profile** with RetroAchievements, Steam achievements and Discord presence.
 - **Almost everything is adjustable**: see [Make it yours](#make-it-yours). Controller glyphs,
   touch, layout, colours, icons, wallpaper, sounds and boot all have a setting.
@@ -94,7 +99,7 @@ tablet, used every day.
 
 ## A tour
 
-*Shot on an AYANEO Pocket FIT Elite (1920×1080) with a real library, on ECHO 2.9. Game
+*Shot on an AYANEO Pocket FIT Elite (1920×1080) with a real library, on ECHO 2.12. Game
 artwork, wallpaper art, book covers and app icons belong to their owners.*
 
 ### Home
@@ -115,7 +120,8 @@ when something is waiting. Its ring is the battery, filled to the charge; while 
 rings spread from it and the mark glows, as they spread from the left island while music plays. A new
 notification drops out of the right island as a card; press it once to see the newest, twice to open
 them all. UP from the top of a list drops the left island's card the same way: what is playing, or
-the last thing you opened. The footer leads with the screen's filter: one LT/RT mark and the word
+the last thing you opened. Press the left island twice (or **Select** twice) to open the player for
+whatever is playing. The footer leads with the screen's filter: one LT/RT mark and the word
 for the current filter or sort (a tap steps to the next). Then **Back**, the **A** action in
 the centre, and the screen's own actions on the right, with **LB** (Apps) and **RB** (Search) side
 by side as icons. **Home** has no hint; the Guide button, or Start held, goes home. *Quick
@@ -130,13 +136,14 @@ launch when you **hold A** until the ring fills, so a stray press never launches
 ### The crossbar
 
 Each category is a column. Media columns list the apps that belong to them first (Spotify under
-Music, Stremio under Video), then their own library rows, ending with a **Folders** row for the
-folders they scan.
+Music, Stremio under Video), then their own library rows, ending with the column's own settings row
+(**Music Settings**, **Video Settings**) for the folders they scan and the app that opens them.
+With the wave off, the focused game's or app's colour still washes the crossbar.
 
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/col-shelves.jpg" width="420"> | <img src="docs/screenshots/col-game.jpg" width="420"> |
-| Shelves: Playing, Backlog, Completed, Favorites | Emulation: All Games, then one system per console |
+| Shelves: Playing, Backlog, Completed, Favorites | Emulation: All Games, then one system per console, or one folder per genre |
 | <img src="docs/screenshots/col-music.jpg" width="420"> | <img src="docs/screenshots/col-video.jpg" width="420"> |
 | Music | Video |
 | <img src="docs/screenshots/col-photo.jpg" width="420"> | <img src="docs/screenshots/col-library.jpg" width="420"> |
@@ -151,6 +158,11 @@ anything destructive asks twice. **Game Info** shows play time, platform and las
 walk its views: **Achievements** (first, when the game has them: the d-pad hovers a badge, X filters,
 A on a badge opens the full wall), **Screenshots**, **Info**, **Video** and **Manual**.
 
+Every game has a **genre**, from the scrapers or set by you with **≡ ▸ Metadata ▸ Edit Genre**.
+**≡ ▸ Show Only <genre>** filters the game lists and the drawer's Games to it, and the footer names
+the genre in force; **Show All Genres** clears it. **Group by Genre** on All Games' options turns the
+column's system folders into genre folders, and **Group by System** turns them back.
+
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/game-hover-panel.jpg" width="420"> | <img src="docs/screenshots/game-context-menu.jpg" width="420"> |
@@ -163,6 +175,8 @@ A on a badge opens the full wall), **Screenshots**, **Info**, **Video** and **Ma
 | One console's games, by cover | Anything destructive asks twice, with Cancel first |
 | <img src="docs/screenshots/achievements.jpg" width="420"> | <img src="docs/screenshots/settings-accounts.jpg" width="420"> |
 | Achievements: rarity, progress and every badge | Accounts: permissions, RetroAchievements, Steam and Discord |
+| <img src="docs/screenshots/game-metadata.jpg" width="420"> | |
+| Metadata: title, note, genre, artwork and the manual | |
 
 ### The App Drawer and Search
 
@@ -171,7 +185,13 @@ about it, **Open** and **Options**) and every app as a VHS case in three columns
 whole rows at a time, with a spine saying what it is. A game's cover keeps its own shape on the case's
 ribbed plastic, so square Game Boy boxes and tall Switch covers both show whole. Its sections (Recently Used, Apps, Emulators, Games) are icons in the top
 bar; LT and RT move between them. The Games tab has a chip per system, Steam Games included, and a
-game's **Y** opens the same menu as on the crossbar.
+game's **Y** opens the same menu as on the crossbar. **X** switches the chips between systems and
+genres. A game's details show its achievements and its last earned badges in a row.
+
+**Music** (your albums), **Videos** and **Books** are sections too, each shown when that library has
+something in it: A plays the album or video or opens the book, and **Y** on an album has Play Album
+and Edit Genre. **X** steps Music's chips through artist, album and genre, and Books' through author,
+title and genre. The details column names the album and artist, or the book and author.
 
 **Search** (RB) puts every result on one shelf: the likeliest match stands in the middle as the
 same VHS case the drawer uses, the rest as spines fanning out to both sides, and left and right slide along it. LT and
@@ -189,11 +209,15 @@ its **icon slot**; the main art is used only when the icon slot is empty.
 
 ### Music, video, photos and books
 
-Songs, Artists, Albums and Playlists open in the column, as All Games does (an artist leads to their
-tracks, an album to its tracks), and music keeps playing in the background with its controls on the
-island. The built-in video player seeks with LEFT and RIGHT and keeps speed, subtitles, audio track
-and screen mode under **Options**. The photo viewer zooms, pans and rotates, and any photo can
-become the wallpaper with its EXIF data stripped. Books open in the built-in reader: two pages side
+Songs, Artists, Albums, Genres and Playlists open in the column, as All Games does (an artist leads
+to their tracks, an album to its tracks), and music keeps playing in the background with its controls
+on the island. Music and books take their genre from the files (a song's genre tag, an EPUB's
+subject), and **Edit Genre** changes it for a track, a book, or a whole album; rescans keep what you
+set. **A** on a video plays it at once (its page is under **Options ▸ Details**). The built-in video
+player seeks with LEFT and RIGHT and keeps speed, subtitles, audio track and screen mode under
+**Options**, and **Set as Wallpaper** on a video's options makes it the moving wallpaper. The photo
+viewer zooms, pans and rotates, and any photo can become the wallpaper with its EXIF data stripped:
+move and zoom it first, and the wallpaper keeps exactly what the screen showed. Books open in the built-in reader: two pages side
 by side or one, text size, typeface and page colour, contents and bookmarks, and it keeps your
 place.
 
@@ -209,8 +233,10 @@ place.
 | Speed, subtitles, audio track and screen mode | A song opening through the Lens launch |
 | <img src="docs/screenshots/photo-browser.jpg" width="420"> | <img src="docs/screenshots/photo-viewer.jpg" width="420"> |
 | Photos | The photo viewer |
-| <img src="docs/screenshots/photo-viewer-options.jpg" width="420"> | <img src="docs/screenshots/library-series.jpg" width="420"> |
-| Rotate, zoom and information | Books by series |
+| <img src="docs/screenshots/photo-viewer-options.jpg" width="420"> | <img src="docs/screenshots/photo-wallpaper-frame.jpg" width="420"> |
+| Rotate, zoom and information | Framing a photo before it becomes the wallpaper |
+| <img src="docs/screenshots/library-series.jpg" width="420"> | |
+| Books by series | |
 | <img src="docs/screenshots/reader.jpg" width="420"> | <img src="docs/screenshots/reader-options.jpg" width="420"> |
 | The book reader | Its options: contents, text size, typeface, page colour, layout |
 
@@ -221,6 +247,10 @@ notification as a card, when there is one; a second press opens the panel: Notif
 Profile, Quick settings, Libraries and Settings, along a tab row at the top that **LT/RT** step
 through, as in each Settings section. Settings has seven sections: **Library, Emulators,
 Look, Controls, Accounts, System, Setup**.
+
+**Notifications** pins what is playing at the top, or the video or book you just had open, and the
+panel opens on it: its art, its progress, and its buttons (Pause and Next track, Resume, Continue
+reading). Your notifications follow, filtered by **All**, **Messages** and **System**.
 
 The **Profile** tab shows your name and picture, your games, hours and achievements, what you played
 last with its achievement progress, and your Steam, RetroAchievements and Discord accounts. Its row
@@ -306,19 +336,26 @@ the top screen, and the bottom screen is a **companion**. Devices with one scree
   screenshots and description. While a game you launched from ECHO is running, Info shows that game
   and a **Resume** button (hold it, like every launch).
 - **Recent** is the Last Played screen, with its filters. With a second screen, Last Played leaves
-  the XMB and lives here. Tap to pick, hold to launch.
+  the XMB and lives here. Tap to pick, hold to launch. It follows the crossbar's column (Music shows
+  recent music), and RIGHT closes its list to show the selected item in full; LEFT opens it again.
+- **A session clock** ("NOW PLAYING · 12 MIN") counts while a game you launched is running.
+- **A music remote**: while music plays the companion is its remote (A play/pause, up and down skip)
+  and the crossbar stays free. **B** goes to Recent, and **Y** has Stop & Close.
 - **The App Drawer, Search and Settings open on the bottom screen**, whether you open them with
-  **RB**, **LB**, a menu or a tap. The controller still drives them. Search opens the keyboard,
-  which the Thor shows on the bottom screen; **B** hides the keyboard first, and the next **B**
-  closes Search. The first-run setup stays on the top screen.
+  **RB**, **LB**, a menu or a tap. The controller still drives them. The other screen shows the
+  drawer's focused game as Recent does (art, play time, details and achievements), and Search's
+  results while you type below. Search opens the keyboard, which the Thor shows on the bottom
+  screen; **B** hides the keyboard first, and the next **B** closes Search. The first-run setup stays
+  on the top screen. A menu opens on the screen that asked for it, and the theme store shows the
+  theme in focus, large, on the other screen.
 - **A keyboard you drive with the controller:** [Inlay](https://github.com/dakingeman/inlay), a
   free, open-source gamepad keyboard for Android handhelds, works well with ECHO on two screens.
   Install it and choose it as your keyboard in Android's settings.
 - **Tap a screen to give it the controller.** On the companion, the d-pad's left and right change
   page, up and down move through Recent, LT and RT change its filter, A opens and **B** hands the
   controller back to the XMB. The screen the controller is on has a light outline.
-- **Swap** (on the companion's bar) puts the XMB on the bottom screen and the companion on the top,
-  and back. ECHO remembers it. The controller stays with the XMB.
+- **Swap** (on the companion's bar, or **L3** / **R3**) puts the XMB on the bottom screen and the
+  companion on the top, and back. ECHO remembers it. The controller stays with the XMB.
 - **Games always open on the main screen.** DS and 3DS emulators keep the bottom screen while a
   game runs, and ECHO comes back to it when you return.
 - **Dual or single:** the top panel's **Quick settings ▸ Screens** turns the second screen off
@@ -369,7 +406,7 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 - **Settings rebuilt** into seven sections, with an Overview of art cards, a Permissions screen, and
   eight new settings for behaviour that used to be fixed in code.
 - **The setup wizard rebuilt** so each step runs the same code as the matching Settings screen.
-- **Media folders managed in place**, from a Folders row on each media column. Music gains Artists
+- **Media folders managed in place**, from a settings row on each media column (**Music Settings** and so on). Music gains Artists
   and Albums (artists are split out of credit strings). Video titles are read from scene-release
   file names, with TMDB posters. Photos get a choice of default viewer.
 - **A Library column for books** (EPUB, PDF and CBZ, series, covers, a built-in reader or an app of
@@ -391,7 +428,7 @@ git log --oneline 9c8a6ec9..HEAD | wc -l   # commits since the fork
 | **The drawer's All Apps tab and grid** | Every other tab already lists every app | `a19b8e04` |
 | **Collections** (screen, menu actions, pill and picker) | Gone from the interface. The tables stay, because pinned shortcuts from other launchers still write to them. | `28bc907f` |
 | **The Game Details page**, and the "Launch Games Directly" setting | It duplicated the hover panel; Confirm now always launches | `8792a098`, `1956ca71` |
-| **Separate Music, Video, Photo and Books settings screens** | Four copies of one screen, replaced by each column's Folders row | `06b96ded` |
+| **Separate Music, Video, Photo and Books settings screens** | Four copies of one screen, replaced by each column's settings row | `06b96ded` |
 | **Per-System Defaults and the ROM Root Access block** | The console's own menu owns its emulator and folders now | `7b332ebd` |
 | **Icon display modes** (Box Art, 3D Box, Physical Media) and four Studio tabs | Used by 2 of 153 games | `1aed1d11` |
 | **Text Legibility and Font Colour settings** | Text Legibility had no effect; Font Colour was not wanted | `fba80a71` |
@@ -497,10 +534,13 @@ access to all of your storage.
 | Sorts and filters (the footer's left side), tabs and sections | **LT / RT** | Page Up / Page Down | Tap |
 | Seek or turn pages in the players, the reader and Artwork Studio | **LB / RB** | | |
 | Now playing / last played island | **Select** (again to put it back) | | Tap the island |
+| Open the player for what is playing | **Select** twice | | Double-tap the island |
+| Group by system or genre (App Drawer); artist, album or genre (Music); author, title or genre (Books) | **X** | | |
 | Notifications: the top panel | **Start** (twice when a notification is waiting) | | Tap the notification island twice; slide up to close |
 | Home: back to the crossbar from any screen | **Guide**, or hold **Start** | | |
 | Confirm in pickers (Add, Apply) | **Start** | | The button in the footer |
 | Give the controller to the other screen (two screens) | **B** on the companion returns it to the XMB | | Tap that screen |
+| Swap the two screens | **L3** or **R3** | | Swap, on the companion's bar |
 
 - **D-pad ◀ backs out** of a folder, flyout or settings page wherever LEFT is not already doing
   something. Turn it off with *Controls ▸ Controller ▸ Left Backs Out*.
@@ -559,11 +599,11 @@ The focused game or app also tints the wave and fills the screen with its own ar
 
 | Setting | What it changes |
 |---|---|
-| **Choose Wallpaper** | a still picture, or a motion wallpaper (MP4, WebM, animated GIF or WebP) |
+| **Choose Wallpaper** | a still picture, or a motion wallpaper (MP4, WebM, animated GIF or WebP); a photo or video in your library can also be set from its options |
 | **Wave Design** | **PSP**, **Echo Rings** or **Echo Arcs** |
 | **Wave Style** | Animated, Reduced, Static, Reduced + Static, or Off (Quick settings steps through them too) |
 | **Wave Over Wallpaper** | keep the wave drawn on top of your wallpaper |
-| **Background Motion** | the same styles for a motion wallpaper |
+| **Background Motion** | the same styles for a motion wallpaper, set apart from the wave: turning the wave off leaves a video wallpaper playing |
 
 ### The crossbar — *Look ▸ Crossbar*
 
@@ -593,7 +633,7 @@ Every setting for the crossbar itself is on this one tab.
 | **Show Boot Sequence** (and **on Resume**) | the line of light that becomes the ECHO mark, with your chosen wave rising behind it; A or B skips it |
 | **Boot Video** | your own clip instead |
 | **Launch Disc** · **Launch Disc Style** | the cover becomes a spinning disc between choosing an app or media and it opening; **Disc** or **Lens** (the art spins inside the ECHO ring, then opens like a lens) |
-| **GameBoot** · **GameBoot Style** · **GameBoot Video** | the same for games, or your own clip |
+| **GameBoot** · **GameBoot Style** · **GameBoot Video** | the same for games, or your own clip; **X** on GameBoot Video previews it in the style you chose |
 
 ### Sound — *Look ▸ Sound*
 
@@ -694,7 +734,8 @@ the columns, use **Options ▸ Move Column** on any row (see below).
 ### Games and consoles
 
 The **Game** column holds **All Games**, **Missing** (only when some game files cannot be found),
-one **system** per console, **Folders** (your ROM roots) and **Search**.
+one **system** per console (or one **genre** each, with **Group by Genre**), its settings row (your
+ROM roots) and **Search**.
 
 - **Add a console by hand**: *Emulators ▸ Library Manager ▸ Add Console*, choose the platform,
   assign an emulator, scan. The folder is found under your ROM root automatically.
@@ -805,16 +846,17 @@ already have are kept, and art you set or locked yourself is never replaced.
 ### Music, video, photos and books
 
 Each media column scans one or more folders. Add, rescan, relink or remove them from the column's
-**Folders** row; the same row picks the default player, viewer or reader app.
+settings row (**Music Settings**, **Video Settings** and so on); the same row picks the default
+player, viewer or reader app.
 
-- **Music**: Songs, Artists, Albums and Playlists; a fullscreen player that keeps playing in the
+- **Music**: Songs, Artists, Albums, Genres and Playlists; a fullscreen player that keeps playing in the
   background, with notification controls.
 - **Video**: libraries with thumbnails, Recently Watched, and the built-in player or an external
   app. Resume picks up where you stopped.
 - **Photo**: albums, the viewer, and **Set as Wallpaper**. Location data is never read.
 - **Library**: EPUB, PDF and CBZ books by series. They open in the built-in reader (contents, bookmarks,
   and it remembers your place; EPUB books also get two-page or single-page, text size, typeface
-  and page colour), or in a reader app chosen from the Folders row.
+  and page colour), or in a reader app chosen from the column's settings row.
 
 Each column also lists its apps. Add more with its **Add** row.
 
@@ -835,8 +877,8 @@ Every Look and Controls setting is described in [Make it yours](#make-it-yours).
 
 *System ▸ Backup & Restore* writes your library and settings to a `.pfpbackup` file in a folder you
 choose. Android's own cloud backup is off, so this is how you move to a new device. Android does not
-carry folder access across, so after a restore relink each folder from its column's **Folders ▸ ≡ ▸
-Relink Folder**.
+carry folder access across, so after a restore relink each folder from its column's settings row,
+**≡ ▸ Relink Folder**.
 
 ### Settings map
 
@@ -844,13 +886,13 @@ Relink Folder**.
 |---|---|
 | **Library** | Media Libraries (music, video, photo and book folders) · Hidden Items |
 | **Emulators** | Library Manager · Artwork · Installed · Custom Emulators · RetroArch |
-| **Look** | Theme · Wallpaper · Crossbar (with Categories) · Boot · Sound |
+| **Look** | Theme · Store · Wallpaper · Crossbar (with Categories) · Boot · Sound |
 | **Controls** | Controller · Touch |
 | **Accounts** | Permissions · Achievements (RetroAchievements and Steam) · Artwork (SteamGridDB, ScreenScraper, IGDB, TMDB) · Discord |
 | **System** | About · Logs · Backup & Restore · Performance · Credits |
 | **Setup** | Setup Wizard |
 
-Media folders are in **Library ▸ Media Libraries**, and on each column's **Folders** row. A media
+Media folders are in **Library ▸ Media Libraries**, and on each column's settings row. A media
 category with no folder keeps only its apps.
 
 **Options ▸ Move** lifts a row: a system in Games, or an app or row in a media category's top
@@ -879,7 +921,7 @@ it, **A** drops it there and **B** puts it back.
 | Home does not open ECHO | *Android Settings ▸ Apps ▸ Default apps ▸ Home app* |
 | A console shows no new games | **≡ ▸ Scan This Console**, or turn on *Rescan On Return* |
 | A game will not launch | Check the emulator is installed, then **≡ ▸ Settings ▸ Change Emulator** and the card's **Default Emulator** |
-| Games or media went missing after a reinstall or restore | Relink the folder: **Folders ▸ ≡ ▸ Relink Folder** |
+| Games or media went missing after a reinstall or restore | Relink the folder from the column's settings row: **≡ ▸ Relink Folder** |
 | Artwork will not download | Add a key in *Accounts ▸ Artwork* and check the connection. A key saved on another install (a restored backup) cannot be read here and shows as not set: enter it again |
 | Recently Used is empty | Allow restricted settings for ECHO, then grant usage access (see [Permissions](#permissions)) |
 | No notifications in the top panel | Grant notification access in *Accounts ▸ Permissions* |

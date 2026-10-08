@@ -199,7 +199,7 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
       <div class="col center" style="gap:20px">
         <div class="eyebrow"><b>03</b><i></i><span>The crossbar</span></div>
         <h2 class="h2" style="max-width:14ch">Categories across. Everything else down.</h2>
-        <p class="lede" style="max-width:620px">Each category is a column. Media columns list the apps that belong to them first, then their own library rows, ending with a Folders row for the folders they scan.</p>
+        <p class="lede" style="max-width:620px">Each category is a column. Media columns list the apps that belong to them first, then their own library rows, ending with the column’s own settings row (Music Settings, Video Settings) for the folders they scan.</p>
       </div>
       <div class="frame">
         <img id="cat-shot" alt="">
@@ -231,7 +231,7 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
           <div class="eyebrow"><b>04</b><i></i><span>Games</span></div>
           <h2 class="h2">Every console you own, on one card each.</h2>
         </div>
-        <p class="lede">Point ECHO at your Games folder and it adds a system for every console that has games, with the emulators you already have. A focused game fills the background with its own art, its title and facts beside the tile; X opens its details.</p>
+        <p class="lede">Point ECHO at your Games folder and it adds a system for every console that has games, with the emulators you already have. A focused game fills the background with its own art, its title and facts beside the tile; X opens its details. Every game has a genre you can edit, filter by, or group the column by.</p>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px">
         <figure style="margin:0;grid-column:1/-1;position:relative;border-radius:24px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.08)">
@@ -244,6 +244,7 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
         <figure class="shot"><img src="docs/screenshots/achievements.jpg?v=2.9.0" alt="Achievements"><figcaption>Achievements: rarity, progress and every badge</figcaption></figure>
         <figure class="shot"><img src="docs/screenshots/game-context-menu.jpg?v=2.9.0" alt="Its options"><figcaption>Its options, on a rail at the right edge</figcaption></figure>
         <figure class="shot"><img src="docs/screenshots/context-menu-confirm.jpg?v=2.9.0" alt="Anything destructive asks twice"><figcaption>Anything destructive asks twice, with Cancel first</figcaption></figure>
+        <figure class="shot"><img src="docs/screenshots/game-metadata.jpg?v=2.9.0" alt="Metadata"><figcaption>Metadata: title, note, genre, artwork and the manual</figcaption></figure>
         <figure class="shot"><img src="docs/screenshots/artwork-studio.jpg?v=2.9.0" alt="The Artwork Studio"><figcaption>The Artwork Studio: pick where the art comes from</figcaption></figure>
       </div>
       <div id="systems" style="display:flex;flex-wrap:wrap;gap:10px"></div>
@@ -285,7 +286,7 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
           <img src="docs/screenshots/app-drawer.jpg?v=2.9.0" alt="The App Drawer" style="border-radius:22px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 60px 120px rgba(0,0,0,.5)">
           <figcaption style="display:flex;gap:14px;align-items:center;font-size:15px;line-height:1.6;color:#a9b4bd;font-weight:300">
             <img class="glyph" data-glyph="bumper_left" alt="LB" style="width:44px;height:44px;flex:0 0 auto;aspect-ratio:auto;box-shadow:none;border-radius:0">
-            <span style="color:inherit"><span style="font-weight:400">The App Drawer.</span> Every app as a VHS case in three columns, with a spine saying what it is.</span>
+            <span style="color:inherit"><span style="font-weight:400">The App Drawer.</span> Every app as a VHS case, with a spine saying what it is, and your albums, videos and books on the same shelf. X groups games by system or genre.</span>
           </figcaption>
         </figure>
         <figure class="shot" style="gap:16px">
@@ -346,7 +347,10 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
         <p class="lede">On a handheld like the AYN Thor, the XMB stays on top and the bottom screen follows it: the focused game's details, or the game you are playing with a Resume button. Last Played, the App Drawer, Search and Settings open down there, so the XMB never leaves the top.</p>
         <div class="col" style="gap:12px;font-size:15px;line-height:1.6;color:#a9b4bd;font-weight:300">
           <div><span style="color:#eef2f6;font-weight:400">Tap a screen</span> to give it the controller. B hands it back to the XMB.</div>
-          <div><span style="color:#eef2f6;font-weight:400">Swap</span> puts the XMB on the bottom screen and the companion on top, and ECHO remembers it.</div>
+          <div><span style="color:#eef2f6;font-weight:400">Swap</span> (or L3 / R3) puts the XMB on the bottom screen and the companion on top, and ECHO remembers it.</div>
+          <div><span style="color:#eef2f6;font-weight:400">A music remote</span> while music plays, and a session clock while a game runs.</div>
+          <div><span style="color:#eef2f6;font-weight:400">Recent</span> follows the crossbar’s column, and shows the selected item in full.</div>
+          <div><span style="color:#eef2f6;font-weight:400">Search</span> types on one screen and shows its results on the other; a menu opens on the screen that asked.</div>
           <div><span style="color:#eef2f6;font-weight:400">DS and 3DS emulators</span> keep the bottom screen while a game runs.</div>
           <div><span style="color:#eef2f6;font-weight:400">Quick settings ▸ Screens</span> switches between Dual and Single.</div>
           <div><span style="color:#eef2f6;font-weight:400">Typing with the controller?</span> <a href="https://github.com/dakingeman/inlay">Inlay</a>, a free gamepad keyboard for Android handhelds, works well with it.</div>
@@ -371,7 +375,7 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
       <div class="col" style="flex:1 1 320px;gap:22px">
         <div class="eyebrow"><b>10</b><i></i><span>Make it yours</span></div>
         <h2 class="h2" style="font-size:clamp(40px,4.5vw,64px)">Almost everything is adjustable.</h2>
-        <p class="lede" style="font-size:16px">Controller glyphs, touch, layout, colours, icons, wallpaper, sounds and boot all have a setting, and most of it previews live on the crossbar. Quick settings can strip the footer down to the A button and the filter.</p>
+        <p class="lede" style="font-size:16px">Controller glyphs, touch, layout, colours, icons, wallpaper, sounds and boot all have a setting, and most of it previews live on the crossbar. Themes come from the store whole or a part at a time. A video can be the wallpaper, with its motion set apart from the wave, and with the wave off the focused art still tints the crossbar. Quick settings can strip the footer down to the A button and the filter.</p>
         <div class="mono" style="font-size:13px;line-height:2;color:#c3ccd4;padding:20px 24px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
           <div style="color:#9fdcec">ECHO/</div>
           <div style="display:flex;justify-content:space-between;gap:16px"><span>├ Artwork/</span><span style="color:#6f7a83">per console</span></div>
@@ -461,27 +465,27 @@ const CONTROLS = [
   { action: 'Search', pad: ['bumper_right'], touchPill: 'Search', shot: 'search', text: 'RB, on any screen, searches games, apps, music, video, photos and books together. RB again closes it.' },
   { action: 'Filters and sorts', pad: ['trigger_left', 'trigger_right'], touch: ['tap'], shot: 'game-list', text: 'LT and RT step the filters and sorts in the footer’s left side (Title, Recently Played or Date Added), and the tabs of a screen.' },
   { action: 'Details', pad: ['@x'], touch: [], shot: 'game-info', text: 'X opens the focused game’s or app’s details, or runs the screen’s own X action.' },
-  { action: 'Now playing', pad: ['start'], touchPill: 'Tap island', shot: 'last-played', text: 'Start takes the controller to the island at the top left: what is playing, or what you used last. Start again gives it back.' },
-  { action: 'Notifications: the top panel', pad: ['select'], touchPill: 'Tap island', shot: 'card-notifications', text: 'Select first shows the newest notification as a card; a second press opens the panel: Notifications, Profile, Quick settings, Libraries and Settings. Hold Select, or press Guide, to go Home from any screen.' }
+  { action: 'Now playing', pad: ['select'], touchPill: 'Tap island', shot: 'card-island', text: 'Select takes the controller to the island at the top left: what is playing, or what you used last. Select again gives it back; Select twice, or a double tap on the island, opens the player.' },
+  { action: 'Notifications: the top panel', pad: ['start'], touchPill: 'Tap island', shot: 'panel-notifications', text: 'Start first shows the newest notification as a card; a second press opens the panel, with what is playing pinned at the top: Notifications, Profile, Quick settings, Libraries and Settings. Hold Start, or press Guide, to go Home from any screen.' }
 ];
 const CATS = [
   ['Last Played', 'last-played', 'Games, apps, music, video and books together, newest first.'],
   ['Shelves', 'col-shelves', 'Playing, Backlog, Completed and Favorites. A shelf only shows when it has a game.'],
-  ['Game', 'col-game', 'All Games, then one card per console, each with its own emulator.'],
-  ['Music', 'col-music', 'Spotify and your other music apps first, then Songs, Artists, Albums and Playlists.'],
+  ['Game', 'col-game', 'All Games, then one card per console, each with its own emulator, or one folder per genre with Group by Genre.'],
+  ['Music', 'col-music', 'Spotify and your other music apps first, then Songs, Artists, Albums, Genres and Playlists.'],
   ['Video', 'col-video', 'Libraries with thumbnails, Recently Watched, and resume where you stopped.'],
   ['Photo', 'col-photo', 'Albums and the viewer. Any photo can become the wallpaper.'],
   ['Library', 'col-library', 'EPUB, PDF and CBZ books by series, with a built-in reader.']
 ];
 const MEDIA = [
-  ['Music', 'Songs, Artists, Albums and Playlists open in the column, as All Games does, and music keeps playing in the background with its controls on the island.',
-    [['music-songs', 'Songs'], ['music-player', 'The music player'], ['launch-disc-music', 'A song opening through the Lens launch']]],
-  ['Video', 'The built-in video player seeks with LEFT and RIGHT and keeps speed, subtitles, audio track and screen mode under Options. Resume picks up where you stopped.',
-    [['video-browser', 'Videos'], ['video-detail', 'A video’s page: resume or start over'], ['video-player-controls', 'The video player']]],
-  ['Photo', 'The photo viewer zooms, pans and rotates, and any photo can become the wallpaper with its EXIF data stripped.',
-    [['photo-browser', 'Photos'], ['photo-viewer', 'The photo viewer']]],
+  ['Music', 'Songs, Artists, Albums, Genres and Playlists open in the column, as All Games does, and music keeps playing in the background with its controls on the island. Genres come from the files, and Edit Genre changes a track, a book or a whole album.',
+    [['music-songs', 'Songs'], ['music-albums', 'Albums'], ['music-player', 'The music player'], ['launch-disc-music', 'A song opening through the Lens launch']]],
+  ['Video', 'A on a video plays it at once. The built-in player seeks with LEFT and RIGHT and keeps speed, subtitles, audio track and screen mode under Options, and Set as Wallpaper makes a video the moving wallpaper. Resume picks up where you stopped.',
+    [['video-browser', 'Videos'], ['video-detail', 'A video’s page: resume or start over'], ['video-player-controls', 'The video player'], ['video-player-options', 'Speed, subtitles, audio track and screen mode']]],
+  ['Photo', 'The photo viewer zooms, pans and rotates, and any photo can become the wallpaper with its EXIF data stripped: move and zoom it first, and the wallpaper keeps what the screen showed.',
+    [['photo-browser', 'Photos'], ['photo-viewer', 'The photo viewer'], ['photo-viewer-options', 'Rotate, zoom and information'], ['photo-wallpaper-frame', 'Framing a photo for the wallpaper']]],
   ['Books', 'Books open in the built-in reader: two pages side by side or one, text size, typeface and page colour, contents and bookmarks, and it keeps your place.',
-    [['library-series', 'Books by series'], ['reader', 'The book reader']]]
+    [['library-series', 'Books by series'], ['reader', 'The book reader'], ['reader-options', 'Contents, text size, typeface, page colour and layout']]]
 ];
 const SYSTEMS = ['PSP', 'PS Vita', 'PS1', 'PS2', 'PS3', 'GameCube / Wii', 'Wii U', 'DS', '3DS', 'Switch', 'N64', 'GB / GBC / GBA', 'NES / SNES', 'Genesis', 'Saturn', 'Dreamcast', 'Arcade', 'Xbox', 'Xbox 360', 'Windows', 'Android', 'RetroArch cores'];
 
