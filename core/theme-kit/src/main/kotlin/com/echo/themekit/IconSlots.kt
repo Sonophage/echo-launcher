@@ -8,7 +8,7 @@ data class IconSlot(
 
     val templateSizePx: Int,
 ) {
-    enum class Group { CATEGORY_BAR, ITEMS, STATUS, CONSOLE }
+    enum class Group { CATEGORY_BAR, ITEMS, STATUS, CONSOLE, ART }
 }
 
 object IconSlots {

@@ -144,6 +144,7 @@ private fun groupLabel(group: IconSlot.Group): String = when (group) {
     IconSlot.Group.ITEMS -> "Items"
     IconSlot.Group.STATUS -> "Status"
     IconSlot.Group.CONSOLE -> "Consoles"
+    IconSlot.Group.ART -> "System Art"
 }
 
 @Composable

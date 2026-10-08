@@ -3054,12 +3054,13 @@ class CrossbarViewModel @Inject constructor(
             move.lift(column = itemId == MOVE_COLUMN)
             return
         }
-        if (itemId == RENAME_COLUMN || itemId == CHANGE_COLUMN_ICON || itemId == CHANGE_SYSTEM_ICON) {
+        if (itemId == RENAME_COLUMN || itemId == CHANGE_COLUMN_ICON || itemId == CHANGE_SYSTEM_ICON || itemId == CHANGE_SYSTEM_ART) {
             val focused = state.currentItems.getOrNull(state.selectedItemIndex)
             closeContextMenu()
             when (itemId) {
                 RENAME_COLUMN -> move.promptRenameColumn()
                 CHANGE_COLUMN_ICON -> openCustomIcons(state.columnIconSlot())
+                CHANGE_SYSTEM_ART -> openCustomIcons(systemArtSlotFor(focused))
                 else -> openCustomIcons(focused?.let(::systemIconSlot))
             }
             return
@@ -4229,6 +4230,7 @@ class CrossbarViewModel @Inject constructor(
         com.echo.themekit.IconSlot.Group.ITEMS,
         com.echo.themekit.IconSlot.Group.STATUS,
         com.echo.themekit.IconSlot.Group.CONSOLE,
+        com.echo.themekit.IconSlot.Group.ART,
     )
 
     // opens on `slotKey` when given (a column's or system's Change Icon), else on the first slot

@@ -130,6 +130,7 @@ import com.echo.feature.crossbar.viewmodel.panelStage
 import com.echo.feature.crossbar.viewmodel.promptsFor
 import com.echo.feature.crossbar.viewmodel.RecentFilter
 import com.echo.feature.crossbar.viewmodel.fanCoversToDraw
+import com.echo.feature.crossbar.viewmodel.systemArtSlotFor
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 
@@ -844,11 +845,34 @@ fun CrossbarShell(
             } else {
             val metadataAsSubtitle = uiState.gameMetadataVisible
 
+            val fanItem = uiState.currentItems.getOrNull(uiState.selectedItemIndex)
+            val ownArt = systemArtSlotFor(fanItem)?.let { com.echo.core.ui.icons.LocalCustomIcons.current[it] }
             val fanCovers = fanCoversToDraw(
-                insideCovers = uiState.currentItems.getOrNull(uiState.selectedItemIndex)?.insideCovers.orEmpty(),
+                insideCovers = fanItem?.insideCovers.orEmpty(),
                 cardArtGrid = uiState.cardArtGrid,
+                hasOwnArt = ownArt != null,
             )
-            if (fanCovers.isNotEmpty()) {
+            if (ownArt != null) {
+                // the system's own art fills the fan's place (owner, 2026-10-07)
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    androidx.compose.runtime.CompositionLocalProvider(com.echo.core.ui.icons.LocalIconAnimating provides true) {
+                        com.echo.core.ui.icons.CustomIconSurface(
+                            icon = ownArt,
+                            contentDescription = fanItem?.title,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(
+                                    x = -maxWidth * CrossbarCoverFanPlacement.RightInsetFraction,
+                                    y = maxHeight * CrossbarCoverFanPlacement.TopFraction,
+                                )
+                                .size(
+                                    width = maxWidth * CrossbarCoverFanPlacement.WidthFraction,
+                                    height = maxHeight * CrossbarCoverFanPlacement.HeightFraction,
+                                ),
+                        )
+                    }
+                }
+            } else if (fanCovers.isNotEmpty()) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     CrossbarCoverFan(
                         covers = fanCovers,

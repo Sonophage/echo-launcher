@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.feature.crossbar.viewmodel.systemArtSlotFor
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -659,6 +660,18 @@ private fun CrossbarItemLeadingIcon(
 
     val userPickedIcon = (memoryCardSlotKeyFor(item) ?: itemSlotKeyFor(item.type))
         ?.let { com.echo.core.ui.icons.LocalCustomIcons.current[it] }
+    // a system's own art stands in for the covers from inside it
+    val ownArt = systemArtSlotFor(item)?.let { com.echo.core.ui.icons.LocalCustomIcons.current[it] }
+    if (ownArt != null && userPickedIcon == null && item.iconKey == null) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.width(LEADING_ICON_SLOT)) {
+            com.echo.core.ui.icons.CustomIconSurface(
+                icon = ownArt,
+                contentDescription = item.title,
+                modifier = Modifier.size(LEADING_ICON_SIZE).clip(RoundedCornerShape(6.dp)).selectedIconBloom(isSelected),
+            )
+        }
+        return
+    }
     if (cardArtGrid && item.insideCovers.isNotEmpty() && userPickedIcon == null && item.iconKey == null) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.width(LEADING_ICON_SLOT)) {
             Box(

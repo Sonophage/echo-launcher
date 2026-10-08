@@ -79,3 +79,23 @@ class ChangeIconSlotTest {
         assertNull(systemIconSlot(CrossbarItem(id = "g", title = "Game", type = CrossbarItemType.STANDARD, platformId = "nds")))
     }
 }
+
+// owner, 2026-10-07: a system's own art replaces the covers from inside it; with no art the fan stays
+class SystemArtTest {
+    private val nds = CrossbarItem(id = "card_nds", title = "NDS", type = CrossbarItemType.MEMORY_CARD, platformId = "nds")
+
+    @Test
+    fun `a system and All Games each have an art slot, a game does not`() {
+        assertEquals("sysart_nds", systemArtSlotFor(nds))
+        assertEquals("sysart_allgames", systemArtSlotFor(CrossbarItem(id = "all", title = "All Games", type = CrossbarItemType.ALL_GAMES)))
+        assertNull(systemArtSlotFor(CrossbarItem(id = "g", title = "Game", type = CrossbarItemType.STANDARD, platformId = "nds")))
+        assertNull(systemArtSlotFor(null))
+    }
+
+    @Test
+    fun `own art hides the fan, and no art keeps it`() {
+        val covers = listOf("a", "b", "c", "d")
+        assertEquals(emptyList<String>(), fanCoversToDraw(covers, cardArtGrid = true, hasOwnArt = true))
+        assertEquals(listOf("a", "b", "c"), fanCoversToDraw(covers, cardArtGrid = true, hasOwnArt = false))
+    }
+}

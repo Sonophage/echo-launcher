@@ -50,6 +50,10 @@ internal fun defaultGlyphFor(slot: IconSlot): SlotGlyphDefault {
     if (slot.group == IconSlot.Group.CONSOLE) {
         return SlotGlyphDefault.Console(slot.key.removePrefix("sysicon_"))
     }
+    // a system's Art slot shows its console in the picker, so the row says which system it is
+    if (slot.group == IconSlot.Group.ART) {
+        return SlotGlyphDefault.Console(slot.key.removePrefix("sysart_"))
+    }
 
     catbarIconKeyFor(slot.key)?.let { iconKey ->
         return SlotGlyphDefault.Drawable(categoryIconFor(iconKey).resId)

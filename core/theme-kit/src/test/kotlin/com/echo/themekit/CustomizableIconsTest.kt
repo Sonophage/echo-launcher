@@ -21,16 +21,25 @@ class CustomizableIconsTest {
 
     @Test
     fun `console slots come after the theme slots`() {
-        val consoleSlots = CustomizableIcons.ALL.drop(IconSlots.ALL.size)
+        val consoleSlots = CustomizableIcons.ALL.drop(IconSlots.ALL.size).filter { it.group == IconSlot.Group.CONSOLE }
         assertTrue(consoleSlots.isNotEmpty(), "no console slots registered")
-        assertTrue(consoleSlots.all { it.group == IconSlot.Group.CONSOLE })
         assertTrue(consoleSlots.all { it.key.startsWith("sysicon_") })
         assertTrue(consoleSlots.all { it.templateSizePx == 256 })
     }
 
+    // owner, 2026-10-07: every console that has an icon slot also has an Art slot, so any system row can
+    // wear its own image or GIF instead of its covers
+    @Test
+    fun `every console has an art slot after the theme slots`() {
+        val extra = CustomizableIcons.ALL.drop(IconSlots.ALL.size)
+        val art = extra.filter { it.group == IconSlot.Group.ART }
+        assertEquals(SYSICON_PLATFORM_IDS.map { "sysart_$it" }, art.map { it.key })
+        assertTrue(extra.all { it.group == IconSlot.Group.CONSOLE || it.group == IconSlot.Group.ART })
+    }
+
     @Test
     fun `every console slot key derives from the platform id list`() {
-        val consoleSlots = CustomizableIcons.ALL.drop(IconSlots.ALL.size)
+        val consoleSlots = CustomizableIcons.ALL.drop(IconSlots.ALL.size).filter { it.group == IconSlot.Group.CONSOLE }
         assertEquals(SYSICON_PLATFORM_IDS, consoleSlots.map { it.key.removePrefix("sysicon_") })
     }
 

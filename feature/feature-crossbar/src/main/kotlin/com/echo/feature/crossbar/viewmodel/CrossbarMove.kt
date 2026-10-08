@@ -32,6 +32,7 @@ internal const val MOVE_COLUMN = "move_column"
 internal const val RENAME_COLUMN = "rename_column"
 internal const val CHANGE_COLUMN_ICON = "change_column_icon"
 internal const val CHANGE_SYSTEM_ICON = "change_system_icon"
+internal const val CHANGE_SYSTEM_ART = "change_system_art"
 internal const val MENU_WAIT_MS = 400L
 
 private const val PINNED_SYSTEMS = "pinned"
@@ -117,6 +118,7 @@ class CrossbarMove(
             CrossbarContextMenuItem(id, label, group = MenuGroup.CATEGORY, pinnedToRoot = true, confirms = false)
         if (state.rowMoveGroups(pinnedSystems()).getOrNull(state.selectedItemIndex) != null) add(row(MOVE_ROW, "Move"))
         if (systemIconSlot(item) != null && !state.isInSubItem) add(row(CHANGE_SYSTEM_ICON, "Change Icon"))
+        if (systemArtSlotFor(item) != null && !state.isInSubItem) add(row(CHANGE_SYSTEM_ART, "Change Art"))
         if (state.columnMovable()) add(row(MOVE_COLUMN, "Move Column"))
         if (state.columnEditable()) add(row(RENAME_COLUMN, "Rename Column"))
         if (state.columnEditable() && state.columnIconSlot() != null) add(row(CHANGE_COLUMN_ICON, "Change Column Icon"))

@@ -83,12 +83,23 @@ fun consoleDisplayName(platformId: String): String = when (platformId) {
 object CustomizableIcons {
     private const val CONSOLE_TEMPLATE_PX = 256
 
+    // owner, 2026-10-07: a system's art. An image or GIF the owner places here is drawn instead of the
+    // covers from inside it, on the row and in the fan
+    private const val ART_TEMPLATE_PX = 512
+
     val ALL: List<IconSlot> = IconSlots.ALL + SYSICON_PLATFORM_IDS.map { id ->
         IconSlot(
             key = "sysicon_$id",
             group = IconSlot.Group.CONSOLE,
             displayName = consoleDisplayName(id),
             templateSizePx = CONSOLE_TEMPLATE_PX,
+        )
+    } + SYSICON_PLATFORM_IDS.map { id ->
+        IconSlot(
+            key = "sysart_$id",
+            group = IconSlot.Group.ART,
+            displayName = consoleDisplayName(id),
+            templateSizePx = ART_TEMPLATE_PX,
         )
     }
 

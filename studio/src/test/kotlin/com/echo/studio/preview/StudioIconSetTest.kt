@@ -10,8 +10,9 @@ class StudioIconSetTest {
     @Test
     fun `every non-console customizable slot has studio art`() {
         val studioKeys = StudioIconSet.RESOURCE_SLOTS.keys + StudioIconSet.ITEM_VECTORS.keys
+        // a system's Art slot has no default glyph: empty, the row shows the covers from inside it
         val expected = CustomizableIcons.ALL
-            .filter { it.group != IconSlot.Group.CONSOLE }
+            .filter { it.group != IconSlot.Group.CONSOLE && it.group != IconSlot.Group.ART }
             .map { it.key }
         assertEquals(
             expected.sorted(),
