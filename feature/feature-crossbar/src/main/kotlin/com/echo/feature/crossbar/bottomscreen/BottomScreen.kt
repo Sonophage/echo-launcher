@@ -46,7 +46,7 @@ import com.echo.feature.crossbar.viewmodel.SearchScope
 import com.echo.feature.settings.ui.SettingsNavHost
 import androidx.compose.runtime.collectAsState
 
-enum class BottomPage(val label: String) { INFO("Info"), RECENT("Recent") }
+enum class BottomPage(val label: String) { INFO("Info"), RECENT("Recent"), MUSIC("Music") }
 
 // what the bottom screen shows over its own pages: the screens a second screen takes from the top one
 // (owner, 2026-10-06), whatever opened them
@@ -112,7 +112,28 @@ fun BottomScreen(
                 }
                 LockedScreen.NONE -> Unit
             }
-            if (info != null) {
+            if (page == BottomPage.MUSIC) {
+                // the music remote: the player itself, so the top screen stays free to browse (owner, 2026-10-08)
+                // the scrubber reads the playing position, which only the crossbar's window provided
+                androidx.compose.runtime.CompositionLocalProvider(
+                    com.echo.feature.crossbar.ui.LocalPlaybackPositions provides
+                        remember(crossbar) { com.echo.feature.crossbar.ui.PlaybackPositions(crossbar.musicPositionMs, crossbar.externalPositionMs) },
+                ) {
+                com.echo.feature.crossbar.ui.MusicPlayerScreen(
+                    state = ui.musicPlayback,
+                    onPlayPause = crossbar.music::musicPlayPause,
+                    onPrev = crossbar.music::musicPrev,
+                    onNext = crossbar.music::musicNext,
+                    onSeekTo = crossbar.music::musicSeekTo,
+                    onShuffle = crossbar.music::musicToggleShuffle,
+                    onRepeat = crossbar.music::musicCycleRepeat,
+                    accentArgb = ui.musicAccentArgb,
+                    onBack = { crossbar.bottomScreen.showPage(BottomPage.RECENT) },
+                    showFooter = false,
+                    modifier = Modifier.fillMaxSize().padding(bottom = u.dp(84)),
+                )
+                }
+            } else if (info != null) {
                 // Info's sections (the sheet, the video) open here without touching the top screen
                 // it opens on achievements, as the top screen's Game Info does
                 var open by remember(info.item.id, info.achievementSet, info.content != null) { mutableStateOf(info.firstSection()) }
@@ -165,7 +186,7 @@ fun BottomScreen(
             ) {
                 // the page in view is drawn as the primary button
                 // Info only when there is something to show: on a shelf or a folder it did nothing when tapped
-                BottomPage.entries.filter { it != BottomPage.INFO || state.shownInfo() != null }.forEach { p ->
+                state.pages().forEach { p ->
                     PanelButton(if (p == page) GamepadAction.SELECT else GamepadAction.OPEN_CONTEXT_MENU, p.label, u) { crossbar.bottomScreen.showPage(p) }
                 }
                 Spacer(Modifier.weight(1f))

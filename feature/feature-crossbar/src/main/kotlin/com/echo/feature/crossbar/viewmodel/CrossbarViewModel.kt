@@ -3388,6 +3388,13 @@ class CrossbarViewModel @Inject constructor(
     // belongs to the crossbar's focused row
     internal fun openRecentItemMenu(item: CrossbarItem) = openItemMenu(item)
 
+    // the one way the music player opens: with a second screen it is the companion's Music page, and the
+    // crossbar's screen stays free to browse (owner, 2026-10-08); on one screen it covers the crossbar
+    internal fun showMusicPlayer() {
+        if (_uiState.value.secondScreen) bottomScreen.showPage(com.echo.feature.crossbar.bottomscreen.BottomPage.MUSIC)
+        else _uiState.update { it.copy(musicPlayerVisible = true) }
+    }
+
     private fun openItemMenu(item: CrossbarItem?) {
         when {
             item?.mediaRootUri != null && item.mediaRootKind == null -> folders.openRomRootContextMenu(item)
@@ -3569,7 +3576,7 @@ class CrossbarViewModel @Inject constructor(
             StageCommand.OPEN_MUSIC -> {
                 menuSound.play(MenuSound.SELECT)
                 panel.closeNotifications()
-                if (s.musicPlayback.track != null) _uiState.update { it.copy(musicPlayerVisible = true) }
+                if (s.musicPlayback.track != null) showMusicPlayer()
             }
             StageCommand.LAUNCH_RECENT -> {
                 panel.closeNotifications()

@@ -264,7 +264,7 @@ class CrossbarSearch(
         scope.launch {
             vm.launching.awaitDiscHandOff(track.artUri)
             vm.musicPlayer.setQueue(listOf(track), 0)
-            uiState.update { it.copy(musicPlayerVisible = true) }
+            vm.showMusicPlayer()
         }
     }
 

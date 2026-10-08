@@ -213,7 +213,7 @@ class CrossbarMusic(
         item.type == CrossbarItemType.EMPTY -> true
         item.id == CrossbarViewModel.NOW_PLAYING_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
-            if (uiState.value.musicPlayback.track != null) uiState.update { it.copy(musicPlayerVisible = true) }
+            if (uiState.value.musicPlayback.track != null) vm.showMusicPlayer()
             true
         }
 
@@ -266,7 +266,7 @@ class CrossbarMusic(
         scope.launch {
             vm.launching.awaitDiscHandOff(track.artUri)
             musicPlayer.setQueue(currentMusicTracks, startIndex)
-            uiState.update { it.copy(musicPlayerVisible = true) }
+            vm.showMusicPlayer()
         }
     }
 
@@ -480,7 +480,7 @@ class CrossbarMusic(
                 val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
                 if (currentMusicTracks.isNotEmpty()) {
                     musicPlayer.setQueue(currentMusicTracks, startIndex)
-                    uiState.update { it.copy(musicPlayerVisible = true) }
+                    vm.showMusicPlayer()
                 }
             }
 

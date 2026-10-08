@@ -52,6 +52,12 @@ class CrossbarBottomScreen(
                 link.update { it.copy(focused = info) }
             }
         }
+        // music starting turns the companion into its remote; music ending takes the page away
+        scope.launch {
+            uiState.map { it.musicPlayback.track != null }.distinctUntilChanged().collect { on ->
+                link.update { it.copy(music = on, page = if (on && !it.music) BottomPage.MUSIC else it.page) }
+            }
+        }
         scope.launch {
             combine(link.attached, link.hostShown, lastLaunch) { on, shown, last ->
                 if (on) playingGameId(shown, last?.gameId)?.let { it to last?.launchedAt } else null
@@ -163,10 +169,18 @@ class CrossbarBottomScreen(
     fun onButton(action: GamepadAction): Boolean {
         val state = link.state.value
         val page = state.shownPage()
+        // the music remote: A plays or pauses, up and down skip
+        if (page == BottomPage.MUSIC) when (action) {
+            GamepadAction.SELECT -> return true.also { vm.music.musicPlayPause() }
+            GamepadAction.NAVIGATE_UP -> return true.also { vm.music.musicPrev() }
+            GamepadAction.NAVIGATE_DOWN -> return true.also { vm.music.musicNext() }
+            else -> Unit
+        }
         when (action) {
             GamepadAction.BACK -> setCompanionActive(false)
             GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT ->
-                showPage(if (page == BottomPage.INFO) BottomPage.RECENT else BottomPage.INFO)
+                showPage(state.steppedPage(if (action == GamepadAction.NAVIGATE_LEFT) -1 else 1))
+
             GamepadAction.NAVIGATE_UP, GamepadAction.NAVIGATE_DOWN -> if (page == BottomPage.RECENT) {
                 val step = if (action == GamepadAction.NAVIGATE_UP) -1 else 1
                 val next = (state.recentSelected + step).coerceIn(0, (state.recent.size - 1).coerceAtLeast(0))

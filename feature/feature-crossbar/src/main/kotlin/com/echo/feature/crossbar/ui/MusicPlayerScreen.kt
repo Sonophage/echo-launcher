@@ -85,6 +85,8 @@ fun MusicPlayerScreen(
     onRepeat: () -> Unit = {},
     accentArgb: Long? = null,
     onAction: ((GamepadAction) -> Unit)? = null,
+    // the companion draws its own pills along the bottom edge, so it hides the player's footer
+    showFooter: Boolean = true,
 ) {
     val accent = mediaAccent(accentArgb)
     val track = state.track
@@ -203,7 +205,7 @@ fun MusicPlayerScreen(
             }
         }
 
-        EchoHintBar(
+        if (showFooter) EchoHintBar(
             items = listOf(
                 ControllerPromptItem(GamepadAction.SELECT, "Play / Pause"),
                 ControllerPromptItem(listOf(GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT), "Track"),

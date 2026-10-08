@@ -95,4 +95,19 @@ class BottomScreenRulesTest {
         assertEquals("Android settings stays last", com.echo.feature.crossbar.viewmodel.QuickSetting.ANDROID_SETTINGS, dual.last())
         assertFalse(com.echo.feature.crossbar.viewmodel.QuickSetting.SECOND_SCREEN in com.echo.feature.crossbar.viewmodel.quickSettingsFor(secondDisplay = false))
     }
+
+    // owner, 2026-10-08: the Music page is there only while music plays; Info only with info; left and right
+    // walk what is there
+    @Test
+    fun `the pages are what can be shown, and stepping walks only those`() {
+        val shelf = BottomScreenState()
+        assertEquals(listOf(BottomPage.RECENT), shelf.pages())
+        assertEquals("Info with nothing to show falls back to Recent", BottomPage.RECENT, shelf.copy(page = BottomPage.INFO).shownPage())
+
+        val playing = BottomScreenState(focused = skyrim, music = true, page = BottomPage.MUSIC)
+        assertEquals(listOf(BottomPage.INFO, BottomPage.RECENT, BottomPage.MUSIC), playing.pages())
+        assertEquals(BottomPage.INFO, playing.steppedPage(1))
+        assertEquals(BottomPage.RECENT, playing.steppedPage(-1))
+        assertEquals("music stopped: its page goes", BottomPage.RECENT, playing.copy(music = false).shownPage())
+    }
 }

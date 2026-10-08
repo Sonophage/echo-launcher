@@ -24,6 +24,8 @@ data class BottomScreenState(
     val recentFilter: RecentFilter = RecentFilter.ALL,
     val recentSelected: Int = 0,
     val page: BottomPage = BottomPage.INFO,
+    // music is playing, so the companion offers its remote (owner, 2026-10-08)
+    val music: Boolean = false,
 )
 
 class DrawerFocus(
@@ -34,8 +36,21 @@ class DrawerFocus(
 
 // the page in view: Info stands down for Recent while there is no info to show, so the button lit is
 // the page drawn and the controller moves what is on screen
-fun BottomScreenState.shownPage(): BottomPage =
-    if (page == BottomPage.INFO && shownInfo() == null) BottomPage.RECENT else page
+fun BottomScreenState.shownPage(): BottomPage = if (page in pages()) page else BottomPage.RECENT
+
+// the pages the companion can show now, in pill order: Info when there is info, Recent always, Music while
+// something plays
+fun BottomScreenState.pages(): List<BottomPage> = listOfNotNull(
+    BottomPage.INFO.takeIf { shownInfo() != null },
+    BottomPage.RECENT,
+    BottomPage.MUSIC.takeIf { music },
+)
+
+// left and right walk the pages there are, round the ends
+fun BottomScreenState.steppedPage(delta: Int): BottomPage {
+    val all = pages()
+    return all[(all.indexOf(shownPage()) + delta).mod(all.size)]
+}
 
 // owner, 2026-10-06: on a device with a second screen, the bottom screen follows the top one. It is a
 // second activity with no view model of its own: it draws the crossbar's state and acts through the
