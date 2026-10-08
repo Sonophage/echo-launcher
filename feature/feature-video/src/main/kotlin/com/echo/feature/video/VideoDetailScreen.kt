@@ -202,7 +202,9 @@ fun VideoDetailScreen(
             }
 
             Text(video.displayTitle, color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
-            Text(metadataLine(video), color = TextMuted, fontSize = 13.sp)
+            // owner, 2026-10-08: the line was lost on a light poster; it is lit and shadowed like the title
+            Text(metadataLine(video), color = TextPrimary.copy(alpha = 0.85f), fontSize = 13.sp,
+                style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.8f), blurRadius = 8f)))
             if (video.resumePositionMs > 0) {
                 Text("Resume at ${fmtTime(video.resumePositionMs)}", color = menuCursorEdge(), fontSize = 12.sp)
             }
@@ -443,8 +445,20 @@ private fun RenameDialog(
 private fun metadataLine(video: Video): String = buildList {
     video.durationMs?.let { add(fmtTime(it)) }
     video.resolutionLabel?.let { add(it) }
-    video.codec?.let { add(it) }
+    video.codec?.let(::containerLabel)?.let { add(it) }
 }.joinToString("  ·  ").ifEmpty { video.displayName }
+
+// the scanner keeps the MIME subtype ("X-MATROSKA"); people know the file kind ("MKV")
+internal fun containerLabel(subtype: String): String = when (subtype.lowercase()) {
+    "x-matroska", "matroska" -> "MKV"
+    "quicktime" -> "MOV"
+    "x-msvideo", "avi" -> "AVI"
+    "x-flv" -> "FLV"
+    "3gpp" -> "3GP"
+    "mp2t" -> "TS"
+    "x-ms-wmv" -> "WMV"
+    else -> subtype.uppercase().removePrefix("X-")
+}
 
 private fun fmtTime(ms: Long): String {
     if (ms <= 0) return "0:00"
