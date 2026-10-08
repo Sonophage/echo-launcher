@@ -47,7 +47,6 @@ import com.echo.core.ui.preview.EchoPreview
 import com.echo.feature.appbar.appdrawer.AppWall
 import com.echo.feature.appbar.appdrawer.UninstallConfirmDialog
 import com.echo.feature.appbar.appdrawer.WallBackdrop
-import com.echo.feature.appbar.appdrawer.WallHints
 import com.echo.feature.appbar.appdrawer.WallInfo
 import com.echo.feature.appbar.appdrawer.SystemChipRow
 import com.echo.feature.appbar.appdrawer.actionLabel
@@ -293,18 +292,30 @@ internal fun AppDrawerContent(
                 }
             }
 
-            Column(Modifier.fillMaxWidth().padding(horizontal = u.dp(46))) {
-                WallHints(
-                    u = u,
-                    // owner, 2026-10-06: the section is the footer's filter, LT/RT and its word, at the far left
-                    filter = state.activeFilter.label,
-                    onNextFilter = { onFilterSelected(state.activeFilter.stepped(1, state.sections)) },
-                    action = focused?.let(::actionLabel),
-                    onAction = { focused?.let(onBandLaunch) },
-                    onSearch = onOpenSearch,
-                    onBack = onBack,
-                )
-            }
+            // owner, 2026-10-07: the kit's footer, not a hint row of its own. The section is the footer's filter,
+            // LT/RT and its word, at the far left (owner, 2026-10-06)
+            com.echo.core.ui.components.EchoHintBar(
+                items = listOf(
+                    com.echo.core.ui.components.ControllerPromptItem(GamepadAction.BACK, "Back"),
+                    com.echo.core.ui.components.ControllerPromptItem(GamepadAction.NEXT_PAGE, "Search"),
+                ),
+                primary = focused?.let { com.echo.core.ui.components.HintAction(GamepadAction.SELECT, actionLabel(it)) },
+                filter = {
+                    com.echo.core.ui.components.TriggerFilter(
+                        state.activeFilter.label,
+                        onTapped = { onFilterSelected(state.activeFilter.stepped(1, state.sections)) },
+                    )
+                },
+                onAction = { action ->
+                    when (action) {
+                        GamepadAction.SELECT -> focused?.let(onBandLaunch)
+                        GamepadAction.NEXT_PAGE -> onOpenSearch()
+                        GamepadAction.BACK -> onBack()
+                        else -> Unit
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
 
         CrossbarLetterRail(

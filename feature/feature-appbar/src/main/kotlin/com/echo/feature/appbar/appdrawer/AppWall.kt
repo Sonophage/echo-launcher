@@ -258,49 +258,6 @@ internal fun WallInfo(
 internal fun actionLabel(app: InstalledApp): String = if (app.isGame || app.gameId != null) "Play" else "Open"
 
 @Composable
-internal fun WallHints(
-    u: DesignUnits,
-    action: String?,
-    onAction: () -> Unit,
-    onSearch: () -> Unit,
-    onBack: () -> Unit,
-    filter: String? = null,
-    onNextFilter: () -> Unit = {},
-) {
-    val pad = LocalPadPrompts.current
-    Row(
-        Modifier.fillMaxWidth().height(u.dp(72)),
-        horizontalArrangement = Arrangement.spacedBy(u.dp(if (pad) 28 else 12)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        filter?.let { com.echo.core.ui.components.TriggerFilter(it, onTapped = onNextFilter) }
-        if (pad && action != null) Hint(listOf(GamepadAction.SELECT), action, u, onAction)
-        // the tab row already shows LT/RT
-        Hint(listOf(GamepadAction.NEXT_PAGE), "Search", u, onSearch)
-        Hint(listOf(GamepadAction.BACK), "Back", u, onBack)
-    }
-}
-
-@Composable
-private fun Hint(actions: List<GamepadAction>, label: String, u: DesignUnits, onClick: () -> Unit) {
-    val style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(13), fontWeight = FontWeight.Light)
-    if (LocalPadPrompts.current) {
-        ControllerPrompt(actions, label, Modifier.clip(RoundedCornerShape(u.dp(8))).clickable(onClick = onClick),
-            labelStyle = style, glyphSize = u.dp(22), spacing = u.dp(8))
-    } else {
-        Box(
-            Modifier
-                .heightIn(min = 44.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color.White.copy(alpha = 0.12f))
-                .clickable(onClick = onClick)
-                .padding(horizontal = u.dp(22)),
-            contentAlignment = Alignment.Center,
-        ) { Text(label, style = style.copy(color = Color.White)) }
-    }
-}
-
-@Composable
 internal fun SystemChipRow(
     chips: List<SystemChip>,
     selected: String?,
