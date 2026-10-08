@@ -91,7 +91,7 @@ fun EchoTextPromptOverlay(
                 .fillMaxHeight()
                 // a tap on the rail is not a tap on the screen behind
                 .pointerInput(Unit) { detectTapGestures { } }
-                .padding(top = StatusStripHeight, bottom = HintBarHeight, end = RailEdgeGap, start = RailEdgeGap),
+                .padding(top = StatusStripHeight + com.echo.core.ui.components.RailTopGap, bottom = HintBarHeight, end = RailEdgeGap, start = RailEdgeGap),
         ) {
             ContextMenuHeader(title, subtitle, u)
 

@@ -93,16 +93,21 @@ fun <T> EchoContextMenuOverlay(
         Box(Modifier.fillMaxSize().clickable(onClick = onDismiss))
         RailPanelBacking(u, backdropArt)
 
+        // the column fills the rail's height and centres what it holds, so a long menu scrolls its rows and its
+        // header stays below the status strip instead of being pushed up into it (owner, 2026-10-07)
         Column(
             horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.Center,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .width(u.dp(RAIL_PANEL_WIDTH))
-                .padding(top = StatusStripHeight, bottom = HintBarHeight, end = RailEdgeGap),
+                .fillMaxHeight()
+                .padding(top = StatusStripHeight + RailTopGap, bottom = HintBarHeight, end = RailEdgeGap),
         ) {
             ContextMenuHeader(title, subtitle, u)
 
             LazyColumn(
+                modifier = Modifier.weight(1f, fill = false),
                 state = listState,
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(RailRowGap),
@@ -305,6 +310,9 @@ private fun CrossbarRailBadge(
 
 val RailIcon = 29.dp
 val RailEdgeGap = 24.dp
+// below the status strip: the profile orb at the top right hangs past the strip, and a rail's title sat
+// under it on a long menu (owner, 2026-10-07)
+val RailTopGap = 28.dp
 val RailRowGap = 13.dp
 private const val DimFadeMs = 160
 // the menu's sizes are panel design units, as the Recent rail's are, so the two read alike

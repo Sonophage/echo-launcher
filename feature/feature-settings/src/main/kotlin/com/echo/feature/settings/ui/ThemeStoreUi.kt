@@ -409,7 +409,7 @@ internal fun ThemePageOverlay(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(u.dp(6)),
             modifier = Modifier.align(Alignment.CenterEnd).width(u.dp(RAIL_PANEL_WIDTH)).fillMaxHeight()
-                .padding(top = StatusStripHeight, bottom = HintBarHeight, end = RailEdgeGap, start = RailEdgeGap)
+                .padding(top = StatusStripHeight + com.echo.core.ui.components.RailTopGap, bottom = HintBarHeight, end = RailEdgeGap, start = RailEdgeGap)
                 .verticalScroll(rememberScrollState()),
         ) {
             ContextMenuHeader(
