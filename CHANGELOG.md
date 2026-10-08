@@ -45,6 +45,10 @@ released; it becomes the next release's notes.
 - App Drawer and Search logos stay readable on small screens.
 - The Libraries tab drops its "6 of 6 on the crossbar" line.
 - **Button hints** is one setting, All / Minimal / Off, in Controls ▸ Touch and the panel.
+- **Game Rows Show** (Cover art / Icons) replaces Card Art Grid in Settings and matches the panel's tile.
+- Settings moved: Boot Sound to Boot, the video player to **Library ▸ Video Player**, Rescan On Return
+  to Library Manager, and Reset Emulator Configuration onto Emulators ▸ Installed.
+- Library Manager asks before removing an app or a file extension.
 
 ### PC games
 - **DroidDeck** is a PC launcher: its Steam games launch on its own link, and its exported files
