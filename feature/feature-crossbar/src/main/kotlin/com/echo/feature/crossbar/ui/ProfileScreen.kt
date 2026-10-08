@@ -622,7 +622,12 @@ internal fun DetailCard(a: Achievement, u: DesignUnits) {
             .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(u.dp(18))).padding(u.dp(20)),
         verticalArrangement = Arrangement.spacedBy(u.dp(16)),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(16))) {
+        // the stats are measured first and the badge, name and description take what is left: a long description
+        // in a short card used to push the values past the card's clipped edge
+        Row(
+            Modifier.weight(1f, fill = false),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(16)),
+        ) {
             Box(Modifier.size(u.dp(72)).border(u.dp(2), Color.White.copy(alpha = 0.5f), RoundedCornerShape(u.dp(16))), contentAlignment = Alignment.Center) {
                 BadgeIcon(a, u.dp(56), u)
             }
