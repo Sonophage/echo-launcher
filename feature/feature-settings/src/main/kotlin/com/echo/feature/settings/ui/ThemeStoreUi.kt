@@ -82,7 +82,10 @@ import com.echo.themekit.ThemePart
 // a card in the theme store: a saved theme or an online one
 internal data class StoreCard(val id: String, val name: String, val subtitle: String, val image: String?, val accentArgb: Long? = null,
     // the theme's wallpaper, for the hero above the shelves; the card itself shows [image]
-    val wallpaper: String? = null)
+    val wallpaper: String? = null,
+    // an online theme's standing against the saved one; the tag, the hero and the featured card read this, not
+    // the subtitle's words
+    val standing: ThemeCatalogRepository.Standing? = null)
 
 internal fun EchoThemeStore.SavedTheme.card() =
     StoreCard(id, name, author?.let { "by $it" } ?: "${parts.size} parts", heroPath ?: previewPath, accentArgb)
@@ -109,7 +112,7 @@ private fun StoreShelf(cards: List<StoreCard>, focusedIndex: Int?, onOpen: (Stri
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(card.name, color = Color.White, fontSize = 15.sp, fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    StandingTag(card.subtitle)
+                    StandingTag(card.subtitle, card.standing)
                 }
             }
         }
@@ -118,13 +121,13 @@ private fun StoreShelf(cards: List<StoreCard>, focusedIndex: Int?, onOpen: (Stri
 
 // New and Update stand out; the rest ("Downloaded", "In use", "by …") is quiet text
 @Composable
-private fun StandingTag(text: String) {
-    val loud = text == "New" || text == "Update"
+private fun StandingTag(text: String, standing: ThemeCatalogRepository.Standing?) {
+    val loud = standing == ThemeCatalogRepository.Standing.NEW || standing == ThemeCatalogRepository.Standing.UPDATE
     Text(
         text, maxLines = 1, fontSize = 11.sp,
         color = if (loud) RailInkColor else SettingsSubtext,
         fontWeight = if (loud) FontWeight.SemiBold else FontWeight.Normal,
-        modifier = if (loud) Modifier.clip(RoundedCornerShape(8.dp)).background(if (text == "Update") UpdateAmber else Color.White).padding(horizontal = 8.dp, vertical = 2.dp)
+        modifier = if (loud) Modifier.clip(RoundedCornerShape(8.dp)).background(if (standing == ThemeCatalogRepository.Standing.UPDATE) UpdateAmber else Color.White).padding(horizontal = 8.dp, vertical = 2.dp)
         else Modifier,
     )
 }
@@ -164,7 +167,7 @@ fun ThemeStoreScreen(
             ThemeCatalogRepository.Standing.NEW -> "New"
             ThemeCatalogRepository.Standing.CURRENT -> "Downloaded"
             ThemeCatalogRepository.Standing.UPDATE -> "Update"
-        }, t.heroUrl, wallpaper = t.wallpaperUrl)
+        }, t.heroUrl, wallpaper = t.wallpaperUrl, standing = standing)
     }
     fun shelf(section: String) = if (section == "saved") saved else online
     fun open(section: String, id: String) {
@@ -185,7 +188,7 @@ fun ThemeStoreScreen(
     }
     // the hero shows the card in focus; before any is focused, the newest online theme
     val featured = focusedShelf?.let { shelf(it).getOrNull(column) }
-        ?: online.firstOrNull { it.subtitle == "New" } ?: online.firstOrNull() ?: saved.first()
+        ?: online.firstOrNull { it.standing == ThemeCatalogRepository.Standing.NEW } ?: online.firstOrNull() ?: saved.first()
     val featuredSection = focusedShelf ?: if (featured.id == CURRENT_LOOK_ID || online.none { it.id == featured.id }) "saved" else "online"
 
     Box(modifier) {
@@ -328,7 +331,7 @@ private fun StoreHero(card: StoreCard, online: Boolean) {
             Text(
                 when {
                     card.id == CURRENT_LOOK_ID -> "THE LOOK IN USE"
-                    online && card.subtitle == "New" -> "NEW IN THE STORE"
+                    online && card.standing == ThemeCatalogRepository.Standing.NEW -> "NEW IN THE STORE"
                     online -> "IN THE STORE"
                     else -> "ON THIS DEVICE"
                 },

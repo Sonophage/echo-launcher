@@ -76,7 +76,8 @@ fun gameInfoSectionLabel(section: GameInfoAction?): String = when (section) {
     else -> section.name.lowercase().replaceFirstChar { it.uppercase() }
 }
 
-data class GameInfoStat(val label: String, val value: String)
+// opensAchievements: the stat a tap (or LT/RT) takes to the achievements wall; set here, not read off its label
+data class GameInfoStat(val label: String, val value: String, val opensAchievements: Boolean = false)
 
 fun GameInfoState.notices(all: List<AndroidNotice>): List<AndroidNotice> =
     if (isApp) all.filter { it.packageName == item.packageName } else emptyList()
@@ -93,7 +94,7 @@ fun gameInfoStats(info: GameInfoState, newNotices: Int, now: Long): List<GameInf
         )
     } else {
         listOfNotNull(
-            info.achievementsStat?.let { GameInfoStat("Achievements", it) },
+            info.achievementsStat?.let { GameInfoStat("Achievements", it, opensAchievements = true) },
             info.item.totalPlayTimeMillis.takeIf { it > 0L }?.let { GameInfoStat("Played", playTimeLabel(it)) },
             info.item.lastOpenedAt?.let { GameInfoStat("Last played", relativeTime(now, it)) },
             info.content?.platformName?.takeIf { it.isNotBlank() }?.let { GameInfoStat("Platform", it) },

@@ -35,10 +35,11 @@ class ContextMenusTest {
         isFavorite: Boolean = false,
         packageName: String? = null,
         subtitle: String? = null,
+        pinnedInCategory: Boolean = false,
     ) = CrossbarItem(
         id = "g1", title = "Crisis Core", gameId = 1L,
         platformId = platformId, isFavorite = isFavorite, packageName = packageName,
-        subtitle = subtitle,
+        subtitle = subtitle, pinnedInCategory = pinnedInCategory,
     )
 
     private fun ids(items: List<CrossbarContextMenuItem>) = items.map { it.action }
@@ -158,13 +159,18 @@ class ContextMenusTest {
     }
 
     @Test
-    fun `pin flips to unpin for a pinned row`() {
+    fun `pin flips to unpin for a pinned row, whatever its subtitle says`() {
         val cats = listOf(category(BuiltInCategory.GAMES, gaming = true), category("retro", gaming = true))
-        val items = ids(
+        val pinned = ids(
+            gameContextMenuItems(game(pinnedInCategory = true), state(cats, selectedCategoryIndex = 1), 1, false, null),
+        )
+        assertTrue("unpin_category" in pinned)
+        assertFalse("pin_category" in pinned)
+        // the word on screen is a label; renaming it must not change what the menu offers
+        val wordOnly = ids(
             gameContextMenuItems(game(subtitle = "Pinned"), state(cats, selectedCategoryIndex = 1), 1, false, null),
         )
-        assertTrue("unpin_category" in items)
-        assertFalse("pin_category" in items)
+        assertTrue("pin_category" in wordOnly)
     }
 
     @Test

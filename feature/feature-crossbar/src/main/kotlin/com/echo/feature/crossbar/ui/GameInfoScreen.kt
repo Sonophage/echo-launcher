@@ -161,7 +161,7 @@ fun GameInfoScreen(
             }
             Row(Modifier.weight(1f).padding(bottom = u.dp(8)), horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
                 stats.forEach { stat ->
-                    if (stat.label == "Achievements") {
+                    if (stat.opensAchievements) {
                         Box(Modifier.clip(RoundedCornerShape(u.dp(8))).clickable { onAction(GamepadAction.CHANGE_SORT) }) { BandStat(stat, u, GamepadAction.CHANGE_SORT) }
                     } else {
                         BandStat(stat, u)

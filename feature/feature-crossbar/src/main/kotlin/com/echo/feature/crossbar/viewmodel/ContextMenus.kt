@@ -58,7 +58,7 @@ internal fun gameContextMenuItems(
             } else {
                 if (hasOtherCustomCategory) add(CrossbarContextMenuItem("move_category", "Move to Category", group = MenuGroup.CATEGORY))
                 add(CrossbarContextMenuItem("remove_category", "Remove from Category", group = MenuGroup.CATEGORY))
-                val pinned = item.subtitle == "Pinned"
+                val pinned = item.pinnedInCategory
                 add(
                     CrossbarContextMenuItem(
                         if (pinned) "unpin_category" else "pin_category",

@@ -1160,6 +1160,8 @@ data class CrossbarItem(
     val title: String,
     // a row of Recent's pinned list (owner, 2026-10-06)
     val pinnedToRecent: Boolean = false,
+    // pinned to the top of its category; the menu offers Unpin from this, not from the "Pinned" subtitle
+    val pinnedInCategory: Boolean = false,
     val artworkUri: String? = null,
     val iconUri: String? = null,
     val logoUri: String? = null,
@@ -1775,7 +1777,7 @@ class CrossbarViewModel @Inject constructor(
                             .filterNot { isHiddenAt(HiddenPlacement.gameKey(it.game.id), HideLocationType.CATEGORY, category.id) }
                         val pinnedGameIds = gameRows.filter { it.pinned }.map { it.game.id }.toSet()
                         val gameItems = gameRows.map { it.game }.gameSorted(_uiState.value.gameSortMode).toCrossbarItems().map { crossbar ->
-                            if (crossbar.gameId in pinnedGameIds) crossbar.copy(subtitle = "Pinned") else crossbar
+                            if (crossbar.gameId in pinnedGameIds) crossbar.copy(subtitle = "Pinned", pinnedInCategory = true) else crossbar
                         }
 
                         val combined = gameItems
@@ -1805,6 +1807,7 @@ class CrossbarViewModel @Inject constructor(
         id           = "app_$packageName",
         title        = label,
         subtitle     = if (pinned) "Pinned" else null,
+        pinnedInCategory = pinned,
         packageName  = packageName,
         isAndroidApp = true,
         iconUri      = artwork?.let { it.iconUri ?: it.artworkUri },
