@@ -1254,6 +1254,7 @@ fun CrossbarShell(
                     AppDrawerScreen(
                         initialFilter = initialFilter,
                         genreFilter = uiState.genreFilter,
+                        chipsByGenre = uiState.gameGrouping == com.echo.feature.crossbar.viewmodel.GameGrouping.GENRE,
                         onBack = onCloseAppDrawer,
                         pendingGamepadAction = uiState.pendingDrawerAction,
                         selectReleases = uiState.drawerSelectReleases,

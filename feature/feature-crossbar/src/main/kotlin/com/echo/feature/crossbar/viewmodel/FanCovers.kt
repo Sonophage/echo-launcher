@@ -20,6 +20,8 @@ internal fun fanCoversToDraw(insideCovers: List<String>, cardArtGrid: Boolean, h
 fun systemArtSlotFor(item: CrossbarItem?): String? {
     val id = when {
         item == null -> null
+        // a genre folder is drawn as All Games, but All Games' own art is not its
+        item.id in genreItemIds -> null
         item.type == CrossbarItemType.ALL_GAMES -> "allgames"
         item.type == CrossbarItemType.MEMORY_CARD -> item.platformId
         else -> null

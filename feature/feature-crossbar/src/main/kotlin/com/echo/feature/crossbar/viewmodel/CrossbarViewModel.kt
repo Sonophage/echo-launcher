@@ -451,6 +451,9 @@ data class CrossbarUiState(
     val sortLabel: String? = null,
     // the one genre the game lists show, or null for all (owner, 2026-10-08)
     val genreFilter: com.echo.core.domain.model.GameGenre? = null,
+    // the Game column's folders: one per system, or one per genre (owner, 2026-10-08)
+    val gameGrouping: GameGrouping = GameGrouping.SYSTEM,
+    val genreCounts: Map<com.echo.core.domain.model.GameGenre, Int> = emptyMap(),
 
     val musicPlayerVisible: Boolean = false,
     val musicPlayback: com.echo.feature.crossbar.music.MusicPlaybackState =
@@ -1592,7 +1595,11 @@ class CrossbarViewModel @Inject constructor(
 
                         realGames.groupBy { it.platformId }
                             .forEach { (pid, list) -> put(cardItemId(pid), fanOf(list)) }
+                        realGames.groupBy { com.echo.core.domain.model.effectiveGenre(it.genre, it.genreOverride) }
+                            .forEach { (genre, list) -> genre?.let { put(genreItemId(it), fanOf(list)) } }
                     }
+                    val genreCounts = realGames.mapNotNull { com.echo.core.domain.model.effectiveGenre(it.genre, it.genreOverride) }
+                        .groupingBy { it }.eachCount()
 
                     val validPlatformId = _uiState.value.selectedPlatformId
                         ?.takeIf { id ->
@@ -1604,6 +1611,7 @@ class CrossbarViewModel @Inject constructor(
 
                     _uiState.update { it.copy(
                         platformGameCounts = counts,
+                        genreCounts = genreCounts,
                         allGamesCount = gamesOnlyTotal,
                         cardFanCovers = fanCovers,
                         favoritesCount = favoritesTotal,
@@ -2251,7 +2259,8 @@ class CrossbarViewModel @Inject constructor(
         }
         if (booksTitle != null) return booksTitle
         return when {
-            s.selectedPlatformId == ALL_GAMES_PLATFORM_ID -> "All Games"
+            s.selectedPlatformId == ALL_GAMES_PLATFORM_ID ->
+                s.genreFilter?.takeIf { s.gameGrouping == GameGrouping.GENRE }?.label ?: "All Games"
             s.selectedPlatformId == FAVORITES_PLATFORM_ID -> "Favorites"
             s.selectedPlatformId == MISSING_PLATFORM_ID   -> "Missing"
             s.selectedPlatformId != null ->
@@ -2340,7 +2349,10 @@ class CrossbarViewModel @Inject constructor(
             }
             val idx = sibs.indexOfFirst { sib ->
                 when {
-                    s.selectedPlatformId == ALL_GAMES_PLATFORM_ID -> sib.type == CrossbarItemType.ALL_GAMES
+                    // inside a genre folder its own row is lit, not All Games
+                    s.selectedPlatformId == ALL_GAMES_PLATFORM_ID && s.gameGrouping == GameGrouping.GENRE && s.genreFilter != null ->
+                        sib.id == genreItemId(s.genreFilter)
+                    s.selectedPlatformId == ALL_GAMES_PLATFORM_ID -> sib.id == ALL_GAMES_ITEM_ID
                     s.selectedPlatformId == FAVORITES_PLATFORM_ID -> sib.type == CrossbarItemType.FAVORITES
                     s.selectedPlatformId == MISSING_PLATFORM_ID   -> sib.type == CrossbarItemType.MISSING
                     s.selectedPlatformId != null                 -> sib.platformId == s.selectedPlatformId
@@ -3057,7 +3069,7 @@ class CrossbarViewModel @Inject constructor(
 
     private fun openAllGamesContextMenu() {
         _uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(state = MenuState(title = "All Games", rows = allGamesContextMenuItems()), isAllGames = true)
+            activeContextMenu = CrossbarContextMenu(state = MenuState(title = "All Games", rows = allGamesContextMenuItems(_uiState.value.gameGrouping)), isAllGames = true)
         )}
     }
 
@@ -3209,6 +3221,8 @@ class CrossbarViewModel @Inject constructor(
             menu.isAllGames -> when (itemId) {
                 "library_manager" -> _uiState.update { it.withSettingsOpen("settings_library") }
                 "import_pc_games" -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
+                "group_by_genre"  -> setGameGrouping(GameGrouping.GENRE)
+                "group_by_system" -> setGameGrouping(GameGrouping.SYSTEM)
             }
             menu.platformId != null -> if (itemId.startsWith(PLATFORM_EMU_PREFIX)) {
                 launching.setPlatformEmulator(menu.platformId, itemId.removePrefix(PLATFORM_EMU_PREFIX))
@@ -4086,6 +4100,13 @@ class CrossbarViewModel @Inject constructor(
                 openAllGamesFolder()
                 return
             }
+            in genreItemIds -> {
+                genreOfItemId(item?.id)?.let { genre ->
+                    _uiState.update { it.copy(genreFilter = genre) }
+                    openAllGamesFolder()
+                }
+                return
+            }
 
             in SHELF_CARD_IDS -> {
                 item?.id?.let { recents.openShelf(it) }
@@ -4203,8 +4224,14 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
+    // a genre folder is All Games narrowed to its genre, so leaving it clears the genre
     internal fun closePlatformFolder() = navigateRememberingCursor {
-        it.copy(selectedPlatformId = null)
+        it.copy(selectedPlatformId = null, genreFilter = it.genreFilter.takeUnless { _ -> it.gameGrouping == GameGrouping.GENRE })
+    }
+
+    internal fun setGameGrouping(grouping: GameGrouping) {
+        menuSound.play(MenuSound.SELECT)
+        viewModelScope.launch { context.echoDataStore.edit { it[KEY_GAMES_GROUP_BY] = grouping.name } }
     }
 
 
@@ -4710,6 +4737,11 @@ class CrossbarViewModel @Inject constructor(
                 val design = runCatching {
                     com.echo.core.ui.wave.WaveDesign.valueOf(prefs[KEY_WAVE_DESIGN] ?: com.echo.core.ui.wave.WaveDesign.PSP.name)
                 }.getOrDefault(com.echo.core.ui.wave.WaveDesign.PSP)
+                val grouping = GameGrouping.fromName(prefs[KEY_GAMES_GROUP_BY])
+                if (grouping != _uiState.value.gameGrouping) {
+                    _uiState.update { it.copy(gameGrouping = grouping) }
+                    if (categoryShowsGameRows(currentCategory())) loadItemsForCategory(currentCategory(), keepCursorOnRow = false)
+                }
                 _uiState.update {
                     it.copy(
                         waveStyle            = style,
@@ -4728,6 +4760,7 @@ class CrossbarViewModel @Inject constructor(
 
     companion object {
         private val KEY_WAVE_STYLE        = stringPreferencesKey("display_wave_style")
+        internal val KEY_GAMES_GROUP_BY   = stringPreferencesKey("games_group_by")
         private val KEY_WAVE_DESIGN       = stringPreferencesKey("display_wave_design")
 
         private val KEY_RESPECT_BATTERY   = booleanPreferencesKey("display_battery_saver")

@@ -66,7 +66,9 @@ class CrossbarGames(
             )
         }
 
-        val cardRows = visibleCards.map { card ->
+        val cardRows = if (uiState.value.gameGrouping == GameGrouping.GENRE) {
+            genreFolderRows(uiState.value.genreCounts, uiState.value.cardFanCovers)
+        } else visibleCards.map { card ->
             val count = uiState.value.platformGameCounts[card.platformId] ?: card.gameCount
             CrossbarItem(
                 id          = vm.cardItemId(card.platformId),

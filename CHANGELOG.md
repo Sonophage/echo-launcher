@@ -7,6 +7,8 @@ released; it becomes the next release's notes.
 
 ### Games
 - Games have a genre: Edit Genre on a game's menu picks one, or keeps what the scrapers found.
+- **Group by Genre** on All Games' Options turns the Game column's system folders into genre
+  folders (and the App Drawer's Games buttons into genres); **Group by System** turns them back.
 - **Show Only <genre>** on a game's menu filters the game lists and the App Drawer's Games;
   **Show All Genres** clears it. The footer names the genre in force.
 

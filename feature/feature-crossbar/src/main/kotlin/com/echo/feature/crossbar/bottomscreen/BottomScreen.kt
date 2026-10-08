@@ -241,6 +241,7 @@ private fun AppsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel, u: Design
             onOpenPermissions = { crossbar.onOpenSettingsScreen("settings_permissions") },
             heroOnOtherScreen = true,
             genreFilter = ui.genreFilter,
+            chipsByGenre = ui.gameGrouping == com.echo.feature.crossbar.viewmodel.GameGrouping.GENRE,
             onFocusedApp = { app, launch, options -> crossbar.bottomScreen.drawerFocused(app?.let { DrawerFocus(it, launch, options) }) },
             modifier = Modifier.fillMaxSize(),
         )

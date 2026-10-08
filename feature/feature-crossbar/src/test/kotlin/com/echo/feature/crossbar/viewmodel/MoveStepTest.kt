@@ -90,6 +90,8 @@ class SystemArtTest {
         assertEquals("sysart_allgames", systemArtSlotFor(CrossbarItem(id = "all", title = "All Games", type = CrossbarItemType.ALL_GAMES)))
         assertNull(systemArtSlotFor(CrossbarItem(id = "g", title = "Game", type = CrossbarItemType.STANDARD, platformId = "nds")))
         assertNull(systemArtSlotFor(null))
+        assertNull("a genre folder does not wear All Games' art",
+            systemArtSlotFor(genreFolderRows(mapOf(com.echo.core.domain.model.GameGenre.RPG to 3), emptyMap()).first()))
     }
 
     @Test

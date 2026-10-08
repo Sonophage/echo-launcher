@@ -284,10 +284,41 @@ internal fun platformContextMenuItems(
     }
 }
 
-internal fun allGamesContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
+internal fun allGamesContextMenuItems(grouping: GameGrouping = GameGrouping.SYSTEM): List<CrossbarContextMenuItem> = listOf(
+    // owner, 2026-10-08: the Game column's folders by system or by genre
+    if (grouping == GameGrouping.GENRE) CrossbarContextMenuItem("group_by_system", "Group by System")
+    else CrossbarContextMenuItem("group_by_genre", "Group by Genre"),
     CrossbarContextMenuItem("import_pc_games", "Import PC Games"),
     CrossbarContextMenuItem("library_manager", "Manage Library", group = MenuGroup.SETTINGS),
 )
+
+enum class GameGrouping {
+    SYSTEM, GENRE;
+
+    companion object {
+        fun fromName(name: String?): GameGrouping = entries.firstOrNull { it.name == name } ?: SYSTEM
+    }
+}
+
+internal const val GENRE_ITEM_PREFIX = "genre_folder_"
+internal fun genreItemId(genre: com.echo.core.domain.model.GameGenre) = GENRE_ITEM_PREFIX + genre.name
+internal val genreItemIds: Set<String> = com.echo.core.domain.model.GameGenre.entries.map(::genreItemId).toSet()
+internal fun genreOfItemId(id: String?): com.echo.core.domain.model.GameGenre? =
+    id?.takeIf { it.startsWith(GENRE_ITEM_PREFIX) }?.let { com.echo.core.domain.model.GameGenre.fromName(it.removePrefix(GENRE_ITEM_PREFIX)) }
+
+// a folder per genre that has games, in the list's order; a genre folder opens All Games narrowed to it
+internal fun genreFolderRows(counts: Map<com.echo.core.domain.model.GameGenre, Int>, covers: Map<String, List<String>>): List<CrossbarItem> =
+    com.echo.core.domain.model.GameGenre.entries.mapNotNull { genre ->
+        counts[genre]?.takeIf { it > 0 }?.let { n ->
+            CrossbarItem(
+                id = genreItemId(genre),
+                title = genre.label,
+                subtitle = countLabel(n, "game", "games"),
+                insideCovers = covers[genreItemId(genre)].orEmpty(),
+                type = CrossbarItemType.ALL_GAMES,
+            )
+        }
+    }
 
 internal const val MEDIA_APP_PREFIX = "media_app_"
 

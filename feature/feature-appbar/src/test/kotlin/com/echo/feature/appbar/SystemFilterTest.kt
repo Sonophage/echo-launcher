@@ -42,4 +42,14 @@ class SystemFilterTest {
         assertEquals("Games · RPG", sectionLabel(AppFilter.GAMES, com.echo.core.domain.model.GameGenre.RPG))
         assertEquals("Apps is not a games list", "Apps", sectionLabel(AppFilter.APPS, com.echo.core.domain.model.GameGenre.RPG))
     }
+
+    @Test
+    fun `grouped by genre, the Games buttons are genres and each keeps its own games`() {
+        val rpg = rom(4, "psp", "PSP").copy(genre = com.echo.core.domain.model.GameGenre.RPG)
+        val action = rom(5, "snes", "SNES").copy(genre = com.echo.core.domain.model.GameGenre.ACTION)
+        val list = listOf(rpg, action, rom(6, "gba", "GBA"))
+        assertEquals(listOf("All" to 3, "RPG" to 1, "Action" to 1), genreChips(list).map { it.label to it.count })
+        assertEquals(listOf("rom:4"), list.ofChip("RPG", byGenre = true).map { it.packageName })
+        assertEquals("systems as before", listOf("rom:5"), list.ofChip("snes", byGenre = false).map { it.packageName })
+    }
 }

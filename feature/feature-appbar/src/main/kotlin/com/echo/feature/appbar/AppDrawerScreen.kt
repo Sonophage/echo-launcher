@@ -99,11 +99,14 @@ fun AppDrawerScreen(
 
     // the crossbar's genre filter: the Games section shows that genre only (owner, 2026-10-08)
     genreFilter: com.echo.core.domain.model.GameGenre? = null,
+    // the Game column grouped by genre: the Games section's buttons are genres too
+    chipsByGenre: Boolean = false,
 
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(genreFilter) { viewModel.setGenreFilter(genreFilter) }
+    LaunchedEffect(chipsByGenre) { viewModel.setChipsByGenre(chipsByGenre) }
     val focusedApp = state.visibleApps.getOrNull(state.selectedIndex).takeIf { !state.chipFocus }
     LaunchedEffect(focusedApp) {
         onFocusedApp(focusedApp, { focusedApp?.let { viewModel.launchApp(it.packageName) } }, { focusedApp?.let(viewModel::openAppMenu) })

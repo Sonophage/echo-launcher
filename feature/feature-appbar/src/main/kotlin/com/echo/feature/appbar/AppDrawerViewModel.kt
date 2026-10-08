@@ -128,6 +128,8 @@ data class AppDrawerUiState(
 
     // the crossbar's genre filter, which the Games section follows (owner, 2026-10-08)
     val genreFilter: com.echo.core.domain.model.GameGenre? = null,
+    // the Game column is grouped by genre, so the Games section's buttons are genres
+    val chipsByGenre: Boolean = false,
 
     val chipFocus: Boolean = false,
 
@@ -222,6 +224,12 @@ class AppDrawerViewModel @Inject constructor(
                     genre = com.echo.core.domain.model.effectiveGenre(game.genre, game.genreOverride),
                 )
             }
+    }
+
+    fun setChipsByGenre(on: Boolean) {
+        if (on == _uiState.value.chipsByGenre) return
+        _uiState.update { it.copy(chipsByGenre = on, systemFilter = null, selectedIndex = 0) }
+        applyFilter()
     }
 
     fun setGenreFilter(genre: com.echo.core.domain.model.GameGenre?) {
@@ -600,10 +608,14 @@ class AppDrawerViewModel @Inject constructor(
         // the genre narrows the Games section first, so each system chip counts what it will show
         val tabApps = state.allApps.filter { app -> state.activeFilter.matches(app) }
             .let { if (state.activeFilter == AppFilter.GAMES) it.ofGenre(state.genreFilter) else it }
-        val chips = if (state.activeFilter == AppFilter.GAMES) systemChips(tabApps) else emptyList()
+        val chips = when {
+            state.activeFilter != AppFilter.GAMES -> emptyList()
+            state.chipsByGenre -> genreChips(tabApps)
+            else -> systemChips(tabApps)
+        }
         val system = state.systemFilter?.takeIf { id -> chips.any { it.id == id } }
 
-        val inTab = tabApps.ofSystem(system)
+        val inTab = tabApps.ofChip(system, state.chipsByGenre)
             .let { apps ->
                 if (state.activeFilter == AppFilter.RECENT) {
                     apps.sortedByDescending { it.lastUsedAt }

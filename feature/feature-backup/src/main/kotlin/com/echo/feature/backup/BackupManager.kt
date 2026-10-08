@@ -478,6 +478,7 @@ open class BackupManager @Inject constructor(
 
         stringPreferencesKey("display_wave_style"),
         stringPreferencesKey("display_motion_style"),
+        stringPreferencesKey("games_group_by"),
         stringPreferencesKey("display_gameboot_style"),
         stringPreferencesKey("display_launch_disc_style"),
         stringPreferencesKey("display_wave_design"),
