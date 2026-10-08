@@ -188,13 +188,13 @@ interface GameDao {
     @Query(
         """
         SELECT * FROM games
-        WHERE date_added > 0 AND is_missing = 0
+        WHERE date_added > 0 AND is_missing = 0 AND content_type = 'GAME'
         ORDER BY date_added DESC, id DESC
         """
     )
     fun observeRecentlyAdded(): kotlinx.coroutines.flow.Flow<List<GameEntity>>
 
-    @Query("SELECT COUNT(*) FROM games WHERE date_added > 0 AND is_missing = 0")
+    @Query("SELECT COUNT(*) FROM games WHERE date_added > 0 AND is_missing = 0 AND content_type = 'GAME'")
     fun observeRecentlyAddedCount(): kotlinx.coroutines.flow.Flow<Int>
 
     @Query("SELECT * FROM games WHERE play_state = :state AND is_missing = 0 ORDER BY title COLLATE NOCASE")
