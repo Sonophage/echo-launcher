@@ -136,7 +136,7 @@ folders they scan.
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/col-shelves.jpg" width="420"> | <img src="docs/screenshots/col-game.jpg" width="420"> |
-| Shelves: Playing, Backlog, Completed, Favorites | Emulation: All Games, then one card per console |
+| Shelves: Playing, Backlog, Completed, Favorites | Emulation: All Games, then one system per console |
 | <img src="docs/screenshots/col-music.jpg" width="420"> | <img src="docs/screenshots/col-video.jpg" width="420"> |
 | Music | Video |
 | <img src="docs/screenshots/col-photo.jpg" width="420"> | <img src="docs/screenshots/col-library.jpg" width="420"> |
@@ -698,7 +698,7 @@ one **system** per console, **Folders** (your ROM roots) and **Search**.
   scan, update metadata, scrape missing artwork, or remove. ROM files are never deleted. From the
   same menu: **Move**, **Change Icon**, **Change Art** (your own image or GIF in place of the covers
   from inside it), **Move Column**, **Rename Column** and **Change Column Icon**.
-- **Rescanning**: there is no file watcher. Rescan a card, use Library Manager's **Scan All
+- **Rescanning**: there is no file watcher. Rescan a system, use Library Manager's **Scan All
   Consoles** or **Re-Scan All (Remove Missing)**, or turn on *System ▸ Performance ▸ Rescan On
   Return*, which checks for new and missing games when you come back, at most every five minutes.
   A console whose folder cannot be read is skipped, so an unmounted SD card never empties a library.
