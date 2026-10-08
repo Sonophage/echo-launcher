@@ -135,4 +135,13 @@ class ProfileTest {
         val sorted = setsByLastPlayed(listOf(played("old", 10), played("never1", null), played("new", 30), played("never2", null), played("mid", 20)))
         assertEquals(listOf("new", "mid", "old", "never1", "never2"), sorted.map { it.title })
     }
+
+    // most Steam games are not in the library: the set's newest unlock places it
+    @Test
+    fun `a set outside the library is placed by its newest unlock`() {
+        val played = set("played", "played").copy(lastPlayedAt = 20)
+        val steam = set("steam", "steam").copy(lastUnlockedAt = 30)
+        val quiet = set("quiet", "quiet").copy(lastUnlockedAt = 10)
+        assertEquals(listOf("steam", "played", "quiet"), setsByLastPlayed(listOf(quiet, played, steam)).map { it.title })
+    }
 }

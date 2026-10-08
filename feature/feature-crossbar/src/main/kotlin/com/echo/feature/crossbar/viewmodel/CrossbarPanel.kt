@@ -174,7 +174,9 @@ class CrossbarPanel(
             }
             ProfileSpot.SHOWCASE -> {
                 uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.SHOWCASE)) }
-                openProfile(ProfileTab.ACHIEVEMENTS, set = index, fromPanel = true)
+                // the wall opens on its first game, the one played last (owner, 2026-10-07). [index] is the
+                // showcased achievement's place among the rarest, not a game's place in the strip
+                openProfile(ProfileTab.ACHIEVEMENTS, fromPanel = true)
             }
             ProfileSpot.FRIENDS -> {
                 uiState.update { it.copy(panelProfile = it.panelProfile.copy(spot = ProfileSpot.FRIENDS)) }

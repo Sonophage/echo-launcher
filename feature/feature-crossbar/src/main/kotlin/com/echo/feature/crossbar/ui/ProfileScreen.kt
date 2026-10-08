@@ -474,7 +474,9 @@ private fun AchievementsWall(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(BADGE_COLUMNS),
                 state = grid,
-                modifier = Modifier.weight(1.3f).fillMaxHeight(),
+                // owner, 2026-10-07: two rows of badges in view, the rest scroll, so the game strip above gets
+                // the room
+                modifier = Modifier.weight(1.3f).height(u.dp(BADGE_SIZE * 2 + 12 + 8)),
                 horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
                 verticalArrangement = Arrangement.spacedBy(u.dp(12)),
                 contentPadding = PaddingValues(u.dp(4)),
@@ -496,15 +498,15 @@ private fun CoverStrip(sets: List<AchievementSet>, art: Map<Long, String>, at: I
     LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(u.dp(10)), contentPadding = PaddingValues(vertical = u.dp(4), horizontal = u.dp(4))) {
         items(sets.size) { i ->
             val on = i == at
-            val shape = RoundedCornerShape(u.dp(12))
+            val shape = RoundedCornerShape(u.dp(16))
             Box(
-                Modifier.size(u.dp(64)).graphicsLayer(alpha = if (on) 1f else 0.55f).clip(shape).background(PanelCardFill)
+                Modifier.size(u.dp(STRIP_TILE)).graphicsLayer(alpha = if (on) 1f else 0.55f).clip(shape).background(PanelCardFill)
                     .then(if (on) Modifier.border(u.dp(if (focused) 2.5f else 1.5f), Color.White.copy(alpha = if (focused) 1f else 0.6f), shape)
                         else if (sets[i].mastered) Modifier.border(u.dp(1.5f), MasteredGold, shape) else Modifier)
                     .clickable { onSet(i) },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.EmojiEvents, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(u.dp(24)))
+                Icon(Icons.Outlined.EmojiEvents, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(u.dp(34)))
                 // a Steam set has no icon: the tile shows the game's art from the library, else Steam's box art,
                 // instead of a bare "Steam"
                 val gameArt = sets[i].gameId?.let(art::get)
@@ -515,13 +517,17 @@ private fun CoverStrip(sets: List<AchievementSet>, art: Map<Long, String>, at: I
                     gameArt != null -> AsyncImage(rememberArtworkModel(gameArt), sets[i].title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                     steamArt != null -> AsyncImage(steamArt, sets[i].title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
-                Text(if (sets[i].provider == AchievementProvider.STEAM) "Steam" else "RA", color = Color.White, fontSize = u.sp(9),
+                Text(if (sets[i].provider == AchievementProvider.STEAM) "Steam" else "RA", color = Color.White, fontSize = u.sp(11),
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = u.dp(3)).clip(RoundedCornerShape(u.dp(4)))
                         .background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = u.dp(4)))
             }
         }
     }
 }
+
+private const val BADGE_SIZE = 78
+// owner, 2026-10-07: the game strip is the wall's top row, and bigger
+private const val STRIP_TILE = 104
 
 // the Legendary tier's gold, for a mastered set
 private val MasteredGold = Color(0xFFE8A93A)
@@ -555,7 +561,7 @@ internal fun Badge(a: Achievement, focused: Boolean, u: DesignUnits, onClick: ()
     val shape = RoundedCornerShape(u.dp(16))
     val tier = tierColor(rarityTier(a.globalPercent))
     Box(
-        Modifier.size(u.dp(78)).clip(shape).background(if (focused) PanelCardFocusFill else PanelCardFill)
+        Modifier.size(u.dp(BADGE_SIZE)).clip(shape).background(if (focused) PanelCardFocusFill else PanelCardFill)
             .border(
                 if (focused) u.dp(PANEL_FOCUS_RING_WIDTH + 0.5f) else u.dp(1.5f),
                 if (focused) PanelFocusRing else if (a.isUnlocked) tier.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.08f),

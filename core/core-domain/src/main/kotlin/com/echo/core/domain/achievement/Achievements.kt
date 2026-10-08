@@ -14,6 +14,7 @@ data class AchievementSet(
     val lastSyncedAt: Long?,
     val lastPlayedAt: Long?,
     val platformId: String? = null,
+    val lastUnlockedAt: Long? = null,
 )
 
 data class Achievement(

@@ -22,6 +22,9 @@ data class AchievementSetRow(
     @ColumnInfo(name = "last_synced_at") val lastSyncedAt: Long?,
     @ColumnInfo(name = "last_played_at") val lastPlayedAt: Long?,
     @ColumnInfo(name = "platform_id") val platformId: String? = null,
+    // the newest unlock in the set: when the game is not in the library (most of Steam), the only sign of
+    // when it was played
+    @ColumnInfo(name = "last_unlocked_at") val lastUnlockedAt: Long? = null,
 )
 
 private const val SET_ROW_COLUMNS =
@@ -36,7 +39,9 @@ private const val SET_ROW_COLUMNS =
         "(SELECT COALESCE(SUM(a.points), 0) FROM account_achievements a " +
         "WHERE a.provider = s.provider AND a.provider_game_id = s.provider_game_id) AS points, " +
         "(SELECT COALESCE(SUM(a.points), 0) FROM account_achievements a " +
-        "WHERE a.provider = s.provider AND a.provider_game_id = s.provider_game_id AND a.is_earned = 1) AS earned_points"
+        "WHERE a.provider = s.provider AND a.provider_game_id = s.provider_game_id AND a.is_earned = 1) AS earned_points, " +
+        "(SELECT MAX(a.earned_at) FROM account_achievements a " +
+        "WHERE a.provider = s.provider AND a.provider_game_id = s.provider_game_id AND a.is_earned = 1) AS last_unlocked_at"
 
 @Dao
 interface AccountAchievementSetDao {

@@ -194,6 +194,7 @@ private fun AchievementSetRow.toAchievementSet(): AchievementSet? {
         lastSyncedAt = lastSyncedAt,
         lastPlayedAt = lastPlayedAt,
         platformId = platformId,
+        lastUnlockedAt = lastUnlockedAt,
     )
 }
 

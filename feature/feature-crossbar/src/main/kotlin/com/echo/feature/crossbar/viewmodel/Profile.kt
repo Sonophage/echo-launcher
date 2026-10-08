@@ -145,10 +145,10 @@ fun ProfileState.withData(next: ProfileData): ProfileState {
     )
 }
 
-// owner, 2026-10-07: the achievements strip opens on the game played last; a set never played goes after,
-// in the order it came
+// owner, 2026-10-07: the achievements strip opens on the game played last. A game not in the library has no
+// last-played time, so its newest unlock stands in; a set with neither goes after, in the order it came
 fun setsByLastPlayed(sets: List<com.echo.core.domain.achievement.AchievementSet>): List<com.echo.core.domain.achievement.AchievementSet> =
-    sets.sortedByDescending { it.lastPlayedAt ?: Long.MIN_VALUE }
+    sets.sortedByDescending { maxOf(it.lastPlayedAt ?: Long.MIN_VALUE, it.lastUnlockedAt ?: Long.MIN_VALUE) }
 
 fun recentlyPlayed(games: List<Game>, count: Int = RECENTLY_PLAYED_COUNT): List<Game> =
     games.filter { it.lastPlayedAt != null }.sortedByDescending { it.lastPlayedAt }
