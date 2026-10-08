@@ -94,6 +94,7 @@ private fun TouchSensitivity.label(): String = when (this) {
 
 data class DisplaySettingsUiState(
     val waveStyle: WaveStyle = WaveStyle.ANIMATED,
+    val motionStyle: WaveStyle = WaveStyle.ANIMATED,
 
     val waveDesign: WaveDesign = WaveDesign.PSP,
     val showBootSequence: Boolean = true,
@@ -203,6 +204,9 @@ class DisplaySettingsViewModel @Inject constructor(
             waveStyle            = runCatching {
                 WaveStyle.valueOf(prefs[KEY_WAVE_STYLE] ?: WaveStyle.ANIMATED.name)
             }.getOrDefault(WaveStyle.ANIMATED),
+            motionStyle          = com.echo.core.ui.motion.MotionWallpaperPolicy.motionStyleOf(
+                prefs[stringPreferencesKey(com.echo.core.ui.motion.MotionWallpaperPolicy.KEY)],
+            ),
             waveDesign           = runCatching {
                 WaveDesign.valueOf(prefs[KEY_WAVE_DESIGN] ?: WaveDesign.PSP.name)
             }.getOrDefault(WaveDesign.PSP),
@@ -306,6 +310,8 @@ class DisplaySettingsViewModel @Inject constructor(
         else UiMediaLimits.AUDIO_MIME.toTypedArray()
 
     fun setWaveStyle(style: WaveStyle) = save { it[KEY_WAVE_STYLE] = style.name }
+
+    fun setMotionStyle(style: WaveStyle) = save { it[stringPreferencesKey(com.echo.core.ui.motion.MotionWallpaperPolicy.KEY)] = style.name }
 
     fun setWaveDesign(design: WaveDesign) = save { it[KEY_WAVE_DESIGN] = design.name }
 

@@ -52,8 +52,10 @@ class NotificationSheetTest {
     private fun labels(s: CrossbarUiState) = stageActions(s.panelStage(), s.clearableNoticeCount).map { it.label }
 
     @Test
-    fun `what is playing or was last played stays on the orb, not in the notifications list`() {
-        assertTrue(state(playing = true).noticeFocusables.isEmpty())
+    // owner, 2026-10-08: what a player holds is now pinned first (PanelMediaTest); the last thing played, with no
+    // player holding it, still stays on the orb
+    fun `what was last played stays on the orb, not in the notifications list`() {
+        assertEquals(listOf(NoticeFocus.Media), state(playing = true).noticeFocusables)
         assertTrue(state(recent = game).noticeFocusables.isEmpty())
         assertTrue(state().noticeFocusables.isEmpty())
         assertEquals(PanelStage.Empty, state().panelStage())

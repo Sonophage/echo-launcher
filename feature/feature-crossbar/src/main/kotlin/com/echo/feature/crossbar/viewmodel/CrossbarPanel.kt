@@ -425,7 +425,8 @@ class CrossbarPanel(
         if (index < 0) return
         vm.markTouchInput()
         uiState.update { it.copy(panelTab = PanelTab.NOTIFICATIONS, noticeCursor = index) }
-        vm.runStageButton(GamepadAction.SELECT)
+        // the media row only brings its stage forward; its buttons are on the stage
+        if (focus != NoticeFocus.Media) vm.runStageButton(GamepadAction.SELECT)
     }
 
     fun onFocusedNoticeTapped() {

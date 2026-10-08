@@ -108,6 +108,8 @@ import com.echo.feature.crossbar.viewmodel.LibraryChip
 import com.echo.feature.crossbar.viewmodel.NoticeFocus
 import com.echo.feature.crossbar.viewmodel.PanelEntry
 import com.echo.feature.crossbar.viewmodel.PanelStage
+import com.echo.feature.crossbar.viewmodel.formatDuration
+import com.echo.feature.crossbar.viewmodel.playbackFraction
 import com.echo.feature.crossbar.viewmodel.PanelTab
 import com.echo.feature.crossbar.viewmodel.ProfileData
 import com.echo.feature.crossbar.viewmodel.ProfileFocus
@@ -162,6 +164,11 @@ fun CrossbarNotificationBar(
     onTabTapped: (PanelTab) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    // the media a player holds, pinned first above the notifications (owner, 2026-10-08, design 4a)
+    media: PanelStage.Music? = null,
+    // the focused stage's buttons, the footer's own, so a tap does what the button does
+    actions: List<com.echo.feature.crossbar.viewmodel.StageAction> = emptyList(),
+    onStageButton: (GamepadAction) -> Unit = {},
 ) {
     if (pull.progress.value <= 0f && !open) return
     Box(modifier.fillMaxSize().graphicsLayer { translationY = -(1f - pull.progress.value) * size.height }) {
@@ -189,13 +196,13 @@ fun CrossbarNotificationBar(
                     val others = entries.filter { it.focus != focus }
                     if (u.square) {
                         Column(Modifier.fillMaxSize().padding(top = u.dp(24)), verticalArrangement = Arrangement.spacedBy(u.dp(20))) {
-                            Box(Modifier.fillMaxWidth().weight(1f)) { FocusedNotice(stage, stageIcon?.bitmap, tint, u, onFocusedTapped) }
-                            NoticeList(others, androidAccessGranted, u, onRowTapped, onGrantAndroidAccess, Modifier.fillMaxWidth().weight(1f))
+                            Box(Modifier.fillMaxWidth().weight(1f)) { FocusedNotice(stage, stageIcon?.bitmap, tint, u, onFocusedTapped, actions, onStageButton) }
+                            NoticeList(others, media, focus == NoticeFocus.Media, androidAccessGranted, u, onRowTapped, onGrantAndroidAccess, Modifier.fillMaxWidth().weight(1f))
                         }
                     } else {
                         Row(Modifier.fillMaxSize().padding(top = u.dp(24)), horizontalArrangement = Arrangement.spacedBy(u.dp(36))) {
-                            Box(Modifier.weight(1.15f).fillMaxHeight()) { FocusedNotice(stage, stageIcon?.bitmap, tint, u, onFocusedTapped) }
-                            NoticeList(others, androidAccessGranted, u, onRowTapped, onGrantAndroidAccess, Modifier.weight(1f).fillMaxHeight())
+                            Box(Modifier.weight(1.15f).fillMaxHeight()) { FocusedNotice(stage, stageIcon?.bitmap, tint, u, onFocusedTapped, actions, onStageButton) }
+                            NoticeList(others, media, focus == NoticeFocus.Media, androidAccessGranted, u, onRowTapped, onGrantAndroidAccess, Modifier.weight(1f).fillMaxHeight())
                         }
                     }
                 }
@@ -246,7 +253,16 @@ private fun NoticeChips(chip: NoticeChip, allCount: Int, u: DesignUnits, onTappe
 
 // the focused notice shown large, as a card tinted by its app
 @Composable
-private fun FocusedNotice(stage: PanelStage, icon: ImageBitmap?, tint: Color, u: DesignUnits, onTapped: () -> Unit) {
+private fun FocusedNotice(
+    stage: PanelStage,
+    icon: ImageBitmap?,
+    tint: Color,
+    u: DesignUnits,
+    onTapped: () -> Unit,
+    actions: List<com.echo.feature.crossbar.viewmodel.StageAction>,
+    onStageButton: (GamepadAction) -> Unit,
+) {
+    if (stage is PanelStage.Music) return MediaStage(stage, u, actions, onStageButton)
     val now = System.currentTimeMillis()
     val (app, sub, title, text) = when (stage) {
         is PanelStage.Android -> NoticeCardText(stage.notice.appLabel, relativeTime(now, stage.notice.postedAt), stage.notice.title ?: stage.notice.appLabel, stage.notice.text)
@@ -282,11 +298,73 @@ private fun FocusedNotice(stage: PanelStage, icon: ImageBitmap?, tint: Color, u:
     }
 }
 
+// design 4a: the art, the title large, where it is, and its buttons; the position ticks outside the ui state
+@Composable
+private fun MediaStage(
+    media: PanelStage.Music,
+    u: DesignUnits,
+    actions: List<com.echo.feature.crossbar.viewmodel.StageAction>,
+    onStageButton: (GamepadAction) -> Unit,
+) {
+    val positionMs = media.livePositionMs()
+    Column(Modifier.fillMaxWidth().padding(top = u.dp(8)), verticalArrangement = Arrangement.spacedBy(u.dp(22))) {
+        Eyebrow(listOfNotNull("Now playing", media.app ?: "Music").joinToString(" · "), u)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(28))) {
+            Art(media.art, u.dp(200), u.dp(200), u.dp(18), Icons.Outlined.MusicNote, u)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(10))) {
+                Text(if (media.playing) "Playing" else "Paused", color = Faint, fontSize = u.sp(14), fontWeight = FontWeight.Light)
+                Headline(media.title, u.sp(52), 2)
+                Meta(listOfNotNull(media.artist, media.album).joinToString(" · "), u.sp(18))
+            }
+        }
+        if (media.durationMs > 0) Column(verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+            Box(Modifier.fillMaxWidth().height(u.dp(4)).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.15f))) {
+                Box(Modifier.fillMaxWidth(playbackFraction(positionMs, media.durationMs) ?: 0f).fillMaxHeight().background(Color.White))
+            }
+            Row(Modifier.fillMaxWidth()) {
+                Text(formatDuration(positionMs), color = Faint, fontSize = u.sp(13))
+                Spacer(Modifier.weight(1f))
+                Text(formatDuration(media.durationMs), color = Faint, fontSize = u.sp(13))
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(u.dp(12))) {
+            actions.forEach { a -> com.echo.core.ui.design.PanelButton(a.button, a.label, u) { onStageButton(a.button) } }
+        }
+    }
+}
+
+// the pinned row: what plays, above the notifications, lit while it has the controller
+@Composable
+private fun PinnedMediaRow(media: PanelStage.Music, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(u.dp(PANEL_CARD_RADIUS))
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Brush.horizontalGradient(listOf(MusicTint.copy(alpha = 0.55f), MusicTint.copy(alpha = 0.18f))))
+            .border(u.dp(if (focused) 2 else 1), Color.White.copy(alpha = if (focused) 1f else 0.2f), shape)
+            .clickable(onClick = onClick)
+            .padding(start = u.dp(14), end = u.dp(18), top = u.dp(12), bottom = u.dp(12)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(u.dp(14)),
+    ) {
+        Art(media.art, u.dp(42), u.dp(42), u.dp(10), Icons.Outlined.MusicNote, u)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
+            Text(media.title, color = Color.White, fontSize = u.sp(15), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(media.app ?: "Now playing", media.artist).joinToString(" · "), color = Color.White.copy(alpha = 0.7f),
+                fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Icon(Icons.Filled.PlayArrow, null, tint = Color.White.copy(alpha = if (media.playing) 1f else 0.6f), modifier = Modifier.size(u.dp(20)))
+    }
+}
+
 private data class NoticeCardText(val app: String, val sub: String, val title: String, val text: String?)
 
 @Composable
 private fun NoticeList(
     entries: List<PanelEntry>,
+    media: PanelStage.Music?,
+    mediaFocused: Boolean,
     androidAccessGranted: Boolean,
     u: DesignUnits,
     onRowTapped: (NoticeFocus) -> Unit,
@@ -297,6 +375,7 @@ private fun NoticeList(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(u.dp(10)),
     ) {
+        media?.let { item(key = "media") { PinnedMediaRow(it, mediaFocused, u) { onRowTapped(NoticeFocus.Media) } } }
         if (!androidAccessGranted) {
             item(key = "grant") {
                 Text("Turn on Notification access to see other apps here", color = Faint, fontSize = u.sp(14),

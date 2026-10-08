@@ -252,12 +252,14 @@ fun DisplaySettingsScreen(
                         selectedIndex = viewModel.waveStyleOptions.indexOfFirst { it.first == state.waveStyle },
                         onPick   = { viewModel.setWaveStyle(viewModel.waveStyleOptions[it].first) },
                     )
-                } else if (state.motionWallpaperPath != null) {
+                }
+                // the video wallpaper moves on its own setting, so the wave can be off with the video playing
+                if (state.motionWallpaperPath != null) {
                     SettingsPickerRow(
                         label    = "Background Motion",
                         options  = viewModel.waveStyleOptions.map { SettingsPickerOption(it.second) },
-                        selectedIndex = viewModel.waveStyleOptions.indexOfFirst { it.first == state.waveStyle },
-                        onPick   = { viewModel.setWaveStyle(viewModel.waveStyleOptions[it].first) },
+                        selectedIndex = viewModel.waveStyleOptions.indexOfFirst { it.first == state.motionStyle },
+                        onPick   = { viewModel.setMotionStyle(viewModel.waveStyleOptions[it].first) },
                     )
                 }
 

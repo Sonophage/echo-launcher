@@ -145,6 +145,8 @@ internal fun videoFileContextMenuItems(
     add(CrossbarContextMenuItem("video_play", "Play"))
     if (resumePositionMs > 0) add(CrossbarContextMenuItem("video_resume", "Resume"))
     add(CrossbarContextMenuItem("video_details", "Details"))
+    // owner, 2026-10-08: a video can be the wallpaper; MotionWallpaper decides whether it fits its limits
+    add(CrossbarContextMenuItem("video_wallpaper", "Set as Wallpaper"))
 
     add(CrossbarContextMenuItem("video_favorite", if (isFavorite) "Remove from Favorites" else "Add to Favorites", group = MenuGroup.LIBRARY, pinnedToRoot = true))
     add(CrossbarContextMenuItem("video_add_playlist", "Add to Playlist", group = MenuGroup.LIBRARY))

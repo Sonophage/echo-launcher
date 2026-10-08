@@ -3,6 +3,13 @@ package com.echo.core.ui.motion
 import com.echo.core.ui.wave.WaveStyle
 
 object MotionWallpaperPolicy {
+    // the video wallpaper's own motion, apart from the wave (owner, 2026-10-08: turning the wave off stopped the
+    // video). Unset, it plays: the wave no longer decides it
+    const val KEY = "display_motion_style"
+
+    fun motionStyleOf(saved: String?): WaveStyle =
+        saved?.let { runCatching { WaveStyle.valueOf(it) }.getOrNull() } ?: WaveStyle.ANIMATED
+
     enum class Decision {
         POSTER,
 

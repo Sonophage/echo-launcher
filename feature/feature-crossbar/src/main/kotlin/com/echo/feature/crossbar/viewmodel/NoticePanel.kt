@@ -128,6 +128,9 @@ private fun gridMove(at: Int, move: PanelMove, columns: Int, count: Int): Int {
 }
 
 sealed interface NoticeFocus {
+    // what a player holds, pinned above the notifications (owner, 2026-10-08)
+    data object Media : NoticeFocus
+
     data class Notice(val key: String) : NoticeFocus
 
     data class Launcher(val id: Long) : NoticeFocus
@@ -260,7 +263,12 @@ fun PanelStage.islandProgress(positionMs: Long): Float? = when (this) {
     else -> null
 }
 
+// owner, 2026-10-08: the media a player holds, playing or paused, is the panel's first row and its stage
+// (design 4a); the last thing played, with no player holding it, stays on the orb
+fun CrossbarUiState.pinnedMedia(): PanelStage.Music? = (mediaStage() as? PanelStage.Music)?.takeIf { it.loaded }
+
 fun CrossbarUiState.panelStage(): PanelStage = when (val focus = focusedNotice) {
+    NoticeFocus.Media -> pinnedMedia()
     is NoticeFocus.Notice -> androidNotices.firstOrNull { it.key == focus.key }?.let { PanelStage.Android(it) }
     is NoticeFocus.Launcher -> launcherNotices.firstOrNull { it.id == focus.id }?.let { PanelStage.Launcher(it) }
     null -> null
@@ -278,8 +286,14 @@ fun stageActions(stage: PanelStage, clearable: Int): List<StageAction> = buildLi
     fun x(label: String, command: StageCommand) = add(StageAction(GamepadAction.CHANGE_SORT, label, command))
     fun y(label: String, command: StageCommand) = add(StageAction(GamepadAction.OPEN_CONTEXT_MENU, label, command))
     val clearAll = { if (clearable > 0) y("Clear all $clearable", StageCommand.CLEAR_ALL) }
-    // the panel shows notices only; what is playing or was last played is on the orb
     when (stage) {
+        // design 4a: A plays or pauses, X skips, Y opens the player (ECHO's, or the app's)
+        is PanelStage.Music -> {
+            a(if (stage.playing) "Pause" else "Play", StageCommand.PLAY_PAUSE)
+            x("Next track", StageCommand.NEXT_TRACK)
+            if (stage.packageName != null) y("Open ${stage.app ?: "app"}", StageCommand.OPEN_APP)
+            else y("Open Music", StageCommand.OPEN_MUSIC)
+        }
         is PanelStage.Android -> {
             if (stage.notice.canOpen) a("Open", StageCommand.OPEN_NOTICE)
             if (stage.notice.canDismiss) x("Dismiss", StageCommand.DISMISS)

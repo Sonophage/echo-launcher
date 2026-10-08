@@ -120,6 +120,7 @@ import com.echo.feature.crossbar.ui.detail.MetadataPreviewPanel
 import com.echo.feature.video.VideoDetailScreen
 import com.echo.feature.photos.PhotoViewerScreen
 import com.echo.feature.crossbar.viewmodel.mediaStage
+import com.echo.feature.crossbar.viewmodel.pinnedMedia
 import com.echo.feature.crossbar.viewmodel.recentStage
 import com.echo.feature.crossbar.viewmodel.PanelStage
 import com.echo.feature.crossbar.viewmodel.clearableNoticeCount
@@ -230,6 +231,7 @@ fun CrossbarShellContainer(
         onOrbTransport = viewModel::onOrbTransport,
         onNotificationsDismissed = viewModel.panel::closeNotifications,
         onPanelRowTapped = viewModel.panel::onPanelRowTapped,
+        onStageButton = viewModel::runStageButton,
         onFocusedNoticeTapped = viewModel.panel::onFocusedNoticeTapped,
         onPanelTabTapped = viewModel.panel::onPanelTabTapped,
         onNotificationsSwipedOpen = viewModel.panel::onNotificationsSwipedOpen,
@@ -416,6 +418,7 @@ fun CrossbarShell(
     onOrbTransport: (com.echo.feature.crossbar.viewmodel.StageCommand) -> Unit = {},
     onNotificationsDismissed: () -> Unit = {},
     onPanelRowTapped: (com.echo.feature.crossbar.viewmodel.NoticeFocus) -> Unit = {},
+    onStageButton: (com.echo.core.domain.model.GamepadAction) -> Unit = {},
     onFocusedNoticeTapped: () -> Unit = {},
     onPanelTabTapped: (com.echo.feature.crossbar.viewmodel.PanelTab) -> Unit = {},
     onNotificationsSwipedOpen: () -> Unit = {},
@@ -639,7 +642,7 @@ fun CrossbarShell(
                 MotionWallpaperPolicy.Inputs(
                     hasMotion = uiState.motionWallpaperPath != null,
                     hasPoster = uiState.customWallpaperPath != null,
-                    style = uiState.waveStyle,
+                    style = uiState.motionStyle,
                     covered = waveCovered,
                     throttled = powerThrottled,
                     appVisible = appVisible,
@@ -1124,6 +1127,9 @@ fun CrossbarShell(
                     accent = com.echo.core.ui.theme.menuCursorEdge(),
                     onRowTapped = onPanelRowTapped,
                     onFocusedTapped = onFocusedNoticeTapped,
+                    media = uiState.pinnedMedia(),
+                    actions = stageActions(panelStage, uiState.clearableNoticeCount),
+                    onStageButton = onStageButton,
                     settingFocus = uiState.panelSetting,
                     onQuickTapped = onQuickSettingTapped,
                     onSettingTapped = onPanelSettingTapped,

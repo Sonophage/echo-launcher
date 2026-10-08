@@ -240,6 +240,13 @@ class ContextMenusTest {
         )
     }
 
+    // owner, 2026-10-08: any video can be made the wallpaper from its menu
+    @Test
+    fun `a video's menu offers Set as Wallpaper`() {
+        assertTrue("video_wallpaper" in ids(videoFileContextMenuItems(false, 0L, false, false)))
+        assertTrue("video_wallpaper" in ids(videoFileContextMenuItems(true, 90_000L, true, true)))
+    }
+
     @Test
     fun `resume appears only when there is somewhere to resume to`() {
         assertFalse("video_resume" in ids(videoFileContextMenuItems(false, 0L, false, false)))

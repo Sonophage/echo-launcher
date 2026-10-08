@@ -512,6 +512,8 @@ data class CrossbarUiState(
     val customWallpaperPath: String? = null,
 
     val motionWallpaperPath: String? = null,
+    // how the video wallpaper moves, its own setting apart from the wave
+    val motionStyle: com.echo.core.ui.wave.WaveStyle = com.echo.core.ui.wave.WaveStyle.ANIMATED,
 
     val showBootSequence: Boolean = true,
 
@@ -769,12 +771,13 @@ data class CrossbarUiState(
     val overlayKeepsChrome: Boolean
         get() = (activeContextMenu != null || notificationsOpen || moving != null) && !otherBlockingOverlay
 
-    // the notifications under the current chip; what is playing or was last played lives on the orb
+    // the notifications under the current chip
     val noticeEntries: List<PanelEntry>
         get() = panelEntries(androidNotices, launcherNotices).filter { noticeChip in it.chips() }
 
+    // the media a player holds comes first, under every chip, so the panel opens on it
     val noticeFocusables: List<NoticeFocus>
-        get() = noticeEntries.map { it.focus }
+        get() = listOfNotNull(NoticeFocus.Media.takeIf { pinnedMedia() != null }) + noticeEntries.map { it.focus }
 
     val focusedNotice: NoticeFocus?
         get() = if (panelTab != PanelTab.NOTIFICATIONS) null else noticeFocusables.let { rows ->
@@ -1340,6 +1343,7 @@ class CrossbarViewModel @Inject constructor(
     private val setupStateProvider: com.echo.feature.launcher.SetupStateProvider,
     internal val customIconStore: CustomIconStore,
     internal val echoThemeStore: EchoThemeStore,
+    internal val motionWallpaper: com.echo.core.data.wallpaper.MotionWallpaper,
     internal val uiMediaStore: com.echo.core.data.repository.UiMediaStore,
     private val gameBootGate: com.echo.feature.launcher.GameBootGate,
     private val mediaLaunchGate: com.echo.core.data.launch.MediaLaunchGate,
@@ -3512,9 +3516,29 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
+    // when the island was last pressed, by tap or Select, so a second press in time opens the player
+    private var orbPressAt = 0L
+
+    private fun orbDoublePressed(): Boolean {
+        val now = android.os.SystemClock.uptimeMillis()
+        val double = isOrbDoublePress(orbPressAt, now)
+        orbPressAt = if (double) 0L else now
+        return double
+    }
+
+    // the player for whatever is playing: ECHO's own, or the app whose session it is
+    private fun openNowPlaying() {
+        val music = _uiState.value.mediaStage() as? PanelStage.Music ?: return
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update { it.copy(orbLevel = 0) }
+        val pkg = music.packageName
+        if (pkg != null) launching.launchAppWithDisc(pkg, music.art) else if (_uiState.value.musicPlayback.track != null) showMusicPlayer()
+    }
+
     fun onOrbTapped() {
         markTouchInput()
-        if (_uiState.value.orbKind() == null) return
+        val kind = _uiState.value.orbKind() ?: return
+        if (kind == OrbKind.MUSIC && orbDoublePressed()) return openNowPlaying()
         menuSound.play(MenuSound.SCROLL)
         _uiState.update { it.copy(orbLevel = if (it.orbLevel == 0) 1 else 0) }
     }
@@ -3528,6 +3552,7 @@ class CrossbarViewModel @Inject constructor(
     // Start: the island takes the controller, as up from the top of a list does; nothing when it is empty
     private fun focusOrb(state: CrossbarUiState) {
         if (state.orbKind() == null) return
+        orbDoublePressed()
         menuSound.play(MenuSound.SCROLL)
         _uiState.update { it.copy(orbLevel = 1) }
     }
@@ -3562,6 +3587,10 @@ class CrossbarViewModel @Inject constructor(
         if (kind == null) {
             _uiState.update { it.copy(orbLevel = 0) }
             return false
+        }
+        if (action == GamepadAction.OPEN_ISLAND && kind == OrbKind.MUSIC && orbDoublePressed()) {
+            openNowPlaying()
+            return true
         }
         when (val step = orbStep(action, state.orbLevel, kind)) {
             is OrbStep.Level -> {
@@ -4625,6 +4654,9 @@ class CrossbarViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         waveStyle            = style,
+                        motionStyle          = com.echo.core.ui.motion.MotionWallpaperPolicy.motionStyleOf(
+                            prefs[androidx.datastore.preferences.core.stringPreferencesKey(com.echo.core.ui.motion.MotionWallpaperPolicy.KEY)],
+                        ),
                         waveDesign           = design,
                         respectBatterySaver  = prefs[KEY_RESPECT_BATTERY] ?: true,
                         waveOverWallpaper    = prefs[KEY_WAVE_OVER_WALLPAPER] ?: false,

@@ -40,4 +40,12 @@ class NowPlayingOrbTest {
         assertEquals(OrbStep.RestAndPass, orbStep(GamepadAction.HOME, 1, music))
         assertEquals(OrbStep.RestAndPass, orbStep(GamepadAction.OPEN_SEARCH, 1, music))
     }
+
+    // owner, 2026-10-08: two presses of the island open the player; a slow second press is a single press again
+    @Test
+    fun `a second island press in time is a double press, a slow one is not`() {
+        assertEquals(true, isOrbDoublePress(lastPressAt = 10_000L, now = 10_000L + ORB_DOUBLE_PRESS_MS))
+        assertEquals(false, isOrbDoublePress(lastPressAt = 10_000L, now = 10_000L + ORB_DOUBLE_PRESS_MS + 1))
+        assertEquals("no earlier press", false, isOrbDoublePress(lastPressAt = 0L, now = 200L))
+    }
 }

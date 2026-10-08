@@ -12,6 +12,12 @@ fun CrossbarUiState.orbKind(): OrbKind? = when {
     else -> null
 }
 
+// owner, 2026-10-08: a second press of the island soon after the first opens the player for whatever plays
+const val ORB_DOUBLE_PRESS_MS = 400L
+
+fun isOrbDoublePress(lastPressAt: Long, now: Long): Boolean =
+    lastPressAt > 0L && now - lastPressAt in 0L..ORB_DOUBLE_PRESS_MS
+
 sealed interface OrbStep {
     data class Level(val level: Int) : OrbStep
     data class Transport(val command: StageCommand) : OrbStep

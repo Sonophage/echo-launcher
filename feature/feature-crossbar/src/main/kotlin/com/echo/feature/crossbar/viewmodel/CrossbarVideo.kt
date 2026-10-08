@@ -303,6 +303,17 @@ class CrossbarVideo(
                 vm.appAction { videoRepository.removeVideoFromPlaylist(nav.id, videoId) }
             }
 
+            "video_wallpaper" -> scope.launch {
+                val video = videoRepository.getVideo(videoId) ?: return@launch
+                val result = vm.motionWallpaper.apply(video.mimeType ?: "video/mp4", video.sizeBytes) {
+                    vm.context.contentResolver.openInputStream(android.net.Uri.parse(video.uri))
+                }
+                com.echo.core.ui.notification.SystemToasts.post(
+                    if (result.applied) "Wallpaper set" else "Couldn't set the wallpaper",
+                    if (result.applied) video.title ?: video.displayName else result.message,
+                    if (result.applied) com.echo.core.ui.notification.ToastKind.SUCCESS else com.echo.core.ui.notification.ToastKind.ERROR,
+                )
+            }
             "video_remove_recent" -> vm.appAction { videoRepository.clearLastWatched(videoId) }
             "video_remove" -> vm.appAction { videoRepository.removeVideo(videoId) }
         }

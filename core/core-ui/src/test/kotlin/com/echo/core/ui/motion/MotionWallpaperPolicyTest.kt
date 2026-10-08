@@ -118,4 +118,14 @@ class MotionWallpaperPolicyTest {
             )
         }
     }
+
+    // owner, 2026-10-08: turning the wave off stopped the video wallpaper; they are two settings now
+    @Test
+    fun `the video plays whatever the wave is, until its own motion says otherwise`() {
+        assertEquals("unset: the video plays", MotionWallpaperPolicy.Decision.PLAY,
+            MotionWallpaperPolicy.decide(allClear.copy(style = MotionWallpaperPolicy.motionStyleOf(null))))
+        assertEquals("set still: a poster", MotionWallpaperPolicy.Decision.POSTER,
+            MotionWallpaperPolicy.decide(allClear.copy(style = MotionWallpaperPolicy.motionStyleOf(WaveStyle.STATIC.name))))
+        assertEquals("a stored value that no longer names a style plays", WaveStyle.ANIMATED, MotionWallpaperPolicy.motionStyleOf("SPARKLE"))
+    }
 }
