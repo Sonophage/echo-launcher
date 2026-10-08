@@ -26,6 +26,12 @@ internal fun genreChips(games: List<InstalledApp>): List<SystemChip> =
 internal fun List<InstalledApp>.ofChip(id: String?, byGenre: Boolean): List<InstalledApp> =
     if (byGenre) ofGenre(com.echo.core.domain.model.GameGenre.fromName(id)) else ofSystem(id)
 
+// X switches the grouping only in the Games section, where the buttons are systems or genres
+internal fun groupingToggleApplies(action: com.echo.core.domain.model.GamepadAction, section: AppFilter): Boolean =
+    action == com.echo.core.domain.model.GamepadAction.CHANGE_SORT && section == AppFilter.GAMES
+
+internal fun groupingHintLabel(byGenre: Boolean): String = if (byGenre) "Group by System" else "Group by Genre"
+
 // the Games section narrowed to one genre; null keeps them all
 internal fun List<InstalledApp>.ofGenre(genre: com.echo.core.domain.model.GameGenre?): List<InstalledApp> =
     if (genre == null) this else filter { it.genre == genre }

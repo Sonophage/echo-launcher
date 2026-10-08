@@ -4229,6 +4229,9 @@ class CrossbarViewModel @Inject constructor(
         it.copy(selectedPlatformId = null, genreFilter = it.genreFilter.takeUnless { _ -> it.gameGrouping == GameGrouping.GENRE })
     }
 
+    fun toggleGameGrouping() =
+        setGameGrouping(if (_uiState.value.gameGrouping == GameGrouping.GENRE) GameGrouping.SYSTEM else GameGrouping.GENRE)
+
     internal fun setGameGrouping(grouping: GameGrouping) {
         menuSound.play(MenuSound.SELECT)
         viewModelScope.launch { context.echoDataStore.edit { it[KEY_GAMES_GROUP_BY] = grouping.name } }

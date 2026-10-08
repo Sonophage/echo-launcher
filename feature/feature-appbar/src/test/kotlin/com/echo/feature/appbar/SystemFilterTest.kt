@@ -52,4 +52,14 @@ class SystemFilterTest {
         assertEquals(listOf("rom:4"), list.ofChip("RPG", byGenre = true).map { it.packageName })
         assertEquals("systems as before", listOf("rom:5"), list.ofChip("snes", byGenre = false).map { it.packageName })
     }
+
+    // owner, 2026-10-08: X in the drawer's Games section switches systems and genres, and says which it will do
+    @Test
+    fun `X groups in the Games section only, and the hint names the other grouping`() {
+        assertEquals(true, groupingToggleApplies(com.echo.core.domain.model.GamepadAction.CHANGE_SORT, AppFilter.GAMES))
+        assertEquals(false, groupingToggleApplies(com.echo.core.domain.model.GamepadAction.CHANGE_SORT, AppFilter.APPS))
+        assertEquals(false, groupingToggleApplies(com.echo.core.domain.model.GamepadAction.SELECT, AppFilter.GAMES))
+        assertEquals("Group by Genre", groupingHintLabel(byGenre = false))
+        assertEquals("Group by System", groupingHintLabel(byGenre = true))
+    }
 }

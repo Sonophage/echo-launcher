@@ -101,6 +101,8 @@ fun AppDrawerScreen(
     genreFilter: com.echo.core.domain.model.GameGenre? = null,
     // the Game column grouped by genre: the Games section's buttons are genres too
     chipsByGenre: Boolean = false,
+    // X in the Games section switches the grouping between systems and genres (owner, 2026-10-08)
+    onToggleGrouping: (() -> Unit)? = null,
 
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
@@ -140,6 +142,7 @@ fun AppDrawerScreen(
                 pendingGamepadAction == GamepadAction.OPEN_SEARCH ||
                     pendingGamepadAction == GamepadAction.NEXT_PAGE -> onOpenAppSearch("")
                 pendingGamepadAction == GamepadAction.PREV_PAGE -> closeDrawer()
+                groupingToggleApplies(pendingGamepadAction, state.activeFilter) && onToggleGrouping != null -> onToggleGrouping()
                 else -> viewModel.handleGamepadAction(pendingGamepadAction)
             }
             onGamepadActionConsumed()
@@ -225,6 +228,7 @@ fun AppDrawerScreen(
             onTouchInteraction()
             viewModel.onSystemChipTapped(id)
         },
+        groupingHint = onToggleGrouping?.let { toggle -> groupingHintLabel(chipsByGenre) to toggle },
         onCloseMenu = { viewModel.closeAppMenu() },
         onConfirmUninstall = { viewModel.confirmUninstall() },
         onCancelUninstall = { viewModel.cancelUninstall() },
@@ -257,6 +261,8 @@ internal fun AppDrawerContent(
     onLetterRailTouch: (Int) -> Unit = {},
     onLetterRailReleased: () -> Unit = {},
     onSystemChip: (String?) -> Unit = {},
+    // the X hint in the Games section and what a tap on it does
+    groupingHint: Pair<String, () -> Unit>? = null,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize().filmGrain()) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
@@ -317,8 +323,10 @@ internal fun AppDrawerContent(
             // owner, 2026-10-07: the kit's footer, not a hint row of its own. The section is the footer's filter,
             // LT/RT and its word, at the far left (owner, 2026-10-06)
             com.echo.core.ui.components.EchoHintBar(
-                items = listOf(
+                items = listOfNotNull(
                     com.echo.core.ui.components.ControllerPromptItem(GamepadAction.BACK, "Back"),
+                    groupingHint?.takeIf { state.activeFilter == AppFilter.GAMES }
+                        ?.let { com.echo.core.ui.components.ControllerPromptItem(GamepadAction.CHANGE_SORT, it.first) },
                     com.echo.core.ui.components.ControllerPromptItem(GamepadAction.NEXT_PAGE, "Search"),
                 ),
                 primary = focused?.let { com.echo.core.ui.components.HintAction(GamepadAction.SELECT, actionLabel(it)) },
@@ -332,6 +340,7 @@ internal fun AppDrawerContent(
                     when (action) {
                         GamepadAction.SELECT -> focused?.let(onBandLaunch)
                         GamepadAction.NEXT_PAGE -> onOpenSearch()
+                        GamepadAction.CHANGE_SORT -> groupingHint?.second?.invoke()
                         GamepadAction.BACK -> onBack()
                         else -> Unit
                     }
