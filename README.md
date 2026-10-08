@@ -223,7 +223,10 @@ Look, Controls, Accounts, System, Setup**.
 The **Profile** tab shows your name and picture, your games, hours and achievements, what you played
 last with its achievement progress, and your Steam, RetroAchievements and Discord accounts. Its row
 of big numbers, with its **Library overview** button, opens **Overview**: your library at a glance,
-with ECHO's version, the artwork and cache, and every column's counts.
+with ECHO's version, the artwork and cache, and every column's counts. Its **Achievements** wall
+starts with the game you played last (a Steam game outside your library is placed by its newest
+unlock): round game tiles marked with a blue dot for Steam or a gold one for RetroAchievements, the
+set's progress and points under its ring, and two rows of badges that scroll.
 
 | | |
 |:---:|:---:|
@@ -574,7 +577,7 @@ Every setting for the crossbar itself is on this one tab.
 | **Apps On The Recent Shelf** · **Last Played Size** | whether apps join Last Played, and how many items it keeps |
 | **Show Device Notifications** · **Last Opened In The Island** | what the top bar shows |
 | **Categories** | opens the category manager (below) |
-| **Customize Crossbar Icons** | replace any of the 42 theme glyphs or a console's icon with your own image or GIF, live |
+| **Customize Crossbar Icons** | replace any of the 42 theme glyphs, a console's icon, or a system's art with your own image or GIF; a side rail over the live crossbar |
 
 ### Boot and launch — *Look ▸ Boot*
 
@@ -691,14 +694,19 @@ one **system** per console, **Folders** (your ROM roots) and **Search**.
 
 - **Add a console by hand**: *Emulators ▸ Library Manager ▸ Add Console*, choose the platform,
   assign an emulator, scan. The folder is found under your ROM root automatically.
-- **Manage a card** from its **≡** menu or Library Manager: rename, change emulator, hide, scan,
-  update metadata, scrape missing artwork, or remove. ROM files are never deleted.
+- **Manage a system** from its **Options** menu or Library Manager: rename, change emulator, hide,
+  scan, update metadata, scrape missing artwork, or remove. ROM files are never deleted. From the
+  same menu: **Move**, **Change Icon**, **Change Art** (your own image or GIF in place of the covers
+  from inside it), **Move Column**, **Rename Column** and **Change Column Icon**.
 - **Rescanning**: there is no file watcher. Rescan a card, use Library Manager's **Scan All
   Consoles** or **Re-Scan All (Remove Missing)**, or turn on *System ▸ Performance ▸ Rescan On
   Return*, which checks for new and missing games when you come back, at most every five minutes.
   A console whose folder cannot be read is skipped, so an unmounted SD card never empties a library.
-- **Android games**: **Find Games** on the Android card's menu, or **≡ ▸ Mark as Game** on an app.
-- **PC games**: the PC system's **Import PC Games**.
+- **Android games**: **Find Games** on the Android system's menu, or **≡ ▸ Mark as Game** on an app.
+- **PC games**: the PC system's **Import PC Games**, or **Scan This Console**. ECHO launches PC
+  games through GameNative, GameHub, BannerHub, Winlator and **DroidDeck** (Steam games on its own
+  link, `droiddeck://game/<id>`). DroidDeck's exported `.droiddeck` files in `<ROM root>/windows`
+  become games when DroidDeck is installed.
 
 ### Emulators
 
