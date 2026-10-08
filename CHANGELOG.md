@@ -52,6 +52,7 @@ released; it becomes the next release's notes.
 
 ### Fixes
 - The keyboard shows on the Thor's bottom screen in Swap.
+- The Thor's top screen no longer turns grey after a rename prompt is cancelled.
 - The boot sound plays to its end.
 - Applying a theme with nothing left out applies all of it again.
 - Theme files are written the same way every time.
