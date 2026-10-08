@@ -55,6 +55,15 @@ private fun recentInfoPrompt(state: CrossbarUiState, item: CrossbarItem): Crossb
     else -> null
 }
 
+// whether the crossbar's footer is drawn: for the panel, for a hint the hint delay allows, for root actions,
+// and always while moving, as Move's A and B are the only way to learn how to drop or cancel (owner, 2026-10-08)
+fun footerShown(state: CrossbarUiState, rootActionsVisible: Boolean): Boolean =
+    state.notificationsOpen ||
+        ((state.showContextMenuHint || rootActionsVisible || state.moving != null) && state.stripShowsCrossbarContext)
+
+// Minimal hints (the A card and the filter only) give way while moving: Drop and Cancel are Move's only guide
+fun minimalHintsApply(state: CrossbarUiState): Boolean = state.interfaceChoices.minimalHints && state.moving == null
+
 fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
     val focused = state.currentItems.getOrNull(state.selectedItemIndex)
 
@@ -85,9 +94,11 @@ fun promptsFor(state: CrossbarUiState): CrossbarPrompts {
     // Move (owner, 2026-10-07): A drops the lifted row or column where it is, B puts it back
     state.moving?.let { session ->
         return CrossbarPrompts(
-            primary = CrossbarPrompt(GamepadAction.SELECT, "Drop", session.title),
+            // no bare A orb: it carries no word, and the kit drops a second A hint beside it. Both hints are
+            // written out, "B Cancel" and "A Drop" (owner, 2026-10-08)
+            primary = null,
             back = CrossbarPrompt(GamepadAction.BACK, "Cancel"),
-            right = emptyList(),
+            right = listOf(CrossbarPrompt(GamepadAction.SELECT, "Drop", session.title)),
         )
     }
 

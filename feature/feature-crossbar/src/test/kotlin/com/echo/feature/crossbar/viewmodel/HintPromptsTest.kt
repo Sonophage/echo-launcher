@@ -5,6 +5,7 @@ import com.echo.core.domain.model.Category
 import com.echo.core.domain.model.CategoryType
 import com.echo.core.domain.model.GamepadAction
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -127,6 +128,31 @@ class HintPromptsTest {
             "Back",
             promptsFor(state(menu = submenu)).back.verb,
         )
+    }
+
+    // owner, 2026-10-08: on the Thor, Move showed no footer, because the hint delay held it back; nothing said
+    // A drops and B cancels
+    @Test
+    fun `Move always shows its Drop and Cancel hints, whatever the hint delay holds back`() {
+        val moving = state().copy(
+            showBootSequence = false,
+            showContextMenuHint = false,
+            moving = MoveSession(column = false, title = "Nintendo DS", items = emptyList(), categories = emptyList(), itemIndex = 0, categoryIndex = 0),
+        )
+        assertTrue(footerShown(moving, rootActionsVisible = false))
+        val prompts = promptsFor(moving)
+        assertNull("no bare A orb, which shows no word", prompts.primary)
+        assertEquals(GamepadAction.BACK, prompts.back?.action)
+        assertEquals("Cancel", prompts.back?.verb)
+        assertTrue("Drop is written out, not only the bare A orb", prompts.right.any { it.action == GamepadAction.SELECT && it.verb == "Drop" })
+
+        // on the Thor, Minimal hints filtered Cancel out of Move's footer
+        val minimal = com.echo.core.data.repository.InterfaceChoices(minimalHints = true)
+        assertFalse("Minimal gives way while moving", minimalHintsApply(moving.copy(interfaceChoices = minimal)))
+        assertTrue("and applies again after", minimalHintsApply(state().copy(interfaceChoices = minimal)))
+
+        assertFalse("with nothing to show, the footer still waits for the delay",
+            footerShown(state().copy(showBootSequence = false, showContextMenuHint = false), rootActionsVisible = false))
     }
 }
 

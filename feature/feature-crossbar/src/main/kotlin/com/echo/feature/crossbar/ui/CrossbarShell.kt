@@ -612,7 +612,7 @@ fun CrossbarShell(
             CompositionLocalProvider(
                 com.echo.core.ui.components.LocalChromeScale provides com.echo.core.ui.components.ChromeScale(layoutAdjust.headerScale, layoutAdjust.footerScale),
                 LocalPadPrompts provides padPromptsShown(rememberSystemStatus().controllerConnected, uiState.lastInputWasTouch),
-                com.echo.core.ui.components.LocalMinimalHints provides uiState.interfaceChoices.minimalHints,
+                com.echo.core.ui.components.LocalMinimalHints provides com.echo.feature.crossbar.viewmodel.minimalHintsApply(uiState),
                 // behind a context menu, blurred: the focused item's art, else the wallpaper
                 LocalMenuBackdropArt provides (if (uiState.onLastPlayedHome) {
                     uiState.currentItems.getOrNull(uiState.selectedItemIndex)?.backdropArt?.firstOrNull()
@@ -1156,8 +1156,7 @@ fun CrossbarShell(
 
             AnimatedVisibility(
 
-                visible = uiState.notificationsOpen ||
-                    ((uiState.showContextMenuHint || rootActionsVisible) && uiState.stripShowsCrossbarContext),
+                visible = com.echo.feature.crossbar.viewmodel.footerShown(uiState, rootActionsVisible),
                 enter = fadeIn(tween(200)),
                 exit = ExitTransition.None,
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(aboveContextRail),
