@@ -43,11 +43,12 @@ val DEFAULT_BINDINGS = listOf(
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_R2,     GamepadAction.NEXT_CATEGORY),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_L1,     GamepadAction.PREV_PAGE),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_R1,     GamepadAction.NEXT_PAGE),
-    // the guide button is Home (owner, 2026-10-04). owner, 2026-10-06: Start opens the island, Select the
-    // notifications, and holding Select is Home, for systems that keep the guide button for themselves
+    // the guide button is Home (owner, 2026-10-04). owner, 2026-10-07 (swapping 2026-10-06): Start opens the
+    // notifications and holding Start is Home, for systems that keep the guide button for themselves; Select
+    // opens the island
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_MODE,   GamepadAction.HOME),
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_START,  GamepadAction.OPEN_ISLAND),
-    GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.OPEN_NOTIFICATIONS),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_START,  GamepadAction.OPEN_NOTIFICATIONS),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.OPEN_ISLAND),
     GamepadBinding(KeyEvent.KEYCODE_ENTER,         GamepadAction.SELECT),
     GamepadBinding(KeyEvent.KEYCODE_BACK,          GamepadAction.BACK),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_CENTER,   GamepadAction.SELECT),
@@ -141,6 +142,23 @@ private fun GamepadMappings.withKitFaceButtons(): GamepadMappings {
         }
     }
     return GamepadMappings(listOf(GamepadBinding(KeyEvent.KEYCODE_BUTTON_MODE, GamepadAction.HOME)) + moved)
+}
+
+// owner, 2026-10-07: Start and Select trade roles. A saved mapping that still has Start on the island and Select
+// on the notifications (the 2026-10-06 layout) takes the new one; any other choice is the person's and stays.
+// Run once per install (ControllerMappingRepository), so swapping them back on purpose sticks
+fun GamepadMappings.withStartSelectSwapped(): GamepadMappings {
+    if (actionFor(KeyEvent.KEYCODE_BUTTON_START) != GamepadAction.OPEN_ISLAND ||
+        actionFor(KeyEvent.KEYCODE_BUTTON_SELECT) != GamepadAction.OPEN_NOTIFICATIONS) return this
+    return GamepadMappings(
+        bindings.map { b ->
+            when (b.keyCode) {
+                KeyEvent.KEYCODE_BUTTON_START -> b.copy(action = GamepadAction.OPEN_NOTIFICATIONS)
+                KeyEvent.KEYCODE_BUTTON_SELECT -> b.copy(action = GamepadAction.OPEN_ISLAND)
+                else -> b
+            }
+        },
+    )
 }
 
 fun GamepadAction.displayLabel(): String = when (this) {

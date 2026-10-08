@@ -1,6 +1,7 @@
 package com.echo.core.data.repository
 
 import com.echo.core.domain.model.withKitButtons
+import com.echo.core.domain.model.withStartSelectSwapped
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -20,6 +21,10 @@ import javax.inject.Singleton
 
 private val KEY_MAPPINGS = stringPreferencesKey("controller_mappings_v1")
 
+// set once a mapping has been saved after Start and Select traded roles (2026-10-07); until then a saved mapping
+// is read with the trade applied
+private val KEY_START_SELECT_SWAPPED = androidx.datastore.preferences.core.booleanPreferencesKey("controller_start_select_swapped")
+
 @Singleton
 class ControllerMappingRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -30,7 +35,10 @@ class ControllerMappingRepository @Inject constructor(
         .map { prefs ->
             val raw = prefs[KEY_MAPPINGS]
             if (raw != null) {
-                runCatching { json.decodeFromString<GamepadMappings>(raw).withKitButtons() }
+                runCatching {
+                    json.decodeFromString<GamepadMappings>(raw).withKitButtons()
+                        .let { if (prefs[KEY_START_SELECT_SWAPPED] == true) it else it.withStartSelectSwapped() }
+                }
                     .getOrElse {
                         Timber.w("Failed to parse controller mappings, using defaults")
                         GamepadMappings()
@@ -43,6 +51,7 @@ class ControllerMappingRepository @Inject constructor(
     suspend fun saveMappings(mappings: GamepadMappings) {
         context.echoDataStore.edit { prefs ->
             prefs[KEY_MAPPINGS] = json.encodeToString(mappings)
+            prefs[KEY_START_SELECT_SWAPPED] = true
         }
         Timber.i("Controller mappings saved")
     }
@@ -50,6 +59,7 @@ class ControllerMappingRepository @Inject constructor(
     suspend fun resetToDefaults() {
         context.echoDataStore.edit { prefs ->
             prefs.remove(KEY_MAPPINGS)
+            prefs[KEY_START_SELECT_SWAPPED] = true
         }
         Timber.i("Controller mappings reset to defaults")
     }
@@ -58,7 +68,8 @@ class ControllerMappingRepository @Inject constructor(
         val prefs = context.echoDataStore.data.first()
         val current = prefs[KEY_MAPPINGS]?.let {
             runCatching { json.decodeFromString<GamepadMappings>(it) }.getOrNull()
-        }?.withKitButtons() ?: GamepadMappings()
+        }?.withKitButtons()?.let { if (prefs[KEY_START_SELECT_SWAPPED] == true) it else it.withStartSelectSwapped() }
+            ?: GamepadMappings()
 
         val updated = current.bindings
             .filter { it.keyCode != newKeyCode && it.action != action }

@@ -118,7 +118,7 @@ them all. UP from the top of a list drops the left island's card the same way: w
 the last thing you opened. The footer leads with the screen's filter: one LT/RT mark and the word
 for the current filter or sort (a tap steps to the next). Then **Back**, the **A** action in
 the centre, and the screen's own actions on the right, with **LB** (Apps) and **RB** (Search) side
-by side as icons. **Home** has no hint; the Guide button, or Select held, goes home. *Quick
+by side as icons. **Home** has no hint; the Guide button, or Start held, goes home. *Quick
 settings ▸ Button hints ▸ Minimal* leaves only the filter and the A action in the footer. Games and apps
 launch when you **hold A** until the ring fills, so a stray press never launches anything.
 
@@ -214,7 +214,7 @@ place.
 
 ### The top panel and Settings
 
-**Select** (View) or a tap on the notification island at the top right first shows the newest
+**Start** (Menu) or a tap on the notification island at the top right first shows the newest
 notification as a card, when there is one; a second press opens the panel: Notifications,
 Profile, Quick settings, Libraries and Settings, along a tab row at the top that **LT/RT** step
 through, as in each Settings section. Settings has seven sections: **Library, Emulators,
@@ -491,9 +491,9 @@ access to all of your storage.
 | Search | **RB**, on every screen (again to close) | Tab | Search, in the footer |
 | Sorts and filters (the footer's left side), tabs and sections | **LT / RT** | Page Up / Page Down | Tap |
 | Seek or turn pages in the players, the reader and Artwork Studio | **LB / RB** | | |
-| Now playing / last played island | **Start** (again to put it back) | | Tap the island |
-| Notifications: the top panel | **Select** (twice when a notification is waiting) | | Tap the notification island twice; slide up to close |
-| Home: back to the crossbar from any screen | **Guide**, or hold **Select** | | |
+| Now playing / last played island | **Select** (again to put it back) | | Tap the island |
+| Notifications: the top panel | **Start** (twice when a notification is waiting) | | Tap the notification island twice; slide up to close |
+| Home: back to the crossbar from any screen | **Guide**, or hold **Start** | | |
 | Confirm in pickers (Add, Apply) | **Start** | | The button in the footer |
 | Give the controller to the other screen (two screens) | **B** on the companion returns it to the XMB | | Tap that screen |
 

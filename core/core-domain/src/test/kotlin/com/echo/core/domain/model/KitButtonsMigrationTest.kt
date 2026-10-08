@@ -87,8 +87,10 @@ class KitButtonsMigrationTest {
         assertEquals(GamepadAction.OPEN_ISLAND, m.actionFor(KeyEvent.KEYCODE_BUTTON_START))
         assertEquals(GamepadAction.OPEN_NOTIFICATIONS, m.actionFor(KeyEvent.KEYCODE_BUTTON_SELECT))
         assertEquals("the guide button stays Home", GamepadAction.HOME, m.actionFor(KeyEvent.KEYCODE_BUTTON_MODE))
-        m.bindings.forEach { assertEquals("key ${it.keyCode} matches a fresh install", GamepadMappings().actionFor(it.keyCode), it.action) }
         assertEquals("migrating twice changes nothing", m.bindings, m.withKitButtons().bindings)
+        // the repository then trades Start and Select once (2026-10-07); after both, it is a fresh install
+        val now = m.withStartSelectSwapped()
+        now.bindings.forEach { assertEquals("key ${it.keyCode} matches a fresh install", GamepadMappings().actionFor(it.keyCode), it.action) }
     }
 
     @Test
@@ -97,5 +99,24 @@ class KitButtonsMigrationTest {
         assertEquals(GamepadAction.OPEN_CONTEXT_MENU, m.actionFor(KeyEvent.KEYCODE_BUTTON_X))
         assertEquals(GamepadAction.CHANGE_SORT, m.actionFor(KeyEvent.KEYCODE_BUTTON_Y))
         assertEquals(gamepadMappingsFor(ConfirmBackLayout.STANDARD, XYLayout.SWAPPED).actionFor(KeyEvent.KEYCODE_BUTTON_X), m.actionFor(KeyEvent.KEYCODE_BUTTON_X))
+    }
+
+    // owner, 2026-10-07: a mapping saved with the 2026-10-06 layout trades Start and Select; one the owner set
+    // differently, or one already traded, is left alone
+    @Test
+    fun `the old Start and Select layout trades, any other stays`() {
+        val old = GamepadMappings(listOf(
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_START, GamepadAction.OPEN_ISLAND),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.OPEN_NOTIFICATIONS),
+        )).withStartSelectSwapped()
+        assertEquals(GamepadAction.OPEN_NOTIFICATIONS, old.actionFor(KeyEvent.KEYCODE_BUTTON_START))
+        assertEquals(GamepadAction.OPEN_ISLAND, old.actionFor(KeyEvent.KEYCODE_BUTTON_SELECT))
+        assertEquals("already traded stays", old, old.withStartSelectSwapped())
+
+        val own = GamepadMappings(listOf(
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_START, GamepadAction.OPEN_SEARCH),
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.OPEN_NOTIFICATIONS),
+        ))
+        assertEquals(own, own.withStartSelectSwapped())
     }
 }

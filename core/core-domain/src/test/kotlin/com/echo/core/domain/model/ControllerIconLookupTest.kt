@@ -68,13 +68,13 @@ class ControllerIconLookupTest {
         assertEquals(ControllerIcon.FACE_WEST, swapped.iconFor(GamepadAction.OPEN_CONTEXT_MENU))
     }
 
-    // owner, 2026-10-06: Start is the island and Select the notifications
+    // owner, 2026-10-07: Select is the island and Start the notifications (they traded on that day)
     @Test
-    fun `the island sits on Start and the notifications on Select under every layout`() {
+    fun `the island sits on Select and the notifications on Start under every layout`() {
         for (confirmBack in ConfirmBackLayout.entries) {
             for (xy in XYLayout.entries) {
-                assertEquals(ControllerIcon.START, mappings(confirmBack, xy).iconFor(GamepadAction.OPEN_ISLAND))
-                assertEquals(ControllerIcon.SELECT, mappings(confirmBack, xy).iconFor(GamepadAction.OPEN_NOTIFICATIONS))
+                assertEquals(ControllerIcon.SELECT, mappings(confirmBack, xy).iconFor(GamepadAction.OPEN_ISLAND))
+                assertEquals(ControllerIcon.START, mappings(confirmBack, xy).iconFor(GamepadAction.OPEN_NOTIFICATIONS))
             }
         }
     }

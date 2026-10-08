@@ -605,6 +605,8 @@ open class BackupManager @Inject constructor(
             booleanPreferencesKey("display_launch_disc"),
 
             booleanPreferencesKey("controller_left_backs_out"),
+            // travels with controller_mappings_v1: a restored mapping saved after the Start/Select trade is not traded again
+            booleanPreferencesKey("controller_start_select_swapped"),
 
             booleanPreferencesKey("sound_menu_enabled"),
 

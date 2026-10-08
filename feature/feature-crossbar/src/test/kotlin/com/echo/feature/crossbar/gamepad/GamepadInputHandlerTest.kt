@@ -114,28 +114,28 @@ class GamepadInputHandlerTest {
         }
     }
 
-    // owner, 2026-10-06: Select opens the notifications, and holding it is Home, for systems that keep the
+    // owner, 2026-10-07: Start opens the notifications, and holding it is Home, for systems that keep the
     // guide button for themselves. A hold must not open the notifications on the way.
     @Test
-    fun `a press of Select is the notifications, and Select held is Home and nothing else`() = runTest {
+    fun `a press of Start is the notifications, and Start held is Home and nothing else`() = runTest {
         handler.scope = backgroundScope
         handler.actions.test {
-            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.ACTION_DOWN))
-            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.ACTION_UP))
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.ACTION_DOWN))
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.ACTION_UP))
             assertEquals(GamepadAction.OPEN_NOTIFICATIONS, awaitItem())
 
-            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.ACTION_DOWN))
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.ACTION_DOWN))
             advanceTimeBy(SELECT_HOLD_MS + 1)
             assertEquals(GamepadAction.HOME, awaitItem())
-            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.ACTION_UP))
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.ACTION_UP))
             expectNoEvents()
             cancelAndIgnoreRemainingEvents()
         }
     }
 
-    // owner, 2026-10-06: the bumpers are Apps (LB) and Search (RB), Y the context menu, Start the island
+    // owner, 2026-10-06: the bumpers are Apps (LB) and Search (RB), Y the context menu; 2026-10-07: Select the island
     @Test
-    fun `the bumpers, Y and Start send what the owner's map says`() = runTest {
+    fun `the bumpers, Y and Select send what the owner's map says`() = runTest {
         handler.actions.test {
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_L1, KeyEvent.ACTION_DOWN))
             assertEquals("LB is Apps", GamepadAction.PREV_PAGE, awaitItem())
@@ -143,7 +143,7 @@ class GamepadInputHandlerTest {
             assertEquals("RB is Search", GamepadAction.NEXT_PAGE, awaitItem())
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_Y, KeyEvent.ACTION_DOWN))
             assertEquals(GamepadAction.OPEN_CONTEXT_MENU, awaitItem())
-            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.ACTION_DOWN))
+            handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_SELECT, KeyEvent.ACTION_DOWN))
             assertEquals(GamepadAction.OPEN_ISLAND, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
