@@ -49,6 +49,9 @@ released; it becomes the next release's notes.
 - Settings moved: Boot Sound to Boot, the video player to **Library ▸ Video Player**, Rescan On Return
   to Library Manager, and Reset Emulator Configuration onto Emulators ▸ Installed.
 - Library Manager asks before removing an app or a file extension.
+- Every settings screen uses ECHO's own controls: text fields open the side-rail prompt, Add PC Game is
+  a rail menu (Test Launch now reachable by controller), progress shows as rows, and the confirms match.
+- The App Drawer's footer matches every other screen's.
 
 ### PC games
 - **DroidDeck** is a PC launcher: its Steam games launch on its own link, and its exported files

@@ -76,6 +76,9 @@ screen's padded column.
 `SettingsRow` and `SettingsValueRow` (`feature-settings`, `SettingsScaffold.kt`) carry controller
 focus and navigation. Inside `LocalSettingsRailUnits` they draw as the kit's rail rows;
 `SettingsScaffold` and the setup wizard set it, so every settings page has them. Use them for any list of options instead of a new row.
+A text value is `SettingsTextFieldRow`: a value row whose A opens the rail text prompt (the scaffold draws it;
+`isPassword` masks keys). A job in progress is `SettingsProgressRow` (done / total, or Working…), never a raw
+progress bar. A confirm is `SettingsConfirmOverlay`, drawn outside the scrolling column.
 
 ## See it on a device
 
