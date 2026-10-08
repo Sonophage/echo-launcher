@@ -56,7 +56,8 @@ data class PcExportFile(
     val uri: String,
 )
 
-private val PC_EXPORT_EXTENSIONS = setOf("steam", "epic", "gog", "amazon", "pcgame", "desktop", "pfpgame")
+// "droiddeck": DroidDeck's own export, one droiddeck://game/<steam app id> per file (owner, 2026-10-07)
+private val PC_EXPORT_EXTENSIONS = setOf("steam", "epic", "gog", "amazon", "pcgame", "desktop", "pfpgame", "droiddeck")
 
 private const val ECHO_EXPORT_EXTENSION = "pfpgame"
 private const val MAX_ECHO_EXPORT_BYTES = 256L * 1024

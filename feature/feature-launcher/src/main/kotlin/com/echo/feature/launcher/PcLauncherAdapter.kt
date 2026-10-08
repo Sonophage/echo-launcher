@@ -59,8 +59,6 @@ private class GameHubFamilyAdapter(
     }
 }
 
-// DroidDeck reads GameNative's launch intent on purpose, so one adapter serves both. It runs
-// Steam only: any other game_source is refused.
 private class GameNativeAdapter(
     override val type: PcLauncherType = PcLauncherType.GAMENATIVE,
     private val activity: String = "app.gamenative.MainActivity",
@@ -81,6 +79,33 @@ private class GameNativeAdapter(
     }
 }
 
+// DroidDeck launches a Steam game from its own link, droiddeck://game/<app id>: what its export files hold and the
+// only way in on 0.3.1, the release on the owner's devices. Its LAUNCH_GAME action came after 0.3.1 (seen on the
+// Konker, 2026-10-07: the action opened DroidDeck's home and nothing more, the link started the game). Steam only
+private class DroidDeckAdapter : PcLauncherAdapter {
+    override val type = PcLauncherType.DROIDDECK
+    override val idPrompt = "Steam App ID for the installed game"
+    override val requiresIntegerId = true
+    override val sources = listOf("STEAM")
+
+    override fun buildLaunchIntent(packageName: String, gameId: String, source: String?): Intent? {
+        if (source != null && !source.equals("STEAM", ignoreCase = true)) return null
+        val id = droidDeckAppId(gameId) ?: return null
+        return Intent(Intent.ACTION_VIEW, android.net.Uri.parse("droiddeck://game/$id")).apply {
+            component = ComponentName(packageName, "com.droiddeck.launcher.MainActivity")
+            // DroidDeck already running gets the link as a new intent, not just brought to the front
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+    }
+}
+
+// the Steam app id a DroidDeck export file names: "droiddeck://game/<id>", or the bare id; null for anything else
+fun droidDeckAppId(text: String?): String? {
+    val line = text?.trim()?.lineSequence()?.firstOrNull()?.trim() ?: return null
+    val id = line.removePrefix("droiddeck://game/")
+    return id.takeIf { it.isNotEmpty() && it.length <= 10 && it.all(Char::isDigit) && it.toLongOrNull()?.let { n -> n in 1..Int.MAX_VALUE } == true }
+}
+
 object PcLauncherAdapters {
     fun forType(type: PcLauncherType, pm: PackageManager? = null): PcLauncherAdapter? = when (type) {
         PcLauncherType.BANNERHUB_V6,
@@ -88,12 +113,7 @@ object PcLauncherAdapters {
             pm?.let { PcLauncherCatalog.gameHubGeneration(pkg, it) } ?: GameHubGeneration.V6
         }
         PcLauncherType.GAMENATIVE   -> GameNativeAdapter()
-        PcLauncherType.DROIDDECK    -> GameNativeAdapter(
-            type     = PcLauncherType.DROIDDECK,
-            activity = "com.droiddeck.launcher.MainActivity",
-            sources  = listOf("STEAM"),
-            idPrompt = "Steam App ID for the installed game",
-        )
+        PcLauncherType.DROIDDECK    -> DroidDeckAdapter()
 
         PcLauncherType.WINLATOR,
         PcLauncherType.MANUAL       -> null
@@ -106,6 +126,7 @@ object PcLauncherAdapters {
 
     fun gameSourceForExtension(extension: String): String? = when (extension.lowercase()) {
         "steam"  -> "STEAM"
+        "droiddeck" -> "STEAM"
         "epic"   -> "EPIC"
         "gog"    -> "GOG"
         "amazon" -> "AMAZON"

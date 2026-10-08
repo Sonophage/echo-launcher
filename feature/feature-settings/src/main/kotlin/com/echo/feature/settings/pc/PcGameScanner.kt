@@ -92,8 +92,16 @@ class PcGameScanner @Inject constructor(
             windowsLibrarySetup.importFolders()
         }
         val echoExports = mutableListOf<PcExportFile>()
-        for ((rootUri, importDocId) in importFolders) {
-            romScanner.scanPcFolder(rootUri, importDocId).forEach { file ->
+        // DroidDeck writes its export into the windows folder itself, beside import (owner, 2026-10-07)
+        val droidDeckFiles = if (overrideFolder != null || launchers.droidDeck == null) emptyList() else
+            windowsLibrarySetup.windowsFolders().flatMap { (rootUri, docId) ->
+                romScanner.scanPcFolder(rootUri, docId).filter { it.extension == DROIDDECK_EXTENSION }
+            }.distinctBy { it.uri }
+        val scanned = importFolders.flatMap { (rootUri, importDocId) ->
+            romScanner.scanPcFolder(rootUri, importDocId).filterNot { it.extension == DROIDDECK_EXTENSION }
+        } + droidDeckFiles
+        run {
+            scanned.forEach { file ->
 
                 if (file.extension == PcGameExportCodec.EXTENSION) {
                     echoExports += file
@@ -103,6 +111,7 @@ class PcGameScanner @Inject constructor(
                 if (launch == null) { skipped++; return@forEach }
                 val intentUri = launch.intent.toUri(Intent.URI_INTENT_SCHEME)
                 val existing = gameRepository.getByIntentUri(intentUri)
+                    ?: findBySteamId(launch)
                     ?: findWindowsGame(launch.packageName, file.title)
                 if (existing == null) {
                     gameRepository.upsert(
@@ -124,6 +133,11 @@ class PcGameScanner @Inject constructor(
                     gameRepository.updateStorefrontIdentity(
                         existing.id, launch.storefront, launch.storefrontGameId,
                     )
+                    // a DroidDeck game keeps the launch DroidDeck reads now (its link, 2026-10-07)
+                    if (launch.packageName == existing.packageName && existing.launchIntentUri != intentUri &&
+                        file.extension == DROIDDECK_EXTENSION) {
+                        gameRepository.attachLauncherHandle(existing.id, existing.packageName, null, intentUri)
+                    }
                     alreadyInLibrary++
                 }
             }
@@ -303,6 +317,7 @@ class PcGameScanner @Inject constructor(
     }
 
     private data class InstalledLaunchers(
+        val droidDeck: String?,
         val gameNative: String?,
         val gameHub: String?,
         val winlator: String?,
@@ -311,6 +326,7 @@ class PcGameScanner @Inject constructor(
     private fun installedLaunchers(pm: PackageManager): InstalledLaunchers {
         fun installed(vararg pkgs: String) = pkgs.firstOrNull { runCatching { pm.getApplicationInfo(it, 0) }.isSuccess }
         return InstalledLaunchers(
+            droidDeck = installed("com.droiddeck.launcher"),
             gameNative = installed("app.gamenative"),
 
             gameHub = PcLauncherCatalog.installedGameHubFamilyPackages(pm).firstOrNull(),
@@ -345,6 +361,14 @@ class PcGameScanner @Inject constructor(
             return PcLaunch(intent, "Winlator", pkg)
         }
 
+        // a DroidDeck export launches in DroidDeck, which wrote it
+        if (file.extension == DROIDDECK_EXTENSION) {
+            val pkg = launchers.droidDeck ?: return null
+            val appId = com.echo.feature.launcher.droidDeckAppId(file.idContent) ?: return null
+            val intent = PcLauncherAdapters.forType(PcLauncherType.DROIDDECK)?.buildLaunchIntent(pkg, appId, "STEAM") ?: return null
+            return PcLaunch(intent, "DroidDeck", pkg, storefront = "STEAM", storefrontGameId = appId)
+        }
+
         val id = file.idContent?.trim()?.takeIf { it.toIntOrNull()?.let { n -> n > 0 } == true } ?: return null
         val source = PcLauncherAdapters.gameSourceForExtension(file.extension) ?: return null
         val storefront = StorefrontIdentity.normalizeStore(source)
@@ -364,6 +388,11 @@ class PcGameScanner @Inject constructor(
         return null
     }
 
+    // a launcher's game is the same game when the launcher and its Steam app id match, whatever the file is
+    // called (DroidDeck names its files "<Name> (<id>)" and shortens long names)
+    private suspend fun findBySteamId(launch: PcLaunch): Game? =
+        sameSteamGame(gameRepository.getByPlatform(WINDOWS_PLATFORM_ID), launch.packageName, launch.storefrontGameId)
+
     private suspend fun findWindowsGame(packageName: String, title: String): Game? {
         val key = WindowsGameKeys.normalizeTitle(title)
         return gameRepository.getByPlatform(WINDOWS_PLATFORM_ID).firstOrNull {
@@ -372,5 +401,10 @@ class PcGameScanner @Inject constructor(
     }
 
     private companion object {
+        const val DROIDDECK_EXTENSION = "droiddeck"
+
     }
 }
+
+internal fun sameSteamGame(games: List<Game>, packageName: String, steamId: String?): Game? =
+    steamId?.let { id -> games.firstOrNull { it.packageName == packageName && it.storefrontGameId == id } }

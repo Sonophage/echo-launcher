@@ -89,22 +89,41 @@ class PcLauncherAdapterTest {
         assertEquals("STEAM", intent.getStringExtra("game_source"))
     }
 
-    // DroidDeck 0.3.1 (GameLaunchIntent.kt) reads app_id as an Int and refuses any game_source but
-    // STEAM. A Long id or another store would open DroidDeck without starting the game.
+    // DroidDeck 0.3.1 has no LAUNCH_GAME action: on the Konker it opened DroidDeck's home and stopped. Its own
+    // droiddeck://game/<id> link started the game, so that is what ECHO sends; Steam is its only store
     @Test
-    fun `droiddeck launches a steam app_id through its own activity`() {
+    fun `droiddeck launches a steam app id through its own link`() {
         val adapter = PcLauncherAdapters.forType(PcLauncherType.DROIDDECK)!!
         val intent = adapter.buildLaunchIntent("com.droiddeck.launcher", "620", null)!!
-        assertEquals("com.droiddeck.launcher.LAUNCH_GAME", intent.action)
+        assertEquals(android.content.Intent.ACTION_VIEW, intent.action)
+        assertEquals("droiddeck://game/620", intent.dataString)
         assertEquals("com.droiddeck.launcher.MainActivity", intent.component?.className)
-        assertEquals(620, intent.getIntExtra("app_id", -1))
-        assertEquals("STEAM", intent.getStringExtra("game_source"))
         assertEquals(listOf("STEAM"), adapter.sources)
+        org.junit.Assert.assertNull("another store is not DroidDeck's", adapter.buildLaunchIntent("com.droiddeck.launcher", "620", "EPIC"))
     }
 
     @Test
     fun `winlator and manual have no id adapter`() {
         assertNull(PcLauncherAdapters.forType(PcLauncherType.WINLATOR))
         assertNull(PcLauncherAdapters.forType(PcLauncherType.MANUAL))
+    }
+}
+
+// owner, 2026-10-07: DroidDeck writes "<Name> (<appid>).droiddeck" holding droiddeck://game/<appid>. The id must be
+// a real Steam app id (DroidDeck reads it as an Int), or the file is not a game ECHO can launch
+class DroidDeckFileTest {
+    @Test
+    fun `the app id comes from DroidDeck's link or a bare id`() {
+        org.junit.Assert.assertEquals("1809540", droidDeckAppId("droiddeck://game/1809540\n"))
+        org.junit.Assert.assertEquals("489830", droidDeckAppId("489830"))
+    }
+
+    @Test
+    fun `anything else is not a launchable id`() {
+        org.junit.Assert.assertNull(droidDeckAppId(null))
+        org.junit.Assert.assertNull(droidDeckAppId("droiddeck://game/"))
+        org.junit.Assert.assertNull(droidDeckAppId("droiddeck://game/abc"))
+        org.junit.Assert.assertNull(droidDeckAppId("droiddeck://game/18446744073709551615"))
+        org.junit.Assert.assertNull(droidDeckAppId("steam://run/620"))
     }
 }

@@ -51,6 +51,12 @@ check (see `echo-ui`), and say in the commit what was and was not seen on the de
 
 ## Data safety
 
+Never write the database file while ECHO can run. ECHO is the home app, so `am force-stop` does not
+stop it: Android starts it again within a second, and a file swapped under the open connection corrupts
+the games table (2026-10-07, on the Konker). Run `pm disable-user --user 0 com.echo.launcher.debug`,
+check `pidof` is empty, write the file and delete `-wal` and `-shm`, then `pm enable` it. Keep the copy
+you pulled until `pragma integrity_check` on the live database says `ok`.
+
 An operation that rewrites artwork links or the artwork folder can lose the owner's library. First
 pull the database from the device (`run-as com.echo.launcher.debug cat databases/pfp_database`,
 with `-wal` and `-shm`), run `pragma integrity_check` on the copy, and record the counts to compare
