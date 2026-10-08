@@ -155,6 +155,7 @@ internal suspend fun saveThenPrune(save: suspend () -> Unit, prune: suspend () -
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
+        timber.log.Timber.w(e, "Saving a wallpaper or UI media file failed")
         return false
     }
     prune()

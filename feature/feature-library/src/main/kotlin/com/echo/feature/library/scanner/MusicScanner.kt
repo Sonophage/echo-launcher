@@ -196,7 +196,12 @@ class MusicScanner @Inject constructor(
         if (bytes == null || bytes.isEmpty()) return null
         return runCatching {
             val file = File(artCacheDir, "${sha1(key)}.img")
-            if (!file.exists()) file.writeBytes(bytes)
+            // written beside and renamed, so a cut-off write is never kept as the album's art
+            if (!file.exists()) {
+                val part = File(artCacheDir, "${file.name}.part")
+                part.writeBytes(bytes)
+                if (!part.renameTo(file)) { part.delete(); return@runCatching null }
+            }
             Uri.fromFile(file).toString()
         }.getOrNull()
     }

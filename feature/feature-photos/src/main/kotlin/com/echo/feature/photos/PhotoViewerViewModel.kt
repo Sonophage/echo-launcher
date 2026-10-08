@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.echo.core.data.datastore.echoDataStore
+import com.echo.core.data.repository.SafeMedia
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.setWallpaperLuma
 import com.echo.core.domain.model.GamepadAction
@@ -434,9 +435,13 @@ class PhotoViewerViewModel @Inject constructor(
 
         val dir = File(context.filesDir, "wallpaper").apply { mkdirs() }
         val dest = File(dir, "wallpaper_${System.currentTimeMillis()}.jpg")
-        FileOutputStream(dest).use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out) }
+        val written = runCatching {
+            FileOutputStream(dest).use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out) }
+        }.getOrDefault(false)
         bitmap.recycle()
-        dest.takeIf { it.length() > 0 }?.let { Pair(it, null) }
+        // a failed write leaves no half-written wallpaper behind
+        if (!written || dest.length() == 0L) { dest.delete(); return@runCatching null }
+        Pair(dest, null)
     }.getOrElse { Timber.w(it, "Wallpaper import failed for ${photo.uri}"); null }
 
     private fun importAnimatedWallpaper(photo: Photo, mime: String): Pair<File, File?>? {
@@ -451,8 +456,11 @@ class PhotoViewerViewModel @Inject constructor(
         if (knownSize != null && knownSize > MotionLimits.MAX_BYTES) return null
 
         val copied = runCatching {
+            // capped: a file of unknown size stops at the motion limit instead of filling storage
             context.contentResolver.openInputStream(Uri.parse(photo.uri))?.use { input ->
-                motionDest.outputStream().use { out -> input.copyTo(out) }
+                motionDest.outputStream().use { out ->
+                    with(SafeMedia) { input.copyCappedTo(out, MotionLimits.MAX_BYTES) }
+                }
             } != null
         }.getOrDefault(false)
         if (!copied) {
@@ -503,7 +511,6 @@ class PhotoViewerViewModel @Inject constructor(
     fun confirmWallpaper() = applyWallpaper()
     fun cancelWallpaperPreview() = _uiState.update { it.copy(wallpaperPreviewVisible = false) }
 
-    fun requestRemove() = _uiState.update { it.copy(confirmRemove = true) }
     fun cancelRemove() = _uiState.update { it.copy(confirmRemove = false) }
 
     fun confirmRemove() {

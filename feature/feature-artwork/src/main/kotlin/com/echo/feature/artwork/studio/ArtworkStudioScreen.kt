@@ -1287,16 +1287,18 @@ internal fun StudioVideoTilePreview(url: String, modifier: Modifier = Modifier) 
     )
 }
 
-private fun downloadTilePreviewVideo(context: android.content.Context, url: String): java.io.File? =
-    runCatching {
-        val name = "studio_vid_" + Integer.toHexString(url.hashCode()) + ".mp4"
-        val dest = java.io.File(context.cacheDir, name)
-        if (dest.exists() && dest.length() > 0) return dest
+private fun downloadTilePreviewVideo(context: android.content.Context, url: String): java.io.File? {
+    val name = "studio_vid_" + Integer.toHexString(url.hashCode()) + ".mp4"
+    val dest = java.io.File(context.cacheDir, name)
+    if (dest.exists() && dest.length() > 0) return dest
+    // downloaded beside the clip and renamed when whole, so a cut-off download is never taken for a clip
+    val part = java.io.File(context.cacheDir, "$name.part")
+    return runCatching {
         val conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
             connectTimeout = 15_000; readTimeout = 30_000; instanceFollowRedirects = true
         }
         conn.inputStream.use { input ->
-            dest.outputStream().use { out ->
+            part.outputStream().use { out ->
                 val buf = ByteArray(64 * 1024); var total = 0L
                 while (true) {
                     val n = input.read(buf); if (n == -1) break
@@ -1306,8 +1308,12 @@ private fun downloadTilePreviewVideo(context: android.content.Context, url: Stri
                 }
             }
         }
-        dest.takeIf { it.length() > 0 } ?: run { dest.delete(); null }
-    }.onFailure { timber.log.Timber.w(it, "Tile preview video download failed") }.getOrNull()
+        if (part.length() > 0 && part.renameTo(dest)) dest else { part.delete(); null }
+    }.onFailure {
+        timber.log.Timber.w(it, "Tile preview video download failed")
+        part.delete()
+    }.getOrNull()
+}
 
 private fun studioTileCrop(view: android.view.TextureView, size: androidx.media3.common.VideoSize?) {
     val vw = size?.width?.toFloat() ?: return

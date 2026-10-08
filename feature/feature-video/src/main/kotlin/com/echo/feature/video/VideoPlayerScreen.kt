@@ -116,7 +116,8 @@ fun VideoPlayerScreen(
     val seekStepMs = choices.videoSeekStepSeconds * 1_000L
 
     var index by remember { mutableIntStateOf(startIndex.coerceIn(0, videos.lastIndex)) }
-    val current = videos[index]
+    // the list can shrink while the player is open (a rescan, a removal); never read past its end
+    val current = videos[index.coerceIn(0, videos.lastIndex)]
 
     var isPlaying by remember { mutableStateOf(true) }
     var positionMs by remember { mutableLongStateOf(0L) }

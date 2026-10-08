@@ -323,7 +323,10 @@ open class BackupManager @Inject constructor(
                 source.inputStream().use { it.copyTo(out) }
             } != null
         }.getOrDefault(false)
-        return if (ok) doc else null
+        if (ok) return doc
+        // a document the copy did not fill is not a backup: leaving it would list it as one to restore
+        runCatching { DocumentsContract.deleteDocument(context.contentResolver, doc) }
+        return null
     }
 
     open suspend fun listBackups(): List<BackupInfo> {
