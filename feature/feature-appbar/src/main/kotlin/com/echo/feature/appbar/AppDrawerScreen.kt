@@ -105,6 +105,8 @@ fun AppDrawerScreen(
     onToggleGrouping: (() -> Unit)? = null,
     // an album, video or book picked in the drawer, opened by the crossbar
     onOpenMedia: (DrawerMedia) -> Unit = {},
+    // Y on an album, video or book: the crossbar's menu for it
+    onMediaMenu: (DrawerMedia, String) -> Unit = { _, _ -> },
 
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
@@ -163,6 +165,12 @@ fun AppDrawerScreen(
         val media = state.pendingMediaOpen ?: return@LaunchedEffect
         onOpenMedia(media)
         viewModel.onMediaOpenHandled()
+    }
+
+    LaunchedEffect(state.pendingMediaMenu) {
+        val (media, title) = state.pendingMediaMenu ?: return@LaunchedEffect
+        onMediaMenu(media, title)
+        viewModel.onMediaMenuHandled()
     }
 
     LaunchedEffect(state.pendingRomLaunch) {

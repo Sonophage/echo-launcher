@@ -271,6 +271,17 @@ class CrossbarMusic(
         }
     }
 
+    internal fun openAlbumMenu(key: String, title: String) {
+        uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = albumContextMenuItems()), albumKey = key)) }
+    }
+
+    internal fun openAlbumGenrePicker(key: String) {
+        scope.launch {
+            val ids = musicRepository.observeAllTracks().first().filter { it.album.musicGroupKey() == key }.map { it.id }
+            vm.genres.openPicker(GenreTarget.Tracks(ids))
+        }
+    }
+
     // an album from its first track, in track order (the App Drawer's Music)
     internal fun playAlbum(key: String) {
         scope.launch {
@@ -364,14 +375,9 @@ class CrossbarMusic(
         return when {
             item.id == CrossbarViewModel.NOW_PLAYING_ITEM_ID -> { vm.openNowPlayingContextMenu(); true }
             item.type == CrossbarItemType.MUSIC_TRACK -> { openMusicTrackContextMenu(item); true }
-            // an album's genre is set on all its tracks at once (owner, 2026-10-08)
+            // an album's own menu: play it, or set the genre of all its tracks (owner, 2026-10-08)
             item.type == CrossbarItemType.MUSIC_GROUP && uiState.value.musicNav == MusicNav.Albums && item.musicGroupKey != null -> {
-                val key = item.musicGroupKey
-                scope.launch {
-                    val ids = musicRepository.observeAllTracks().first().filter { it.album.musicGroupKey() == key }.map { it.id }
-                    vm.genres.openPicker(GenreTarget.Tracks(ids))
-                }
-                true
+                openAlbumMenu(item.musicGroupKey, item.title); true
             }
             item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
                 openPlaylistRowContextMenu(item.playlistId, item.title); true

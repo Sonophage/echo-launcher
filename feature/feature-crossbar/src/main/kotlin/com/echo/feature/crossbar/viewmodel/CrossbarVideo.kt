@@ -277,7 +277,7 @@ class CrossbarVideo(
         }
     }
 
-    private fun openVideoFileContextMenu(videoId: String, title: String) {
+    internal fun openVideoFileContextMenu(videoId: String, title: String) {
         scope.launch {
             val video = videoRepository.getVideo(videoId) ?: return@launch
             val inPlaylist = uiState.value.videoNav is VideoNav.Playlist

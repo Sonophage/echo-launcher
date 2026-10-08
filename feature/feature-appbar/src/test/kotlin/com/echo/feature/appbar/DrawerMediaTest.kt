@@ -43,4 +43,14 @@ class DrawerMediaTest {
         assertEquals("Group by Author", mediaGroupingHint(AppFilter.BOOKS, byGenre = true))
         assertNull("videos have no grouping", mediaGroupingHint(AppFilter.VIDEOS, byGenre = false))
     }
+
+    // owner, 2026-10-08: grouped by genre the row shows with one genre, so X visibly does something
+    @Test
+    fun `genre buttons show with one genre, artists and systems need two`() {
+        val one = listOf(SystemChip(null, "All", 3), SystemChip("K-Pop", "K-Pop", 1))
+        assertTrue(AppDrawerUiState(activeFilter = AppFilter.MUSIC, systemChips = one, mediaChipsByGenre = true).showSystemChips)
+        assertEquals(false, AppDrawerUiState(activeFilter = AppFilter.MUSIC, systemChips = one, mediaChipsByGenre = false).showSystemChips)
+        assertTrue(AppDrawerUiState(activeFilter = AppFilter.GAMES, systemChips = one, chipsByGenre = true).showSystemChips)
+        assertEquals(false, AppDrawerUiState(activeFilter = AppFilter.GAMES, systemChips = one).showSystemChips)
+    }
 }

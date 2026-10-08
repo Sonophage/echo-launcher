@@ -136,6 +136,7 @@ data class AppDrawerUiState(
 
     // a media case asked to open; the crossbar opens it as its own column does
     val pendingMediaOpen: DrawerMedia? = null,
+    val pendingMediaMenu: Pair<DrawerMedia, String>? = null,
 
     // Music's and Books' buttons are genres (X), else artists or authors
     val mediaChipsByGenre: Boolean = false,
@@ -148,8 +149,13 @@ data class AppDrawerUiState(
     val chipFocus: Boolean = false,
 
 ) {
-    val showSystemChips: Boolean get() = (activeFilter == AppFilter.GAMES || activeFilter == AppFilter.MUSIC || activeFilter == AppFilter.BOOKS) &&
-        systemChips.size > 2
+    // owner, 2026-10-08: grouped by genre the buttons show even with one genre, so X visibly does something;
+    // systems, artists and authors still need two to be worth a row
+    val showSystemChips: Boolean get() = when (activeFilter) {
+        AppFilter.GAMES -> systemChips.size > if (chipsByGenre) 1 else 2
+        AppFilter.MUSIC, AppFilter.BOOKS -> systemChips.size > if (mediaChipsByGenre) 1 else 2
+        else -> false
+    }
 
     val menuActions: List<AppMenuAction>
         get() = buildList {
@@ -325,6 +331,8 @@ class AppDrawerViewModel @Inject constructor(
 
     fun onMediaOpenHandled() = _uiState.update { it.copy(pendingMediaOpen = null) }
 
+    fun onMediaMenuHandled() = _uiState.update { it.copy(pendingMediaMenu = null) }
+
     // X in Music or Books: artists or authors, or genres
     fun toggleMediaGrouping() {
         menuSound.play(MenuSound.SELECT)
@@ -341,7 +349,12 @@ class AppDrawerViewModel @Inject constructor(
     }
 
     fun openAppMenu(app: InstalledApp) {
-        if (app.media != null) return
+        // an album, video or book: the crossbar's own menu for it
+        app.media?.let { media ->
+            menuSound.play(MenuSound.SELECT)
+            _uiState.update { it.copy(pendingMediaMenu = media to app.label) }
+            return
+        }
         if (app.gameId != null) {
             menuSound.play(MenuSound.SELECT)
             _uiState.update { it.copy(pendingGameMenu = app.gameId) }

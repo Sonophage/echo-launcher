@@ -246,16 +246,19 @@ class CrossbarBookshelf(
     internal fun openBookContextMenu(item: CrossbarItem): Boolean {
         if (item.menuHostCategory(vm.currentCategory()?.id) != BuiltInCategory.LIBRARY) return false
         if (item.type != CrossbarItemType.LIBRARY_BOOK || !item.id.startsWith("book_")) return false
-        val bookId = item.id.removePrefix("book_")
+        openBookMenu(item.id.removePrefix("book_"), item.title)
+        return true
+    }
+
+    internal fun openBookMenu(bookId: String, title: String) {
         scope.launch {
             val onShelf = runCatching { bookRepository.getBook(bookId) }
                 .getOrNull()?.lastOpenedAt != null
             val items = bookContextMenuItems(hasOpenStamp = onShelf)
             uiState.update {
-                it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), bookFileId = bookId))
+                it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = items), bookFileId = bookId))
             }
         }
-        return true
     }
 
     internal fun handleBookAction(bookId: String, itemId: String) {

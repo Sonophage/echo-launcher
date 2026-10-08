@@ -66,4 +66,9 @@ class MediaGenreViewsTest {
         }
         assertEquals(false, base.namePromptOpen)
     }
+
+    @Test
+    fun `an album's menu plays it and sets its genre`() {
+        assertEquals(listOf("play_album", "edit_genre"), albumContextMenuItems().map { it.action })
+    }
 }

@@ -22,7 +22,10 @@ released; it becomes the next release's notes.
 ### App Drawer
 - The drawer has **Music** (albums), **Videos** and **Books** sections, each shown when that library has
   something in it. A plays the album, plays the video or opens the book.
-- In Music and Books, X switches the buttons between artists (or authors) and genres.
+- In Music and Books, X switches the buttons between artists (or authors) and genres; grouped by
+  genre the buttons show even with one genre.
+- Y on an album gives Play Album and Edit Genre (in the drawer and in Music's Albums); on a video
+  or a book, its usual menu.
 
 ### Photos and look
 - Setting a photo as the wallpaper lets you move and zoom it first (d-pad or drag, LT/RT or pinch);

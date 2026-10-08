@@ -193,6 +193,12 @@ internal fun bookContextMenuItems(hasOpenStamp: Boolean): List<CrossbarContextMe
     add(CrossbarContextMenuItem("book_remove", "Remove From Library", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
+// an album's own menu (the Albums view, the App Drawer's Music)
+internal fun albumContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
+    CrossbarContextMenuItem("play_album", "Play Album"),
+    CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.METADATA),
+)
+
 internal fun recentAlbumContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
     CrossbarContextMenuItem("open_album", "Open Album"),
     CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true),

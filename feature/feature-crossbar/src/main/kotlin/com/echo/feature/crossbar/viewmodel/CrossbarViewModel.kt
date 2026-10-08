@@ -142,6 +142,9 @@ data class CrossbarContextMenu(
 
     val recentAlbum: CrossbarItem? = null,
 
+    // an album's own menu, by its key (the Albums view and the App Drawer's Music)
+    val albumKey: String? = null,
+
     val playlistId: Long? = null,
 
     val playlistPickerTrackId: String? = null,
@@ -2480,6 +2483,21 @@ class CrossbarViewModel @Inject constructor(
 
     // owner, 2026-10-08: Game Info from the App Drawer's Options did nothing, since the drawer's game is seldom in
     // the crossbar's column; the column's row when it is there, else the game from the library
+    // owner, 2026-10-08: Y on an album, video or book in the App Drawer gives the menu its own column gives it;
+    // asked from the companion's drawer, it opens there, where the controller is
+    fun openDrawerMediaMenu(media: com.echo.feature.appbar.DrawerMedia, title: String) {
+        when (media.kind) {
+            com.echo.feature.appbar.MediaKind.MUSIC -> music.openAlbumMenu(media.ref, title)
+            com.echo.feature.appbar.MediaKind.VIDEO -> video.openVideoFileContextMenu(media.ref, title)
+            com.echo.feature.appbar.MediaKind.BOOK -> bookshelf.openBookMenu(media.ref, title)
+        }
+    }
+
+    internal fun openDrawerMediaMenuOnCompanion(media: com.echo.feature.appbar.DrawerMedia, title: String) {
+        _uiState.update { it.copy(menuOnCompanion = true) }
+        openDrawerMediaMenu(media, title)
+    }
+
     // owner, 2026-10-08: an album, video or book picked in the App Drawer opens as the crossbar's own column opens
     // it: an album plays from its first track, a video plays, a book opens in the reader
     fun openDrawerMedia(media: com.echo.feature.appbar.DrawerMedia) {
@@ -3215,6 +3233,13 @@ class CrossbarViewModel @Inject constructor(
 
         closeContextMenu()
 
+        menu.albumKey?.let { key ->
+            when (itemId) {
+                "play_album" -> music.playAlbum(key)
+                "edit_genre" -> music.openAlbumGenrePicker(key)
+            }
+            return
+        }
         if (menu.recentAlbum != null) {
             when (itemId) {
                 "open_album" -> _uiState.value.currentItems.indexOfFirst { it.id == menu.recentAlbum.id }.takeIf { it >= 0 }?.let(::onItemSelected)
