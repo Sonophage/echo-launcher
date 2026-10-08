@@ -46,7 +46,7 @@ class CrossbarPanel(
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun profileData(): Flow<ProfileData> {
-        val achievements = combine(vm.achievementController.observeSets(), vm.achievementController.observeAllAchievements()) { sets, all ->
+        val achievements = combine(vm.achievementController.observeSets().map(::setsByLastPlayed), vm.achievementController.observeAllAchievements()) { sets, all ->
             sets to sets.associate { set -> setKey(set) to all[set.provider to set.providerGameId].orEmpty() }
         }.map { (sets, badges) -> Triple(sets, badges, setArt(sets)) }
         val accounts = combine(

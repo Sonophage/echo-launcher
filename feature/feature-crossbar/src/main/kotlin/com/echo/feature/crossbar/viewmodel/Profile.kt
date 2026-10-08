@@ -145,6 +145,11 @@ fun ProfileState.withData(next: ProfileData): ProfileState {
     )
 }
 
+// owner, 2026-10-07: the achievements strip opens on the game played last; a set never played goes after,
+// in the order it came
+fun setsByLastPlayed(sets: List<com.echo.core.domain.achievement.AchievementSet>): List<com.echo.core.domain.achievement.AchievementSet> =
+    sets.sortedByDescending { it.lastPlayedAt ?: Long.MIN_VALUE }
+
 fun recentlyPlayed(games: List<Game>, count: Int = RECENTLY_PLAYED_COUNT): List<Game> =
     games.filter { it.lastPlayedAt != null }.sortedByDescending { it.lastPlayedAt }
         .distinctBy { it.discSetKey ?: it.id.toString() }.take(count)

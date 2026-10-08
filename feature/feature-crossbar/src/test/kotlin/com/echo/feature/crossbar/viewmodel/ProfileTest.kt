@@ -127,4 +127,12 @@ class ProfileTest {
         assertEquals(ProfileSpot.EDIT_PICTURE, go(choice, PanelMove.RIGHT).spot)
         assertEquals(ProfileSpot.EDIT_NAME, go(choice, PanelMove.RIGHT, PanelMove.LEFT).spot)
     }
+
+    // owner, 2026-10-07: the strip starts at the game played last; never-played sets follow in their own order
+    @Test
+    fun `achievement sets run from the last played, never played last`() {
+        fun played(id: String, at: Long?) = set(id, id).copy(lastPlayedAt = at)
+        val sorted = setsByLastPlayed(listOf(played("old", 10), played("never1", null), played("new", 30), played("never2", null), played("mid", 20)))
+        assertEquals(listOf("new", "mid", "old", "never1", "never2"), sorted.map { it.title })
+    }
 }

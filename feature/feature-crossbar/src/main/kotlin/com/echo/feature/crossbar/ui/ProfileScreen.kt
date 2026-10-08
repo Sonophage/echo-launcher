@@ -136,30 +136,16 @@ fun ProfileScreen(
             ProfileTab.OVERVIEW -> com.echo.feature.settings.ui.LibraryOverview(Modifier.fillMaxSize())
         }
 
-        Row(
-            Modifier.align(Alignment.BottomStart).padding(start = u.dp(68), bottom = u.dp(14)),
-            horizontalArrangement = Arrangement.spacedBy(u.dp(8)),
-        ) {
-            if (profile.tab == ProfileTab.ACHIEVEMENTS && profile.data.sets.isNotEmpty()) {
-                Hint(GamepadAction.CHANGE_SORT, "Filter", u) { onAction(GamepadAction.CHANGE_SORT) }
-            }
-            Hint(GamepadAction.BACK, "Back", u) { onAction(GamepadAction.BACK) }
-        }
-    }
-}
-
-@Composable
-private fun Hint(action: GamepadAction, label: String, u: DesignUnits, onClick: () -> Unit) {
-    Box(
-        Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(u.dp(20))).clickable(onClick = onClick).padding(horizontal = u.dp(12)),
-        contentAlignment = Alignment.Center,
-    ) {
-        val style = EchoTextStyle.copy(fontSize = u.sp(13), fontWeight = FontWeight.Light)
-        if (LocalPadPrompts.current) {
-            ControllerPrompt(action, label, labelStyle = style, glyphSize = u.dp(22), spacing = u.dp(8))
-        } else {
-            Text(label, color = Color.White.copy(alpha = 0.75f), style = style)
-        }
+        // the kit's footer, as every screen has (owner, 2026-10-07)
+        com.echo.core.ui.components.EchoHintBar(
+            items = listOfNotNull(
+                com.echo.core.ui.components.ControllerPromptItem(GamepadAction.BACK, "Back"),
+                com.echo.core.ui.components.ControllerPromptItem(GamepadAction.CHANGE_SORT, "Filter")
+                    .takeIf { profile.tab == ProfileTab.ACHIEVEMENTS && profile.data.sets.isNotEmpty() },
+            ),
+            onAction = onAction,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
@@ -513,7 +499,8 @@ private fun CoverStrip(sets: List<AchievementSet>, art: Map<Long, String>, at: I
             val shape = RoundedCornerShape(u.dp(12))
             Box(
                 Modifier.size(u.dp(64)).graphicsLayer(alpha = if (on) 1f else 0.55f).clip(shape).background(PanelCardFill)
-                    .then(if (on) Modifier.border(u.dp(if (focused) 2.5f else 1.5f), Color.White.copy(alpha = if (focused) 1f else 0.6f), shape) else Modifier)
+                    .then(if (on) Modifier.border(u.dp(if (focused) 2.5f else 1.5f), Color.White.copy(alpha = if (focused) 1f else 0.6f), shape)
+                        else if (sets[i].mastered) Modifier.border(u.dp(1.5f), MasteredGold, shape) else Modifier)
                     .clickable { onSet(i) },
                 contentAlignment = Alignment.Center,
             ) {
@@ -536,6 +523,9 @@ private fun CoverStrip(sets: List<AchievementSet>, art: Map<Long, String>, at: I
     }
 }
 
+// the Legendary tier's gold, for a mastered set
+private val MasteredGold = Color(0xFFE8A93A)
+
 @Composable
 internal fun Ring(set: AchievementSet, u: DesignUnits) {
     val fraction = if (set.total > 0) set.unlocked.toFloat() / set.total else 0f
@@ -551,6 +541,11 @@ internal fun Ring(set: AchievementSet, u: DesignUnits) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("${(fraction * 100).toInt()}%", color = Color.White, fontSize = u.sp(26), fontWeight = FontWeight.ExtraLight, maxLines = 1)
             Text("${set.unlocked} of ${set.total}", color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(11), maxLines = 1)
+            // points are stored for every set; RetroAchievements fills them, Steam leaves them 0
+            if (set.points > 0) {
+                Text("${set.earnedPoints} / ${set.points} pts", color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(10), maxLines = 1)
+            }
+            if (set.mastered) Text("Mastered", color = MasteredGold, fontSize = u.sp(10), fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
     }
 }
