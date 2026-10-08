@@ -29,7 +29,7 @@ object BackupEntry {
     const val APP_OVERRIDES        = "app_overrides.json"
     const val COLLECTIONS          = "collections.json"
     const val COLLECTION_GAMES     = "collection_games.json"
-    const val THEMES               = "themes.json"
+    // themes.json: written by backups before 2026-10-07; restore no longer reads it
     const val HIDDEN_PLACEMENTS    = "hidden_placements.json"
     const val MUSIC_FOLDERS        = "music_folders.json"
     const val MUSIC_TRACKS         = "music_tracks.json"

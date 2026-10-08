@@ -21,7 +21,6 @@ import com.echo.core.data.database.dao.MusicTrackDao
 import com.echo.core.data.database.dao.PlaylistDao
 import com.echo.core.data.database.dao.PlaySessionDao
 import com.echo.core.data.database.dao.PlatformDao
-import com.echo.core.data.database.dao.ThemeDao
 import com.echo.core.data.database.dao.HiddenPlacementDao
 import com.echo.core.data.database.dao.BookDao
 import com.echo.core.data.database.dao.BookLibraryDao
@@ -73,7 +72,6 @@ object DatabaseModule {
     @Provides fun provideCategoryDao(db: EchoDatabase): CategoryDao = db.categoryDao()
     @Provides fun providePlaySessionDao(db: EchoDatabase): PlaySessionDao = db.playSessionDao()
     @Provides fun provideLibrarySourceDao(db: EchoDatabase): LibrarySourceDao = db.librarySourceDao()
-    @Provides fun provideThemeDao(db: EchoDatabase): ThemeDao = db.themeDao()
     @Provides fun provideMemoryCardDao(db: EchoDatabase): MemoryCardDao = db.memoryCardDao()
     @Provides fun provideAppOverrideDao(db: EchoDatabase): AppOverrideDao = db.appOverrideDao()
     @Provides fun provideCollectionDao(db: EchoDatabase): CollectionDao = db.collectionDao()

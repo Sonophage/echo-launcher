@@ -18,7 +18,6 @@ import com.echo.core.data.database.entity.PhotoLibraryEntity
 import com.echo.core.data.database.entity.PlatformEntity
 import com.echo.core.data.database.entity.PlaylistEntity
 import com.echo.core.data.database.entity.PlaylistTrackEntity
-import com.echo.core.data.database.entity.ThemeEntity
 import com.echo.core.data.database.entity.VideoEntity
 import com.echo.core.data.database.entity.VideoLibraryEntity
 import com.echo.core.data.database.entity.VideoPlaylistEntity
@@ -31,7 +30,6 @@ interface BackupDao {
     @Query("SELECT * FROM app_overrides")         suspend fun getAppOverrides(): List<AppOverrideEntity>
     @Query("SELECT * FROM collections")           suspend fun getCollections(): List<CollectionEntity>
     @Query("SELECT * FROM collection_games")      suspend fun getCollectionGames(): List<CollectionGameEntity>
-    @Query("SELECT * FROM themes")                suspend fun getThemes(): List<ThemeEntity>
     @Query("SELECT * FROM hidden_placements")     suspend fun getHiddenPlacements(): List<HiddenPlacementEntity>
     @Query("SELECT * FROM music_folders")         suspend fun getMusicFolders(): List<MusicFolderEntity>
     @Query("SELECT * FROM music_tracks")          suspend fun getMusicTracks(): List<MusicTrackEntity>
@@ -50,7 +48,6 @@ interface BackupDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertAppOverrides(rows: List<AppOverrideEntity>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertCollections(rows: List<CollectionEntity>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertCollectionGames(rows: List<CollectionGameEntity>)
-    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertThemes(rows: List<ThemeEntity>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertHiddenPlacements(rows: List<HiddenPlacementEntity>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertMusicFolders(rows: List<MusicFolderEntity>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertMusicTracks(rows: List<MusicTrackEntity>)
@@ -100,6 +97,4 @@ interface BackupDao {
         barPosition: Int,
     )
 
-    @Query("UPDATE themes SET is_active = (id = :id)")
-    suspend fun setActiveTheme(id: String)
 }

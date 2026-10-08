@@ -24,7 +24,6 @@ import com.echo.core.data.database.dao.MusicTrackDao
 import com.echo.core.data.database.dao.PlaylistDao
 import com.echo.core.data.database.dao.PlaySessionDao
 import com.echo.core.data.database.dao.PlatformDao
-import com.echo.core.data.database.dao.ThemeDao
 import com.echo.core.data.database.dao.HiddenPlacementDao
 import com.echo.core.data.database.dao.BookDao
 import com.echo.core.data.database.dao.BookLibraryDao
@@ -57,7 +56,6 @@ import com.echo.core.data.database.entity.PlaylistEntity
 import com.echo.core.data.database.entity.PlaylistTrackEntity
 import com.echo.core.data.database.entity.PlaySessionEntity
 import com.echo.core.data.database.entity.PlatformEntity
-import com.echo.core.data.database.entity.ThemeEntity
 import com.echo.core.data.database.entity.HiddenPlacementEntity
 import com.echo.core.data.database.entity.BookEntity
 import com.echo.core.data.database.entity.BookLibraryEntity
@@ -73,7 +71,7 @@ import com.echo.core.data.database.entity.VideoLibraryEntity
 import com.echo.core.data.database.entity.VideoPlaylistEntity
 import com.echo.core.data.database.entity.VideoPlaylistItemEntity
 
-const val ECHO_DATABASE_VERSION = 56
+const val ECHO_DATABASE_VERSION = 57
 
 @Database(
     entities = [
@@ -84,7 +82,6 @@ const val ECHO_DATABASE_VERSION = 56
         CategoryItemEntity::class,
         PlaySessionEntity::class,
         LibrarySourceEntity::class,
-        ThemeEntity::class,
         MemoryCardEntity::class,
         AppOverrideEntity::class,
         CollectionEntity::class,
@@ -124,7 +121,6 @@ abstract class EchoDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun playSessionDao(): PlaySessionDao
     abstract fun librarySourceDao(): LibrarySourceDao
-    abstract fun themeDao(): ThemeDao
     abstract fun memoryCardDao(): MemoryCardDao
     abstract fun appOverrideDao(): AppOverrideDao
     abstract fun collectionDao(): CollectionDao
@@ -1299,6 +1295,14 @@ abstract class EchoDatabase : RoomDatabase() {
             }
         }
 
+        // the themes table belonged to feature-themes, removed in 03b9395f; nothing has read it since
+        // (owner, 2026-10-07: kill dead code). Saved themes live in EchoThemeStore's files
+        val MIGRATION_56_57 = object : Migration(56, 57) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS `themes`")
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -1355,6 +1359,7 @@ abstract class EchoDatabase : RoomDatabase() {
             MIGRATION_53_54,
             MIGRATION_54_55,
             MIGRATION_55_56,
+            MIGRATION_56_57,
         )
     }
 }

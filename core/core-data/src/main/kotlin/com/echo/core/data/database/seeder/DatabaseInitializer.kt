@@ -7,9 +7,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import com.echo.core.data.database.dao.PlatformDao
-import com.echo.core.data.database.dao.ThemeDao
 import com.echo.core.data.database.entity.MemoryCardEntity
-import com.echo.core.data.database.entity.ThemeEntity
 import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.data.repository.CategoryRepositoryImpl
 import com.echo.core.data.repository.WindowsLibrarySetup
@@ -20,7 +18,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val KEY_DB_SEEDED     = booleanPreferencesKey("db_seeded_v1")
-private val KEY_THEMES_SEEDED = booleanPreferencesKey("themes_seeded_v1")
 
 private val KEY_LAST_PLAYED_PLACED = booleanPreferencesKey("last_played_placed_v1")
 
@@ -52,33 +49,12 @@ internal fun renamedFromLegacy(platformId: String, name: String, platformName: S
     else -> null
 }
 
-private val BUILTIN_CLASSIC_BLUE = ThemeEntity(
-    id               = "builtin_classic_blue",
-    name             = "Classic Blue",
-    author           = "ECHO",
-    version          = "1.0",
-    waveColor        = 0xFF0055AAL,
-    waveOpacity      = 0.7f,
-    waveSpeed        = 1.0f,
-    waveAmplitude    = 1.0f,
-    accentColor      = 0xFFFFFFFFL,
-    textColor        = 0xFFFFFFFFL,
-    backgroundUri    = null,
-    fontKey          = "system_default",
-    hasBootAnimation = false,
-    bootAnimationUri = null,
-    soundPackUri     = null,
-    packagePath      = null,
-    isBuiltIn        = true,
-    isActive         = true,
-)
 
 @Singleton
 class DatabaseInitializer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val platformSeeder: PlatformSeeder,
     private val categoryRepository: CategoryRepositoryImpl,
-    private val themeDao: ThemeDao,
     private val libraryConsolidation: LibraryConsolidation,
     private val memoryCardDao: com.echo.core.data.database.dao.MemoryCardDao,
     private val platformDao: PlatformDao,
@@ -92,7 +68,6 @@ class DatabaseInitializer @Inject constructor(
         renameNetworkColumn()
         moveSettingsToPanel()
         seedAndroidCard()
-        seedThemes()
 
         libraryConsolidation.run()
         dropLegacyNames()
@@ -168,17 +143,4 @@ class DatabaseInitializer @Inject constructor(
         context.echoDataStore.edit { it[KEY_ANDROID_CARD_SEEDED] = true }
     }
 
-    private suspend fun seedThemes() {
-        val prefs = context.echoDataStore.data.first()
-        if (prefs[KEY_THEMES_SEEDED] == true) {
-            Timber.d("Themes already seeded — skipping")
-            return
-        }
-
-        Timber.i("Seeding built-in themes")
-        themeDao.insertAll(listOf(BUILTIN_CLASSIC_BLUE))
-
-        context.echoDataStore.edit { it[KEY_THEMES_SEEDED] = true }
-        Timber.i("Theme seed complete")
-    }
 }

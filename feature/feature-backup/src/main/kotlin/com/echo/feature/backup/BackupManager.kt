@@ -32,7 +32,6 @@ import com.echo.core.data.database.entity.PlatformEntity
 import com.echo.core.data.database.entity.PlaylistEntity
 import com.echo.core.data.database.entity.PlaylistTrackEntity
 import com.echo.core.data.database.entity.PlaySessionEntity
-import com.echo.core.data.database.entity.ThemeEntity
 import com.echo.core.data.database.entity.VideoEntity
 import com.echo.core.data.database.entity.VideoLibraryEntity
 import com.echo.core.data.database.entity.VideoPlaylistEntity
@@ -126,7 +125,6 @@ open class BackupManager @Inject constructor(
             zip.writeJson(BackupEntry.APP_OVERRIDES,        json.encodeToString(listSerializer<AppOverrideEntity>(),       backupDao.getAppOverrides()))
             zip.writeJson(BackupEntry.COLLECTIONS,          json.encodeToString(listSerializer<CollectionEntity>(),        backupDao.getCollections()))
             zip.writeJson(BackupEntry.COLLECTION_GAMES,     json.encodeToString(listSerializer<CollectionGameEntity>(),    backupDao.getCollectionGames()))
-            zip.writeJson(BackupEntry.THEMES,               json.encodeToString(listSerializer<ThemeEntity>(),             backupDao.getThemes()))
             zip.writeJson(BackupEntry.HIDDEN_PLACEMENTS,    json.encodeToString(listSerializer<HiddenPlacementEntity>(),   backupDao.getHiddenPlacements()))
             zip.writeJson(BackupEntry.MUSIC_FOLDERS,        json.encodeToString(listSerializer<MusicFolderEntity>(),       backupDao.getMusicFolders()))
             zip.writeJson(BackupEntry.MUSIC_TRACKS,         json.encodeToString(listSerializer<MusicTrackEntity>(),        backupDao.getMusicTracks()))
@@ -202,7 +200,6 @@ open class BackupManager @Inject constructor(
         val appOverrides   = entries.decodeList<AppOverrideEntity>(BackupEntry.APP_OVERRIDES)
         val collections    = entries.decodeList<CollectionEntity>(BackupEntry.COLLECTIONS)
         val collectionGames = entries.decodeList<CollectionGameEntity>(BackupEntry.COLLECTION_GAMES)
-        val themes         = entries.decodeList<ThemeEntity>(BackupEntry.THEMES)
         val hiddenPlaces   = entries.decodeList<HiddenPlacementEntity>(BackupEntry.HIDDEN_PLACEMENTS)
         val musicFolders   = entries.decodeList<MusicFolderEntity>(BackupEntry.MUSIC_FOLDERS)
         val musicTracks    = entries.decodeList<MusicTrackEntity>(BackupEntry.MUSIC_TRACKS)
@@ -295,8 +292,6 @@ open class BackupManager @Inject constructor(
             backupDao.restorePlatformPrefs(p.id, p.preferredEmulatorPackage, p.isPinnedToBar, p.barPosition)
         }
 
-        backupDao.insertThemes(themes)
-        themes.firstOrNull { it.isActive }?.let { backupDao.setActiveTheme(it.id) }
 
         if (settings != null) restoreSettingsSnapshot(settings.remapWallpaper(filesDirPath))
         if (reader != null) restoreReaderSnapshot(reader)
