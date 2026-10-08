@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import com.echo.core.domain.model.EmulatorProfile
 import com.echo.core.domain.model.IntentType
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -160,5 +161,18 @@ class EmulatorProfileRepositoryTest {
         repo.initialize()
 
         assertTrue(repo.getAllPersistedProfiles().isEmpty())
+    }
+
+    // two saves at once (an emulator detected while you edit a custom one) must not drop either; before the
+    // lock each read the file, changed its copy and wrote it, so the last writer's copy won
+    @Test
+    fun `saves made at the same time all survive`() {
+        val repo = repository(kotlinx.coroutines.Dispatchers.IO)
+        kotlinx.coroutines.runBlocking {
+            (1..40).map { n -> launch(kotlinx.coroutines.Dispatchers.IO) { repo.savePersistedProfile(profile("p$n")) } }.forEach { it.join() }
+        }
+
+        val saved = kotlinx.coroutines.runBlocking { repo.getAllPersistedProfiles() }.map { it.id }.toSet()
+        assertEquals((1..40).map { "p$it" }.toSet(), saved)
     }
 }

@@ -8,6 +8,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,6 +47,13 @@ class EmulatorProfileRepository @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    // one read-modify-write at a time: two saves at once must not lose either
+    private val writeLock = Mutex()
+
+    // written whole or not at all, so a cut-off write never reads back as no profiles
+    private val persistedFile get() =
+        androidx.core.util.AtomicFile(java.io.File(context.filesDir, "emulator_profiles/custom_profiles.json"))
+
     suspend fun initialize() {
         val bundled  = withContext(io) { loadBundledProfiles() }
         val persisted = withContext(io) { loadPersistedProfiles() }
@@ -69,30 +78,29 @@ class EmulatorProfileRepository @Inject constructor(
             .stabilizeCore(autoCoreMemory.rememberedProfileId(platformId))
     }
 
-    suspend fun savePersistedProfile(profile: EmulatorProfile) = withContext(io) {
+    suspend fun savePersistedProfile(profile: EmulatorProfile) = withContext(io) { writeLock.withLock {
         val current = loadPersistedProfiles().toMutableList()
         val idx = current.indexOfFirst { it.id == profile.id }
         if (idx >= 0) current[idx] = profile else current.add(profile)
         _profiles.value = mergeProfiles(loadBundledProfiles(), current)
         persistProfiles(current)
-    }
+    } }
 
-    suspend fun deleteCustomProfile(id: String) = withContext(io) {
+    suspend fun deleteCustomProfile(id: String) = withContext(io) { writeLock.withLock {
         val current = loadPersistedProfiles().filter { it.id != id }
         _profiles.value = mergeProfiles(loadBundledProfiles(), current)
         persistProfiles(current)
-    }
+    } }
 
-    suspend fun resetPersistedProfiles() = withContext(io) {
+    suspend fun resetPersistedProfiles() = withContext(io) { writeLock.withLock {
         try {
-            val file = java.io.File(context.filesDir, "emulator_profiles/custom_profiles.json")
-            if (file.exists()) file.delete()
+            persistedFile.delete()
         } catch (e: Exception) {
             Timber.e(e, "Failed to delete persisted profiles during reset")
         }
         _profiles.value = loadBundledProfiles()
         Timber.i("Emulator profiles reset to bundled defaults")
-    }
+    } }
 
     private fun mergeProfiles(
         bundled: List<EmulatorProfile>,
@@ -117,9 +125,9 @@ class EmulatorProfileRepository @Inject constructor(
 
     private fun loadPersistedProfiles(): List<EmulatorProfile> {
         val parsed = try {
-            val file = java.io.File(context.filesDir, "emulator_profiles/custom_profiles.json")
-            if (!file.exists()) return emptyList()
-            json.decodeFromString<List<EmulatorProfile>>(file.readText())
+            val file = persistedFile
+            if (!file.baseFile.exists()) return emptyList()
+            json.decodeFromString<List<EmulatorProfile>>(file.readFully().decodeToString())
         } catch (e: Exception) {
             Timber.e(e, "Failed to load persisted emulator profiles")
             return emptyList()
@@ -133,12 +141,17 @@ class EmulatorProfileRepository @Inject constructor(
     }
 
     private fun persistProfiles(profiles: List<EmulatorProfile>) {
+        val file = persistedFile
+        file.baseFile.parentFile?.mkdirs()
+        val out = try { file.startWrite() } catch (e: Exception) {
+            Timber.e(e, "Failed to persist emulator profiles")
+            return
+        }
         try {
-            val dir  = java.io.File(context.filesDir, "emulator_profiles")
-            dir.mkdirs()
-            val file = java.io.File(dir, "custom_profiles.json")
-            file.writeText(json.encodeToString(ListSerializer(EmulatorProfile.serializer()), profiles))
+            out.write(json.encodeToString(ListSerializer(EmulatorProfile.serializer()), profiles).encodeToByteArray())
+            file.finishWrite(out)
         } catch (e: Exception) {
+            file.failWrite(out)
             Timber.e(e, "Failed to persist emulator profiles")
         }
     }
