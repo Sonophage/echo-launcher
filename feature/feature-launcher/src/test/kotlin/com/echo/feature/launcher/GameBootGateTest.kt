@@ -91,6 +91,18 @@ class GameBootGateTest {
         assertTrue(awaiting.isCompleted)
     }
 
+    // owner, 2026-10-08: Settings' preview played the disc while GameBoot Style was Lens; it asks requestFor now
+    @Test
+    fun `the preview's request wears the chosen style without raising a presentation`() = runTest {
+        val h = Harness(this, enabled = true, style = com.echo.core.data.repository.GameBootStyle.LENS)
+
+        val request = h.gate.requestFor("Preview", "card.png", backdropArt = "bg.png", cardArt = "card.png")
+
+        assertEquals(com.echo.core.data.repository.GameBootStyle.LENS, request.style)
+        assertEquals("bg.png", request.backdropArt)
+        assertNull(h.gate.active.value, "Asking what a launch would show must not show it")
+    }
+
     @Test
     fun `switched on suspends until the overlay reports back and plays the assigned sound`() = runTest {
         val h = Harness(this, enabled = true, customAudio = "/data/ui-media/gameboot_audio.mp3")

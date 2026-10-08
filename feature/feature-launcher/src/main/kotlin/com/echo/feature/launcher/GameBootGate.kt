@@ -69,18 +69,9 @@ class GameBootGate @Inject constructor(
         }
         val done = CompletableDeferred<Unit>()
         completion = done
-        val (video, audio) = withContext(Dispatchers.IO) {
-            val customVideo = uiMedia.pathFor(UiMediaSlot.GAMEBOOT_VIDEO)
-            customVideo to resolveGameBootAudio(
-                customVideoPath = customVideo,
-                customAudioPath = uiMedia.pathFor(UiMediaSlot.GAMEBOOT_AUDIO),
-            )
-        }
-        val style = preferences.styleFlow.first()
-        _active.value = GameBootRequest(
-            gameTitle = gameTitle, videoPath = video, audioPath = audio, coverArt = coverArt,
-            style = style, backdropArt = backdropArt, cardArt = cardArt,
-        )
+        val request = requestFor(gameTitle, coverArt, backdropArt, cardArt)
+        val (video, audio, style) = Triple(request.videoPath, request.audioPath, request.style)
+        _active.value = request
 
         audio?.let { track ->
             if (video != null) {
@@ -100,6 +91,22 @@ class GameBootGate @Inject constructor(
         } finally {
             completion = null
         }
+    }
+
+    // what a launch of this game shows; Settings' preview asks for the same (owner, 2026-10-08: the preview
+    // played the disc while the style was Lens)
+    suspend fun requestFor(gameTitle: String, coverArt: String? = null, backdropArt: String? = null, cardArt: String? = null): GameBootRequest {
+        val (video, audio) = withContext(Dispatchers.IO) {
+            val customVideo = uiMedia.pathFor(UiMediaSlot.GAMEBOOT_VIDEO)
+            customVideo to resolveGameBootAudio(
+                customVideoPath = customVideo,
+                customAudioPath = uiMedia.pathFor(UiMediaSlot.GAMEBOOT_AUDIO),
+            )
+        }
+        return GameBootRequest(
+            gameTitle = gameTitle, videoPath = video, audioPath = audio, coverArt = coverArt,
+            style = preferences.styleFlow.first(), backdropArt = backdropArt, cardArt = cardArt,
+        )
     }
 
     fun onPresentationFinished() {

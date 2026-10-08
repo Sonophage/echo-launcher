@@ -7,7 +7,6 @@ import android.provider.MediaStore
 import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.domain.model.Game
 import com.echo.core.domain.model.resolve
-import com.echo.core.ui.media.resolveGameBootAudio
 import com.echo.feature.appbar.LauncherShortcutRepository
 import com.echo.feature.launcher.LaunchDispatchResult
 import com.echo.feature.launcher.LaunchRecoveryAction
@@ -326,21 +325,14 @@ class CrossbarLauncher(
 
     fun previewGameBoot() {
         scope.launch {
-            val (video, audio) = withContext(Dispatchers.IO) {
-                val customVideo = vm.uiMediaStore.pathFor(com.echo.core.domain.model.UiMediaSlot.GAMEBOOT_VIDEO)
-                customVideo to resolveGameBootAudio(
-                    customVideoPath = customVideo,
-                    customAudioPath = vm.uiMediaStore.pathFor(
-                        com.echo.core.domain.model.UiMediaSlot.GAMEBOOT_AUDIO,
-                    ),
-                )
-            }
-
-            val previewArt = if (video != null) null else runCatching {
-                vm.gameRepository.observeAllGames().first().firstNotNullOfOrNull { it.discFaceUri }
+            // the first game with art stands in for the one being launched, dressed as a launch dresses it
+            val game = runCatching {
+                vm.gameRepository.observeAllGames().first().firstOrNull { it.discFaceUri != null }
             }.getOrNull()
+            val cover = game?.let { com.echo.core.domain.model.coverArtOf(it.iconUri, it.artworkUri) }
+            val request = gameBootGate.requestFor("Preview", cover, backdropArt = game?.artworkUri, cardArt = cover)
 
-            audio?.let {
+            request.audioPath?.let {
                 vm.uiMediaAudioPlayer.play(
                     uri = it,
                     clipEndMs = com.echo.themekit.UiMediaLimits.GAMEBOOT_SEQUENCE_MS,
@@ -349,12 +341,7 @@ class CrossbarLauncher(
             }
             uiState.update {
                 it.copy(
-                    activeGameBoot = com.echo.feature.launcher.GameBootRequest(
-                        gameTitle = "Preview",
-                        videoPath = video,
-                        audioPath = audio,
-                        coverArt = previewArt,
-                    ),
+                    activeGameBoot = request,
                     gameBootIsPreview = true,
                 )
             }

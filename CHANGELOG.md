@@ -38,6 +38,9 @@ released; it becomes the next release's notes.
 ### Fixes
 - Game Info from the App Drawer's Options opens again.
 - With a genre filter on, the drawer's system buttons count only that genre.
+- A video opened to play shows no page before the player on a single screen.
+- Inside a shelf, the strip on the left shows the shelves with their covers instead of a blank card.
+- GameBoot's Preview in Settings plays the style you chose (it always played the disc).
 
 ### Two screens (AYN Thor)
 - With the App Drawer on the second screen, the other screen shows the focused game as Recent
