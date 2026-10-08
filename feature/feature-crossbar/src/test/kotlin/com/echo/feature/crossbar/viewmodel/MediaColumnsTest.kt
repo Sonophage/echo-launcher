@@ -39,9 +39,9 @@ class MediaColumnsTest {
     private fun subtitleOf(items: List<CrossbarItem>, id: String) = items.first { it.id == id }.subtitle
 
     @Test
-    fun `music root is songs, artists, albums, playlists, in that order`() {
+    fun `music root is songs, artists, albums, genres, playlists, in that order`() {
         assertEquals(
-            listOf("all_music", "music_artists", "music_albums", "playlists", "media_folders_MUSIC"),
+            listOf("all_music", "music_artists", "music_albums", "music_genres", "playlists", "media_folders_MUSIC"),
             ids(CrossbarUiState().musicRootSections()),
         )
     }

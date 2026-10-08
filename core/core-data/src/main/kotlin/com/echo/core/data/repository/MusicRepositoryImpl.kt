@@ -86,6 +86,9 @@ class MusicRepositoryImpl @Inject constructor(
 
     override suspend fun clearTrackLastPlayed(trackId: String) = trackDao.clearLastPlayed(trackId)
 
+    override suspend fun setGenreOverride(trackIds: List<String>, genre: String?) =
+        trackDao.setGenreOverride(trackIds, genre?.trim()?.takeIf { it.isNotEmpty() })
+
     override fun observeRecentlyPlayedTracks(limit: Int): Flow<List<MusicTrack>> =
         trackDao.observeRecentlyPlayed(limit).map { list -> list.map { it.toDomain() } }
 

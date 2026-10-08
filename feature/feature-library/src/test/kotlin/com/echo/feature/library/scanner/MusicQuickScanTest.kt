@@ -41,9 +41,10 @@ class MusicQuickScanTest {
         lastModified: Long? = 1000L,
         artUri: String? = null,
         albumArtist: String? = "",
+        genre: String? = "",
     ) = MusicTrack(
         id = "t1", folderId = "f1", uri = "content://t1", displayName = "t1.mp3",
-        lastModified = lastModified, artUri = artUri, albumArtist = albumArtist,
+        lastModified = lastModified, artUri = artUri, albumArtist = albumArtist, genre = genre,
     )
 
     @Test
@@ -74,5 +75,12 @@ class MusicQuickScanTest {
     @Test
     fun `the art rule still applies to a row that has been read`() {
         assertFalse(canReuseMusicMetadata(track(artUri = "file:///gone.img"), 1000L, gone))
+    }
+
+    // owner, 2026-10-08: tracks read before genres existed get read once more, and never again after
+    @Test
+    fun `a row written before genres existed is reparsed, once`() {
+        assertFalse(canReuseMusicMetadata(track(genre = null), 1000L, present))
+        assertTrue(canReuseMusicMetadata(track(genre = ""), 1000L, present), "a file with no genre tag is reused after one read")
     }
 }

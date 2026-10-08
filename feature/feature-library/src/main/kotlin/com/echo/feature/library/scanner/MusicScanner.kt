@@ -41,6 +41,8 @@ internal fun canReuseMusicMetadata(
     if (prior == null) return false
     if (prior.lastModified != lastModified) return false
     if (prior.albumArtist == null) return false
+    // owner, 2026-10-08: a track read before genres existed is read once more for its genre tag
+    if (prior.genre == null) return false
     return musicArtStillOnDisk(prior.artUri, artExists)
 }
 
@@ -147,6 +149,7 @@ class MusicScanner @Inject constructor(
             sizeBytes = sizeBytes,
             lastModified = lastModified,
             trackNumber = meta?.trackNumber,
+            genre = meta?.genre,
             relativePath = relPath.takeIf { it.isNotEmpty() },
             artUri = artUri,
         )
@@ -162,6 +165,7 @@ class MusicScanner @Inject constructor(
         val trackNumber: Int?,
         val mimeType: String?,
         val artwork: ByteArray?,
+        val genre: String,
     )
 
     private fun readMetadata(uri: Uri): TrackMeta? = runCatching {
@@ -178,6 +182,7 @@ class MusicScanner @Inject constructor(
                     ?.substringBefore('/')?.trim()?.toIntOrNull(),
                 mimeType = mmr.str(MediaMetadataRetriever.METADATA_KEY_MIMETYPE),
                 artwork = runCatching { mmr.embeddedPicture }.getOrNull(),
+                genre = mmr.str(MediaMetadataRetriever.METADATA_KEY_GENRE).orEmpty(),
             )
         }
     }.getOrNull()

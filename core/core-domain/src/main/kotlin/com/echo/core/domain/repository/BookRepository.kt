@@ -31,6 +31,9 @@ interface BookRepository {
 
     suspend fun removeBook(id: String)
 
+    // the owner's genre for a book; null puts back the EPUB's
+    suspend fun setGenreOverride(id: String, genre: String?)
+
     fun observeDefaultReader(): Flow<String?>
     suspend fun getDefaultReader(): String?
     suspend fun setDefaultReader(packageName: String?)

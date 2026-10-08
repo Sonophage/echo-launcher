@@ -188,6 +188,7 @@ internal fun photoLibraryContextMenuItems(): List<CrossbarContextMenuItem> = lis
 
 internal fun bookContextMenuItems(hasOpenStamp: Boolean): List<CrossbarContextMenuItem> = buildList {
     add(CrossbarContextMenuItem("book_open", "Read"))
+    add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.METADATA))
     if (hasOpenStamp) add(CrossbarContextMenuItem("book_remove_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
     add(CrossbarContextMenuItem("book_remove", "Remove From Library", isDestructive = true, group = MenuGroup.REMOVE))
 }
@@ -209,6 +210,7 @@ internal fun musicTrackContextMenuItems(
     add(CrossbarContextMenuItem("play_background", "Play in Background"))
 
     add(CrossbarContextMenuItem("add_to_playlist", "Add to Playlist", group = MenuGroup.LIBRARY))
+    add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.METADATA))
     if (hasPlayStamp) add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
 
     if (playlistId != null) {

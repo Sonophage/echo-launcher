@@ -52,11 +52,23 @@ interface BookDao {
     @Transaction
     suspend fun replaceForLibrary(libraryId: String, books: List<BookEntity>) {
         val stamps = openStampsForLibrary(libraryId).associate { it.id to it.lastOpenedAt }
+        val genres = genreOverridesForLibrary(libraryId).associate { it.id to it.genreOverride }
         deleteForLibrary(libraryId)
         if (books.isNotEmpty()) insertAll(
-            books.map { if (it.lastOpenedAt == null) it.copy(lastOpenedAt = stamps[it.id]) else it },
+            books.map {
+                it.copy(
+                    lastOpenedAt = it.lastOpenedAt ?: stamps[it.id],
+                    genreOverride = it.genreOverride ?: genres[it.id],
+                )
+            },
         )
     }
+
+    @Query("SELECT id, genre_override AS genreOverride FROM books WHERE library_id = :libraryId AND genre_override IS NOT NULL")
+    suspend fun genreOverridesForLibrary(libraryId: String): List<GenreOverrideRow>
+
+    @Query("UPDATE books SET genre_override = :genre WHERE id = :id")
+    suspend fun setGenreOverride(id: String, genre: String?)
 
     @Query("UPDATE books SET last_opened_at = :openedAt WHERE id = :id")
     suspend fun markOpened(id: String, openedAt: Long)

@@ -157,6 +157,10 @@ class CrossbarGames(
             }
             return
         }
+        dialog.editGenreTarget?.let { target ->
+            name.trim().takeIf { it.isNotEmpty() }?.let { vm.genres.set(target, it) }
+            return
+        }
         if (dialog.editNoteGameId != null) {
             scope.launch {
                 vm.gameRepository.updateNote(dialog.editNoteGameId, name.trim().ifBlank { null })

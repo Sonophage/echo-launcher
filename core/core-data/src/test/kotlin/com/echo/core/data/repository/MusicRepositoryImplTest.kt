@@ -137,6 +137,9 @@ private class FakeMusicTrackDao : MusicTrackDao {
         byFolder[folderId].orEmpty()
             .filter { it.lastPlayedAt != null }
             .map { TrackPlayStamp(it.id, it.lastPlayedAt) }
+    override suspend fun genreOverridesForFolder(folderId: String) =
+        byFolder[folderId].orEmpty().filter { it.genreOverride != null }.map { com.echo.core.data.database.dao.GenreOverrideRow(it.id, it.genreOverride) }
+    override suspend fun setGenreOverride(ids: List<String>, genre: String?) = ids.forEach { id -> mutate(id) { it.copy(genreOverride = genre) } }
     override suspend fun markPlayed(id: String, playedAt: Long) = mutate(id) { it.copy(lastPlayedAt = playedAt) }
     override suspend fun clearLastPlayed(id: String) = mutate(id) { it.copy(lastPlayedAt = null) }
     override fun observeRecentlyPlayed(limit: Int): Flow<List<MusicTrackEntity>> = flowOf(

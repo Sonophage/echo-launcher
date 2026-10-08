@@ -116,6 +116,9 @@ internal fun CrossbarPalette.toEchoColors() = EchoColors(
 data class CrossbarContextMenu(
     val state: MenuState<String>,
 
+    // the Genre picker's track, album or book (owner, 2026-10-08)
+    val genreTarget: GenreTarget? = null,
+
     val primaryId: String? = null,
 
     val platformId: String? = null,
@@ -185,6 +188,8 @@ data class CollectionNameDialogState(
     val editTitleGameId: Long? = null,
 
     val editNoteGameId: Long? = null,
+
+    val editGenreTarget: GenreTarget? = null,
 
     val renameCardPlatformId: String? = null,
 
@@ -301,6 +306,10 @@ sealed interface BooksNav {
     data object SeriesList : BooksNav
 
     data class Series(val name: String) : BooksNav
+
+    // owner, 2026-10-08: the books by genre, as Series drills
+    data object Genres : BooksNav
+    data class Genre(val name: String) : BooksNav
 }
 
 data class BookSeries(val name: String, val bookCount: Int, val coverUri: String?)
@@ -340,11 +349,16 @@ sealed interface MusicNav {
     data object Albums : MusicNav
     data class Artist(val name: String, val key: String) : MusicNav
     data class Album(val name: String, val key: String) : MusicNav
+
+    // owner, 2026-10-08: the tracks by genre, as Artists and Albums drill
+    data object Genres : MusicNav
+    data class Genre(val name: String, val key: String) : MusicNav
 }
 
 // a column of tracks, which the music sorts order
 internal val MusicNav.listsTracks: Boolean
-    get() = this == MusicNav.AllMusic || this is MusicNav.Playlist || this is MusicNav.Artist || this is MusicNav.Album
+    get() = this == MusicNav.AllMusic || this is MusicNav.Playlist || this is MusicNav.Artist || this is MusicNav.Album ||
+        this is MusicNav.Genre
 
 data class SearchState(
     val scope: SearchScope,
@@ -397,6 +411,7 @@ enum class DrillOutStep {
     LIBRARY_SHELF,
 
     LIBRARY_SERIES,
+    LIBRARY_GENRE,
     LIBRARY,
     ROM_FOLDERS,
 
@@ -594,6 +609,8 @@ data class CrossbarUiState(
     val bookLibraries: List<com.echo.core.domain.model.BookLibrary> = emptyList(),
 
     val bookSeries: List<BookSeries> = emptyList(),
+    // the books by genre, each as a name, a count and a cover (owner, 2026-10-08)
+    val bookGenres: List<BookSeries> = emptyList(),
 
     val defaultReader: String? = null,
     val defaultReaderLabel: String? = null,
@@ -742,6 +759,7 @@ data class CrossbarUiState(
             photoNav is PhotoNav.Library -> DrillOutStep.PHOTO_LIBRARY
             photoNav != PhotoNav.Root -> DrillOutStep.PHOTO
             booksNav is BooksNav.Series -> DrillOutStep.LIBRARY_SERIES
+            booksNav is BooksNav.Genre -> DrillOutStep.LIBRARY_GENRE
             booksNav is BooksNav.Shelf -> DrillOutStep.LIBRARY_SHELF
             booksNav != BooksNav.Root -> DrillOutStep.LIBRARY
             romFoldersOpen -> DrillOutStep.ROM_FOLDERS
@@ -892,6 +910,8 @@ enum class CrossbarItemType {
 
     MUSIC_ARTISTS,
     MUSIC_ALBUMS,
+    MUSIC_GENRES,
+    LIBRARY_GENRE,
     MUSIC_TRACK,
     PLAYLIST,
     VIDEO_LIBRARY,
@@ -942,6 +962,13 @@ private val BY_SERIES_POSITION = compareBy<com.echo.core.domain.model.Book>(
 
 internal fun List<com.echo.core.domain.model.Book>.inSeriesOrder(): List<com.echo.core.domain.model.Book> =
     sortedWith(BY_SERIES_POSITION)
+
+// owner, 2026-10-08: the books by genre, the owner's own first; books with none are left out
+internal fun List<com.echo.core.domain.model.Book>.genreGroups(): List<BookSeries> =
+    filter { it.genreName != null }
+        .groupBy { it.genreName!! }
+        .map { (name, books) -> BookSeries(name, books.size, books.firstNotNullOfOrNull { it.coverUri }) }
+        .sortedBy { it.name.lowercase() }
 
 internal fun List<com.echo.core.domain.model.Book>.seriesGroups(): List<BookSeries> =
     filter { it.seriesName != null }
@@ -1423,6 +1450,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
     internal val panel = CrossbarPanel(this, _uiState, viewModelScope, menuSound)
+    internal val genres = CrossbarGenres(this, _uiState, viewModelScope)
 
     internal val librarySearch = CrossbarSearch(this, _uiState, viewModelScope, menuSound)
 
@@ -2217,6 +2245,8 @@ class CrossbarViewModel @Inject constructor(
             MusicNav.Playlists   -> "Playlist"
             is MusicNav.Playlist -> nav.name
             MusicNav.Artists     -> "Artists"
+            MusicNav.Genres      -> "Genres"
+            is MusicNav.Genre    -> nav.name
             MusicNav.Albums      -> "Albums"
             is MusicNav.Artist   -> nav.name
             is MusicNav.Album    -> nav.name
@@ -2254,6 +2284,8 @@ class CrossbarViewModel @Inject constructor(
             is BooksNav.Shelf -> nav.name
             BooksNav.SeriesList -> "Series"
             is BooksNav.Series  -> nav.name
+            BooksNav.Genres     -> "Genres"
+            is BooksNav.Genre   -> nav.name
             BooksNav.Folders  -> columnSettingsTitle(currentCategory()?.name)
             BooksNav.Root     -> null
         }
@@ -2282,6 +2314,7 @@ class CrossbarViewModel @Inject constructor(
                 MusicNav.AllMusic -> ALL_MUSIC_ITEM_ID
                 MusicNav.Artists, is MusicNav.Artist -> MUSIC_ARTISTS_ITEM_ID
                 MusicNav.Albums, is MusicNav.Album -> MUSIC_ALBUMS_ITEM_ID
+                MusicNav.Genres, is MusicNav.Genre -> MUSIC_GENRES_ITEM_ID
                 else -> PLAYLISTS_ITEM_ID
             }
             val idx = sibs.indexOfFirst { it.id == root }.coerceAtLeast(0)
@@ -3129,6 +3162,8 @@ class CrossbarViewModel @Inject constructor(
             }
             return
         }
+
+        menu.genreTarget?.let { return genres.onPick(it, itemId) }
 
         if (itemId == MOVE_ROW || itemId == MOVE_COLUMN) {
             closeContextMenu()
@@ -3994,6 +4029,7 @@ class CrossbarViewModel @Inject constructor(
             DrillOutStep.PHOTO_LIBRARY -> gallery.openPhotoView(PhotoNav.Albums)
             DrillOutStep.PHOTO -> gallery.closePhotoView()
             DrillOutStep.LIBRARY_SERIES -> bookshelf.openBooksView(BooksNav.SeriesList)
+            DrillOutStep.LIBRARY_GENRE -> bookshelf.openBooksView(BooksNav.Genres)
             DrillOutStep.LIBRARY_SHELF -> bookshelf.openBooksView(BooksNav.Shelves)
             DrillOutStep.LIBRARY -> bookshelf.closeBooksView()
             DrillOutStep.ROM_FOLDERS -> folders.closeRomFolders()
@@ -4904,7 +4940,8 @@ class CrossbarViewModel @Inject constructor(
         internal const val PLAYLISTS_ITEM_ID = "playlists"
 
         // the Music rows that drill into the column, shown as the drill flyout's siblings
-        internal val MUSIC_DRILL_ROOTS by lazy { setOf(ALL_MUSIC_ITEM_ID, MUSIC_ARTISTS_ITEM_ID, MUSIC_ALBUMS_ITEM_ID, PLAYLISTS_ITEM_ID) }
+        internal val MUSIC_DRILL_ROOTS by lazy { setOf(ALL_MUSIC_ITEM_ID, MUSIC_ARTISTS_ITEM_ID, MUSIC_ALBUMS_ITEM_ID, MUSIC_GENRES_ITEM_ID, PLAYLISTS_ITEM_ID) }
+        internal const val MUSIC_GENRES_ITEM_ID = "music_genres"
         internal const val MUSIC_ARTISTS_ITEM_ID = "music_artists"
         internal const val MUSIC_ALBUMS_ITEM_ID = "music_albums"
         internal const val ADD_MUSIC_APPS_ITEM_ID = "add_music_apps"
@@ -4933,6 +4970,7 @@ class CrossbarViewModel @Inject constructor(
         internal const val OPEN_READER_ITEM_ID = "library_open_reader"
         internal const val BOOK_SHELVES_ITEM_ID = "library_shelves"
         internal const val BOOK_SERIES_ITEM_ID = "library_series"
+        internal const val BOOK_GENRES_ITEM_ID = "library_genres"
         internal const val ALL_BOOKS_ITEM_ID = "all_books"
         internal const val ADD_BOOK_FOLDER_ITEM_ID = "add_book_folder"
         internal const val ADD_LIBRARY_APPS_ITEM_ID = "add_library_apps"

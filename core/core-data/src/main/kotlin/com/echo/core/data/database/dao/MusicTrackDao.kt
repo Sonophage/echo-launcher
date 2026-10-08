@@ -60,11 +60,24 @@ interface MusicTrackDao {
     @Transaction
     suspend fun replaceForFolder(folderId: String, tracks: List<MusicTrackEntity>) {
         val stamps = playStampsForFolder(folderId).associate { it.id to it.lastPlayedAt }
+        // a genre the owner set survives the rescan, as the play stamp does
+        val genres = genreOverridesForFolder(folderId).associate { it.id to it.genreOverride }
         deleteForFolder(folderId)
         if (tracks.isNotEmpty()) insertAll(
-            tracks.map { if (it.lastPlayedAt == null) it.copy(lastPlayedAt = stamps[it.id]) else it },
+            tracks.map {
+                it.copy(
+                    lastPlayedAt = it.lastPlayedAt ?: stamps[it.id],
+                    genreOverride = it.genreOverride ?: genres[it.id],
+                )
+            },
         )
     }
+
+    @Query("SELECT id, genre_override AS genreOverride FROM music_tracks WHERE folder_id = :folderId AND genre_override IS NOT NULL")
+    suspend fun genreOverridesForFolder(folderId: String): List<GenreOverrideRow>
+
+    @Query("UPDATE music_tracks SET genre_override = :genre WHERE id IN (:ids)")
+    suspend fun setGenreOverride(ids: List<String>, genre: String?)
 
     @Query("UPDATE music_tracks SET last_played_at = :playedAt WHERE id = :id")
     suspend fun markPlayed(id: String, playedAt: Long)
@@ -87,3 +100,6 @@ interface MusicTrackDao {
     )
     fun observeNewestArtUris(limit: Int): Flow<List<String>>
 }
+
+// a row's id and the genre the owner set on it, carried over a rescan
+data class GenreOverrideRow(val id: String, val genreOverride: String?)

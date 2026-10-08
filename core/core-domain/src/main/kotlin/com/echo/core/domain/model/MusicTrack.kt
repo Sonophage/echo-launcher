@@ -20,9 +20,20 @@ data class MusicTrack(
     val artUri: String? = null,
 
     val lastPlayedAt: Long? = null,
+    // the tag ("" when the file has none, null before the scanner read it) and the owner's own
+    val genre: String? = null,
+    val genreOverride: String? = null,
 ) {
     val displayTitle: String get() = title?.takeIf { it.isNotBlank() } ?: displayName
 }
 
 val MusicTrack.primaryArtist: String?
     get() = albumArtist?.trim()?.ifBlank { null } ?: artist
+
+val MusicTrack.genreName: String? get() = mediaGenreName(genre, genreOverride)
+
+// owner, 2026-10-08: a track's or book's genre, as text; the owner's own first. A tag such as "(17)" or
+// "Pop;Dance" reads as its first named part
+fun mediaGenreName(tag: String?, override: String?): String? =
+    override?.trim()?.takeIf { it.isNotEmpty() }
+        ?: tag?.split(';', '/', '\u0000')?.map { it.replace(Regex("^\\(\\d+\\)"), "").trim() }?.firstOrNull { it.isNotEmpty() }

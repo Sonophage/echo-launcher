@@ -14,6 +14,8 @@ data class EpubMetadata(
     val series: String? = null,
     val seriesIndex: Double? = null,
     val coverEntry: String? = null,
+    // the first dc:subject, which is what EPUBs carry as their genre (owner, 2026-10-08)
+    val subject: String? = null,
 )
 
 object EpubMetadataReader {
@@ -75,6 +77,7 @@ object EpubMetadataReader {
     internal fun parsePackageDocument(xml: ByteArray, opfPath: String): EpubMetadata? {
         var title: String? = null
         var author: String? = null
+        var subject: String? = null
         val metas = mutableListOf<Meta>()
         val items = mutableListOf<Item>()
 
@@ -89,6 +92,7 @@ object EpubMetadataReader {
                         "metadata" -> inMetadata = true
                         "title" -> if (inMetadata && title == null) title = parser.textOrNull()
                         "creator" -> if (inMetadata && author == null) author = parser.textOrNull()
+                        "subject" -> if (inMetadata && subject == null) subject = parser.textOrNull()
                         "meta" -> metas += Meta(
                             name = parser.attr("name"),
                             content = parser.attr("content"),
@@ -125,6 +129,7 @@ object EpubMetadataReader {
             series = calibreSeries ?: epub3Series,
             seriesIndex = if (calibreSeries != null) calibreIndex else epub3Index,
             coverEntry = coverEntry(metas, items, opfPath),
+            subject = subject,
         )
     }
 

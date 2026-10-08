@@ -12,6 +12,7 @@ import com.echo.feature.crossbar.viewmodel.CrossbarViewModel.Companion.BOOK_SERI
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel.Companion.BOOK_SHELVES_ITEM_ID
 import com.echo.core.domain.model.MusicTrack
 import com.echo.core.domain.model.primaryArtist
+import com.echo.core.domain.model.genreName
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel.Companion.CAMERA_ITEM_ID
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel.Companion.MEMORY_CARD_ASSET_URI
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel.Companion.MUSIC_ALBUMS_ITEM_ID
@@ -75,6 +76,14 @@ internal fun CrossbarUiState.musicRootSections(): List<CrossbarItem> {
                 title    = "Albums",
                 subtitle = "Browse by release",
                 type     = CrossbarItemType.MUSIC_ALBUMS,
+            )
+        )
+        add(
+            CrossbarItem(
+                id       = CrossbarViewModel.MUSIC_GENRES_ITEM_ID,
+                title    = "Genres",
+                subtitle = "Browse by sound",
+                type     = CrossbarItemType.MUSIC_GENRES,
             )
         )
         add(
@@ -250,6 +259,16 @@ internal fun CrossbarUiState.booksRootSections(): List<CrossbarItem> {
             )
         }
 
+        if (bookGenres.isNotEmpty()) {
+            add(
+                CrossbarItem(
+                    id       = CrossbarViewModel.BOOK_GENRES_ITEM_ID,
+                    title    = "Genres",
+                    subtitle = countLabel(bookGenres.size, "genre", "genres"),
+                    type     = CrossbarItemType.LIBRARY_SERIES,
+                )
+            )
+        }
         val series = bookSeries
         if (series.isNotEmpty()) {
             add(
@@ -356,6 +375,10 @@ internal fun List<MusicTrack>.tracksByArtistKey(key: String): List<MusicTrack> {
     val solo = soloCredits()
     return filter { track -> track.actsUnder(solo).any { it.musicGroupKey() == key } }
 }
+
+// owner, 2026-10-08: the tracks by genre, the owner's own first; untagged tracks gather under No Genre
+internal fun List<MusicTrack>.genreGroups(): List<MusicGroup> =
+    musicGroups({ listOf(it.genreName) }, "No Genre") { tracks -> countLabel(tracks.size, "track", "tracks") }
 
 internal fun List<MusicTrack>.albumGroups(): List<MusicGroup> =
     musicGroups({ listOf(it.album) }, "Unknown Album") { tracks ->

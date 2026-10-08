@@ -4,6 +4,7 @@ import com.echo.core.domain.model.GamepadAction
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.domain.model.MusicTrack
+import com.echo.core.domain.model.genreName
 import com.echo.core.ui.components.MenuState
 import com.echo.core.ui.sound.MenuSound
 import kotlinx.coroutines.CoroutineScope
@@ -178,12 +179,15 @@ class CrossbarMusic(
         MusicNav.Albums      -> "albums"
         is MusicNav.Artist   -> "artist_${nav.key}"
         is MusicNav.Album    -> "album_${nav.key}"
+        MusicNav.Genres      -> "genres"
+        is MusicNav.Genre    -> "genre_${nav.key}"
     }
 
     // B inside an artist or album goes back to the list it came from; elsewhere to the root
     internal fun backOutOfMusicView() = when (uiState.value.musicNav) {
         is MusicNav.Artist -> openMusicView(MusicNav.Artists)
         is MusicNav.Album -> openMusicView(MusicNav.Albums)
+        is MusicNav.Genre -> openMusicView(MusicNav.Genres)
         else -> closeMusicView()
     }
 
@@ -221,11 +225,15 @@ class CrossbarMusic(
         item.id == CrossbarViewModel.ALL_MUSIC_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicView(MusicNav.AllMusic); true }
         item.id == CrossbarViewModel.MUSIC_ARTISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicView(MusicNav.Artists); true }
         item.id == CrossbarViewModel.MUSIC_ALBUMS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicView(MusicNav.Albums); true }
+        item.id == CrossbarViewModel.MUSIC_GENRES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openMusicView(MusicNav.Genres); true }
         item.type == CrossbarItemType.MUSIC_GROUP && item.musicGroupKey != null -> {
             menuSound.play(MenuSound.SELECT)
             openMusicView(
-                if (uiState.value.musicNav == MusicNav.Artists) MusicNav.Artist(item.title, item.musicGroupKey)
-                else MusicNav.Album(item.title, item.musicGroupKey)
+                when (uiState.value.musicNav) {
+                    MusicNav.Artists -> MusicNav.Artist(item.title, item.musicGroupKey)
+                    MusicNav.Genres -> MusicNav.Genre(item.title, item.musicGroupKey)
+                    else -> MusicNav.Album(item.title, item.musicGroupKey)
+                }
             )
             true
         }
@@ -352,6 +360,15 @@ class CrossbarMusic(
         return when {
             item.id == CrossbarViewModel.NOW_PLAYING_ITEM_ID -> { vm.openNowPlayingContextMenu(); true }
             item.type == CrossbarItemType.MUSIC_TRACK -> { openMusicTrackContextMenu(item); true }
+            // an album's genre is set on all its tracks at once (owner, 2026-10-08)
+            item.type == CrossbarItemType.MUSIC_GROUP && uiState.value.musicNav == MusicNav.Albums && item.musicGroupKey != null -> {
+                val key = item.musicGroupKey
+                scope.launch {
+                    val ids = musicRepository.observeAllTracks().first().filter { it.album.musicGroupKey() == key }.map { it.id }
+                    vm.genres.openPicker(GenreTarget.Tracks(ids))
+                }
+                true
+            }
             item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
                 openPlaylistRowContextMenu(item.playlistId, item.title); true
             }
@@ -477,6 +494,7 @@ class CrossbarMusic(
 
     internal fun handleMusicTrackAction(trackId: String, itemId: String, playlistId: Long?) {
         when (itemId) {
+            "edit_genre" -> vm.genres.openPicker(GenreTarget.Tracks(listOf(trackId)))
             "play" -> {
                 val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
                 if (currentMusicTracks.isNotEmpty()) {
@@ -631,6 +649,16 @@ class CrossbarMusic(
             }
             is MusicNav.Album -> musicRepository.observeAllTracks().collect { tracks ->
                 setMusicTrackItems(tracks.filter { it.album.musicGroupKey() == nav.key }, emptyAllMusicItem())
+            }
+            MusicNav.Genres -> {
+                clearMusicTrackCache()
+                musicRepository.observeAllTracks().collect { tracks ->
+                    val rows = tracks.genreGroups().map { it.toGroupRow("gen") }
+                    uiState.update { it.copy(currentItems = rows.ifEmpty { listOf(emptyAllMusicItem()) }) }
+                }
+            }
+            is MusicNav.Genre -> musicRepository.observeAllTracks().collect { tracks ->
+                setMusicTrackItems(tracks.filter { it.genreName.musicGroupKey() == nav.key }, emptyAllMusicItem())
             }
         }
     }

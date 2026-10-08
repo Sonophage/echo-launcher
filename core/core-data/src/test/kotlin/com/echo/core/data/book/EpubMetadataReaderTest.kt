@@ -239,4 +239,21 @@ class EpubMetadataReaderTest {
         assertFalse(title.contains("root:"), "the title must never hold the contents of a file")
         assertFalse(title.contains("/bin/"), "the title must never hold the contents of a file")
     }
+
+    // owner, 2026-10-08: an EPUB's first subject is its genre
+    @Test
+    fun `the first subject is read as the genre`() {
+        val book = epub(
+            "mimetype" to "application/epub+zip".toByteArray(),
+            "META-INF/container.xml" to container("OEBPS/content.opf"),
+            "OEBPS/content.opf" to opf(
+                """
+                <dc:title>Annihilation</dc:title>
+                <dc:subject>Science Fiction</dc:subject>
+                <dc:subject>Horror</dc:subject>
+                """
+            ),
+        )
+        assertEquals("Science Fiction", EpubMetadataReader.read(book)?.subject)
+    }
 }

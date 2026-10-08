@@ -12,6 +12,13 @@ released; it becomes the next release's notes.
 - **Show Only <genre>** on a game's menu filters the game lists and the App Drawer's Games;
   **Show All Genres** clears it. The footer names the genre in force.
 
+### Music and books
+- Music and books have genres, read from the files on the next scan (a music file's genre tag, an
+  EPUB's subject). Music has a **Genres** row next to Artists and Albums; the Library shows one when
+  its books have genres.
+- **Edit Genre** on a track, a book, or an album in Albums (which sets all its tracks) picks one of
+  the library's genres, a new one, or puts back the file's own. Rescans keep what you set.
+
 ### Photos and look
 - Setting a photo as the wallpaper lets you move and zoom it first (d-pad or drag, LT/RT or pinch);
   the wallpaper keeps exactly what the screen showed.

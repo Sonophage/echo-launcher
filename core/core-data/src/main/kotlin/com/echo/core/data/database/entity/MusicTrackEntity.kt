@@ -64,6 +64,13 @@ data class MusicTrackEntity(
 
     @ColumnInfo(name = "last_played_at")
     val lastPlayedAt: Long? = null,
+
+    // the file's genre tag; "" once read and empty, null until the scanner has read it (owner, 2026-10-08)
+    val genre: String? = null,
+
+    // a genre the owner set, kept over the tag and over rescans
+    @ColumnInfo(name = "genre_override")
+    val genreOverride: String? = null,
 )
 
 fun MusicTrackEntity.toDomain() = MusicTrack(
@@ -83,6 +90,8 @@ fun MusicTrackEntity.toDomain() = MusicTrack(
     relativePath = relativePath,
     artUri       = artUri,
     lastPlayedAt = lastPlayedAt,
+    genre        = genre,
+    genreOverride = genreOverride,
 )
 
 fun MusicTrack.toEntity() = MusicTrackEntity(
@@ -102,4 +111,6 @@ fun MusicTrack.toEntity() = MusicTrackEntity(
     relativePath = relativePath,
     artUri       = artUri,
     lastPlayedAt = lastPlayedAt,
+    genre        = genre,
+    genreOverride = genreOverride,
 )

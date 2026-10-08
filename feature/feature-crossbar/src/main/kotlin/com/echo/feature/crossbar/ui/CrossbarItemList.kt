@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.ImportContacts
@@ -386,6 +387,7 @@ internal fun itemSlotKeyFor(type: CrossbarItemType): String? = when (type) {
     CrossbarItemType.MUSIC_TRACK -> "item_music_track"
     CrossbarItemType.MUSIC_ARTISTS -> "item_music_artists"
     CrossbarItemType.MUSIC_ALBUMS -> "item_music_albums"
+    CrossbarItemType.MUSIC_GENRES -> "item_music_genres"
     CrossbarItemType.PLAYLIST -> "item_playlist"
     else -> null
 }
@@ -725,6 +727,11 @@ private fun CrossbarItemLeadingIcon(
         item.type == CrossbarItemType.MUSIC_ALBUMS -> {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.width(LEADING_ICON_SLOT)) {
                 ThemedGlyph(itemSlotKeyFor(item.type) ?: "", Icons.Filled.Album, null, iconTint, Modifier.size(48.dp))
+            }
+        }
+        item.type == CrossbarItemType.MUSIC_GENRES -> {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.width(LEADING_ICON_SLOT)) {
+                ThemedGlyph(itemSlotKeyFor(item.type) ?: "", Icons.Filled.Category, null, iconTint, Modifier.size(48.dp))
             }
         }
 

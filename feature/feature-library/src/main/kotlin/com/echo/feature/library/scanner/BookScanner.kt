@@ -87,6 +87,8 @@ internal fun canReuse(prior: Book?, lastModified: Long?, coverExists: (String) -
     if (prior == null) return false
     if (prior.lastModified != lastModified) return false
     if (!prior.hasParsedMetadata()) return false
+    // owner, 2026-10-08: a book read before genres existed is read once more for its subject
+    if (prior.genre == null) return false
     val cover = prior.coverUri
     return cover.isNullOrBlank() || coverExists(cover)
 }
@@ -177,6 +179,7 @@ class BookScanner @Inject constructor(
             series = meta?.series,
             seriesIndex = meta?.seriesIndex,
             coverUri = cover,
+            genre = meta?.subject.orEmpty(),
         )
     }
 

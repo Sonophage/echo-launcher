@@ -71,7 +71,7 @@ import com.echo.core.data.database.entity.VideoLibraryEntity
 import com.echo.core.data.database.entity.VideoPlaylistEntity
 import com.echo.core.data.database.entity.VideoPlaylistItemEntity
 
-const val ECHO_DATABASE_VERSION = 58
+const val ECHO_DATABASE_VERSION = 59
 
 @Database(
     entities = [
@@ -1310,6 +1310,16 @@ abstract class EchoDatabase : RoomDatabase() {
             }
         }
 
+        // owner, 2026-10-08: music and books have a genre: the tag the scanner reads, and the owner's own
+        val MIGRATION_58_59 = object : Migration(58, 59) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `music_tracks` ADD COLUMN `genre` TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE `music_tracks` ADD COLUMN `genre_override` TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE `books` ADD COLUMN `genre` TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE `books` ADD COLUMN `genre_override` TEXT DEFAULT NULL")
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -1368,6 +1378,7 @@ abstract class EchoDatabase : RoomDatabase() {
             MIGRATION_55_56,
             MIGRATION_56_57,
             MIGRATION_57_58,
+            MIGRATION_58_59,
         )
     }
 }

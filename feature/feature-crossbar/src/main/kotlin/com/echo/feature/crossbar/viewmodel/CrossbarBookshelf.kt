@@ -50,7 +50,7 @@ class CrossbarBookshelf(
         }
         scope.launch {
             bookRepository.observeAllBooks().collect { books ->
-                uiState.update { it.copy(bookSeries = books.seriesGroups()) }
+                uiState.update { it.copy(bookSeries = books.seriesGroups(), bookGenres = books.genreGroups()) }
                 refreshBooksRootIfShowing()
             }
         }
@@ -153,6 +153,17 @@ class CrossbarBookshelf(
             )
         }
 
+    internal fun bookGenreItems(genres: List<BookSeries>): List<CrossbarItem> = genres.map { g ->
+        CrossbarItem(
+            id       = "bgenre_${g.name}",
+            title    = g.name,
+            subtitle = countLabel(g.bookCount, "book", "books"),
+            coverUri = g.coverUri,
+            artworkUri = g.coverUri,
+            type     = CrossbarItemType.LIBRARY_GENRE,
+        )
+    }
+
     internal fun handleBooksSelection(item: CrossbarItem): Boolean = when {
         item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.librarySearch.openSearch(SearchScope.BOOKS); true }
         item.id == CrossbarViewModel.ADD_MENU_ITEM_ID -> { menuSound.play(MenuSound.SELECT); vm.openAddMenu(); true }
@@ -168,6 +179,8 @@ class CrossbarBookshelf(
         item.id == CrossbarViewModel.BOOK_SHELVES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.Shelves); true }
         item.id == CrossbarViewModel.ALL_BOOKS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.AllBooks); true }
         item.id == CrossbarViewModel.BOOK_SERIES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.SeriesList); true }
+        item.id == CrossbarViewModel.BOOK_GENRES_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.Genres); true }
+        item.type == CrossbarItemType.LIBRARY_GENRE -> { menuSound.play(MenuSound.SELECT); openBooksView(BooksNav.Genre(item.title)); true }
         item.id == CrossbarViewModel.ADD_BOOK_FOLDER_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
             vm.folders.openMediaFolders(MediaRootKind.BOOK)
@@ -222,6 +235,8 @@ class CrossbarBookshelf(
         is BooksNav.Shelf -> "shelf_${nav.id}"
         BooksNav.SeriesList -> "series"
         is BooksNav.Series  -> "series_${nav.name}"
+        BooksNav.Genres     -> "genres"
+        is BooksNav.Genre   -> "genre_${nav.name}"
     }
 
     internal fun openBooksView(nav: BooksNav) = vm.navigateRememberingCursor { it.copy(booksNav = nav) }
@@ -246,6 +261,7 @@ class CrossbarBookshelf(
     internal fun handleBookAction(bookId: String, itemId: String) {
         when (itemId) {
             "book_open" -> openBook(bookId)
+            "edit_genre" -> vm.genres.openPicker(GenreTarget.Book(bookId))
 
             "book_remove_recent" -> vm.appAction { bookRepository.clearBookLastOpened(bookId) }
             "book_remove" -> vm.appAction { bookRepository.removeBook(bookId) }
@@ -293,6 +309,14 @@ class CrossbarBookshelf(
                 }
             }
 
+            BooksNav.Genres -> bookRepository.observeAllBooks().collect { books ->
+                val genres = books.genreGroups()
+                uiState.update { it.copy(bookGenres = genres, currentItems = bookGenreItems(genres).ifEmpty { listOf(emptyBooksItem()) }) }
+            }
+            is BooksNav.Genre -> bookRepository.observeAllBooks().collect { books ->
+                val inGenre = books.filter { it.genreName == nav.name }
+                uiState.update { it.copy(currentItems = bookItems(inGenre.bookSorted(it.bookSortMode)).ifEmpty { listOf(emptyBooksItem()) }) }
+            }
             is BooksNav.Series -> bookRepository.observeAllBooks().collect { books ->
                 val inSeries = books.filter { it.seriesName == nav.name }.inSeriesOrder()
                 uiState.update { it.copy(currentItems = bookItems(inSeries).ifEmpty { listOf(emptyBooksItem()) }) }

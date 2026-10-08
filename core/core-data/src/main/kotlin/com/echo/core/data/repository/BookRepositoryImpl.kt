@@ -95,6 +95,9 @@ class BookRepositoryImpl @Inject constructor(
         libraryDao.updateScanResult(libraryId, books.size, scannedAt)
     }
 
+    override suspend fun setGenreOverride(id: String, genre: String?) =
+        bookDao.setGenreOverride(id, genre?.trim()?.takeIf { it.isNotEmpty() })
+
     override suspend fun removeBook(id: String) {
         val book = bookDao.getById(id)
         bookDao.deleteById(id)

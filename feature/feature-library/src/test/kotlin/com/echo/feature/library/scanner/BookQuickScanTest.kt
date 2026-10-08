@@ -10,6 +10,7 @@ class BookQuickScanTest {
         lastModified: Long? = 1000L,
         title: String? = "Dune",
         coverUri: String? = "file:///cache/book_covers/abc.jpg",
+        genre: String? = "",
     ) = Book(
         id = "b1",
         libraryId = "l1",
@@ -18,6 +19,7 @@ class BookQuickScanTest {
         title = title,
         coverUri = coverUri,
         lastModified = lastModified,
+        genre = genre,
     )
 
     private val coverPresent: (String) -> Boolean = { true }
@@ -58,5 +60,11 @@ class BookQuickScanTest {
     fun `a book known only by its series counts as parsed`() {
         val seriesOnly = book(title = null, coverUri = null).copy(series = "Dune")
         assertTrue(canReuse(seriesOnly, lastModified = 1000L, coverExists = coverPresent))
+    }
+
+    @Test
+    fun `a book read before genres existed is reparsed, once`() {
+        assertFalse(canReuse(book(genre = null), lastModified = 1000L, coverExists = coverPresent))
+        assertTrue(canReuse(book(genre = ""), lastModified = 1000L, coverExists = coverPresent))
     }
 }

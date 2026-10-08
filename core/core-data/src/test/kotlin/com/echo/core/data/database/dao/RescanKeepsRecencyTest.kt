@@ -107,4 +107,21 @@ class RescanKeepsRecencyTest {
 
         assertEquals(null, dao.getById("t1"))
     }
+
+    // owner, 2026-10-08: a genre the owner set is not undone by the next scan
+    @Test
+    fun `rescanning keeps the genre the owner set on a track and a book`() = runTest {
+        db.musicFolderDao().upsert(MusicFolderEntity(id = "f1", displayName = "Music", treeUri = "file:///m", createdAt = 0, updatedAt = 0))
+        db.musicTrackDao().replaceForFolder("f1", listOf(track("t1", "f1").copy(genre = "Pop")))
+        db.musicTrackDao().setGenreOverride(listOf("t1"), "K-Pop")
+        db.musicTrackDao().replaceForFolder("f1", listOf(track("t1", "f1").copy(genre = "Pop")))
+        assertEquals("K-Pop", db.musicTrackDao().getById("t1")?.genreOverride)
+        assertEquals("the tag is still the file's", "Pop", db.musicTrackDao().getById("t1")?.genre)
+
+        db.bookLibraryDao().upsert(BookLibraryEntity(id = "l1", displayName = "Books", treeUri = "file:///b", createdAt = 0, updatedAt = 0))
+        db.bookDao().replaceForLibrary("l1", listOf(book("b1", "l1")))
+        db.bookDao().setGenreOverride("b1", "Weird Fiction")
+        db.bookDao().replaceForLibrary("l1", listOf(book("b1", "l1")))
+        assertEquals("Weird Fiction", db.bookDao().getById("b1")?.genreOverride)
+    }
 }

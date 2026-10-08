@@ -62,6 +62,12 @@ data class BookEntity(
 
     @ColumnInfo(name = "last_opened_at")
     val lastOpenedAt: Long? = null,
+
+    // the EPUB's first subject; "" once read and empty, null until the scanner has read it (owner, 2026-10-08)
+    val genre: String? = null,
+
+    @ColumnInfo(name = "genre_override")
+    val genreOverride: String? = null,
 )
 
 fun BookEntity.toDomain() = Book(
@@ -80,6 +86,8 @@ fun BookEntity.toDomain() = Book(
     relativePath = relativePath,
     dateAdded    = dateAdded,
     lastOpenedAt = lastOpenedAt,
+    genre        = genre,
+    genreOverride = genreOverride,
 )
 
 fun Book.toEntity() = BookEntity(
@@ -98,4 +106,6 @@ fun Book.toEntity() = BookEntity(
     relativePath = relativePath,
     dateAdded    = dateAdded,
     lastOpenedAt = lastOpenedAt,
+    genre        = genre,
+    genreOverride = genreOverride,
 )

@@ -25,6 +25,9 @@ interface MusicRepository {
     suspend fun markTrackPlayed(trackId: String, playedAt: Long)
 
     suspend fun clearTrackLastPlayed(trackId: String)
+
+    // the owner's genre for these tracks (an album's, or one track's); null puts back the tag
+    suspend fun setGenreOverride(trackIds: List<String>, genre: String?)
     fun observeRecentlyPlayedTracks(limit: Int): Flow<List<MusicTrack>>
 
     fun observeDefaultPlayerPackage(): Flow<String?>
