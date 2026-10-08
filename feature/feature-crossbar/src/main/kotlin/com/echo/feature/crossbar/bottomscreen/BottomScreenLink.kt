@@ -16,6 +16,8 @@ data class BottomScreenState(
     val focused: GameInfoState? = null,
     // the game ECHO launched, while it runs in front of ECHO
     val playing: GameInfoState? = null,
+    // when that game was launched, for the session clock (owner, 2026-10-08)
+    val playingSince: Long? = null,
     // the Recent page: the Last Played screen, which leaves the top screen for this one (owner, 2026-10-06)
     val recent: List<CrossbarItem> = emptyList(),
     val recentFilters: List<RecentFilter> = listOf(RecentFilter.ALL),
@@ -83,6 +85,17 @@ class BottomScreenLink @Inject constructor() {
 // the info the bottom screen shows: the running game while it is in front, else the cursor's item.
 // None means the Recent shelf stands in.
 fun BottomScreenState.shownInfo(): GameInfoState? = playing ?: focused
+
+// the companion's session clock: "NOW PLAYING · 12 MIN", in hours past an hour; minutes round down, so a game
+// just launched reads "JUST STARTED"
+fun sessionLabel(since: Long?, now: Long): String {
+    val minutes = since?.let { (now - it) / 60_000L } ?: return "NOW PLAYING"
+    return when {
+        minutes < 1 -> "NOW PLAYING · JUST STARTED"
+        minutes < 60 -> "NOW PLAYING · $minutes MIN"
+        else -> "NOW PLAYING · ${minutes / 60} H ${minutes % 60} MIN"
+    }
+}
 
 // a game counts as playing while ECHO is behind the game it launched last
 fun playingGameId(hostShown: Boolean, lastLaunchGameId: Long?): Long? = lastLaunchGameId.takeIf { !hostShown }

@@ -54,10 +54,10 @@ class CrossbarBottomScreen(
         }
         scope.launch {
             combine(link.attached, link.hostShown, lastLaunch) { on, shown, last ->
-                if (on) playingGameId(shown, last?.gameId) else null
-            }.distinctUntilChanged().collectLatest { gameId ->
-                val info = gameId?.let { itemFor(it) }?.let { vm.gameDetail.load(GameInfoState(it)) }
-                link.update { it.copy(playing = info) }
+                if (on) playingGameId(shown, last?.gameId)?.let { it to last?.launchedAt } else null
+            }.distinctUntilChanged().collectLatest { session ->
+                val info = session?.first?.let { itemFor(it) }?.let { vm.gameDetail.load(GameInfoState(it)) }
+                link.update { it.copy(playing = info, playingSince = session?.second.takeIf { info != null }) }
             }
         }
         scope.launch {

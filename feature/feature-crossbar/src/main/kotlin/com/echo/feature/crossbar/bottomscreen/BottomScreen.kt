@@ -127,8 +127,12 @@ fun BottomScreen(
                     companion = true,
                 )
                 if (state.playing != null) {
+                    // the session clock ticks each minute while the game runs
+                    val now by androidx.compose.runtime.produceState(System.currentTimeMillis(), state.playingSince) {
+                        while (true) { value = System.currentTimeMillis(); kotlinx.coroutines.delay(30_000L) }
+                    }
                     Text(
-                        "NOW PLAYING",
+                        sessionLabel(state.playingSince, now),
                         style = u.eyebrow(),
                         color = Color.White.copy(alpha = 0.85f),
                         modifier = Modifier.align(Alignment.TopStart).padding(start = u.dp(40), top = u.dp(28)),
