@@ -54,6 +54,7 @@ private val KEY_WAVE_OVER_WALLPAPER = booleanPreferencesKey("display_wave_over_w
 
 private val KEY_TOUCH_NAV_BUTTON   = stringPreferencesKey("interface_touch_nav_button")
 
+internal val BOOT_TAB_SOUNDS = listOf(UiMediaSlot.BOOT_AUDIO, UiMediaSlot.LAUNCH_DISC_AUDIO, UiMediaSlot.GAMEBOOT_AUDIO)
 private val KEY_CONTEXT_MENU_HINT_DELAY_SECONDS = floatPreferencesKey("interface_context_menu_hint_delay_seconds")
 
 private val KEY_TOUCH_SENSITIVITY  = stringPreferencesKey("interface_touch_sensitivity")
@@ -127,8 +128,9 @@ data class DisplaySettingsUiState(
 
     val bootVideoLabel: String = UI_MEDIA_DEFAULT_LABEL,
     val bootVideoAssigned: Boolean = false,
-    val bootAudioLabel: String = UI_MEDIA_DEFAULT_LABEL,
-    val bootAudioAssigned: Boolean = false,
+    // the Boot tab's sounds (boot, launch disc, GameBoot), each beside its animation
+    val bootTabSoundLabels: Map<UiMediaSlot, String> = emptyMap(),
+    val bootTabSoundsAssigned: Set<UiMediaSlot> = emptySet(),
 
     val gameBootEnabled: Boolean = true,
     val gameBootStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.LENS,
@@ -228,8 +230,8 @@ class DisplaySettingsViewModel @Inject constructor(
             wallpaperPreviewVisible = previewVisible,
             bootVideoLabel       = label(UiMediaSlot.BOOT_VIDEO),
             bootVideoAssigned    = UiMediaSlot.BOOT_VIDEO in assigned,
-            bootAudioLabel       = label(UiMediaSlot.BOOT_AUDIO),
-            bootAudioAssigned    = UiMediaSlot.BOOT_AUDIO in assigned,
+            bootTabSoundLabels   = BOOT_TAB_SOUNDS.associateWith { label(it) },
+            bootTabSoundsAssigned = BOOT_TAB_SOUNDS.filterTo(HashSet()) { it in assigned },
 
             gameBootEnabled      = GameBootPreferences.resolve(prefs),
             gameBootStyle        = GameBootPreferences.styleOf(prefs),
@@ -274,8 +276,8 @@ class DisplaySettingsViewModel @Inject constructor(
 
     fun clearUiMedia(slot: UiMediaSlot) = viewModelScope.launch { uiMediaStore.clear(slot) }
 
-    // owner, 2026-10-07: boot audio sits beside the boot video, on the Boot tab
-    fun previewBootAudio() = bootAudioPreviewer.play(slot = UiMediaSlot.BOOT_AUDIO, customPath = uiMediaStore.pathFor(UiMediaSlot.BOOT_AUDIO))
+    // owner, 2026-10-07/08: the boot, launch disc and GameBoot sounds sit on the Boot tab, beside their animations
+    fun previewSound(slot: UiMediaSlot) = bootAudioPreviewer.play(slot = slot, customPath = uiMediaStore.pathFor(slot))
 
     override fun onCleared() {
         bootAudioPreviewer.stop()

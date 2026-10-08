@@ -176,8 +176,10 @@ class AudioSettingsViewModel @Inject constructor(
                 UiMediaSlot.LAUNCH_DISC_AUDIO +
                 UiMediaSlot.GAMEBOOT_AUDIO
 
-        // boot audio is set on the Boot tab, beside the boot video (owner, 2026-10-07); Clear All Sounds still clears it
-        val SOUND_SLOTS_SHOWN: List<UiMediaSlot> = SOUND_SLOTS - UiMediaSlot.BOOT_AUDIO
+        // the boot, launch disc and GameBoot sounds are set on the Boot tab, beside their animations
+        // (owner, 2026-10-07/08); Clear All Sounds still clears them
+        val SOUND_SLOTS_SHOWN: List<UiMediaSlot> =
+            SOUND_SLOTS - setOf(UiMediaSlot.BOOT_AUDIO, UiMediaSlot.LAUNCH_DISC_AUDIO, UiMediaSlot.GAMEBOOT_AUDIO)
 
         private val SCREEN_SLOTS: Set<UiMediaSlot> = SOUND_SLOTS.toSet() + UiMediaSlot.MENU_MUSIC
     }

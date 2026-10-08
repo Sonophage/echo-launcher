@@ -100,6 +100,22 @@ fun DisplaySettingsScreen(
         uiMediaPicker.launch(viewModel.uiMediaPickerMime(slot))
     }
 
+    // a Boot tab sound, beside its animation (owner, 2026-10-07/08)
+    @Composable
+    fun BootTabSoundRow(slot: UiMediaSlot, what: String) {
+        MediaAssignmentRow(
+            label    = slot.displayName,
+            focusKey = "display_${slot.key}",
+            sublabel = "$what (MP3, WAV, OGG or M4A)",
+            value    = state.bootTabSoundLabels[slot] ?: com.echo.feature.settings.viewmodel.UI_MEDIA_DEFAULT_LABEL,
+            isAssigned = slot in state.bootTabSoundsAssigned,
+            onPick   = { pickUiMedia(slot) },
+            onPreview = { viewModel.previewSound(slot) },
+            onUseDefault = { viewModel.clearUiMedia(slot) },
+            onFocusChanged = { focusedSlot = if (it) slot else null },
+        )
+    }
+
     LaunchedEffect(state.wallpaperImporting) {
         if (state.wallpaperImporting) {
             importWasActive = true
@@ -157,7 +173,8 @@ fun DisplaySettingsScreen(
                     when (slot) {
                         UiMediaSlot.BOOT_VIDEO -> onPreviewBootSequence()
                         UiMediaSlot.GAMEBOOT_VIDEO -> onPreviewGameBoot()
-                        UiMediaSlot.BOOT_AUDIO -> viewModel.previewBootAudio()
+                        UiMediaSlot.BOOT_AUDIO, UiMediaSlot.LAUNCH_DISC_AUDIO, UiMediaSlot.GAMEBOOT_AUDIO ->
+                            viewModel.previewSound(slot)
                         else -> return@SettingsPageScaffold false
                     }
                     true
@@ -429,17 +446,7 @@ fun DisplaySettingsScreen(
                     onFocusChanged = { focusedSlot = if (it) UiMediaSlot.BOOT_VIDEO else null },
                 )
 
-                MediaAssignmentRow(
-                    label    = UiMediaSlot.BOOT_AUDIO.displayName,
-                    focusKey = "display_${UiMediaSlot.BOOT_AUDIO.key}",
-                    sublabel = "The sound the boot sequence plays (MP3, WAV, OGG or M4A)",
-                    value    = state.bootAudioLabel,
-                    isAssigned = state.bootAudioAssigned,
-                    onPick   = { pickUiMedia(UiMediaSlot.BOOT_AUDIO) },
-                    onPreview = { viewModel.previewBootAudio() },
-                    onUseDefault = { viewModel.clearUiMedia(UiMediaSlot.BOOT_AUDIO) },
-                    onFocusChanged = { focusedSlot = if (it) UiMediaSlot.BOOT_AUDIO else null },
-                )
+                BootTabSoundRow(UiMediaSlot.BOOT_AUDIO, "The sound the boot sequence plays")
 
                 SettingsGroup("Launch Disc  ·  two switches, one animation")
 
@@ -463,6 +470,7 @@ fun DisplaySettingsScreen(
                         onFocusChangedExternal = { if (it) focusedSlot = null },
                         onClick = { viewModel.cycleLaunchDiscStyle() },
                     )
+                    BootTabSoundRow(UiMediaSlot.LAUNCH_DISC_AUDIO, "The sound as the disc spins up")
                 }
 
                 SettingsGroup("GameBoot")
@@ -503,6 +511,9 @@ fun DisplaySettingsScreen(
                         onUseDefault = { viewModel.clearUiMedia(UiMediaSlot.GAMEBOOT_VIDEO) },
                         onFocusChanged = { focusedSlot = if (it) UiMediaSlot.GAMEBOOT_VIDEO else null },
                     )
+                    if (!state.gameBootVideoAssigned) {
+                        BootTabSoundRow(UiMediaSlot.GAMEBOOT_AUDIO, "The sound as the disc leaves; a clip of your own plays its own")
+                    }
                 }
             }
             if (section == null || section == DisplaySection.INPUT) {
@@ -646,7 +657,7 @@ private fun formatHintDelay(seconds: Float): String = when {
 private fun UiMediaSlot.isAssignedIn(state: DisplaySettingsUiState): Boolean = when (this) {
     UiMediaSlot.BOOT_VIDEO -> state.bootVideoAssigned
     UiMediaSlot.GAMEBOOT_VIDEO -> state.gameBootVideoAssigned
-    UiMediaSlot.BOOT_AUDIO -> state.bootAudioAssigned
+    UiMediaSlot.BOOT_AUDIO, UiMediaSlot.LAUNCH_DISC_AUDIO, UiMediaSlot.GAMEBOOT_AUDIO -> this in state.bootTabSoundsAssigned
     else -> false
 }
 
