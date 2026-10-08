@@ -371,8 +371,6 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
 @Composable
 private fun LibraryTiles(chips: List<LibraryChip>, focus: Int, u: DesignUnits, onTapped: (QuickSetting, Int) -> Unit, modifier: Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(u.dp(16))) {
-        Text("${chips.count { it.visible }} of ${chips.size} on the crossbar", color = Color.White.copy(alpha = 0.6f),
-            fontSize = u.sp(14), fontWeight = FontWeight.Light)
         chips.withIndex().chunked(com.echo.feature.crossbar.viewmodel.LIBRARY_GRID_COLUMNS).forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(18))) {
                 row.forEach { (i, chip) ->
