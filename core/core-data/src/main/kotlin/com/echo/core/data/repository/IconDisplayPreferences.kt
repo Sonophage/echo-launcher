@@ -1,6 +1,8 @@
 package com.echo.core.data.repository
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -44,8 +46,7 @@ class IconDisplayPreferences @Inject constructor(
     val rowCoverArtFlow: Flow<Boolean> = context.echoDataStore.data
         .map { it[KEY_ROW_COVER_ART] ?: false }
 
-    suspend fun setRowCoverArt(enabled: Boolean) =
-        context.echoDataStore.edit { it[KEY_ROW_COVER_ART] = enabled }
+    suspend fun setGameRows(covers: Boolean) = context.echoDataStore.edit { it.setGameRows(covers) }
 
     val lingerDelaySecondsFlow: Flow<Float> = context.echoDataStore.data
         .map { (it[KEY_ICON1_LINGER_DELAY_SECONDS] ?: 1.5f).coerceIn(1f, 5f) }
@@ -54,6 +55,16 @@ class IconDisplayPreferences @Inject constructor(
         context.echoDataStore.edit { it[KEY_ICON1_LINGER_DELAY_SECONDS] = seconds.coerceIn(1f, 5f) }
 
     companion object {
+        // owner, 2026-10-07: one Game rows setting, in the panel and in Settings. Icons means icons in every
+        // column, so a console card's grid of covers (Card Art Grid) follows it
+        fun gameRowsShowCovers(prefs: Preferences): Boolean = prefs[KEY_ROW_COVER_ART] ?: false
+
+        fun MutablePreferences.setGameRows(covers: Boolean) {
+            this[KEY_ROW_COVER_ART] = covers
+            this[KEY_CARD_ART_GRID] = covers
+        }
+
+        val KEY_CARD_ART_GRID = androidx.datastore.preferences.core.booleanPreferencesKey("display_card_art_grid")
         private val KEY_ANIMATED_ICONS = androidx.datastore.preferences.core.booleanPreferencesKey("pref_animated_icons")
         private val KEY_ICON1_LINGER_DELAY_SECONDS =
             floatPreferencesKey("pref_icon1_linger_delay_seconds")

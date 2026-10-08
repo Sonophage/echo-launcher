@@ -3410,9 +3410,7 @@ class CrossbarViewModel @Inject constructor(
                 QuickSetting.BACKDROP -> iconDisplayPreferences.setItemBackdrop(!s.itemBackdropEnabled)
                 // owner, 2026-10-07: Icons means icons in every column, so a folder's grid of covers goes too
                 QuickSetting.ROW_ART -> {
-                    val covers = s.iconStyle != GameIconStyle.COVER_ART
-                    iconDisplayPreferences.setRowCoverArt(covers)
-                    context.echoDataStore.edit { it[KEY_CARD_ART_GRID] = covers }
+                    iconDisplayPreferences.setGameRows(s.iconStyle != GameIconStyle.COVER_ART)
                 }
                 QuickSetting.RECENT_APPS -> context.echoDataStore.edit { it[KEY_RECENTS_INCLUDE_APPS] = !s.recentsIncludeApps }
                 QuickSetting.MINIMAL_HINTS -> context.echoDataStore.edit {
@@ -4716,7 +4714,7 @@ class CrossbarViewModel @Inject constructor(
 
         private val KEY_FADE_BY_DISTANCE = booleanPreferencesKey("display_fade_by_distance")
 
-        private val KEY_CARD_ART_GRID = booleanPreferencesKey("display_card_art_grid")
+        private val KEY_CARD_ART_GRID = com.echo.core.data.repository.IconDisplayPreferences.KEY_CARD_ART_GRID
 
         private val KEY_RECENTS_INCLUDE_APPS = booleanPreferencesKey("display_recents_include_apps")
 

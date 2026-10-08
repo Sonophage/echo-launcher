@@ -164,7 +164,7 @@ fun AudioSettingsScreen(
                             .padding(horizontal = 48.dp, vertical = 8.dp),
                     )
                 }
-                AudioSettingsViewModel.SOUND_SLOTS.forEach { slot ->
+                AudioSettingsViewModel.SOUND_SLOTS_SHOWN.forEach { slot ->
                     val label = state.soundLabels[slot] ?: NO_SOUND_LABEL
                     MediaAssignmentRow(
                         label = slot.displayName,

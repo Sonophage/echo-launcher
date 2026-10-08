@@ -30,7 +30,10 @@ import com.echo.feature.library.scanner.scanOutcomeMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.datastore.preferences.core.edit
+import com.echo.core.data.datastore.echoDataStore
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -132,6 +135,17 @@ class LibraryManagerViewModel @Inject constructor(
     private val standardRomFolders: StandardRomFolders,
 ) : ViewModel() {
     private val _scratch = MutableStateFlow(LibraryManagerUiState())
+
+    // owner, 2026-10-07: Rescan On Return lives with the other scanning, here, not under Performance
+    val rescanOnReturn: StateFlow<Boolean> = context.echoDataStore.data
+        .map { com.echo.core.data.repository.InterfacePreferences.read(it).rescanOnReturn }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun setRescanOnReturn(on: Boolean) {
+        viewModelScope.launch {
+            context.echoDataStore.edit { it[com.echo.core.data.repository.InterfacePreferences.KEY_RESCAN_ON_RETURN] = on }
+        }
+    }
 
     init {
         viewModelScope.launch {

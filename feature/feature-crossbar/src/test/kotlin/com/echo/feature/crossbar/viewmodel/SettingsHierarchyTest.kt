@@ -188,11 +188,13 @@ class SettingsHierarchyTest {
     // owner, 2026-10-05: Hidden Items moved from Emulators to Library, beside the media folders
     @Test fun `Hidden Items is under Library via its dedicated route`() {
         assertEquals(
-            listOf("settings_media_libraries", "settings_app_visibility"),
+            // owner, 2026-10-07: Video Player moved here from Touch
+            listOf("settings_media_libraries", "settings_app_visibility", "settings_video_player"),
             settingsEntriesIn(SettingsSectionId.LIBRARY).map { it.id },
         )
         assertFalse(settingsEntriesIn(SettingsSectionId.EMULATORS).any { it.id == "settings_app_visibility" })
         assertTrue("settings_app_visibility route missing", SETTINGS_SCREEN_ROUTES.contains("settings_app_visibility"))
+        assertTrue("settings_video_player route missing", SETTINGS_SCREEN_ROUTES.contains("settings_video_player"))
     }
 
     @Test fun `Hidden Games is not reachable from Look`() {

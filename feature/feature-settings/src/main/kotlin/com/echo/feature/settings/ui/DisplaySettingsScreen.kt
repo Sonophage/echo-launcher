@@ -51,7 +51,7 @@ import com.echo.core.domain.model.UiMediaSlot
 import com.echo.feature.settings.viewmodel.DisplaySettingsUiState
 import com.echo.feature.settings.viewmodel.DisplaySettingsViewModel
 
-enum class DisplaySection { APPEARANCE, LAYOUT, BOOT, INPUT, PERFORMANCE }
+enum class DisplaySection { APPEARANCE, LAYOUT, BOOT, INPUT, VIDEO, PERFORMANCE }
 
 @Composable
 fun DisplaySettingsScreen(
@@ -127,6 +127,7 @@ fun DisplaySettingsScreen(
             DisplaySection.LAYOUT      -> "Crossbar"
             DisplaySection.BOOT        -> "Boot"
             DisplaySection.INPUT       -> "Touch"
+            DisplaySection.VIDEO       -> "Video Player"
             DisplaySection.PERFORMANCE -> "Performance"
             null                       -> "Display"
         },
@@ -170,6 +171,7 @@ fun DisplaySettingsScreen(
                     when (slot) {
                         UiMediaSlot.BOOT_VIDEO -> onPreviewBootSequence()
                         UiMediaSlot.GAMEBOOT_VIDEO -> onPreviewGameBoot()
+                        UiMediaSlot.BOOT_AUDIO -> viewModel.previewBootAudio()
                         else -> return@SettingsPageScaffold false
                     }
                     true
@@ -344,11 +346,13 @@ fun DisplaySettingsScreen(
                     onPick   = { viewModel.setIconLegibility(IconLegibilityStyle.entries[it]) },
                 )
 
-                SettingsToggleRow(
-                    label    = "Card Art Grid",
-                    sublabel = "Show a console card as four covers from inside it, instead of its console icon",
-                    checked  = state.cardArtGrid,
-                    onToggle = { viewModel.setCardArtGrid(it) },
+                SettingsPickerRow(
+                    label    = "Game Rows Show",
+                    sublabel = "Cover art, or icons in every column — a console card shows its console icon " +
+                        "instead of four covers from inside it",
+                    options  = listOf(SettingsPickerOption("Cover art"), SettingsPickerOption("Icons")),
+                    selectedIndex = if (state.gameRowsShowCovers) 0 else 1,
+                    onPick   = { viewModel.setGameRows(it == 0) },
                 )
 
                 SettingsToggleRow(
@@ -441,6 +445,18 @@ fun DisplaySettingsScreen(
                     onPreview = onPreviewBootSequence,
                     onUseDefault = { viewModel.clearUiMedia(UiMediaSlot.BOOT_VIDEO) },
                     onFocusChanged = { focusedSlot = if (it) UiMediaSlot.BOOT_VIDEO else null },
+                )
+
+                MediaAssignmentRow(
+                    label    = UiMediaSlot.BOOT_AUDIO.displayName,
+                    focusKey = "display_${UiMediaSlot.BOOT_AUDIO.key}",
+                    sublabel = "The sound the boot sequence plays (MP3, WAV, OGG or M4A)",
+                    value    = state.bootAudioLabel,
+                    isAssigned = state.bootAudioAssigned,
+                    onPick   = { pickUiMedia(UiMediaSlot.BOOT_AUDIO) },
+                    onPreview = { viewModel.previewBootAudio() },
+                    onUseDefault = { viewModel.clearUiMedia(UiMediaSlot.BOOT_AUDIO) },
+                    onFocusChanged = { focusedSlot = if (it) UiMediaSlot.BOOT_AUDIO else null },
                 )
 
                 SettingsGroup("Launch Disc  ·  two switches, one animation")
@@ -549,7 +565,9 @@ fun DisplaySettingsScreen(
                     enabled  = state.buttonHints != com.echo.core.data.repository.ButtonHints.OFF,
                     valueFormatter = { formatHintDelay(it) },
                 )
-
+            }
+            // owner, 2026-10-07: the video player's settings are their own tab under Library, out of Touch
+            if (section == null || section == DisplaySection.VIDEO) {
                 SettingsGroup("Video Player")
 
                 SettingsPickerRow(
@@ -583,14 +601,6 @@ fun DisplaySettingsScreen(
                     sublabel = "Freeze the background (wave or motion wallpaper) when Battery Saver is active",
                     checked  = state.respectBatterySaver,
                     onToggle = { viewModel.setRespectBatterySaver(it) },
-                )
-
-                SettingsToggleRow(
-                    label    = "Rescan On Return",
-                    sublabel = "Look for new and missing games when you come back to the launcher, at most every five minutes. " +
-                        "Inserting a card still rescans either way",
-                    checked  = state.interfaceChoices.rescanOnReturn,
-                    onToggle = { viewModel.setRescanOnReturn(it) },
                 )
 
             }
@@ -707,6 +717,7 @@ private fun formatHintDelay(seconds: Float): String = when {
 private fun UiMediaSlot.isAssignedIn(state: DisplaySettingsUiState): Boolean = when (this) {
     UiMediaSlot.BOOT_VIDEO -> state.bootVideoAssigned
     UiMediaSlot.GAMEBOOT_VIDEO -> state.gameBootVideoAssigned
+    UiMediaSlot.BOOT_AUDIO -> state.bootAudioAssigned
     else -> false
 }
 

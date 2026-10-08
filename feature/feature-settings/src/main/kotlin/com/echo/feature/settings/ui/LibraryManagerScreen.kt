@@ -77,6 +77,8 @@ fun LibraryManagerScreen(
         onStartAddConsole = { viewModel.startAddConsole() },
         onRequestRomFolderSetup = { viewModel.requestRomFolderSetup() },
         onScanAllConsoles = { viewModel.scanAllConsoles(it) },
+        rescanOnReturn = viewModel.rescanOnReturn.collectAsState().value,
+        onRescanOnReturn = { viewModel.setRescanOnReturn(it) },
         onDismissMessage = { viewModel.dismissMessage() },
         onPlatformChosen = { viewModel.onPlatformChosen(it) },
         onEmulatorChosen = { viewModel.onEmulatorChosen(it) },
@@ -149,11 +151,13 @@ private fun LibraryManagerContent(
     onAddPcGameById: (PcLauncherRow, String, String, String?) -> Unit,
     homeRoleIntentProvider: () -> android.content.Intent?,
     modifier: Modifier = Modifier,
+    rescanOnReturn: Boolean = true,
+    onRescanOnReturn: (Boolean) -> Unit = {},
 ) {
     val handleBack: () -> Unit = onBack
 
     when (state.step) {
-        LibraryStep.LIST          -> LibraryListContent(state, handleBack, onOpenCardDetail, onStartAddConsole, onRequestRomFolderSetup, onScanAllConsoles, onDismissMessage, modifier)
+        LibraryStep.LIST          -> LibraryListContent(state, handleBack, onOpenCardDetail, onStartAddConsole, onRequestRomFolderSetup, onScanAllConsoles, onDismissMessage, modifier, rescanOnReturn, onRescanOnReturn)
         LibraryStep.PICK_PLATFORM -> PickPlatformContent(state, onBack = handleBack, onPlatformChosen = onPlatformChosen, modifier = modifier)
         LibraryStep.PICK_EMULATOR -> PickEmulatorContent(state, onBack = handleBack, onEmulatorChosen = onEmulatorChosen, modifier = modifier)
         LibraryStep.SCAN_PROMPT   -> ScanPromptContent(state, onBack = handleBack, onConfirmAddConsole = onConfirmAddConsole, modifier = modifier)
@@ -184,6 +188,8 @@ private fun LibraryListContent(
     onScanAllConsoles: (removeMissing: Boolean) -> Unit,
     onDismissMessage: () -> Unit,
     modifier: Modifier,
+    rescanOnReturn: Boolean,
+    onRescanOnReturn: (Boolean) -> Unit,
 ) {
     SettingsPageScaffold(
         subtitle = "Library Manager",
@@ -256,6 +262,14 @@ private fun LibraryListContent(
                     onClick = { confirmRescanAll = false },
                 )
             }
+
+            SettingsToggleRow(
+                label    = "Rescan On Return",
+                sublabel = "Look for new and missing games when you come back to the launcher, at most every five minutes. " +
+                    "Inserting a card still rescans either way",
+                checked  = rescanOnReturn,
+                onToggle = onRescanOnReturn,
+            )
 
             state.message?.let { MessageRow(it) { onDismissMessage() } }
         }
@@ -387,6 +401,8 @@ private fun CardDetailContent(
 
     var showEmulatorDialog by remember { mutableStateOf(false) }
     var showRemoveConfirm  by remember { mutableStateOf(false) }
+    var removeAppConfirm   by remember { mutableStateOf<Pair<Long, String>?>(null) }
+    var removeExtConfirm   by remember { mutableStateOf<String?>(null) }
     var newExt             by remember(card.platformId) { mutableStateOf("") }
     val isScanning = card.platformId in state.scanningPlatformIds
     val isAndroid = card.platformId == "android"
@@ -456,7 +472,7 @@ private fun CardDetailContent(
                         SettingsRow(
                             label    = app.label,
                             trailing = { Text("Remove", color = SettingsAccent) },
-                            onClick  = { onRemoveApp(app.gameId) },
+                            onClick  = { removeAppConfirm = app.gameId to app.label },
                         )
                     }
                 }
@@ -483,7 +499,7 @@ private fun CardDetailContent(
                         SettingsRow(
                             label    = ".$ext",
                             trailing = { Text("Remove", color = SettingsAccent) },
-                            onClick  = { onRemoveExtension(card.platformId, ext) },
+                            onClick  = { removeExtConfirm = ext },
                         )
                     }
                 }
@@ -564,6 +580,25 @@ private fun CardDetailContent(
             confirmLabel = "Remove",
             onConfirm = { showRemoveConfirm = false; onRemoveCard(card.platformId) },
             onCancel = { showRemoveConfirm = false },
+        )
+    }
+    removeAppConfirm?.let { (gameId, label) ->
+        SettingsConfirmOverlay(
+            title = "Remove $label?",
+            message = "Takes the app out of this library. The app stays installed.",
+            confirmLabel = "Remove",
+            onConfirm = { removeAppConfirm = null; onRemoveApp(gameId) },
+            onCancel = { removeAppConfirm = null },
+        )
+    }
+    removeExtConfirm?.let { ext ->
+        SettingsConfirmOverlay(
+            title = "Remove .$ext?",
+            message = "Scans stop matching .$ext files for ${card.displayName}. Games already found stay until " +
+                "a scan that removes missing games.",
+            confirmLabel = "Remove",
+            onConfirm = { removeExtConfirm = null; onRemoveExtension(card.platformId, ext) },
+            onCancel = { removeExtConfirm = null },
         )
     }
 }

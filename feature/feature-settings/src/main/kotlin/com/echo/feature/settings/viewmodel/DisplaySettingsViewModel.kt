@@ -63,7 +63,6 @@ private val KEY_ICON_LEGIBILITY    = stringPreferencesKey("display_icon_legibili
 
 private val KEY_FADE_BY_DISTANCE = booleanPreferencesKey("display_fade_by_distance")
 
-private val KEY_CARD_ART_GRID = booleanPreferencesKey("display_card_art_grid")
 
 private val KEY_RECENTS_INCLUDE_APPS = booleanPreferencesKey("display_recents_include_apps")
 
@@ -107,7 +106,7 @@ data class DisplaySettingsUiState(
     val iconLegibility: IconLegibilityStyle = IconLegibilityStyle.DEFAULT,
 
     val fadeByDistance: Boolean = true,
-    val cardArtGrid: Boolean = true,
+    val gameRowsShowCovers: Boolean = false,
     val recentsIncludeApps: Boolean = false,
 
     val textShadow: Boolean = true,
@@ -128,6 +127,8 @@ data class DisplaySettingsUiState(
 
     val bootVideoLabel: String = UI_MEDIA_DEFAULT_LABEL,
     val bootVideoAssigned: Boolean = false,
+    val bootAudioLabel: String = UI_MEDIA_DEFAULT_LABEL,
+    val bootAudioAssigned: Boolean = false,
 
     val gameBootEnabled: Boolean = true,
     val gameBootStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.LENS,
@@ -171,6 +172,7 @@ class DisplaySettingsViewModel @Inject constructor(
     private val controllerLayout: ControllerLayoutRepository,
     private val stillWallpaper: StillWallpaper,
     private val motionWallpaper: com.echo.core.data.wallpaper.MotionWallpaper,
+    private val bootAudioPreviewer: com.echo.core.ui.media.UiMediaAudioPlayer,
 
     @com.echo.feature.settings.di.SettingsIoDispatcher
     private val io: CoroutineDispatcher = Dispatchers.IO,
@@ -210,7 +212,7 @@ class DisplaySettingsViewModel @Inject constructor(
             touchNavButtonMode   = TouchNavButtonMode.fromName(prefs[KEY_TOUCH_NAV_BUTTON]),
             iconLegibility       = IconLegibilityStyle.fromName(prefs[KEY_ICON_LEGIBILITY]),
             fadeByDistance       = prefs[KEY_FADE_BY_DISTANCE] ?: true,
-            cardArtGrid          = prefs[KEY_CARD_ART_GRID] ?: true,
+            gameRowsShowCovers   = com.echo.core.data.repository.IconDisplayPreferences.gameRowsShowCovers(prefs),
             recentsIncludeApps   = prefs[KEY_RECENTS_INCLUDE_APPS] ?: false,
             textShadow           = prefs[KEY_TEXT_SHADOW] ?: true,
             interfaceChoices     = com.echo.core.data.repository.InterfacePreferences.read(prefs),
@@ -226,6 +228,8 @@ class DisplaySettingsViewModel @Inject constructor(
             wallpaperPreviewVisible = previewVisible,
             bootVideoLabel       = label(UiMediaSlot.BOOT_VIDEO),
             bootVideoAssigned    = UiMediaSlot.BOOT_VIDEO in assigned,
+            bootAudioLabel       = label(UiMediaSlot.BOOT_AUDIO),
+            bootAudioAssigned    = UiMediaSlot.BOOT_AUDIO in assigned,
 
             gameBootEnabled      = GameBootPreferences.resolve(prefs),
             gameBootStyle        = GameBootPreferences.styleOf(prefs),
@@ -270,6 +274,13 @@ class DisplaySettingsViewModel @Inject constructor(
 
     fun clearUiMedia(slot: UiMediaSlot) = viewModelScope.launch { uiMediaStore.clear(slot) }
 
+    // owner, 2026-10-07: boot audio sits beside the boot video, on the Boot tab
+    fun previewBootAudio() = bootAudioPreviewer.play(slot = UiMediaSlot.BOOT_AUDIO, customPath = uiMediaStore.pathFor(UiMediaSlot.BOOT_AUDIO))
+
+    override fun onCleared() {
+        bootAudioPreviewer.stop()
+    }
+
     fun setGameBootEnabled(enabled: Boolean) = viewModelScope.launch {
         gameBootPreferences.setGameBootEnabled(enabled)
     }
@@ -306,7 +317,9 @@ class DisplaySettingsViewModel @Inject constructor(
     fun setIconLegibility(style: IconLegibilityStyle) = save { it[KEY_ICON_LEGIBILITY] = style.name }
 
     fun setFadeByDistance(v: Boolean) = save { it[KEY_FADE_BY_DISTANCE] = v }
-    fun setCardArtGrid(v: Boolean) = save { it[KEY_CARD_ART_GRID] = v }
+    fun setGameRows(covers: Boolean) = save {
+        with(com.echo.core.data.repository.IconDisplayPreferences) { it.setGameRows(covers) }
+    }
 
     fun setRecentsIncludeApps(v: Boolean) = save { it[KEY_RECENTS_INCLUDE_APPS] = v }
 
@@ -315,7 +328,6 @@ class DisplaySettingsViewModel @Inject constructor(
     fun setShowDeviceNotifications(v: Boolean) = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_SHOW_DEVICE_NOTIFICATIONS] = v }
     fun setIslandShowsRecent(v: Boolean) = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_ISLAND_SHOWS_RECENT] = v }
     fun setLastPlayedSize(v: Int) = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_LAST_PLAYED_SIZE] = v }
-    fun setRescanOnReturn(v: Boolean) = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_RESCAN_ON_RETURN] = v }
     fun setVideoSeekStepSeconds(v: Int) = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_VIDEO_SEEK_STEP_SECONDS] = v }
     fun setVideoControlsHideMs(v: Int) = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_VIDEO_CONTROLS_HIDE_MS] = v }
 

@@ -31,6 +31,7 @@ val SETTINGS_SCREEN_ROUTES: Set<String> = setOf(
     "settings_layout",
     "settings_boot",
     "settings_touch",
+    "settings_video_player",
     "settings_performance",
     "settings_audio",
     "settings_controller",
@@ -138,6 +139,9 @@ fun SettingsNavHost(
             )
             "settings_touch"      -> DisplaySettingsScreen(
                 onBack = onBack, section = DisplaySection.INPUT, modifier = modifier,
+            )
+            "settings_video_player" -> DisplaySettingsScreen(
+                onBack = onBack, section = DisplaySection.VIDEO, modifier = modifier,
             )
             "settings_performance" -> DisplaySettingsScreen(
                 onBack = onBack, section = DisplaySection.PERFORMANCE, modifier = modifier,

@@ -51,6 +51,7 @@ class DisplaySettingsViewModelGameBootTest {
 
             com.echo.core.data.wallpaper.StillWallpaper(context),
             com.echo.core.data.wallpaper.MotionWallpaper(context, com.echo.core.data.wallpaper.StillWallpaper(context)),
+            io.mockk.mockk(relaxed = true),
 
             io = dispatcher,
         )
@@ -115,6 +116,7 @@ class DisplaySettingsViewModelGameBootTest {
             },
             com.echo.core.data.wallpaper.StillWallpaper(context),
             com.echo.core.data.wallpaper.MotionWallpaper(context, com.echo.core.data.wallpaper.StillWallpaper(context)),
+            io.mockk.mockk(relaxed = true),
             io = dispatcher,
         )
         vm.onUiMediaPickerLaunchedFor(com.echo.core.domain.model.UiMediaSlot.BOOT_VIDEO)

@@ -32,8 +32,10 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
 
     SettingsEntry("settings_media_libraries", "Media Libraries", "Your music, video, photo & book folders", SettingsSectionId.LIBRARY),
     SettingsEntry("settings_app_visibility", "Hidden Items", "Apps & games hidden everywhere or from one place", SettingsSectionId.LIBRARY),
+    // owner, 2026-10-07: the video player's settings moved here from Touch
+    SettingsEntry("settings_video_player", "Video Player", "Seek step & how long the controls stay up", SettingsSectionId.LIBRARY),
 
-    SettingsEntry("settings_library", "Library Manager", "ROM sources & scanning", SettingsSectionId.EMULATORS),
+    SettingsEntry("settings_library", "Library Manager", "ROM sources, scanning & rescan on return", SettingsSectionId.EMULATORS),
     SettingsEntry("settings_artwork", "Artwork", "Your art, scraping & cache", SettingsSectionId.EMULATORS),
 
     SettingsEntry("settings_emulators_installed", "Installed", "Detected emulator profiles", SettingsSectionId.EMULATORS),
@@ -53,7 +55,7 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_categories", "Categories", "Crossbar categories & the collections inside them", SettingsSectionId.LOOK, parent = "settings_layout"),
 
     SettingsEntry("settings_controller", "Controller", "Button swaps, prompts, stick, triggers & scrolling", SettingsSectionId.CONTROLS),
-    SettingsEntry("settings_touch", "Touch", "On-screen button, hints & the video player", SettingsSectionId.CONTROLS),
+    SettingsEntry("settings_touch", "Touch", "On-screen button & button hints", SettingsSectionId.CONTROLS),
 
     SettingsEntry("settings_permissions", "Permissions", "What ECHO can reach, and how to grant it", SettingsSectionId.ACCOUNTS),
     SettingsEntry("settings_accounts", "Achievements", "RetroAchievements & Steam", SettingsSectionId.ACCOUNTS),
@@ -63,7 +65,7 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_about", "About", "ECHO", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_logs", "Logs", "Debug & error log viewer", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_backup", "Backup & Restore", "Export & import", SettingsSectionId.SYSTEM),
-    SettingsEntry("settings_performance", "Performance", "Thermal, battery saver & rescanning", SettingsSectionId.SYSTEM),
+    SettingsEntry("settings_performance", "Performance", "Thermal & battery saver", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_credits", "Credits", "Artwork & attributions", SettingsSectionId.SYSTEM),
 
     SettingsEntry("settings_initial_setup", "Setup Wizard", "Guided folder & account setup", SettingsSectionId.SETUP),

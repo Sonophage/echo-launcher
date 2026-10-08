@@ -241,9 +241,11 @@ fun EmulatorsSettingsScreen(
             }
             }
 
-            if (section == null) SettingsGroup("Maintenance")
+            // owner, 2026-10-07: on the Installed tab too, not only behind the setup repair link
+            val showsMaintenance = section == null || section == EmulatorSettingsSection.INSTALLED
+            if (showsMaintenance) SettingsGroup("Maintenance")
 
-            if (section == null) SettingsRow(
+            if (showsMaintenance) SettingsRow(
                 label    = "Reset Emulator Configuration",
                 sublabel = "Clear launch settings and restore defaults. Your games, artwork, and saves are not affected.",
                 focusKey = "reset_emulator_config",
