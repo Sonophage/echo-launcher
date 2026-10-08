@@ -2789,6 +2789,7 @@ class CrossbarViewModel @Inject constructor(
                     GamepadAction.NEXT_CATEGORY -> onCustomIconGroupMove(+1)
                     GamepadAction.SELECT,
                     GamepadAction.OPEN_CONTEXT_MENU,
+                    GamepadAction.CHANGE_SORT,
                     GamepadAction.BACK -> _uiState.update { it.copy(pendingCustomIconsAction = action) }
                     else -> Unit
                 }
@@ -4254,8 +4255,9 @@ class CrossbarViewModel @Inject constructor(
 
     fun onCustomIconSlotMove(dir: Int) {
         val session = _uiState.value.customIconSession ?: return
+        // one past the last slot is the Reset All Icons row
         val count = CustomizableIcons.group(session.group).size
-        val next = (session.slotIndex + dir).coerceIn(0, (count - 1).coerceAtLeast(0))
+        val next = (session.slotIndex + dir).coerceIn(0, count)
         _uiState.update { it.copy(customIconSession = session.copy(slotIndex = next, message = null)) }
     }
 
