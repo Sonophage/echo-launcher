@@ -1253,8 +1253,11 @@ fun CrossbarShell(
                 }
             }
 
-            uiState.topSearch?.let { search ->
+            // with two screens, Search types on the companion and shows its results here (owner, 2026-10-08)
+            (uiState.topSearch ?: uiState.search?.takeIf { uiState.secondScreen })?.let { search ->
                 SearchScreen(
+                    part = if (uiState.topSearch == null) com.echo.feature.crossbar.ui.SearchPart.RESULTS
+                    else com.echo.feature.crossbar.ui.SearchPart.ALL,
                     state = search,
                     onQueryChange = onSearchQueryChange,
                     onActivateAt = onSearchActivatedAt,

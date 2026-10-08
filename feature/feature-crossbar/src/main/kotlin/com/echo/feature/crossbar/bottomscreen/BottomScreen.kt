@@ -104,6 +104,8 @@ fun BottomScreen(
                             onFocusAt = crossbar.librarySearch::onSearchFocusedAt,
                             onOptionsAt = crossbar.librarySearch::onSearchOptionsAt,
                             onKindPicked = crossbar.librarySearch::pickSearchKind,
+                            // the keyboard and field here, the results on the crossbar's screen (owner, 2026-10-08)
+                            part = com.echo.feature.crossbar.ui.SearchPart.FIELD,
                         )
                     }
                     return@BoxWithConstraints
