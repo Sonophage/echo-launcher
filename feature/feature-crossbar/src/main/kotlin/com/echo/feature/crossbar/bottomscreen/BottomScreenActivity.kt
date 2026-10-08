@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.bottomscreen
 
+import com.echo.feature.crossbar.viewmodel.namePromptOpen
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.ActivityManager
@@ -59,8 +60,11 @@ class BottomScreenActivity : ComponentActivity() {
                     // single screen chosen in Quick settings: the second screen goes back to Android
                     LaunchedEffect(ui.secondScreenEnabled) { if (!ui.secondScreenEnabled) finishAndRemoveTask() }
                     if (ui.screensSwapped) {
-                        // swapped: the XMB is drawn here, the companion on the main screen
-                        LaunchedEffect(Unit) { onLocked(LockedScreenOpen(open = false, typing = false)) }
+                        // swapped: the XMB is drawn here, the companion on the main screen. A name prompt (New
+                        // Genre, Rename, Edit Note) takes the keys while it is open, or the keyboard cannot reach it
+                        // and Android reports ECHO as not responding (owner, 2026-10-08)
+                        val typing = ui.namePromptOpen
+                        LaunchedEffect(typing) { onLocked(LockedScreenOpen(open = typing, typing = typing)) }
                         CrossbarShellContainer(viewModel = vm)
                     } else {
                         BottomScreen(state, vm, onLocked = ::onLocked)

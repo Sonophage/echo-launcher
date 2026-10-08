@@ -199,14 +199,6 @@ class CrossbarMusic(
         openMusicView(MusicNav.Album(name, key))
     }
 
-    private fun MusicGroup.toGroupRow(prefix: String): CrossbarItem = CrossbarItem(
-        id            = "mg_${prefix}_$key",
-        title         = name,
-        subtitle      = subtitle,
-        coverUri      = artUri,
-        musicGroupKey = key,
-        type          = CrossbarItemType.MUSIC_GROUP,
-    )
 
     private fun currentPlaylistContextId(): Long? =
         (uiState.value.musicNav as? MusicNav.Playlist)?.id
@@ -640,7 +632,7 @@ class CrossbarMusic(
                 val artists = nav == MusicNav.Artists
                 musicRepository.observeAllTracks().collect { tracks ->
                     val groups = if (artists) tracks.artistGroups() else tracks.albumGroups()
-                    val rows = groups.map { it.toGroupRow(if (artists) "art" else "alb") }
+                    val rows = groups.map { it.toGroupRow(if (artists) "art" else ALBUMS_VIEW_PREFIX) }
                     uiState.update { it.copy(currentItems = rows.ifEmpty { listOf(emptyAllMusicItem()) }) }
                 }
             }

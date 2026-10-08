@@ -1329,6 +1329,10 @@ internal fun CrossbarUiState.withSettingsOpen(screenId: String): CrossbarUiState
 internal fun CrossbarUiState.withGameInfoOpen(info: GameInfoState): CrossbarUiState =
     withDrawerAndSearchClosed().copy(gameInfo = info, profile = null)
 
+// a prompt with a text field is open; the same four withNamePromptText fills
+val CrossbarUiState.namePromptOpen: Boolean
+    get() = renameAppTarget != null || collectionNameDialog != null || playlistNameDialog != null || saveThemeNameDialog != null
+
 fun CrossbarUiState.withNamePromptText(text: String): CrossbarUiState = when {
     renameAppTarget != null      -> copy(renameAppText = text)
     collectionNameDialog != null -> copy(collectionNameDialog = collectionNameDialog.copy(text = text))

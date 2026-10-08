@@ -41,4 +41,29 @@ class MediaGenreViewsTest {
         assertTrue("edit_genre" in musicTrackContextMenuItems(null, hasPlayStamp = false).map { it.action })
         assertTrue("edit_genre" in bookContextMenuItems(hasOpenStamp = false).map { it.action })
     }
+
+    @Test
+    fun `an album in the Albums view is not a Recent album, so Y gives its own menu`() {
+        val album = MusicGroup(key = "born pink", name = "BORN PINK", subtitle = "", trackCount = 8, artUri = null)
+        assertEquals(false, album.toGroupRow(ALBUMS_VIEW_PREFIX).isRecentAlbum)
+        assertEquals("the shelf's own album rows still are", true, album.toGroupRow("alb").isRecentAlbum)
+    }
+
+    // owner, 2026-10-08: with the screens swapped, a name prompt must take the keys; namePromptOpen and
+    // withNamePromptText must name the same prompts, or a prompt is typed into but never focused
+    @Test
+    fun `every prompt that takes typed text counts as an open name prompt`() {
+        val base = CrossbarUiState(showBootSequence = false)
+        val prompts = listOf(
+            base.copy(collectionNameDialog = CollectionNameDialogState(title = "New Genre", editGenreTarget = GenreTarget.Book("b"))),
+            base.copy(playlistNameDialog = PlaylistNameDialogState(title = "New Playlist")),
+            base.copy(saveThemeNameDialog = PlaylistNameDialogState(title = "Save")),
+            base.copy(renameAppTarget = "com.a"),
+        )
+        prompts.forEach { s ->
+            assertTrue(s.namePromptOpen)
+            assertTrue("typed text reaches it", s.withNamePromptText("x") != s)
+        }
+        assertEquals(false, base.namePromptOpen)
+    }
 }

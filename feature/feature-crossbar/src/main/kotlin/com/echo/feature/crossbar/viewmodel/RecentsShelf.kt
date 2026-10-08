@@ -147,6 +147,19 @@ internal val CrossbarItem.isRecentAlbum: Boolean
 
 internal const val RECENT_ALBUM_ID_PREFIX = "mg_alb_"
 
+// owner, 2026-10-08: the Albums view named its rows mg_alb_ too, so every album there read as a Recent album
+// and Y gave Recent's menu; it has its own prefix
+internal const val ALBUMS_VIEW_PREFIX = "album"
+
+internal fun MusicGroup.toGroupRow(prefix: String): CrossbarItem = CrossbarItem(
+    id            = "mg_${prefix}_$key",
+    title         = name,
+    subtitle      = subtitle,
+    coverUri      = artUri,
+    musicGroupKey = key,
+    type          = CrossbarItemType.MUSIC_GROUP,
+)
+
 /**
  * An app's "last used" comes from Android's UsageStats and cannot be cleared, so
  * Remove from Recent cannot work the way it does for a game or a track, where the
