@@ -24,6 +24,12 @@ data class BottomScreenState(
     val page: BottomPage = BottomPage.INFO,
 )
 
+class DrawerFocus(
+    val app: com.echo.feature.appbar.InstalledApp,
+    val onLaunch: () -> Unit,
+    val onOptions: () -> Unit,
+)
+
 // the page in view: Info stands down for Recent while there is no info to show, so the button lit is
 // the page drawn and the controller moves what is on screen
 fun BottomScreenState.shownPage(): BottomPage =
@@ -50,6 +56,13 @@ class BottomScreenLink @Inject constructor() {
     val hostShown: StateFlow<Boolean> = _hostShown.asStateFlow()
 
     fun update(change: (BottomScreenState) -> BottomScreenState) = _state.update(change)
+
+    // the App Drawer's focused app while the drawer is open on the companion, for the crossbar's screen to draw
+    // large (owner, 2026-10-08), with the drawer's own Play and Options for a tap on it
+    private val _drawerFocus = MutableStateFlow<DrawerFocus?>(null)
+    val drawerFocus: StateFlow<DrawerFocus?> = _drawerFocus.asStateFlow()
+
+    fun drawerFocused(focus: DrawerFocus?) { _drawerFocus.value = focus }
 
     fun attach(on: Boolean) { _attached.value = on }
 

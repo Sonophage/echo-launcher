@@ -150,6 +150,7 @@ fun CrossbarShellContainer(
     onSettingsLongPress: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val drawerFocus by viewModel.bottomScreen.drawerFocus.collectAsStateWithLifecycle()
 
     val shareContext = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(uiState.pendingThemeShareFile) {
@@ -295,6 +296,7 @@ fun CrossbarShellContainer(
         onGameInfoPanelClose = viewModel.gameDetail::closeGameInfoPanel,
         onGameInfoScrollMax = viewModel.gameDetail::onGameInfoScrollMax,
         onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
+        drawerFocus = drawerFocus,
         onProfileSet = viewModel.panel::onProfileSetTapped,
         onProfileBadge = viewModel.panel::onProfileBadgeTapped,
         onProfileFilter = viewModel.panel::onProfileFilterTapped,
@@ -484,6 +486,7 @@ fun CrossbarShell(
     onGameInfoPanelClose: () -> Unit = {},
     onGameInfoScrollMax: (Int) -> Unit = {},
     onPanelProfileTapped: (com.echo.feature.crossbar.viewmodel.ProfileSpot, Int) -> Unit = { _, _ -> },
+    drawerFocus: com.echo.feature.crossbar.bottomscreen.DrawerFocus? = null,
     onProfileSet: (Int) -> Unit = {},
     onProfileBadge: (Int) -> Unit = {},
     onProfileFilter: (com.echo.feature.crossbar.viewmodel.BadgeFilter) -> Unit = {},
@@ -1248,6 +1251,17 @@ fun CrossbarShell(
                         onGameMenu = onGameMenuFromDrawer,
                         onOpenAppSearch = onOpenAppSearch,
                         onOpenPermissions = { onOpenSettingsScreen("settings_permissions") },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+
+            // with two screens, the App Drawer is on the companion and its focused app is drawn large here
+            // (owner, 2026-10-08), over the crossbar it would otherwise leave idle
+            if (uiState.secondScreen && uiState.activeAppDrawerFilter != null && uiState.search == null) {
+                drawerFocus?.let { focus ->
+                    com.echo.feature.appbar.appdrawer.AppDrawerHero(
+                        app = focus.app, onLaunch = focus.onLaunch, onOptions = focus.onOptions,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

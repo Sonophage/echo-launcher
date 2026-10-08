@@ -91,9 +91,20 @@ fun AppDrawerScreen(
     // owner, 2026-10-05: one place grants access; the empty Recently Used page sends people to Permissions
     onOpenPermissions: (() -> Unit)? = null,
 
+    // owner, 2026-10-08: with two screens the focused app is drawn large on the other one, so the drawer
+    // reports it and drops its own info column to give the shelf the room
+    heroOnOtherScreen: Boolean = false,
+    // the focused app, and the drawer's own Launch and Options for it, for the other screen's hero
+    onFocusedApp: (app: InstalledApp?, launch: () -> Unit, options: () -> Unit) -> Unit = { _, _, _ -> },
+
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val focusedApp = state.visibleApps.getOrNull(state.selectedIndex).takeIf { !state.chipFocus }
+    LaunchedEffect(focusedApp) {
+        onFocusedApp(focusedApp, { focusedApp?.let { viewModel.launchApp(it.packageName) } }, { focusedApp?.let(viewModel::openAppMenu) })
+    }
+    DisposableEffect(Unit) { onDispose { onFocusedApp(null, {}, {}) } }
     LaunchedEffect(state.activeFilter, state.sections) { onTabsShown(state.activeFilter, state.sections) }
     LaunchedEffect(tabPick) {
         tabPick?.let {
@@ -211,6 +222,7 @@ fun AppDrawerScreen(
         onConfirmUninstall = { viewModel.confirmUninstall() },
         onCancelUninstall = { viewModel.cancelUninstall() },
         onGrantUsageAccess = onOpenPermissions ?: { viewModel.openUsageAccessSettings() },
+        heroOnOtherScreen = heroOnOtherScreen,
         modifier = modifier,
     )
 }
@@ -232,6 +244,7 @@ internal fun AppDrawerContent(
     modifier: Modifier = Modifier,
     onBandLaunch: (InstalledApp) -> Unit = { onAppLaunched(it.packageName) },
     onBandOptions: (InstalledApp) -> Unit = onAppMenu,
+    heroOnOtherScreen: Boolean = false,
     onMenuRowActivated: (Int) -> Unit = {},
 
     onLetterRailTouch: (Int) -> Unit = {},
@@ -249,13 +262,15 @@ internal fun AppDrawerContent(
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(StatusStripHeight))
             Row(Modifier.weight(1f).fillMaxWidth().padding(start = u.dp(46), end = u.dp(52))) {
-                Box(Modifier.width(u.dp(420)).fillMaxHeight().padding(top = u.dp(24))) {
-                    focused?.let { app ->
-                        WallInfo(app, focusedIcon, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
-                            holding = state.holdingPackage == app.packageName, details = state.gameDetails?.takeIf { it.gameId == app.gameId })
+                if (!heroOnOtherScreen) {
+                    Box(Modifier.width(u.dp(420)).fillMaxHeight().padding(top = u.dp(24))) {
+                        focused?.let { app ->
+                            WallInfo(app, focusedIcon, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
+                                holding = state.holdingPackage == app.packageName, details = state.gameDetails?.takeIf { it.gameId == app.gameId })
+                        }
                     }
+                    Spacer(Modifier.width(u.dp(56)))
                 }
-                Spacer(Modifier.width(u.dp(56)))
                 Column(Modifier.weight(1f).fillMaxHeight().padding(top = u.dp(12))) {
                     if (state.showSystemChips) {
                         SystemChipRow(

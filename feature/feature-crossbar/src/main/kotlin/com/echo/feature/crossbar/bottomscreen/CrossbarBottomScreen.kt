@@ -137,6 +137,10 @@ class CrossbarBottomScreen(
 
     // the Swap button: the XMB and the companion change screens, and the controller follows the XMB's
     // cursor to its new screen (owner, 2026-10-06)
+    fun drawerFocused(focus: DrawerFocus?) = link.drawerFocused(focus)
+
+    val drawerFocus get() = link.drawerFocus
+
     fun toggleSwap() {
         setCompanionActive(false)
         scope.launch { vm.context.echoDataStore.edit { it[KEY_SWAP_SCREENS] = it[KEY_SWAP_SCREENS] != true } }

@@ -203,6 +203,8 @@ private fun AppsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel, u: Design
             tabPick = pick,
             onTabPickConsumed = { pick = null },
             onOpenPermissions = { crossbar.onOpenSettingsScreen("settings_permissions") },
+            heroOnOtherScreen = true,
+            onFocusedApp = { app, launch, options -> crossbar.bottomScreen.drawerFocused(app?.let { DrawerFocus(it, launch, options) }) },
             modifier = Modifier.fillMaxSize(),
         )
         active?.let { a ->
