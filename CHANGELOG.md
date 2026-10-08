@@ -26,6 +26,8 @@ released; it becomes the next release's notes.
   for the look in use, with **Save as Theme**. This replaces Mix.
 - A theme that updates in the online store offers **Update**.
 - **Remove** asks first, then deletes the theme and its folder in `ECHO/Themes`.
+- Applying a theme first saves your look as **Before <theme>** on the device shelf: once, however
+  many themes you try, and not when your look is the default.
 
 ### Achievements
 - The wall starts with the game you played last; Steam games outside your library are placed by
@@ -42,6 +44,7 @@ released; it becomes the next release's notes.
 - A long menu's title sits below the profile picture.
 - App Drawer and Search logos stay readable on small screens.
 - The Libraries tab drops its "6 of 6 on the crossbar" line.
+- **Button hints** is one setting, All / Minimal / Off, in Controls ▸ Touch and the panel.
 
 ### PC games
 - **DroidDeck** is a PC launcher: its Steam games launch on its own link, and its exported files
