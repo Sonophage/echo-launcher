@@ -81,6 +81,10 @@ data class ThemePage(
 ) {
     val partsToTake: Set<ThemePart> get() = (chosen ?: parts) intersect parts
 
+    // what A applies: the whole theme when nothing it has is left out, so the wallpaper, icons and colours it
+    // leaves out are cleared as a theme always did; only the ticked parts once one is left out
+    val partsToApply: Set<ThemePart> get() = if (partsToTake == parts) ThemePart.entries.toSet() else partsToTake
+
     val actionLabel: String get() = when {
         current -> "Save as Theme"
         busy -> if (update) "Updating" else "Downloading"
@@ -117,6 +121,8 @@ class ThemesSettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val themeStore: EchoThemeStore,
     private val catalog: ThemeCatalogRepository,
+    private val themeFolders: com.echo.feature.artwork.portable.ThemeFolderSync,
+    private val folderRepository: com.echo.core.data.repository.ArtworkFolderRepository,
 ) : ViewModel() {
     init { refreshOnline() }
 
@@ -238,15 +244,15 @@ class ThemesSettingsViewModel @Inject constructor(
     fun pageAction() {
         val page = uiState.value.page ?: return
         if (page.busy || page.current || page.partsToTake.isEmpty()) return
-        val take = page.partsToTake
+        val take = page.partsToApply
         page.savedId?.takeIf { !page.update }?.let { id -> applyParts(id, take); closeThemePage(); return }
         val online = page.online ?: return
         _extra.update { it.copy(page = page.copy(busy = true)) }
         viewModelScope.launch {
             when (val result = catalog.install(online)) {
                 is ThemeCatalogRepository.Install.Done -> {
-                    // the downloaded file says which parts the theme really has
-                    applyParts(result.theme.id, take intersect result.theme.parts)
+                    // a whole theme stays whole; a pick is cut to the parts the downloaded file really has
+                    applyParts(result.theme.id, if (take.size == ThemePart.entries.size) take else take intersect result.theme.parts)
                     _extra.update { e ->
                         e.copy(page = null, installMessage = "${if (page.update) "Updated" else "Downloaded"} \"${result.theme.name}\"")
                     }
@@ -277,8 +283,18 @@ class ThemesSettingsViewModel @Inject constructor(
         }
     }
 
+    // owner, 2026-10-07: Remove removes the theme and deletes its folder in ECHO/Themes
     fun deleteSavedTheme(id: String) {
-        viewModelScope.launch { themeStore.delete(id) }
+        val theme = uiState.value.savedThemes.firstOrNull { it.id == id } ?: return
+        viewModelScope.launch {
+            themeStore.delete(id)
+            val tree = folderRepository.getTreeUri() ?: return@launch
+            val deleted = runCatching { themeFolders.deleteFolder(Uri.parse(tree), themeStore.folderName(theme)) }.getOrDefault(false)
+            _extra.update {
+                it.copy(installMessage = if (deleted) "Removed \"${theme.name}\" and its folder"
+                    else "Removed \"${theme.name}\"; its folder in ECHO/Themes could not be deleted")
+            }
+        }
     }
 
     fun shareSavedTheme(id: String) {

@@ -20,6 +20,15 @@ class ThemePagePartsTest {
         assertEquals("Apply 2 parts", one.actionLabel)
     }
 
+    // a whole theme clears the wallpaper, icons and colours it leaves out; a theme with no icons applied with
+    // only its own parts would leave the last theme's icons behind
+    @Test
+    fun `everything ticked applies the whole theme, a pick applies only the pick`() {
+        assertEquals(ThemePart.entries.toSet(), saved.partsToApply)
+        val one = saved.toggled(ThemePart.entries[1])
+        assertEquals(parts - ThemePart.entries[1], one.partsToApply)
+    }
+
     @Test
     fun `a part the theme lacks cannot be ticked`() {
         val lacking = ThemePart.entries.first { it !in parts }
