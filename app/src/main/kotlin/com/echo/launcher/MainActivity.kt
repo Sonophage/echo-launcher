@@ -219,6 +219,10 @@ class MainActivity : ComponentActivity() {
         launchDispatcher.onHostResumed()
         discordBootstrap.onResume()
         rebindNotificationListenerIfDetached()
+        // HOME, or a reinstall, can leave Android's launcher on the second screen while this one never stopped
+        if (bottomScreenLink.needsCompanion(crossbarViewModel.uiState.value.secondScreenEnabled)) {
+            com.echo.feature.crossbar.bottomscreen.BottomScreenActivity.showBeside(this)
+        }
 
         if (wasStopped) {
             wasStopped = false

@@ -369,3 +369,8 @@ internal fun genreFilterRow(itemGenre: com.echo.core.domain.model.GameGenre?, ac
 // a filtered game list keeps its other rows (headers, Add Games); a game shows when it is the genre
 internal fun List<CrossbarItem>.withGenre(genre: com.echo.core.domain.model.GameGenre?): List<CrossbarItem> =
     if (genre == null) this else filter { it.gameId == null || it.genre == genre }
+
+// a game's row: the column's own when the column holds it, else built from the library (a game opened from the
+// App Drawer is seldom in the column)
+internal suspend fun gameRowFor(gameId: Long, column: List<CrossbarItem>, fromLibrary: suspend () -> CrossbarItem?): CrossbarItem? =
+    column.firstOrNull { it.gameId == gameId } ?: fromLibrary()

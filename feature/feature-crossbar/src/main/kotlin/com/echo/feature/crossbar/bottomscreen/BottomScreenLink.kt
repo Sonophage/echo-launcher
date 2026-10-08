@@ -140,6 +140,10 @@ class BottomScreenLink @Inject constructor() {
 
     fun attach(on: Boolean) { _attached.value = on }
 
+    // owner, 2026-10-08: the second screen is wanted and something else holds it (Android's own launcher after
+    // HOME or a reinstall), so ECHO puts it back when its first screen resumes
+    fun needsCompanion(enabled: Boolean): Boolean = enabled && !_attached.value
+
     fun hostShown(shown: Boolean) { _hostShown.value = shown }
 
     fun bind(crossbar: CrossbarViewModel) { _crossbar.value = crossbar }

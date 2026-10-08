@@ -233,7 +233,7 @@ private fun AppsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel, u: Design
             onTouchInteraction = crossbar::markTouchInput,
             onAddToCrossBar = crossbar::addAppToOpenCategory,
             onLaunchRom = crossbar.launching::launchGameFromDrawer,
-            onGameMenu = crossbar::openGameMenu,
+            onGameMenu = crossbar::openGameMenuOnCompanion,
             onOpenAppSearch = crossbar.librarySearch::openAppSearch,
             onTabsShown = { a, s -> active = a; sections = s },
             tabPick = pick,

@@ -150,4 +150,13 @@ class BottomScreenRulesTest {
         assertEquals(BottomPage.RECENT, back.page)
         assertEquals("left with the list open leaves Recent", BottomPage.MUSIC, back.sideStep(GamepadAction.NAVIGATE_LEFT).page)
     }
+
+    @Test
+    fun `the second screen is put back only when it is wanted and not already showing`() {
+        val link = BottomScreenLink()
+        assertTrue("wanted, hidden: show it", link.needsCompanion(enabled = true))
+        assertFalse("turned off in Quick settings", link.needsCompanion(enabled = false))
+        link.attach(true)
+        assertFalse("already showing: leave focus alone", link.needsCompanion(enabled = true))
+    }
 }

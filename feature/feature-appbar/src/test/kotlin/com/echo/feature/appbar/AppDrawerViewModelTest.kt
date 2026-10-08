@@ -67,6 +67,25 @@ class AppDrawerViewModelTest {
         verify(exactly = 1) { repository.launchApp(any()) }
     }
 
+    // owner, 2026-10-08: with a genre in force, each system chip counts the games it will show
+    @Test
+    fun `the system chips count only the genre in force`() = runTest {
+        fun game(id: Long, platform: String, genre: String) = com.echo.core.domain.model.Game(
+            id = id, title = "Game $id", platformId = platform, romPath = "/r/$id", genre = genre)
+        every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf(listOf(
+            game(1, "psp", "Role Playing Game"), game(2, "psp", "Action"), game(3, "snes", "Action RPG")))
+        val platforms = mockk<com.echo.core.data.database.dao.PlatformDao>(relaxed = true)
+        viewModel = AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), platforms, appCategories)
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.setFilter(AppFilter.GAMES)
+        viewModel.setGenreFilter(com.echo.core.domain.model.GameGenre.RPG)
+        testDispatcher.scheduler.advanceUntilIdle()
+        val chips = viewModel.uiState.value.systemChips.associate { it.id to it.count }
+        assertEquals("All", 2, chips[null])
+        assertEquals(1, chips["psp"])
+        assertEquals(1, chips["snes"])
+    }
+
     @Test
     fun `the drawer opens on Recently Used, not on the full alphabetical list`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()

@@ -2429,6 +2429,17 @@ class CrossbarViewModel @Inject constructor(
         publishGameItems(builtGameItems, keepCursorOnRow = false)
     }
 
+    // owner, 2026-10-08: Game Info from the App Drawer's Options did nothing, since the drawer's game is seldom in
+    // the crossbar's column; the column's row when it is there, else the game from the library
+    internal fun openGameInfoFor(gameId: Long) {
+        viewModelScope.launch {
+            val item = gameRowFor(gameId, _uiState.value.currentItems) {
+                gameRepository.getById(gameId)?.let { listOf(it).toCrossbarItems().first() }
+            } ?: return@launch
+            gameDetail.onOpenGameInfo(item)
+        }
+    }
+
     // the game's genre from the library, so the drawer's Options, whose game is not in the column, filter too
     internal fun filterByGenreOf(gameId: Long) {
         viewModelScope.launch {
@@ -3404,6 +3415,12 @@ class CrossbarViewModel @Inject constructor(
     }
 
     // a library game's Options from the App Drawer: the same menu as on the crossbar, drawn over the drawer
+    // the drawer on the companion asked: the menu opens there, where the controller is (owner, 2026-10-08)
+    internal fun openGameMenuOnCompanion(gameId: Long) {
+        _uiState.update { it.copy(menuOnCompanion = true) }
+        openGameMenu(gameId)
+    }
+
     fun openGameMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch

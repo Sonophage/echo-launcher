@@ -597,12 +597,13 @@ class AppDrawerViewModel @Inject constructor(
         if (_uiState.value.activeFilter !in sections) _uiState.update { it.copy(activeFilter = sections.first(), selectedIndex = 0) }
         val state = _uiState.value
 
+        // the genre narrows the Games section first, so each system chip counts what it will show
         val tabApps = state.allApps.filter { app -> state.activeFilter.matches(app) }
+            .let { if (state.activeFilter == AppFilter.GAMES) it.ofGenre(state.genreFilter) else it }
         val chips = if (state.activeFilter == AppFilter.GAMES) systemChips(tabApps) else emptyList()
         val system = state.systemFilter?.takeIf { id -> chips.any { it.id == id } }
 
         val inTab = tabApps.ofSystem(system)
-            .let { if (state.activeFilter == AppFilter.GAMES) it.ofGenre(state.genreFilter) else it }
             .let { apps ->
                 if (state.activeFilter == AppFilter.RECENT) {
                     apps.sortedByDescending { it.lastUsedAt }
