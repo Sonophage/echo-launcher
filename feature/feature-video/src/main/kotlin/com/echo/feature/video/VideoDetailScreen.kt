@@ -152,6 +152,9 @@ fun VideoDetailScreen(
         }
     }
 
+    // owner, 2026-10-08: opened to play, no page shows before the player, not even a loading one; the screen
+    // behind stays until the player covers it
+    if (state.isLoading && autoPlay) return
     if (state.isLoading) {
         Box(modifier.fillMaxSize().background(PageBg)) {
             EchoTrio(Modifier.align(Alignment.Center), color = menuCursorEdge())
@@ -160,10 +163,7 @@ fun VideoDetailScreen(
     }
     val video = state.video ?: run { onBack(); return }
     // straight to the player: nothing but the page until it starts, unless it could not play
-    if (autoPlay && !state.playing && state.launchError == null) {
-        Box(modifier.fillMaxSize().background(PageBg))
-        return
-    }
+    if (autoPlay && !state.playing && state.launchError == null) return
     val echoColors = LocalEchoColors.current
 
     Box(
