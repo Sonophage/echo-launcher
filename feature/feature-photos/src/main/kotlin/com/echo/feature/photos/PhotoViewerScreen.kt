@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -123,6 +124,7 @@ fun PhotoViewerScreen(
         modifier = modifier
             .fillMaxSize()
             .background(ViewerBg)
+            .onSizeChanged { viewModel.onViewSize(it.width.toFloat(), it.height.toFloat()) }
             .transformable(transformState)
 
             .clickable(
@@ -133,18 +135,20 @@ fun PhotoViewerScreen(
     ) {
         val infoOpen = state.infoVisible
         MediaDesignFrame { u ->
+            // framing a wallpaper: the photo fills the screen as the wallpaper will, scaled to the frame's zoom
+            val frame = state.wallpaperFrame
             AsyncImage(
                 model = photo.uri,
                 contentDescription = photo.displayName,
-                contentScale = ContentScale.Fit,
+                contentScale = if (state.wallpaperPreviewVisible) ContentScale.Crop else ContentScale.Fit,
                 modifier = (if (infoOpen) Modifier
                     .align(Alignment.TopStart)
                     .offset(u.dp(64), u.dp(90))
                     .size(u.dp(720), u.dp(540))
                 else Modifier.fillMaxSize())
                     .graphicsLayer(
-                        scaleX = state.zoom,
-                        scaleY = state.zoom,
+                        scaleX = frame?.layerScale(state.zoom) ?: state.zoom,
+                        scaleY = frame?.layerScale(state.zoom) ?: state.zoom,
                         translationX = state.panX,
                         translationY = state.panY,
                         rotationZ = state.rotationDegrees.toFloat(),
@@ -178,11 +182,13 @@ fun PhotoViewerScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text("Set as launcher wallpaper?", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text("It replaces the Crossbar wave background.", color = TextMuted, fontSize = 12.sp)
+                Text("Move and zoom the photo: the screen shows what the wallpaper keeps.", color = TextMuted, fontSize = 12.sp)
                 Spacer(Modifier.height(4.dp))
                 EchoControllerHints(
                     items = listOf(
                         ControllerPromptItem(GamepadAction.SELECT, "Apply"),
+                        ControllerPromptItem(listOf(GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT), "Move"),
+                        ControllerPromptItem(listOf(GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY), "Zoom"),
                         ControllerPromptItem(GamepadAction.BACK, "Cancel"),
                     ),
                     style = ControllerHintStyle.OVERLAY,

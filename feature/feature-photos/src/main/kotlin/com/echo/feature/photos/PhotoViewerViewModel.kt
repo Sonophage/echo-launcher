@@ -105,12 +105,22 @@ data class PhotoViewerUiState(
     val confirmRemove: Boolean = false,
 
     val wallpaperPreviewVisible: Boolean = false,
+    // the photo's size and the screen's, so the preview can frame the wallpaper (owner, 2026-10-08)
+    val imageW: Int = 0,
+    val imageH: Int = 0,
+    val viewW: Float = 0f,
+    val viewH: Float = 0f,
     val applyingWallpaper: Boolean = false,
     val actionMessage: String? = null,
     val closed: Boolean = false,
 ) {
     val photo: Photo? get() = photos.getOrNull(index)
     val zoomed: Boolean get() = zoom > ZOOM_MIN
+
+    // the wallpaper being framed, once both sizes are known
+    val wallpaperFrame: WallpaperFrame?
+        get() = if (wallpaperPreviewVisible && imageW > 0 && imageH > 0 && viewW > 0f && viewH > 0f)
+            WallpaperFrame(imageW, imageH, rotationDegrees, viewW, viewH) else null
 
     val optionsMenu: MenuState<PhotoViewerAction>
         get() = MenuState(
@@ -159,9 +169,16 @@ class PhotoViewerViewModel @Inject constructor(
         val s = _uiState.value
         when {
             s.applyingWallpaper -> if (action == GamepadAction.BACK) _uiState.update { it.copy(closed = true) } else Unit
+            // the d-pad moves the photo in the frame, LT and RT zoom it out and in (owner, 2026-10-08)
             s.wallpaperPreviewVisible -> when (action) {
                 GamepadAction.SELECT -> applyWallpaper()
-                GamepadAction.BACK   -> _uiState.update { it.copy(wallpaperPreviewVisible = false) }
+                GamepadAction.BACK   -> _uiState.update { it.copy(wallpaperPreviewVisible = false, zoom = ZOOM_MIN, panX = 0f, panY = 0f) }
+                GamepadAction.NAVIGATE_LEFT  -> frameBy(1f, +PAN_STEP_PX, 0f)
+                GamepadAction.NAVIGATE_RIGHT -> frameBy(1f, -PAN_STEP_PX, 0f)
+                GamepadAction.NAVIGATE_UP    -> frameBy(1f, 0f, +PAN_STEP_PX)
+                GamepadAction.NAVIGATE_DOWN  -> frameBy(1f, 0f, -PAN_STEP_PX)
+                GamepadAction.PREV_CATEGORY  -> frameBy(1f / ZOOM_STEP, 0f, 0f)
+                GamepadAction.NEXT_CATEGORY  -> frameBy(ZOOM_STEP, 0f, 0f)
                 else -> Unit
             }
             s.confirmRemove -> when (action) {
@@ -256,7 +273,7 @@ class PhotoViewerViewModel @Inject constructor(
     fun activateInfo(action: PhotoInfoAction) {
         _uiState.update { it.copy(infoFocus = action) }
         when (action) {
-            PhotoInfoAction.WALLPAPER -> _uiState.update { it.copy(infoVisible = false, wallpaperPreviewVisible = true) }
+            PhotoInfoAction.WALLPAPER -> { _uiState.update { it.copy(infoVisible = false) }; openWallpaperFrame() }
             PhotoInfoAction.ROTATE -> activate(PhotoViewerAction.ROTATE_RIGHT)
             PhotoInfoAction.FAVORITE -> toggleFavorite()
             PhotoInfoAction.REMOVE -> _uiState.update { it.copy(infoVisible = false, confirmRemove = true) }
@@ -313,7 +330,7 @@ class PhotoViewerViewModel @Inject constructor(
     fun activate(action: PhotoViewerAction) {
         _uiState.update { it.copy(showOptions = false) }
         when (action) {
-            PhotoViewerAction.SET_WALLPAPER -> _uiState.update { it.copy(wallpaperPreviewVisible = true) }
+            PhotoViewerAction.SET_WALLPAPER -> openWallpaperFrame()
             PhotoViewerAction.ROTATE_LEFT   -> _uiState.update { it.copy(rotationDegrees = (it.rotationDegrees + 270) % 360) }
             PhotoViewerAction.ROTATE_RIGHT  -> _uiState.update { it.copy(rotationDegrees = (it.rotationDegrees + 90) % 360) }
             PhotoViewerAction.ZOOM_IN       -> zoomBy(ZOOM_STEP)
@@ -337,6 +354,7 @@ class PhotoViewerViewModel @Inject constructor(
     }
 
     fun onGesture(zoomChange: Float, panChangeX: Float, panChangeY: Float) {
+        if (_uiState.value.wallpaperPreviewVisible) return frameBy(zoomChange, panChangeX, panChangeY)
         _uiState.update {
             val zoom = (it.zoom * zoomChange).coerceIn(ZOOM_MIN, ZOOM_MAX)
             if (zoom <= ZOOM_MIN) it.copy(zoom = ZOOM_MIN, panX = 0f, panY = 0f)
@@ -354,6 +372,38 @@ class PhotoViewerViewModel @Inject constructor(
         }
     }
 
+    fun onViewSize(width: Float, height: Float) {
+        if (width != _uiState.value.viewW || height != _uiState.value.viewH) _uiState.update { it.copy(viewW = width, viewH = height) }
+    }
+
+    // the preview starts at the whole screen filled, and learns the photo's size if the library does not hold it
+    private fun openWallpaperFrame() {
+        val photo = _uiState.value.photo ?: return
+        _uiState.update { it.copy(wallpaperPreviewVisible = true, zoom = ZOOM_MIN, panX = 0f, panY = 0f, imageW = photo.width ?: 0, imageH = photo.height ?: 0) }
+        if ((photo.width ?: 0) > 0 && (photo.height ?: 0) > 0) return
+        viewModelScope.launch {
+            val bounds = withContext(Dispatchers.IO) {
+                BitmapFactory.Options().apply { inJustDecodeBounds = true }.also { o ->
+                    runCatching { context.contentResolver.openInputStream(Uri.parse(photo.uri))?.use { BitmapFactory.decodeStream(it, null, o) } }
+                }
+            }
+            _uiState.update { it.copy(imageW = bounds.outWidth.coerceAtLeast(0), imageH = bounds.outHeight.coerceAtLeast(0)) }
+        }
+    }
+
+    // zoom and move the photo inside the wallpaper frame, never past its edges
+    private fun frameBy(zoomChange: Float, dx: Float, dy: Float) {
+        _uiState.update {
+            val frame = it.wallpaperFrame ?: return@update it
+            val zoom = (it.zoom * zoomChange).coerceIn(ZOOM_MIN, ZOOM_MAX)
+            it.copy(
+                zoom = zoom,
+                panX = (it.panX + dx).coerceIn(-frame.panLimitX(zoom), frame.panLimitX(zoom)),
+                panY = (it.panY + dy).coerceIn(-frame.panLimitY(zoom), frame.panLimitY(zoom)),
+            )
+        }
+    }
+
     private fun clampPan(value: Float, zoom: Float): Float {
         val limit = (zoom - 1f) * 1200f
         return value.coerceIn(-limit, limit)
@@ -362,11 +412,13 @@ class PhotoViewerViewModel @Inject constructor(
     private fun applyWallpaper() {
         val photo = _uiState.value.photo ?: return
         val rotation = _uiState.value.rotationDegrees
+        val s = _uiState.value
+        val crop = s.wallpaperFrame?.crop(s.zoom, s.panX, s.panY)
         _uiState.update { it.copy(applyingWallpaper = true) }
 
         viewModelScope.launch {
             try {
-            val imported = withContext(Dispatchers.IO) { importWallpaper(photo, rotation) }
+            val imported = withContext(Dispatchers.IO) { importWallpaper(photo, rotation, crop) }
             if (imported == null) {
                 _uiState.update {
                     it.copy(applyingWallpaper = false, actionMessage = "Could not set wallpaper — the image couldn't be read")
@@ -401,7 +453,7 @@ class PhotoViewerViewModel @Inject constructor(
         }
     }
 
-    private fun importWallpaper(photo: Photo, rotationDegrees: Int): Pair<File, File?>? = runCatching {
+    private fun importWallpaper(photo: Photo, rotationDegrees: Int, crop: FloatArray? = null): Pair<File, File?>? = runCatching {
         val uri = Uri.parse(photo.uri)
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
@@ -413,6 +465,7 @@ class PhotoViewerViewModel @Inject constructor(
             "image/webp" -> readHeader(context, uri)?.let(::isAnimatedWebpHeader) == true
             else -> false
         }
+        // an animation cannot be cut, so it is kept whole, as it always was
         if (animated && rotationDegrees % 360 == 0) {
             return@runCatching importAnimatedWallpaper(photo, mime!!)
         }
@@ -427,11 +480,21 @@ class PhotoViewerViewModel @Inject constructor(
             BitmapFactory.decodeStream(it, null, opts)
         } ?: return@runCatching null
 
-        val bitmap = if (rotationDegrees % 360 != 0) {
+        val bitmap = (if (rotationDegrees % 360 != 0) {
             val m = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
             Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, m, true)
                 .also { if (it != decoded) decoded.recycle() }
-        } else decoded
+        } else decoded)
+            .let { turned ->
+                // the part the frame showed
+                val c = crop ?: return@let turned
+                val l = (c[0] * turned.width).toInt().coerceAtMost(turned.width - 1)
+                val t = (c[1] * turned.height).toInt().coerceAtMost(turned.height - 1)
+                val w = ((c[2] - c[0]) * turned.width).toInt().coerceIn(1, turned.width - l)
+                val h = ((c[3] - c[1]) * turned.height).toInt().coerceIn(1, turned.height - t)
+                if (l == 0 && t == 0 && w == turned.width && h == turned.height) turned
+                else Bitmap.createBitmap(turned, l, t, w, h).also { if (it != turned) turned.recycle() }
+            }
 
         val dir = File(context.filesDir, "wallpaper").apply { mkdirs() }
         val dest = File(dir, "wallpaper_${System.currentTimeMillis()}.jpg")
