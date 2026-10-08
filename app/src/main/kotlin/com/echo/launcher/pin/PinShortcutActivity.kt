@@ -11,10 +11,10 @@ import com.echo.core.domain.model.GameContentType
 import com.echo.core.domain.repository.GameRepository
 import com.echo.feature.launcher.PcShortcutImporter
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -54,13 +54,11 @@ class PinShortcutActivity : ComponentActivity() {
 
         Timber.i("Accepted pinned shortcut: \"$label\" from $hostPackage")
 
-        runBlocking {
-            withTimeoutOrNull(STORE_TIMEOUT_MS) {
-                withContext(Dispatchers.IO) {
-                    runCatching { store(hostPackage, shortcutId, label) }
-                        .onFailure { Timber.e(it, "Failed to store pinned shortcut $shortcutId") }
-                }
-            } ?: Timber.e("Storing pinned shortcut $shortcutId timed out")
+        // stored after the activity has finished: the main thread never waits on the database, and a slow
+        // store still completes instead of timing out and losing a shortcut the system already pinned
+        storeScope.launch {
+            runCatching { store(hostPackage, shortcutId, label) }
+                .onFailure { Timber.e(it, "Failed to store pinned shortcut $shortcutId") }
         }
     }
 
@@ -72,7 +70,8 @@ class PinShortcutActivity : ComponentActivity() {
         }
 
         val hostLabel = runCatching {
-            packageManager.getApplicationLabel(packageManager.getApplicationInfo(hostPackage, 0)).toString()
+            val pm = applicationContext.packageManager
+            pm.getApplicationLabel(pm.getApplicationInfo(hostPackage, 0)).toString()
         }.getOrNull() ?: "Shortcuts"
         val gameId = gameRepository.getLauncherShortcut(hostPackage, shortcutId)?.id
             ?: gameRepository.upsert(
@@ -92,6 +91,6 @@ class PinShortcutActivity : ComponentActivity() {
     }
 
     private companion object {
-        const val STORE_TIMEOUT_MS = 5_000L
+        val storeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 }
