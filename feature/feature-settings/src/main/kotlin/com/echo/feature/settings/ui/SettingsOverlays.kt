@@ -171,6 +171,7 @@ fun SettingsTextPromptOverlay(
     onCancel: () -> Unit,
     placeholder: String = "",
     confirmLabel: String = "Save",
+    isPassword: Boolean = false,
 ) {
     SettingsOverlayInput { action ->
         when (action) {
@@ -188,5 +189,6 @@ fun SettingsTextPromptOverlay(
         onConfirm = onConfirm,
         onCancel = onCancel,
         confirmLabel = confirmLabel,
+        isPassword = isPassword,
     )
 }

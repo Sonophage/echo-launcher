@@ -296,27 +296,12 @@ fun ArtworkImportScreen(
 
             if (state.importRunning) {
                 SettingsGroup("Importing")
-                Column(modifier = Modifier.padding(horizontal = 48.dp, vertical = 10.dp)) {
-                    LinearProgressIndicator(
-
-                        progress = {
-                            if (state.importTotal > 0)
-                                (state.importDone.toFloat() / state.importTotal).coerceIn(0f, 1f)
-                            else 0f
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = SettingsAccent,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text  = "${state.importDone} / ${state.importTotal}  —  ${state.importLabel}",
-                        color = SettingsText,
-                    )
-                    Text(
-                        text  = "Runs in the background — you can leave this screen.",
-                        color = SettingsSubtext,
-                    )
-                }
+                SettingsProgressRow(
+                    label    = state.importLabel.ifBlank { "Importing" },
+                    done     = state.importDone,
+                    total    = state.importTotal,
+                    sublabel = "Runs in the background — you can leave this screen",
+                )
                 SettingsRow(
                     label    = "Cancel Import",
                     sublabel = "Already-imported artwork is kept",

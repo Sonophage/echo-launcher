@@ -48,6 +48,12 @@ fun LogsSettingsScreen(
         subtitle = "Logs",
         onBack   = onBack,
         modifier = Modifier.fillMaxSize(),
+        // owner, 2026-10-07: the hints are the footer's, not words in the group header
+        helperFooterItems = if (focusedLog != null) {
+            SettingsDefaultHelperItems + com.echo.core.ui.components.ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options")
+        } else {
+            SettingsDefaultHelperItems
+        },
         onInterceptAction = { action ->
             val m = menuFor
             when {
@@ -81,7 +87,7 @@ fun LogsSettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState),
         ) {
-            SettingsGroup("Log Files   —   Ⓐ open externally · ≡ options")
+            SettingsGroup("Log Files")
 
             if (state.logFiles.isEmpty()) {
                 SettingsRow(

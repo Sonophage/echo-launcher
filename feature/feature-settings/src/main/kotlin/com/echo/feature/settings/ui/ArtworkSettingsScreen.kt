@@ -122,38 +122,17 @@ fun ArtworkSettingsScreen(
                 SettingsGroup("Scrape Artwork")
 
                 if (state.isScraping) {
-                    Column(modifier = Modifier.padding(horizontal = 48.dp, vertical = 10.dp)) {
-                        LinearProgressIndicator(
-                            progress = {
-                                if (state.scrapeTotal > 0) state.scrapeCurrent.toFloat() / state.scrapeTotal else 0f
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            color = SettingsAccent,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text  = "${state.scrapeCurrent} / ${state.scrapeTotal}  —  ${state.scrapeTitle}",
-                            color = SettingsText,
-                        )
-                        if (state.scrapeSource.isNotEmpty() || state.scrapeAsset.isNotEmpty()) {
-                            Text(
-                                text = buildString {
-                                    if (state.scrapeSource.isNotEmpty()) append(state.scrapeSource)
-                                    if (state.scrapeSource.isNotEmpty() && state.scrapeAsset.isNotEmpty()) append(" › ")
-                                    if (state.scrapeAsset.isNotEmpty()) append(state.scrapeAsset)
-                                },
-                                color = SettingsAccent,
-                            )
-                        }
-                        Text(
-                            text  = "${state.scrapeSucceeded} succeeded · ${state.scrapeFailed} failed",
-                            color = SettingsSubtext,
-                        )
-                        Text(
-                            text  = "Runs in the background — you can leave this screen.",
-                            color = SettingsSubtext,
-                        )
-                    }
+                    val where = listOf(state.scrapeSource, state.scrapeAsset).filter { it.isNotEmpty() }.joinToString(" › ")
+                    SettingsProgressRow(
+                        label    = state.scrapeTitle.ifBlank { "Scraping" },
+                        done     = state.scrapeCurrent,
+                        total    = state.scrapeTotal,
+                        sublabel = listOfNotNull(
+                            where.ifEmpty { null },
+                            "${state.scrapeSucceeded} succeeded · ${state.scrapeFailed} failed",
+                            "runs in the background — you can leave this screen",
+                        ).joinToString(" · "),
+                    )
                     SettingsRow(
                         label    = "Cancel Scrape",
                         sublabel = "Stops after the current game — artwork fetched so far is kept",

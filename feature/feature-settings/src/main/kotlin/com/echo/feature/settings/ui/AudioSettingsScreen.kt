@@ -157,13 +157,7 @@ fun AudioSettingsScreen(
 
                 SettingsGroup("Sound Assignments")
 
-                if (state.importing) {
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 48.dp, vertical = 8.dp),
-                    )
-                }
+                if (state.importing) SettingsProgressRow(label = "Importing sound")
                 AudioSettingsViewModel.SOUND_SLOTS_SHOWN.forEach { slot ->
                     val label = state.soundLabels[slot] ?: NO_SOUND_LABEL
                     MediaAssignmentRow(

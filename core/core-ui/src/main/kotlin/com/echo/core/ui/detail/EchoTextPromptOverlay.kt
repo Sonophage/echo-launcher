@@ -68,6 +68,8 @@ fun EchoTextPromptOverlay(
     onReset: (() -> Unit)? = null,
     confirmLabel: String = "Save",
     cancelLabel: String = "Cancel",
+    // a key or password: shown as dots and typed on the keyboard's password layout
+    isPassword: Boolean = false,
 ) {
     val focusRequester = remember { FocusRequester() }
 
@@ -101,7 +103,13 @@ fun EchoTextPromptOverlay(
                 singleLine = true,
                 textStyle = EchoTextStyle.merge(TextStyle(color = RailInk, fontSize = u.sp(17), fontWeight = FontWeight.Bold)),
                 cursorBrush = SolidColor(RailInk),
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
+                keyboardOptions = if (isPassword) {
+                    KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password, imeAction = ImeAction.Done)
+                } else {
+                    KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done)
+                },
+                visualTransformation = if (isPassword) androidx.compose.ui.text.input.PasswordVisualTransformation()
+                else androidx.compose.ui.text.input.VisualTransformation.None,
                 keyboardActions = KeyboardActions(onDone = { onConfirm() }),
                 decorationBox = { field ->
                     Box(

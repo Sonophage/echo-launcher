@@ -264,11 +264,7 @@ private fun ThemesSettingsContent(
                     onClick  = if (state.isInstalling) null else ({ echoPicker.launch(arrayOf("*/*")) }),
                 )
 
-                if (state.isInstalling) {
-                    LinearProgressIndicator(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 48.dp, vertical = 4.dp),
-                    )
-                }
+                if (state.isInstalling) SettingsProgressRow(label = "Installing theme")
 
                 state.installMessage?.let { msg ->
                     SettingsRow(

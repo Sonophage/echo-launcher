@@ -1,5 +1,9 @@
 package com.echo.feature.settings.ui
 
+import androidx.compose.runtime.mutableIntStateOf
+import com.echo.core.ui.components.MenuState
+import com.echo.core.ui.components.MenuRow
+import com.echo.core.ui.components.EchoContextMenuOverlay
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -191,6 +195,7 @@ private fun LibraryListContent(
     rescanOnReturn: Boolean,
     onRescanOnReturn: (Boolean) -> Unit,
 ) {
+    var confirmRescanAll by remember { mutableStateOf(false) }
     SettingsPageScaffold(
         subtitle = "Library Manager",
         onBack = onBack,
@@ -241,27 +246,11 @@ private fun LibraryListContent(
                 },
                 onClick  = if (anyScannable) ({ onScanAllConsoles(false) }) else null,
             )
-            var confirmRescanAll by remember { mutableStateOf(false) }
-            if (!confirmRescanAll) {
-                SettingsRow(
-                    label    = "Re-Scan All (Remove Missing)",
-                    sublabel = "Also removes games whose ROM file no longer exists",
-                    onClick  = if (anyScannable) ({ confirmRescanAll = true }) else null,
-                )
-            } else {
-                SettingsRow(
-                    label    = "Confirm: Re-Scan and Remove Missing Games?",
-                    sublabel = "Removes library entries whose ROM file is gone. This can take a while with a large library",
-                    onClick  = {
-                        confirmRescanAll = false
-                        onScanAllConsoles(true)
-                    },
-                )
-                SettingsRow(
-                    label   = "Cancel",
-                    onClick = { confirmRescanAll = false },
-                )
-            }
+            SettingsRow(
+                label    = "Re-Scan All (Remove Missing)",
+                sublabel = "Also removes games whose ROM file no longer exists",
+                onClick  = if (anyScannable) ({ confirmRescanAll = true }) else null,
+            )
 
             SettingsToggleRow(
                 label    = "Rescan On Return",
@@ -273,6 +262,16 @@ private fun LibraryListContent(
 
             state.message?.let { MessageRow(it) { onDismissMessage() } }
         }
+    }
+    // owner, 2026-10-07: the kit's confirm, not a Confirm row and a Cancel row in the list
+    if (confirmRescanAll) {
+        SettingsConfirmOverlay(
+            title = "Re-Scan and Remove Missing Games?",
+            message = "Removes library entries whose ROM file is gone. This can take a while with a large library.",
+            confirmLabel = "Re-Scan",
+            onConfirm = { confirmRescanAll = false; onScanAllConsoles(true) },
+            onCancel = { confirmRescanAll = false },
+        )
     }
 }
 
@@ -509,7 +508,6 @@ private fun CardDetailContent(
                     onValueChange = { newExt = it },
                     placeholder   = "e.g. iso, chd, zip",
                     helper        = "Matched case-insensitively when scanning.",
-                    helperPrompt  = ControllerPromptItem(GamepadAction.SELECT, "Type"),
                 )
                 newExt.trim().lowercase().removePrefix(".").filter { it.isLetterOrDigit() }
                     .takeIf { it.isNotBlank() }
@@ -725,6 +723,10 @@ private fun ImportPcGamesContent(
     }
 }
 
+private enum class AddPcRow { ID, NAME, SOURCE, TEST, ADD }
+
+// owner, 2026-10-07: on the kit, not a Material dialog. The rail menu holds the fields, the source, Test Launch
+// and Add, so every one is reachable by pad; ID and name open the rail prompt
 @Composable
 private fun AddPcGameDialog(
     launcher: PcLauncherRow,
@@ -736,44 +738,59 @@ private fun AddPcGameDialog(
     var id by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
     var source by remember { mutableStateOf(adapter?.sources?.firstOrNull()) }
+    var cursor by remember { mutableIntStateOf(0) }
+    var editing by remember { mutableStateOf<AddPcRow?>(null) }
+    var draft by remember { mutableStateOf("") }
+
+    val ready = id.isNotBlank() && title.isNotBlank()
+    val rows = buildList {
+        add(MenuRow(AddPcRow.ID, "Game ID · ${id.ifBlank { "not set" }}"))
+        add(MenuRow(AddPcRow.NAME, "Game name · ${title.ifBlank { "not set" }}"))
+        if (adapter != null && adapter.sources.size > 1) add(MenuRow(AddPcRow.SOURCE, "Source · $source"))
+        if (id.isNotBlank()) add(MenuRow(AddPcRow.TEST, "Test Launch"))
+        if (ready) add(MenuRow(AddPcRow.ADD, "Add"))
+    }
+    val at = cursor.coerceIn(0, rows.lastIndex)
+
+    fun activate(row: AddPcRow) {
+        when (row) {
+            AddPcRow.ID -> { draft = id; editing = AddPcRow.ID }
+            AddPcRow.NAME -> { draft = title; editing = AddPcRow.NAME }
+            AddPcRow.SOURCE -> adapter?.sources?.let { all -> source = all[(all.indexOf(source) + 1) % all.size] }
+            AddPcRow.TEST -> onTest(id, source)
+            AddPcRow.ADD -> onAdd(id, title, source)
+        }
+    }
+
+    val field = editing
+    if (field != null) {
+        SettingsTextPromptOverlay(
+            title = if (field == AddPcRow.ID) "Game ID" else "Game name",
+            value = draft,
+            onValueChange = { draft = it },
+            onConfirm = {
+                if (field == AddPcRow.ID) id = draft.trim() else title = draft.trim()
+                editing = null
+            },
+            onCancel = { editing = null },
+        )
+        return
+    }
 
     SettingsOverlayInput { action ->
         when (action) {
-            GamepadAction.SELECT -> if (id.isNotBlank() && title.isNotBlank()) onAdd(id, title, source)
+            GamepadAction.NAVIGATE_UP -> cursor = (at - 1).coerceAtLeast(0)
+            GamepadAction.NAVIGATE_DOWN -> cursor = (at + 1).coerceAtMost(rows.lastIndex)
+            GamepadAction.SELECT -> rows.getOrNull(at)?.action?.let(::activate)
             GamepadAction.BACK -> onDismiss()
             else -> Unit
         }
     }
-    EchoOverlayCard(onScrimTap = onDismiss) {
-        EchoOverlayTitle("Add ${launcher.name} game")
-        Spacer(Modifier.height(10.dp))
-        adapter?.idPrompt?.let { Text(it, color = SettingsSubtext, fontSize = 12.sp) }
-        OutlinedTextField(value = id, onValueChange = { id = it }, label = { Text("Game ID") }, singleLine = true)
-        OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Game name") }, singleLine = true)
-        if (adapter != null && adapter.sources.isNotEmpty()) {
-            Text("Source", color = SettingsSubtext, fontSize = 12.sp)
-            Row {
-                adapter.sources.forEach { s ->
-                    Text(
-                        text = s,
-                        color = if (s == source) SettingsAccent else SettingsSubtext,
-                        modifier = Modifier
-                            .clickable { source = s }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        Row {
-            TextButton(onClick = { onTest(id, source) }) { Text("Test Launch") }
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-            TextButton(
-                onClick = { onAdd(id, title, source) },
-                enabled = id.isNotBlank() && title.isNotBlank(),
-            ) { Text("Add") }
-        }
-    }
+    EchoContextMenuOverlay(
+        state = MenuState(title = "Add ${launcher.name} game", subtitle = adapter?.idPrompt, rows = rows, selectedIndex = at),
+        onRowActivated = { index -> if (index == at) rows[index].action?.let(::activate) else cursor = index },
+        onDismiss = onDismiss,
+    )
 }
 
 private fun cardSublabel(card: LibraryCardRow): String = buildString {

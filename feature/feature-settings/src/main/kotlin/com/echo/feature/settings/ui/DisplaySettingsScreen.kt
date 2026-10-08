@@ -67,7 +67,7 @@ fun DisplaySettingsScreen(
     val state by viewModel.uiState.collectAsState()
 
 
-    var classicConfirmFocus by remember { mutableStateOf<Int?>(null) }
+    var confirmClassic by remember { mutableStateOf(false) }
 
     var focusedSlot by remember { mutableStateOf<UiMediaSlot?>(null) }
 
@@ -139,20 +139,6 @@ fun DisplaySettingsScreen(
         } ?: emptyList(),
         onInterceptAction = { action ->
 
-            classicConfirmFocus?.let { focused ->
-                when (action) {
-                    GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT ->
-                        classicConfirmFocus = if (focused == PSP_CONFIRM_CANCEL) PSP_CONFIRM_APPLY else PSP_CONFIRM_CANCEL
-                    GamepadAction.SELECT -> {
-                        if (focused == PSP_CONFIRM_APPLY) viewModel.applyClassicLayout()
-                        classicConfirmFocus = null
-                    }
-                    GamepadAction.BACK -> classicConfirmFocus = null
-                    else -> Unit
-                }
-                return@SettingsPageScaffold true
-            }
-
             if (state.wallpaperPreviewVisible) {
                 if (action == GamepadAction.SELECT || action == GamepadAction.BACK) {
                     viewModel.hideWallpaperPreview()
@@ -202,11 +188,7 @@ fun DisplaySettingsScreen(
                 SettingsGroup("Appearance")
 
                 if (state.wallpaperImporting) {
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 48.dp, vertical = 8.dp),
-                    )
+                    SettingsProgressRow(label = "Importing wallpaper")
                 } else {
                     SettingsRow(
                         label    = "Choose Wallpaper",
@@ -332,7 +314,7 @@ fun DisplaySettingsScreen(
                         "Apply the PSP's own proportions to this screen"
                     },
                     enabled  = !state.classicLayoutApplied,
-                    onClick  = { classicConfirmFocus = PSP_CONFIRM_CANCEL },
+                    onClick  = { confirmClassic = true },
                 )
 
                 // owner, 2026-10-07: everything about the crossbar in one tab: sizes, rows, Last Played, the status
@@ -634,11 +616,15 @@ fun DisplaySettingsScreen(
         }
     }
 
-    classicConfirmFocus?.let { focused ->
-        ClassicLayoutConfirmPanel(
-            focusedOption = focused,
-            onCancel = { classicConfirmFocus = null },
-            onApply = { viewModel.applyClassicLayout(); classicConfirmFocus = null },
+    // owner, 2026-10-07: the kit's confirm, not a panel of its own
+    if (confirmClassic) {
+        SettingsConfirmOverlay(
+            title = "Apply Classic Layout?",
+            message = "Sets this screen's Crossbar scale and crossbar position to the PSP's own proportions. " +
+                "Your current layout for this screen size is replaced; other screen sizes keep theirs.",
+            confirmLabel = "Apply",
+            onConfirm = { confirmClassic = false; viewModel.applyClassicLayout() },
+            onCancel = { confirmClassic = false },
         )
     }
 
@@ -648,63 +634,6 @@ fun DisplaySettingsScreen(
             message = state.wallpaperMessage!!,
             onDismiss = { viewModel.dismissWallpaperMessage() },
         )
-    }
-}
-
-private const val PSP_CONFIRM_CANCEL = 0
-private const val PSP_CONFIRM_APPLY = 1
-
-@Composable
-private fun ClassicLayoutConfirmPanel(focusedOption: Int, onCancel: () -> Unit, onApply: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
-            .clickable(onClick = onCancel),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier
-                .width(380.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xF2101018))
-                .border(1.dp, SettingsDivider, RoundedCornerShape(8.dp))
-
-                .clickable(enabled = false) {}
-                .padding(20.dp),
-        ) {
-            Text("Apply Classic Layout?", color = SettingsText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Sets this screen's Crossbar scale and crossbar position to the PSP's own proportions. " +
-                    "Your current layout for this screen size is replaced; other screen sizes keep theirs.",
-                color = SettingsSubtext,
-                fontSize = 13.sp,
-            )
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                ClassicConfirmOption("Cancel", focusedOption == PSP_CONFIRM_CANCEL, onCancel)
-                ClassicConfirmOption("Apply", focusedOption == PSP_CONFIRM_APPLY, onApply)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ClassicConfirmOption(label: String, focused: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (focused) SettingsAccent.copy(alpha = 0.25f) else Color.Transparent)
-            .border(1.dp, if (focused) SettingsAccent else Color.Transparent, RoundedCornerShape(6.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        Text(label, color = if (focused) Color.White else SettingsSubtext, fontSize = 14.sp)
     }
 }
 

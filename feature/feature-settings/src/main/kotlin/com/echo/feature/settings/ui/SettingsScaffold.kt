@@ -256,6 +256,19 @@ internal class SettingsPickerRequest(
 internal val LocalSettingsPicker =
     compositionLocalOf { mutableStateOf<SettingsPickerRequest?>(null) }
 
+// a text field row's edit, drawn by the scaffold as the kit's rail prompt (owner, 2026-10-07: every settings
+// text field on the kit, none a Material field)
+internal class SettingsTextRequest(
+    val title: String,
+    val value: String,
+    val placeholder: String,
+    val isPassword: Boolean,
+    val onDone: (String) -> Unit,
+)
+
+internal val LocalSettingsTextPrompt =
+    compositionLocalOf { mutableStateOf<SettingsTextRequest?>(null) }
+
 private const val SETTINGS_HELP_TEXT_SP = 13
 
 internal val CONTENT_EDGE_MARGIN = 16.dp
@@ -350,6 +363,7 @@ fun SettingsScaffold(
     val overlayInput = LocalSettingsOverlayInput.current
 
     val pickerState = remember { mutableStateOf<SettingsPickerRequest?>(null) }
+    val textPromptState = remember { mutableStateOf<SettingsTextRequest?>(null) }
     val pickerCursor = remember { mutableIntStateOf(0) }
 
     val touchScrolled = remember { mutableStateOf(false) }
@@ -644,6 +658,7 @@ fun SettingsScaffold(
         },
         LocalSettingsHelp provides helpText,
         LocalSettingsPicker provides pickerState,
+        LocalSettingsTextPrompt provides textPromptState,
         LocalSettingsFocusRegistry provides focusRegistry,
 
         LocalSettingsRegisterFirstFocusable provides { fr ->
@@ -884,6 +899,18 @@ fun SettingsScaffold(
                     picker = picker,
                     cursor = pickerCursor.intValue,
                     onDismiss = { pickerState.value = null },
+                )
+            }
+            textPromptState.value?.let { request ->
+                var draft by remember(request) { mutableStateOf(request.value) }
+                SettingsTextPromptOverlay(
+                    title = request.title,
+                    value = draft,
+                    onValueChange = { draft = it },
+                    onConfirm = { request.onDone(draft); textPromptState.value = null },
+                    onCancel = { textPromptState.value = null },
+                    placeholder = request.placeholder,
+                    isPassword = request.isPassword,
                 )
             }
         }
@@ -1321,7 +1348,18 @@ fun SettingsPickerRow(
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+// a job in progress, as a settings row: done / total when the count is known, "Working…" when it is not
+// (owner, 2026-10-07: the kit's rows, no raw progress bars)
+@Composable
+fun SettingsProgressRow(label: String, done: Int? = null, total: Int? = null, sublabel: String? = null) {
+    SettingsValueRow(
+        label = label,
+        value = if (done != null && total != null && total > 0) "$done / $total" else "Working…",
+        sublabel = sublabel,
+    )
+}
+
+// a value row; A (or a tap) opens the kit's rail prompt to edit it, and Save hands the text to [onValueChange]
 @Composable
 fun SettingsTextFieldRow(
     label: String,
@@ -1332,126 +1370,21 @@ fun SettingsTextFieldRow(
     singleLine: Boolean = true,
     isPassword: Boolean = false,
     helper: String? = null,
-
-    helperPrompt: ControllerPromptItem? = null,
     enabled: Boolean = true,
 ) {
-    val focusTracker = LocalSettingsFocusTracker.current
-    val keyboard = LocalSoftwareKeyboardController.current
-    val reportFocused = LocalSettingsReportFocused.current
-    val help = LocalSettingsHelp.current
-    val focusInfo = LocalSettingsFocusInfo.current
-    var editing by remember { mutableStateOf(false) }
-    var fieldFocused by remember { mutableStateOf(false) }
-    if (fieldFocused && focusInfo != null) {
-        DisposableEffect(label, value, helper) {
-            val info = SettingsFocusInfo(label, value.takeUnless { isPassword }, helper)
-            focusInfo.value = info
-            onDispose { if (focusInfo.value == info) focusInfo.value = null }
-        }
+    val prompt = LocalSettingsTextPrompt.current
+    val shown = when {
+        value.isBlank() -> placeholder.ifBlank { "Not set" }
+        isPassword -> "••••••••"
+        singleLine -> value
+        else -> value.lineSequence().first()
     }
-
-    val row = rememberControllerRowRegistration(
-        prefix = "field",
+    SettingsValueRow(
+        label = label,
+        value = shown,
+        sublabel = helper,
         focusKey = focusKey,
-        claimInitialFocus = true,
-        selectable = enabled,
         enabled = enabled,
-        onSelect = { editing = true },
+        onClick = { prompt.value = SettingsTextRequest(label, value, placeholder, isPassword, onValueChange) },
     )
-    val fr = row.focusRequester
-
-    LaunchedEffect(editing) {
-        if (editing) {
-            withFrameNanos { }
-            runCatching { fr.requestFocus() }
-            withFrameNanos { }
-            keyboard?.show()
-        } else {
-            keyboard?.hide()
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 48.dp, vertical = 8.dp)
-            .then(row.positionReporting),
-    ) {
-        Text(
-            text = label,
-            color = SettingsSubtext,
-            fontSize = 12.sp,
-            style = EchoTextStyle.copy(shadow = SettingsTextShadow),
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
-        Box {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                enabled = enabled,
-                readOnly = !editing,
-                singleLine = singleLine,
-                placeholder = { Text(placeholder, color = SettingsSubtext) },
-                visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = if (isPassword) KeyboardType.Password else KeyboardType.Text,
-                    imeAction = if (singleLine) ImeAction.Done else ImeAction.Default,
-                ),
-                keyboardActions = KeyboardActions(onDone = { editing = false }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = SettingsText,
-                    unfocusedTextColor = SettingsText,
-                    focusedBorderColor = SettingsAccent,
-                    unfocusedBorderColor = SettingsDivider,
-                    cursorColor = SettingsAccent,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(fr)
-                    .onFocusChanged { state ->
-                        fieldFocused = state.isFocused
-                        if (state.isFocused) {
-                            focusTracker { editing = true }
-                            reportFocused(fr)
-                            help.value = helper
-                        } else {
-                            editing = false
-                        }
-                    },
-            )
-
-            if (!editing && enabled) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .pointerInput(Unit) { detectTapGestures { editing = true } },
-                )
-            }
-        }
-        if (!helper.isNullOrBlank() || helperPrompt != null) {
-            Spacer(Modifier.height(4.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (!helper.isNullOrBlank()) {
-                    Text(
-                        text = helper,
-                        color = SettingsSubtext.copy(alpha = 0.6f),
-                        fontSize = 11.sp,
-                        style = EchoTextStyle.copy(shadow = SettingsTextShadow),
-                    )
-                }
-                if (helperPrompt != null) {
-                    EchoControllerHints(
-                        items = listOf(helperPrompt),
-                        style = ControllerHintStyle.INLINE,
-                    )
-                }
-            }
-        }
-    }
 }

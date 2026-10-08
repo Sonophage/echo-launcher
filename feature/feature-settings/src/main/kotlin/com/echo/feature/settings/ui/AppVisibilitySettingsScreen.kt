@@ -57,22 +57,12 @@ fun AppVisibilitySettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState),
         ) {
-            SettingsGroup("Hidden Items")
-
-            Text(
-                text = "Apps and games you've hidden, grouped by item with the places each is hidden " +
-                    "from. Hide items from their Options menu; unhide them here.",
-                color = SettingsSubtext,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(start = 48.dp, end = 48.dp, bottom = 8.dp),
-            )
-
+            // owner, 2026-10-07: the kit's groups and rows; each hidden item is a group of the places it is hidden from
             if (state.groups.isEmpty()) {
-                Text(
-                    text = "Nothing is hidden.",
-                    color = SettingsSubtext,
-                    fontSize = 13.sp,
-                    modifier = Modifier.fillMaxWidth().padding(48.dp),
+                SettingsGroup("Hidden Items")
+                SettingsRow(
+                    label    = "Nothing is hidden",
+                    sublabel = "Hide an app or game from its Options menu; unhide it here",
                 )
             } else {
                 state.groups.forEach { group ->
@@ -93,28 +83,8 @@ private fun HiddenItemCard(
     onUnhide: (HiddenEntry) -> Unit,
     onUnhideAll: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 48.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (group.icon != null) {
-                AsyncImage(
-                    model = group.icon,
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)),
-                )
-                Spacer(Modifier.width(12.dp))
-            }
-            Text(
-                text = group.label,
-                color = SettingsText,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-            )
-        }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SettingsGroup(group.label)
 
         group.entries.forEach { entry ->
             SettingsValueRow(

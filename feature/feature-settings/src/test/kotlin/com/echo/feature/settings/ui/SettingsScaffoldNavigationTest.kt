@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import com.echo.core.domain.model.GamepadAction
@@ -630,4 +631,25 @@ class SettingsScaffoldNavigationTest {
     private fun viewportBottom(): Float = viewportBounds().bottom - margin()
 
     private fun viewportCenterY(): Float = viewportBounds().center.y
+
+    // owner, 2026-10-07: a settings text field is a kit row; A opens the rail prompt, Save hands back the text,
+    // B leaves the value as it was. The old Material field took typing in the row itself
+    @Test
+    fun `A on a text field row opens the rail prompt, and only Save changes the value`() {
+        var saved: String? = null
+        showScreen {
+            SettingsTextFieldRow(label = "API Key", value = "old", onValueChange = { saved = it })
+        }
+        assertFocusedRow("old")
+
+        press(GamepadAction.SELECT)
+        composeRule.onNode(androidx.compose.ui.test.hasSetTextAction()).performTextReplacement("new-key")
+        press(GamepadAction.BACK)
+        assertEquals("B cancels without saving", null, saved)
+
+        press(GamepadAction.SELECT)
+        composeRule.onNode(androidx.compose.ui.test.hasSetTextAction()).performTextReplacement("new-key")
+        press(GamepadAction.SELECT)
+        assertEquals("new-key", saved)
+    }
 }

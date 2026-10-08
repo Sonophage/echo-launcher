@@ -46,17 +46,11 @@ fun ControllerSettingsScreen(
                 .verticalScroll(scrollState),
         ) {
             SettingsGroup("A / B Swap")
-            Text(
-                text     = "Controls which button confirms and which goes back. " +
-                    "Applies globally to all launcher menus.",
-                color    = SettingsSubtext,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 48.dp, vertical = 4.dp),
-            )
 
             SettingsPickerRow(
                 label    = "A / B Swap",
-                sublabel = state.layoutPrefs.confirmBackLayout.displayLabel(),
+                sublabel = "Which button confirms and which goes back, in every launcher menu · " +
+                    state.layoutPrefs.confirmBackLayout.displayLabel(),
                 options  = ConfirmBackLayout.entries.map {
                     SettingsPickerOption(
                         label = if (it == ConfirmBackLayout.STANDARD) "Off" else "On",
@@ -68,17 +62,10 @@ fun ControllerSettingsScreen(
             )
 
             SettingsGroup("X / Y Swap")
-            Text(
-                text     = "Swaps X and Y actions within the launcher UI only. " +
-                    "Does not affect emulator controls.",
-                color    = SettingsSubtext,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 48.dp, vertical = 4.dp),
-            )
 
             SettingsPickerRow(
                 label    = "X / Y Swap",
-                sublabel = state.layoutPrefs.xyLayout.displayLabel(),
+                sublabel = "Swaps X and Y in the launcher only, never in emulators · " + state.layoutPrefs.xyLayout.displayLabel(),
                 options  = XYLayout.entries.map {
                     SettingsPickerOption(
                         label = if (it == XYLayout.STANDARD) "Off" else "On",
@@ -90,33 +77,21 @@ fun ControllerSettingsScreen(
             )
 
             SettingsGroup("Controller Type")
-            Text(
-                text     = "Changes which button icons and labels are shown in help prompts.",
-                color    = SettingsSubtext,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 48.dp, vertical = 4.dp),
-            )
 
             SettingsPickerRow(
                 label    = "Type",
-                sublabel = "Affects the help bar at the bottom of the launcher",
+                sublabel = "Which button icons and labels the help bar at the bottom shows",
                 options  = ControllerDisplayType.entries.map { SettingsPickerOption(it.displayLabel()) },
                 selectedIndex = ControllerDisplayType.entries.indexOf(state.layoutPrefs.displayType),
                 onPick   = { viewModel.setDisplayType(ControllerDisplayType.entries[it]) },
             )
 
             SettingsGroup("Stick")
-            Text(
-                text     = "How far the stick must move before it navigates, and how far before " +
-                    "it counts as a full tilt. Lower is more deliberate.",
-                color    = SettingsSubtext,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 48.dp, vertical = 4.dp),
-            )
 
             SettingsPickerRow(
                 label    = "Stick Sensitivity",
-                sublabel = "Low needs a firmer push and reaches top speed later",
+                sublabel = "How far the stick moves before it navigates, and before it counts as a full tilt. " +
+                    "Low needs a firmer push and reaches top speed later",
                 options  = StickSensitivity.entries.map { SettingsPickerOption(it.displayLabel()) },
                 selectedIndex = StickSensitivity.entries.indexOf(state.layoutPrefs.stickSensitivity),
                 onPick   = { viewModel.setStickSensitivity(StickSensitivity.entries[it]) },
@@ -143,17 +118,11 @@ fun ControllerSettingsScreen(
             )
 
             SettingsGroup("Scroll Speed")
-            Text(
-                text     = "How fast lists scroll while a direction is held. Holding longer " +
-                    "accelerates, and a full stick tilt accelerates twice as fast.",
-                color    = SettingsSubtext,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 48.dp, vertical = 4.dp),
-            )
 
             SettingsPickerRow(
                 label    = "Scroll Speed",
-                sublabel = "Applies to held D-pad and stick navigation",
+                sublabel = "How fast held D-pad and stick navigation scrolls. Holding longer speeds it up, " +
+                    "and a full stick tilt goes twice as fast",
                 options  = ScrollSpeed.entries.map { SettingsPickerOption(it.displayLabel()) },
                 selectedIndex = ScrollSpeed.entries.indexOf(state.layoutPrefs.scrollSpeed),
                 onPick   = { viewModel.setScrollSpeed(ScrollSpeed.entries[it]) },
