@@ -19,6 +19,22 @@ released; it becomes the next release's notes.
 - Quick settings tiles no longer break a word in two; the theme page's text fits the second screen;
   the Info button shows only when there is info.
 
+- On the second screen, B leaves the music player for Recent and Y opens its options (Stop & Close).
+- The second screen's Recent can show the selected item in full: right closes the list, left opens it.
+
+### Notifications panel
+- What is playing, or the video or book you just had open, is pinned at the top of Notifications and
+  the panel opens on it, with its art, progress and buttons (Play/Pause, Next track, Open Music;
+  Resume; Continue reading).
+- Double-tap the island (or press Select twice) to open the player for whatever is playing.
+
+### Library
+- A on a video plays it straight away; Details is on its menu.
+- A video can be made the wallpaper: **Set as Wallpaper** on its menu.
+- The video wallpaper's motion is its own setting (Wallpaper ▸ Background Motion); turning the wave
+  off no longer stops the video.
+- Each column's folder row is named for the column: "Music Settings", not "Folders".
+
 ### Apps
 - An app's Options offer **Artwork** (Artwork Studio, as for games), **App Info** and **Uninstall**.
   The old Edit App Details screen is gone.
@@ -26,6 +42,7 @@ released; it becomes the next release's notes.
 - Recent shows an app with no art on its icon's colour, with its icon, instead of black.
 
 ### Fixes
+- A on a track in Recent plays it, queued with its album.
 - Recent no longer crashes when one album was played in two separate runs.
 - Recently Added lists games only (an app given art showed as "app_shortcut").
 - "Today" means today's date: a game played yesterday afternoon no longer reads "Today" after midnight.
