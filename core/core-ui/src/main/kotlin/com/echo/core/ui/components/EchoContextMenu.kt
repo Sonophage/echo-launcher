@@ -91,22 +91,7 @@ fun <T> EchoContextMenuOverlay(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         Box(Modifier.fillMaxSize().clickable(onClick = onDismiss))
-        val panelWidth = u.dp(RAIL_PANEL_WIDTH)
-        // the Recent rail's backing (owner, 2026-10-04): the art behind, blurred, under the wave and the fill.
-        // owner, 2026-10-07: every context menu wears it; with no art it is the dark base and the wave
-        Box(Modifier.fillMaxSize().drawWithContent { clipRect(left = size.width - panelWidth.toPx()) { this@drawWithContent.drawContent() } }) {
-            Box(Modifier.fillMaxSize().background(PanelBase))
-            if (backdropArt != null) {
-                AsyncImage(
-                    model = rememberBlurSourceModel(backdropArt),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().blur(u.dp(24)).graphicsLayer(alpha = 0.4f),
-                )
-            }
-            LocalBackdropWave.current?.invoke()
-        }
-        Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(panelWidth).background(RailPanelFill))
+        RailPanelBacking(u, backdropArt)
 
         Column(
             horizontalAlignment = Alignment.End,
@@ -140,6 +125,29 @@ fun <T> EchoContextMenuOverlay(
                 }
             }
         }
+    }
+}
+
+// the right-hand rail every context menu and side-rail prompt sits on, drawn over a full-size parent.
+// The Recent rail's backing (owner, 2026-10-04): the art behind, blurred, under the wave and the fill.
+// owner, 2026-10-07: every context menu wears it; with no art it is the dark base and the wave
+@Composable
+fun RailPanelBacking(u: DesignUnits, backdropArt: String? = LocalMenuBackdropArt.current) {
+    val panelWidth = u.dp(RAIL_PANEL_WIDTH)
+    Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().drawWithContent { clipRect(left = size.width - panelWidth.toPx()) { this@drawWithContent.drawContent() } }) {
+            Box(Modifier.fillMaxSize().background(PanelBase))
+            if (backdropArt != null) {
+                AsyncImage(
+                    model = rememberBlurSourceModel(backdropArt),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().blur(u.dp(24)).graphicsLayer(alpha = 0.4f),
+                )
+            }
+            LocalBackdropWave.current?.invoke()
+        }
+        Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(panelWidth).background(RailPanelFill))
     }
 }
 
@@ -300,7 +308,7 @@ val RailEdgeGap = 24.dp
 val RailRowGap = 13.dp
 private const val DimFadeMs = 160
 // the menu's sizes are panel design units, as the Recent rail's are, so the two read alike
-private const val RAIL_MAX_TEXT = 380
+internal const val RAIL_MAX_TEXT = 380
 internal val RailInk = Color(0xFF1A0C03)
 private val RailDestructive = Color(0xFFE2606A)
 
