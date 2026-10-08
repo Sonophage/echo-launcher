@@ -64,6 +64,12 @@ class BottomScreenLink @Inject constructor() {
 
     fun drawerFocused(focus: DrawerFocus?) { _drawerFocus.value = focus }
 
+    // the theme the store has in focus on the companion, for the crossbar's screen (owner, 2026-10-08)
+    private val _storePreview = MutableStateFlow<com.echo.feature.settings.ui.StorePreview?>(null)
+    val storePreview: StateFlow<com.echo.feature.settings.ui.StorePreview?> = _storePreview.asStateFlow()
+
+    fun storePreviewed(preview: com.echo.feature.settings.ui.StorePreview?) { _storePreview.value = preview }
+
     fun attach(on: Boolean) { _attached.value = on }
 
     fun hostShown(shown: Boolean) { _hostShown.value = shown }

@@ -1,5 +1,6 @@
 package com.echo.feature.settings.ui
 
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -78,6 +79,14 @@ import com.echo.core.ui.theme.EchoTextStyle
 import com.echo.feature.settings.viewmodel.ThemePage
 import com.echo.feature.settings.viewmodel.ThemesSettingsViewModel
 import com.echo.themekit.ThemePart
+
+// the theme the store has in focus, for a second screen to show large (owner, 2026-10-08): with two screens the
+// store is on the companion and the crossbar's screen shows the theme. picture is its wallpaper, or on its page
+// the screenshot in view
+data class StorePreview(val name: String, val line: String, val picture: String?, val accentArgb: Long? = null)
+
+// set by a host with a second screen; null on one screen, where the store's own hero shows the theme
+val LocalStorePreview = androidx.compose.runtime.compositionLocalOf<((StorePreview?) -> Unit)?> { null }
 
 // a card in the theme store: a saved theme or an online one
 internal data class StoreCard(val id: String, val name: String, val subtitle: String, val image: String?, val accentArgb: Long? = null,
@@ -191,6 +200,21 @@ fun ThemeStoreScreen(
         ?: online.firstOrNull { it.standing == ThemeCatalogRepository.Standing.NEW } ?: online.firstOrNull() ?: saved.first()
     val featuredSection = focusedShelf ?: if (featured.id == CURRENT_LOOK_ID || online.none { it.id == featured.id }) "saved" else "online"
 
+    LocalStorePreview.current?.let { report ->
+        val page = state.page
+        val preview = if (page != null) {
+            StorePreview(
+                name = page.name,
+                line = listOfNotNull(page.author?.let { "by $it" }, page.version?.let { "version $it" }).joinToString("  ·  "),
+                picture = page.screenshots.getOrNull(shot) ?: page.backdrop ?: page.hero,
+            )
+        } else {
+            StorePreview(featured.name, featured.subtitle, featured.wallpaper ?: featured.image, featured.accentArgb)
+        }
+        LaunchedEffect(preview) { report(preview) }
+        DisposableEffect(Unit) { onDispose { report(null) } }
+    }
+
     Box(modifier) {
         SettingsPageScaffold(
             subtitle = "Store",
@@ -240,7 +264,8 @@ fun ThemeStoreScreen(
         ) {
             // the hero stays put above the shelves, so it is never scrolled under the tab row
             Column(Modifier.fillMaxSize()) {
-            StoreHero(featured, featuredSection == "online")
+            // with a second screen the theme shows large there, so the shelves take this screen
+            if (LocalStorePreview.current == null) StoreHero(featured, featuredSection == "online")
             // two shelves: the store scrolls itself (the first to the top, the last to the bottom), since the
             // scaffold's own scrolling measures rows from the top of the page and would slide one under the hero
             val scroll = rememberScrollState()

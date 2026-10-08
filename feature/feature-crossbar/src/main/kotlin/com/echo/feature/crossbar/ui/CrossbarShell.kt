@@ -151,6 +151,7 @@ fun CrossbarShellContainer(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val drawerFocus by viewModel.bottomScreen.drawerFocus.collectAsStateWithLifecycle()
+    val storePreview by viewModel.bottomScreen.storePreview.collectAsStateWithLifecycle()
 
     val shareContext = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(uiState.pendingThemeShareFile) {
@@ -297,6 +298,7 @@ fun CrossbarShellContainer(
         onGameInfoScrollMax = viewModel.gameDetail::onGameInfoScrollMax,
         onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
         drawerFocus = drawerFocus,
+        storePreview = storePreview,
         onProfileSet = viewModel.panel::onProfileSetTapped,
         onProfileBadge = viewModel.panel::onProfileBadgeTapped,
         onProfileFilter = viewModel.panel::onProfileFilterTapped,
@@ -487,6 +489,7 @@ fun CrossbarShell(
     onGameInfoScrollMax: (Int) -> Unit = {},
     onPanelProfileTapped: (com.echo.feature.crossbar.viewmodel.ProfileSpot, Int) -> Unit = { _, _ -> },
     drawerFocus: com.echo.feature.crossbar.bottomscreen.DrawerFocus? = null,
+    storePreview: com.echo.feature.settings.ui.StorePreview? = null,
     onProfileSet: (Int) -> Unit = {},
     onProfileBadge: (Int) -> Unit = {},
     onProfileFilter: (com.echo.feature.crossbar.viewmodel.BadgeFilter) -> Unit = {},
@@ -1267,6 +1270,9 @@ fun CrossbarShell(
                 }
             }
 
+            // with two screens, the theme store is on the companion and its focused theme shows here (owner, 2026-10-08)
+            if (uiState.secondScreen && uiState.activeSettingsScreen != null) storePreview?.let { StorePreviewHero(it) }
+
             // with two screens, Search types on the companion and shows its results here (owner, 2026-10-08)
             (uiState.topSearch ?: uiState.search?.takeIf { uiState.secondScreen })?.let { search ->
                 SearchScreen(
@@ -1765,5 +1771,22 @@ private fun hintTile(item: CrossbarItem, icon: ImageBitmap?): (@Composable () ->
         }
         icon != null -> { -> androidx.compose.foundation.Image(icon, null, Modifier.fillMaxSize()) }
         else -> null
+    }
+}
+
+// the store's focused theme on the crossbar's screen: its picture filling the screen, its name over it
+@Composable
+private fun StorePreviewHero(preview: com.echo.feature.settings.ui.StorePreview) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
+        val u = com.echo.core.ui.design.panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
+        preview.picture?.let {
+            AsyncImage(model = rememberArtworkModel(it), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        }
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
+        Column(Modifier.align(Alignment.BottomStart).padding(start = u.dp(64), bottom = u.dp(56)), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+            Text("PREVIEW", style = u.eyebrow(), color = Color.White.copy(alpha = 0.75f))
+            Text(preview.name, color = Color.White, fontSize = u.sp(40), fontWeight = androidx.compose.ui.text.font.FontWeight.Light, maxLines = 1)
+            if (preview.line.isNotBlank()) Text(preview.line, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(15), maxLines = 1)
+        }
     }
 }

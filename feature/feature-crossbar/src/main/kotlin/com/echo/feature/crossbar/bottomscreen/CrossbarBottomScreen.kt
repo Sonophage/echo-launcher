@@ -141,6 +141,10 @@ class CrossbarBottomScreen(
 
     val drawerFocus get() = link.drawerFocus
 
+    fun storePreviewed(preview: com.echo.feature.settings.ui.StorePreview?) = link.storePreviewed(preview)
+
+    val storePreview get() = link.storePreview
+
     fun toggleSwap() {
         setCompanionActive(false)
         scope.launch { vm.context.echoDataStore.edit { it[KEY_SWAP_SCREENS] = it[KEY_SWAP_SCREENS] != true } }

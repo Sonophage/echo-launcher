@@ -218,6 +218,8 @@ private fun AppsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel, u: Design
 @Composable
 private fun SettingsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel) {
     val screenId = ui.activeSettingsScreen ?: return
+    // the store reports its focused theme, which the crossbar's screen shows large
+    CompositionLocalProvider(com.echo.feature.settings.ui.LocalStorePreview provides crossbar.bottomScreen::storePreviewed) {
     SettingsNavHost(
         screenId = screenId,
         onBack = crossbar::onSettingsBack,
@@ -237,4 +239,5 @@ private fun SettingsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel) {
         onOpenScreen = crossbar::onOpenSettingsScreen,
         modifier = Modifier.fillMaxSize(),
     )
+    }
 }
