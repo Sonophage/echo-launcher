@@ -119,4 +119,17 @@ class KitButtonsMigrationTest {
         ))
         assertEquals(own, own.withStartSelectSwapped())
     }
+
+    // owner, 2026-10-08: L3 and R3 swap the screens; a saved map gains them once, and a stick bound on purpose stays
+    @Test
+    fun `a saved map gains Swap Screens on both stick clicks, and keeps a stick bound to something else`() {
+        val m = savedBeforeSplit(KeyEvent.KEYCODE_BUTTON_Y, KeyEvent.KEYCODE_BUTTON_X).withKitButtons()
+        assertEquals(GamepadAction.SWAP_SCREENS, m.actionFor(KeyEvent.KEYCODE_BUTTON_THUMBL))
+        assertEquals(GamepadAction.SWAP_SCREENS, m.actionFor(KeyEvent.KEYCODE_BUTTON_THUMBR))
+
+        val own = GamepadMappings(DEFAULT_BINDINGS.filterNot { it.action == GamepadAction.SWAP_SCREENS } +
+            GamepadBinding(KeyEvent.KEYCODE_BUTTON_THUMBL, GamepadAction.OPEN_SEARCH)).withKitButtons()
+        assertEquals(GamepadAction.OPEN_SEARCH, own.actionFor(KeyEvent.KEYCODE_BUTTON_THUMBL))
+        assertEquals(GamepadAction.SWAP_SCREENS, own.actionFor(KeyEvent.KEYCODE_BUTTON_THUMBR))
+    }
 }

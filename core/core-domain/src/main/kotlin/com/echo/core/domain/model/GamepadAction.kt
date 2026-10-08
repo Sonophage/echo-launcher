@@ -33,6 +33,9 @@ enum class GamepadAction {
     // Start the notifications (they traded places)
     OPEN_ISLAND,
     OPEN_NOTIFICATIONS,
+
+    // owner, 2026-10-08: either stick click swaps the two screens on a device with a second one
+    SWAP_SCREENS,
 }
 
 val GamepadAction.isDirectional: Boolean

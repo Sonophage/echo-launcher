@@ -2574,6 +2574,12 @@ class CrossbarViewModel @Inject constructor(
     private fun dispatchGamepadAction(action: GamepadAction) {
         val state = _uiState.value
 
+        // L3 or R3 (owner, 2026-10-08): the same as the Swap button, from either screen, over anything open
+        if (action == GamepadAction.SWAP_SCREENS) {
+            if (state.secondDisplayPresent && state.secondScreenEnabled) bottomScreen.toggleSwap()
+            return
+        }
+
         if (state.letterJump != null) {
             when (action) {
                 GamepadAction.NAVIGATE_UP -> moveLetterJump(-1)

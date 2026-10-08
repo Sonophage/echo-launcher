@@ -2435,7 +2435,7 @@ class ArtworkStudioViewModel @Inject constructor(
 
             GamepadAction.OPEN_CONTEXT_MENU -> openActions()
 
-            GamepadAction.OPEN_NOTIFICATIONS -> Unit
+            GamepadAction.OPEN_NOTIFICATIONS, GamepadAction.SWAP_SCREENS -> Unit
         }
     }
 }

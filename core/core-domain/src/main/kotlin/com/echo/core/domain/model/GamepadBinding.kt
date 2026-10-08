@@ -49,6 +49,8 @@ val DEFAULT_BINDINGS = listOf(
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_MODE,   GamepadAction.HOME),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_START,  GamepadAction.OPEN_NOTIFICATIONS),
     GamepadBinding(KeyEvent.KEYCODE_BUTTON_SELECT, GamepadAction.OPEN_ISLAND),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_THUMBL, GamepadAction.SWAP_SCREENS),
+    GamepadBinding(KeyEvent.KEYCODE_BUTTON_THUMBR, GamepadAction.SWAP_SCREENS),
     GamepadBinding(KeyEvent.KEYCODE_ENTER,         GamepadAction.SELECT),
     GamepadBinding(KeyEvent.KEYCODE_BACK,          GamepadAction.BACK),
     GamepadBinding(KeyEvent.KEYCODE_DPAD_CENTER,   GamepadAction.SELECT),
@@ -97,7 +99,17 @@ fun gamepadMappingsFor(
 // mappings saved before the kit's buttons have Options on a face button and Home on Start. Moves
 // those three roles to where DEFAULT_BINDINGS has them and keeps every other choice (A/B and X/Y swaps,
 // remapped keys). A mapping that already binds the guide button is taken as current.
-fun GamepadMappings.withKitButtons(): GamepadMappings = withKitFaceButtons().withTriggerTabs().withMenuButtonsSplit()
+fun GamepadMappings.withKitButtons(): GamepadMappings =
+    withKitFaceButtons().withTriggerTabs().withMenuButtonsSplit().withStickClickSwap()
+
+// mappings saved before 2026-10-08 leave L3 and R3 unbound: each gets Swap Screens, unless it was bound to
+// something on purpose
+private fun GamepadMappings.withStickClickSwap(): GamepadMappings {
+    val sticks = listOf(KeyEvent.KEYCODE_BUTTON_THUMBL, KeyEvent.KEYCODE_BUTTON_THUMBR)
+    val free = sticks.filter { key -> bindings.none { it.keyCode == key } }
+    if (free.isEmpty()) return this
+    return GamepadMappings(bindings + free.map { GamepadBinding(it, GamepadAction.SWAP_SCREENS) })
+}
 
 // mappings saved before 2026-10-06 have Search on a face button, Options on Start and Home on Select: the face
 // button becomes the context menu, Start the island and Select the notifications. A mapping that already
@@ -178,6 +190,7 @@ fun GamepadAction.displayLabel(): String = when (this) {
     GamepadAction.HOME              -> "Home"
     GamepadAction.OPEN_ISLAND       -> "Now Playing Island (Confirm in pickers)"
     GamepadAction.OPEN_NOTIFICATIONS -> "Notifications (hold for Home)"
+    GamepadAction.SWAP_SCREENS      -> "Swap Screens"
 }
 
 fun Int.keycodeDisplayName(): String = when (this) {
