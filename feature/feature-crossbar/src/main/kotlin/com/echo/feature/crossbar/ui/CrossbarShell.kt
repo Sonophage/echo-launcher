@@ -152,6 +152,7 @@ fun CrossbarShellContainer(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val drawerFocus by viewModel.bottomScreen.drawerFocus.collectAsStateWithLifecycle()
+    val drawerInfo by viewModel.bottomScreen.drawerInfo.collectAsStateWithLifecycle()
     val storePreview by viewModel.bottomScreen.storePreview.collectAsStateWithLifecycle()
 
     val shareContext = androidx.compose.ui.platform.LocalContext.current
@@ -300,6 +301,7 @@ fun CrossbarShellContainer(
         onGameInfoScrollMax = viewModel.gameDetail::onGameInfoScrollMax,
         onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
         drawerFocus = drawerFocus,
+        drawerInfo = drawerInfo,
         storePreview = storePreview,
         onProfileSet = viewModel.panel::onProfileSetTapped,
         onProfileBadge = viewModel.panel::onProfileBadgeTapped,
@@ -492,6 +494,7 @@ fun CrossbarShell(
     onGameInfoScrollMax: (Int) -> Unit = {},
     onPanelProfileTapped: (com.echo.feature.crossbar.viewmodel.ProfileSpot, Int) -> Unit = { _, _ -> },
     drawerFocus: com.echo.feature.crossbar.bottomscreen.DrawerFocus? = null,
+    drawerInfo: com.echo.feature.crossbar.viewmodel.GameInfoState? = null,
     storePreview: com.echo.feature.settings.ui.StorePreview? = null,
     onProfileSet: (Int) -> Unit = {},
     onProfileBadge: (Int) -> Unit = {},
@@ -1268,9 +1271,17 @@ fun CrossbarShell(
             // with two screens, the App Drawer is on the companion and its focused app is drawn large here
             // (owner, 2026-10-08), over the crossbar it would otherwise leave idle
             if (uiState.secondScreen && uiState.activeAppDrawerFilter != null && uiState.search == null) {
-                drawerFocus?.let { focus ->
-                    com.echo.feature.appbar.appdrawer.AppDrawerHero(
-                        app = focus.app, onLaunch = focus.onLaunch, onOptions = focus.onOptions,
+                // as the Recent screen draws an item (owner, 2026-10-08), so a game's details and achievements fit
+                val info = drawerInfo
+                if (drawerFocus != null && info != null) CompositionLocalProvider(LocalFromRecent provides false) {
+                    LastPlayedPage(
+                        items = listOf(info.item),
+                        selectedIndex = 0,
+                        listState = androidx.compose.foundation.lazy.rememberLazyListState(),
+                        filter = com.echo.feature.crossbar.viewmodel.RecentFilter.ALL,
+                        railVisible = false,
+                        onCardTapped = { drawerFocus.onLaunch() },
+                        achievements = info.achievementsStat,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

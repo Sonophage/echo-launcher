@@ -196,19 +196,6 @@ private fun AppCase(app: InstalledApp, height: Dp, focused: Boolean, dimmed: Boo
 
 // the left column: the app's tile, name and kind, a pill with what it is, what is known about it, when it was
 // last used, and its buttons
-// the App Drawer's focused app, drawn large on the other screen while the drawer is open on a second one
-// (owner, 2026-10-08): the wall's backdrop, then the app's details as the drawer shows them
-@Composable
-fun AppDrawerHero(app: InstalledApp, onLaunch: () -> Unit, onOptions: () -> Unit, modifier: Modifier = Modifier) {
-    BoxWithConstraints(modifier.fillMaxSize()) {
-        val u = com.echo.core.ui.design.panelDesignUnits(maxWidth.value, maxHeight.value, androidx.compose.ui.platform.LocalDensity.current)
-        val icon = rememberAppIcon(app.packageName.takeIf { app.gameId == null })
-        WallBackdrop(app, icon, u)
-        WallInfo(app, icon, u, onLaunch = onLaunch, onOptions = onOptions,
-            modifier = Modifier.align(Alignment.CenterStart).padding(start = u.dp(96)).width(u.dp(560)))
-    }
-}
-
 @Composable
 internal fun WallInfo(
     app: InstalledApp,

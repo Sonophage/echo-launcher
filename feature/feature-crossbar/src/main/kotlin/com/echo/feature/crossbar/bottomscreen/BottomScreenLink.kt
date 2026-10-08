@@ -126,6 +126,12 @@ class BottomScreenLink @Inject constructor() {
 
     fun drawerFocused(focus: DrawerFocus?) { _drawerFocus.value = focus }
 
+    // that app or game as the Recent screen draws it, with its details and achievements once they load
+    private val _drawerInfo = MutableStateFlow<GameInfoState?>(null)
+    val drawerInfo: StateFlow<GameInfoState?> = _drawerInfo.asStateFlow()
+
+    fun drawerInfoLoaded(info: GameInfoState?) { _drawerInfo.value = info }
+
     // the theme the store has in focus on the companion, for the crossbar's screen (owner, 2026-10-08)
     private val _storePreview = MutableStateFlow<com.echo.feature.settings.ui.StorePreview?>(null)
     val storePreview: StateFlow<com.echo.feature.settings.ui.StorePreview?> = _storePreview.asStateFlow()

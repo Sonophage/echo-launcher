@@ -100,6 +100,9 @@ fun LastPlayedPage(
 
     // the crossbar wave, drawn over the backdrop art and under icons, panels and words (owner, 2026-10-05)
     wave: (@Composable () -> Unit)? = null,
+
+    // the focused game's achievements, "12/40", once loaded (owner, 2026-10-08)
+    achievements: String? = null,
 ) {
     val focused = items.getOrNull(selectedIndex)
     val now = System.currentTimeMillis()
@@ -111,7 +114,7 @@ fun LastPlayedPage(
             if (rail) {
                 RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, onCardPressed, wave)
             } else {
-                Letterbox(focused, now, empty, u, wave, { onCardPressed(selectedIndex, it) }) { onCardTapped(selectedIndex) }
+                Letterbox(focused, now, empty, u, wave, achievements, { onCardPressed(selectedIndex, it) }) { onCardTapped(selectedIndex) }
             }
         }
     }
@@ -124,6 +127,7 @@ private fun Letterbox(
     empty: String,
     u: DesignUnits,
     wave: (@Composable () -> Unit)?,
+    achievements: String?,
     onArtPressed: (Boolean) -> Unit,
     onArtTapped: () -> Unit,
 ) {
@@ -180,6 +184,11 @@ private fun Letterbox(
                         Text(it, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(13), fontWeight = FontWeight.Light,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                    // a game's year, genre, developer and players, and its achievements
+                    factsLine(item, achievements)?.let {
+                            Text(it, color = Color.White.copy(alpha = 0.55f), fontSize = u.sp(13), fontWeight = FontWeight.Light,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                 }
             }
         }
@@ -393,6 +402,11 @@ private fun detailLine(item: CrossbarItem, now: Long): String {
     return listOfNotNull(opened, played).joinToString(" · ").ifBlank { kindLabel(item) }
 }
 
+// a game's year, genre, developer and players, then its achievements; null when nothing is known
+internal fun factsLine(item: CrossbarItem, achievements: String?): String? =
+    listOfNotNull(item.metadataLine?.takeIf { it.isNotBlank() }, achievements?.let { "Achievements $it" })
+        .joinToString("  ·  ").ifEmpty { null }
+
 private fun subLine(item: CrossbarItem): String? =
     (item.progressLabel ?: item.subtitle)?.takeIf { it.isNotBlank() && it != kindLabel(item) }
 
@@ -445,10 +459,13 @@ private fun filterGlyph(filter: RecentFilter): ImageVector = when (filter) {
     RecentFilter.APPS -> Icons.Outlined.Apps
 }
 
+// false where the page shows something that is not from Recent: the App Drawer's focus on the other screen
+internal val LocalFromRecent = androidx.compose.runtime.staticCompositionLocalOf { true }
+
 @Composable
 private fun Eyebrow(item: CrossbarItem, u: DesignUnits) {
     Text(
-        "From recent · ${kindLabel(item)}".uppercase(),
+        (if (LocalFromRecent.current) "From recent · ${kindLabel(item)}" else kindLabel(item)).uppercase(),
         style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(13), letterSpacing = 0.18.em),
         maxLines = 1,
     )

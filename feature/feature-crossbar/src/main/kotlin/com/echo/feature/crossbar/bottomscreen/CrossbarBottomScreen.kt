@@ -53,6 +53,17 @@ class CrossbarBottomScreen(
                 link.update { it.copy(focused = info) }
             }
         }
+        // owner, 2026-10-08: the drawer's focused item is drawn on the crossbar's screen as Recent draws an item, so
+        // a game's details and achievements show there; it loads once the cursor settles, as Info does
+        scope.launch {
+            link.drawerFocus.map { it?.app }.distinctUntilChanged { a, b -> a?.packageName == b?.packageName && a?.gameId == b?.gameId }
+                .debounce(SETTLE_MS)
+                .collectLatest { app ->
+                    val item = app?.let { a -> a.gameId?.let { itemFor(it) } ?: drawerAppItem(a) }
+                    link.drawerInfoLoaded(item?.let { GameInfoState(it) })
+                    item?.let { link.drawerInfoLoaded(vm.gameDetail.load(GameInfoState(it))) }
+                }
+        }
         // the companion follows the crossbar's column: Recent narrows to its kind, and the Music column shows the
         // remote while something plays
         scope.launch {
@@ -147,6 +158,13 @@ class CrossbarBottomScreen(
     fun resume() {
         lastLaunch.value?.gameId?.let(vm.launching::resumeGame)
     }
+
+    private fun drawerAppItem(app: com.echo.feature.appbar.InstalledApp) = CrossbarItem(
+        id = app.packageName, title = app.label, packageName = app.packageName, isAndroidApp = true,
+        lastOpenedAt = app.lastUsedAt.takeIf { it > 0L }, totalPlayTimeMillis = app.playTimeMillis,
+    )
+
+    val drawerInfo get() = link.drawerInfo
 
     private suspend fun itemFor(gameId: Long): CrossbarItem? =
         runCatching { vm.gameRepository.getById(gameId) }.getOrNull()?.let { game -> with(vm) { listOf(game).toCrossbarItems() }.first() }
