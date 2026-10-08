@@ -3402,6 +3402,12 @@ class CrossbarViewModel @Inject constructor(
         openItemMenu(item)
     }
 
+    // Y on the companion's music remote: the player's options open on that screen
+    internal fun openMusicOptionsOnCompanion() {
+        _uiState.update { it.copy(menuOnCompanion = true) }
+        music.openMusicPlayerOptions()
+    }
+
     // the one way the music player opens: with a second screen it is the companion's Music page, and the
     // crossbar's screen stays free to browse (owner, 2026-10-08); on one screen it covers the crossbar
     internal fun showMusicPlayer() {

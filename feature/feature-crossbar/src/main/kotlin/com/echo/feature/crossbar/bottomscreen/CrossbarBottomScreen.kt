@@ -179,12 +179,13 @@ class CrossbarBottomScreen(
     fun onButton(action: GamepadAction): Boolean {
         val state = link.state.value
         val page = state.shownPage()
-        // the music remote: A plays or pauses, up and down skip
-        if (page == BottomPage.MUSIC) when (action) {
-            GamepadAction.SELECT -> return true.also { vm.music.musicPlayPause() }
-            GamepadAction.NAVIGATE_UP -> return true.also { vm.music.musicPrev() }
-            GamepadAction.NAVIGATE_DOWN -> return true.also { vm.music.musicNext() }
-            else -> Unit
+        if (page == BottomPage.MUSIC) when (musicRemoteKey(action)) {
+            MusicRemoteKey.PLAY_PAUSE -> return true.also { vm.music.musicPlayPause() }
+            MusicRemoteKey.PREV -> return true.also { vm.music.musicPrev() }
+            MusicRemoteKey.NEXT -> return true.also { vm.music.musicNext() }
+            MusicRemoteKey.LEAVE -> return true.also { showPage(BottomPage.RECENT) }
+            MusicRemoteKey.OPTIONS -> return true.also { vm.openMusicOptionsOnCompanion() }
+            null -> Unit
         }
         when (action) {
             GamepadAction.BACK -> setCompanionActive(false)

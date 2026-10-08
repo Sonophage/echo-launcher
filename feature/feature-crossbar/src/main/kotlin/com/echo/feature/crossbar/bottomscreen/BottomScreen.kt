@@ -190,6 +190,8 @@ fun BottomScreen(
                     PanelButton(if (p == page) GamepadAction.SELECT else GamepadAction.OPEN_CONTEXT_MENU, p.label, u) { crossbar.bottomScreen.showPage(p) }
                 }
                 Spacer(Modifier.weight(1f))
+                // the remote's way out: Y's options hold Stop & Close; B, or a tap on the player, goes back to Recent
+                if (page == BottomPage.MUSIC) PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u) { crossbar.openMusicOptionsOnCompanion() }
                 // Resume launches the game again, so it is a hold like every launch
                 if (state.playing != null) PanelButton(GamepadAction.SELECT, "Resume", u, holdMs = LAUNCH_HOLD_MS) { crossbar.bottomScreen.resume() }
                 PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Apps", u) { crossbar.onOpenAppDrawer() }

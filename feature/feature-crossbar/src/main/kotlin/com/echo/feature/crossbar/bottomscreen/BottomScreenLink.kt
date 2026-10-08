@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.bottomscreen
 
+import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoState
@@ -58,6 +59,19 @@ fun recentFilterFor(categoryId: String?, gaming: Boolean, shown: List<com.echo.f
         else -> null
     }
     return kind?.takeIf { it in shown } ?: com.echo.feature.crossbar.viewmodel.RecentFilter.ALL
+}
+
+enum class MusicRemoteKey { PLAY_PAUSE, PREV, NEXT, LEAVE, OPTIONS }
+
+// the music remote: A plays or pauses, up and down skip, B leaves the player for Recent with the music still
+// playing, Y opens the player's options (Stop & Close among them) on this screen. Left and right stay the pages'
+fun musicRemoteKey(action: GamepadAction): MusicRemoteKey? = when (action) {
+    GamepadAction.SELECT -> MusicRemoteKey.PLAY_PAUSE
+    GamepadAction.NAVIGATE_UP -> MusicRemoteKey.PREV
+    GamepadAction.NAVIGATE_DOWN -> MusicRemoteKey.NEXT
+    GamepadAction.BACK -> MusicRemoteKey.LEAVE
+    GamepadAction.OPEN_CONTEXT_MENU -> MusicRemoteKey.OPTIONS
+    else -> null
 }
 
 // left and right walk the pages there are, round the ends

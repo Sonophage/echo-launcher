@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.bottomscreen
 
+import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
@@ -122,5 +123,16 @@ class BottomScreenRulesTest {
         assertEquals(F.APPS, recentFilterFor("android", gaming = false, shown = stocked))
         assertEquals("no recent video: All", F.ALL, recentFilterFor("videos", gaming = false, shown = stocked))
         assertEquals("Photos has no kind of its own", F.ALL, recentFilterFor("photos", gaming = false, shown = stocked))
+    }
+
+    // the remote must have a way out the owner can find (owner, 2026-10-08: "how do I exit the music player"):
+    // B leaves for Recent, Y opens Stop & Close; left and right stay free for the pages
+    @Test
+    fun `the music remote has a way out`() {
+        assertEquals(MusicRemoteKey.LEAVE, musicRemoteKey(GamepadAction.BACK))
+        assertEquals(MusicRemoteKey.OPTIONS, musicRemoteKey(GamepadAction.OPEN_CONTEXT_MENU))
+        assertEquals(MusicRemoteKey.PLAY_PAUSE, musicRemoteKey(GamepadAction.SELECT))
+        assertNull("left walks the pages", musicRemoteKey(GamepadAction.NAVIGATE_LEFT))
+        assertNull("right walks the pages", musicRemoteKey(GamepadAction.NAVIGATE_RIGHT))
     }
 }
