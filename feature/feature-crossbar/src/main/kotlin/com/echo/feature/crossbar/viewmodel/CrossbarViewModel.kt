@@ -1839,6 +1839,7 @@ class CrossbarViewModel @Inject constructor(
     ): List<CrossbarItem> =
         orderedColumn(if (hasFolders) mediaColumn(sections, apps, addRows) else folderlessColumn(apps, addRows), columnOrderFor(currentCategory()?.id))
             .let { if (hasFolders) libraryColumn(it, scope) else it }
+            .map { row -> if (row.isColumnFoldersRow) row.copy(title = columnSettingsTitle(currentCategory()?.name)) else row }
 
     private fun addAppsItem(): CrossbarItem = CrossbarItem(
         id       = ADD_APPS_ITEM_ID,
@@ -2207,7 +2208,7 @@ class CrossbarViewModel @Inject constructor(
             MusicNav.Albums      -> "Albums"
             is MusicNav.Artist   -> nav.name
             is MusicNav.Album    -> nav.name
-            MusicNav.Folders     -> "Folders"
+            MusicNav.Folders     -> columnSettingsTitle(currentCategory()?.name)
             MusicNav.Root        -> null
         }
         if (musicTitle != null) return musicTitle
@@ -2221,7 +2222,7 @@ class CrossbarViewModel @Inject constructor(
             is VideoNav.Playlist     -> nav.name
             VideoNav.Libraries       -> "Video Libraries"
             is VideoNav.Library      -> nav.name
-            VideoNav.Folders         -> "Folders"
+            VideoNav.Folders         -> columnSettingsTitle(currentCategory()?.name)
             VideoNav.Root            -> null
         }
         if (videoTitle != null) return videoTitle
@@ -2231,7 +2232,7 @@ class CrossbarViewModel @Inject constructor(
             PhotoNav.Albums     -> "Albums"
             PhotoNav.Favorites  -> "Favourites"
             is PhotoNav.Library -> nav.name
-            PhotoNav.Folders    -> "Folders"
+            PhotoNav.Folders    -> columnSettingsTitle(currentCategory()?.name)
             PhotoNav.Root       -> null
         }
         if (photoTitle != null) return photoTitle
@@ -2241,7 +2242,7 @@ class CrossbarViewModel @Inject constructor(
             is BooksNav.Shelf -> nav.name
             BooksNav.SeriesList -> "Series"
             is BooksNav.Series  -> nav.name
-            BooksNav.Folders  -> "Folders"
+            BooksNav.Folders  -> columnSettingsTitle(currentCategory()?.name)
             BooksNav.Root     -> null
         }
         if (booksTitle != null) return booksTitle
@@ -3945,7 +3946,7 @@ class CrossbarViewModel @Inject constructor(
         when (item.type) {
             CrossbarItemType.VIDEO_FILE -> {
                 menuSound.play(MenuSound.SELECT)
-                _uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
+                _uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_"), activeVideoAutoPlay = true) }
                 return true
             }
             CrossbarItemType.LIBRARY_BOOK -> {

@@ -197,7 +197,8 @@ class CrossbarVideo(
         }
         item.type == CrossbarItemType.VIDEO_FILE -> {
             menuSound.play(MenuSound.SELECT)
-            uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_")) }
+            // owner, 2026-10-08: A plays the video; Details is on its menu
+            uiState.update { it.copy(activeVideoId = item.id.removePrefix("vid_"), activeVideoAutoPlay = true) }
             true
         }
 
@@ -292,8 +293,9 @@ class CrossbarVideo(
 
     internal fun handleVideoFileAction(videoId: String, itemId: String) {
         when (itemId) {
-            "video_play", "video_resume", "video_details" ->
-                uiState.update { it.copy(activeVideoId = videoId) }
+            "video_play", "video_resume" ->
+                uiState.update { it.copy(activeVideoId = videoId, activeVideoAutoPlay = true) }
+            "video_details" -> uiState.update { it.copy(activeVideoId = videoId, activeVideoAutoPlay = false) }
             "video_favorite" -> vm.appAction {
                 val v = videoRepository.getVideo(videoId) ?: return@appAction
                 videoRepository.setFavorite(videoId, !v.isFavorite)

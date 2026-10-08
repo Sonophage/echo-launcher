@@ -436,3 +436,10 @@ internal fun List<MusicTrack>.recentMusicRows(): List<Pair<Long, CrossbarItem>> 
     }
     return rows
 }
+
+// owner, 2026-10-08: a column's own folder row is that column's settings, named after it ("Music Settings",
+// "Emulation Settings"), not "Folders"
+internal fun columnSettingsTitle(columnName: String?): String = "${columnName?.takeIf { it.isNotBlank() } ?: "Library"} Settings"
+
+internal val CrossbarItem.isColumnFoldersRow: Boolean
+    get() = mediaRootKind != null && id == CrossbarViewModel.mediaFoldersItemId(mediaRootKind)

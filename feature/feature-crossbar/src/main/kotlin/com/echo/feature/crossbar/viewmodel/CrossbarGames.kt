@@ -82,7 +82,7 @@ class CrossbarGames(
         val gapRow = if (totalGames == 0) vm.setupGapItem() else null
         val foldersRow = CrossbarItem(
             id       = CrossbarViewModel.ROM_FOLDERS_ITEM_ID,
-            title    = "Folders",
+            title    = columnSettingsTitle(vm.currentCategory()?.name),
             subtitle = countLabel(visibleCards.size, "console", "consoles"),
             type     = CrossbarItemType.MEDIA_ROOT,
         )

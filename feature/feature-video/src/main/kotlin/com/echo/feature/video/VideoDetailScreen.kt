@@ -39,6 +39,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -110,6 +112,13 @@ fun VideoDetailScreen(
         LaunchedEffect(loadedVideoId) {
             if (loadedVideoId == videoId) state.primaryActions.firstOrNull()?.let(viewModel::activate)
         }
+        // owner, 2026-10-08: playing a video shows no details screen on the way in or out; when playback ends
+        // the screen closes with it
+        var started by remember(videoId) { mutableStateOf(false) }
+        LaunchedEffect(state.playing, state.handedOffToPlayer) {
+            if (state.playing || state.handedOffToPlayer) started = true
+            else if (autoPlayEnded(started, state.playing, state.handedOffToPlayer)) onBack()
+        }
     }
 
     LaunchedEffect(state.closed) { if (state.closed) { onBack(); viewModel.onClosedHandled() } }
@@ -151,6 +160,11 @@ fun VideoDetailScreen(
         return
     }
     val video = state.video ?: run { onBack(); return }
+    // straight to the player: nothing but the page until it starts, unless it could not play
+    if (autoPlay && !state.playing && state.launchError == null) {
+        Box(modifier.fillMaxSize().background(PageBg))
+        return
+    }
     val echoColors = LocalEchoColors.current
 
     Box(
@@ -463,3 +477,6 @@ internal fun videoDetailHelperItems(state: VideoDetailUiState): List<ControllerP
         ControllerPromptItem(GamepadAction.BACK, "Back"),
     )
 }
+
+// a video opened to play closes once its playback has started and stopped
+internal fun autoPlayEnded(started: Boolean, playing: Boolean, handedOff: Boolean): Boolean = started && !playing && !handedOff
