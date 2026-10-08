@@ -40,3 +40,42 @@ class MoveStepTest {
         assertEquals(listOf("a", "c", "b", "d"), listOf("a", "b", "c", "d").swapped(1, 2))
     }
 }
+
+// Change Icon (owner, 2026-10-07) opens Custom Icons on the slot the row or column draws, not on the first
+// slot of the first group, so the owner lands on the icon he asked to change.
+class ChangeIconSlotTest {
+    private val groups = listOf(
+        com.echo.themekit.IconSlot.Group.CATEGORY_BAR,
+        com.echo.themekit.IconSlot.Group.ITEMS,
+        com.echo.themekit.IconSlot.Group.STATUS,
+        com.echo.themekit.IconSlot.Group.CONSOLE,
+    )
+
+    @Test
+    fun `a system opens on its console icon`() {
+        val (group, slot) = customIconStart("sysicon_nds", groups)
+        assertEquals(3, group)
+        assertEquals("sysicon_nds", com.echo.themekit.CustomizableIcons.group(groups[group])[slot].key)
+    }
+
+    @Test
+    fun `a column opens on its category bar icon`() {
+        val (group, slot) = customIconStart("catbar_music", groups)
+        assertEquals(0, group)
+        assertEquals("catbar_music", com.echo.themekit.CustomizableIcons.group(groups[group])[slot].key)
+    }
+
+    @Test
+    fun `an unknown key opens on the first slot`() {
+        assertEquals(0 to 0, customIconStart("nope", groups))
+        assertEquals(0 to 0, customIconStart(null, groups))
+    }
+
+    @Test
+    fun `only a system row has a console icon slot`() {
+        val card = CrossbarItem(id = "card_nds", title = "NDS", type = CrossbarItemType.MEMORY_CARD, platformId = "nds")
+        assertEquals("sysicon_nds", systemIconSlot(card))
+        assertNull(systemIconSlot(card.copy(platformId = "not_a_console")))
+        assertNull(systemIconSlot(CrossbarItem(id = "g", title = "Game", type = CrossbarItemType.STANDARD, platformId = "nds")))
+    }
+}

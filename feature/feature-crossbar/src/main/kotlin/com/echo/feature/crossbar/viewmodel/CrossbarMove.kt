@@ -29,6 +29,9 @@ data class MoveSession(
 
 internal const val MOVE_ROW = "move_row"
 internal const val MOVE_COLUMN = "move_column"
+internal const val RENAME_COLUMN = "rename_column"
+internal const val CHANGE_COLUMN_ICON = "change_column_icon"
+internal const val CHANGE_SYSTEM_ICON = "change_system_icon"
 internal const val MENU_WAIT_MS = 400L
 
 private const val PINNED_SYSTEMS = "pinned"
@@ -53,6 +56,13 @@ internal fun liftedColumnStep(reachable: List<Boolean>, at: Int, delta: Int): In
     return null
 }
 
+// the Custom Icons group and slot to open on; the first slot when the key is unknown or its group is not offered
+internal fun customIconStart(slotKey: String?, groups: List<com.echo.themekit.IconSlot.Group>): Pair<Int, Int> {
+    val slot = com.echo.themekit.CustomizableIcons.ALL.firstOrNull { it.key == slotKey } ?: return 0 to 0
+    val group = groups.indexOf(slot.group).takeIf { it >= 0 } ?: return 0 to 0
+    return group to com.echo.themekit.CustomizableIcons.group(slot.group).indexOfFirst { it.key == slot.key }
+}
+
 internal fun <T> List<T>.swapped(a: Int, b: Int): List<T> =
     toMutableList().apply { this[a] = this[b].also { this[b] = this[a] } }
 
@@ -70,10 +80,23 @@ internal fun CrossbarUiState.rowMoveGroups(pinnedSystems: Set<String>): List<Str
     }
 }
 
-internal fun CrossbarUiState.columnMovable(): Boolean {
+// the open column can be renamed and re-iconed from its rows; it can move when there is somewhere to go
+internal fun CrossbarUiState.columnEditable(): Boolean {
     val current = categories.getOrNull(selectedCategoryIndex) ?: return false
-    return !isInSubItem && categoryReachable(current) && categories.count { categoryReachable(it) } > 1
+    return !isInSubItem && categoryReachable(current)
 }
+
+internal fun CrossbarUiState.columnMovable(): Boolean =
+    columnEditable() && categories.count { categoryReachable(it) } > 1
+
+// the Custom Icons slot a column draws, or null when its icon is not one a theme can replace
+internal fun CrossbarUiState.columnIconSlot(): String? =
+    categories.getOrNull(selectedCategoryIndex)?.let { com.echo.core.ui.icons.catbarSlotKeyFor(it.iconKey) }
+
+// a system's console icon slot, or null for a system with no console icon
+internal fun systemIconSlot(item: CrossbarItem): String? =
+    item.platformId?.takeIf { item.type == CrossbarItemType.MEMORY_CARD && it in com.echo.themekit.SYSICON_PLATFORM_IDS }
+        ?.let { "sysicon_$it" }
 
 class CrossbarMove(
     private val vm: CrossbarViewModel,
@@ -86,12 +109,35 @@ class CrossbarMove(
 ) {
     private fun pinnedSystems(): Set<String> = vm.enabledCards.filter { it.pinned }.map { it.platformId }.toSet()
 
-    // the menu rows for the focused row of the crossbar: Move when the row can move, Move Column when the column can
+    // the edit rows for the focused row of the crossbar (owner, 2026-10-07): Move and Change Icon for the row
+    // when it can, then Move Column, Rename Column and Change Column Icon for its column
     fun menuRows(state: CrossbarUiState, item: CrossbarItem): List<CrossbarContextMenuItem> = buildList {
         if (state.currentItems.getOrNull(state.selectedItemIndex)?.id != item.id) return@buildList
-        val group = state.rowMoveGroups(pinnedSystems()).getOrNull(state.selectedItemIndex)
-        if (group != null) add(CrossbarContextMenuItem(MOVE_ROW, "Move", group = MenuGroup.CATEGORY, pinnedToRoot = true, confirms = false))
-        if (state.columnMovable()) add(CrossbarContextMenuItem(MOVE_COLUMN, "Move Column", group = MenuGroup.CATEGORY, pinnedToRoot = true, confirms = false))
+        fun row(id: String, label: String) =
+            CrossbarContextMenuItem(id, label, group = MenuGroup.CATEGORY, pinnedToRoot = true, confirms = false)
+        if (state.rowMoveGroups(pinnedSystems()).getOrNull(state.selectedItemIndex) != null) add(row(MOVE_ROW, "Move"))
+        if (systemIconSlot(item) != null && !state.isInSubItem) add(row(CHANGE_SYSTEM_ICON, "Change Icon"))
+        if (state.columnMovable()) add(row(MOVE_COLUMN, "Move Column"))
+        if (state.columnEditable()) add(row(RENAME_COLUMN, "Rename Column"))
+        if (state.columnEditable() && state.columnIconSlot() != null) add(row(CHANGE_COLUMN_ICON, "Change Column Icon"))
+    }
+
+    fun promptRenameColumn() {
+        val s = uiState.value
+        val column = s.categories.getOrNull(s.selectedCategoryIndex) ?: return
+        uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+            title = "Rename Column",
+            subtitle = "The name under this column's icon.",
+            initialText = column.name,
+            renameCategoryId = column.id,
+            placeholder = column.name,
+        ))}
+    }
+
+    fun renameColumn(id: String, name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        scope.launch { categoryRepository.rename(id, trimmed) }
     }
 
     fun lift(column: Boolean) {

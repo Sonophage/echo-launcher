@@ -165,6 +165,10 @@ class CrossbarGames(
             scope.launch { vm.context.echoDataStore.edit { it[CrossbarViewModel.KEY_PROFILE_NAME] = name.trim().ifBlank { DEFAULT_PROFILE_NAME } } }
             return
         }
+        if (dialog.renameCategoryId != null) {
+            vm.move.renameColumn(dialog.renameCategoryId, name)
+            return
+        }
         if (dialog.renameCardPlatformId != null) {
             val trimmed = name.trim()
             if (trimmed.isEmpty()) return

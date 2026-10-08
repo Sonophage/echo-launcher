@@ -188,6 +188,8 @@ data class CollectionNameDialogState(
 
     val renameCardPlatformId: String? = null,
 
+    val renameCategoryId: String? = null,
+
     val renameProfile: Boolean = false,
 
     val placeholder: String = "e.g. RPGs, Currently Playing",
@@ -3051,6 +3053,16 @@ class CrossbarViewModel @Inject constructor(
             move.lift(column = itemId == MOVE_COLUMN)
             return
         }
+        if (itemId == RENAME_COLUMN || itemId == CHANGE_COLUMN_ICON || itemId == CHANGE_SYSTEM_ICON) {
+            val focused = state.currentItems.getOrNull(state.selectedItemIndex)
+            closeContextMenu()
+            when (itemId) {
+                RENAME_COLUMN -> move.promptRenameColumn()
+                CHANGE_COLUMN_ICON -> openCustomIcons(state.columnIconSlot())
+                else -> openCustomIcons(focused?.let(::systemIconSlot))
+            }
+            return
+        }
 
         if (menu.isAddMenu) {
             val row = currentAddActions().firstOrNull { it.id == itemId }
@@ -4218,10 +4230,12 @@ class CrossbarViewModel @Inject constructor(
         com.echo.themekit.IconSlot.Group.CONSOLE,
     )
 
-    fun openCustomIcons() {
+    // opens on `slotKey` when given (a column's or system's Change Icon), else on the first slot
+    fun openCustomIcons(slotKey: String? = null) {
+        val (groupIndex, slotIndex) = customIconStart(slotKey, customIconGroups)
         _uiState.update {
             it.withSettingsClosed().copy(
-                customIconSession = CustomIconSession(groups = customIconGroups),
+                customIconSession = CustomIconSession(groups = customIconGroups, groupIndex = groupIndex, slotIndex = slotIndex),
             )
         }
     }
