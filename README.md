@@ -678,7 +678,8 @@ long-press instead.
 
 The default order is **Last Played, Shelves, Game, Music, Video, Photo, Library, Network,
 Settings**. *Look ▸ Crossbar ▸ Categories* creates your own (gaming for games, non-gaming for apps),
-and renames, reorders, hides or deletes them. Built-in categories can be hidden but not deleted.
+and renames, hides or deletes them. Built-in categories can be hidden but not deleted. To reorder
+the columns, use **Options ▸ Move Column** on any row (see below).
 
 ### Games and consoles
 
@@ -835,8 +836,11 @@ Relink Folder**.
 | **Setup** | Setup Wizard |
 
 Media folders are in **Library ▸ Media Libraries**, and on each column's **Folders** row. A media
-category with no folder keeps only its apps. In a media category's top column or a category of apps,
-**Options ▸ Move Up / Move Down** puts an app or row where you want it.
+category with no folder keeps only its apps.
+
+**Options ▸ Move** lifts a row: a system in Games, or an app or row in a media category's top
+column or a category of apps. **Options ▸ Move Column** lifts the whole column. The d-pad carries
+it, **A** drops it there and **B** puts it back.
 
 ---
 

@@ -38,26 +38,27 @@ class CategoryMoveTest {
     )
 
     @Test
-    fun `two quick moves land both, with unique positions`() = runTest {
+    fun `two quick drops land in turn, with unique positions`() = runTest {
         val fake = FakeCategories(listOf(category("a", 0), category("b", 1), category("c", 2)))
         val repo = CategoryRepositoryImpl(fake.dao)
 
-        launch { repo.move("c", up = true) }
-        launch { repo.move("c", up = true) }
+        launch { repo.reorder(listOf("b", "a", "c")) }
+        launch { repo.reorder(listOf("c", "b", "a")) }
         testScheduler.advanceUntilIdle()
 
-        assertEquals(listOf("c", "a", "b"), fake.order())
+        assertEquals(listOf("c", "b", "a"), fake.order())
         assertEquals(3, fake.positions().toSet().size)
     }
 
     @Test
-    fun `a move swaps with the next row the manager shows, not a hidden legacy row`() = runTest {
+    fun `a drop leaves a hidden legacy row where it was`() = runTest {
         val fake = FakeCategories(
-            listOf(category("a", 0), category("music_apps", 1), category("b", 2)),
+            listOf(category("a", 0), category("music_apps", 5), category("b", 2)),
         )
 
-        CategoryRepositoryImpl(fake.dao).move("b", up = true)
+        CategoryRepositoryImpl(fake.dao).reorder(listOf("b", "a"))
 
-        assertEquals(listOf("b", "music_apps", "a"), fake.order())
+        assertEquals(listOf("b", "a", "music_apps"), fake.order())
+        assertEquals(5, fake.rows.getValue("music_apps").position)
     }
 }

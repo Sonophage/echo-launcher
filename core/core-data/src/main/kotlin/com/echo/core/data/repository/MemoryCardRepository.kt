@@ -113,21 +113,4 @@ class MemoryCardRepository @Inject constructor(
         val all = memoryCardDao.getAll().map { it.platformId }
         reorderedKeepingHidden(all, shownIds).forEachIndexed { order, id -> memoryCardDao.setSortOrder(id, order) }
     }
-
-    suspend fun move(platformId: String, up: Boolean): Boolean {
-        val ordered = memoryCardDao.getAll()
-        val index = ordered.indexOfFirst { it.platformId == platformId }
-        if (index < 0) return false
-        val targetIndex = if (up) index - 1 else index + 1
-        if (targetIndex !in ordered.indices) return false
-
-        val current = ordered[index]
-        val target  = ordered[targetIndex]
-
-        if (current.pinned != target.pinned) return false
-
-        memoryCardDao.setSortOrder(current.platformId, target.sortOrder)
-        memoryCardDao.setSortOrder(target.platformId, current.sortOrder)
-        return true
-    }
 }

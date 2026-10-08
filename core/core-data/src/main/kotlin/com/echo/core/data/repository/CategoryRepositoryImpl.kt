@@ -92,21 +92,6 @@ class CategoryRepositoryImpl @Inject constructor(
         reorderedKeepingHidden(all, shownIds).forEachIndexed { position, id -> categoryDao.updatePosition(id, position) }
     }
 
-    suspend fun move(id: String, up: Boolean): Boolean = moveLock.withLock {
-        val ordered = categoryDao.getAll()
-            .filterNot { it.id in LEGACY_APP_PSEUDO_IDS }
-            .sortedBy { it.position }
-        val index = ordered.indexOfFirst { it.id == id }
-        if (index < 0) return@withLock false
-        val targetIndex = if (up) index - 1 else index + 1
-        if (targetIndex !in ordered.indices) return@withLock false
-        val current = ordered[index]
-        val target  = ordered[targetIndex]
-        categoryDao.updatePosition(current.id, target.position)
-        categoryDao.updatePosition(target.id, current.position)
-        true
-    }
-
     suspend fun addItemToCategory(categoryId: String, itemId: String, itemType: String, order: Int = 0) =
         categoryDao.addItem(CategoryItemEntity(categoryId, itemId, itemType, order))
 

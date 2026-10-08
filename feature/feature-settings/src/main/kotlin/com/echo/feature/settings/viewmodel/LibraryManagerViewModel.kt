@@ -390,10 +390,6 @@ class LibraryManagerViewModel @Inject constructor(
         viewModelScope.launch { memoryCardRepository.setPinned(platformId, pinned) }
     }
 
-    fun moveCard(platformId: String, up: Boolean) {
-        viewModelScope.launch { memoryCardRepository.move(platformId, up) }
-    }
-
     fun removeCard(platformId: String) {
         viewModelScope.launch {
             memoryCardRepository.remove(platformId)

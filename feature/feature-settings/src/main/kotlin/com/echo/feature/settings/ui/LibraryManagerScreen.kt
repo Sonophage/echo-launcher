@@ -91,7 +91,6 @@ fun LibraryManagerScreen(
         onConfirmRename = { viewModel.confirmRename(it) },
         onToggleEnabled = { p, e -> viewModel.toggleEnabled(p, e) },
         onTogglePinned = { p, pin -> viewModel.togglePinned(p, pin) },
-        onMoveCard = { p, up -> viewModel.moveCard(p, up) },
         onRemoveCard = { viewModel.removeCard(it) },
         onSetEmulatorForDetail = { viewModel.setEmulatorForDetail(it) },
         onOpenImportPcGames = { viewModel.openImportPcGames() },
@@ -134,7 +133,6 @@ private fun LibraryManagerContent(
     onConfirmRename: (String) -> Unit,
     onToggleEnabled: (platformId: String, enabled: Boolean) -> Unit,
     onTogglePinned: (platformId: String, pinned: Boolean) -> Unit,
-    onMoveCard: (platformId: String, up: Boolean) -> Unit,
     onRemoveCard: (platformId: String) -> Unit,
     onSetEmulatorForDetail: (EmulatorOption) -> Unit,
     onOpenImportPcGames: () -> Unit,
@@ -159,7 +157,7 @@ private fun LibraryManagerContent(
         LibraryStep.PICK_PLATFORM -> PickPlatformContent(state, onBack = handleBack, onPlatformChosen = onPlatformChosen, modifier = modifier)
         LibraryStep.PICK_EMULATOR -> PickEmulatorContent(state, onBack = handleBack, onEmulatorChosen = onEmulatorChosen, modifier = modifier)
         LibraryStep.SCAN_PROMPT   -> ScanPromptContent(state, onBack = handleBack, onConfirmAddConsole = onConfirmAddConsole, modifier = modifier)
-        LibraryStep.CARD_DETAIL   -> CardDetailContent(state, onBack = handleBack, onAddAndroidApps = onAddAndroidApps, onLoadEmulatorOptions = onLoadEmulatorOptions, onRemoveExtension = onRemoveExtension, onAddExtension = onAddExtension, onScanConsole = onScanConsole, onScrapeArtwork = onScrapeArtwork, onBeginRename = onBeginRename, onToggleEnabled = onToggleEnabled, onTogglePinned = onTogglePinned, onMoveCard = onMoveCard, onRemoveCard = onRemoveCard, onSetEmulatorForDetail = onSetEmulatorForDetail, onOpenImportPcGames = onOpenImportPcGames, onSetVita3KFolder = onSetVita3KFolder, onScanVitaGames = onScanVitaGames, onReleaseVita3KFolder = onReleaseVita3KFolder, onRemoveApp = onRemoveApp, modifier = modifier)
+        LibraryStep.CARD_DETAIL   -> CardDetailContent(state, onBack = handleBack, onAddAndroidApps = onAddAndroidApps, onLoadEmulatorOptions = onLoadEmulatorOptions, onRemoveExtension = onRemoveExtension, onAddExtension = onAddExtension, onScanConsole = onScanConsole, onScrapeArtwork = onScrapeArtwork, onBeginRename = onBeginRename, onToggleEnabled = onToggleEnabled, onTogglePinned = onTogglePinned, onRemoveCard = onRemoveCard, onSetEmulatorForDetail = onSetEmulatorForDetail, onOpenImportPcGames = onOpenImportPcGames, onSetVita3KFolder = onSetVita3KFolder, onScanVitaGames = onScanVitaGames, onReleaseVita3KFolder = onReleaseVita3KFolder, onRemoveApp = onRemoveApp, modifier = modifier)
         LibraryStep.IMPORT_PC     -> ImportPcGamesContent(state, onBack = handleBack, onRefreshHomeStatus = onRefreshHomeStatus, onScanPcGamesFolder = onScanPcGamesFolder, onExportManualPcGames = onExportManualPcGames, onImportPcGame = onImportPcGame, onImportAllPcGames = onImportAllPcGames, onTestLaunchPcGame = onTestLaunchPcGame, onAddPcGameById = onAddPcGameById, onDismissMessage = onDismissMessage, homeRoleIntentProvider = homeRoleIntentProvider, modifier = modifier)
     }
 
@@ -353,7 +351,6 @@ private fun CardDetailContent(
     onBeginRename: (String) -> Unit,
     onToggleEnabled: (String, Boolean) -> Unit,
     onTogglePinned: (String, Boolean) -> Unit,
-    onMoveCard: (String, Boolean) -> Unit,
     onRemoveCard: (String) -> Unit,
     onSetEmulatorForDetail: (EmulatorOption) -> Unit,
     onOpenImportPcGames: () -> Unit,
@@ -538,8 +535,6 @@ private fun CardDetailContent(
                 checked  = card.pinned,
                 onToggle = { onTogglePinned(card.platformId, it) },
             )
-            SettingsRow(label = "Move Up",   onClick = { onMoveCard(card.platformId, true) })
-            SettingsRow(label = "Move Down", onClick = { onMoveCard(card.platformId, false) })
 
             if (!isWindows) {
                 SettingsGroup("Danger Zone")
@@ -792,7 +787,6 @@ fun LibraryManagerScreenPreview() {
             onConfirmRename = {},
             onToggleEnabled = { _, _ -> },
             onTogglePinned = { _, _ -> },
-            onMoveCard = { _, _ -> },
             onRemoveCard = {},
             onSetEmulatorForDetail = {},
             onOpenImportPcGames = {},

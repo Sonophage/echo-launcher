@@ -175,9 +175,6 @@ class CategoryManagerViewModel @Inject constructor(
         viewModelScope.launch { categoryRepository.setGamingCategory(id, isGaming) }
     }
 
-    fun move(id: String, up: Boolean) {
-        viewModelScope.launch { categoryRepository.move(id, up) }
-    }
 
     fun delete(id: String) {
         viewModelScope.launch {

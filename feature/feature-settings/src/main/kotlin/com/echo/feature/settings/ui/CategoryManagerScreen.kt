@@ -194,10 +194,6 @@ private fun CategoryDetailContent(
                 onToggle = { vm.setGamingCategory(cat.id, it) },
             )
 
-            SettingsGroup("Order")
-            SettingsRow(label = "Move Left",  onClick = { vm.move(cat.id, up = true) })
-            SettingsRow(label = "Move Right", onClick = { vm.move(cat.id, up = false) })
-
             if (!cat.protected) {
                 SettingsGroup("Danger Zone")
                 SettingsRow(
