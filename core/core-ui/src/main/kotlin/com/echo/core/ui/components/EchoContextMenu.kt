@@ -195,7 +195,8 @@ fun ContextMenuEyebrow(
         fontWeight = FontWeight.Medium,
         letterSpacing = 1.sp,
         style = EchoTextStyle.copy(shadow = TextDropShadow),
-        maxLines = 1,
+        // two lines: on a narrow rail (the Thor's bottom screen) a long eyebrow was cut to "…ONLY THE P…"
+        maxLines = 2,
         textAlign = textAlign,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier.widthIn(max = u.dp(RAIL_MAX_TEXT)),

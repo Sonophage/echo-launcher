@@ -432,9 +432,12 @@ internal fun ThemePageOverlay(
                     Modifier.fillMaxWidth().contextMenuRow(focused = focused, dim = if (has || page.current) 1f else 0.4f, u = u) { onRow(row) },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(if (has || page.current) source else "Not in this theme", color = contextMenuInk(focused).copy(alpha = 0.65f),
-                        fontSize = u.sp(12), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    ContextMenuRowLabel(part.label, focused = focused, u = u, modifier = Modifier.padding(start = u.dp(10)))
+                    // the part, with where it comes from beneath it: side by side, a narrow rail cut it to "From Ry…"
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                        ContextMenuRowLabel(part.label, focused = focused, u = u)
+                        Text(if (has || page.current) source else "Not in this theme", color = contextMenuInk(focused).copy(alpha = 0.65f),
+                            fontSize = u.sp(12), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                     if (has && !page.current) {
                         val ink = contextMenuInk(focused)
                         Box(

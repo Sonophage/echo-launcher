@@ -359,12 +359,36 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
             Tile(setting == focus, u.dp(300), u.dp(18), u.dp(28), u, Modifier.weight(1f), { onTapped(setting, 0) }) {
                 Icon(quickIcon(setting), null, tint = Color.White, modifier = Modifier.size(u.dp(34)))
                 Column {
-                    Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(17), lineHeight = u.sp(17) * 1.2f, fontWeight = FontWeight.Light)
+                    WholeWordText(label, u.sp(17), Color.White.copy(alpha = 0.75f), FontWeight.Light, lineHeightScale = 1.2f)
                     // six or seven tiles share the row, so a long value ("Reduced + Static", "Cover art") takes two lines
-                    Text(value, color = Color.White, fontSize = u.sp(22), lineHeight = u.sp(22) * 1.1f, fontWeight = FontWeight.ExtraLight, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    WholeWordText(value, u.sp(22), Color.White, FontWeight.ExtraLight, lineHeightScale = 1.1f, maxLines = 2)
                 }
             }
         }
+    }
+}
+
+// a tile's words wrap between words, never inside one: on the Thor's narrow tiles "Game backgrounds" broke as
+// "backgroun / ds". The size steps down until the longest word fits the tile's width (owner, 2026-10-08)
+@Composable
+private fun WholeWordText(text: String, size: androidx.compose.ui.unit.TextUnit, color: Color, weight: FontWeight, lineHeightScale: Float, maxLines: Int = 3) {
+    androidx.compose.foundation.layout.BoxWithConstraints {
+        val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+        val width = constraints.maxWidth
+        // measured in the style the text is drawn in (ECHO's font), or the default font fits where Sora does not
+        val base = androidx.compose.material3.LocalTextStyle.current
+        val fitted = remember(text, size, width, base) {
+            val words = text.split(' ')
+            var s = size
+            repeat(8) {
+                val w = words.maxOf { word -> measurer.measure(word, base.merge(androidx.compose.ui.text.TextStyle(fontSize = s, fontWeight = weight))).size.width }
+                if (w <= width) return@remember s
+                s *= 0.9f
+            }
+            s
+        }
+        Text(text, color = color, fontSize = fitted, lineHeight = fitted * lineHeightScale, fontWeight = weight,
+            maxLines = maxLines, overflow = TextOverflow.Ellipsis)
     }
 }
 

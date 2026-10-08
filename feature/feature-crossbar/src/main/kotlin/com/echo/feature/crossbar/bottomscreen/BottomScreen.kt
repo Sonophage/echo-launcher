@@ -160,7 +160,8 @@ fun BottomScreen(
                 horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
             ) {
                 // the page in view is drawn as the primary button
-                BottomPage.entries.forEach { p ->
+                // Info only when there is something to show: on a shelf or a folder it did nothing when tapped
+                BottomPage.entries.filter { it != BottomPage.INFO || state.shownInfo() != null }.forEach { p ->
                     PanelButton(if (p == page) GamepadAction.SELECT else GamepadAction.OPEN_CONTEXT_MENU, p.label, u) { crossbar.bottomScreen.showPage(p) }
                 }
                 Spacer(Modifier.weight(1f))
