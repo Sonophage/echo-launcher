@@ -14,9 +14,6 @@ interface LibrarySourceDao {
     @Query("SELECT * FROM library_sources ORDER BY label ASC")
     fun observeAll(): Flow<List<LibrarySourceEntity>>
 
-    @Query("SELECT * FROM library_sources WHERE is_enabled = 1")
-    suspend fun getEnabled(): List<LibrarySourceEntity>
-
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(source: LibrarySourceEntity): Long
 
@@ -25,9 +22,6 @@ interface LibrarySourceDao {
 
     @Query("DELETE FROM library_sources WHERE id = :id")
     suspend fun deleteById(id: Long)
-
-    @Query("DELETE FROM library_sources WHERE path = :path")
-    suspend fun deleteByPath(path: String)
 
     @Query("UPDATE library_sources SET is_enabled = :enabled WHERE id = :id")
     suspend fun setEnabled(id: Long, enabled: Boolean)
@@ -38,7 +32,4 @@ interface LibrarySourceDao {
         WHERE id = :id
     """)
     suspend fun updateScanResult(id: Long, scannedAt: Long, gameCount: Int)
-
-    @Query("SELECT * FROM library_sources WHERE path = :path LIMIT 1")
-    suspend fun getByPath(path: String): LibrarySourceEntity?
 }

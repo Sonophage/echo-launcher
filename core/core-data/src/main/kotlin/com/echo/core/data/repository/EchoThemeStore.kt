@@ -12,8 +12,6 @@ import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.clearWallpaperLuma
 import com.echo.core.data.wallpaper.ThemeAccent
 import com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE
 import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.setWallpaperLuma
-import com.echo.themekit.AccentDeriver
-import com.echo.themekit.ArgbImage
 import com.echo.themekit.CustomizableIcons
 import com.echo.themekit.EchoThemeBundle
 import com.echo.themekit.EchoThemeCodec
@@ -25,7 +23,6 @@ import com.echo.themekit.ThemeMedia
 import com.echo.themekit.ThemePart
 import com.echo.themekit.ThemeReadme
 import com.echo.themekit.parts
-import kotlinx.coroutines.flow.map
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -82,24 +79,6 @@ class EchoThemeStore @Inject constructor(
 
     private val _themes = MutableStateFlow(scan())
     val themes: StateFlow<List<SavedTheme>> = _themes.asStateFlow()
-
-    suspend fun createFromImage(uri: Uri, name: String? = null): SavedTheme? = withContext(Dispatchers.IO) {
-        val bitmap = runCatching {
-            context.contentResolver.openInputStream(uri)
-                ?.use { with(SafeMedia) { it.readCapped() } }
-                ?.let { SafeMedia.decodeBitmapCapped(it) }
-        }.getOrNull() ?: return@withContext null
-
-        val scaled = downscale(bitmap, maxEdge = 1920)
-        val accent = AccentDeriver.deriveAccent(scaled.toArgbImage())?.toUInt()?.toLong()
-        val themeName = name ?: nextDefaultName()
-        save(
-            name = themeName,
-            wallpaper = scaled,
-            accentArgb = accent,
-            source = EchoThemeSource(type = EchoThemeSource.TYPE_USER_CREATED),
-        ).also { if (scaled !== bitmap) bitmap.recycle() }
-    }
 
     // applies the theme, or only [parts] of it, ticked on its store page. A whole theme sets what it has and clears
     // the wallpaper, icons and colours it leaves out; a part ECHO has only one of (sounds, boot, game start,
@@ -258,9 +237,6 @@ class EchoThemeStore @Inject constructor(
 
     // which theme each part in use came from, by part; a part set by hand or by no theme is absent
     suspend fun partSources(): Map<ThemePart, String> = decodeSources(context.echoDataStore.data.first()[KEY_PART_SOURCES])
-
-    val partSourcesFlow: kotlinx.coroutines.flow.Flow<Map<ThemePart, String>> =
-        context.echoDataStore.data.map { decodeSources(it[KEY_PART_SOURCES]) }
 
     // the README and the screenshots of a saved theme, the screenshots unpacked under the cache
     suspend fun details(id: String): ThemeDetails? = withContext(Dispatchers.IO) {
@@ -584,37 +560,6 @@ class EchoThemeStore @Inject constructor(
             .map { File(dir, "$slotKey.$it") }
             .firstOrNull { it.isFile }
 
-    private fun save(name: String, wallpaper: Bitmap, accentArgb: Long?, source: EchoThemeSource): SavedTheme? {
-        return runCatching {
-            dir.mkdirs()
-            val id = "pfp_${System.currentTimeMillis()}"
-
-            val manifest = EchoThemeManifest(
-                name = name,
-                accentColor = accentArgb?.let { "#%06X".format(it and 0xFFFFFF) } ?: "",
-                source = source,
-                created = LocalDate.now().toString(),
-            )
-            val wallpaperPng = ByteArrayOutputStream()
-                .also { wallpaper.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
-
-            val preview = downscale(wallpaper, maxEdge = 480)
-            val previewBytes = ByteArrayOutputStream()
-                .also { preview.compress(Bitmap.CompressFormat.PNG, 90, it) }.toByteArray()
-
-            FileOutputStream(File(dir, "$id.$THEME_EXT")).use { out ->
-                EchoThemeCodec.write(EchoThemeBundle(manifest, wallpaperPng, previewBytes), out)
-            }
-            FileOutputStream(File(dir, "$id.wallpaper.jpg")).use { wallpaper.compress(Bitmap.CompressFormat.JPEG, 92, it) }
-            FileOutputStream(File(dir, "$id.preview.jpg")).use { preview.compress(Bitmap.CompressFormat.JPEG, 88, it) }
-            if (preview !== wallpaper) preview.recycle()
-
-            _themes.value = scan()
-            // the listed entry, which carries the store's details; the plain one if the list could not read it
-            _themes.value.firstOrNull { it.id == id } ?: SavedTheme(id, name, accentArgb, File(dir, "$id.preview.jpg").absolutePath)
-        }.onFailure { Timber.w(it, "EchoThemeStore: save failed") }.getOrNull()
-    }
-
     private fun scan(): List<SavedTheme> =
         dir.listFiles { f -> f.name.endsWith(".$THEME_EXT") }.orEmpty()
             .sortedByDescending { it.lastModified() }
@@ -646,12 +591,6 @@ class EchoThemeStore @Inject constructor(
         return Bitmap.createScaledBitmap(src, (src.width * scale).toInt().coerceAtLeast(1), (src.height * scale).toInt().coerceAtLeast(1), true)
     }
 
-    private fun Bitmap.toArgbImage(): ArgbImage {
-        val px = IntArray(width * height)
-        getPixels(px, 0, width, 0, 0, width, height)
-        return ArgbImage(width, height, px)
-    }
-
     private fun String.toAccentArgbOrNull(): Long? {
         val hex = removePrefix("#")
         if (hex.length != 6) return null
@@ -666,7 +605,7 @@ class EchoThemeStore @Inject constructor(
         private val KEY_LAUNCH_DISC_STYLE = stringPreferencesKey("display_launch_disc_style")
         private val KEY_BUTTON_SET = stringPreferencesKey("controller_display_type")
 
-        // which theme each part came from, as PART=name lines (owner, 2026-10-07: the Mix screen)
+        // which theme each part came from, as PART=name lines (owner, 2026-10-07: a theme page)
         val KEY_PART_SOURCES = stringPreferencesKey("theme_part_sources")
         private const val META = "meta.json"
         private const val CATALOG = "catalog-sha256"

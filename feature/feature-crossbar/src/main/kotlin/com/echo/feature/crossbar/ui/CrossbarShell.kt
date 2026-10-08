@@ -286,7 +286,6 @@ fun CrossbarShellContainer(
         onMetadataField = viewModel.artworkTools::toggleMetadataField,
         onMetadataApply = viewModel.artworkTools::applyMetadataPreview,
         onCloseMetadata = viewModel.artworkTools::closeMetadataPreview,
-        onOpenLibraryManager = viewModel::openLibraryManager,
         onGoToLibrary = viewModel::goToLibrary,
         onCloseVideoDetail = viewModel.video::onCloseVideoDetail,
         onVideoDetailActionConsumed = viewModel.video::consumeVideoDetailAction,
@@ -478,7 +477,6 @@ fun CrossbarShell(
     onMetadataField: (com.echo.feature.artwork.match.MetadataField) -> Unit = {},
     onMetadataApply: () -> Unit = {},
     onCloseMetadata: () -> Unit = {},
-    onOpenLibraryManager: () -> Unit = {},
     onGoToLibrary: () -> Unit = {},
     onCloseVideoDetail: () -> Unit = {},
     onVideoDetailActionConsumed: () -> Unit = {},
@@ -1203,7 +1201,6 @@ fun CrossbarShell(
                             onPreviewBootSequence = onPreviewBootSequence,
                             onPreviewGameBoot = onPreviewGameBoot,
                             onAddAndroidApps = onOpenAndroidLibraryPicker,
-                            onOpenLibraryManager = onOpenLibraryManager,
                             onGoToLibrary = onGoToLibrary,
                             onOpenScreen = onOpenSettingsScreen,
                             modifier = Modifier.fillMaxSize(),
@@ -1428,7 +1425,7 @@ fun CrossbarShell(
 
             if (uiState.showWindowsSetupPrompt) {
                 EchoConfirmOverlay(
-                    title = "Finish your Windows Library",
+                    title = "Finish the PC system",
                     message = "A PC game was added, but the PC system has no folder " +
                         "yet. Set it up in Library Manager so game folders can be scanned.",
                     confirmLabel = "Set Up",

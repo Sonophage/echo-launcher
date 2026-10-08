@@ -70,7 +70,7 @@ dependencies {
     implementation(project(":feature:feature-launcher"))
     // BackupManager and workers
     implementation(project(":feature:feature-backup"))
-    // RomScanner, PlatformExtensionMap, DiscImageResolver
+    // RomScanner, DiscImageResolver
     implementation(project(":feature:feature-library"))
     // InstalledAppRepository, AppCategoryRepository — powers the Hidden Apps manager
     implementation(project(":feature:feature-appbar"))

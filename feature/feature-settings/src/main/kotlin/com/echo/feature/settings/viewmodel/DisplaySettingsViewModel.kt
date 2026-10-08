@@ -93,12 +93,6 @@ private fun TouchSensitivity.label(): String = when (this) {
     TouchSensitivity.HIGH     -> "High"
 }
 
-private data class Transient(
-    val bootPreviewVisible: Boolean,
-    val gameBootPreviewVisible: Boolean,
-    val xyLayout: XYLayout,
-)
-
 data class DisplaySettingsUiState(
     val waveStyle: WaveStyle = WaveStyle.ANIMATED,
 
@@ -135,7 +129,6 @@ data class DisplaySettingsUiState(
 
     val bootVideoLabel: String = UI_MEDIA_DEFAULT_LABEL,
     val bootVideoAssigned: Boolean = false,
-    val bootPreviewVisible: Boolean = false,
 
     val gameBootEnabled: Boolean = true,
     val gameBootStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.LENS,
@@ -143,7 +136,6 @@ data class DisplaySettingsUiState(
     val launchDiscStyle: com.echo.core.data.repository.GameBootStyle = com.echo.core.data.repository.GameBootStyle.LENS,
     val gameBootVideoLabel: String = UI_MEDIA_DEFAULT_LABEL,
     val gameBootVideoAssigned: Boolean = false,
-    val gameBootPreviewVisible: Boolean = false,
 
     val xyLayout: XYLayout = XYLayout.STANDARD,
 
@@ -186,8 +178,6 @@ class DisplaySettingsViewModel @Inject constructor(
     private val _wallpaperMessage  = MutableStateFlow<String?>(null)
     private val _wallpaperImporting = MutableStateFlow(false)
     private val _wallpaperPreviewVisible = MutableStateFlow(false)
-    private val _bootPreviewVisible = MutableStateFlow(false)
-    private val _gameBootPreviewVisible = MutableStateFlow(false)
 
     private var pendingUiMediaSlot: UiMediaSlot? = null
 
@@ -196,15 +186,8 @@ class DisplaySettingsViewModel @Inject constructor(
         _wallpaperMessage,
         _wallpaperImporting,
         _wallpaperPreviewVisible,
-
-        combine(
-            _bootPreviewVisible,
-            _gameBootPreviewVisible,
-            controllerLayout.prefs,
-        ) { boot, gameBoot, layout ->
-            Transient(boot, gameBoot, layout.xyLayout)
-        },
-    ) { prefs, msg, importing, previewVisible, transient ->
+        controllerLayout.prefs,
+    ) { prefs, msg, importing, previewVisible, layout ->
 
         val assigned = uiMediaStore.assignments()
         fun label(slot: UiMediaSlot): String = when {
@@ -243,7 +226,6 @@ class DisplaySettingsViewModel @Inject constructor(
             wallpaperPreviewVisible = previewVisible,
             bootVideoLabel       = label(UiMediaSlot.BOOT_VIDEO),
             bootVideoAssigned    = UiMediaSlot.BOOT_VIDEO in assigned,
-            bootPreviewVisible   = transient.bootPreviewVisible,
 
             gameBootEnabled      = GameBootPreferences.resolve(prefs),
             gameBootStyle        = GameBootPreferences.styleOf(prefs),
@@ -251,8 +233,7 @@ class DisplaySettingsViewModel @Inject constructor(
             launchDiscStyle      = com.echo.core.data.launch.LaunchDiscPreferences.styleOf(prefs),
             gameBootVideoLabel   = label(UiMediaSlot.GAMEBOOT_VIDEO),
             gameBootVideoAssigned = UiMediaSlot.GAMEBOOT_VIDEO in assigned,
-            gameBootPreviewVisible = transient.gameBootPreviewVisible,
-            xyLayout             = transient.xyLayout,
+            xyLayout             = layout.xyLayout,
 
             classicLayoutApplied     = ClassicCrossbarLayout.isApplied(prefs, ClassicCrossbarLayout.forWindow(context)),
             layoutAdjust             = ClassicCrossbarLayout.current(prefs, ClassicCrossbarLayout.forWindow(context).bucketKey),
@@ -392,8 +373,6 @@ class DisplaySettingsViewModel @Inject constructor(
         val result = motionWallpaper.apply(mime, knownSize) { context.contentResolver.openInputStream(uri) }
         _wallpaperMessage.value = result.message ?: "Motion wallpaper applied"
     }
-
-    private suspend fun pruneWallpaperDir(keep: List<File>) = stillWallpaper.prune(keep)
 
     fun clearWallpaper() {
         viewModelScope.launch {

@@ -18,36 +18,6 @@ data class CollectionWithCount(
 
 @Dao
 interface CollectionDao {
-    @Query(
-        """
-        SELECT c.*, (
-            SELECT COUNT(*)
-            FROM games display_game
-            WHERE (
-                  (display_game.disc_set_key IS NULL AND display_game.is_missing = 0 AND EXISTS (
-                      SELECT 1 FROM collection_games cg
-                      WHERE cg.collection_id = c.id AND cg.game_id = display_game.id
-                  ))
-                  OR (display_game.disc_set_key IS NOT NULL
-                      AND display_game.is_disc_primary = 1
-                      AND EXISTS (
-                          SELECT 1 FROM collection_games cg
-                          JOIN games member ON member.id = cg.game_id
-                          WHERE cg.collection_id = c.id
-                            AND member.disc_set_key = display_game.disc_set_key
-                      )
-                      AND EXISTS (
-                          SELECT 1 FROM games present
-                          WHERE present.disc_set_key = display_game.disc_set_key
-                            AND present.is_missing = 0
-                      ))
-              )
-        ) AS game_count
-        FROM collections c
-        ORDER BY c.sort_order ASC, c.created_at ASC
-        """
-    )
-    fun observeAllWithCounts(): Flow<List<CollectionWithCount>>
 
     @Query(
         """

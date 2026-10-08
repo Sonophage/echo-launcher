@@ -60,9 +60,6 @@ interface VideoDao {
     @Query("SELECT * FROM videos WHERE id = :id")
     suspend fun getById(id: String): VideoEntity?
 
-    @Query("SELECT COUNT(*) FROM videos WHERE library_id = :libraryId")
-    suspend fun countForLibrary(libraryId: String): Int
-
     @Query("SELECT COUNT(*) FROM videos WHERE thumbnail_uri = :uri OR custom_thumbnail_uri = :uri")
     suspend fun countReferencingThumbnail(uri: String): Int
 

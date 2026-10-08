@@ -131,9 +131,6 @@ interface GameDao {
     @Query("UPDATE games SET is_disc_primary = CASE WHEN id = :discId THEN 1 ELSE 0 END WHERE disc_set_key = (SELECT disc_set_key FROM games WHERE id = :id)")
     suspend fun setPreferredDisc(id: Long, discId: Long)
 
-    @Query("SELECT * FROM games WHERE rom_path = :romPath LIMIT 1")
-    suspend fun getByRomPath(romPath: String): GameEntity?
-
     @Query("SELECT * FROM games WHERE package_name = :packageName LIMIT 1")
     suspend fun getByPackageName(packageName: String): GameEntity?
 
@@ -152,9 +149,6 @@ interface GameDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(game: GameEntity): Long
 
-    @Query("SELECT date_added FROM games WHERE id = :id")
-    suspend fun dateAddedOf(id: Long): Long?
-
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(games: List<GameEntity>)
 
@@ -166,9 +160,6 @@ interface GameDao {
 
     @Query("DELETE FROM games WHERE platform_id = :platformId")
     suspend fun deleteByPlatform(platformId: String)
-
-    @Query("SELECT COUNT(*) FROM games WHERE platform_id = :platformId AND is_missing = 0")
-    suspend fun countByPlatform(platformId: String): Int
 
     @Query(
         """
@@ -223,9 +214,6 @@ interface GameDao {
 
     @Query("UPDATE games SET logo_uri = :logoUri WHERE id = :id")
     suspend fun updateLogo(id: Long, logoUri: String?)
-
-    @Query("UPDATE games SET logo_uri = :logoUri WHERE id = :id")
-    suspend fun updateLogoOnly(id: Long, logoUri: String?)
 
     @Query(
         """
@@ -285,9 +273,6 @@ interface GameDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAllReplace(games: List<GameEntity>)
-
-    @Query("SELECT * FROM games WHERE artwork_uri IS NULL AND rom_path IS NOT NULL")
-    suspend fun getGamesWithoutArtwork(): List<GameEntity>
 
     @Query(
         """

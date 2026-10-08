@@ -16,27 +16,13 @@ class NavigationContext(
     var editHandler: EditModeHandler? = null
         private set
 
-    var isReady: Boolean
-        get() = ready
-        private set(value) { ready = value }
-
     fun markReady() {
         ready = true
     }
 
-    fun nodesInRegistrationOrder(): List<NavigationNode> = nodes
-
-    fun geometryFor(key: String): Float? = geometry[key]
-
     fun allGeometry(): Map<String, Float> = geometry
 
-    fun reportGeometry(key: String, y: Float) {
-        geometry = geometry + (key to y)
-    }
-
     fun hasGeometry(): Boolean = geometry.isNotEmpty()
-
-    fun focusedNode(): NavigationNode? = focusedKey?.let { findNode(it) }
 
     fun editHandlerFor(key: String): EditModeHandler? {
         if (editHandler != null) return null
@@ -180,9 +166,5 @@ class NavigationContext(
         }
         if (!node.focusable || !node.selectable || !node.enabled) return false
         return node.onSelect?.invoke() != null
-    }
-
-    internal fun setFocusedKeyForTest(key: String?) {
-        focusedKey = key
     }
 }

@@ -5,9 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import com.echo.core.data.datastore.echoDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,15 +13,6 @@ import javax.inject.Singleton
 class ArtworkScrapePreferences @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
-    val downloadClearLogosFlow: Flow<Boolean> =
-        context.echoDataStore.data.map { it[KEY_DOWNLOAD_CLEAR_LOGOS] ?: true }
-
-    val downloadManualsFlow: Flow<Boolean> =
-        context.echoDataStore.data.map { it[KEY_DOWNLOAD_MANUALS] ?: true }
-
-    val downloadVideoSnapsFlow: Flow<Boolean> =
-        context.echoDataStore.data.map { it[KEY_DOWNLOAD_VIDEO_SNAPS] ?: false }
-
     suspend fun getOptions(): ScrapeOptions {
         val prefs = context.echoDataStore.data.first()
         return ScrapeOptions(

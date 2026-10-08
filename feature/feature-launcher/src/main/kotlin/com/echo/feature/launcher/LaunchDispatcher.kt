@@ -159,15 +159,6 @@ class LaunchDispatcher @Inject constructor(
         if (offerRecovery) emitRecovery(game, resolved, reason, kind)
     }
 
-    suspend fun requestRecovery(
-        game: Game,
-        resolved: ResolvedLaunch?,
-        message: String,
-        kind: LaunchFailureKind = LaunchFailureKind.UNKNOWN,
-    ) {
-        emitRecovery(game, resolved, message, kind)
-    }
-
     fun dismissRecovery() {
         _recoveryRequests.value = null
     }

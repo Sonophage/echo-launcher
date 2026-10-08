@@ -73,7 +73,6 @@ private data class SafFileChild(
 @Singleton
 class RomScanner @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val platformExtensionMap: PlatformExtensionMap,
     private val discImageResolver: DiscImageResolver,
     private val folderHintResolver: PlatformFolderHintResolver,
     private val arcadeRomsets: ArcadeRomsetCatalog,
@@ -379,11 +378,6 @@ class RomScanner @Inject constructor(
             out.toString(Charsets.UTF_8.name())
         }
     }.getOrNull()
-
-    suspend fun findMissingRoms(knownPaths: List<String>): List<String> =
-        knownPaths.filter { path -> !File(path).exists() }
-
-    private fun String.sanitizeRomName(): String = cleanRomTitle(this)
 }
 
 fun safDocumentIdToRawPath(documentId: String): String? {

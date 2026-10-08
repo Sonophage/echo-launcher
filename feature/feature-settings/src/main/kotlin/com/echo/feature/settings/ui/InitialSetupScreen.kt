@@ -38,7 +38,6 @@ fun InitialSetupScreen(
     modifier: Modifier = Modifier,
 
     firstRun: Boolean = false,
-    onOpenLibraryManager: () -> Unit = {},
 
     onGoToLibrary: () -> Unit = {},
     viewModel: InitialSetupViewModel = hiltViewModel(),

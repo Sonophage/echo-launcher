@@ -6,12 +6,9 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.echo.core.data.datastore.echoDataStore
-import com.echo.core.domain.model.GamepadAction
-import com.echo.core.domain.model.GamepadBinding
 import com.echo.core.domain.model.GamepadMappings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -62,20 +59,5 @@ class ControllerMappingRepository @Inject constructor(
             prefs[KEY_START_SELECT_SWAPPED] = true
         }
         Timber.i("Controller mappings reset to defaults")
-    }
-
-    suspend fun remap(action: GamepadAction, newKeyCode: Int) {
-        val prefs = context.echoDataStore.data.first()
-        val current = prefs[KEY_MAPPINGS]?.let {
-            runCatching { json.decodeFromString<GamepadMappings>(it) }.getOrNull()
-        }?.withKitButtons()?.let { if (prefs[KEY_START_SELECT_SWAPPED] == true) it else it.withStartSelectSwapped() }
-            ?: GamepadMappings()
-
-        val updated = current.bindings
-            .filter { it.keyCode != newKeyCode && it.action != action }
-            .plus(GamepadBinding(newKeyCode, action))
-
-        saveMappings(GamepadMappings(updated))
-        Timber.i("Remapped $action → keycode $newKeyCode")
     }
 }

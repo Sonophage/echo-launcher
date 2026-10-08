@@ -15,6 +15,3 @@ data class ArtPickerItem(
     val thumbUrl: String? = null,
     val label: String? = null,
 )
-
-internal fun mediaStableId(media: DetailMedia): String =
-    if (media.isVideo) "v:${media.uri}" else "i:${media.uri}"

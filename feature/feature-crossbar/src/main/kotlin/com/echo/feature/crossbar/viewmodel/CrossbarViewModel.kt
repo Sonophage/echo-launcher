@@ -4387,11 +4387,6 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    fun openLibraryManager() {
-        markInitialSetupSeen()
-        _uiState.update { it.withSettingsOpen("settings_library") }
-    }
-
     fun goToLibrary() {
         markInitialSetupSeen()
         _uiState.update { it.withSettingsClosed() }

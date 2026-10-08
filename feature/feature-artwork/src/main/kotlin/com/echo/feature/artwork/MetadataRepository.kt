@@ -385,21 +385,6 @@ class MetadataRepository @Inject constructor(
         return MetadataFetchResult(true, src, "Found via $src", scrapedTitle = newScrapedTitle)
     }
 
-    suspend fun fetchMissingMetadata(onProgress: (current: Int, total: Int) -> Unit) {
-        resetSsBatchGuards()
-        val games = gameDao.getGamesWithoutArtwork()
-        games.forEachIndexed { index, game ->
-            onProgress(index + 1, games.size)
-            fetchForGame(
-                gameId     = game.id,
-                title      = game.title,
-                platformId = game.platformId,
-                romPath    = game.romPath,
-            )
-            if (index < games.size - 1) delay(500)
-        }
-    }
-
     private fun primarySource(
         ss: SsGameInfo?,
         igdb: IgdbGameInfo?,

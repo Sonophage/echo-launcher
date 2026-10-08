@@ -14,9 +14,6 @@ class NavigationEngine(
     val focusedKey: String?
         get() = active.focusedKey
 
-    val activeContextId: String
-        get() = active.id
-
     val isModalActive: Boolean
         get() = contexts.size > 1
 
@@ -82,10 +79,6 @@ class NavigationEngine(
 
     fun setFocused(key: String?) {
         active.setFocused(key)
-    }
-
-    fun reportNodeGeometry(key: String, y: Float) {
-        active.reportGeometry(key, y)
     }
 
     fun focusableKeys(): Set<String> = active.nodes.filter { it.focusable && it.enabled }.mapTo(mutableSetOf()) { it.key }
@@ -166,12 +159,7 @@ class NavigationEngine(
         inputLocked = false
     }
 
-    internal fun activeContextForTest(): NavigationContext = active
-
     fun confirmDirect(): Boolean = active.confirm()
-
-    fun moveActive(direction: NavigationDirection): String? =
-        dispatchDirection(active, direction)
 
     fun moveVerticalActive(delta: Int): String? = active.moveVertical(delta)
 

@@ -68,14 +68,14 @@ object PcGameExportCodec {
             Json.parseToJsonElement(text) as? JsonObject
         } catch (e: IllegalArgumentException) {
             null
-        } ?: return PcGameExportDecode.Rejected("is not a PlayFieldPortal game export")
+        } ?: return PcGameExportDecode.Rejected("is not an ECHO game export")
         if ((root["format"] as? JsonPrimitive)?.contentOrNull != FORMAT) {
-            return PcGameExportDecode.Rejected("is not a PlayFieldPortal game export")
+            return PcGameExportDecode.Rejected("is not an ECHO game export")
         }
         val version = (root["version"] as? JsonPrimitive)?.intOrNull ?: VERSION
         if (version > VERSION) {
             return PcGameExportDecode.Rejected(
-                "was made by a newer version of PlayFieldPortal (export version $version); update to import it",
+                "was made by a newer version of ECHO (export version $version); update to import it",
             )
         }
         if (version < 1) return PcGameExportDecode.Rejected("has an invalid version ($version)")

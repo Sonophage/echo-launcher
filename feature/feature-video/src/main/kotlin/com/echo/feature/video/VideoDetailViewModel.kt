@@ -256,8 +256,6 @@ class VideoDetailViewModel @Inject constructor(
         }
     }
 
-    fun closePlaylistPicker() = _uiState.update { it.copy(showPlaylistPicker = false) }
-
     fun onNewPlaylistNameChange(text: String) = _uiState.update { it.copy(newPlaylistName = text) }
 
     fun confirmCreatePlaylist() {

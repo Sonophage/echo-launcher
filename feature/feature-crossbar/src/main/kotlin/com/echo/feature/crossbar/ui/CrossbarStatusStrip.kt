@@ -117,7 +117,6 @@ import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.components.ChromeScrim
 
 private val StripPrimary = Color(0xFFEEEEEE)
-private val StripMuted   = Color(0xAAEEEEEE)
 
 object CrossbarStatusIcons {
     @DrawableRes val bluetooth: Int = R.drawable.ic_status_bluetooth

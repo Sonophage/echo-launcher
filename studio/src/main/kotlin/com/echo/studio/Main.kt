@@ -12,7 +12,7 @@ import com.echo.studio.ui.StudioApp
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "PlayField Theme Studio",
+        title = "ECHO Theme Studio",
         state = rememberWindowState(size = DpSize(1280.dp, 760.dp)),
     ) {
         val scope = rememberCoroutineScope()

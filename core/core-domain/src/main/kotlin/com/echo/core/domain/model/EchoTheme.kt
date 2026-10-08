@@ -19,12 +19,3 @@ data class EchoTheme(
     val packagePath: String? = null,
     val isBuiltIn: Boolean = false,
 )
-
-enum class ThemeSoundEvent {
-    NAVIGATE_HORIZONTAL,
-    NAVIGATE_VERTICAL,
-    SELECT,
-    BACK,
-    CATEGORY_CHANGE,
-    BOOT,
-}

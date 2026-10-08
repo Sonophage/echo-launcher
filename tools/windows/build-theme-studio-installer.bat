@@ -7,12 +7,12 @@ REM  Play Field Portal - Theme Studio Installer Builder
 REM  Packages the Theme Studio as a Windows .exe installer via
 REM  Compose Desktop / jpackage. Gradle's copyReleaseInstallerToDist
 REM  task (studio/build.gradle.kts) is what flattens the installer
-REM  into <root>\dist as PlayField-Theme-Studio-<version>.exe --
+REM  into <root>\dist as ECHO-Theme-Studio-<version>.exe --
 REM  this script drives and verifies that, it never copies or
 REM  renames on its own.
 REM
 REM  The installer creates a Desktop shortcut and a Start Menu
-REM  entry under "PlayField Theme Studio", and lets the user pick
+REM  entry under "ECHO Theme Studio", and lets the user pick
 REM  the install directory. Those come from the windows {} block in
 REM  studio/build.gradle.kts (shortcut / menu / menuGroup /
 REM  dirChooser) -- change them there, not here.
@@ -170,20 +170,20 @@ echo ========================================
 echo.
 echo Artifacts in %ROOT%dist:
 
-set "_EXE=%ROOT%dist\PlayField-Theme-Studio-%_VERSION%.exe"
+set "_EXE=%ROOT%dist\ECHO-Theme-Studio-%_VERSION%.exe"
 if exist "%_EXE%" (
     for %%A in ("%_EXE%") do echo   %%~nxA   ^(%%~zA bytes^)
 ) else (
-    echo   MISSING: PlayField-Theme-Studio-%_VERSION%.exe 1>&2
+    echo   MISSING: ECHO-Theme-Studio-%_VERSION%.exe 1>&2
     set "_FAIL=1"
 )
 
 if "%_ALSO_MSI%"=="1" (
-    set "_MSI=%ROOT%dist\PlayField-Theme-Studio-%_VERSION%.msi"
+    set "_MSI=%ROOT%dist\ECHO-Theme-Studio-%_VERSION%.msi"
     if exist "!_MSI!" (
         for %%A in ("!_MSI!") do echo   %%~nxA   ^(%%~zA bytes^)
     ) else (
-        echo   MISSING: PlayField-Theme-Studio-%_VERSION%.msi 1>&2
+        echo   MISSING: ECHO-Theme-Studio-%_VERSION%.msi 1>&2
         set "_FAIL=1"
     )
 )
@@ -198,7 +198,7 @@ if "%_FAIL%"=="1" (
 
 echo.
 echo The installer adds a Desktop shortcut and a Start Menu entry
-echo under "PlayField Theme Studio", and prompts for the install directory.
+echo under "ECHO Theme Studio", and prompts for the install directory.
 echo.
 popd
 exit /b 0

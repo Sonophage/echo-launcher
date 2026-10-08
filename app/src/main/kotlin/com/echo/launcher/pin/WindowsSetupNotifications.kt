@@ -19,7 +19,7 @@ object WindowsSetupNotifications {
         }
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "Windows Library", NotificationManager.IMPORTANCE_DEFAULT)
+            NotificationChannel(CHANNEL_ID, "PC games", NotificationManager.IMPORTANCE_DEFAULT)
                 .apply { description = "Finish setting up the PC system" },
         )
 
@@ -36,7 +36,7 @@ object WindowsSetupNotifications {
         val notification = Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_add)
             .setContentTitle("\"$gameTitle\" added to PC")
-            .setContentText("Finish setting up your Windows Library to scan its folder")
+            .setContentText("Finish setting up the PC system to scan its folder")
             .setAutoCancel(true)
             .apply { open?.let { setContentIntent(it) } }
             .build()

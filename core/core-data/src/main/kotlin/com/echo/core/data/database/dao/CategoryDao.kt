@@ -73,7 +73,4 @@ interface CategoryDao {
 
     @Query("DELETE FROM category_items WHERE category_id = :categoryId")
     suspend fun clearCategory(categoryId: String)
-
-    @Query("UPDATE category_items SET sort_order = :order WHERE category_id = :categoryId AND item_id = :itemId")
-    suspend fun updateItemOrder(categoryId: String, itemId: String, order: Int)
 }

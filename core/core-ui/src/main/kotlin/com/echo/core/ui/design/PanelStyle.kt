@@ -18,7 +18,6 @@ val PanelFocusRing = Color.White.copy(alpha = 0.9f)
 
 const val PANEL_CARD_RADIUS = 14
 const val PANEL_FOCUS_RING_WIDTH = 2
-const val PANEL_UNFOCUSED_ALPHA = 0.55f
 
 private const val PANEL_DESIGN_WIDTH = 1200f
 const val PANEL_DESIGN_HEIGHT = 752f

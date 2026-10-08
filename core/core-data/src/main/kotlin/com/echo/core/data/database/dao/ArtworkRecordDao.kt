@@ -34,27 +34,12 @@ interface ArtworkRecordDao {
     @Query("SELECT COALESCE(MAX(sort_order), -1) FROM artwork_records WHERE game_id = :gameId AND artwork_type = :type")
     suspend fun maxSortOrder(gameId: Long, type: String): Int
 
-    @Query("SELECT COUNT(*) FROM artwork_records WHERE game_id = :gameId AND artwork_type = :type")
-    suspend fun countFor(gameId: Long, type: String): Int
-
     @Query("""
         SELECT * FROM artwork_records
         WHERE platform_id = :platformId AND artwork_type = :type
           AND portable_name = :portableName COLLATE NOCASE AND game_id != :gameId
     """)
     suspend fun findNameCollisions(platformId: String, type: String, portableName: String, gameId: Long): List<ArtworkRecordEntity>
-
-    @Query("""
-        SELECT * FROM artwork_records
-        WHERE game_id = :gameId AND artwork_type = :type AND provider_asset_id = :providerAssetId
-    """)
-    suspend fun findByProviderAssetId(gameId: Long, type: String, providerAssetId: String): List<ArtworkRecordEntity>
-
-    @Query("SELECT * FROM artwork_records WHERE game_id = :gameId AND artwork_type = :type AND origin_url = :originUrl")
-    suspend fun findByOriginUrl(gameId: Long, type: String, originUrl: String): List<ArtworkRecordEntity>
-
-    @Query("SELECT * FROM artwork_records WHERE game_id = :gameId AND artwork_type = :type AND checksum = :checksum")
-    suspend fun findByChecksum(gameId: Long, type: String, checksum: String): List<ArtworkRecordEntity>
 
     @Query("SELECT * FROM artwork_records")
     suspend fun getAll(): List<ArtworkRecordEntity>

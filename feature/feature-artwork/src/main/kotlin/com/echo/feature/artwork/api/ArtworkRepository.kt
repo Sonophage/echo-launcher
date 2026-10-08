@@ -64,29 +64,6 @@ class ArtworkRepository @Inject constructor(
     private val internalStore: com.echo.feature.artwork.store.InternalArtworkStore,
     private val ssMediaCacheDao: com.echo.core.data.database.dao.SsMediaCacheDao,
 ) {
-    suspend fun fetchMissingArtwork(
-        onProgress: (current: Int, total: Int, title: String) -> Unit,
-    ): List<ArtworkFetchResult> = withContext(Dispatchers.IO) {
-        val games = gameDao.getGamesWithoutArtwork()
-        Timber.i("Metadata fetch started — ${games.size} games need artwork")
-        val results = mutableListOf<ArtworkFetchResult>()
-
-        metadataRepository.fetchMissingMetadata { current, total ->
-            val title = games.getOrNull(current - 1)?.title ?: ""
-            onProgress(current, total, title)
-        }
-
-        games.forEach { game ->
-            val updated = gameDao.getById(game.id)
-            val success = updated?.artworkUri != null
-            results += ArtworkFetchResult(game.id, game.title, success,
-                errorMessage = if (!success) "No artwork found" else null)
-        }
-
-        Timber.i("Metadata fetch complete — ${results.count { it.success }} succeeded")
-        results
-    }
-
     suspend fun fetchArtworkForGame(gameId: Long, title: String): ArtworkFetchResult {
         val game = gameDao.getById(gameId)
             ?: return ArtworkFetchResult(gameId, title, false, errorMessage = "Game not found")

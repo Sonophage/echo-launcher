@@ -64,7 +64,6 @@ fun SettingsNavHost(
     onPreviewBootSequence: () -> Unit = {},
     onPreviewGameBoot: () -> Unit = {},
     onAddAndroidApps: () -> Unit = {},
-    onOpenLibraryManager: () -> Unit = {},
     onGoToLibrary: () -> Unit = {},
 
     onOpenScreen: (String) -> Unit = {},
@@ -86,7 +85,6 @@ fun SettingsNavHost(
         when (screenId) {
             "settings_initial_setup" -> InitialSetupScreen(
                 onBack = onBack,
-                onOpenLibraryManager = onOpenLibraryManager,
                 onGoToLibrary = onGoToLibrary,
                 modifier = modifier,
             )
@@ -94,7 +92,6 @@ fun SettingsNavHost(
             "settings_initial_setup_first" -> InitialSetupScreen(
                 onBack = onBack,
                 firstRun = true,
-                onOpenLibraryManager = onOpenLibraryManager,
                 onGoToLibrary = onGoToLibrary,
                 modifier = modifier,
             )

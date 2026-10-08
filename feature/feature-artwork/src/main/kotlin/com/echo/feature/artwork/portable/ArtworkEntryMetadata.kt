@@ -36,9 +36,6 @@ data class ArtworkEntryMetadata(
         val locked: Boolean = false,
     )
 
-    fun withAsset(record: AssetRecord, nowMillis: Long = System.currentTimeMillis()): ArtworkEntryMetadata =
-        copy(assets = assets.filterNot { it.kind == record.kind } + record, updatedAt = nowMillis)
-
     companion object {
         const val FORMAT_VERSION = 1
         const val FILE_NAME = "metadata.json"

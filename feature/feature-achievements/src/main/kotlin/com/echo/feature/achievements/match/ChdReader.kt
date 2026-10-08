@@ -96,23 +96,6 @@ class ChdReader private constructor(
         append((v ushr 8 and 0xFF).toChar()); append((v and 0xFF).toChar())
     }
 
-    fun metadataChain(): List<Pair<String, String>> {
-        val out = mutableListOf<Pair<String, String>>()
-        var offset = header.metaOffset
-        var hops = 0
-        while (offset != 0L && hops++ < MAX_METADATA_ENTRIES) {
-            val h = readAt(offset, 16)
-            if (h.size < 16) break
-            val length = (be32(h, 4) and 0xFFFFFF).coerceAtMost(1024)
-            val text = String(readAt(offset + 16, length), Charsets.US_ASCII).trimEnd('\u0000', ' ')
-            out.add(fourcc(be32(h, 0)) to text)
-            offset = be64(h, 8)
-        }
-        return out
-    }
-
-    fun codecTags(): List<String> = header.compressors.map { fourcc(it) }
-
     fun close() = source.close()
 
     companion object {
@@ -125,7 +108,6 @@ class ChdReader private constructor(
         val CODEC_LZMA = tag('l', 'z', 'm', 'a')
         val CODEC_CD_ZLIB = tag('c', 'd', 'z', 'l')
         val CODEC_CD_LZMA = tag('c', 'd', 'l', 'z')
-        val CODEC_CD_FLAC = tag('c', 'd', 'f', 'l')
 
         const val CD_FRAME_SIZE = 2448
         const val CD_MAX_SECTOR_DATA = 2352

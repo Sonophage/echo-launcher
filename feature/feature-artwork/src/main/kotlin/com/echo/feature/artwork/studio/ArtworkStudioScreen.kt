@@ -82,10 +82,6 @@ import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.core.ui.theme.menuCursorEdge
 import com.echo.feature.artwork.store.ArtworkKind
 
-private val STUDIO_GRID_GAP = 8.dp
-
-internal const val STUDIO_WIDE_WINDOW_DP = 1000
-
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ArtworkStudioScreen(

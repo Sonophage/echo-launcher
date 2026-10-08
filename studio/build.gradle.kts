@@ -49,7 +49,7 @@ compose.desktop {
             // Msi stays for managed/silent deployment. Both come out of the same jpackage run
             // and both need the WiX Toolset on PATH.
             targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "PlayField Theme Studio"
+            packageName = "ECHO Theme Studio"
             packageVersion = "1.2.0"
             description = "Create, convert, and share ECHO crossbar themes"
 
@@ -57,7 +57,7 @@ compose.desktop {
                 // Desktop + Start Menu shortcuts, and let the user pick the install dir.
                 shortcut = true
                 menu = true
-                menuGroup = "PlayField Theme Studio"
+                menuGroup = "ECHO Theme Studio"
                 dirChooser = true
                 // Stable MSI UpgradeCode: MUST NEVER CHANGE. It ties every future installer to
                 // this product in Add/Remove Programs, so upgrades replace the existing install
@@ -76,12 +76,12 @@ val copyInstallerToDist = tasks.register<Copy>("copyReleaseInstallerToDist") {
     from(layout.buildDirectory.dir("compose/binaries/main-release")) {
         // Scoped to the per-format subdirs, NOT "**/*.exe": the app-image that jpackage builds
         // first lands in main-release/app/ and contains the application LAUNCHER
-        // "PlayField Theme Studio.exe". Flattened into dist next to the installer that would be
+        // "ECHO Theme Studio.exe". Flattened into dist next to the installer that would be
         // an easy exe to hand someone by mistake — it only runs from its own install tree.
         include("exe/**/*.exe", "msi/**/*.msi", "deb/**/*.deb", "dmg/**/*.dmg", "pkg/**/*.pkg")
     }
     // Flatten out of the format subdir and normalize spaces to hyphens, matching the launcher
-    // APK naming in dist (e.g. "PlayField Theme Studio-1.1.0.msi" -> PlayField-Theme-Studio-1.1.0.msi).
+    // APK naming in dist (e.g. "ECHO Theme Studio-1.1.0.msi" -> ECHO-Theme-Studio-1.1.0.msi).
     eachFile { path = name.replace(" ", "-") }
     includeEmptyDirs = false
     into(distDir)

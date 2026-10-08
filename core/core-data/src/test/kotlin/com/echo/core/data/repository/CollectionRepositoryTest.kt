@@ -123,7 +123,6 @@ private class FakeCollectionDao : CollectionDao {
 
     private fun ordered() = collections.values.sortedWith(compareBy({ it.sortOrder }, { it.createdAt }))
 
-    override fun observeAllWithCounts(): Flow<List<CollectionWithCount>> = flowOf(countsList())
     override suspend fun getAllWithCounts(): List<CollectionWithCount> = countsList()
     private fun countsList() = ordered().map { c ->
         CollectionWithCount(c, memberships.count { it.collectionId == c.id })

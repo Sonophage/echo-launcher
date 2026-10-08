@@ -9,10 +9,6 @@ object ArtworkPathResolver {
 
     const val DIR_ICON1 = "$DIR_ECHO/icon1"
 
-    const val DIR_VERSIONS = "$DIR_ECHO/versions"
-
-    const val DIR_ORIGINALS = "$DIR_ECHO/originals"
-
     fun versionsDirSegments(platformId: String, kind: ArtworkKind): List<String> =
         listOf(ArtworkLibraryManifest.DIR_ARTWORK, platformId, DIR_ECHO, "versions", kind.name.lowercase())
 

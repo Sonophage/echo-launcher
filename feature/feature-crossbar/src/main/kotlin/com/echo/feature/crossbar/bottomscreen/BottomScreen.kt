@@ -228,7 +228,6 @@ private fun SettingsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel) {
         onPreviewBootSequence = crossbar.launching::previewBootSequence,
         onPreviewGameBoot = crossbar.launching::previewGameBoot,
         onAddAndroidApps = crossbar::openAndroidLibraryPicker,
-        onOpenLibraryManager = crossbar::openLibraryManager,
         onGoToLibrary = crossbar::goToLibrary,
         onOpenScreen = crossbar::onOpenSettingsScreen,
         modifier = Modifier.fillMaxSize(),

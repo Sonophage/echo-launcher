@@ -36,12 +36,6 @@ class ArtworkFolderRepository @Inject constructor(
     suspend fun getTreeUri(): String? =
         context.echoDataStore.data.first()[KEY_ARTWORK_FOLDER_TREE_URI]
 
-    suspend fun getStorageMode(): ArtworkStorageMode =
-        ArtworkStorageMode.fromName(context.echoDataStore.data.first()[KEY_ARTWORK_STORAGE_MODE])
-
-    suspend fun getLibraryUuid(): String? =
-        context.echoDataStore.data.first()[KEY_ARTWORK_LIBRARY_UUID]
-
     suspend fun setTreeUri(treeUri: String?) {
         context.echoDataStore.edit { prefs ->
             if (treeUri.isNullOrBlank()) prefs.remove(KEY_ARTWORK_FOLDER_TREE_URI)

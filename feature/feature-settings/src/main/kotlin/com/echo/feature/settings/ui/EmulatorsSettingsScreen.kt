@@ -148,7 +148,7 @@ fun EmulatorsSettingsScreen(
                 }
                 EmulatorHint(
                     "PC games run through these rather than through an emulator profile. Import " +
-                        "them in Settings ▸ Library ▸ Library Manager, on the Windows card.",
+                        "them in Settings ▸ Emulators ▸ Library Manager, on the PC system.",
                 )
             }
 

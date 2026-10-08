@@ -69,9 +69,6 @@ class EmulatorProfileRepository @Inject constructor(
             .stabilizeCore(autoCoreMemory.rememberedProfileId(platformId))
     }
 
-    suspend fun saveCustomProfile(profile: EmulatorProfile) =
-        savePersistedProfile(profile.copy(isCustom = true))
-
     suspend fun savePersistedProfile(profile: EmulatorProfile) = withContext(io) {
         val current = loadPersistedProfiles().toMutableList()
         val idx = current.indexOfFirst { it.id == profile.id }

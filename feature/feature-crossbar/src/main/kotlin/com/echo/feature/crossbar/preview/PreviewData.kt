@@ -39,12 +39,6 @@ object PreviewData {
         CrossbarItem("25", "Golden Sun",                subtitle = "GBA"),
     )
 
-    val favoriteItems = listOf(
-        CrossbarItem("1",  "Shadow of the Colossus",  subtitle = "PS2 · Favorite"),
-        CrossbarItem("20", "Pokémon FireRed",          subtitle = "GBA · Favorite"),
-        CrossbarItem("7",  "Metal Gear Solid 3",       subtitle = "PS2 · Favorite"),
-    )
-
     val emptyItems = emptyList<CrossbarItem>()
 
     val platformFolders = listOf(

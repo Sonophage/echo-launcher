@@ -137,7 +137,6 @@ class StudioViewModel(private val scope: CoroutineScope) {
     fun setWaveStyle(style: String) = _state.update { it.copy(waveStyle = style) }
     fun setPreviewMode(mode: PreviewMode) = _state.update { it.copy(previewMode = mode) }
     fun dismissDialog() = _state.update { it.copy(dialog = null) }
-    fun clearStatus() = _state.update { it.copy(statusMessage = null) }
 
     fun setBarTopFraction(fraction: Float) = _state.update {
         it.copy(
