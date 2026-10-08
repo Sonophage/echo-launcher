@@ -159,4 +159,16 @@ class BottomScreenRulesTest {
         link.attach(true)
         assertFalse("already showing: leave focus alone", link.needsCompanion(enabled = true))
     }
+
+    @Test
+    fun `a drawer album draws as music on the other screen, an app as an app`() {
+        val album = com.echo.feature.appbar.InstalledApp("media:MUSIC:born pink", "BORN PINK", null, isGame = false, isEmulator = false,
+            art = "file:///art.jpg", media = com.echo.feature.appbar.DrawerMedia(com.echo.feature.appbar.MediaKind.MUSIC, "born pink", "BLACKPINK", "K-Pop"))
+        val item = drawerCaseItem(album)
+        assertEquals(com.echo.feature.crossbar.viewmodel.RecentKind.MUSIC, com.echo.feature.crossbar.viewmodel.recentKind(item))
+        assertEquals("file:///art.jpg", item.coverUri)
+        assertEquals("BLACKPINK  ·  K-Pop", item.subtitle)
+        val app = drawerCaseItem(com.echo.feature.appbar.InstalledApp("com.a", "A", null, isGame = false, isEmulator = false))
+        assertEquals(com.echo.feature.crossbar.viewmodel.RecentKind.APP, com.echo.feature.crossbar.viewmodel.recentKind(app))
+    }
 }

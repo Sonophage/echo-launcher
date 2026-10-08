@@ -38,14 +38,22 @@ enum class AppFilter(val label: String, val subtitle: String) {
     RECENT("Recently Used", "Apps you've used lately"),
     APPS("Apps", "Everything that is not a game or an emulator"),
     EMULATORS("Emulators", "RetroArch, PPSSPP, Dolphin and more"),
-    GAMES("Games", "Apps categorized as games");
+    GAMES("Games", "Apps categorized as games"),
+    MUSIC("Music", "Your albums"),
+    VIDEOS("Videos", "Your videos"),
+    BOOKS("Books", "Your books");
 
     fun matches(app: InstalledApp): Boolean = when (this) {
-        APPS -> !app.isGame && !app.isEmulator
+        APPS -> app.media == null && !app.isGame && !app.isEmulator
         GAMES -> app.isGame
         EMULATORS -> app.isEmulator
-        RECENT -> app.lastUsedAt > 0L
+        RECENT -> app.media == null && app.lastUsedAt > 0L
+        MUSIC -> app.media?.kind == MediaKind.MUSIC
+        VIDEOS -> app.media?.kind == MediaKind.VIDEO
+        BOOKS -> app.media?.kind == MediaKind.BOOK
     }
+
+    val isMedia: Boolean get() = this == MUSIC || this == VIDEOS || this == BOOKS
 
     fun stepped(delta: Int, shown: List<AppFilter>): AppFilter {
         val here = shown.indexOf(this)
@@ -126,6 +134,12 @@ data class AppDrawerUiState(
 
     val systemFilter: String? = null,
 
+    // a media case asked to open; the crossbar opens it as its own column does
+    val pendingMediaOpen: DrawerMedia? = null,
+
+    // Music's and Books' buttons are genres (X), else artists or authors
+    val mediaChipsByGenre: Boolean = false,
+
     // the crossbar's genre filter, which the Games section follows (owner, 2026-10-08)
     val genreFilter: com.echo.core.domain.model.GameGenre? = null,
     // the Game column is grouped by genre, so the Games section's buttons are genres
@@ -134,7 +148,8 @@ data class AppDrawerUiState(
     val chipFocus: Boolean = false,
 
 ) {
-    val showSystemChips: Boolean get() = activeFilter == AppFilter.GAMES && systemChips.size > 2
+    val showSystemChips: Boolean get() = (activeFilter == AppFilter.GAMES || activeFilter == AppFilter.MUSIC || activeFilter == AppFilter.BOOKS) &&
+        systemChips.size > 2
 
     val menuActions: List<AppMenuAction>
         get() = buildList {
@@ -170,6 +185,9 @@ class AppDrawerViewModel @Inject constructor(
     private val mediaLaunchGate: com.echo.core.data.launch.MediaLaunchGate,
     private val platformDao: com.echo.core.data.database.dao.PlatformDao,
     private val appCategoryRepository: AppCategoryRepository,
+    private val musicRepository: com.echo.core.domain.repository.MusicRepository,
+    private val videoRepository: com.echo.core.domain.repository.VideoRepository,
+    private val bookRepository: com.echo.core.domain.repository.BookRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AppDrawerUiState())
     val uiState: StateFlow<AppDrawerUiState> = _uiState.asStateFlow()
@@ -185,7 +203,7 @@ class AppDrawerViewModel @Inject constructor(
             val hidden = appCategoryRepository.hiddenEverywhere()
             // owner, 2026-10-05: an installed app that is also in the game library shows its cover
             val covers = libraryCovers()
-            val apps = appRepository.getInstalledApps().filterNot { it.packageName in hidden }.map { app -> covers[app.packageName]?.let { app.copy(art = it) } ?: app } + romsInLibrary()
+            val apps = appRepository.getInstalledApps().filterNot { it.packageName in hidden }.map { app -> covers[app.packageName]?.let { app.copy(art = it) } ?: app } + romsInLibrary() + mediaInLibrary()
             _uiState.update {
                 it.copy(
                     allApps = apps.sortedBy { app -> app.label.lowercase() },
@@ -199,6 +217,12 @@ class AppDrawerViewModel @Inject constructor(
 
     private suspend fun libraryCovers(): Map<String, String> =
         com.echo.core.domain.model.appCovers(gameRepository.observeAllGames().first())
+
+    private suspend fun mediaInLibrary(): List<InstalledApp> = runCatching {
+        albumCases(musicRepository.observeAllTracks().first()) +
+            videoCases(videoRepository.observeAllVideos().first()) +
+            bookCases(bookRepository.observeAllBooks().first())
+    }.getOrElse { timber.log.Timber.w(it, "Media for the drawer failed to load"); emptyList() }
 
     private suspend fun romsInLibrary(): List<InstalledApp> {
         // a game a launcher app opens with its own shortcut (owner, 2026-10-05: the Steam games GameNative runs)
@@ -280,6 +304,11 @@ class AppDrawerViewModel @Inject constructor(
 
     fun launchApp(packageName: String) {
         val app = _uiState.value.visibleApps.firstOrNull { it.packageName == packageName }
+        app?.media?.let { media ->
+            menuSound.play(MenuSound.SELECT)
+            _uiState.update { it.copy(pendingMediaOpen = media) }
+            return
+        }
         menuSound.play(MenuSound.LAUNCH)
 
         if (app?.gameId != null) {
@@ -294,6 +323,15 @@ class AppDrawerViewModel @Inject constructor(
 
     fun onRomLaunchHandled() = _uiState.update { it.copy(pendingRomLaunch = null) }
 
+    fun onMediaOpenHandled() = _uiState.update { it.copy(pendingMediaOpen = null) }
+
+    // X in Music or Books: artists or authors, or genres
+    fun toggleMediaGrouping() {
+        menuSound.play(MenuSound.SELECT)
+        _uiState.update { it.copy(mediaChipsByGenre = !it.mediaChipsByGenre, systemFilter = null, selectedIndex = 0) }
+        applyFilter()
+    }
+
     fun onGameMenuHandled() = _uiState.update { it.copy(pendingGameMenu = null) }
 
     fun onCrossBarAddHandled() = _uiState.update { it.copy(pendingCrossBarAdd = null) }
@@ -303,6 +341,7 @@ class AppDrawerViewModel @Inject constructor(
     }
 
     fun openAppMenu(app: InstalledApp) {
+        if (app.media != null) return
         if (app.gameId != null) {
             menuSound.play(MenuSound.SELECT)
             _uiState.update { it.copy(pendingGameMenu = app.gameId) }
@@ -590,7 +629,9 @@ class AppDrawerViewModel @Inject constructor(
             }
             GamepadAction.SELECT -> {
                 val app = state.visibleApps.getOrNull(cur)
-                if (app != null) holdToLaunch(app.packageName)
+                // media plays inside ECHO, so it acts at once; a launch out of ECHO is a hold
+                if (app?.media != null) launchApp(app.packageName)
+                else if (app != null) holdToLaunch(app.packageName)
             }
 
             else -> Unit
@@ -608,14 +649,15 @@ class AppDrawerViewModel @Inject constructor(
         // the genre narrows the Games section first, so each system chip counts what it will show
         val tabApps = state.allApps.filter { app -> state.activeFilter.matches(app) }
             .let { if (state.activeFilter == AppFilter.GAMES) it.ofGenre(state.genreFilter) else it }
-        val chips = when {
-            state.activeFilter != AppFilter.GAMES -> emptyList()
-            state.chipsByGenre -> genreChips(tabApps)
-            else -> systemChips(tabApps)
+        val chips = when (state.activeFilter) {
+            AppFilter.GAMES -> if (state.chipsByGenre) genreChips(tabApps) else systemChips(tabApps)
+            AppFilter.MUSIC, AppFilter.BOOKS -> mediaChips(tabApps, state.mediaChipsByGenre)
+            else -> emptyList()
         }
         val system = state.systemFilter?.takeIf { id -> chips.any { it.id == id } }
 
-        val inTab = tabApps.ofChip(system, state.chipsByGenre)
+        val inTab = if (state.activeFilter.isMedia) tabApps.ofMediaChip(system, state.mediaChipsByGenre)
+            else tabApps.ofChip(system, state.chipsByGenre)
             .let { apps ->
                 if (state.activeFilter == AppFilter.RECENT) {
                     apps.sortedByDescending { it.lastUsedAt }

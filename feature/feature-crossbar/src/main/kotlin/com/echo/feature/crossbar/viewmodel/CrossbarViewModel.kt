@@ -2480,6 +2480,16 @@ class CrossbarViewModel @Inject constructor(
 
     // owner, 2026-10-08: Game Info from the App Drawer's Options did nothing, since the drawer's game is seldom in
     // the crossbar's column; the column's row when it is there, else the game from the library
+    // owner, 2026-10-08: an album, video or book picked in the App Drawer opens as the crossbar's own column opens
+    // it: an album plays from its first track, a video plays, a book opens in the reader
+    fun openDrawerMedia(media: com.echo.feature.appbar.DrawerMedia) {
+        when (media.kind) {
+            com.echo.feature.appbar.MediaKind.MUSIC -> music.playAlbum(media.ref)
+            com.echo.feature.appbar.MediaKind.VIDEO -> _uiState.update { it.copy(activeVideoId = media.ref, activeVideoAutoPlay = true) }
+            com.echo.feature.appbar.MediaKind.BOOK -> bookshelf.openBook(media.ref)
+        }
+    }
+
     internal fun openGameInfoFor(gameId: Long) {
         viewModelScope.launch {
             val item = gameRowFor(gameId, _uiState.value.currentItems) {

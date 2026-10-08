@@ -19,6 +19,11 @@ released; it becomes the next release's notes.
 - **Edit Genre** on a track, a book, or an album in Albums (which sets all its tracks) picks one of
   the library's genres, a new one, or puts back the file's own. Rescans keep what you set.
 
+### App Drawer
+- The drawer has **Music** (albums), **Videos** and **Books** sections, each shown when that library has
+  something in it. A plays the album, plays the video or opens the book.
+- In Music and Books, X switches the buttons between artists (or authors) and genres.
+
 ### Photos and look
 - Setting a photo as the wallpaper lets you move and zoom it first (d-pad or drag, LT/RT or pinch);
   the wallpaper keeps exactly what the screen showed.

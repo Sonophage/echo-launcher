@@ -97,6 +97,7 @@ internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits)
 
 // what a case's spine says: the console for a game in the library, else the kind of app
 internal fun caseLabel(app: InstalledApp): String = when {
+    app.media != null -> app.media.kind.label
     app.platformName != null -> app.platformName
     app.isEmulator -> "Emulator"
     app.isGame || app.gameId != null -> "Game"

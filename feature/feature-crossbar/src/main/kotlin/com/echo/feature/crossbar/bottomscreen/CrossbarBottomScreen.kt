@@ -159,10 +159,7 @@ class CrossbarBottomScreen(
         lastLaunch.value?.gameId?.let(vm.launching::resumeGame)
     }
 
-    private fun drawerAppItem(app: com.echo.feature.appbar.InstalledApp) = CrossbarItem(
-        id = app.packageName, title = app.label, packageName = app.packageName, isAndroidApp = true,
-        lastOpenedAt = app.lastUsedAt.takeIf { it > 0L }, totalPlayTimeMillis = app.playTimeMillis,
-    )
+    private fun drawerAppItem(app: com.echo.feature.appbar.InstalledApp) = drawerCaseItem(app)
 
     val drawerInfo get() = link.drawerInfo
 

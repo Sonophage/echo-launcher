@@ -448,6 +448,9 @@ private fun drawerGlyph(section: AppFilter): ImageVector = when (section) {
     AppFilter.APPS -> Icons.Outlined.Apps
     AppFilter.EMULATORS -> Icons.Outlined.VideogameAsset
     AppFilter.GAMES -> Icons.Outlined.Games
+    AppFilter.MUSIC -> Icons.Outlined.MusicNote
+    AppFilter.VIDEOS -> Icons.Outlined.Movie
+    AppFilter.BOOKS -> Icons.AutoMirrored.Outlined.MenuBook
 }
 
 private fun filterGlyph(filter: RecentFilter): ImageVector = when (filter) {

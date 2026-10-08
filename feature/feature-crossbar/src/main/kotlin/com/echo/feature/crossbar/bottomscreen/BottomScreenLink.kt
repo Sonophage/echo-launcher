@@ -169,3 +169,28 @@ fun sessionLabel(since: Long?, now: Long): String {
 
 // a game counts as playing while ECHO is behind the game it launched last
 fun playingGameId(hostShown: Boolean, lastLaunchGameId: Long?): Long? = lastLaunchGameId.takeIf { !hostShown }
+
+// a drawer case as the Recent view draws it: an album, video or book as its own kind (its art, its label),
+// an app as an app (owner, 2026-10-08: an album showed as "APP" with a letter tile)
+internal fun drawerCaseItem(app: com.echo.feature.appbar.InstalledApp): CrossbarItem {
+    val last = app.lastUsedAt.takeIf { it > 0L }
+    val media = app.media ?: return CrossbarItem(
+        id = app.packageName, title = app.label, packageName = app.packageName, isAndroidApp = true,
+        lastOpenedAt = last, totalPlayTimeMillis = app.playTimeMillis,
+    )
+    val type = when (media.kind) {
+        com.echo.feature.appbar.MediaKind.MUSIC -> com.echo.feature.crossbar.viewmodel.CrossbarItemType.MUSIC_GROUP
+        com.echo.feature.appbar.MediaKind.VIDEO -> com.echo.feature.crossbar.viewmodel.CrossbarItemType.VIDEO_FILE
+        com.echo.feature.appbar.MediaKind.BOOK -> com.echo.feature.crossbar.viewmodel.CrossbarItemType.LIBRARY_BOOK
+    }
+    val id = when (media.kind) {
+        com.echo.feature.appbar.MediaKind.MUSIC -> "mg_album_${media.ref}"
+        com.echo.feature.appbar.MediaKind.VIDEO -> "vid_${media.ref}"
+        com.echo.feature.appbar.MediaKind.BOOK -> "book_${media.ref}"
+    }
+    return CrossbarItem(
+        id = id, title = app.label, subtitle = listOfNotNull(media.maker, media.genre).joinToString("  ·  ").ifEmpty { null },
+        coverUri = app.art, artworkUri = app.art, type = type, lastOpenedAt = last,
+        musicGroupKey = media.ref.takeIf { media.kind == com.echo.feature.appbar.MediaKind.MUSIC },
+    )
+}

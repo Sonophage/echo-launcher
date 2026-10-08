@@ -271,6 +271,18 @@ class CrossbarMusic(
         }
     }
 
+    // an album from its first track, in track order (the App Drawer's Music)
+    internal fun playAlbum(key: String) {
+        scope.launch {
+            val album = musicRepository.observeAllTracks().first().filter { it.album.musicGroupKey() == key }
+                .sortedWith(compareBy({ it.trackNumber ?: Int.MAX_VALUE }, { it.displayTitle }))
+            if (album.isEmpty()) return@launch
+            vm.launching.awaitDiscHandOff(album.first().artUri)
+            musicPlayer.setQueue(album, 0)
+            vm.showMusicPlayer()
+        }
+    }
+
     fun musicPlayPause() = musicPlayer.playPause()
     fun musicNext() = musicPlayer.next()
     fun musicPrev() = musicPlayer.prev()

@@ -103,6 +103,8 @@ fun AppDrawerScreen(
     chipsByGenre: Boolean = false,
     // X in the Games section switches the grouping between systems and genres (owner, 2026-10-08)
     onToggleGrouping: (() -> Unit)? = null,
+    // an album, video or book picked in the drawer, opened by the crossbar
+    onOpenMedia: (DrawerMedia) -> Unit = {},
 
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
@@ -143,6 +145,8 @@ fun AppDrawerScreen(
                     pendingGamepadAction == GamepadAction.NEXT_PAGE -> onOpenAppSearch("")
                 pendingGamepadAction == GamepadAction.PREV_PAGE -> closeDrawer()
                 groupingToggleApplies(pendingGamepadAction, state.activeFilter) && onToggleGrouping != null -> onToggleGrouping()
+                pendingGamepadAction == GamepadAction.CHANGE_SORT && mediaGroupingHint(state.activeFilter, false) != null ->
+                    viewModel.toggleMediaGrouping()
                 else -> viewModel.handleGamepadAction(pendingGamepadAction)
             }
             onGamepadActionConsumed()
@@ -153,6 +157,12 @@ fun AppDrawerScreen(
         val id = state.pendingGameMenu ?: return@LaunchedEffect
         onGameMenu(id)
         viewModel.onGameMenuHandled()
+    }
+
+    LaunchedEffect(state.pendingMediaOpen) {
+        val media = state.pendingMediaOpen ?: return@LaunchedEffect
+        onOpenMedia(media)
+        viewModel.onMediaOpenHandled()
     }
 
     LaunchedEffect(state.pendingRomLaunch) {
@@ -228,7 +238,8 @@ fun AppDrawerScreen(
             onTouchInteraction()
             viewModel.onSystemChipTapped(id)
         },
-        groupingHint = onToggleGrouping?.let { toggle -> groupingHintLabel(chipsByGenre) to toggle },
+        groupingHint = mediaGroupingHint(state.activeFilter, state.mediaChipsByGenre)?.let { it to viewModel::toggleMediaGrouping }
+            ?: onToggleGrouping?.let { toggle -> groupingHintLabel(chipsByGenre) to toggle },
         onCloseMenu = { viewModel.closeAppMenu() },
         onConfirmUninstall = { viewModel.confirmUninstall() },
         onCancelUninstall = { viewModel.cancelUninstall() },
@@ -325,7 +336,7 @@ internal fun AppDrawerContent(
             com.echo.core.ui.components.EchoHintBar(
                 items = listOfNotNull(
                     com.echo.core.ui.components.ControllerPromptItem(GamepadAction.BACK, "Back"),
-                    groupingHint?.takeIf { state.activeFilter == AppFilter.GAMES }
+                    groupingHint?.takeIf { state.activeFilter == AppFilter.GAMES || mediaGroupingHint(state.activeFilter, false) != null }
                         ?.let { com.echo.core.ui.components.ControllerPromptItem(GamepadAction.CHANGE_SORT, it.first) },
                     com.echo.core.ui.components.ControllerPromptItem(GamepadAction.NEXT_PAGE, "Search"),
                 ),

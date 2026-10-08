@@ -44,8 +44,7 @@ class AppDrawerViewModelTest {
 
             mockk(relaxed = true),
             mockk(relaxed = true),
-            appCategories,
-        )
+            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
     }
 
     @After
@@ -75,7 +74,7 @@ class AppDrawerViewModelTest {
         every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf(listOf(
             game(1, "psp", "Role Playing Game"), game(2, "psp", "Action"), game(3, "snes", "Action RPG")))
         val platforms = mockk<com.echo.core.data.database.dao.PlatformDao>(relaxed = true)
-        viewModel = AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), platforms, appCategories)
+        viewModel = AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), platforms, appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.setFilter(AppFilter.GAMES)
         viewModel.setGenreFilter(com.echo.core.domain.model.GameGenre.RPG)
@@ -233,8 +232,7 @@ class AppDrawerViewModelTest {
 
             mockk(relaxed = true),
             mockk(relaxed = true),
-            appCategories,
-        )
+            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertFalse(viewModel.uiState.value.allApps.any { it.packageName == "com.example.browser" })
@@ -269,8 +267,7 @@ class AppDrawerViewModelTest {
 
             mockk(relaxed = true),
             mockk(relaxed = true),
-            appCategories,
-        )
+            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
     }
 
     // owner, 2026-10-05: an empty section is not shown, and LT/RT step over it
@@ -295,7 +292,8 @@ class AppDrawerViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(AppFilter.entries, state.sections)
+        // the media sections hide, as any empty section does; Recently Used stays though it is empty
+        assertEquals(AppFilter.entries.filterNot { it.isMedia }, state.sections)
         assertEquals(AppFilter.RECENT, state.activeFilter)
         assertTrue("the section itself is empty", state.visibleApps.isEmpty())
     }
@@ -303,13 +301,14 @@ class AppDrawerViewModelTest {
     @Test
     fun `LB and RB wrap around the tabs, like the Tabs hint and the settings tabs`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.setFilter(AppFilter.entries.last())
+        val shown = viewModel.uiState.value.sections
+        viewModel.setFilter(shown.last())
 
         viewModel.handleGamepadAction(GamepadAction.NEXT_CATEGORY)
-        assertEquals(AppFilter.entries.first(), viewModel.uiState.value.activeFilter)
+        assertEquals(shown.first(), viewModel.uiState.value.activeFilter)
 
         viewModel.handleGamepadAction(GamepadAction.PREV_CATEGORY)
-        assertEquals(AppFilter.entries.last(), viewModel.uiState.value.activeFilter)
+        assertEquals(shown.last(), viewModel.uiState.value.activeFilter)
     }
 
     @Test
@@ -481,7 +480,7 @@ class AppDrawerViewModelTest {
 
     private fun drawerOver(apps: List<InstalledApp>): AppDrawerViewModel {
         coEvery { repository.getInstalledApps() } returns apps
-        return AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), appCategories)
+        return AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
     }
 
     private fun pick(vm: AppDrawerViewModel, letter: Char) {

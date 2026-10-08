@@ -47,6 +47,9 @@ data class InstalledApp(
 
     // a library game's genre (owner, 2026-10-08), for the Games section's genre filter
     val genre: com.echo.core.domain.model.GameGenre? = null,
+
+    // an album, video or book on the wall, not an app (owner, 2026-10-08)
+    val media: DrawerMedia? = null,
 )
 
 @Singleton
