@@ -99,7 +99,7 @@ class EchoThemeStorePartsTest {
         assertEquals(null, bundle.manifest.buttonSet, "a setting the person never chose is not carried")
     }
 
-    // owner, 2026-10-07: the Mix screen takes each part from any theme
+    // owner, 2026-10-07: a theme's store page takes each part on its own
     @Test
     fun `mixing takes one part from another theme and leaves the rest`() = runTest {
         val store = EchoThemeStore(context, media)

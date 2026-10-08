@@ -1,6 +1,6 @@
 package com.echo.themekit
 
-// the parts a theme can set, each applied on its own from the Mix screen (owner, 2026-10-07)
+// the parts a theme can set, each applied on its own from a theme's store page (owner, 2026-10-07)
 enum class ThemePart(val label: String) {
     ICONS("Icons"),
     WALLPAPER("Wallpaper"),

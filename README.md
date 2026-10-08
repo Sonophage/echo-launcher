@@ -525,12 +525,15 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 
 ### Theme store — *Look ▸ Store*
 
-A full panel of themes, each card headed by its hero picture: **On this device** (your saved themes)
-and **Online** (the [echo-themes](https://github.com/Sonophage/echo-themes) store). A card opens the
-theme's page: its details from its README, the parts it has, its screenshots (**LEFT/RIGHT**), and **A**
-to apply it, or to download an online theme first. **Y** on a saved theme has Apply, Share and Remove.
-**Mix** takes each part of the look (icons, wallpaper, colours and layout, wave, sounds, boot, game
-start, buttons) from any saved theme that has it; *Look ▸ Theme* then shows **Mixed**.
+A hero shows the theme in focus, over two shelves of cards: **Online** (the
+[echo-themes](https://github.com/Sonophage/echo-themes) store, each marked New, Update or Downloaded) and
+**On this device** (your saved themes, led by **Your look**). A card opens the theme's page: its wallpaper
+behind, its details and screenshots (**LT/RT**), and on the right a row for each part of the look (icons,
+wallpaper, colours and layout, wave, sounds, boot, game start, buttons). Each row says which theme that
+part comes from now; **A** on a row ticks it in or out, and **A** on the top row applies the ticked parts,
+downloading an online theme first. Parts from different themes make *Look ▸ Theme* show **Mixed**. **Your
+look** opens the same page for the look in use, with **Save as Theme**. **Y** on a saved theme has Apply,
+Share and Remove.
 
 ### Colour and theme — *Look ▸ Theme*
 

@@ -4,7 +4,7 @@ import com.echo.themekit.ThemePart
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-// owner, 2026-10-07: once the Mix screen takes parts from different themes, Theme says the look is a mix
+// owner, 2026-10-07: once theme pages take parts from different themes, Theme says the look is a mix
 class ActiveThemeLabelTest {
     @Test
     fun `one theme's parts name it, parts from two themes are a mix, none is the default`() {

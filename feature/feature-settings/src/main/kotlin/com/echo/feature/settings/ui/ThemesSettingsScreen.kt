@@ -323,6 +323,8 @@ internal fun FocusableStrip(
     focusRequester: FocusRequester? = null,
     onFocusChange: (Boolean) -> Unit,
     onSelect: () -> Unit,
+    // the white plate behind a focused strip; off where the content marks focus itself (the store's cards)
+    plate: Boolean = true,
     content: @Composable (focused: Boolean) -> Unit,
 ) {
     val focusTracker  = LocalSettingsFocusTracker.current
@@ -364,7 +366,7 @@ internal fun FocusableStrip(
             .fillMaxWidth()
 
             .padding(horizontal = 40.dp)
-            .settingsSelectedPlate(isFocused)
+            .then(if (plate) Modifier.settingsSelectedPlate(isFocused) else Modifier)
             .focusRequester(fr)
             .onGloballyPositioned {
                 rowPositions?.put(fr, it.localToRoot(Offset.Zero).y)

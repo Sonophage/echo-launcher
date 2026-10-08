@@ -44,7 +44,7 @@ data class ThemesSettingsUiState(
 
     val savedThemes: List<EchoThemeStore.SavedTheme> = emptyList(),
 
-    // which theme each part in use came from (the Mix screen)
+    // which theme each part in use came from (the theme page shows it)
     val partSources: Map<ThemePart, String> = emptyMap(),
     // the theme whose store page is open
     val page: ThemePage? = null,
@@ -69,20 +69,41 @@ data class ThemePage(
     val busy: Boolean = false,
     // the online store has a newer file than the one saved
     val update: Boolean = false,
+    // owner, 2026-10-07: the page is where parts are picked. The parts ticked to take; null takes every part
+    // the theme has
+    val chosen: Set<ThemePart>? = null,
+    // the rail row the controller is on: 0 is the action, then one row per part in ThemePart order
+    val cursor: Int = 0,
+    // the page of the look in use, saved as a theme or not: each part and where it came from
+    val current: Boolean = false,
+    // the picture behind the page: a saved theme's wallpaper, else the store's hero
+    val backdrop: String? = null,
 ) {
+    val partsToTake: Set<ThemePart> get() = (chosen ?: parts) intersect parts
+
     val actionLabel: String get() = when {
+        current -> "Save as Theme"
         busy -> if (update) "Updating" else "Downloading"
-        update -> "Update"
-        savedId != null -> "Apply"
-        else -> "Download"
+        partsToTake.isEmpty() -> "Pick a part"
+        update -> "Update and apply"
+        savedId == null -> "Download and apply"
+        partsToTake == parts -> "Apply"
+        else -> "Apply ${partsToTake.size} part${if (partsToTake.size == 1) "" else "s"}"
     }
+
+    // A on a part row ticks it in or out; a part the theme lacks, or the current look, has nothing to tick
+    fun toggled(part: ThemePart): ThemePage =
+        if (current || part !in parts) this
+        else copy(chosen = partsToTake.let { if (part in it) it - part else it + part })
 }
 
-internal fun pageOf(theme: EchoThemeStore.SavedTheme, details: EchoThemeStore.ThemeDetails?) = ThemePage(
+
+internal fun pageOf(theme: EchoThemeStore.SavedTheme, details: EchoThemeStore.ThemeDetails?, backdrop: String? = null) = ThemePage(
     name = theme.name, author = theme.author, version = theme.version,
     description = details?.readme?.description ?: theme.description, parts = theme.parts,
     hero = theme.heroPath ?: theme.previewPath, body = details?.readme?.body,
     screenshots = details?.screenshotPaths.orEmpty(), savedId = theme.id,
+    backdrop = backdrop ?: theme.heroPath ?: theme.previewPath,
 )
 
 // owner, 2026-10-07: with parts taken from more than one theme, the look in use is a mix, not the last theme applied
@@ -169,10 +190,11 @@ class ThemesSettingsViewModel @Inject constructor(
     // the theme store's page for one theme: its hero, README and screenshots
     fun openThemePage(id: String) {
         val theme = uiState.value.savedThemes.firstOrNull { it.id == id } ?: return
-        _extra.update { it.copy(page = pageOf(theme, null)) }
+        val wallpaper = themeStore.wallpaperPath(id)
+        _extra.update { it.copy(page = pageOf(theme, null, wallpaper)) }
         viewModelScope.launch {
             val details = themeStore.details(id)
-            _extra.update { e -> if (e.page?.savedId == id) e.copy(page = pageOf(theme, details)) else e }
+            _extra.update { e -> if (e.page?.savedId == id) e.copy(page = pageOf(theme, details, wallpaper).copy(chosen = e.page.chosen, cursor = e.page.cursor)) else e }
         }
     }
 
@@ -181,7 +203,10 @@ class ThemesSettingsViewModel @Inject constructor(
         val theme = uiState.value.online?.firstOrNull { it.id == id } ?: return
         val saved = uiState.value.savedThemes.firstOrNull { it.name == theme.name }
         val update = ThemeCatalogRepository.standing(saved, theme) == ThemeCatalogRepository.Standing.UPDATE
-        _extra.update { it.copy(page = ThemePage(name = theme.name, hero = theme.heroUrl, screenshots = theme.screenshotUrls, savedId = saved?.id, online = theme, update = update)) }
+        // ponytail: an online theme's parts are unknown until it is downloaded, so all are offered; the
+        // store's index could list them
+        _extra.update { it.copy(page = ThemePage(name = theme.name, hero = theme.heroUrl, screenshots = theme.screenshotUrls, savedId = saved?.id, online = theme, update = update,
+            parts = saved?.parts ?: ThemePart.entries.toSet(), backdrop = saved?.let { s -> themeStore.wallpaperPath(s.id) } ?: theme.heroUrl)) }
         viewModelScope.launch {
             val readme = catalog.readme(theme) ?: return@launch
             _extra.update { e ->
@@ -191,34 +216,54 @@ class ThemesSettingsViewModel @Inject constructor(
         }
     }
 
-    // A on a page: apply a saved theme, or download an online one first
+    // the look in use as a page: every part and the theme it came from, saved as a theme or not
+    fun openCurrentLook() {
+        _extra.update { it.copy(page = ThemePage(name = uiState.value.activeThemeName, parts = ThemePart.entries.toSet(), current = true)) }
+    }
+
+    // UP and DOWN on a page's rail
+    fun pageMove(delta: Int) {
+        _extra.update { e -> e.copy(page = e.page?.let { it.copy(cursor = (it.cursor + delta).coerceIn(0, ThemePart.entries.size)) }) }
+    }
+
+    // A on a page's rail: the action row runs the page's action, a part row ticks the part
+    fun pageSelect() {
+        val page = uiState.value.page ?: return
+        if (page.cursor == 0) return pageAction()
+        val part = ThemePart.entries.getOrNull(page.cursor - 1) ?: return
+        _extra.update { e -> e.copy(page = e.page?.toggled(part)) }
+    }
+
+    // the page's action: apply the ticked parts of a saved theme, or download an online one and then apply them
     fun pageAction() {
         val page = uiState.value.page ?: return
-        if (page.busy) return
-        page.savedId?.takeIf { !page.update }?.let { applySavedTheme(it); closeThemePage(); return }
+        if (page.busy || page.current || page.partsToTake.isEmpty()) return
+        val take = page.partsToTake
+        page.savedId?.takeIf { !page.update }?.let { id -> applyParts(id, take); closeThemePage(); return }
         val online = page.online ?: return
         _extra.update { it.copy(page = page.copy(busy = true)) }
         viewModelScope.launch {
             when (val result = catalog.install(online)) {
-                is ThemeCatalogRepository.Install.Done -> _extra.update { e ->
-                    e.copy(
-                        page = e.page?.copy(busy = false, update = false, savedId = result.theme.id, parts = result.theme.parts),
-                        installMessage = "${if (page.update) "Updated" else "Downloaded"} \"${result.theme.name}\"",
-                    )
+                is ThemeCatalogRepository.Install.Done -> {
+                    // the downloaded file says which parts the theme really has
+                    applyParts(result.theme.id, take intersect result.theme.parts)
+                    _extra.update { e ->
+                        e.copy(page = null, installMessage = "${if (page.update) "Updated" else "Downloaded"} \"${result.theme.name}\"")
+                    }
                 }
                 is ThemeCatalogRepository.Install.Failed -> _extra.update { e -> e.copy(page = e.page?.copy(busy = false), installMessage = result.reason) }
             }
         }
     }
 
-    fun closeThemePage() = _extra.update { it.copy(page = null) }
-
-    // one part of a theme, from the Mix screen
-    fun applyPart(id: String, part: ThemePart) {
+    private fun applyParts(id: String, parts: Set<ThemePart>) {
+        if (parts.isEmpty()) return
         viewModelScope.launch {
-            if (!themeStore.apply(id, setOf(part))) _extra.update { it.copy(installMessage = "Could not apply the theme's ${part.label.lowercase()}") }
+            if (!themeStore.apply(id, parts)) _extra.update { it.copy(installMessage = "Could not apply the theme") }
         }
     }
+
+    fun closeThemePage() = _extra.update { it.copy(page = null) }
 
     fun saveCurrentLookAsTheme(name: String) {
         viewModelScope.launch {

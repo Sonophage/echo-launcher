@@ -64,6 +64,9 @@ class EchoThemeStore @Inject constructor(
         val catalogSha: String? = null,
     )
 
+    // a saved theme's own wallpaper, for its store page (owner, 2026-10-07: the theme, not a screenshot)
+    fun wallpaperPath(id: String): String? = File(dir, "$id.wallpaper.jpg").takeIf { it.isFile }?.absolutePath
+
     // a theme's store page: its README and its screenshots, unpacked to files
     data class ThemeDetails(val readme: ThemeReadme, val screenshotPaths: List<String>)
 
@@ -98,7 +101,7 @@ class EchoThemeStore @Inject constructor(
         ).also { if (scaled !== bitmap) bitmap.recycle() }
     }
 
-    // applies the theme, or only [parts] of it from the Mix screen. A whole theme sets what it has and clears
+    // applies the theme, or only [parts] of it, ticked on its store page. A whole theme sets what it has and clears
     // the wallpaper, icons and colours it leaves out; a part ECHO has only one of (sounds, boot, game start,
     // wave design, buttons) keeps the person's own when the theme leaves it out
     suspend fun apply(id: String, parts: Set<ThemePart> = ThemePart.entries.toSet()): Boolean = withContext(Dispatchers.IO) {
