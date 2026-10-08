@@ -76,7 +76,6 @@ import com.echo.feature.crossbar.viewmodel.RecentFilter
 import com.echo.feature.crossbar.viewmodel.RecentKind
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.groupRecentsByDay
-import com.echo.feature.crossbar.viewmodel.isInstalledApp
 import com.echo.feature.crossbar.viewmodel.recentKind
 import com.echo.core.common.format.playTimeLabel
 import com.echo.core.common.format.relativeTime
@@ -333,10 +332,15 @@ private fun RecentRow(item: CrossbarItem, focused: Boolean, dim: Float, now: Lon
 }
 
 
-// the art fills the page like a wallpaper, so the wave draws over it
+// the art fills the page like a wallpaper, so the wave draws over it. An app with no art gets the crossbar's
+// own app backdrop, its icon's colour, rather than black (owner, 2026-10-08)
 @Composable
 private fun BackdropArt(item: CrossbarItem?, alignment: Alignment) {
-    val art = item?.backdropArt?.firstOrNull() ?: return
+    val art = item?.backdropArt?.firstOrNull()
+    if (art == null) {
+        item?.takeIf(::isAppWithoutArt)?.packageName?.let { CrossbarAppIconBackdrop(it, fallbackAccent = PanelBase) }
+        return
+    }
     AsyncImage(
         model = rememberArtworkModel(art),
         contentDescription = null,
@@ -346,10 +350,13 @@ private fun BackdropArt(item: CrossbarItem?, alignment: Alignment) {
     )
 }
 
-// an app with no art shows its icon, which sits above the wave
+// an app with no art shows its icon, which sits above the wave. Anything with a package is an Android app or
+// an Android game, so an app marked as a game (it has a game row) keeps its icon too
+internal fun isAppWithoutArt(item: CrossbarItem): Boolean = item.backdropArt.isEmpty() && item.packageName != null
+
 @Composable
 private fun AppIconArt(item: CrossbarItem?, iconSize: Dp) {
-    if (item?.backdropArt?.firstOrNull() != null || item?.isInstalledApp != true) return
+    if (item == null || !isAppWithoutArt(item)) return
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         AndroidAppIcon(packageName = item.packageName, title = item.title, size = iconSize)
     }
