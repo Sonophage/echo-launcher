@@ -95,12 +95,14 @@ fun VhsCoverArt(model: Any?, u: DesignUnits) {
     }
 }
 
+// the smallest an app's logo on a case is drawn: 72 design units is ~44dp on the Konker (owner, 2026-10-07: the
+// App Drawer's and Search's logos stay readable on small screens)
+val VHS_ICON_MIN = 64.dp
+
 // an app's cover: its colour with ECHO's echo rings, its icon large and faint and again small and sharp, and its
-// name. Without an icon, glyph stands in for it
+// name. Without an icon, glyph stands in for it. [iconMin] keeps the icon from shrinking below that size
 @Composable
-// [iconMin] keeps the app's icon from shrinking with the screen below that size (the App Drawer on a small
-// handheld, owner 2026-10-07)
-fun VhsAppFace(label: String, icon: AppIconArt?, tint: Color, u: DesignUnits, iconMin: Dp = 0.dp, glyph: @Composable () -> Unit) {
+fun VhsAppFace(label: String, icon: AppIconArt?, tint: Color, u: DesignUnits, iconMin: Dp = VHS_ICON_MIN, glyph: @Composable () -> Unit) {
     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(u.dp(4))).background(tint)) {
         Box(Modifier.fillMaxSize().coverRings()) {
             icon?.let { Image(it.bitmap, null, Modifier.align(Alignment.BottomEnd).offset(u.dp(30), u.dp(18)).size(u.dp(130)).rotate(-14f).graphicsLayer(alpha = 0.16f)) }
