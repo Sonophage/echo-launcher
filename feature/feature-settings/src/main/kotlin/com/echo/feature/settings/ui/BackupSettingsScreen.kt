@@ -83,7 +83,11 @@ fun BackupSettingsScreen(
                 }
             SettingsValueRow(label = "ROM Files",           value = "✗  (not included)")
 
-            SettingsValueRow(label = "API Keys",            value = "✓  (re-enter on another device or after a reinstall)")
+            SettingsValueRow(
+                label    = "API Keys",
+                value    = "This device only",
+                sublabel = "Encrypted to this device: re-enter them after a reinstall or on another device",
+            )
 
             SettingsGroup("Restore")
 
@@ -98,8 +102,8 @@ fun BackupSettingsScreen(
             SettingsRow(
                 label    = "After Restoring",
                 sublabel = "Your folders come back, but Android's access to them does not. Re-link " +
-                    "each root under its section's Root Access (Library, Music, Video, Photo) — one " +
-                    "tap each; re-linking a root restores everything under it at once.",
+                    "each folder under Permissions ▸ Folders — one tap each; re-linking a folder " +
+                    "restores everything under it at once.",
             )
 
             if (state.isWorking) {

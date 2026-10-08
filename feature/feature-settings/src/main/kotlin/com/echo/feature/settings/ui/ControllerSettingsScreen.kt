@@ -9,6 +9,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,6 +31,7 @@ fun ControllerSettingsScreen(
     viewModel: ControllerSettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    var confirmReset by remember { mutableStateOf(false) }
 
     SettingsPageScaffold(
         subtitle = "Controller",
@@ -168,8 +172,18 @@ fun ControllerSettingsScreen(
             SettingsRow(
                 label    = "Reset All Controller Settings",
                 sublabel = "Returns every controller setting to its default",
-                onClick  = { viewModel.resetToDefaults() },
+                onClick  = { confirmReset = true },
             )
         }
+    }
+
+    if (confirmReset) {
+        SettingsConfirmOverlay(
+            title = "Reset Controller Settings?",
+            message = "Every controller setting returns to its default.",
+            confirmLabel = "Reset",
+            onConfirm = { confirmReset = false; viewModel.resetToDefaults() },
+            onCancel = { confirmReset = false },
+        )
     }
 }

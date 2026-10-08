@@ -40,6 +40,7 @@ fun LogsSettingsScreen(
 
     var menuFor by remember { mutableStateOf<String?>(null) }
     var menuIndex by remember { mutableIntStateOf(0) }
+    var confirmClear by remember { mutableStateOf(false) }
     val menuRows = listOf(MenuRow("share", "Share"))
 
     Box(modifier = modifier) {
@@ -100,10 +101,7 @@ fun LogsSettingsScreen(
             SettingsRow(
                 label   = "Clear All Logs",
                 onFocusChangedExternal = { focused -> if (focused) focusedLog = null },
-                onClick = {
-                    focusedLog = null
-                    viewModel.clearLogs()
-                },
+                onClick = { confirmClear = true },
             )
         }
     }
@@ -116,6 +114,15 @@ fun LogsSettingsScreen(
                 menuFor = null
             },
             onDismiss      = { menuFor = null },
+        )
+    }
+    if (confirmClear) {
+        SettingsConfirmOverlay(
+            title = "Clear All Logs?",
+            message = "Deletes every log file on this device.",
+            confirmLabel = "Clear All",
+            onConfirm = { confirmClear = false; focusedLog = null; viewModel.clearLogs() },
+            onCancel = { confirmClear = false },
         )
     }
     }

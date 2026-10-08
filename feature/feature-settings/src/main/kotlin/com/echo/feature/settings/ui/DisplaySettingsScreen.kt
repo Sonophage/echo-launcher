@@ -507,16 +507,6 @@ fun DisplaySettingsScreen(
                     )
                 }
             }
-            if (section == null || section == DisplaySection.LAYOUT) {
-                SettingsGroup("Orientation")
-
-                SettingsValueRow(
-                    label    = "Screen Orientation",
-                    sublabel = "Follows the device — the Crossbar is drawn for landscape, so a portrait " +
-                        "device will letterbox it",
-                    value    = "Android auto-rotate",
-                )
-            }
             if (section == null || section == DisplaySection.INPUT) {
                 SettingsGroup("Interface")
 

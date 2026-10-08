@@ -236,7 +236,7 @@ private fun ThemesSettingsContent(
                 SettingsToggleRow(
                     label    = "Color from Wallpaper",
                     sublabel = when {
-                        !state.hasWallpaper -> "Set a wallpaper under Wallpaper & Text first"
+                        !state.hasWallpaper -> "Set a wallpaper under Wallpaper first"
                         state.accentFromWallpaper -> "Following your wallpaper — changes with it"
                         else -> "Take the accent colour from your wallpaper"
                     },

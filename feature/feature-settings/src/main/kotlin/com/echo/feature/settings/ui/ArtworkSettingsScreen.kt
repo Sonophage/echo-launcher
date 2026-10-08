@@ -37,6 +37,7 @@ fun ArtworkSettingsScreen(
     val state by viewModel.uiState.collectAsState()
 
     var showImport by remember { mutableStateOf(false) }
+    var confirmClearAll by remember { mutableStateOf(false) }
     if (showImport) {
         ArtworkImportScreen(onBack = { showImport = false; viewModel.refreshFolderGrant() }, modifier = modifier)
         return
@@ -488,17 +489,28 @@ fun ArtworkSettingsScreen(
                 SettingsRow(
                     label    = "Clear All Artwork",
                     sublabel = "Fresh start: removes cached images, stored artwork, and every game's art links. Files in your artwork folder are kept — Relink or re-scrape to restore",
-                    onClick  = { viewModel.clearCache() },
+                    onClick  = { confirmClearAll = true },
                 )
             }
         }
     }
 
+    if (confirmClearAll) {
+        SettingsConfirmOverlay(
+            title = "Clear All Artwork?",
+            message = "Removes cached images, stored artwork and every game's art links. " +
+                "Files in your artwork folder are kept.",
+            confirmLabel = "Clear All",
+            onConfirm = { confirmClearAll = false; viewModel.clearCache() },
+            onCancel = { confirmClearAll = false },
+        )
+    }
+
     if (state.confirmRescrapeAll) {
         SettingsConfirmOverlay(
             title = "Re-Scrape All Games?",
-            message = "This will clear and re-scrape artwork for all ${state.status.total} games. " +
-                "Existing artwork will be replaced.",
+            message = "Scraped artwork for all ${state.status.total} games is fetched again. " +
+                "Art you picked or added is kept.",
             confirmLabel = "Re-Scrape All",
             onConfirm = { viewModel.confirmRescrapeAll() },
             onCancel = { viewModel.cancelRescrapeAll() },
