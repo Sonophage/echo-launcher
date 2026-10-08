@@ -156,11 +156,13 @@ A on a badge opens the full wall), **Screenshots**, **Info**, **Video** and **Ma
 | <img src="docs/screenshots/game-hover-panel.jpg" width="420"> | <img src="docs/screenshots/game-context-menu.jpg" width="420"> |
 | A focused game | Its options |
 | <img src="docs/screenshots/game-info.jpg" width="420"> | <img src="docs/screenshots/artwork-studio.jpg" width="420"> |
-| Game Info | The Artwork Studio: pick where the art comes from |
+| Game Info, with the game's achievements | The Artwork Studio: pick where the art comes from |
 | <img src="docs/screenshots/col-game-cards.jpg" width="420"> | <img src="docs/screenshots/game-list.jpg" width="420"> |
 | Console cards, each showing four covers from inside it | All Games |
 | <img src="docs/screenshots/game-console.jpg" width="420"> | <img src="docs/screenshots/context-menu-confirm.jpg" width="420"> |
 | One console's games, by cover | Anything destructive asks twice, with Cancel first |
+| <img src="docs/screenshots/achievements.jpg" width="420"> | <img src="docs/screenshots/settings-accounts.jpg" width="420"> |
+| Achievements: rarity, progress and every badge | Accounts: permissions, RetroAchievements, Steam and Discord |
 
 ### The App Drawer and Search
 
@@ -181,9 +183,9 @@ its **icon slot**; the main art is used only when the icon slot is empty.
 | | |
 |:---:|:---:|
 | <img src="docs/screenshots/app-drawer.jpg" width="420"> | <img src="docs/screenshots/app-drawer-context-menu.jpg" width="420"> |
-| The App Drawer | An item's options |
-| <img src="docs/screenshots/search.jpg" width="420"> | |
-| Search | |
+| The App Drawer: a game's details, achievements and last badges; X groups by system or genre | An item's options |
+| <img src="docs/screenshots/search.jpg" width="420"> | <img src="docs/screenshots/music-albums.jpg" width="420"> |
+| Search | Albums, browsed on the crossbar |
 
 ### Music, video, photos and books
 
@@ -202,7 +204,7 @@ place.
 | <img src="docs/screenshots/video-browser.jpg" width="420"> | <img src="docs/screenshots/video-player-controls.jpg" width="420"> |
 | Videos | The video player |
 | <img src="docs/screenshots/video-detail.jpg" width="420"> | |
-| A video's page: resume or start over | |
+| A video's page | |
 | <img src="docs/screenshots/video-player-options.jpg" width="420"> | <img src="docs/screenshots/launch-disc-music.jpg" width="420"> |
 | Speed, subtitles, audio track and screen mode | A song opening through the Lens launch |
 | <img src="docs/screenshots/photo-browser.jpg" width="420"> | <img src="docs/screenshots/photo-viewer.jpg" width="420"> |
@@ -519,6 +521,8 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 |:---:|:---:|
 | <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> | <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> |
 | Look | Colour Scheme, previewed on the live crossbar |
+| <img src="docs/screenshots/theme-store.jpg" width="420"> | <img src="docs/screenshots/theme-page.jpg" width="420"> |
+| Look ▸ Store: themes online and on this device | A theme's page: take all of it, or only the parts you want |
 | <img src="docs/screenshots/settings-controller.jpg" width="420"> | <img src="docs/screenshots/glyphs-playstation.jpg" width="420"> |
 | Controller ▸ Type picks the button glyphs | The same screen with PlayStation glyphs |
 | <img src="docs/screenshots/settings-touch.jpg" width="420"> | <img src="docs/screenshots/settings-wallpaper.jpg" width="420"> |
