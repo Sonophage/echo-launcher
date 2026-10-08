@@ -144,6 +144,8 @@ fun ProfileScreen(
                     .takeIf { profile.tab == ProfileTab.ACHIEVEMENTS && profile.data.sets.isNotEmpty() },
             ),
             onAction = onAction,
+            // the legend for the strip's dots sits in the footer's middle
+            centre = if (profile.tab == ProfileTab.ACHIEVEMENTS && profile.data.sets.isNotEmpty()) ({ ProviderLegend(u) }) else null,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
@@ -517,15 +519,37 @@ private fun CoverStrip(sets: List<AchievementSet>, art: Map<Long, String>, at: I
                     gameArt != null -> AsyncImage(rememberArtworkModel(gameArt), sets[i].title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                     steamArt != null -> AsyncImage(steamArt, sets[i].title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
-                Text(if (sets[i].provider == AchievementProvider.STEAM) "Steam" else "RA", color = Color.White, fontSize = u.sp(11),
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = u.dp(3)).clip(RoundedCornerShape(u.dp(4)))
-                        .background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = u.dp(4)))
+                // owner, 2026-10-07: a small dot at the top says where the set comes from; the legend is under the wall
+                ProviderDot(sets[i].provider, u, Modifier.align(Alignment.TopCenter).padding(top = u.dp(6)))
             }
         }
     }
 }
 
 private const val BADGE_SIZE = 78
+
+// Steam's own light blue and RetroAchievements' gold, apart from the rarity tiers' blue and gold
+private val SteamBlue = Color(0xFF66C0F4)
+private val RetroGold = Color(0xFFF5C518)
+
+private fun providerColor(p: AchievementProvider): Color = if (p == AchievementProvider.STEAM) SteamBlue else RetroGold
+
+@Composable
+private fun ProviderDot(p: AchievementProvider, u: DesignUnits, modifier: Modifier = Modifier) {
+    Box(modifier.size(u.dp(12)).clip(CircleShape).background(providerColor(p)).border(u.dp(1.5f), Color.Black.copy(alpha = 0.6f), CircleShape))
+}
+
+@Composable
+private fun ProviderLegend(u: DesignUnits, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(u.dp(18)), verticalAlignment = Alignment.CenterVertically) {
+        listOf(AchievementProvider.STEAM to "Steam", AchievementProvider.RETRO_ACHIEVEMENTS to "RetroAchievements").forEach { (p, label) ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(6))) {
+                ProviderDot(p, u)
+                Text(label, color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(12), fontWeight = FontWeight.Light, maxLines = 1)
+            }
+        }
+    }
+}
 // owner, 2026-10-07: the game strip is the wall's top row, and bigger
 private const val STRIP_TILE = 104
 
@@ -558,7 +582,8 @@ internal fun Ring(set: AchievementSet, u: DesignUnits) {
 
 @Composable
 internal fun Badge(a: Achievement, focused: Boolean, u: DesignUnits, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(u.dp(16))
+    // owner, 2026-10-07: achievement badges are round
+    val shape = CircleShape
     val tier = tierColor(rarityTier(a.globalPercent))
     Box(
         Modifier.size(u.dp(BADGE_SIZE)).clip(shape).background(if (focused) PanelCardFocusFill else PanelCardFill)
@@ -576,7 +601,7 @@ internal fun Badge(a: Achievement, focused: Boolean, u: DesignUnits, onClick: ()
 
 @Composable
 private fun BadgeIcon(a: Achievement, size: Dp, u: DesignUnits) {
-    Box(Modifier.size(size).clip(RoundedCornerShape(u.dp(8))), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size).clip(CircleShape), contentAlignment = Alignment.Center) {
         Box(Modifier.fillMaxSize().graphicsLayer(alpha = if (a.isUnlocked) 1f else 0.3f), contentAlignment = Alignment.Center) {
             Icon(Icons.Outlined.EmojiEvents, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.fillMaxSize(0.6f))
             a.iconUrl?.let { AsyncImage(it, a.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
@@ -595,7 +620,7 @@ internal fun DetailCard(a: Achievement, u: DesignUnits) {
         verticalArrangement = Arrangement.spacedBy(u.dp(16)),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(16))) {
-            Box(Modifier.size(u.dp(72)).border(u.dp(2), Color.White.copy(alpha = 0.5f), RoundedCornerShape(u.dp(16))), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(u.dp(72)).border(u.dp(2), Color.White.copy(alpha = 0.5f), CircleShape), contentAlignment = Alignment.Center) {
                 BadgeIcon(a, u.dp(56), u)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
