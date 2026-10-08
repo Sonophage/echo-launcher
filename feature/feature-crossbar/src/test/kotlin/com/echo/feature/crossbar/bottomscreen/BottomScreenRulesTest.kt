@@ -135,4 +135,19 @@ class BottomScreenRulesTest {
         assertNull("left walks the pages", musicRemoteKey(GamepadAction.NAVIGATE_LEFT))
         assertNull("right walks the pages", musicRemoteKey(GamepadAction.NAVIGATE_RIGHT))
     }
+
+    // the item in full view must be reachable on the companion, swapped or not (owner, 2026-10-08), and
+    // left and right must still reach the other pages once the list is where it goes
+    @Test
+    fun `left and right close and open Recent's list before changing page`() {
+        val open = BottomScreenState(music = true, page = BottomPage.RECENT)
+        val full = open.sideStep(GamepadAction.NAVIGATE_RIGHT)
+        assertFalse("right closes the list", full.recentListOpen)
+        assertEquals(BottomPage.RECENT, full.page)
+        assertEquals("right again goes on to Music", BottomPage.MUSIC, full.sideStep(GamepadAction.NAVIGATE_RIGHT).page)
+        val back = full.sideStep(GamepadAction.NAVIGATE_LEFT)
+        assertTrue("left opens it again", back.recentListOpen)
+        assertEquals(BottomPage.RECENT, back.page)
+        assertEquals("left with the list open leaves Recent", BottomPage.MUSIC, back.sideStep(GamepadAction.NAVIGATE_LEFT).page)
+    }
 }

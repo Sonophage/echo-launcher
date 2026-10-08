@@ -173,7 +173,7 @@ class CrossbarBottomScreen(
 
     fun showPage(page: BottomPage) = link.update { it.copy(page = page) }
 
-    // the controller on the companion: left and right change page, up and down walk Recent, LT and RT
+    // the controller on the companion: left and right change page (on Recent, first close or open its list), up and down walk Recent, LT and RT
     // its filters, A opens (a hold for what leaves ECHO, as everywhere), B hands the controller back
     // to the XMB. False lets the XMB have the press.
     fun onButton(action: GamepadAction): Boolean {
@@ -189,8 +189,7 @@ class CrossbarBottomScreen(
         }
         when (action) {
             GamepadAction.BACK -> setCompanionActive(false)
-            GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT ->
-                showPage(state.steppedPage(if (action == GamepadAction.NAVIGATE_LEFT) -1 else 1))
+            GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT -> link.update { it.sideStep(action) }
 
             GamepadAction.NAVIGATE_UP, GamepadAction.NAVIGATE_DOWN -> if (page == BottomPage.RECENT) {
                 val step = if (action == GamepadAction.NAVIGATE_UP) -1 else 1

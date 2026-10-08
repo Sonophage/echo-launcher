@@ -24,6 +24,8 @@ data class BottomScreenState(
     val recentFilters: List<RecentFilter> = listOf(RecentFilter.ALL),
     val recentFilter: RecentFilter = RecentFilter.ALL,
     val recentSelected: Int = 0,
+    // Recent's list beside the item (true) or the item in full view, as the top screen's Last Played shows it
+    val recentListOpen: Boolean = true,
     val page: BottomPage = BottomPage.INFO,
     // music is playing, so the companion offers its remote (owner, 2026-10-08)
     val music: Boolean = false,
@@ -72,6 +74,21 @@ fun musicRemoteKey(action: GamepadAction): MusicRemoteKey? = when (action) {
     GamepadAction.BACK -> MusicRemoteKey.LEAVE
     GamepadAction.OPEN_CONTEXT_MENU -> MusicRemoteKey.OPTIONS
     else -> null
+}
+
+// left and right on the companion: on Recent they first close the list to show the item in full, and open it
+// again, as on the top screen (recentRailStep); past that they walk the pages (owner, 2026-10-08: the game's
+// info in full view, on either screen)
+fun BottomScreenState.sideStep(action: GamepadAction): BottomScreenState {
+    val left = action == GamepadAction.NAVIGATE_LEFT
+    if (shownPage() == BottomPage.RECENT) {
+        when (com.echo.feature.crossbar.viewmodel.recentRailStep(action, onLastPlayedHome = true, railVisible = recentListOpen)) {
+            com.echo.feature.crossbar.viewmodel.RailStep.Open -> return copy(recentListOpen = true)
+            com.echo.feature.crossbar.viewmodel.RailStep.Close -> return copy(recentListOpen = false)
+            com.echo.feature.crossbar.viewmodel.RailStep.Pass -> Unit
+        }
+    }
+    return copy(page = steppedPage(if (left) -1 else 1))
 }
 
 // left and right walk the pages there are, round the ends

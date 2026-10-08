@@ -166,7 +166,7 @@ fun BottomScreen(
                     selectedIndex = state.recentSelected,
                     listState = recentList,
                     filter = state.recentFilter,
-                    railVisible = true,
+                    railVisible = state.recentListOpen,
                     onCardTapped = crossbar.bottomScreen::tapRecent,
                     onCardPressed = crossbar.bottomScreen::pressRecent,
                     modifier = Modifier.fillMaxSize(),
