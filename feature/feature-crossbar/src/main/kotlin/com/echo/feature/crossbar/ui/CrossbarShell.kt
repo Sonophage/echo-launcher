@@ -1339,7 +1339,8 @@ fun CrossbarShell(
                 )
             }
 
-            uiState.activeContextMenu?.let { menu ->
+            // a menu asked for on the second screen is drawn there
+            uiState.activeContextMenu?.takeUnless { uiState.menuOnCompanion && uiState.secondScreen }?.let { menu ->
 
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
                     EchoContextMenuOverlay(

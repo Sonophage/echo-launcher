@@ -621,6 +621,9 @@ data class CrossbarUiState(
     val screensSwapped: Boolean = false,
     // the companion takes the controller, after a tap on its screen, until B or a tap on the XMB
     val companionActive: Boolean = false,
+    // the open menu, and any it leads to, was asked for on the second screen and is drawn there (owner,
+    // 2026-10-08: a menu opens where it was asked for); cleared whenever no menu is open
+    val menuOnCompanion: Boolean = false,
     // the device has a second display, and whether ECHO uses it (Quick settings, owner 2026-10-06)
     val secondDisplayPresent: Boolean = false,
     val secondScreenEnabled: Boolean = true,
@@ -1431,6 +1434,14 @@ class CrossbarViewModel @Inject constructor(
     internal var platformCache: Map<String, PlatformEntity> = emptyMap()
     internal var enabledCards: List<MemoryCard> = emptyList()
     internal val taskNotifier = BackgroundTaskNotifier(context)
+
+    init {
+        viewModelScope.launch {
+            _uiState.map { it.activeContextMenu == null }.distinctUntilChanged().collect { closed ->
+                if (closed) _uiState.update { if (it.menuOnCompanion) it.copy(menuOnCompanion = false) else it }
+            }
+        }
+    }
 
     init {
         gamepadInputHandler.scope = viewModelScope
@@ -3386,7 +3397,10 @@ class CrossbarViewModel @Inject constructor(
 
     // a Recent item's Options from the second screen (owner, 2026-10-08): its own menu, with no Move, which
     // belongs to the crossbar's focused row
-    internal fun openRecentItemMenu(item: CrossbarItem) = openItemMenu(item)
+    internal fun openRecentItemMenu(item: CrossbarItem) {
+        _uiState.update { it.copy(menuOnCompanion = true) }
+        openItemMenu(item)
+    }
 
     // the one way the music player opens: with a second screen it is the companion's Music page, and the
     // crossbar's screen stays free to browse (owner, 2026-10-08); on one screen it covers the crossbar

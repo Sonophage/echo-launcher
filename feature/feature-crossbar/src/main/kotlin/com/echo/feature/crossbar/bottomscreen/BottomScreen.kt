@@ -197,6 +197,14 @@ fun BottomScreen(
                 // the XMB and this screen change places (owner, 2026-10-06)
                 PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.bottomScreen.toggleSwap() }
             }
+            // a menu asked for here (Y on Recent) opens here, over the page
+            ui.activeContextMenu?.takeIf { ui.menuOnCompanion }?.let { menu ->
+                com.echo.core.ui.components.EchoContextMenuOverlay(
+                    state = menu.state,
+                    onRowActivated = crossbar::onContextMenuItemActivatedAt,
+                    onDismiss = crossbar::closeContextMenu,
+                )
+            }
         }
     }
 }
