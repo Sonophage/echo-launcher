@@ -449,7 +449,15 @@ private fun AchievementsWall(
                     }
                 }
             }
-            Ring(set, u)
+            // owner, 2026-10-07: points and Mastered sit beneath the ring; inside it they ran out of the circle
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(u.dp(4))) {
+                Ring(set, u)
+                // points are stored for every set; RetroAchievements fills them, Steam leaves them 0
+                if (set.points > 0) {
+                    Text("${set.earnedPoints} / ${set.points} pts", color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(12), maxLines = 1)
+                }
+                if (set.mastered) Text("Mastered", color = MasteredGold, fontSize = u.sp(12), fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
         }
         Row(Modifier.padding(top = u.dp(14), bottom = u.dp(10)), horizontalArrangement = Arrangement.spacedBy(u.dp(6))) {
             BadgeFilter.entries.forEach { f ->
@@ -572,11 +580,6 @@ internal fun Ring(set: AchievementSet, u: DesignUnits) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("${(fraction * 100).toInt()}%", color = Color.White, fontSize = u.sp(26), fontWeight = FontWeight.ExtraLight, maxLines = 1)
             Text("${set.unlocked} of ${set.total}", color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(11), maxLines = 1)
-            // points are stored for every set; RetroAchievements fills them, Steam leaves them 0
-            if (set.points > 0) {
-                Text("${set.earnedPoints} / ${set.points} pts", color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(10), maxLines = 1)
-            }
-            if (set.mastered) Text("Mastered", color = MasteredGold, fontSize = u.sp(10), fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
     }
 }
