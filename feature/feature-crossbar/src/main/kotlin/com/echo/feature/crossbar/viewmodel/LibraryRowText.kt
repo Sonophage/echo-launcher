@@ -57,8 +57,12 @@ internal fun formatDuration(ms: Long): String {
 internal fun formatDate(ms: Long): String =
     SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(ms))
 
-internal fun relativeDate(epochMillis: Long, now: Long = System.currentTimeMillis()): String {
-    val days = daysSince(epochMillis, now)
+internal fun relativeDate(
+    epochMillis: Long,
+    now: Long = System.currentTimeMillis(),
+    zone: java.time.ZoneId = java.time.ZoneId.systemDefault(),
+): String {
+    val days = daysSince(epochMillis, now, zone)
     return when {
         days < 0L -> formatDate(epochMillis)
         days == 0L -> "Today"
@@ -68,11 +72,21 @@ internal fun relativeDate(epochMillis: Long, now: Long = System.currentTimeMilli
     }
 }
 
-private fun daysSince(epochMillis: Long, now: Long): Long = (now - epochMillis) / 86_400_000L
+// calendar days in the device's zone, as Recent groups by: 11 pm yesterday is Yesterday at 1 am, not Today
+// (it was counting 24-hour blocks, so Recent said "Yesterday · 12 hr ago" beside "Today, 12:31 PM")
+private fun daysSince(epochMillis: Long, now: Long, zone: java.time.ZoneId): Long =
+    java.time.temporal.ChronoUnit.DAYS.between(
+        java.time.Instant.ofEpochMilli(epochMillis).atZone(zone).toLocalDate(),
+        java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate(),
+    )
 
-internal fun relativeDateTime(epochMillis: Long, now: Long = System.currentTimeMillis()): String {
-    val day = relativeDate(epochMillis, now)
-    if (daysSince(epochMillis, now) != 0L) return day
+internal fun relativeDateTime(
+    epochMillis: Long,
+    now: Long = System.currentTimeMillis(),
+    zone: java.time.ZoneId = java.time.ZoneId.systemDefault(),
+): String {
+    val day = relativeDate(epochMillis, now, zone)
+    if (daysSince(epochMillis, now, zone) != 0L) return day
     return "$day, " + SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(epochMillis))
 }
 

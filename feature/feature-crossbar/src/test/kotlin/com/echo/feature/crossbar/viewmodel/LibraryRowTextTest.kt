@@ -221,4 +221,14 @@ class LibraryRowTextTest {
         assertEquals("Game Boy Advance", gameMetaLine("Game Boy Advance", null, "   ", now))
         assertEquals("Game Boy Advance", gameMetaLine("Game Boy Advance", 0L, "", now))
     }
+
+    // on the Thor at 1:20 am, Recent filed a game under Yesterday while its detail said "Today, 12:31 PM"
+    @Test
+    fun `a day is the calendar day, so 12 hours before 1 am is yesterday`() {
+        val zone = java.time.ZoneId.of("America/Los_Angeles")
+        val at = { h: Int, d: Int -> java.time.LocalDateTime.of(2026, 10, d, h, 20).atZone(zone).toInstant().toEpochMilli() }
+        assertEquals("Yesterday", relativeDate(at(12, 7), at(1, 8), zone))
+        assertEquals("Yesterday", relativeDateTime(at(12, 7), at(1, 8), zone))
+        assertTrue(relativeDateTime(at(0, 8), at(23, 8), zone).startsWith("Today, "))
+    }
 }
