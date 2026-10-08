@@ -34,22 +34,26 @@ class DrawerMediaTest {
         }
     }
 
+    // owner, 2026-10-08: X steps Music through artist, album and genre buttons
     @Test
-    fun `Music's buttons are artists, or genres with X, and each keeps its own`() {
-        assertEquals(listOf("All", "BLACKPINK", "Vela Quartet"), mediaChips(albums, byGenre = false).map { it.label })
-        assertEquals(listOf("All", "K-Pop"), mediaChips(albums, byGenre = true).map { it.label })
-        assertEquals(listOf("Longitudes"), albums.ofMediaChip("Vela Quartet", byGenre = false).map { it.label })
-        assertEquals("Group by Genre", mediaGroupingHint(AppFilter.MUSIC, byGenre = false))
-        assertEquals("Group by Author", mediaGroupingHint(AppFilter.BOOKS, byGenre = true))
-        assertNull("videos have no grouping", mediaGroupingHint(AppFilter.VIDEOS, byGenre = false))
+    fun `Music's buttons step artist, album letter, genre, and each keeps its own`() {
+        assertEquals(listOf("All", "BLACKPINK", "Vela Quartet"), mediaChips(albums, MediaGrouping.MAKER).map { it.label })
+        assertEquals(listOf("All", "B", "L"), mediaChips(albums, MediaGrouping.TITLE).map { it.label })
+        assertEquals(listOf("All", "K-Pop"), mediaChips(albums, MediaGrouping.GENRE).map { it.label })
+        assertEquals(listOf("Longitudes"), albums.ofMediaChip("L", MediaGrouping.TITLE).map { it.label })
+        assertEquals(listOf("Longitudes"), albums.ofMediaChip("Vela Quartet", MediaGrouping.MAKER).map { it.label })
+        assertEquals("Group by Album", mediaGroupingHint(AppFilter.MUSIC, MediaGrouping.MAKER))
+        assertEquals("Group by Genre", mediaGroupingHint(AppFilter.MUSIC, MediaGrouping.TITLE))
+        assertEquals("Group by Artist", mediaGroupingHint(AppFilter.MUSIC, MediaGrouping.GENRE))
+        assertEquals("Group by Title", mediaGroupingHint(AppFilter.BOOKS, MediaGrouping.MAKER))
+        assertNull("videos have no grouping", mediaGroupingHint(AppFilter.VIDEOS, MediaGrouping.MAKER))
     }
 
-    // owner, 2026-10-08: grouped by genre the row shows with one genre, so X visibly does something
     @Test
     fun `genre buttons show with one genre, artists and systems need two`() {
         val one = listOf(SystemChip(null, "All", 3), SystemChip("K-Pop", "K-Pop", 1))
-        assertTrue(AppDrawerUiState(activeFilter = AppFilter.MUSIC, systemChips = one, mediaChipsByGenre = true).showSystemChips)
-        assertEquals(false, AppDrawerUiState(activeFilter = AppFilter.MUSIC, systemChips = one, mediaChipsByGenre = false).showSystemChips)
+        assertTrue(AppDrawerUiState(activeFilter = AppFilter.MUSIC, systemChips = one, mediaGrouping = MediaGrouping.GENRE).showSystemChips)
+        assertEquals(false, AppDrawerUiState(activeFilter = AppFilter.MUSIC, systemChips = one, mediaGrouping = MediaGrouping.MAKER).showSystemChips)
         assertTrue(AppDrawerUiState(activeFilter = AppFilter.GAMES, systemChips = one, chipsByGenre = true).showSystemChips)
         assertEquals(false, AppDrawerUiState(activeFilter = AppFilter.GAMES, systemChips = one).showSystemChips)
     }
@@ -69,5 +73,16 @@ class DrawerMediaTest {
         assertEquals("Play", com.echo.feature.appbar.appdrawer.actionLabel(albums.first()))
         assertEquals("Read", com.echo.feature.appbar.appdrawer.actionLabel(bookCases(listOf(Book(id = "b", libraryId = "l", uri = "u", displayName = "b.epub"))).single()))
         assertEquals("Open", com.echo.feature.appbar.appdrawer.actionLabel(InstalledApp("com.a", "A", null, isGame = false, isEmulator = false)))
+    }
+
+    // owner, 2026-10-08: the last badges earned, in one row
+    @Test
+    fun `the row holds the last badges earned, newest first, and only earned ones with an icon`() {
+        val coins = listOf(
+            EarnedBadge("old", true, 10), EarnedBadge("new", true, 30), EarnedBadge("locked", false, null),
+            EarnedBadge(null, true, 40), EarnedBadge("mid", true, 20),
+        )
+        assertEquals(listOf("new", "mid", "old"), recentBadges(coins))
+        assertEquals(listOf("new", "mid"), recentBadges(coins, max = 2))
     }
 }

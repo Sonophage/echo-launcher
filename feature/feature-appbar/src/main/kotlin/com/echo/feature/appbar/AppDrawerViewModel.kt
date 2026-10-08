@@ -81,7 +81,14 @@ enum class AppMenuAction(val label: String, val group: MenuGroup) {
 }
 
 // achievements: "12/40" once the game's set has synced (owner, 2026-10-08: shown under the details)
-data class GameDetails(val gameId: Long, val facts: String?, val description: String?, val achievements: String? = null)
+// recentBadges: the icons of the last achievements earned, newest first (owner, 2026-10-08: one row of them)
+data class GameDetails(
+    val gameId: Long,
+    val facts: String?,
+    val description: String?,
+    val achievements: String? = null,
+    val recentBadges: List<String> = emptyList(),
+)
 
 // the line under a game's title: year, genre, developer, players, as many as are known
 fun gameFacts(game: com.echo.core.domain.model.Game): String? =
@@ -140,7 +147,7 @@ data class AppDrawerUiState(
     val pendingMediaMenu: Pair<DrawerMedia, String>? = null,
 
     // Music's and Books' buttons are genres (X), else artists or authors
-    val mediaChipsByGenre: Boolean = false,
+    val mediaGrouping: MediaGrouping = MediaGrouping.MAKER,
 
     // the crossbar's genre filter, which the Games section follows (owner, 2026-10-08)
     val genreFilter: com.echo.core.domain.model.GameGenre? = null,
@@ -154,7 +161,7 @@ data class AppDrawerUiState(
     // systems, artists and authors still need two to be worth a row
     val showSystemChips: Boolean get() = when (activeFilter) {
         AppFilter.GAMES -> systemChips.size > if (chipsByGenre) 1 else 2
-        AppFilter.MUSIC, AppFilter.BOOKS -> systemChips.size > if (mediaChipsByGenre) 1 else 2
+        AppFilter.MUSIC, AppFilter.BOOKS -> systemChips.size > if (mediaGrouping == MediaGrouping.GENRE) 1 else 2
         else -> false
     }
 
@@ -196,6 +203,7 @@ class AppDrawerViewModel @Inject constructor(
     private val videoRepository: com.echo.core.domain.repository.VideoRepository,
     private val bookRepository: com.echo.core.domain.repository.BookRepository,
     private val achievementSets: com.echo.core.data.database.dao.AccountAchievementSetDao,
+    private val achievementCoins: com.echo.core.data.database.dao.AccountAchievementDao,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AppDrawerUiState())
     val uiState: StateFlow<AppDrawerUiState> = _uiState.asStateFlow()
@@ -335,10 +343,10 @@ class AppDrawerViewModel @Inject constructor(
 
     fun onMediaMenuHandled() = _uiState.update { it.copy(pendingMediaMenu = null) }
 
-    // X in Music or Books: artists or authors, or genres
+    // X in Music or Books: artists or authors, then album or title letters, then genres
     fun toggleMediaGrouping() {
         menuSound.play(MenuSound.SELECT)
-        _uiState.update { it.copy(mediaChipsByGenre = !it.mediaChipsByGenre, systemFilter = null, selectedIndex = 0) }
+        _uiState.update { it.copy(mediaGrouping = it.mediaGrouping.next, systemFilter = null, selectedIndex = 0) }
         applyFilter()
     }
 
@@ -537,9 +545,13 @@ class AppDrawerViewModel @Inject constructor(
                 .collectLatest { gameId ->
                     val game = gameId?.let { runCatching { gameRepository.getById(it) }.getOrNull() }
                     val set = gameId?.let { runCatching { achievementSets.observeSetForGame(it).first() }.getOrNull() }
+                    val coins = set?.let { s -> runCatching { achievementCoins.getForSet(s.provider, s.providerGameId) }.getOrNull() }.orEmpty()
                     _uiState.update {
                         it.copy(gameDetails = game?.let { g ->
-                            GameDetails(g.id, gameFacts(g), g.description?.takeIf { d -> d.isNotBlank() }, achievementsLabel(set?.unlocked, set?.total))
+                            GameDetails(
+                                g.id, gameFacts(g), g.description?.takeIf { d -> d.isNotBlank() }, achievementsLabel(set?.unlocked, set?.total),
+                                recentBadges(coins.map { c -> EarnedBadge(c.iconUrl, c.isEarned, c.earnedAt) }),
+                            )
                         })
                     }
                 }
@@ -669,12 +681,12 @@ class AppDrawerViewModel @Inject constructor(
             .let { if (state.activeFilter == AppFilter.GAMES) it.ofGenre(state.genreFilter) else it }
         val chips = when (state.activeFilter) {
             AppFilter.GAMES -> if (state.chipsByGenre) genreChips(tabApps) else systemChips(tabApps)
-            AppFilter.MUSIC, AppFilter.BOOKS -> mediaChips(tabApps, state.mediaChipsByGenre)
+            AppFilter.MUSIC, AppFilter.BOOKS -> mediaChips(tabApps, state.mediaGrouping)
             else -> emptyList()
         }
         val system = state.systemFilter?.takeIf { id -> chips.any { it.id == id } }
 
-        val inTab = if (state.activeFilter.isMedia) tabApps.ofMediaChip(system, state.mediaChipsByGenre)
+        val inTab = if (state.activeFilter.isMedia) tabApps.ofMediaChip(system, state.mediaGrouping)
             else tabApps.ofChip(system, state.chipsByGenre)
             .let { apps ->
                 if (state.activeFilter == AppFilter.RECENT) {

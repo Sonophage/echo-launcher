@@ -22,8 +22,9 @@ released; it becomes the next release's notes.
 ### App Drawer
 - The drawer has **Music** (albums), **Videos** and **Books** sections, each shown when that library has
   something in it. A plays the album, plays the video or opens the book.
-- In Music and Books, X switches the buttons between artists (or authors) and genres; grouped by
-  genre the buttons show even with one genre.
+- In Music, X steps the buttons through artist, album (A-Z by album name) and genre; in Books,
+  author, title and genre. Grouped by genre the buttons show even with one genre.
+- A game's last earned achievement badges show in a row under its achievements count.
 - The drawer's info column names an album and its artist (a book and its author) and genre, and
   shows a game's achievements under its details.
 - Y on an album gives Play Album and Edit Genre (in the drawer and in Music's Albums); on a video

@@ -48,21 +48,53 @@ internal fun bookCases(books: List<Book>): List<InstalledApp> = books.map {
     mediaCase(MediaKind.BOOK, it.id, it.displayTitle, it.coverUri, it.author?.trim()?.ifBlank { null }, it.genreName, it.lastOpenedAt ?: 0L)
 }
 
-// a media section's buttons: who made it (artists, authors) or, with X, genres
-internal fun mediaChips(cases: List<InstalledApp>, byGenre: Boolean): List<SystemChip> {
-    val key: (InstalledApp) -> String? = { if (byGenre) it.media?.genre else it.media?.maker }
-    return listOf(SystemChip(null, "All", cases.size)) +
-        cases.mapNotNull(key).groupingBy { it }.eachCount()
-            .map { (name, n) -> SystemChip(name, name, n) }
-            .sortedWith(compareByDescending<SystemChip> { it.count }.thenBy { it.label.lowercase() })
+// owner, 2026-10-08: what a media section's buttons group by; X steps through them in this order
+enum class MediaGrouping { MAKER, TITLE, GENRE;
+    val next: MediaGrouping get() = entries[(ordinal + 1) % entries.size]
 }
 
-internal fun List<InstalledApp>.ofMediaChip(id: String?, byGenre: Boolean): List<InstalledApp> =
-    if (id == null) this else filter { (if (byGenre) it.media?.genre else it.media?.maker) == id }
+// a case's button under a grouping: who made it, its title's first letter, or its genre
+private fun DrawerMediaChipKey(app: InstalledApp, by: MediaGrouping): String? = when (by) {
+    MediaGrouping.MAKER -> app.media?.maker
+    MediaGrouping.TITLE -> com.echo.core.ui.components.initialOf(app.label).toString()
+    MediaGrouping.GENRE -> app.media?.genre
+}
+
+// a media section's buttons: artists or authors and genres by count, letters in A-Z order
+internal fun mediaChips(cases: List<InstalledApp>, by: MediaGrouping): List<SystemChip> {
+    val counted = cases.mapNotNull { DrawerMediaChipKey(it, by) }.groupingBy { it }.eachCount().map { (name, n) -> SystemChip(name, name, n) }
+    val ordered = if (by == MediaGrouping.TITLE) counted.sortedBy { it.label }
+        else counted.sortedWith(compareByDescending<SystemChip> { it.count }.thenBy { it.label.lowercase() })
+    return listOf(SystemChip(null, "All", cases.size)) + ordered
+}
+
+internal fun List<InstalledApp>.ofMediaChip(id: String?, by: MediaGrouping): List<InstalledApp> =
+    if (id == null) this else filter { DrawerMediaChipKey(it, by) == id }
+
+// what X says it will do next in a media section
+internal fun mediaGroupingHint(section: AppFilter, by: MediaGrouping): String? {
+    val (maker, title) = when (section) {
+        AppFilter.MUSIC -> "Artist" to "Album"
+        AppFilter.BOOKS -> "Author" to "Title"
+        else -> return null
+    }
+    return "Group by " + when (by.next) { MediaGrouping.MAKER -> maker; MediaGrouping.TITLE -> title; MediaGrouping.GENRE -> "Genre" }
+}
 
 // "12/40", or nothing when the game has no set or the set is empty
 internal fun achievementsLabel(unlocked: Int?, total: Int?): String? =
     if (unlocked != null && total != null && total > 0) "$unlocked/$total" else null
+
+data class EarnedBadge(val iconUrl: String?, val earned: Boolean, val earnedAt: Long?)
+
+// the last achievements earned, newest first, as many as fit one row; those with no icon are skipped
+internal fun recentBadges(coins: List<EarnedBadge>, max: Int = RECENT_BADGES): List<String> =
+    coins.filter { it.earned && !it.iconUrl.isNullOrBlank() }
+        .sortedByDescending { it.earnedAt ?: 0L }
+        .take(max)
+        .map { it.iconUrl!! }
+
+internal const val RECENT_BADGES = 6
 
 // owner, 2026-10-08: the info column names an album's artist (a book's author) and its genre
 internal fun mediaByline(media: DrawerMedia): String? =

@@ -147,7 +147,7 @@ fun AppDrawerScreen(
                     pendingGamepadAction == GamepadAction.NEXT_PAGE -> onOpenAppSearch("")
                 pendingGamepadAction == GamepadAction.PREV_PAGE -> closeDrawer()
                 groupingToggleApplies(pendingGamepadAction, state.activeFilter) && onToggleGrouping != null -> onToggleGrouping()
-                pendingGamepadAction == GamepadAction.CHANGE_SORT && mediaGroupingHint(state.activeFilter, false) != null ->
+                pendingGamepadAction == GamepadAction.CHANGE_SORT && mediaGroupingHint(state.activeFilter, MediaGrouping.MAKER) != null ->
                     viewModel.toggleMediaGrouping()
                 else -> viewModel.handleGamepadAction(pendingGamepadAction)
             }
@@ -246,7 +246,7 @@ fun AppDrawerScreen(
             onTouchInteraction()
             viewModel.onSystemChipTapped(id)
         },
-        groupingHint = mediaGroupingHint(state.activeFilter, state.mediaChipsByGenre)?.let { it to viewModel::toggleMediaGrouping }
+        groupingHint = mediaGroupingHint(state.activeFilter, state.mediaGrouping)?.let { it to viewModel::toggleMediaGrouping }
             ?: onToggleGrouping?.let { toggle -> groupingHintLabel(chipsByGenre) to toggle },
         onCloseMenu = { viewModel.closeAppMenu() },
         onConfirmUninstall = { viewModel.confirmUninstall() },
@@ -344,7 +344,7 @@ internal fun AppDrawerContent(
             com.echo.core.ui.components.EchoHintBar(
                 items = listOfNotNull(
                     com.echo.core.ui.components.ControllerPromptItem(GamepadAction.BACK, "Back"),
-                    groupingHint?.takeIf { state.activeFilter == AppFilter.GAMES || mediaGroupingHint(state.activeFilter, false) != null }
+                    groupingHint?.takeIf { state.activeFilter == AppFilter.GAMES || mediaGroupingHint(state.activeFilter, MediaGrouping.MAKER) != null }
                         ?.let { com.echo.core.ui.components.ControllerPromptItem(GamepadAction.CHANGE_SORT, it.first) },
                     com.echo.core.ui.components.ControllerPromptItem(GamepadAction.NEXT_PAGE, "Search"),
                 ),

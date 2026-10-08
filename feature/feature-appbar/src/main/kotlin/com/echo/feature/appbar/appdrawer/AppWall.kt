@@ -255,6 +255,15 @@ internal fun WallInfo(
         details?.achievements?.let {
             Text("ACHIEVEMENTS  $it", style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.8f), fontSize = u.sp(13), letterSpacing = 0.15.em))
         }
+        // the last badges earned, in one row (owner, 2026-10-08)
+        details?.recentBadges?.takeIf { it.isNotEmpty() }?.let { badges ->
+            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(8))) {
+                badges.forEach { url ->
+                    AsyncImage(url, null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(u.dp(44)).clip(RoundedCornerShape(u.dp(10))).background(Color.White.copy(alpha = 0.08f)))
+                }
+            }
+        }
         if (app.lastUsedAt > 0L) {
             Text("${if (game) "Played" else "Used"} ${relativeTime(System.currentTimeMillis(), app.lastUsedAt).lowercase()}",
                 color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13))
