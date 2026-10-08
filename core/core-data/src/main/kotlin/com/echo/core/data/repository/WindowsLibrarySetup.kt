@@ -50,8 +50,6 @@ class WindowsLibrarySetup @Inject constructor(
         )
         if (card.supportedExtensions.isNotEmpty()) memoryCards.setExtensions(PLATFORM_ID, emptyList())
 
-        if (card.displayName == LEGACY_DISPLAY_NAME) memoryCards.rename(PLATFORM_ID, DISPLAY_NAME)
-
         card.treeUri?.takeIf { it.isNotBlank() }?.let { tree ->
             RomRootRepository.treeDocId(tree)?.let { docId -> ensureImportFolder(ops, tree, docId) }
             return WindowsSetupState.Ready(card.romDirectory)
@@ -144,9 +142,7 @@ class WindowsLibrarySetup @Inject constructor(
 
     companion object {
         const val PLATFORM_ID = com.echo.core.domain.model.PlatformIds.WINDOWS
-        const val DISPLAY_NAME = "Windows Memory Card"
-
-        private const val LEGACY_DISPLAY_NAME = "Windows Games"
+        const val DISPLAY_NAME = "PC"
         const val WINDOWS_FOLDER = "windows"
         const val IMPORT_FOLDER = "import"
     }

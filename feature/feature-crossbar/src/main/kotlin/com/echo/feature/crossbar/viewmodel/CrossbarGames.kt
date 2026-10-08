@@ -58,8 +58,8 @@ class CrossbarGames(
             return vm.libraryColumn(
                 header + CrossbarItem(
                     id       = CrossbarViewModel.NO_CONSOLES_ITEM_ID,
-                    title    = "No consoles configured",
-                    subtitle = "Open Library Manager to add a Memory Card",
+                    title    = "No systems yet",
+                    subtitle = "Open Library Manager to add a system",
                     type     = CrossbarItemType.EMPTY,
                 ),
                 SearchScope.GAMES,
@@ -70,7 +70,7 @@ class CrossbarGames(
             val count = uiState.value.platformGameCounts[card.platformId] ?: card.gameCount
             CrossbarItem(
                 id          = vm.cardItemId(card.platformId),
-                title       = if (card.platformId == WINDOWS_PLATFORM_ID) "Windows Games" else card.displayName,
+                title       = card.displayName,
                 subtitle    = countLabel(count, "game", "games"),
                 platformId  = card.platformId,
                 insideCovers = uiState.value.cardFanCovers[vm.cardItemId(card.platformId)].orEmpty(),
@@ -107,7 +107,7 @@ class CrossbarGames(
         val card = vm.enabledCards.firstOrNull { it.platformId == platformId } ?: return
         vm.closeContextMenu()
         uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
-            title = "Rename Memory Card",
+            title = "Rename System",
             subtitle = "The name this console shows under on the crossbar.",
             initialText = card.displayName,
             renameCardPlatformId = platformId,

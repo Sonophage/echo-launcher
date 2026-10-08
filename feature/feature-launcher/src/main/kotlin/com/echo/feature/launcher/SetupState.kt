@@ -15,7 +15,7 @@ enum class SetupGap(val repairScreenId: String, val message: String) {
     ),
     NO_CONSOLES(
         repairScreenId = "settings_library",
-        message = "Add a console Memory Card to scan into",
+        message = "Add a system to scan into",
     ),
     NO_EMULATORS(
         repairScreenId = "settings_emulators",

@@ -2383,7 +2383,7 @@ class CrossbarViewModel @Inject constructor(
         return CrossbarItem(
             id       = NO_GAMES_ITEM_ID,
             title    = "No games imported yet",
-            subtitle = "Open a Memory Card to scan your library.",
+            subtitle = "Open a system to scan your library.",
             type     = CrossbarItemType.EMPTY,
         )
     }

@@ -11,7 +11,7 @@ enum class LaunchSource(
 ) {
     PER_GAME_OVERRIDE("Per-game override", "per-game override"),
 
-    MEMORY_CARD("Memory card default", "memory card emulator"),
+    MEMORY_CARD("System default", "system emulator"),
 
     PLATFORM_DEFAULT("Platform default", "platform default"),
 

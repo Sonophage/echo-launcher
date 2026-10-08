@@ -167,7 +167,7 @@ private fun LibraryManagerContent(
         val current = state.cards.firstOrNull { it.platformId == targetId }?.displayName ?: ""
         var text by remember(targetId) { mutableStateOf(current) }
         SettingsTextPromptOverlay(
-            title = "Rename Memory Card",
+            title = "Rename System",
             value = text,
             onValueChange = { text = it },
             onConfirm = { onConfirmRename(text) },
@@ -200,7 +200,7 @@ private fun LibraryListContent(
 
             val consoleCards = state.cards
             if (consoleCards.isEmpty()) {
-                Hint("No consoles configured. Add a console to create a Memory Card that appears inside Games.")
+                Hint("No systems yet. Add one and it appears inside Games.")
             } else {
                 consoleCards.forEach { card ->
                     SettingsRow(
@@ -328,12 +328,12 @@ private fun ScanPromptContent(
             )
             SettingsRow(
                 label    = "Scan Now",
-                sublabel = "Create the Memory Card and scan its folder immediately",
+                sublabel = "Create the system and scan its folder now",
                 onClick  = { onConfirmAddConsole(true) },
             )
             SettingsRow(
                 label    = "Add Without Scanning",
-                sublabel = "Create the Memory Card now, scan later",
+                sublabel = "Create the system now, scan later",
                 onClick  = { onConfirmAddConsole(false) },
             )
         }
@@ -376,7 +376,7 @@ private fun CardDetailContent(
                 SettingsGroup("Nothing here yet")
                 SettingsValueRow(label = "No console to show", value = "")
                 SettingsValueRow(
-                    label = "Windows Games appears once a PC game has been imported.",
+                    label = "PC appears once a PC game has been imported.",
                     value = "",
                 )
                 SettingsValueRow(
@@ -526,10 +526,10 @@ private fun CardDetailContent(
                 sublabel = "Fetch box art, logos and backgrounds for this card's games that have none",
                 onClick  = { onScrapeArtwork(card.platformId) },
             )
-            SettingsRow(label = "Rename Memory Card", onClick = { onBeginRename(card.platformId) })
+            SettingsRow(label = "Rename System", onClick = { onBeginRename(card.platformId) })
             SettingsToggleRow(
                 label    = "Show In Games",
-                sublabel = "Enable or hide this Memory Card",
+                sublabel = "Show or hide this system",
                 checked  = card.enabled,
                 onToggle = { onToggleEnabled(card.platformId, it) },
             )
@@ -544,7 +544,7 @@ private fun CardDetailContent(
             if (!isWindows) {
                 SettingsGroup("Danger Zone")
                 SettingsRow(
-                    label    = "Remove Memory Card",
+                    label    = "Remove System",
                     sublabel = "Removes this console and its games. ROM files are not deleted.",
                     trailing = { Text("Remove", color = SettingsAccent) },
                     onClick  = { showRemoveConfirm = true },

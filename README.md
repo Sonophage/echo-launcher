@@ -452,8 +452,8 @@ matching Settings screen. Run it again any time from **Settings ▸ Setup ▸ Se
 2. **Permissions**: each one turns something on; none is required. With Media off, the Music,
    Photos and Video permissions are not asked for.
 3. **Your folders**: the **Games** folder, one subfolder per console (`gba`, `snes`, `psx`, …, the
-   ES-DE names); adding it scans it straight away and creates a Memory Card for every console that
-   has games, including a **Windows** card for PC games. Then the **Music, Video, Photos and Books**
+   ES-DE names); adding it scans it straight away and adds a system for every console that
+   has games, including a **PC** system for PC games. Then the **Music, Video, Photos and Books**
    folders, and the **ECHO folder** for artwork and the look.
 4. **Emulators**: **RetroArch** and the **Vita3K data folder**, shown only when Gaming is on and
    those apps are installed.
@@ -683,7 +683,7 @@ and renames, reorders, hides or deletes them. Built-in categories can be hidden 
 ### Games and consoles
 
 The **Game** column holds **All Games**, **Missing** (only when some game files cannot be found),
-one **Memory Card** per console, **Folders** (your ROM roots) and **Search**.
+one **system** per console, **Folders** (your ROM roots) and **Search**.
 
 - **Add a console by hand**: *Emulators ▸ Library Manager ▸ Add Console*, choose the platform,
   assign an emulator, scan. The folder is found under your ROM root automatically.
@@ -694,7 +694,7 @@ one **Memory Card** per console, **Folders** (your ROM roots) and **Search**.
   Return*, which checks for new and missing games when you come back, at most every five minutes.
   A console whose folder cannot be read is skipped, so an unmounted SD card never empties a library.
 - **Android games**: **Find Games** on the Android card's menu, or **≡ ▸ Mark as Game** on an app.
-- **PC games**: the Windows card's **Import PC Games**.
+- **PC games**: the PC system's **Import PC Games**.
 
 ### Emulators
 

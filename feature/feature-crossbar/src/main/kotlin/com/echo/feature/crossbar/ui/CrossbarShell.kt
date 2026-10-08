@@ -1404,7 +1404,7 @@ fun CrossbarShell(
             if (uiState.showWindowsSetupPrompt) {
                 EchoConfirmOverlay(
                     title = "Finish your Windows Library",
-                    message = "A PC game was added, but the Windows Games library has no folder " +
+                    message = "A PC game was added, but the PC system has no folder " +
                         "yet. Set it up in Library Manager so game folders can be scanned.",
                     confirmLabel = "Set Up",
                     cancelLabel = "Later",

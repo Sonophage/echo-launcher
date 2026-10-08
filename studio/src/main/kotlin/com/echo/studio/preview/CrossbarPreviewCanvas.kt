@@ -353,7 +353,7 @@ private fun FullscreenMenuFrame(model: CrossbarPreviewModel) {
         listOf(
             "Journey of Dreams" to "Crossbar Kids",
             "Midnight Wave" to "Portal Sound Team",
-            "Memory Card Blues" to "Save Point",
+            "Cartridge Blues" to "Save Point",
         ).forEach { (title, artist) ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,

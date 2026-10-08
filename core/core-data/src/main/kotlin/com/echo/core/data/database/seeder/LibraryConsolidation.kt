@@ -132,13 +132,13 @@ class LibraryConsolidation @Inject constructor(
         memoryCardDao.upsert(
             MemoryCardEntity(
                 platformId  = WINDOWS_PLATFORM_ID,
-                displayName = "Windows Memory Card",
+                displayName = com.echo.core.data.repository.WindowsLibrarySetup.DISPLAY_NAME,
                 enabled     = true,
                 sortOrder   = memoryCardDao.maxSortOrder() + 1,
                 gameCount   = count,
             )
         )
-        Timber.i("Windows Memory Card created ($count games)")
+        Timber.i("PC card created ($count games)")
     }
 
     private fun displayTitleOf(g: GameEntity): String =

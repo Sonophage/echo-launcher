@@ -28,7 +28,7 @@ class WindowsLibrarySetupTest {
         treeUri: String? = null,
         romDirectory: String? = null,
         extensions: List<String> = emptyList(),
-        displayName: String = "Windows Memory Card",
+        displayName: String = "PC",
     ) = MemoryCard(
         platformId          = "windows",
         displayName         = displayName,
@@ -64,27 +64,7 @@ class WindowsLibrarySetupTest {
         coEvery { romRoots.getAll() } returns emptyList()
 
         assertEquals(WindowsSetupState.NoRomRoot, setup().ensure(FakeOps()))
-        coVerify { memoryCards.addCard("windows", "Windows Memory Card", null, null, emptyList(), false) }
-    }
-
-    @Test
-    fun `legacy default card name migrates to Windows Memory Card`() = runTest {
-        coEvery { memoryCards.getById("windows") } returns card(displayName = "Windows Games")
-        coEvery { romRoots.getAll() } returns emptyList()
-
-        setup().ensure(FakeOps())
-
-        coVerify { memoryCards.rename("windows", "Windows Memory Card") }
-    }
-
-    @Test
-    fun `a user-chosen card name is never renamed`() = runTest {
-        coEvery { memoryCards.getById("windows") } returns card(displayName = "My PC Games")
-        coEvery { romRoots.getAll() } returns emptyList()
-
-        setup().ensure(FakeOps())
-
-        coVerify(exactly = 0) { memoryCards.rename(any(), any()) }
+        coVerify { memoryCards.addCard("windows", "PC", null, null, emptyList(), false) }
     }
 
     @Test

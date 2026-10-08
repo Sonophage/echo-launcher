@@ -1,15 +1,18 @@
 package com.echo.core.data.database.seeder
 
 import com.echo.core.domain.model.PlatformIds.ANDROID as ANDROID_PLATFORM_ID
+import com.echo.core.domain.model.PlatformIds.WINDOWS as WINDOWS_PLATFORM_ID
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import com.echo.core.data.database.dao.PlatformDao
 import com.echo.core.data.database.dao.ThemeDao
 import com.echo.core.data.database.entity.MemoryCardEntity
 import com.echo.core.data.database.entity.ThemeEntity
 import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.data.repository.CategoryRepositoryImpl
+import com.echo.core.data.repository.WindowsLibrarySetup
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
@@ -35,6 +38,19 @@ internal fun androidCardSeedAction(alreadySeeded: Boolean, cardExists: Boolean):
         cardExists -> AndroidCardSeed.MARK_ONLY
         else -> AndroidCardSeed.CREATE_AND_MARK
     }
+
+private const val LEGACY_CARD_SUFFIX = " Memory Card"
+private val LEGACY_PC_NAMES = setOf("Windows Games", "Windows Memory Card")
+
+/**
+ * The name a system or card takes when it still has a default from before "Memory Card" left the
+ * UI (owner, 2026-10-07). Null keeps it: a name the owner chose is never touched.
+ */
+internal fun renamedFromLegacy(platformId: String, name: String, platformName: String?): String? = when {
+    platformId == WINDOWS_PLATFORM_ID && name in LEGACY_PC_NAMES -> WindowsLibrarySetup.DISPLAY_NAME
+    platformName != null && name == platformName + LEGACY_CARD_SUFFIX -> platformName
+    else -> null
+}
 
 private val BUILTIN_CLASSIC_BLUE = ThemeEntity(
     id               = "builtin_classic_blue",
@@ -65,6 +81,7 @@ class DatabaseInitializer @Inject constructor(
     private val themeDao: ThemeDao,
     private val libraryConsolidation: LibraryConsolidation,
     private val memoryCardDao: com.echo.core.data.database.dao.MemoryCardDao,
+    private val platformDao: PlatformDao,
 ) {
     suspend fun initialize() {
         platformSeeder.seed()
@@ -78,6 +95,19 @@ class DatabaseInitializer @Inject constructor(
         seedThemes()
 
         libraryConsolidation.run()
+        dropLegacyNames()
+    }
+
+    // Every start, not once: a restored backup can bring the old names back.
+    private suspend fun dropLegacyNames() {
+        platformDao.getById(WINDOWS_PLATFORM_ID)?.let { p ->
+            renamedFromLegacy(p.id, p.name, null)?.let { platformDao.update(p.copy(name = it)) }
+        }
+        for (card in memoryCardDao.getAll()) {
+            val platformName = platformDao.getById(card.platformId)?.name
+            renamedFromLegacy(card.platformId, card.displayName, platformName)
+                ?.let { memoryCardDao.setDisplayName(card.platformId, it) }
+        }
     }
 
     private suspend fun seedMainDb() {
@@ -127,13 +157,13 @@ class DatabaseInitializer @Inject constructor(
             memoryCardDao.upsert(
                 MemoryCardEntity(
                     platformId  = ANDROID_PLATFORM_ID,
-                    displayName = "Android Memory Card",
+                    displayName = "Android",
                     enabled     = true,
                     sortOrder   = memoryCardDao.maxSortOrder() + 1,
                     gameCount   = 0,
                 )
             )
-            Timber.i("Android Memory Card seeded")
+            Timber.i("Android card seeded")
         }
         context.echoDataStore.edit { it[KEY_ANDROID_CARD_SEEDED] = true }
     }

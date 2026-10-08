@@ -446,7 +446,7 @@ class InitialSetupViewModel @Inject constructor(
             scratch.update {
                 it.copy(
                     message = "Vita3K data folder set. Installed titles can be scanned from the " +
-                        "PS Vita Memory Card in Library Manager.",
+                        "PS Vita system in Library Manager.",
                     vitaFolderName = rootDisplayName(uri.toString()),
                 )
             }

@@ -158,7 +158,7 @@ class LibraryManagerViewModel @Inject constructor(
                 val rootRaw = RomRootRepository.rawPathOfTree(root.treeUri)?.trimEnd('/')
                 val homed = if (rootRaw == null) emptyList() else cards.mapNotNull { card ->
                     card.romDirectory?.takeIf { it.startsWith("$rootRaw/") }
-                        ?.let { card.displayName.removeSuffix(" Memory Card") }
+                        ?.let { card.displayName }
                 }
                 root.copy(consoles = homed.takeIf { it.isNotEmpty() }?.joinToString(", "))
             },
@@ -253,7 +253,7 @@ class LibraryManagerViewModel @Inject constructor(
                 .filter { it.id != WINDOWS_PLATFORM_ID }
                 .map { PlatformOption(it.id, it.name, it.shortName) }
             if (options.isEmpty()) {
-                _scratch.update { it.copy(message = "Every supported platform already has a Memory Card.") }
+                _scratch.update { it.copy(message = "Every supported system is already added.") }
                 return@launch
             }
             _scratch.update {
@@ -275,7 +275,7 @@ class LibraryManagerViewModel @Inject constructor(
             viewModelScope.launch {
                 memoryCardRepository.addCard(
                     platformId = option.id,
-                    displayName = defaultDisplayName(option.name),
+                    displayName = option.name,
                     romDirectory = null,
                     emulatorId = null,
                 )
@@ -342,7 +342,7 @@ class LibraryManagerViewModel @Inject constructor(
         val s = _scratch.value
         val platformId = s.pendingPlatformId ?: return
         viewModelScope.launch {
-            val displayName = defaultDisplayName(s.pendingPlatformName ?: platformId)
+            val displayName = s.pendingPlatformName ?: platformId
             memoryCardRepository.addCard(
                 platformId = platformId,
                 displayName = displayName,
@@ -358,7 +358,6 @@ class LibraryManagerViewModel @Inject constructor(
         }
     }
 
-    private fun defaultDisplayName(platformName: String): String = "$platformName Memory Card"
 
     private suspend fun buildEmulatorOptions(platformId: String?): List<EmulatorOption> {
         val installed =
@@ -627,7 +626,7 @@ class LibraryManagerViewModel @Inject constructor(
                 }
                 ensureWindowsCard()
             }.fold(
-                onSuccess = { _scratch.update { it.copy(message = "\"$displayName\" added to Windows Games.") } },
+                onSuccess = { _scratch.update { it.copy(message = "\"$displayName\" added to PC.") } },
                 onFailure = { e ->
                     Timber.e(e, "Add PC game by id failed for ${row.name}")
                     _scratch.update { it.copy(message = "Couldn't add game: ${e.message}") }
@@ -684,7 +683,7 @@ class LibraryManagerViewModel @Inject constructor(
                 )
                 ensureWindowsCard()
             }.fold(
-                onSuccess = { _scratch.update { it.copy(message = "\"${row.title}\" added to Windows Games.") } },
+                onSuccess = { _scratch.update { it.copy(message = "\"${row.title}\" added to PC.") } },
                 onFailure = { e ->
                     Timber.e(e, "PC game import failed for ${row.gameId}")
                     _scratch.update { it.copy(message = "Couldn't import \"${row.title}\": ${e.message}") }
@@ -711,7 +710,7 @@ class LibraryManagerViewModel @Inject constructor(
                 }.onFailure { Timber.e(it, "PC game import failed for ${row.gameId}") }
             }
             if (added > 0) ensureWindowsCard()
-            _scratch.update { it.copy(message = "Imported $added PC game(s) into Windows Games.") }
+            _scratch.update { it.copy(message = "Imported $added PC game(s).") }
         }
     }
 

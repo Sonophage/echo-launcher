@@ -258,7 +258,7 @@ internal fun platformContextMenuItems(
         )
     }
 
-    add(CrossbarContextMenuItem("rename_card", "Rename Memory Card", group = MenuGroup.SETTINGS))
+    add(CrossbarContextMenuItem("rename_card", "Rename System", group = MenuGroup.SETTINGS))
     if (romDirectory != null) {
         add(CrossbarContextMenuItem("card_rom_directory", "ROM Folder ($romDirectory)", group = MenuGroup.SETTINGS))
     }
@@ -272,7 +272,7 @@ internal fun platformContextMenuItems(
     add(CrossbarContextMenuItem("hide", "Hide From Games", group = MenuGroup.REMOVE))
 
     if (platformId != PlatformIds.WINDOWS) {
-        add(CrossbarContextMenuItem("remove", "Remove Memory Card", isDestructive = true, group = MenuGroup.REMOVE))
+        add(CrossbarContextMenuItem("remove", "Remove System", isDestructive = true, group = MenuGroup.REMOVE))
     }
 }
 

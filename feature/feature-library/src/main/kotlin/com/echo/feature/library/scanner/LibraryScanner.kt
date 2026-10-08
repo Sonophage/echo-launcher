@@ -66,7 +66,7 @@ class LibraryScanner @Inject constructor(
                 platformId  = platformId,
                 displayName = platformId,
                 status      = ScanStatus.SKIPPED_NO_SOURCE,
-                errorMessage = "Memory Card not found.",
+                errorMessage = "System not found.",
             )
 
         if (!busyPlatforms.add(platformId)) {

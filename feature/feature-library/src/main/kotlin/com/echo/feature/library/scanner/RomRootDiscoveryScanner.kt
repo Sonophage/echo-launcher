@@ -80,7 +80,7 @@ class RomRootDiscoveryScanner @Inject constructor(
                 if (platformId !in haveCard) {
                     memoryCardRepository.addCard(
                         platformId = platformId,
-                        displayName = "${platform.name} Memory Card",
+                        displayName = platform.name,
                         romDirectory = rootRaw?.let { "${it.trimEnd('/')}/$name" },
                         emulatorId = null,
                     )

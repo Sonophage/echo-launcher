@@ -251,7 +251,7 @@ class EmulatorIntentResolver @Inject constructor(
         return romUriMinter.mint(romPath)
             ?: error(
                 "${game.title} is not inside a configured ROM folder, so it cannot be handed to " +
-                    "${profile.name}. Check the folder set for this Memory Card in Settings."
+                    "${profile.name}. Check the folder set for this system in Settings."
             )
     }
 

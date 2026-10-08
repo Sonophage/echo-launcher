@@ -122,7 +122,7 @@ class RomRootDiscoveryScannerTest {
         coVerify(exactly = 1) {
             memoryCardRepository.addCard(
                 platformId = "gbc",
-                displayName = "Game Boy Color Memory Card",
+                displayName = "Game Boy Color",
                 romDirectory = any(),
                 emulatorId = null,
             )

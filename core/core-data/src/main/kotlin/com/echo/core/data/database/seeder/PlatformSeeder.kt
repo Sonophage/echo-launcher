@@ -362,7 +362,7 @@ class PlatformSeeder @Inject constructor(
 
             PlatformEntity(
                 id            = "windows",
-                name          = "Windows Games",
+                name          = "PC",
                 shortName     = "PC",
                 iconRes       = "ic_platform_windows",
                 accentColor   = 0xFF0078D4L,

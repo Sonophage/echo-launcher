@@ -56,7 +56,7 @@ class ShortcutConfirmReceiver : BroadcastReceiver() {
                     if (result.needsSetup) {
                         com.echo.launcher.pin.WindowsSetupNotifications.post(context, name)
                     }
-                    Timber.i("User confirmed PC shortcut \"$name\" → Windows Games")
+                    Timber.i("User confirmed PC shortcut \"$name\" → PC")
                     return@launch
                 }
 

@@ -49,9 +49,9 @@ object PreviewData {
 
     val platformFolders = listOf(
         CrossbarItem("all_games",       "All Games",                   subtitle = "Total Games 73", type = CrossbarItemType.ALL_GAMES),
-        CrossbarItem("platform_psp",    "PSP Memory Card",             subtitle = "24 Games", platformId = "psp", type = CrossbarItemType.MEMORY_CARD),
-        CrossbarItem("platform_ps2",    "PlayStation 2 Memory Card",   subtitle = "32 Games", platformId = "ps2", type = CrossbarItemType.MEMORY_CARD),
-        CrossbarItem("platform_n64",    "Nintendo 64 Memory Card",     subtitle = "17 Games", platformId = "n64", type = CrossbarItemType.MEMORY_CARD),
+        CrossbarItem("platform_psp",    "PSP",                         subtitle = "24 Games", platformId = "psp", type = CrossbarItemType.MEMORY_CARD),
+        CrossbarItem("platform_ps2",    "PlayStation 2",               subtitle = "32 Games", platformId = "ps2", type = CrossbarItemType.MEMORY_CARD),
+        CrossbarItem("platform_n64",    "Nintendo 64",                 subtitle = "17 Games", platformId = "n64", type = CrossbarItemType.MEMORY_CARD),
     )
 
     val defaultState = CrossbarUiState(
