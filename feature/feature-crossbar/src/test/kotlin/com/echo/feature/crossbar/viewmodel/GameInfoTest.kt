@@ -98,8 +98,12 @@ class GameInfoTest {
             gameInfoSections(full),
         )
         assertEquals(GameInfoAction.ACHIEVEMENTS, full.firstSection())
-        assertEquals("no set, no Achievements view: it opens on the screenshots", null, full.copy(achievementSet = null).firstSection())
-        assertEquals("an empty set is no achievements", null, full.copy(achievementSet = set(0)).firstSection())
+        val described = full.copy(content = full.content?.copy(description = "A dragon returns."))
+        assertEquals("no set, no Achievements view: it opens on the screenshots and description",
+            null, described.copy(achievementSet = null).firstSection())
+        assertEquals("an empty set is no achievements", null, described.copy(achievementSet = set(0)).firstSection())
+        // owner, 2026-10-08: with no screenshots and no description that view is empty, so Info comes first
+        assertEquals(GameInfoAction.INFO, full.copy(achievementSet = null).firstSection())
     }
 
     private fun badge(id: String, unlockedAt: Long?) = com.echo.core.domain.achievement.Achievement(

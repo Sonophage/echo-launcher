@@ -52,8 +52,14 @@ fun gameInfoSections(info: GameInfoState): List<GameInfoAction?> = listOfNotNull
 
 val GameInfoState.hasAchievements: Boolean get() = !isApp && (achievementSet?.total ?: 0) > 0
 
-// the view Game Info opens on: achievements, when the game has them
-fun GameInfoState.firstSection(): GameInfoAction? = gameInfoSections(this).first()
+// the view Game Info opens on: achievements, when the game has them; then the screenshots and description;
+// and Info when those are empty, as an empty first view looked broken on the Thor (owner, 2026-10-08)
+fun GameInfoState.firstSection(): GameInfoAction? {
+    val sections = gameInfoSections(this)
+    if (sections.first() != null) return sections.first()
+    val defaultHasContent = isApp || content?.media.orEmpty().isNotEmpty() || !content?.description.isNullOrBlank()
+    return if (defaultHasContent) null else sections.firstOrNull { it == GameInfoAction.INFO }
+}
 
 // the badges Game Info's Achievements view shows, through the wall's filter: the latest unlocked first, then
 // the next locked in the set's own order, so a glance shows what was earned and what comes next

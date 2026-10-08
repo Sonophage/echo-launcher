@@ -113,7 +113,7 @@ fun BottomScreen(
             if (info != null) {
                 // Info's sections (the sheet, the video) open here without touching the top screen
                 // it opens on achievements, as the top screen's Game Info does
-                var open by remember(info.item.id, info.achievementSet) { mutableStateOf(info.firstSection()) }
+                var open by remember(info.item.id, info.achievementSet, info.content != null) { mutableStateOf(info.firstSection()) }
                 GameInfoScreen(
                     info = info.copy(open = open),
                     androidNotices = emptyList(),
