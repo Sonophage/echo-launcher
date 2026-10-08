@@ -57,6 +57,9 @@ released; it becomes the next release's notes.
 ### Fixes
 - The keyboard shows on the Thor's bottom screen in Swap.
 - The Thor's top screen no longer turns grey after a rename prompt is cancelled.
+- Custom emulator profiles are no longer lost to an interrupted save or two saves at once.
+- Pinning a shortcut to ECHO no longer freezes the screen, and a slow save no longer drops it.
+- An achievement's detail card keeps its tier, players and status in view under a long description.
 - The boot sound plays to its end.
 - Applying a theme with nothing left out applies all of it again.
 - Theme files are written the same way every time.
