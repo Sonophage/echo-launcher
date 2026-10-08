@@ -648,7 +648,7 @@ data class CrossbarUiState(
 
     val fadeByDistance: Boolean = true,
 
-    val cardArtGrid: Boolean = true,
+    val cardArtGrid: Boolean = false,
 
     val recentsIncludeApps: Boolean = false,
     val interfaceChoices: com.echo.core.data.repository.InterfaceChoices =
@@ -4582,7 +4582,7 @@ class CrossbarViewModel @Inject constructor(
                 val legibility = com.echo.core.domain.model.IconLegibilityStyle
                     .fromName(prefs[KEY_ICON_LEGIBILITY])
                 val fadeByDistance = prefs[KEY_FADE_BY_DISTANCE] ?: true
-                val cardArtGrid = prefs[KEY_CARD_ART_GRID] ?: true
+                val cardArtGrid = com.echo.core.data.repository.IconDisplayPreferences.cardArtGrid(prefs)
                 val recentsIncludeApps = prefs[KEY_RECENTS_INCLUDE_APPS] ?: false
                 val interfaceChoices = com.echo.core.data.repository.InterfacePreferences.read(prefs)
                 val textShadow = prefs[KEY_TEXT_SHADOW] ?: true
@@ -4717,7 +4717,6 @@ class CrossbarViewModel @Inject constructor(
 
         private val KEY_FADE_BY_DISTANCE = booleanPreferencesKey("display_fade_by_distance")
 
-        private val KEY_CARD_ART_GRID = com.echo.core.data.repository.IconDisplayPreferences.KEY_CARD_ART_GRID
 
         private val KEY_RECENTS_INCLUDE_APPS = booleanPreferencesKey("display_recents_include_apps")
 

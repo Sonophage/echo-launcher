@@ -59,6 +59,9 @@ class IconDisplayPreferences @Inject constructor(
         // column, so a console card's grid of covers (Card Art Grid) follows it
         fun gameRowsShowCovers(prefs: Preferences): Boolean = prefs[KEY_ROW_COVER_ART] ?: false
 
+        // owner, 2026-10-08: a fresh install starts with both as icons; a stored choice is kept as it is
+        fun cardArtGrid(prefs: Preferences): Boolean = prefs[KEY_CARD_ART_GRID] ?: gameRowsShowCovers(prefs)
+
         fun MutablePreferences.setGameRows(covers: Boolean) {
             this[KEY_ROW_COVER_ART] = covers
             this[KEY_CARD_ART_GRID] = covers

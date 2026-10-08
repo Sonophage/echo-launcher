@@ -20,4 +20,18 @@ class GameRowsSettingTest {
         assertEquals(true, IconDisplayPreferences.gameRowsShowCovers(prefs))
         assertEquals(true, prefs[IconDisplayPreferences.KEY_CARD_ART_GRID])
     }
+
+    // owner, 2026-10-08: a new install showed icon rows beside console cards of covers; both start as icons
+    @Test
+    fun `nothing stored starts with icons in the rows and on the console cards`() {
+        val prefs = androidx.datastore.preferences.core.preferencesOf()
+        assertEquals(false, IconDisplayPreferences.gameRowsShowCovers(prefs))
+        assertEquals(false, IconDisplayPreferences.cardArtGrid(prefs))
+    }
+
+    @Test
+    fun `a card grid the owner chose before is kept`() {
+        val prefs = mutablePreferencesOf().apply { this[IconDisplayPreferences.KEY_CARD_ART_GRID] = true }
+        assertEquals(true, IconDisplayPreferences.cardArtGrid(prefs))
+    }
 }
