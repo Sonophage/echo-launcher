@@ -91,6 +91,9 @@ class RomRootRepository @Inject constructor(
             return "$root/$subfolderName"
         }
 
+        // the one mapping from a storage document id to a file path; the ROM scanner used to keep its own copy.
+        // ponytail: "primary" is the device owner's storage (/storage/emulated/0); a second Android user or a
+        // work profile would need Environment.getExternalStorageDirectory() here
         fun docIdToRawPath(documentId: String): String? {
             val parts = documentId.split(":", limit = 2)
             if (parts.size != 2 || parts[1].isBlank()) return null

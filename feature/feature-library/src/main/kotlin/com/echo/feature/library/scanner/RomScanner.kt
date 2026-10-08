@@ -205,7 +205,7 @@ class RomScanner @Inject constructor(
                 }
                 if (child.name.startsWith(".")) continue
 
-                val rawPath = safDocumentIdToRawPath(child.documentId) ?: child.uri.toString()
+                val rawPath = com.echo.core.data.repository.RomRootRepository.docIdToRawPath(child.documentId) ?: child.uri.toString()
                 fileChildren.add(SafFileChild(child.name, rawPath, child.uri.toString()))
             }
         }
@@ -352,7 +352,7 @@ class RomScanner @Inject constructor(
                             title      = title,
                             extension  = ext,
                             idContent  = idContent,
-                            rawPath    = safDocumentIdToRawPath(child.documentId),
+                            rawPath    = com.echo.core.data.repository.RomRootRepository.docIdToRawPath(child.documentId),
                             uri        = child.uri.toString(),
                         )
                     )
@@ -378,17 +378,6 @@ class RomScanner @Inject constructor(
             out.toString(Charsets.UTF_8.name())
         }
     }.getOrNull()
-}
-
-fun safDocumentIdToRawPath(documentId: String): String? {
-    val parts = documentId.split(":", limit = 2)
-    if (parts.size != 2 || parts[1].isBlank()) return null
-    val (volume, relative) = parts
-    return if (volume.equals("primary", ignoreCase = true)) {
-        "/storage/emulated/0/$relative"
-    } else {
-        "/storage/$volume/$relative"
-    }
 }
 
 fun cleanRomTitle(raw: String): String {

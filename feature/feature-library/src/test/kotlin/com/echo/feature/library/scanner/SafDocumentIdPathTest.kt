@@ -10,7 +10,7 @@ class SafDocumentIdPathTest {
     fun `primary volume maps to emulated 0`() {
         assertEquals(
             "/storage/emulated/0/ROMs/PSP/game.iso",
-            safDocumentIdToRawPath("primary:ROMs/PSP/game.iso"),
+            com.echo.core.data.repository.RomRootRepository.docIdToRawPath("primary:ROMs/PSP/game.iso"),
         )
     }
 
@@ -18,7 +18,7 @@ class SafDocumentIdPathTest {
     fun `removable volume maps under storage uuid`() {
         assertEquals(
             "/storage/1A2B-3C4D/Games/game.chd",
-            safDocumentIdToRawPath("1A2B-3C4D:Games/game.chd"),
+            com.echo.core.data.repository.RomRootRepository.docIdToRawPath("1A2B-3C4D:Games/game.chd"),
         )
     }
 
@@ -26,14 +26,14 @@ class SafDocumentIdPathTest {
     fun `primary is case-insensitive`() {
         assertEquals(
             "/storage/emulated/0/a.bin",
-            safDocumentIdToRawPath("PRIMARY:a.bin"),
+            com.echo.core.data.repository.RomRootRepository.docIdToRawPath("PRIMARY:a.bin"),
         )
     }
 
     @Test
     fun `document id without a relative part is rejected`() {
-        assertNull(safDocumentIdToRawPath("primary:"))
-        assertNull(safDocumentIdToRawPath("primary"))
-        assertNull(safDocumentIdToRawPath(""))
+        assertNull(com.echo.core.data.repository.RomRootRepository.docIdToRawPath("primary:"))
+        assertNull(com.echo.core.data.repository.RomRootRepository.docIdToRawPath("primary"))
+        assertNull(com.echo.core.data.repository.RomRootRepository.docIdToRawPath(""))
     }
 }
