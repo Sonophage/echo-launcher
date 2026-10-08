@@ -53,3 +53,10 @@ released; it becomes the next release's notes.
 - Applying a theme with nothing left out applies all of it again.
 - Theme files are written the same way every time.
 - The Emulators hint names the right place for Library Manager.
+- A backup that fails to copy no longer leaves an empty backup to restore.
+- A preview clip, album art or wallpaper cut off mid-write is deleted, not kept; an animated
+  wallpaper copy stops at the size limit.
+- The video player no longer crashes when a rescan shortens its list.
+- Clear All Artwork, Clear All Logs and the controller reset ask first.
+- Re-Scrape All's confirm says art you picked is kept; Backup's text points at Permissions ▸
+  Folders. The fixed Screen Orientation row is gone.
