@@ -29,7 +29,8 @@ enum class GamepadAction {
     NEXT_PAGE,
     HOME,
 
-    // owner, 2026-10-06: Start opens the island (now playing or last played), Select the notifications
+    // the island (now playing or last played) and the notifications; owner, 2026-10-07: Select opens the island,
+    // Start the notifications (they traded places)
     OPEN_ISLAND,
     OPEN_NOTIFICATIONS,
 }

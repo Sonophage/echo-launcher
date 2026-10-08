@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-// owner, 2026-10-06: LB is Apps and RB Search on every screen, Select the notifications, Home back to the
+// owner, 2026-10-06: LB is Apps and RB Search on every screen, Start (since 2026-10-07) the notifications, Home back to the
 // crossbar; the players and editors keep the bumpers for paging and seeking
 class GlobalStepTest {
     private val lb = GamepadAction.PREV_PAGE
@@ -47,7 +47,7 @@ class GlobalStepTest {
     }
 
     @Test
-    fun `Select opens the notifications, and Home never leaves the first-run wizard`() {
+    fun `the notifications button opens the notifications, and Home never leaves the first-run wizard`() {
         assertEquals(GlobalStep.NOTIFICATIONS, globalStep(GamepadAction.OPEN_NOTIFICATIONS, state()))
         assertEquals(GlobalStep.HOME, globalStep(GamepadAction.HOME, state().copy(activeSettingsScreen = "settings_display")))
         val wizard = CrossbarViewModel.WIZARD_SCREEN_IDS.first()

@@ -1255,7 +1255,7 @@ internal fun CrossbarUiState.withDrawerAndSearchClosed(): CrossbarUiState = copy
 enum class GlobalStep { APPS, SEARCH, CLOSE_SEARCH, NOTIFICATIONS, HOME }
 
 // owner, 2026-10-06: the same buttons on every screen but the players and editors, which keep the bumpers
-// for paging and seeking: LB Apps, RB Search, Select the notifications, Home (the guide button, or Select
+// for paging and seeking: LB Apps, RB Search, Start the notifications, Home (the guide button, or Start
 // held) back to the crossbar. Null leaves the press to the screen.
 internal fun globalStep(action: GamepadAction, s: CrossbarUiState): GlobalStep? {
     val keepsItsButtons = s.activePhotoViewer != null || s.activeVideoId != null || s.metadataPreview != null ||

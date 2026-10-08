@@ -36,8 +36,8 @@ internal const val CHORD_SETTLE_MS = 80L
 
 private const val STICK_FULL_TILT_RAMP_FACTOR = 2
 
-// owner, 2026-10-06: a press of Select opens the notifications, holding it is Home
-internal const val SELECT_HOLD_MS = 500L
+// a press of the notifications button (Start since 2026-10-07) opens the notifications, holding it is Home
+internal const val NOTIFICATIONS_HOLD_MS = 500L
 
 internal data class RepeatTuning(
     val initialDelayMs: Long,
@@ -336,7 +336,7 @@ class GamepadInputHandler @Inject constructor(
         val s = scope ?: run { emit(GamepadAction.OPEN_NOTIFICATIONS, physical = true); return }
         notificationsJob?.cancel()
         notificationsJob = s.launch {
-            delay(SELECT_HOLD_MS)
+            delay(NOTIFICATIONS_HOLD_MS)
             notificationsJob = null
             emit(GamepadAction.HOME, physical = true)
         }

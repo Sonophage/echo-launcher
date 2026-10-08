@@ -125,7 +125,7 @@ class GamepadInputHandlerTest {
             assertEquals(GamepadAction.OPEN_NOTIFICATIONS, awaitItem())
 
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.ACTION_DOWN))
-            advanceTimeBy(SELECT_HOLD_MS + 1)
+            advanceTimeBy(NOTIFICATIONS_HOLD_MS + 1)
             assertEquals(GamepadAction.HOME, awaitItem())
             handler.onKeyEvent(keyEvent(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.ACTION_UP))
             expectNoEvents()
