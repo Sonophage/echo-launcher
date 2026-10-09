@@ -169,7 +169,9 @@ column's system folders into genre folders, and **Group by System** turns them b
 | <img src="docs/screenshots/game-hover-panel.jpg" width="420"> | <img src="docs/screenshots/game-context-menu.jpg" width="420"> |
 | A focused game | Its options |
 | <img src="docs/screenshots/game-info.jpg" width="420"> | <img src="docs/screenshots/artwork-studio.jpg" width="420"> |
-| Game Info, with the game's achievements | The Artwork Studio: pick where the art comes from |
+| Game Info: year, genre, developer and description | The Artwork Studio: pick where the art comes from |
+| <img src="docs/screenshots/game-screenshots.jpg" width="420"> | |
+| Game Info's screenshots | |
 | <img src="docs/screenshots/col-game-cards.jpg" width="420"> | <img src="docs/screenshots/game-list.jpg" width="420"> |
 | Console cards, each showing four covers from inside it | All Games |
 | <img src="docs/screenshots/game-console.jpg" width="420"> | <img src="docs/screenshots/context-menu-confirm.jpg" width="420"> |
