@@ -744,6 +744,8 @@ data class CrossbarUiState(
     val saveThemeNameDialog: PlaylistNameDialogState? = null,
 
     val layoutSpec: com.echo.themekit.CrossbarLayoutSpec = com.echo.themekit.CrossbarLayoutSpec.DEFAULT,
+    val focusStyle: com.echo.themekit.FocusStyle = com.echo.themekit.FocusStyle.CLASSIC,
+    val motion: com.echo.themekit.MotionPreset = com.echo.themekit.MotionPreset.CLASSIC,
 
 
     val crossbarLayoutAdjustMap: Map<String, com.echo.themekit.CrossbarLayoutAdjust> = emptyMap(),
@@ -1522,6 +1524,7 @@ class CrossbarViewModel @Inject constructor(
         checkInitialSetup()
         logStartupSequence()
         look.observeColorScheme()
+        look.observeFocusAndMotion()
         observeCategoryBar()
         observeLibraryChips()
         panel.observeProfilePrefs()
@@ -4822,9 +4825,7 @@ class CrossbarViewModel @Inject constructor(
                 val style = runCatching {
                     WaveStyle.valueOf(prefs[KEY_WAVE_STYLE] ?: WaveStyle.ANIMATED.name)
                 }.getOrDefault(WaveStyle.ANIMATED)
-                val design = runCatching {
-                    com.echo.core.ui.wave.WaveDesign.valueOf(prefs[KEY_WAVE_DESIGN] ?: com.echo.core.ui.wave.WaveDesign.PSP.name)
-                }.getOrDefault(com.echo.core.ui.wave.WaveDesign.PSP)
+                val design = com.echo.core.ui.wave.WaveDesign.of(prefs[KEY_WAVE_DESIGN])
                 val grouping = GameGrouping.fromName(prefs[KEY_GAMES_GROUP_BY])
                 if (grouping != _uiState.value.gameGrouping) {
                     _uiState.update { it.copy(gameGrouping = grouping) }

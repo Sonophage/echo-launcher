@@ -28,6 +28,9 @@ data class EchoThemeManifest(
     val gameBootStyle: String? = null,
     val launchDiscStyle: String? = null,
     val buttonSet: String? = null,
+    // a FocusStyle and a MotionPreset by name (owner, 2026-10-09)
+    val focusStyle: String? = null,
+    val motion: String? = null,
 
     // the look settings in ThemeSettings.KEYS (owner, 2026-10-09); anything else is ignored
     val settings: JsonObject? = null,
@@ -52,6 +55,8 @@ data class EchoThemeManifest(
         val WAVE_DESIGNS = setOf("PSP", "ECHO_RINGS", "ECHO_ARCS")
         val GAME_START_STYLES = setOf("DISC", "LENS")
         val BUTTON_SETS = setOf("GENERIC", "XBOX", "NINTENDO", "PLAYSTATION")
+        val FOCUS_STYLES = FocusStyle.entries.map { it.name }.toSet()
+        val MOTION_PRESETS = MotionPreset.entries.map { it.name }.toSet()
     }
 }
 

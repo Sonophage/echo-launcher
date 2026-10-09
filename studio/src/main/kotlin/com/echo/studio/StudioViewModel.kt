@@ -443,6 +443,8 @@ class StudioViewModel(private val scope: CoroutineScope) {
             gameBootStyle = state.keptManifest?.gameBootStyle,
             launchDiscStyle = state.keptManifest?.launchDiscStyle,
             buttonSet = state.keptManifest?.buttonSet,
+            focusStyle = state.keptManifest?.focusStyle,
+            motion = state.keptManifest?.motion,
             settings = state.keptManifest?.settings,
         )
 

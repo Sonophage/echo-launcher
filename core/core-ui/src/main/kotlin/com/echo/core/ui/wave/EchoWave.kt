@@ -25,6 +25,12 @@ enum class WaveDesign(val label: String) {
     PSP("PSP"),
     ECHO_RINGS("Echo Rings"),
     ECHO_ARCS("Echo Arcs"),
+    ;
+
+    companion object {
+        // the stored name, or PSP when none is set or it is not one ECHO knows
+        fun of(name: String?): WaveDesign = entries.firstOrNull { it.name == name } ?: PSP
+    }
 }
 
 val LocalWaveDesign = staticCompositionLocalOf { WaveDesign.PSP }

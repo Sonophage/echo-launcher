@@ -605,6 +605,8 @@ fun CrossbarShell(
 
           com.echo.core.ui.icons.LocalCustomIcons provides uiState.customIcons,
           LocalCrossbarLayout provides uiState.layoutSpec,
+          LocalFocusStyle provides uiState.focusStyle,
+          LocalCrossbarMotion provides uiState.motion,
 
           LocalFocusedGameVideo provides uiState.focusedGameVideo,
 

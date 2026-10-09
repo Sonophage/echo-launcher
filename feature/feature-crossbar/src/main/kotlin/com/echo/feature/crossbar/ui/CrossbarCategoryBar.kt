@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -166,22 +167,30 @@ private fun CrossbarCategoryItem(
 ) {
     // owner, 2026-10-04: smaller, and drawn with the Recent filters' icons
     val iconSize = (LocalCrossbarLayout.current.categoryIconDp * XMB_ICON_SCALE).dp
+    val focusStyle = LocalFocusStyle.current
+    val motion = LocalCrossbarMotion.current
     val itemAlpha by animateFloatAsState(
 
         targetValue = when {
             isSelected -> 1f
-            fadeByDistance -> CrossbarDim.ranked(distance)
-            else -> FlatUnfocusedIconAlpha
+            fadeByDistance -> focusStyle.restAlpha(CrossbarDim.ranked(distance))
+            else -> focusStyle.restAlpha(FlatUnfocusedIconAlpha)
         },
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        animationSpec = motion.fade(),
         label = "crossbarCategoryAlpha",
     )
 
     val labelAlpha by animateFloatAsState(
         targetValue = if (isSelected) 1f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        animationSpec = motion.fade(),
         label = "crossbarCategoryLabelAlpha",
     )
+    val iconScale by animateFloatAsState(
+        targetValue = focusStyle.categoryScale(isSelected),
+        animationSpec = motion.pop(),
+        label = "crossbarCategoryScale",
+    )
+    val accent = com.echo.core.ui.theme.LocalEchoColors.current.accentColor
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -200,6 +209,8 @@ private fun CrossbarCategoryItem(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(60.dp)
+                .graphicsLayer { scaleX = iconScale; scaleY = iconScale }
+                .focusMark(focusStyle, labelAlpha, accent)
                 .alpha(itemAlpha),
         ) {
             androidx.compose.runtime.CompositionLocalProvider(

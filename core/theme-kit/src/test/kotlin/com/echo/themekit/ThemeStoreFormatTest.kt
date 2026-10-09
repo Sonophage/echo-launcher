@@ -59,7 +59,7 @@ class ThemeStoreFormatTest {
         assertEquals(setOf(ThemePart.SOUNDS), sounds.parts())
         val full = sounds.copy(
             manifest = sounds.manifest.copy(
-                accentColor = "#112233", waveDesign = "PSP", buttonSet = "XBOX", gameBootStyle = "LENS",
+                accentColor = "#112233", waveDesign = "PSP", buttonSet = "XBOX", gameBootStyle = "LENS", focusStyle = "LIFT",
                 settings = kotlinx.serialization.json.buildJsonObject { put("pref_animated_icons", kotlinx.serialization.json.JsonPrimitive(false)) },
             ),
             icons = mapOf("catbar_games" to ThemeImage(jpg, "png")),

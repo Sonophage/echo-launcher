@@ -97,6 +97,8 @@ class EchoThemeStorePartsTest {
         assertEquals("ECHO_RINGS", bundle.manifest.waveDesign)
         assertEquals("DISC", bundle.manifest.gameBootStyle)
         assertEquals(null, bundle.manifest.buttonSet, "a setting the person never chose is not carried")
+        assertEquals(null to null, bundle.manifest.focusStyle to bundle.manifest.motion, "nor a focus style or motion")
+        assertEquals(null, bundle.manifest.settings, "nor a display setting")
     }
 
     // owner, 2026-10-07: applying a theme saves the look in use first, so a theme never costs you your own look
@@ -175,6 +177,54 @@ class EchoThemeStorePartsTest {
         assertEquals("Body", details.readme.body)
         assertEquals(1, details.screenshotPaths.size)
         assertTrue(File(details.screenshotPaths.single()).isFile)
+    }
+
+    // owner, 2026-10-09: a theme picks a focus style and a motion preset; one it leaves out or that ECHO does not
+    // know keeps the person's own, and the look kept before the theme carries the person's
+    @Test
+    fun `a theme sets its focus style and motion, and the look before it keeps yours`() = runTest {
+        context.echoDataStore.edit {
+            it[EchoThemeStore.KEY_FOCUS_STYLE] = "BRACKET"
+            it[EchoThemeStore.KEY_MOTION_PRESET] = "SNAPPY"
+            it[com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE] = 0x00AA33
+        }
+        val store = EchoThemeStore(context, media)
+        val halo = assertNotNull(store.importBundle(register(theme(
+            EchoThemeManifest(name = "Halo", accentColor = "#112233", focusStyle = "HALO", motion = "WOBBLE"), media = emptyMap(),
+        ))))
+        assertTrue(com.echo.themekit.ThemePart.FOCUS in halo.parts)
+
+        assertTrue(store.apply(halo.id))
+        val prefs = context.echoDataStore.data.first()
+        assertEquals("HALO", prefs[EchoThemeStore.KEY_FOCUS_STYLE])
+        assertEquals("SNAPPY", prefs[EchoThemeStore.KEY_MOTION_PRESET], "a motion ECHO does not know keeps yours")
+
+        val before = assertNotNull(store.themes.value.firstOrNull { it.name == "Before Halo" })
+        val kept = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${before.id}.echo-theme"))).manifest
+        assertEquals("BRACKET" to "SNAPPY", kept.focusStyle to kept.motion)
+    }
+
+    @Test
+    fun `a look with nothing picked is kept as ECHO's defaults, so taking it back undoes everything a theme picked`() = runTest {
+        context.echoDataStore.edit { it[com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE] = 0x00AA33 }
+        val store = EchoThemeStore(context, media)
+        val halo = assertNotNull(store.importBundle(register(theme(
+            EchoThemeManifest(
+                name = "Halo", accentColor = "#112233", focusStyle = "HALO", motion = "SOFT",
+                waveDesign = "ECHO_ARCS", gameBootStyle = "DISC", launchDiscStyle = "DISC", buttonSet = "XBOX",
+            ),
+            media = emptyMap(),
+        ))))
+        assertTrue(store.apply(halo.id))
+        val before = assertNotNull(store.themes.value.firstOrNull { it.name == "Before Halo" })
+        assertTrue(store.apply(before.id))
+        val prefs = context.echoDataStore.data.first()
+        assertEquals("CLASSIC" to "CLASSIC", prefs[EchoThemeStore.KEY_FOCUS_STYLE] to prefs[EchoThemeStore.KEY_MOTION_PRESET])
+        assertEquals(
+            listOf("PSP", "LENS", "LENS", "GENERIC"),
+            listOf("display_wave_design", "display_gameboot_style", "display_launch_disc_style", "controller_display_type")
+                .map { prefs[stringPreferencesKey(it)] },
+        )
     }
 
     private fun theme(manifest: EchoThemeManifest, media: Map<String, ThemeImage>) =

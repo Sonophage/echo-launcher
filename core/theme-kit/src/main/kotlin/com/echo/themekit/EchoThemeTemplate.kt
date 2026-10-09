@@ -45,6 +45,8 @@ object EchoThemeTemplate {
                      waveDesign is ${EchoThemeManifest.WAVE_DESIGNS.joinToString(", ")}.
                      gameBootStyle and launchDiscStyle are ${EchoThemeManifest.GAME_START_STYLES.joinToString(" or ")}.
                      buttonSet is ${EchoThemeManifest.BUTTON_SETS.joinToString(", ")}.
+                     focusStyle is ${EchoThemeManifest.FOCUS_STYLES.joinToString(", ")}.
+                     motion is ${EchoThemeManifest.MOTION_PRESETS.joinToString(", ")}.
                      settings holds look settings by name: ${ThemeSettings.KEYS.keys.joinToString(", ")}.
                      Each is true or false; display_icon_legibility is a name such as CONTOUR_AUTO.
                      Leave a part as null and the theme keeps the setting the person has.

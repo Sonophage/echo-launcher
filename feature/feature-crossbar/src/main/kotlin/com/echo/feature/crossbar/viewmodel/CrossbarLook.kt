@@ -38,6 +38,19 @@ class CrossbarLook(
 ) {
     internal var baseThemeColors: EchoColors = DefaultEchoColors
 
+    // the theme's focus style and motion preset (owner, 2026-10-09); either left unset is ECHO's own
+    internal fun observeFocusAndMotion() {
+        scope.launch {
+            vm.context.echoDataStore.data
+                .map { prefs ->
+                    com.echo.themekit.focusStyleOf(prefs[com.echo.core.data.repository.EchoThemeStore.KEY_FOCUS_STYLE]) to
+                        com.echo.themekit.motionPresetOf(prefs[com.echo.core.data.repository.EchoThemeStore.KEY_MOTION_PRESET])
+                }
+                .distinctUntilChanged()
+                .collect { (focus, motion) -> uiState.update { it.copy(focusStyle = focus, motion = motion) } }
+        }
+    }
+
     internal fun observeColorScheme() {
         scope.launch {
             vm.context.echoDataStore.data

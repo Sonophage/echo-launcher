@@ -482,6 +482,8 @@ open class BackupManager @Inject constructor(
         stringPreferencesKey("display_gameboot_style"),
         stringPreferencesKey("display_launch_disc_style"),
         stringPreferencesKey("display_wave_design"),
+        stringPreferencesKey("display_focus_style"),
+        stringPreferencesKey("display_motion_preset"),
 
         stringPreferencesKey("display_gameboot_mode"),
         stringPreferencesKey("display_color_scheme"),

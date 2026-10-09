@@ -10,6 +10,7 @@ enum class ThemePart(val label: String) {
     BOOT("Boot"),
     GAME_START("Game start"),
     BUTTONS("Buttons"),
+    FOCUS("Focus and motion"),
     SETTINGS("Display settings"),
 }
 
@@ -28,6 +29,7 @@ fun EchoThemeBundle.parts(): Set<ThemePart> = buildSet {
         add(ThemePart.GAME_START)
     }
     if (m.buttonSet != null) add(ThemePart.BUTTONS)
+    if (m.focusStyle in EchoThemeManifest.FOCUS_STYLES || m.motion in EchoThemeManifest.MOTION_PRESETS) add(ThemePart.FOCUS)
     if (ThemeSettings.clean(m.settings) != null) add(ThemePart.SETTINGS)
 }
 

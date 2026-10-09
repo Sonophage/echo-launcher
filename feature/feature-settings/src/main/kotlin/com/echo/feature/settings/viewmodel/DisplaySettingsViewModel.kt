@@ -207,9 +207,7 @@ class DisplaySettingsViewModel @Inject constructor(
             motionStyle          = com.echo.core.ui.motion.MotionWallpaperPolicy.motionStyleOf(
                 prefs[stringPreferencesKey(com.echo.core.ui.motion.MotionWallpaperPolicy.KEY)],
             ),
-            waveDesign           = runCatching {
-                WaveDesign.valueOf(prefs[KEY_WAVE_DESIGN] ?: WaveDesign.PSP.name)
-            }.getOrDefault(WaveDesign.PSP),
+            waveDesign           = WaveDesign.of(prefs[KEY_WAVE_DESIGN]),
             showBootSequence     = prefs[KEY_SHOW_BOOT]       ?: true,
             showBootOnResume     = prefs[KEY_BOOT_ON_RESUME]  ?: false,
             thermalThrottleAware = prefs[KEY_THERMAL_AWARE]   ?: true,

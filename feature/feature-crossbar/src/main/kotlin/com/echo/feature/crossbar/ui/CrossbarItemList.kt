@@ -498,13 +498,11 @@ private fun CrossbarVerticalListRow(
     iconAnimatingAllowed: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val focusStyle = LocalFocusStyle.current
+    val motion = LocalCrossbarMotion.current
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.06f else 0.9f,
-
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessHigh,
-        ),
+        targetValue = focusStyle.rowScale(isSelected),
+        animationSpec = motion.pop(),
         label = "crossbarListRowScale",
     )
     val rowAlpha by animateFloatAsState(
@@ -513,18 +511,19 @@ private fun CrossbarVerticalListRow(
 
             item.type == CrossbarItemType.EMPTY -> 0.5f
 
-            fadeByDistance -> CrossbarDim.ranked(distance)
-            else -> FlatUnfocusedRowAlpha
+            fadeByDistance -> focusStyle.restAlpha(CrossbarDim.ranked(distance))
+            else -> focusStyle.restAlpha(FlatUnfocusedRowAlpha)
         },
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        animationSpec = motion.fade(),
         label = "crossbarListRowAlpha",
     )
 
     val glow by animateFloatAsState(
         targetValue = if (isSelected) 1f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        animationSpec = motion.fade(),
         label = "crossbarRowGlow",
     )
+    val accent = LocalEchoColors.current.accentColor
 
     val subtitleStyle = if (textShadow) EchoTextStyle.copy(shadow = CrossbarTextShadow) else EchoTextStyle
 
@@ -568,11 +567,13 @@ private fun CrossbarVerticalListRow(
                 ) {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.crossbarFocusGlow(
-                        visible = glow,
-                        reach = CrossbarGlow.RowReach,
-                        alpha = CrossbarGlow.RowAlpha,
-                    ),
+                    modifier = Modifier
+                        .focusMark(focusStyle, glow, accent)
+                        .crossbarFocusGlow(
+                            visible = if (focusStyle.glows) glow else 0f,
+                            reach = CrossbarGlow.RowReach,
+                            alpha = CrossbarGlow.RowAlpha,
+                        ),
                 ) {
                     CrossbarItemLeadingIcon(
                         item = item,
@@ -1194,9 +1195,10 @@ fun glideStart(current: Float, target: Int, maxLead: Int = GLIDE_MAX_LEAD_ROWS):
 @Composable
 private fun rememberGlidePosition(target: Int): State<Float> {
     val position = remember { Animatable(target.toFloat()) }
+    val glide = LocalCrossbarMotion.current.glide()
     LaunchedEffect(target) {
         position.snapTo(glideStart(position.value, target))
-        position.animateTo(target.toFloat(), spring(dampingRatio = 1f, stiffness = GLIDE_STIFFNESS))
+        position.animateTo(target.toFloat(), glide)
     }
     return position.asState()
 }

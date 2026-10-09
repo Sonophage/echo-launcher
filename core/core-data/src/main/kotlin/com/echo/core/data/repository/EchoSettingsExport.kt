@@ -36,6 +36,8 @@ object EchoSettingsExport {
             "display_motion_style" to Kind.TEXT,
             "display_wave_over_wallpaper" to Kind.BOOL,
             "display_icon_legibility" to Kind.TEXT,
+            "display_focus_style" to Kind.TEXT,
+            "display_motion_preset" to Kind.TEXT,
             com.echo.core.data.datastore.CROSSBAR_LAYOUT_ADJUST_KEY.name to Kind.JSON,
             "theme_layout_spec" to Kind.JSON,
         ),

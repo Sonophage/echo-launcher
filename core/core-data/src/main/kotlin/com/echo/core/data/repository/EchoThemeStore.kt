@@ -208,9 +208,13 @@ class EchoThemeStore @Inject constructor(
                 parts0.launchDiscStyle?.takeIf { it in EchoThemeManifest.GAME_START_STYLES }?.let { prefs[KEY_LAUNCH_DISC_STYLE] = it }
             }
             if (ThemePart.BUTTONS in parts) parts0.buttonSet?.takeIf { it in EchoThemeManifest.BUTTON_SETS }?.let { prefs[KEY_BUTTON_SET] = it }
+            if (ThemePart.FOCUS in parts) {
+                parts0.focusStyle?.takeIf { it in EchoThemeManifest.FOCUS_STYLES }?.let { prefs[KEY_FOCUS_STYLE] = it }
+                parts0.motion?.takeIf { it in EchoThemeManifest.MOTION_PRESETS }?.let { prefs[KEY_MOTION_PRESET] = it }
+            }
             if (ThemePart.SETTINGS in parts) prefs.applyThemeSettings(parts0.settings)
         }
-        runCatching { currentLook("").use { appliedPrint.writeText(it.print()) } }
+        runCatching { currentLook("", toTakeBack = true).use { appliedPrint.writeText(it.print()) } }
             .onFailure { Timber.w(it, "EchoThemeStore: could not record the applied look") }
         true
     }
@@ -221,7 +225,7 @@ class EchoThemeStore @Inject constructor(
     // ponytail: a look changed only in a part a theme cannot carry (sort order, folder art) saves nothing.
     private suspend fun keepLookBefore(themeName: String) {
         runCatching {
-            currentLook("Before $themeName").use { look ->
+            currentLook("Before $themeName", toTakeBack = true).use { look ->
                 if (!look.isDefault && look.print() != appliedPrint.takeIf { it.isFile }?.readText()) save(look)
             }
         }.onFailure { Timber.w(it, "EchoThemeStore: could not keep the look before applying") }
@@ -492,8 +496,14 @@ class EchoThemeStore @Inject constructor(
         }
     }
 
-    private suspend fun currentLook(name: String): Look {
+    // the look in use. [toTakeBack] is the look kept before a theme: it names ECHO's default for every style and
+    // setting never picked, so taking it back undoes what the theme picked. Save as Theme carries only what was
+    // picked, so the theme never forces a default on someone else (owner, 2026-10-09)
+    private suspend fun currentLook(name: String, toTakeBack: Boolean = false): Look {
         val prefs = context.echoDataStore.data.first()
+        // the stored value read the way ECHO reads it; one never picked is ECHO's default, or left out to share
+        fun picked(key: androidx.datastore.preferences.core.Preferences.Key<String>, withDefault: Boolean, read: (String?) -> String): String? =
+            if (prefs[key] == null && !withDefault) null else read(prefs[key])
 
         val customDir = File(context.filesDir, CustomIconStore.CUSTOM_ICONS_DIR)
         val themeIconsDir = File(context.filesDir, THEME_ICONS_DIR)
@@ -543,11 +553,20 @@ class EchoThemeStore @Inject constructor(
                 ?.takeUnless { it == com.echo.themekit.CrossbarLayoutSpec.DEFAULT },
             source = EchoThemeSource(type = EchoThemeSource.TYPE_USER_CREATED),
             created = LocalDate.now().toString(),
-            waveDesign = prefs[KEY_WAVE_DESIGN]?.takeIf { it in EchoThemeManifest.WAVE_DESIGNS },
-            gameBootStyle = prefs[KEY_GAMEBOOT_STYLE]?.takeIf { it in EchoThemeManifest.GAME_START_STYLES },
-            launchDiscStyle = prefs[KEY_LAUNCH_DISC_STYLE]?.takeIf { it in EchoThemeManifest.GAME_START_STYLES },
-            buttonSet = prefs[KEY_BUTTON_SET]?.takeIf { it in EchoThemeManifest.BUTTON_SETS },
-            settings = prefs.themeSettings(),
+            // each default comes from the code that reads the setting
+            waveDesign = picked(KEY_WAVE_DESIGN, toTakeBack) { com.echo.core.ui.wave.WaveDesign.of(it).name }
+                ?.takeIf { it in EchoThemeManifest.WAVE_DESIGNS },
+            gameBootStyle = picked(KEY_GAMEBOOT_STYLE, toTakeBack) { GameBootPreferences.styleOf(prefs).name },
+            launchDiscStyle = picked(KEY_LAUNCH_DISC_STYLE, toTakeBack) { com.echo.core.data.launch.LaunchDiscPreferences.styleOf(prefs).name },
+            // ponytail: Keyboard and Touch are no button set a theme can name, so a look on either keeps a theme's
+            // buttons when taken back; add them to BUTTON_SETS if that matters
+            buttonSet = picked(KEY_BUTTON_SET, toTakeBack) { com.echo.core.domain.model.ControllerDisplayType.fromName(it).name }
+                ?.takeIf { it in EchoThemeManifest.BUTTON_SETS },
+            focusStyle = picked(KEY_FOCUS_STYLE, toTakeBack) { com.echo.themekit.focusStyleOf(it).name },
+            motion = picked(KEY_MOTION_PRESET, toTakeBack) { com.echo.themekit.motionPresetOf(it).name },
+            settings = prefs.themeSettings().let { all ->
+                if (toTakeBack) all else kotlinx.serialization.json.JsonObject(all.filterValues { it !is JsonNull }).takeIf { it.isNotEmpty() }
+            },
         )
 
         // the sounds, boot and game-start media in use
@@ -654,6 +673,8 @@ class EchoThemeStore @Inject constructor(
         private val KEY_GAMEBOOT_STYLE = stringPreferencesKey("display_gameboot_style")
         private val KEY_LAUNCH_DISC_STYLE = stringPreferencesKey("display_launch_disc_style")
         private val KEY_BUTTON_SET = stringPreferencesKey("controller_display_type")
+        val KEY_FOCUS_STYLE = stringPreferencesKey("display_focus_style")
+        val KEY_MOTION_PRESET = stringPreferencesKey("display_motion_preset")
 
         // which theme each part came from, as PART=name lines (owner, 2026-10-07: a theme page)
         val KEY_PART_SOURCES = stringPreferencesKey("theme_part_sources")
