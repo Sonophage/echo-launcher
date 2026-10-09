@@ -111,6 +111,19 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
   .hero{padding:120px 16px 56px !important}
   .bar{padding:16px !important}
   .bar nav a:not(.dl){display:none}
+  /* phones: pills wrap instead of scrolling out of sight */
+  .seg{flex-wrap:wrap;width:auto;border-radius:22px}
+  .seg button{padding:8px 14px;font-size:13px}
+  /* captions over a picture shrink so the picture shows */
+  .badge{font-size:11px;padding:4px 10px !important;left:10px !important;bottom:10px !important;max-width:calc(100% - 20px)}
+  .cat-over{padding:36px 14px 10px !important}
+  .cat-over #cat-text,.cat-over .glyph,.cat-over #cat-num{display:none}
+  .cat-over #cat-label{font-size:18px !important}
+  /* media thumbnails two to a row */
+  .thumbs{gap:10px}
+  .thumbs button{flex:0 1 calc(50% - 5px)}
+  /* a chapter's words come before its picture */
+  .art-after{order:2}
 }
 </style>
 </head>
@@ -239,7 +252,7 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
       </div>
       <div class="frame">
         <img id="cat-shot" alt="">
-        <div style="position:absolute;left:0;right:0;bottom:0;padding:80px 32px 28px;background:linear-gradient(rgba(4,6,12,0),rgba(4,6,12,.92));display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+        <div class="cat-over" style="position:absolute;left:0;right:0;bottom:0;padding:80px 32px 28px;background:linear-gradient(rgba(4,6,12,0),rgba(4,6,12,.92));display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
           <div class="col" style="gap:8px;max-width:620px">
             <div id="cat-label" style="font-size:26px;font-weight:300"></div>
             <div id="cat-text" style="font-size:15px;line-height:1.6;color:#c3ccd4;font-weight:300"></div>
@@ -395,7 +408,7 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
 
   <section class="sec">
     <div class="wrap" style="display:flex;flex-wrap:wrap;gap:56px;align-items:center">
-      <div style="flex:2 1 560px;min-width:0">
+      <div class="art-after" style="flex:2 1 560px;min-width:0">
         <img src="docs/screenshots/theme-store.jpg?v=2.12.0.1" alt="The theme store: themes online and on this device" style="display:block;width:100%;border-radius:22px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 60px 120px rgba(0,0,0,.6)">
       </div>
       <div class="col" style="flex:1 1 320px;gap:22px">
