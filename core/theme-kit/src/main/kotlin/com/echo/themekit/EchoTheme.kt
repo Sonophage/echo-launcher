@@ -3,6 +3,7 @@ package com.echo.themekit
 import java.io.File
 import java.io.OutputStream
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class EchoThemeManifest(
@@ -27,6 +28,9 @@ data class EchoThemeManifest(
     val gameBootStyle: String? = null,
     val launchDiscStyle: String? = null,
     val buttonSet: String? = null,
+
+    // the look settings in ThemeSettings.KEYS (owner, 2026-10-09); anything else is ignored
+    val settings: JsonObject? = null,
 ) {
     companion object {
         // owner, 2026-10-07: the format is .echo-theme. A bundle marked pfptheme, from before the rename,

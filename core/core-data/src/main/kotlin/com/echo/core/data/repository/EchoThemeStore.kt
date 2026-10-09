@@ -3,6 +3,9 @@ package com.echo.core.data.repository
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -22,6 +25,7 @@ import com.echo.themekit.ThemeMotion
 import com.echo.themekit.ThemeMedia
 import com.echo.themekit.ThemePart
 import com.echo.themekit.ThemeReadme
+import com.echo.themekit.ThemeSettings
 import com.echo.themekit.parts
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
@@ -36,6 +40,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import timber.log.Timber
 
 private const val THEME_EXT = EchoThemeCodec.FILE_EXTENSION
@@ -198,6 +208,7 @@ class EchoThemeStore @Inject constructor(
                 parts0.launchDiscStyle?.takeIf { it in EchoThemeManifest.GAME_START_STYLES }?.let { prefs[KEY_LAUNCH_DISC_STYLE] = it }
             }
             if (ThemePart.BUTTONS in parts) parts0.buttonSet?.takeIf { it in EchoThemeManifest.BUTTON_SETS }?.let { prefs[KEY_BUTTON_SET] = it }
+            if (ThemePart.SETTINGS in parts) prefs.applyThemeSettings(parts0.settings)
         }
         runCatching { currentLook("").use { appliedPrint.writeText(it.print()) } }
             .onFailure { Timber.w(it, "EchoThemeStore: could not record the applied look") }
@@ -461,7 +472,8 @@ class EchoThemeStore @Inject constructor(
     // the look in use, as a theme: what Save as Theme writes, and what an apply keeps first
     private class Look(val bundle: EchoThemeBundle, val wallpaper: Bitmap?, val preview: Bitmap?) : java.io.Closeable {
         val isDefault: Boolean get() = bundle.wallpaper == null && bundle.motion == null && bundle.icons.isEmpty() &&
-            bundle.sysicons.isEmpty() && bundle.media.isEmpty() && bundle.manifest.accentColor.isBlank()
+            bundle.sysicons.isEmpty() && bundle.media.isEmpty() && bundle.manifest.accentColor.isBlank() &&
+            bundle.manifest.settings.orEmpty().values.all { it is JsonNull }
 
         // the look's content without its name or date, so the same look gives the same print
         fun print(): String {
@@ -535,6 +547,7 @@ class EchoThemeStore @Inject constructor(
             gameBootStyle = prefs[KEY_GAMEBOOT_STYLE]?.takeIf { it in EchoThemeManifest.GAME_START_STYLES },
             launchDiscStyle = prefs[KEY_LAUNCH_DISC_STYLE]?.takeIf { it in EchoThemeManifest.GAME_START_STYLES },
             buttonSet = prefs[KEY_BUTTON_SET]?.takeIf { it in EchoThemeManifest.BUTTON_SETS },
+            settings = prefs.themeSettings(),
         )
 
         // the sounds, boot and game-start media in use
@@ -678,5 +691,32 @@ class EchoThemeStore @Inject constructor(
         val KEY_THEME_LAYOUT = stringPreferencesKey("theme_layout_spec")
 
         val KEY_APPLIED_THEME_NAME = stringPreferencesKey("theme_applied_name")
+    }
+}
+
+// a theme's settings onto the preferences: a value sets the setting, null puts it back to ECHO's default
+internal fun MutablePreferences.applyThemeSettings(settings: JsonObject?) {
+    ThemeSettings.clean(settings)?.forEach { (key, value) ->
+        val primitive = value as? JsonPrimitive
+        when (ThemeSettings.KEYS.getValue(key)) {
+            ThemeSettings.Kind.BOOL -> booleanPreferencesKey(key).let { k ->
+                val on = primitive?.takeUnless { it is JsonNull }?.booleanOrNull
+                if (on != null) this[k] = on else remove(k)
+            }
+            ThemeSettings.Kind.TEXT -> stringPreferencesKey(key).let { k ->
+                val text = primitive?.takeUnless { it is JsonNull }?.content
+                if (text != null) this[k] = text else remove(k)
+            }
+        }
+    }
+}
+
+// every theme setting as it stands, null for one never set, so the look kept before a theme puts each back
+internal fun Preferences.themeSettings(): JsonObject = buildJsonObject {
+    ThemeSettings.KEYS.forEach { (key, kind) ->
+        when (kind) {
+            ThemeSettings.Kind.BOOL -> put(key, this@themeSettings[booleanPreferencesKey(key)])
+            ThemeSettings.Kind.TEXT -> put(key, this@themeSettings[stringPreferencesKey(key)])
+        }
     }
 }

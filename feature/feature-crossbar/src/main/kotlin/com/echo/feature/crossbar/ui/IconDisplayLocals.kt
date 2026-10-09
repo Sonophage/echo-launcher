@@ -1,6 +1,7 @@
 package com.echo.feature.crossbar.ui
 
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.dp
 import com.echo.core.domain.model.VideoSnapPlacement
 
@@ -18,3 +19,6 @@ fun snapSiteFor(placement: VideoSnapPlacement): SnapSite =
 val LocalFocusedGameVideo = compositionLocalOf<FocusedGameVideo?> { null }
 
 val LocalCrossbarHorizontalShift = compositionLocalOf { 0.dp }
+
+// the applied theme's crossbar sizes (owner, 2026-10-09); the default is ECHO's own
+val LocalCrossbarLayout = staticCompositionLocalOf { com.echo.themekit.CrossbarLayoutSpec.DEFAULT }

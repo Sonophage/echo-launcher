@@ -128,7 +128,8 @@ private val ARTWORK_TEXT_GAP = 16.dp
 
 private val TAP_TARGET_HEIGHT = 72.dp
 
-internal val LEADING_ICON_SLOT = CrossbarLayoutSpec.DEFAULT.itemIconSlotDp.dp
+internal val LEADING_ICON_SLOT: Dp
+    @Composable @ReadOnlyComposable get() = LocalCrossbarLayout.current.itemIconSlotDp.dp
 
 internal data class LiveRowProgress(
     val itemId: String,
@@ -201,9 +202,11 @@ private fun RowScrubber(fraction: Float, label: String?, style: TextStyle) {
 private val ScrubberWidth = 96.dp
 private val ScrubberHeight = 3.dp
 
-private val LEADING_ICON_SIZE = CrossbarLayoutSpec.DEFAULT.itemIconDp.dp
+private val LEADING_ICON_SIZE: Dp
+    @Composable @ReadOnlyComposable get() = LocalCrossbarLayout.current.itemIconDp.dp
 
-internal val LEADING_ICON_CENTER = 18.dp + LEADING_ICON_SLOT / 2
+internal val LEADING_ICON_CENTER: Dp
+    @Composable @ReadOnlyComposable get() = 18.dp + LEADING_ICON_SLOT / 2
 
 private val PrimaryText: Color @Composable @ReadOnlyComposable get() = LocalEchoTextColors.current.primary
 
@@ -526,7 +529,8 @@ private fun CrossbarVerticalListRow(
     val subtitleStyle = if (textShadow) EchoTextStyle.copy(shadow = CrossbarTextShadow) else EchoTextStyle
 
     val density = LocalDensity.current
-    val iconCenterPx = remember(density) { with(density) { LEADING_ICON_CENTER.toPx() } }
+    val iconCenter = LEADING_ICON_CENTER
+    val iconCenterPx = remember(density, iconCenter) { with(density) { iconCenter.toPx() } }
     var rowWidthPx by remember { mutableStateOf(0f) }
 
     Row(
@@ -586,15 +590,15 @@ private fun CrossbarVerticalListRow(
                 Column(
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .padding(start = CrossbarLayoutSpec.DEFAULT.itemTextStartGapDp.dp),
+                        .padding(start = LocalCrossbarLayout.current.itemTextStartGapDp.dp),
                 ) {
                     val titleColor = if (isSelected) PrimaryText else InactiveText
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = item.title,
                             color = titleColor,
-                            fontSize = if (isSelected) CrossbarLayoutSpec.DEFAULT.itemTextSelectedSp.sp
-                            else CrossbarLayoutSpec.DEFAULT.itemTextSp.sp,
+                            fontSize = if (isSelected) LocalCrossbarLayout.current.itemTextSelectedSp.sp
+                            else LocalCrossbarLayout.current.itemTextSp.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             style = if (isSelected) EchoTextStyle.copy(shadow = SelectedTextShadow) else EchoTextStyle,
                             maxLines = 1,

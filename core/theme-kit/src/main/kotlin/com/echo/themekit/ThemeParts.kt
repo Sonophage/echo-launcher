@@ -10,6 +10,7 @@ enum class ThemePart(val label: String) {
     BOOT("Boot"),
     GAME_START("Game start"),
     BUTTONS("Buttons"),
+    SETTINGS("Display settings"),
 }
 
 // the parts this theme has. Colours count when it names an accent, an icon or text colour, or a layout
@@ -27,6 +28,7 @@ fun EchoThemeBundle.parts(): Set<ThemePart> = buildSet {
         add(ThemePart.GAME_START)
     }
     if (m.buttonSet != null) add(ThemePart.BUTTONS)
+    if (ThemeSettings.clean(m.settings) != null) add(ThemePart.SETTINGS)
 }
 
 // a theme's README.md: an optional front matter block of "key: value" lines between two "---" lines, which

@@ -19,7 +19,8 @@ dependencies {
     // Shared bounded/confined ZIP ingestion. Pure JVM like this module, so :studio still
     // resolves it without touching Android.
     api(project(":core:core-archive"))
-    implementation(libs.kotlinx.serialization.json)
+    // api: EchoThemeManifest.settings is a JsonObject, so every reader of a manifest needs the type
+    api(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test.junit)

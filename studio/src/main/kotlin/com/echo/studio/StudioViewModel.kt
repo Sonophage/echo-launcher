@@ -443,6 +443,7 @@ class StudioViewModel(private val scope: CoroutineScope) {
             gameBootStyle = state.keptManifest?.gameBootStyle,
             launchDiscStyle = state.keptManifest?.launchDiscStyle,
             buttonSet = state.keptManifest?.buttonSet,
+            settings = state.keptManifest?.settings,
         )
 
     fun exportTo(file: File, renderPreview: suspend (StudioState) -> ByteArray?) = runBusy {

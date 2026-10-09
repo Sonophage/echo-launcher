@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.echo.core.domain.model.Category
@@ -75,7 +76,8 @@ private val SelectedLabelShadow = Shadow(
 internal val CategorySlotWidth = 124.dp
 private val ItemSlotWidth = CategorySlotWidth
 
-internal val CrossbarLeftAnchor = CategorySlotWidth + CrossbarLayoutSpec.DEFAULT.leftAnchorExtraDp.dp
+internal val CrossbarLeftAnchor: Dp
+    @Composable @ReadOnlyComposable get() = CategorySlotWidth + LocalCrossbarLayout.current.leftAnchorExtraDp.dp
 
 internal fun visibleCategories(
     categories: List<Category>,
@@ -163,7 +165,7 @@ private fun CrossbarCategoryItem(
     modifier: Modifier = Modifier,
 ) {
     // owner, 2026-10-04: smaller, and drawn with the Recent filters' icons
-    val iconSize = (CrossbarLayoutSpec.DEFAULT.categoryIconDp * XMB_ICON_SCALE).dp
+    val iconSize = (LocalCrossbarLayout.current.categoryIconDp * XMB_ICON_SCALE).dp
     val itemAlpha by animateFloatAsState(
 
         targetValue = when {

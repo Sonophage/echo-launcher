@@ -49,6 +49,8 @@ object EchoSettingsExport {
             "interface_context_menu_hint_delay_seconds" to Kind.FLOAT,
             "pref_xmb_item_backdrop" to Kind.BOOL,
             "pref_xmb_row_cover_art" to Kind.BOOL,
+            "display_card_art_grid" to Kind.BOOL,
+            "display_fade_by_distance" to Kind.BOOL,
             "games_group_by" to Kind.TEXT,
             "pref_xmb_game_metadata" to Kind.BOOL,
             "pref_animated_icons" to Kind.BOOL,

@@ -27,7 +27,10 @@ class ViewModelKeptPartsTest {
         val out = File.createTempFile("studio-kept-out", ".echo-theme")
         try {
             source.writeBytes(EchoThemeCodec.write(EchoThemeBundle(
-                manifest = EchoThemeManifest(name = "Kept", accentColor = "#123456", waveDesign = "ECHO_ARCS", buttonSet = "NINTENDO"),
+                manifest = EchoThemeManifest(
+                    name = "Kept", accentColor = "#123456", waveDesign = "ECHO_ARCS", buttonSet = "NINTENDO",
+                    settings = kotlinx.serialization.json.buildJsonObject { put("pref_xmb_row_cover_art", kotlinx.serialization.json.JsonPrimitive(true)) },
+                ),
                 wallpaper = null,
                 preview = null,
                 sysicons = mapOf("psx" to ThemeImage(png, "png")),
@@ -44,6 +47,7 @@ class ViewModelKeptPartsTest {
             assertEquals(setOf("psx"), exported.sysicons.keys)
             assertEquals("ECHO_ARCS", exported.manifest.waveDesign)
             assertEquals("NINTENDO", exported.manifest.buttonSet)
+            assertEquals("true", exported.manifest.settings?.get("pref_xmb_row_cover_art")?.toString(), "display settings")
         } finally {
             source.delete()
             out.delete()
