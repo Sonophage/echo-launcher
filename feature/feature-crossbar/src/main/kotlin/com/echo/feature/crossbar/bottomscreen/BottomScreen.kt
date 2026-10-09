@@ -174,6 +174,9 @@ fun BottomScreen(
                 }
             } else {
                 // the Last Played screen, as the top screen draws it, with its filters above it
+                val recentGameId = state.recent.getOrNull(state.recentSelected)?.gameId
+                val recentAchievements by remember(recentGameId) { crossbar.gameDetail.achievementsStatFor(recentGameId) }
+                    .collectAsState(initial = null)
                 LastPlayedPage(
                     items = state.recent.ifEmpty { listOf(crossbar.recents.emptyRecentItem()) },
                     selectedIndex = state.recentSelected,
@@ -182,6 +185,7 @@ fun BottomScreen(
                     railVisible = state.recentListOpen,
                     onCardTapped = crossbar.bottomScreen::tapRecent,
                     onCardPressed = crossbar.bottomScreen::pressRecent,
+                    achievements = recentAchievements,
                     modifier = Modifier.fillMaxSize(),
                 )
                 RecentFilterRow(

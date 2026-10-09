@@ -154,6 +154,9 @@ fun CrossbarShellContainer(
     val drawerFocus by viewModel.bottomScreen.drawerFocus.collectAsStateWithLifecycle()
     val drawerInfo by viewModel.bottomScreen.drawerInfo.collectAsStateWithLifecycle()
     val storePreview by viewModel.bottomScreen.storePreview.collectAsStateWithLifecycle()
+    val recentGameId = uiState.currentItems.getOrNull(uiState.selectedItemIndex)?.gameId.takeIf { uiState.onLastPlayedHome }
+    val recentAchievements by remember(recentGameId) { viewModel.gameDetail.achievementsStatFor(recentGameId) }
+        .collectAsState(initial = null)
 
     val shareContext = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(uiState.pendingThemeShareFile) {
@@ -305,6 +308,7 @@ fun CrossbarShellContainer(
         onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
         drawerFocus = drawerFocus,
         drawerInfo = drawerInfo,
+        recentAchievements = recentAchievements,
         storePreview = storePreview,
         onProfileSet = viewModel.panel::onProfileSetTapped,
         onProfileBadge = viewModel.panel::onProfileBadgeTapped,
@@ -501,6 +505,7 @@ fun CrossbarShell(
     onPanelProfileTapped: (com.echo.feature.crossbar.viewmodel.ProfileSpot, Int) -> Unit = { _, _ -> },
     drawerFocus: com.echo.feature.crossbar.bottomscreen.DrawerFocus? = null,
     drawerInfo: com.echo.feature.crossbar.viewmodel.GameInfoState? = null,
+    recentAchievements: String? = null,
     storePreview: com.echo.feature.settings.ui.StorePreview? = null,
     onProfileSet: (Int) -> Unit = {},
     onProfileBadge: (Int) -> Unit = {},
@@ -848,6 +853,7 @@ fun CrossbarShell(
                     onCardTapped = onRecentCardTap,
                     onCardPressed = onRecentCardPress,
                     wave = homeWave,
+                    achievements = recentAchievements,
                     modifier = Modifier
                         .fillMaxSize()
                         .crossbarNavGestures(

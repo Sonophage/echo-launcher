@@ -39,6 +39,12 @@ class CrossbarGameInfo(
         }
     }
 
+    // the focused game's "12/40" for Recent, worded as Game Info words it (owner, 2026-10-08: Recent shows a
+    // game's achievements under its details, on one screen or two)
+    fun achievementsStatFor(gameId: Long?): kotlinx.coroutines.flow.Flow<String?> =
+        if (gameId == null) kotlinx.coroutines.flow.flowOf(null)
+        else vm.achievementController.observeSetForGame(gameId).map { achievementsStatOf(it) }
+
     // also what the bottom screen shows, so both screens describe an item the same way
     internal suspend fun load(info: GameInfoState): GameInfoState =
         withContext(Dispatchers.IO) { if (info.isApp) vm.loadAppInfo(info) else loadGameInfo(info) }
@@ -56,7 +62,7 @@ class CrossbarGameInfo(
             content = detailPanelContentFor(game, platform, media, video),
             achievementSet = set,
             achievements = achievements.orEmpty(),
-            achievementsStat = set?.takeIf { it.total > 0 }?.let { "${it.unlocked}/${it.total}" },
+            achievementsStat = achievementsStatOf(set),
             videoUri = vm.artworkStore.find(gid, ArtworkKind.VIDEO) ?: vm.artworkStore.find(gid, ArtworkKind.ICON1),
             manualPath = vm.artworkStore.find(gid, ArtworkKind.MANUAL),
         )
@@ -259,3 +265,7 @@ class CrossbarGameInfo(
         }
     }
 }
+
+// "unlocked/total", or null for a game with no achievement set
+internal fun achievementsStatOf(set: com.echo.core.domain.achievement.AchievementSet?): String? =
+    set?.takeIf { it.total > 0 }?.let { "${it.unlocked}/${it.total}" }
