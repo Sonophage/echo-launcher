@@ -100,7 +100,7 @@ internal data class StoreCard(val id: String, val name: String, val subtitle: St
     val standing: ThemeCatalogRepository.Standing? = null)
 
 internal fun EchoThemeStore.SavedTheme.card() =
-    StoreCard(id, name, author?.let { "by $it" } ?: "${parts.size} parts", heroPath ?: previewPath, accentArgb)
+    StoreCard(id, name, author?.let { "by $it" } ?: "${parts.size} part${if (parts.size == 1) "" else "s"}", heroPath ?: previewPath, accentArgb)
 
 // the card that opens the look in use (owner, 2026-10-07: the theme page is also the view of the current look)
 internal const val CURRENT_LOOK_ID = "__current_look"
