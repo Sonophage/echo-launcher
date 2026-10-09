@@ -120,6 +120,25 @@ class EchoThemeStorePartsTest {
         assertEquals("#00AA33", bundle.manifest.accentColor, "the saved look is the one in use before the theme")
     }
 
+    // owner, 2026-10-09 (found on the Thor): a look taken back from its Before card, then the card deleted, was
+    // lost when the next theme went on, because the look still matched what the last apply left
+    @Test
+    fun `deleting the theme a look came from means the look is saved again before the next theme`() = runTest {
+        context.echoDataStore.edit { it[com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE] = 0x00AA33 }
+        val store = EchoThemeStore(context, media)
+        val a = assertNotNull(store.importBundle(register(theme(EchoThemeManifest(name = "Arcs", accentColor = "#112233"), media = emptyMap()))))
+        val b = assertNotNull(store.importBundle(register(theme(EchoThemeManifest(name = "Rings", accentColor = "#445566"), media = emptyMap()))))
+        assertTrue(store.apply(a.id))
+        val mine = store.themes.value.single { it.name == "Before Arcs" }
+        assertTrue(store.apply(mine.id))
+        store.delete(mine.id)
+        store.delete(a.id)
+
+        assertTrue(store.apply(b.id))
+        val kept = assertNotNull(store.themes.value.firstOrNull { it.name == "Before Rings" }, "the look is kept again once the theme it came from is gone")
+        assertEquals("#00AA33", EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${kept.id}.echo-theme"))?.manifest?.accentColor)
+    }
+
     @Test
     fun `a look changed after a theme is saved again, and the default look is not saved`() = runTest {
         val store = EchoThemeStore(context, media)

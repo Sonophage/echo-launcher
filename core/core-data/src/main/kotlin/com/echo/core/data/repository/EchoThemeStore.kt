@@ -225,19 +225,23 @@ class EchoThemeStore @Inject constructor(
             }
             if (ThemePart.SETTINGS in parts) prefs.applyThemeSettings(parts0.settings)
         }
-        runCatching { currentLook("", toTakeBack = true).use { appliedPrint.writeText(it.print()) } }
+        runCatching { currentLook("", toTakeBack = true).use { appliedPrint.writeText("${it.print()}\n$id") } }
             .onFailure { Timber.w(it, "EchoThemeStore: could not record the applied look") }
         true
     }
 
     // owner, 2026-10-07: applying a theme first saves the look in use as "Before <theme>" on the device shelf.
-    // Skipped when the look is still what the last apply left, so trying theme after theme saves your own look
-    // once, not every theme tried; and skipped for the default look, which Reset brings back.
+    // Skipped when the look is still what the last apply left and the theme applied is still kept, so trying theme
+    // after theme saves your own look once, not every theme tried, and deleting that theme never loses the look;
+    // and skipped for the default look, which Reset brings back.
     // ponytail: a look changed only in a part a theme cannot carry (sort order, folder art) saves nothing.
     private suspend fun keepLookBefore(themeName: String) {
         runCatching {
             currentLook("Before $themeName", toTakeBack = true).use { look ->
-                if (!look.isDefault && look.print() != appliedPrint.takeIf { it.isFile }?.readText()) save(look)
+                // the print, then the id of the theme applied
+                val applied = appliedPrint.takeIf { it.isFile }?.readLines().orEmpty()
+                val stillKept = applied.getOrNull(1)?.let(::bundleFile) != null
+                if (!look.isDefault && !(stillKept && look.print() == applied.firstOrNull())) save(look)
             }
         }.onFailure { Timber.w(it, "EchoThemeStore: could not keep the look before applying") }
     }
