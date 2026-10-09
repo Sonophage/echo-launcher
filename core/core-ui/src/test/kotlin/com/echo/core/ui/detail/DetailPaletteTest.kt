@@ -108,35 +108,6 @@ class DetailPaletteTest {
     }
 
     @Test
-    fun `the hero keeps its full height when everything fits`() {
-        assertEquals(DetailHeroHeight, detailHeroHeightFor(viewport = 600.dp))
-    }
-
-    @Test
-    fun `the hero gives up height so the primary actions clear the footer`() {
-        val viewport = 468.dp - ChromeBandBaseHeight - 64.dp - DetailFooterHeight
-        val hero = detailHeroHeightFor(viewport)
-        assertTrue("hero $hero must shrink below $DetailHeroHeight", hero < DetailHeroHeight)
-        assertTrue("the band below the hero must fit", hero + DetailHeroBandBelow <= viewport)
-    }
-
-    @Test
-    fun `a message line under the actions takes its room from the hero too`() {
-        val viewport = 468.dp - ChromeBandBaseHeight - 64.dp - DetailFooterHeight
-        val withMessage = detailHeroHeightFor(viewport, messageLine = true)
-        assertTrue(withMessage < detailHeroHeightFor(viewport))
-        assertTrue(
-            "the band and its message line must fit",
-            withMessage + DetailHeroBandBelow + DetailActionMessageHeight <= viewport,
-        )
-    }
-
-    @Test
-    fun `the hero never collapses below its minimum`() {
-        assertEquals(DetailHeroMinHeight, detailHeroHeightFor(viewport = 120.dp))
-    }
-
-    @Test
     fun `the hero aspect is the banner's full-size width over its full height`() {
         assertEquals(DetailContentMaxWidth - DetailContentPadding * 2, DetailHeroWidth)
         assertEquals(DetailHeroWidth.value / DetailHeroHeight.value, DetailHeroAspect, 0.0001f)

@@ -354,9 +354,6 @@ class EchoThemeStore @Inject constructor(
         data class NotSaved(val cause: Throwable?) : ImportResult
     }
 
-    suspend fun importBundle(uri: Uri): SavedTheme? =
-        (importBundleDetailed(uri) as? ImportResult.Success)?.theme
-
     suspend fun importBundleDetailed(uri: Uri): ImportResult = importBundleDetailed { context.contentResolver.openInputStream(uri) }
 
     // a theme from [open], such as one read from the ECHO folder. With [replacing], that saved theme is

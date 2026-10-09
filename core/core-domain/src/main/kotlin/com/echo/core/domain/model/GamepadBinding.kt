@@ -192,24 +192,3 @@ fun GamepadAction.displayLabel(): String = when (this) {
     GamepadAction.OPEN_NOTIFICATIONS -> "Notifications (hold for Home)"
     GamepadAction.SWAP_SCREENS      -> "Swap Screens"
 }
-
-fun Int.keycodeDisplayName(): String = when (this) {
-    KeyEvent.KEYCODE_BUTTON_A      -> "A / Cross"
-    KeyEvent.KEYCODE_BUTTON_B      -> "B / Circle"
-    KeyEvent.KEYCODE_BUTTON_X      -> "X / Square"
-    KeyEvent.KEYCODE_BUTTON_Y      -> "Y / Triangle"
-    KeyEvent.KEYCODE_DPAD_UP       -> "D-Pad Up"
-    KeyEvent.KEYCODE_DPAD_DOWN     -> "D-Pad Down"
-    KeyEvent.KEYCODE_DPAD_LEFT     -> "D-Pad Left"
-    KeyEvent.KEYCODE_DPAD_RIGHT    -> "D-Pad Right"
-    KeyEvent.KEYCODE_DPAD_CENTER   -> "D-Pad Center"
-    KeyEvent.KEYCODE_BUTTON_L1     -> "L1"
-    KeyEvent.KEYCODE_BUTTON_R1     -> "R1"
-    KeyEvent.KEYCODE_BUTTON_L2     -> "L2"
-    KeyEvent.KEYCODE_BUTTON_R2     -> "R2"
-    KeyEvent.KEYCODE_BUTTON_START  -> "Start"
-    KeyEvent.KEYCODE_BUTTON_SELECT -> "Select"
-    KeyEvent.KEYCODE_ENTER         -> "Enter"
-    KeyEvent.KEYCODE_BACK          -> "Back"
-    else                           -> "Key $this"
-}

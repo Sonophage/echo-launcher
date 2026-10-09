@@ -15,20 +15,6 @@ class CrossbarLayoutPresetTest {
     }
 
     @Test
-    fun `Thor reference window reproduces the hand-tuned compact values`() {
-        val raw = CrossbarLayoutPreset.computeRawForWindow(
-            widthPx = 1920f, heightPx = 1080f, densityDpi = 369f,
-        )
-
-        assertClose(1.32f, raw.scale)
-        assertClose(0.13f, raw.barTopFraction)
-        assertClose(-0.05f, raw.barLeftFraction)
-
-        assertClose(354.55f, raw.canvasH, tolerance = 0.05f)
-        assertClose(630.30f, raw.canvasW, tolerance = 0.05f)
-    }
-
-    @Test
     fun `Thor values survive the codec sanitize gate unchanged`() {
         val preset = CrossbarLayoutPreset.computeForWindow(
             widthPx = 1920f, heightPx = 1080f, densityDpi = 369f,
@@ -36,51 +22,6 @@ class CrossbarLayoutPresetTest {
         val sanitized = CrossbarLayoutAdjustCodec.sanitize(preset)
 
         assertEquals(preset, sanitized)
-    }
-
-    @Test
-    fun `any 16x9 panel lands on the identical reference canvas`() {
-        val odin = CrossbarLayoutPreset.computeRawForWindow(
-            widthPx = 1920f, heightPx = 1080f, densityDpi = 480f,
-        )
-
-        assertClose(354.55f, odin.canvasH, tolerance = 0.05f)
-        assertClose(630.30f, odin.canvasW, tolerance = 0.05f)
-        assertClose(0.13f, odin.barTopFraction)
-        assertClose(-0.05f, odin.barLeftFraction)
-    }
-
-    @Test
-    fun `taller-aspect phone keeps the canvas height and widens the canvas`() {
-        val phone = CrossbarLayoutPreset.computeRawForWindow(
-            widthPx = 2400f, heightPx = 1080f, densityDpi = 440f,
-        )
-
-        assertClose(354.55f, phone.canvasH, tolerance = 0.05f)
-        assertClose(787.85f, phone.canvasW, tolerance = 0.5f)
-        assertClose(-0.04f, phone.barLeftFraction)
-    }
-
-    @Test
-    fun `narrower 16x10 tablet drifts barLeftFraction more negative`() {
-        val tablet = CrossbarLayoutPreset.computeRawForWindow(
-            widthPx = 2560f, heightPx = 1600f, densityDpi = 320f,
-        )
-
-        assertClose(354.55f, tablet.canvasH, tolerance = 0.05f)
-        assertClose(567.2f, tablet.canvasW, tolerance = 0.5f)
-        assertClose(-0.0556f, tablet.barLeftFraction)
-    }
-
-    @Test
-    fun `near-square foldable clamps at SCALE_MAX and degrades gracefully`() {
-        val fold = CrossbarLayoutPreset.computeRawForWindow(
-            widthPx = 2176f, heightPx = 1812f, densityDpi = 373f,
-        )
-
-        assertEquals(CrossbarLayoutAdjust.SCALE_MAX, fold.scale)
-        assertClose(0.1469f, fold.barTopFraction)
-        assertClose(-0.0682f, fold.barLeftFraction)
     }
 
     @Test

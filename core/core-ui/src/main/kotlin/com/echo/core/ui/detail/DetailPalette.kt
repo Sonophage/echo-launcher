@@ -73,14 +73,3 @@ fun detailPalette(): DetailPalette {
     cached?.let { (theme, palette) -> if (theme == echo) return palette }
     return detailPaletteFor(echo).also { cached = echo to it }
 }
-
-val DetailHeroMinHeight: Dp = 120.dp
-
-val DetailHeroBandBelow: Dp = 16.dp + 18.dp + 124.dp + 8.dp
-
-val DetailActionMessageHeight: Dp = 20.dp
-
-fun detailHeroHeightFor(viewport: Dp, messageLine: Boolean = false): Dp {
-    val below = DetailHeroBandBelow + if (messageLine) DetailActionMessageHeight else 0.dp
-    return (viewport - below).coerceIn(DetailHeroMinHeight, DetailHeroHeight)
-}

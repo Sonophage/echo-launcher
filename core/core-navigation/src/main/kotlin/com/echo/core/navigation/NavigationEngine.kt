@@ -9,7 +9,6 @@ class NavigationEngine(
     }
 
     private var ready = false
-    private var inputLocked = false
 
     val focusedKey: String?
         get() = active.focusedKey
@@ -21,7 +20,7 @@ class NavigationEngine(
         get() = active.editHandler != null
 
     val acceptsInput: Boolean
-        get() = ready && !inputLocked
+        get() = ready
 
     var cursorVisible: Boolean = true
         private set
@@ -35,7 +34,7 @@ class NavigationEngine(
     }
 
     fun dispatchTouch(key: String, action: NavigationTouchAction): Boolean {
-        if (!ready || inputLocked) return false
+        if (!ready) return false
         val node = active.findNode(key) ?: return false
         markTouchInput()
         active.setFocused(key)
@@ -52,25 +51,8 @@ class NavigationEngine(
         ready = true
     }
 
-    fun recoverReadiness() {
-        if (ready) return
-        logger.warn(
-            "NavigationEngine: screen '${active.id}' never reported readiness — " +
-                "forcing recovery so navigation is not permanently broken."
-        )
-        markReady()
-    }
-
     fun replaceNodes(nodes: List<NavigationNode>, geometry: Map<String, Float> = emptyMap()) {
         active.updateNodes(nodes, geometry)
-    }
-
-    fun replaceNodesWithGeometry(
-        nodes: List<NavigationNode>,
-        geometry: Map<String, Float>,
-        previousGeometry: Map<String, Float> = emptyMap(),
-    ) {
-        active.updateNodes(nodes, geometry, previousGeometry)
     }
 
     fun focusFirst() {
@@ -85,23 +67,11 @@ class NavigationEngine(
 
     fun currentGeometry(): Map<String, Float> = active.allGeometry()
 
-    fun pushModal(contextId: String) {
-        contexts.addLast(NavigationContext(contextId, modal = true))
-    }
-
-    fun popContext(): String? {
-        if (contexts.size <= 1) return active.focusedKey
-        val closing = contexts.removeLast()
-        closing.clearEditHandler()
-        return active.focusedKey
-    }
-
     fun dispatch(command: NavigationCommand): String? {
         markControllerInput()
 
         if (!ready) return null
 
-        if (inputLocked) return null
 
         val context = active
         val handler = context.editHandler
@@ -150,14 +120,6 @@ class NavigationEngine(
     }
 
     var backHandler: (() -> Unit)? = null
-
-    fun beginRecoveryLock() {
-        inputLocked = true
-    }
-
-    fun endRecoveryLock() {
-        inputLocked = false
-    }
 
     fun confirmDirect(): Boolean = active.confirm()
 

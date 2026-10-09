@@ -332,27 +332,6 @@ class UiMediaStoreTest {
         }
     }
 
-    @Test
-    fun `recordDisplayName stores the provider name and falls back when it reports none`() = runTest {
-        store.recordDisplayName(UiMediaSlot.SOUND_SCROLL, register(wavBytes(), name = "cursor.wav"))
-        assertEquals("cursor.wav", store.displayNameFor(UiMediaSlot.SOUND_SCROLL))
-
-        val unnamed = Uri.parse("content://opaque/no-name-here")
-        store.recordDisplayName(UiMediaSlot.SOUND_BACK, unnamed)
-        assertEquals("Custom sound", store.displayNameFor(UiMediaSlot.SOUND_BACK))
-    }
-
-    @Test
-    fun `recordDisplayName clamps hostile names`() = runTest {
-        val hostile = register(wavBytes(), name = "x".repeat(500))
-        store.recordDisplayName(UiMediaSlot.SOUND_SCROLL, hostile)
-        val stored = assertNotNull(store.displayNameFor(UiMediaSlot.SOUND_SCROLL))
-        assertTrue(
-            stored.length <= MediaDisplayNames.MAX_LENGTH + 1,
-            "provider-controlled names are clamped",
-        )
-    }
-
     private fun wavBytes(): ByteArray {
         val data = ByteArray(2048)
         val out = java.io.ByteArrayOutputStream()

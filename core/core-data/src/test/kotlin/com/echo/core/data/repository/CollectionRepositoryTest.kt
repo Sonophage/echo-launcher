@@ -84,17 +84,6 @@ class CollectionRepositoryTest {
     }
 
     @Test
-    fun `toggle adds then removes membership`() = runTest {
-        val repo = repo()
-        val id = repo.create("Currently Playing")
-
-        assertTrue(repo.toggleGame(id, gameId = 9))
-        assertTrue(repo.getCollectionIdsForGame(9).contains(id))
-        assertFalse(repo.toggleGame(id, gameId = 9))
-        assertTrue(repo.getCollectionIdsForGame(9).isEmpty())
-    }
-
-    @Test
     fun `adding the same game twice is idempotent`() = runTest {
         val repo = repo()
         val id = repo.create("Dupes")
@@ -142,8 +131,6 @@ private class FakeCollectionDao : CollectionDao {
     override suspend fun getGameIdsInCollection(collectionId: Long): List<Long> =
         memberships.filter { it.collectionId == collectionId }.map { it.gameId }
 
-    override suspend fun isGameInCollection(collectionId: Long, gameId: Long): Int =
-        memberships.count { it.collectionId == collectionId && it.gameId == gameId }
 
     override suspend fun maxSortOrder(): Int = collections.values.maxOfOrNull { it.sortOrder } ?: -1
 

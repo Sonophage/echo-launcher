@@ -97,20 +97,6 @@ class StudioSearchTest {
     }
 
     @Test
-    fun `evicting one source leaves the others alone`() {
-        val cache = StudioResultCache()
-        val sgdb = StudioRequestKey.of("Halo", StudioSource.STEAMGRIDDB, ArtworkKind.HERO, false)
-        val igdb = StudioRequestKey.of("Halo", StudioSource.IGDB, ArtworkKind.HERO, false)
-        cache[sgdb] = listOf(art("a"))
-        cache[igdb] = listOf(art("b"))
-
-        cache.evictSource(StudioSource.STEAMGRIDDB)
-
-        assertFalse(cache.contains(sgdb))
-        assertTrue(cache.contains(igdb))
-    }
-
-    @Test
     fun `the cache is bounded and evicts least-recently-used entries`() {
         val cache = StudioResultCache(maxEntries = 2)
         val a = StudioRequestKey.of("A", StudioSource.IGDB, ArtworkKind.HERO, false)

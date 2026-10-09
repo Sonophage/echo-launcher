@@ -105,12 +105,5 @@ class RomRootRepository @Inject constructor(
             }
         }
 
-        fun childDocIdFrom(rootDocId: String, rootRawPath: String, romDirectory: String): String? {
-            val normRoot = rootRawPath.trimEnd('/')
-            val normDir  = romDirectory.trimEnd('/')
-            if (normDir != normRoot && !normDir.startsWith("$normRoot/")) return null
-            val relative = normDir.removePrefix(normRoot).trim('/')
-            return if (relative.isEmpty()) rootDocId else "$rootDocId/$relative"
-        }
     }
 }

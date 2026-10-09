@@ -95,26 +95,6 @@ class WallpaperLuminanceMapTest {
     }
 
     @Test
-    fun `the wave boost applies only to the bottom region`() {
-        val map = WallpaperLuminanceMap.compute(image { _, _ -> gray(100) }, "/w.png")
-        val plain = map.bandAt(0.5f, 0.5f)
-
-        assertEquals(plain.mean, map.effectiveBandAt(0.5f, 0.5f).mean, 0.0001f)
-        assertEquals(
-            plain.mean + WallpaperLuminanceMap.WAVE_LUMINANCE_BOOST,
-            map.effectiveBandAt(0.5f, 0.9f).mean,
-            0.0001f,
-        )
-    }
-
-    @Test
-    fun `the wave boost never pushes past white`() {
-        val map = WallpaperLuminanceMap.compute(image { _, _ -> white }, "/w.png")
-        assertEquals(1f, map.effectiveBandAt(0.5f, 1f).mean, 0.0001f)
-        assertEquals(1f, map.effectiveBandAt(0.5f, 1f).p90, 0.0001f)
-    }
-
-    @Test
     fun `json round-trips`() {
         val original = WallpaperLuminanceMap.compute(
             image { x, y -> gray(((x + y) % 256)) },

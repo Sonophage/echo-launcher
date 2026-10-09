@@ -29,31 +29,4 @@ class NavigationEngineReadinessTest {
         assertEquals("b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
     }
 
-    @Test
-    fun `missing readiness signal recovers and logs warning`() {
-        val warnings = mutableListOf<String>()
-        val engine = NavigationEngine(logger = NavigationLogger { warnings.add(it) })
-        engine.replaceNodes(listOf(node("a"), node("b")))
-
-        engine.recoverReadiness()
-        assertEquals(1, warnings.size)
-        assertTrue(warnings[0].contains("readiness", ignoreCase = true))
-
-        assertEquals("b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-    }
-
-    @Test
-    fun `recovery lock drops inputs instead of queueing`() {
-        val engine = NavigationEngine()
-        engine.replaceNodes(listOf(node("a"), node("b"), node("c")))
-        engine.markReady()
-
-        engine.beginRecoveryLock()
-        assertNull(engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-        assertNull(engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-        engine.endRecoveryLock()
-
-        assertEquals("a", engine.focusedKey)
-        assertEquals("b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-    }
 }

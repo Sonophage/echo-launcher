@@ -41,7 +41,6 @@ import coil3.compose.AsyncImage
 import com.echo.core.ui.image.ArtworkRevisions
 import com.echo.core.ui.image.rememberArtworkModel
 import com.echo.core.ui.icons.GameIconStyle
-import com.echo.feature.artwork.store.ArtworkDimensions
 import com.echo.feature.crossbar.R
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 

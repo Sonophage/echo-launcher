@@ -76,16 +76,6 @@ class CollectionRepository @Inject constructor(
         collectionDao.touch(collectionId, System.currentTimeMillis())
     }
 
-    suspend fun toggleGame(collectionId: Long, gameId: Long): Boolean {
-        return if (collectionDao.isGameInCollection(collectionId, gameId) > 0) {
-            removeGame(collectionId, gameId)
-            false
-        } else {
-            addGame(collectionId, gameId)
-            true
-        }
-    }
-
     suspend fun move(id: Long, up: Boolean): Boolean {
         val ordered = collectionDao.getAll()
         val index = ordered.indexOfFirst { it.id == id }

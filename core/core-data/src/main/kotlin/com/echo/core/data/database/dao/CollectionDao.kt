@@ -99,9 +99,6 @@ interface CollectionDao {
     @Query("SELECT game_id FROM collection_games WHERE collection_id = :collectionId")
     suspend fun getGameIdsInCollection(collectionId: Long): List<Long>
 
-    @Query("SELECT COUNT(*) FROM collection_games WHERE collection_id = :collectionId AND game_id = :gameId")
-    suspend fun isGameInCollection(collectionId: Long, gameId: Long): Int
-
     @Query("SELECT COALESCE(MAX(sort_order), -1) FROM collections")
     suspend fun maxSortOrder(): Int
 

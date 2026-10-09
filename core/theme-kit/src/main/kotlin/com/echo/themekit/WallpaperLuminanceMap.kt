@@ -28,25 +28,12 @@ data class WallpaperLuminanceMap(
         return bands[row * ZONES + zone]
     }
 
-    fun effectiveBandAt(xFraction: Float, yFraction: Float): LuminanceBand {
-        val band = bandAt(xFraction, yFraction)
-        if (yFraction < 1f - WAVE_REGION) return band
-        return LuminanceBand(
-            mean = (band.mean + WAVE_LUMINANCE_BOOST).coerceAtMost(1f),
-            p90 = (band.p90 + WAVE_LUMINANCE_BOOST).coerceAtMost(1f),
-        )
-    }
-
     fun toJson(): String = JSON.encodeToString(serializer(), this)
 
     companion object {
         const val ROWS = 12
 
         const val ZONES = 3
-
-        const val WAVE_REGION = 0.35f
-
-        const val WAVE_LUMINANCE_BOOST = 0.06f
 
         private const val MAX_SAMPLES = 12_000
 

@@ -130,7 +130,6 @@ class LibraryManagerViewModel @Inject constructor(
     private val vita3KLibrary: com.echo.core.data.repository.Vita3KLibrary,
     private val vitaGameScanner: com.echo.feature.library.scanner.VitaGameScanner,
     private val libraryScanner: LibraryScanner,
-    private val romRootScanRunner: RomRootScanRunner,
     private val pcGameExporter: com.echo.feature.settings.pc.PcGameExporter,
     private val standardRomFolders: StandardRomFolders,
 ) : ViewModel() {
@@ -537,25 +536,6 @@ class LibraryManagerViewModel @Inject constructor(
         }
     }
 
-    private var pendingRelinkRomRoot: String? = null
-
-    fun beginRelinkRomRoot(treeUri: String): Uri? {
-        pendingRelinkRomRoot = treeUri
-        return runCatching { Uri.parse(treeUri) }.getOrNull()
-    }
-
-    fun onRomRootRelinkPicked(uri: Uri?) {
-        val old = pendingRelinkRomRoot ?: return
-        pendingRelinkRomRoot = null
-        if (uri == null) return
-        viewModelScope.launch {
-            romRootRepository.persist(uri, writable = true)
-            romRootRepository.replace(old, uri.toString())
-            refreshRomRoots()
-            scanRomRoot()
-        }
-    }
-
     fun openImportPcGames() {
         viewModelScope.launch {
             runCatching { windowsLibrarySetup.ensure() }
@@ -747,10 +727,4 @@ class LibraryManagerViewModel @Inject constructor(
         }
     }
 
-    fun scanRomRoot() {
-        viewModelScope.launch {
-            val report = romRootScanRunner.scan()
-            _scratch.update { it.copy(message = report.message) }
-        }
-    }
 }

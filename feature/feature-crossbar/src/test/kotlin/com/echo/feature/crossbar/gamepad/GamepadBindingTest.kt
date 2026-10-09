@@ -4,7 +4,6 @@ import android.view.KeyEvent
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.domain.model.GamepadMappings
 import com.echo.core.domain.model.displayLabel
-import com.echo.core.domain.model.keycodeDisplayName
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -57,20 +56,4 @@ class GamepadBindingTest {
         }
     }
 
-    @Test
-    fun `keycodeDisplayName returns non-blank for common keycodes`() {
-        val commonCodes = listOf(
-            KeyEvent.KEYCODE_BUTTON_A,
-            KeyEvent.KEYCODE_BUTTON_B,
-            KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_DOWN,
-            KeyEvent.KEYCODE_BUTTON_L1,
-            KeyEvent.KEYCODE_BUTTON_R1,
-        )
-        commonCodes.forEach { code ->
-            assert(code.keycodeDisplayName().isNotBlank()) {
-                "keycodeDisplayName() was blank for keyCode $code"
-            }
-        }
-    }
 }

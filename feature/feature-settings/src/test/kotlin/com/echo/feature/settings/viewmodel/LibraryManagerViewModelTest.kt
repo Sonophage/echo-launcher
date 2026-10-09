@@ -54,7 +54,6 @@ class LibraryManagerViewModelTest {
     private val vita3KLibrary = mockk<Vita3KLibrary>(relaxed = true)
     private val vitaGameScanner = mockk<VitaGameScanner>(relaxed = true)
     private val libraryScanner = mockk<LibraryScanner>(relaxed = true)
-    private val romRootScanRunner = mockk<RomRootScanRunner>(relaxed = true)
     private val pcGameExporter = mockk<com.echo.feature.settings.pc.PcGameExporter>(relaxed = true)
 
     private lateinit var vm: LibraryManagerViewModel
@@ -81,7 +80,6 @@ class LibraryManagerViewModelTest {
             vita3KLibrary,
             vitaGameScanner,
             libraryScanner,
-            romRootScanRunner,
             pcGameExporter,
             StandardRomFolders(memoryCardRepository, folderHintResolver, romScanner),
         )
@@ -149,19 +147,6 @@ class LibraryManagerViewModelTest {
         assertEquals("PlayStation Memory Card: 3 new ROM(s) added", vm.uiState.value.message)
         assertTrue("psx" !in vm.uiState.value.scanningPlatformIds)
         job.cancel()
-    }
-
-    @Test
-    fun `a relinked ROM root keeps write access so standard folders can be created`() = runTest(dispatcher) {
-        val old = "content://tree/primary%3ARoms"
-        val newUri = mockk<android.net.Uri> { every { this@mockk.toString() } returns "content://tree/1A2B-3C4D%3ARoms" }
-
-        vm.beginRelinkRomRoot(old)
-        vm.onRomRootRelinkPicked(newUri)
-        advanceUntilIdle()
-
-        coVerify { romRootRepository.persist(newUri, writable = true) }
-        coVerify { romRootRepository.replace(old, "content://tree/1A2B-3C4D%3ARoms") }
     }
 
     @Test

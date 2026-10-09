@@ -188,11 +188,6 @@ class UiMediaStore @Inject constructor(
         removedAny
     }
 
-    suspend fun displayNameFor(slot: UiMediaSlot): String? {
-        val prefs = context.echoDataStore.data.first()
-        return prefs[displayNameKey(slot)]
-    }
-
     suspend fun recordDisplayName(slot: UiMediaSlot, uri: Uri) {
         val fallback = if (slot.kind == UiMediaKind.VIDEO) "Custom video" else "Custom sound"
         val name = MediaDisplayNames.queryDisplayName(context, uri) ?: fallback
