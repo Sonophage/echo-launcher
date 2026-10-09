@@ -5,7 +5,7 @@ import android.graphics.BitmapFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.echo.core.data.datastore.echoDataStore
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.setWallpaperLuma
+import com.echo.core.data.wallpaper.WallpaperAccentProbe.setWallpaperAccent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.InputStream
@@ -30,12 +30,12 @@ class StillWallpaper @Inject constructor(@ApplicationContext private val context
             runCatching { dest.delete() }
             return@withContext Result.UNREADABLE
         }
-        val luma = WallpaperLuminanceProbe.survey(dest.absolutePath)
+        val survey = WallpaperAccentProbe.survey(dest.absolutePath)
         try {
             context.echoDataStore.edit {
                 it[KEY_CUSTOM] = dest.absolutePath
                 it.remove(KEY_MOTION)
-                it.setWallpaperLuma(luma)
+                it.setWallpaperAccent(survey)
             }
         } catch (e: CancellationException) {
             throw e

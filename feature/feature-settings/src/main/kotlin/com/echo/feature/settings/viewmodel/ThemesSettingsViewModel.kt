@@ -13,7 +13,7 @@ import com.echo.core.data.repository.EchoThemeStore
 import com.echo.core.data.wallpaper.ThemeAccent
 import com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE
 import com.echo.core.data.wallpaper.ThemeAccent.followWallpaperAccent
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe
+import com.echo.core.data.wallpaper.WallpaperAccentProbe
 import com.echo.themekit.ThemePart
 import com.echo.themekit.CatalogTheme
 import com.echo.core.data.repository.ThemeCatalogRepository
@@ -148,7 +148,7 @@ class ThemesSettingsViewModel @Inject constructor(
             ),
             accentOverrideArgb = prefs[KEY_ACCENT_OVERRIDE],
             accentFromWallpaper = prefs[ThemeAccent.KEY_ACCENT_FROM_WALLPAPER] == true,
-            hasWallpaper       = prefs[WallpaperLuminanceProbe.KEY_WALLPAPER_ACCENT] != null,
+            hasWallpaper       = prefs[WallpaperAccentProbe.KEY_WALLPAPER_ACCENT] != null,
             iconColorArgb      = prefs[KEY_ICON_COLOR],
             savedThemes        = saved,
         )
@@ -168,7 +168,7 @@ class ThemesSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             context.echoDataStore.edit { prefs ->
                 prefs[ThemeAccent.KEY_ACCENT_FROM_WALLPAPER] = enabled
-                if (enabled) prefs.followWallpaperAccent(prefs[WallpaperLuminanceProbe.KEY_WALLPAPER_ACCENT])
+                if (enabled) prefs.followWallpaperAccent(prefs[WallpaperAccentProbe.KEY_WALLPAPER_ACCENT])
                 else prefs.remove(KEY_ACCENT_OVERRIDE)
             }
         }

@@ -41,7 +41,7 @@ class BackupKeyDriftTest {
 
         "theme_icons_stamp" to "dangling pointer into un-bundled files",
 
-        "display_wallpaper_luma" to "recomputed by StartupDataPrep from the restored wallpaper",
+        "wallpaper_accent_source" to "recomputed by StartupDataPrep from the restored wallpaper",
 
         "wallpaper_accent" to "recomputed by StartupDataPrep from the restored wallpaper",
 

@@ -7,11 +7,11 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.echo.core.data.datastore.echoDataStore
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.clearWallpaperLuma
+import com.echo.core.data.wallpaper.WallpaperAccentProbe
+import com.echo.core.data.wallpaper.WallpaperAccentProbe.clearWallpaperAccent
 import com.echo.core.data.wallpaper.ThemeAccent
 import com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.setWallpaperLuma
+import com.echo.core.data.wallpaper.WallpaperAccentProbe.setWallpaperAccent
 import com.echo.themekit.CustomizableIcons
 import com.echo.themekit.EchoThemeBundle
 import com.echo.themekit.EchoThemeCodec
@@ -162,7 +162,7 @@ class EchoThemeStore @Inject constructor(
         }
         val parts0 = bundle.manifest
 
-        val luma = if (wallpaperOk) WallpaperLuminanceProbe.survey(dest.absolutePath) else null
+        val survey = if (wallpaperOk) WallpaperAccentProbe.survey(dest.absolutePath) else null
         val sources = partSources().toMutableMap()
         if (whole) sources.clear()
         bundle.parts().filter { it in parts }.forEach { sources[it] = appliedName }
@@ -175,7 +175,7 @@ class EchoThemeStore @Inject constructor(
             if (wallpaperPart) {
                 if (motionDest != null) prefs[KEY_MOTION_WALLPAPER] = motionDest.absolutePath else prefs.remove(KEY_MOTION_WALLPAPER)
                 if (wallpaperOk) prefs[KEY_CUSTOM_WALLPAPER] = dest.absolutePath else prefs.remove(KEY_CUSTOM_WALLPAPER)
-                prefs.setWallpaperLuma(luma)
+                prefs.setWallpaperAccent(survey)
             }
 
             if (ThemePart.COLOURS in parts) {
@@ -222,7 +222,7 @@ class EchoThemeStore @Inject constructor(
         context.echoDataStore.edit { prefs ->
             prefs.remove(KEY_CUSTOM_WALLPAPER)
             prefs.remove(KEY_MOTION_WALLPAPER)
-            prefs.clearWallpaperLuma()
+            prefs.clearWallpaperAccent()
             prefs.remove(KEY_ACCENT_OVERRIDE)
 
             prefs.remove(ThemeAccent.KEY_ACCENT_FROM_WALLPAPER)

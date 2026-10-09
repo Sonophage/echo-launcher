@@ -323,7 +323,7 @@ class CrossbarLook(
                 val motionPath = prefs[CrossbarViewModel.KEY_MOTION_WALLPAPER]
                     ?.takeIf { validPath != null && java.io.File(it).exists() }
 
-                val accent = prefs[com.echo.core.data.wallpaper.WallpaperLuminanceProbe.KEY_WALLPAPER_ACCENT]
+                val accent = prefs[com.echo.core.data.wallpaper.WallpaperAccentProbe.KEY_WALLPAPER_ACCENT]
                     ?.takeIf { validPath != null }
                 uiState.update {
                     it.copy(

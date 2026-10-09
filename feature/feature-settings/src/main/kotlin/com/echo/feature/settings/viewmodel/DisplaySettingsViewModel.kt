@@ -13,7 +13,7 @@ import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.data.repository.ControllerLayoutRepository
 import com.echo.core.data.repository.GameBootPreferences
 import com.echo.core.data.repository.UiMediaStore
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.clearWallpaperLuma
+import com.echo.core.data.wallpaper.WallpaperAccentProbe.clearWallpaperAccent
 import com.echo.core.data.wallpaper.StillWallpaper
 import com.echo.core.domain.model.ControllerHintPolicy
 import com.echo.core.domain.model.UiMediaKind
@@ -407,7 +407,7 @@ class DisplaySettingsViewModel @Inject constructor(
                     context.echoDataStore.edit {
                         it.remove(KEY_CUSTOM_WALLPAPER)
                         it.remove(KEY_MOTION_WALLPAPER)
-                        it.clearWallpaperLuma()
+                        it.clearWallpaperAccent()
                     }
                 },
                 prune = {

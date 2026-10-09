@@ -8,7 +8,7 @@ import android.media.MediaMetadataRetriever
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.echo.core.data.datastore.echoDataStore
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.setWallpaperLuma
+import com.echo.core.data.wallpaper.WallpaperAccentProbe.setWallpaperAccent
 import com.echo.themekit.MotionLimits
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -57,12 +57,12 @@ class MotionWallpaper @Inject constructor(
         frame.recycle()
         if (!posterOk) return@withContext fail(MotionLimits.MSG_UNDECODABLE, "poster write")
 
-        val luma = WallpaperLuminanceProbe.survey(poster.absolutePath)
+        val survey = WallpaperAccentProbe.survey(poster.absolutePath)
         try {
             context.echoDataStore.edit {
                 it[KEY_CUSTOM] = poster.absolutePath
                 it[KEY_MOTION] = motion.absolutePath
-                it.setWallpaperLuma(luma)
+                it.setWallpaperAccent(survey)
             }
         } catch (e: CancellationException) {
             throw e

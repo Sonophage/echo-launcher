@@ -7,12 +7,11 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.echo.core.data.wallpaper.ThemeAccent.followWallpaperAccent
 import com.echo.themekit.AccentDeriver
 import com.echo.themekit.ArgbImage
-import com.echo.themekit.WallpaperLuminanceMap
 import java.io.File
 import kotlin.math.max
 
-object WallpaperLuminanceProbe {
-    val KEY_WALLPAPER_LUMA = stringPreferencesKey("display_wallpaper_luma")
+object WallpaperAccentProbe {
+    val KEY_WALLPAPER_ACCENT_SOURCE = stringPreferencesKey("wallpaper_accent_source")
 
     val KEY_WALLPAPER_ACCENT = longPreferencesKey("wallpaper_accent")
 
@@ -41,28 +40,23 @@ object WallpaperLuminanceProbe {
 
         val image = ArgbImage(width, height, pixels)
         WallpaperSurvey(
-            luma = WallpaperLuminanceMap.compute(image, path).toJson(),
-
+            source = path,
             accentArgb = AccentDeriver.deriveAccent(image)?.toUInt()?.toLong(),
         )
     }.getOrNull()
 
-    data class WallpaperSurvey(val luma: String?, val accentArgb: Long?)
+    data class WallpaperSurvey(val source: String, val accentArgb: Long?)
 
-    fun describes(json: String?, path: String): Boolean =
-        json != null && WallpaperLuminanceMap.fromJson(json, path) != null
-
-    fun MutablePreferences.setWallpaperLuma(survey: WallpaperSurvey?) {
-        val json = survey?.luma
-        if (json != null) this[KEY_WALLPAPER_LUMA] = json else this.remove(KEY_WALLPAPER_LUMA)
+    fun MutablePreferences.setWallpaperAccent(survey: WallpaperSurvey?) {
+        if (survey != null) this[KEY_WALLPAPER_ACCENT_SOURCE] = survey.source else this.remove(KEY_WALLPAPER_ACCENT_SOURCE)
         val accent = survey?.accentArgb
         if (accent != null) this[KEY_WALLPAPER_ACCENT] = accent else this.remove(KEY_WALLPAPER_ACCENT)
 
         followWallpaperAccent(accent)
     }
 
-    fun MutablePreferences.clearWallpaperLuma() {
-        this.remove(KEY_WALLPAPER_LUMA)
+    fun MutablePreferences.clearWallpaperAccent() {
+        this.remove(KEY_WALLPAPER_ACCENT_SOURCE)
         this.remove(KEY_WALLPAPER_ACCENT)
 
         followWallpaperAccent(null)

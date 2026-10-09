@@ -8,9 +8,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.echo.core.data.database.dao.ArtworkRecordDao
 import com.echo.core.data.database.dao.GameDao
 import com.echo.core.data.datastore.echoDataStore
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.clearWallpaperLuma
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.setWallpaperLuma
+import com.echo.core.data.wallpaper.WallpaperAccentProbe
+import com.echo.core.data.wallpaper.WallpaperAccentProbe.clearWallpaperAccent
+import com.echo.core.data.wallpaper.WallpaperAccentProbe.setWallpaperAccent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
@@ -102,21 +102,21 @@ class StartupDataPrep @Inject constructor(
     private suspend fun healWallpaperSurvey() {
         val prefs = context.echoDataStore.data.first()
         val wallpaper = prefs[KEY_CUSTOM_WALLPAPER]
-        val storedLuma = prefs[WallpaperLuminanceProbe.KEY_WALLPAPER_LUMA]
-        val storedAccent = prefs[WallpaperLuminanceProbe.KEY_WALLPAPER_ACCENT]
+        val storedSource = prefs[WallpaperAccentProbe.KEY_WALLPAPER_ACCENT_SOURCE]
+        val storedAccent = prefs[WallpaperAccentProbe.KEY_WALLPAPER_ACCENT]
 
         if (wallpaper == null) {
-            if (storedLuma != null || storedAccent != null) {
-                context.echoDataStore.edit { it.clearWallpaperLuma() }
+            if (storedSource != null || storedAccent != null) {
+                context.echoDataStore.edit { it.clearWallpaperAccent() }
             }
             return
         }
 
-        if (WallpaperLuminanceProbe.describes(storedLuma, wallpaper) && storedAccent != null) return
+        if (storedSource == wallpaper && storedAccent != null) return
 
-        val fresh = WallpaperLuminanceProbe.survey(wallpaper)
-        if (fresh?.luma == storedLuma && fresh?.accentArgb == storedAccent) return
-        context.echoDataStore.edit { it.setWallpaperLuma(fresh) }
+        val fresh = WallpaperAccentProbe.survey(wallpaper)
+        if (fresh?.source == storedSource && fresh?.accentArgb == storedAccent) return
+        context.echoDataStore.edit { it.setWallpaperAccent(fresh) }
     }
 
     private fun resolve(path: String?, filesDirPath: String): String? {
@@ -136,9 +136,10 @@ class StartupDataPrep @Inject constructor(
     }
 }
 
-internal val RETIRED_ACHIEVEMENT_KEYS = setOf(
+internal val RETIRED_KEYS = setOf(
     "goldberg_installer_enabled",
     "local_steam_tracking_enabled",
+    "display_wallpaper_luma",
 )
 
 private val KEY_DATA_PREP_VERSION = intPreferencesKey("data_prep_version")
@@ -161,5 +162,5 @@ internal fun keepOldDefaults(prefs: androidx.datastore.preferences.core.MutableP
 }
 
 internal fun wipeRetiredKeys(prefs: androidx.datastore.preferences.core.MutablePreferences) {
-    prefs.asMap().keys.filter { it.name in RETIRED_ACHIEVEMENT_KEYS }.forEach { prefs.remove(it) }
+    prefs.asMap().keys.filter { it.name in RETIRED_KEYS }.forEach { prefs.remove(it) }
 }

@@ -133,7 +133,7 @@ class BackupKeyCoverageTest {
 
         val sessionState = listOf("achievements_sync_last", "session_blob")
 
-        val derivedCaches = listOf("display_wallpaper_luma", "wallpaper_accent")
+        val derivedCaches = listOf("wallpaper_accent_source", "wallpaper_accent")
 
         (migrationMarkers + danglingStamp + sessionState + derivedCaches).forEach { key ->
             assertTrue(

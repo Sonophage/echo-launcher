@@ -12,8 +12,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.data.repository.SafeMedia
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe
-import com.echo.core.data.wallpaper.WallpaperLuminanceProbe.setWallpaperLuma
+import com.echo.core.data.wallpaper.WallpaperAccentProbe
+import com.echo.core.data.wallpaper.WallpaperAccentProbe.setWallpaperAccent
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.domain.model.Photo
 import com.echo.core.domain.repository.PhotoRepository
@@ -427,15 +427,15 @@ class PhotoViewerViewModel @Inject constructor(
             }
             val (poster, motion) = imported
 
-            val luma = withContext(Dispatchers.IO) {
-                WallpaperLuminanceProbe.survey(poster.absolutePath)
+            val survey = withContext(Dispatchers.IO) {
+                WallpaperAccentProbe.survey(poster.absolutePath)
             }
 
             context.echoDataStore.edit {
                 it[KEY_CUSTOM_WALLPAPER] = poster.absolutePath
                 if (motion != null) it[KEY_MOTION_WALLPAPER] = motion.absolutePath
                 else it.remove(KEY_MOTION_WALLPAPER)
-                it.setWallpaperLuma(luma)
+                it.setWallpaperAccent(survey)
             }
             val keepNames = listOfNotNull(poster, motion).map { it.name }.toSet()
             withContext(Dispatchers.IO) {
