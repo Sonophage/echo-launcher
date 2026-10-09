@@ -49,7 +49,8 @@ object EchoThemeTemplate {
                      focusStyle is ${EchoThemeManifest.FOCUS_STYLES.joinToString(", ")}.
                      motion is ${EchoThemeManifest.MOTION_PRESETS.joinToString(", ")}.
                      settings holds look settings by name: ${ThemeSettings.KEYS.keys.joinToString(", ")}.
-                     Each is true or false; display_icon_legibility is a name such as CONTOUR_AUTO.
+                     Each is true or false; display_icon_legibility is a name such as CONTOUR_AUTO,
+                     and display_color_scheme is ${ThemeSettings.CHOICES.getValue("display_color_scheme").joinToString(", ")}.
                      Leave a part as null and the theme keeps the setting the person has.
                      The theme's name is its folder's name.
         Icons/       Menu and crossbar icons. Console icons go in Icons/Consoles.

@@ -21,6 +21,19 @@ object ThemeSettings {
         "display_icon_legibility" to Kind.TEXT,
         "display_fade_by_distance" to Kind.BOOL,
         "display_wave_over_wallpaper" to Kind.BOOL,
+        // owner, 2026-10-09: the colour scheme and the text shadow are look too
+        "display_color_scheme" to Kind.TEXT,
+        "display_text_shadow" to Kind.BOOL,
+    )
+
+    // the names a text setting may take, where ECHO reads it with valueOf and a stray name would crash. It
+    // mirrors CrossbarColorScheme (core-domain), which theme-kit cannot see; ThemeColorSchemeTest in core-data
+    // fails when the two drift
+    val CHOICES: Map<String, Set<String>> = mapOf(
+        "display_color_scheme" to setOf(
+            "ORIGINAL", "CLASSIC_BLUE", "SUNSET_ORANGE", "FRESH_GREEN", "ROYAL_PURPLE", "CRIMSON_RED", "SILVER_MONO",
+            "SAKURA_PINK", "GOLDEN_AMBER", "AQUA_TEAL", "MIDNIGHT_NAVY", "CHARCOAL", "BLACK",
+        ),
     )
 
     // the listed keys whose value has the listed type, or is null; null when nothing is left
@@ -29,7 +42,7 @@ object ThemeSettings {
             val kind = KEYS[key] ?: return@filter false
             value is JsonNull || (value is JsonPrimitive && when (kind) {
                 Kind.BOOL -> !value.isString && value.booleanOrNull != null
-                Kind.TEXT -> value.isString
+                Kind.TEXT -> value.isString && CHOICES[key]?.contains(value.content) != false
             })
         }
         return kept.takeIf { it.isNotEmpty() }?.let(::JsonObject)

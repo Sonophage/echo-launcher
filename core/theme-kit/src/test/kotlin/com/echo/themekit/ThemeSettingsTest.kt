@@ -26,12 +26,19 @@ class ThemeSettingsTest {
             put("sgdb_api_key", "secret")
             put("controller_xy_layout", "SWAPPED")
             put("display_fade_by_distance", JsonNull)
+            put("display_color_scheme", "NEON")
+            put("display_text_shadow", false)
         }
         assertEquals(
-            JsonObject(mapOf("pref_xmb_row_cover_art" to JsonPrimitive(true), "display_fade_by_distance" to JsonNull)),
+            JsonObject(mapOf(
+                "pref_xmb_row_cover_art" to JsonPrimitive(true), "display_fade_by_distance" to JsonNull,
+                "display_text_shadow" to JsonPrimitive(false),
+            )),
             ThemeSettings.clean(raw),
         )
         assertNull(ThemeSettings.clean(buildJsonObject { put("sgdb_api_key", "secret") }), "nothing left is no settings")
+        assertEquals("BLACK", ThemeSettings.clean(buildJsonObject { put("display_color_scheme", "BLACK") })?.get("display_color_scheme")?.let { (it as JsonPrimitive).content },
+            "a colour scheme ECHO has is kept; NEON above is not, as ECHO would crash reading it")
     }
 
     @Test
