@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,9 +72,11 @@ fun coverWindow(w: Float, h: Float, aspect: Float): Pair<Float, Float> =
 // the case: the caller's modifier sizes, lifts and rings it; face draws the cover in the window beside the spine
 @Composable
 fun VhsCase(label: String, tint: Color, u: DesignUnits, modifier: Modifier = Modifier, face: @Composable BoxScope.() -> Unit) {
-    Box(modifier.clip(caseShape(u)).background(CaseShell).cassetteRibs()) {
-        VhsSpine(label, tint, u, Modifier.padding(start = u.dp(4), top = u.dp(6), bottom = u.dp(6)).width(u.dp(24)).fillMaxHeight())
-        Box(Modifier.fillMaxSize().padding(start = u.dp(32), top = u.dp(6), end = u.dp(6), bottom = u.dp(6))) {
+    BoxWithConstraints(modifier.clip(caseShape(u)).background(CaseShell).cassetteRibs()) {
+        val spine = titanSpineWidth(u.dp(24), maxWidth, IsTitan2)
+        val grow = spine / u.dp(24)
+        VhsSpine(label, tint, u, grow, spine, Modifier.padding(start = u.dp(4), top = u.dp(6), bottom = u.dp(6)).width(spine).fillMaxHeight())
+        Box(Modifier.fillMaxSize().padding(start = spine + u.dp(8), top = u.dp(6), end = u.dp(6), bottom = u.dp(6))) {
             face()
             Box(Modifier.fillMaxSize().background(CoverSheen))
         }
@@ -103,43 +106,61 @@ val VHS_ICON_MIN = 64.dp
 // name. Without an icon, glyph stands in for it. [iconMin] keeps the icon from shrinking below that size
 @Composable
 fun VhsAppFace(label: String, icon: AppIconArt?, tint: Color, u: DesignUnits, iconMin: Dp = VHS_ICON_MIN, glyph: @Composable () -> Unit) {
-    Box(Modifier.fillMaxSize().clip(RoundedCornerShape(u.dp(4))).background(tint)) {
+    BoxWithConstraints(Modifier.fillMaxSize().clip(RoundedCornerShape(u.dp(4))).background(tint)) {
+        val mark = titanFaceSize(u.dp(130), maxWidth, TITAN_MARK_SHARE, IsTitan2)
+        val grow = mark / u.dp(130)
+        val logo = titanFaceSize(maxOf(u.dp(72), iconMin), maxWidth, TITAN_ICON_SHARE, IsTitan2)
         Box(Modifier.fillMaxSize().coverRings()) {
-            icon?.let { Image(it.bitmap, null, Modifier.align(Alignment.BottomEnd).offset(u.dp(30), u.dp(18)).size(u.dp(130)).rotate(-14f).graphicsLayer(alpha = 0.16f)) }
+            icon?.let { Image(it.bitmap, null, Modifier.align(Alignment.BottomEnd).offset(u.dp(30) * grow, u.dp(18) * grow).size(mark).rotate(-14f).graphicsLayer(alpha = 0.16f)) }
         }
         Column(
             Modifier.align(Alignment.Center).padding(horizontal = u.dp(8)),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
-            if (icon != null) Image(icon.bitmap, null, Modifier.size(maxOf(u.dp(72), iconMin)).shadow(u.dp(8), RoundedCornerShape(u.dp(18))))
+            if (icon != null) Image(icon.bitmap, null, Modifier.size(logo).shadow(u.dp(8), RoundedCornerShape(u.dp(18) * grow)))
             else glyph()
-            Text(label.uppercase(), color = Color.White, fontSize = u.sp(13), fontWeight = FontWeight.ExtraBold, letterSpacing = 0.04.em,
-                lineHeight = u.sp(15), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(label.uppercase(), color = Color.White, fontSize = u.sp(13) * grow, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.04.em,
+                lineHeight = u.sp(15) * grow, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
+// owner, 2026-10-09: on the Titan 2 a case's spine, logo and faint logo grow with the case, so Search's one large case
+// is not a small logo on a field of colour. They never shrink, so a small case (the App Drawer's) keeps its sizes,
+// and on any other device they are what they were
+internal const val TITAN_SPINE_SHARE = 0.09f
+internal const val TITAN_ICON_SHARE = 0.42f
+internal const val TITAN_MARK_SHARE = 0.8f
+
+internal fun titanSpineWidth(base: Dp, caseWidth: Dp, titan2: Boolean): Dp =
+    if (titan2) maxOf(base, caseWidth * TITAN_SPINE_SHARE) else base
+
+internal fun titanFaceSize(base: Dp, faceWidth: Dp, share: Float, titan2: Boolean): Dp =
+    if (titan2) maxOf(base, faceWidth * share) else base
+
 // owner, 2026-10-05: the spine reads as a VHS tape's: a cream label with the colour band and a play mark at the
 // top, the kind running down it, tracking rules, and a black VHS tab at the foot
 @Composable
-private fun VhsSpine(label: String, tint: Color, u: DesignUnits, modifier: Modifier) {
+private fun VhsSpine(label: String, tint: Color, u: DesignUnits, grow: Float, width: Dp, modifier: Modifier) {
     Column(
         modifier.clip(RoundedCornerShape(u.dp(3))).background(CaseLabel),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(Modifier.fillMaxWidth().height(u.dp(22)).background(tint), contentAlignment = Alignment.Center) {
-            Text("▶", color = Color.White, fontSize = u.sp(9))
+        Box(Modifier.fillMaxWidth().height(u.dp(22) * grow).background(tint), contentAlignment = Alignment.Center) {
+            Text("▶", color = Color.White, fontSize = u.sp(9) * grow)
         }
         Box(Modifier.weight(1f).padding(vertical = u.dp(8)), contentAlignment = Alignment.TopCenter) {
-            Text(label.uppercase(), color = CaseInk, fontSize = u.sp(10), fontWeight = FontWeight.ExtraBold, letterSpacing = 0.18.em,
+            Text(label.uppercase(), color = CaseInk, fontSize = u.sp(10) * grow, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.18.em,
                 maxLines = 1, softWrap = false, modifier = Modifier.sideways())
         }
         Column(Modifier.padding(bottom = u.dp(5)), verticalArrangement = Arrangement.spacedBy(u.dp(2))) {
-            repeat(3) { Box(Modifier.size(u.dp(14), 1.dp).background(CaseInk.copy(alpha = 0.6f))) }
+            repeat(3) { Box(Modifier.size(u.dp(14) * grow, 1.dp).background(CaseInk.copy(alpha = 0.6f))) }
         }
-        Box(Modifier.fillMaxWidth().height(u.dp(20)).background(CaseInk), contentAlignment = Alignment.Center) {
-            Text("VHS", color = CaseLabel, fontSize = u.sp(6), fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
+        Box(Modifier.fillMaxWidth().height(u.dp(20) * grow).background(CaseInk), contentAlignment = Alignment.Center) {
+            // the legibility floor made the Titan 2's "VHS" wider than its spine; there it is sized to the spine
+            val vhs = if (IsTitan2) with(LocalDensity.current) { (width * 0.42f).toSp() } else u.sp(6)
+            Text("VHS", color = CaseLabel, fontSize = vhs, fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
         }
     }
 }

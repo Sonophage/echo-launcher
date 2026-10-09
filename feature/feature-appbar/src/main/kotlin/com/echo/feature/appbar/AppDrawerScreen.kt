@@ -51,6 +51,8 @@ import com.echo.feature.appbar.appdrawer.WallInfo
 import com.echo.feature.appbar.appdrawer.SystemChipRow
 import com.echo.feature.appbar.appdrawer.actionLabel
 import com.echo.core.ui.design.panelDesignUnits
+import com.echo.core.ui.design.IsTitan2
+import com.echo.feature.appbar.appdrawer.WallInfoStrip
 import com.echo.core.ui.design.filmGrain
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -293,8 +295,16 @@ internal fun AppDrawerContent(
         // in three columns on the right, the bar's sections above and the hints below
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(StatusStripHeight))
+            // owner, 2026-10-09: on the Titan 2's square screen the chosen app's details are a strip across the top and
+            // the cases take the whole width under it
+            val strip = IsTitan2 && !heroOnOtherScreen
+            if (strip) focused?.let { app ->
+                WallInfoStrip(app, focusedIcon, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
+                    holding = state.holdingPackage == app.packageName, details = state.gameDetails?.takeIf { it.gameId == app.gameId },
+                    modifier = Modifier.fillMaxWidth().padding(start = u.dp(46), end = u.dp(52), top = u.dp(16)))
+            }
             Row(Modifier.weight(1f).fillMaxWidth().padding(start = u.dp(46), end = u.dp(52))) {
-                if (!heroOnOtherScreen) {
+                if (!heroOnOtherScreen && !strip) {
                     Box(Modifier.width(u.dp(420)).fillMaxHeight().padding(top = u.dp(24))) {
                         focused?.let { app ->
                             WallInfo(app, focusedIcon, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },

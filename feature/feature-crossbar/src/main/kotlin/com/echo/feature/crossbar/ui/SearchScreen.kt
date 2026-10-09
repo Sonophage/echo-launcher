@@ -101,6 +101,7 @@ import com.echo.core.common.format.relativeTime
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.design.PanelButton
+import com.echo.core.ui.design.IsTitan2
 
 // owner, 2026-10-05: search is the "Drawer and Search Variations" design's 6b, the search shelf: a pegboard room lit
 // by the selected result's own art, the field and the kind filter across the top, what the selected result is,
@@ -196,7 +197,8 @@ fun SearchScreen(
             if (showResults) when {
                 empty != null -> Box(Modifier.padding(horizontal = u.dp(64))) { EmptyNotice(empty, u) }
                 focused != null -> {
-                    if (!imeUp) Info(focused, u, onOpen = { onActivateAt(state.selectedIndex) }, onOptions = { onOptionsAt(state.selectedIndex) }.takeIf { state.scope != SearchScope.WEB })
+                    // the Titan 2's keyboard is hardware: its keyboard strip is a sliver, so there is room for what this is
+                    if (!imeUp || IsTitan2) Info(focused, u, onOpen = { onActivateAt(state.selectedIndex) }, onOptions = { onOptionsAt(state.selectedIndex) }.takeIf { state.scope != SearchScope.WEB })
                     Shelf(state, u, onActivateAt, onFocusAt, Modifier.weight(1f).fillMaxWidth())
                 }
             }
@@ -246,32 +248,57 @@ internal fun searchKindFilter(state: SearchState): Pair<String, SearchKind?>? {
 @Composable
 private fun Info(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOptions: (() -> Unit)?) {
     val (kind, detail) = kindAndDetail(row)
-    Row(Modifier.fillMaxWidth().padding(horizontal = u.dp(60)), horizontalArrangement = Arrangement.spacedBy(u.dp(52))) {
-        Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
-            Text(kind.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(12), letterSpacing = 0.2.em))
-            Text(row.title, color = Color.White, fontSize = u.sp(28), lineHeight = u.sp(31), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            val pill = listOfNotNull(detail.takeIf { it.isNotBlank() }, row.totalPlayTimeMillis.takeIf { it > 0 }?.let(::playTimeLabel)).joinToString(" · ")
-            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10)), verticalAlignment = Alignment.CenterVertically) {
-                if (pill.isNotBlank()) {
-                    Text(pill, color = Color.White, fontSize = u.sp(13), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.clip(RoundedCornerShape(u.dp(20))).background(Color.Black.copy(alpha = 0.6f))
-                            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(u.dp(20))).padding(horizontal = u.dp(14), vertical = u.dp(6)))
-                }
-                row.lastOpenedAt?.let {
-                    Text("Last opened ${relativeTime(System.currentTimeMillis(), it).lowercase()}", color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(13), maxLines = 1)
-                }
+    val about = (row.description ?: row.metadataLine)?.takeIf { it.isNotBlank() }
+    // owner, 2026-10-09: on the Titan 2 the buttons stand on the right, level with the title and larger, and what is
+    // known about the result goes under the title
+    if (IsTitan2) {
+        val bu = DesignUnits(u.scale * TITAN_BUTTON_GROW, LocalDensity.current, u.square)
+        Row(Modifier.fillMaxWidth().padding(horizontal = u.dp(60)), horizontalArrangement = Arrangement.spacedBy(u.dp(32)), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(8))) {
+                InfoTitle(row, kind, detail, u)
+                about?.let { InfoAbout(it, u) }
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(bu.dp(10))) { InfoButtons(row, bu, onOpen, onOptions) }
         }
+        return
+    }
+    Row(Modifier.fillMaxWidth().padding(horizontal = u.dp(60)), horizontalArrangement = Arrangement.spacedBy(u.dp(52))) {
+        Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(u.dp(8))) { InfoTitle(row, kind, detail, u) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(12))) {
-            (row.description ?: row.metadataLine)?.takeIf { it.isNotBlank() }?.let {
-                Text(it, color = Color.White, fontSize = u.sp(14), lineHeight = u.sp(21), fontWeight = FontWeight.Medium, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
-                PanelButton(GamepadAction.SELECT, primaryVerbFor(row) ?: "Open", u, onClick = onOpen)
-                onOptions?.let { PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = it) }
-            }
+            about?.let { InfoAbout(it, u) }
+            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) { InfoButtons(row, u, onOpen, onOptions) }
         }
     }
+}
+
+internal const val TITAN_BUTTON_GROW = 1.35f
+
+@Composable
+private fun InfoTitle(row: CrossbarItem, kind: String, detail: String, u: DesignUnits) {
+    Text(kind.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(12), letterSpacing = 0.2.em))
+    Text(row.title, color = Color.White, fontSize = u.sp(28), lineHeight = u.sp(31), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    val pill = listOfNotNull(detail.takeIf { it.isNotBlank() }, row.totalPlayTimeMillis.takeIf { it > 0 }?.let(::playTimeLabel)).joinToString(" · ")
+    Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10)), verticalAlignment = Alignment.CenterVertically) {
+        if (pill.isNotBlank()) {
+            Text(pill, color = Color.White, fontSize = u.sp(13), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clip(RoundedCornerShape(u.dp(20))).background(Color.Black.copy(alpha = 0.6f))
+                    .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(u.dp(20))).padding(horizontal = u.dp(14), vertical = u.dp(6)))
+        }
+        row.lastOpenedAt?.let {
+            Text("Last opened ${relativeTime(System.currentTimeMillis(), it).lowercase()}", color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(13), maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun InfoAbout(text: String, u: DesignUnits) {
+    Text(text, color = Color.White, fontSize = u.sp(14), lineHeight = u.sp(21), fontWeight = FontWeight.Medium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+}
+
+@Composable
+private fun InfoButtons(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOptions: (() -> Unit)?) {
+    PanelButton(GamepadAction.SELECT, primaryVerbFor(row) ?: "Open", u, onClick = onOpen)
+    onOptions?.let { PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = it) }
 }
 
 // the results on one shelf: the selected one out as a whole case, lifted and ringed; the rest as spines
@@ -290,8 +317,8 @@ private fun Shelf(state: SearchState, u: DesignUnits, onActivateAt: (Int) -> Uni
     BoxWithConstraints(modifier) {
         val density = LocalDensity.current
         val ledge = u.dp(18)
-        val caseH = with(density) { (maxHeight - ledge - u.dp(24)).coerceAtLeast(u.dp(60)).toPx() }
-        val caseW = caseH * 0.72f
+        val caseH = with(density) { shelfCaseHeight(maxHeight - ledge - u.dp(24), maxWidth, IsTitan2).coerceAtLeast(u.dp(60)).toPx() }
+        val caseW = caseH * SHELF_CASE_ASPECT
         val spineW = maxOf(caseH * 0.19f, with(density) { u.dp(30).toPx() })
         val gap = with(density) { u.dp(5).toPx() }
         val viewW = with(density) { maxWidth.toPx() }
@@ -350,6 +377,13 @@ private fun Shelf(state: SearchState, u: DesignUnits, onActivateAt: (Int) -> Uni
         )
     }
 }
+
+internal const val SHELF_CASE_ASPECT = 0.72f
+
+// the case's height on the shelf: all the room there is, except on the Titan 2, whose square screen made one case
+// cover the shelf; there the case is at most 42% of the shelf's width (owner, 2026-10-09)
+internal fun shelfCaseHeight(room: Dp, width: Dp, titan2: Boolean): Dp =
+    if (titan2) minOf(room, width * 0.42f / SHELF_CASE_ASPECT) else room
 
 // one result, between a spine (weight 0) and the whole case (weight 1): the case lifts and rings as it comes out,
 // and the spine fades under it. owner, 2026-10-05: the case is the App Drawer's (VhsCase), so the two screens match

@@ -79,6 +79,7 @@ import com.echo.feature.appbar.WALL_COLUMNS
 import com.echo.feature.appbar.WALL_ROWS
 import androidx.compose.ui.unit.Dp
 import com.echo.core.ui.design.PanelBase
+import com.echo.core.ui.design.IsTitan2
 
 // owner, 2026-10-05: the drawer is the "Drawer and Search Variations" design's 6a: a dark room lit by the
 // selected app's colour, its big icon faint on the wall, and the apps standing as cases in three columns
@@ -135,14 +136,17 @@ internal fun AppWall(
     // owner, 2026-10-05: no row is cut off at the bottom. The cases are as tall as fits WALL_ROWS whole rows in
     // the space, and the d-pad scrolls a row at a time, so the rows always land whole
     BoxWithConstraints(modifier) {
-        val caseHeight = (maxHeight - u.dp(16) * 2 - u.dp(24) * (WALL_ROWS - 1)) / WALL_ROWS
+        // the Titan 2's cases are big enough that the chosen one, lifted and grown, needs more room above and beside it
+        val edge = if (IsTitan2) u.dp(32) else u.dp(16)
+        val side = if (IsTitan2) u.dp(16) else 0.dp
+        val caseHeight = (maxHeight - edge - u.dp(16) - u.dp(24) * (WALL_ROWS - 1)) / WALL_ROWS
         LazyVerticalGrid(
             columns = GridCells.Fixed(WALL_COLUMNS),
             state = gridState,
             horizontalArrangement = Arrangement.spacedBy(u.dp(28)),
             verticalArrangement = Arrangement.spacedBy(u.dp(24)),
             // room for the chosen case to rise
-            contentPadding = PaddingValues(top = u.dp(16), bottom = u.dp(16)),
+            contentPadding = PaddingValues(top = edge, bottom = u.dp(16), start = side, end = side),
             modifier = Modifier.fillMaxSize(),
         ) {
             itemsIndexed(apps, key = { _, app -> app.packageName + (app.gameId ?: "") }) { index, app ->
@@ -274,6 +278,58 @@ internal fun WallInfo(
         }
     }
 }
+
+// owner, 2026-10-09: the Titan 2's details strip: the app's tile, then its name, kind and when it was last used, and
+// its buttons on the right, larger, level with the name
+@Composable
+internal fun WallInfoStrip(
+    app: InstalledApp,
+    icon: AppIconArt?,
+    u: DesignUnits,
+    onLaunch: () -> Unit,
+    onOptions: () -> Unit,
+    modifier: Modifier = Modifier,
+    holding: Boolean = false,
+    details: com.echo.feature.appbar.GameDetails? = null,
+) {
+    val game = app.isGame || app.gameId != null
+    val tint = icon?.color ?: NeutralTint
+    val bu = DesignUnits(u.scale * TITAN_STRIP_BUTTON_GROW, LocalDensity.current, u.square)
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(u.dp(24)), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.size(u.dp(110)).shadow(u.dp(14), RoundedCornerShape(u.dp(26))).clip(RoundedCornerShape(u.dp(26))).background(tint),
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                app.art != null -> AsyncImage(app.art, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                icon != null -> Image(icon.bitmap, null, Modifier.size(u.dp(66)))
+                else -> Text(initialOf(app.label).toString(), color = Color.White, fontSize = u.sp(44), fontWeight = FontWeight.ExtraLight)
+            }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
+            Text(app.label, color = Color.White, fontSize = u.sp(30), lineHeight = u.sp(33), fontWeight = FontWeight.Bold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val facts = listOfNotNull(
+                caseLabel(app),
+                app.media?.let { m -> com.echo.feature.appbar.mediaByline(m) },
+                app.playTimeMillis.takeIf { it > 0L }?.let(::playTimeLabel),
+                details?.achievements?.let { "Achievements $it" },
+            ).joinToString(" · ")
+            Text(facts.uppercase(), style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(12), letterSpacing = 0.18.em),
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (app.lastUsedAt > 0L) {
+                Text("${if (game) "Played" else "Used"} ${relativeTime(System.currentTimeMillis(), app.lastUsedAt).lowercase()}",
+                    color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13))
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(bu.dp(10))) {
+            PanelButton(GamepadAction.SELECT, actionLabel(app), bu, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onClick = onLaunch)
+            PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", bu, onClick = onOptions)
+        }
+    }
+}
+
+private const val TITAN_STRIP_BUTTON_GROW = 1.35f
 
 internal fun actionLabel(app: InstalledApp): String = when {
     app.media?.kind == com.echo.feature.appbar.MediaKind.BOOK -> "Read"
