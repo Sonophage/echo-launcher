@@ -31,12 +31,16 @@ object EchoFonts {
 
     val family: FontFamily get() = custom.value ?: SoraFontFamily
 
-    // uses [file] when Android can build a typeface from it; anything else falls back to Sora, so a
-    // broken file never reaches text drawing. Returns whether the file is in use.
-    fun use(file: java.io.File?): Boolean {
-        val typeface = file?.takeIf { it.isFile }?.let { runCatching { android.graphics.Typeface.Builder(it).build() }.getOrNull() }
-        custom.value = typeface?.let { FontFamily(it) }
-        return typeface != null
+    // uses the first of [files] Android can build a typeface from; with none, Sora, so a broken file never
+    // reaches text drawing. Returns the file in use, or null for Sora.
+    fun use(vararg files: java.io.File?): java.io.File? {
+        for (file in files) {
+            val typeface = file?.takeIf { it.isFile }?.let { runCatching { android.graphics.Typeface.Builder(it).build() }.getOrNull() } ?: continue
+            custom.value = FontFamily(typeface)
+            return file
+        }
+        custom.value = null
+        return null
     }
 }
 

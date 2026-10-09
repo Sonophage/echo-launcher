@@ -28,6 +28,7 @@ object EchoThemeCodec {
     private const val HERO = "preview/hero."
     private const val SCREENSHOTS_PREFIX = "preview/screenshots/"
     private const val ENTRY_README = "readme.md"
+    private const val FONT_ENTRY = "fonts/font."
 
     val PICTURE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
     const val MAX_SCREENSHOTS = 8
@@ -44,6 +45,10 @@ object EchoThemeCodec {
     )
 
     const val MAX_ICON_BYTES = 8 * 1024 * 1024
+
+    val FONT_EXTENSIONS = setOf("ttf", "otf")
+    // a font with every CJK glyph runs to about 20 MB
+    const val MAX_FONT_BYTES = 32 * 1024 * 1024
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -75,6 +80,8 @@ object EchoThemeCodec {
             for ((name, shot) in bundle.screenshots.toSortedMap().entries.take(MAX_SCREENSHOTS)) {
                 if (isScreenshotName(name)) zip.writeEntry("$SCREENSHOTS_PREFIX$name", shot.bytes)
             }
+            bundle.font?.takeIf { it.extension.lowercase() in FONT_EXTENSIONS }
+                ?.let { zip.writeEntry("$FONT_ENTRY${it.extension.lowercase()}", it.bytes) }
             bundle.readme?.toByteArray()?.takeIf { it.size <= MAX_README_BYTES }?.let { zip.writeEntry(ENTRY_README, it) }
 
             for ((key, file) in bundle.media.toSortedMap()) {
@@ -107,6 +114,7 @@ object EchoThemeCodec {
         var hero: ThemeImage? = null
         val screenshots = sortedMapOf<String, ThemeImage>()
         var readme: String? = null
+        var font: ThemeImage? = null
 
         try {
             BoundedZipReader.read(input, BUNDLE_LIMITS) { entry ->
@@ -150,6 +158,10 @@ object EchoThemeCodec {
                                 ?.let { screenshots[name] = ThemeImage(it, name.substringAfterLast('.').lowercase()) }
                         }
                     }
+                    entry.name.startsWith(FONT_ENTRY) -> {
+                        val ext = entry.name.removePrefix(FONT_ENTRY).lowercase()
+                        if (font == null && ext in FONT_EXTENSIONS) entry.readBytes().takeIf { it.size <= MAX_FONT_BYTES }?.let { font = ThemeImage(it, ext) }
+                    }
                     entry.name == ENTRY_README -> readme = entry.readBytes().takeIf { it.size <= MAX_README_BYTES }?.decodeToString()
                     entry.name.startsWith(MEDIA_PREFIX) -> {
                         val name = entry.name.removePrefix(MEDIA_PREFIX)
@@ -180,6 +192,7 @@ object EchoThemeCodec {
             hero = hero,
             screenshots = screenshots,
             readme = readme,
+            font = font,
         )
     }
 

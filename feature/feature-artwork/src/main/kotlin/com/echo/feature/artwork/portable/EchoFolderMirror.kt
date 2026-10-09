@@ -44,6 +44,8 @@ class EchoFolderMirror @Inject constructor(
 
     @OptIn(FlowPreview::class)
     fun start(scope: CoroutineScope) = scope.launch {
+        // the font kept from the last theme or folder read, before anything draws; the read below may change it
+        com.echo.core.data.repository.EchoFontFiles.refresh(context)
         val tree = folderRepository.treeUri
         readLock.withLock { readFolder = tree.first() }
         // the folder is read before anything is written to it, or an edit made while ECHO was closed

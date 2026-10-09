@@ -14,7 +14,7 @@ class EchoThemeTemplateTest {
     @Test
     fun `the template is itself a theme with every folder`() {
         assertNotNull(EchoThemeFolder.toBundle(template))
-        for (folder in listOf("Icons", "Icons/Consoles", "Wallpaper", "Sounds", "Boot", "GameStart", "Preview")) {
+        for (folder in listOf("Icons", "Icons/Consoles", "Wallpaper", "Fonts", "Sounds", "Boot", "GameStart", "Preview")) {
             assertTrue("$folder/README.txt" in template.keys, "$folder has a README")
         }
     }

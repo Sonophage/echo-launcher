@@ -65,6 +65,7 @@ class ThemeStoreFormatTest {
             icons = mapOf("catbar_games" to ThemeImage(jpg, "png")),
             wallpaper = jpg,
             media = sounds.media + ("boot_audio" to ThemeImage(jpg, "wav")),
+            font = ThemeImage(jpg, "ttf"),
         )
         assertEquals(ThemePart.entries.toSet(), full.parts())
     }

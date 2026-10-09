@@ -125,12 +125,15 @@ data class EchoThemeBundle(
     val hero: ThemeImage? = null,
     val screenshots: Map<String, ThemeImage> = emptyMap(),
     val readme: String? = null,
+    // the theme's font, a .ttf or .otf (owner, 2026-10-09); it wins over the ECHO folder's Look/Fonts
+    val font: ThemeImage? = null,
 ) {
     override fun equals(other: Any?): Boolean =
         other is EchoThemeBundle &&
             hero == other.hero &&
             screenshots == other.screenshots &&
             readme == other.readme &&
+            font == other.font &&
             media == other.media &&
             manifest == other.manifest &&
             wallpaper.contentEquals(other.wallpaper) &&
@@ -148,6 +151,7 @@ data class EchoThemeBundle(
         motion?.let { h = 31 * h + it.hashCode() }
         for ((key, file) in media) h = 31 * h + (key.hashCode() xor file.hashCode())
         h = 31 * h + (hero?.hashCode() ?: 0) + screenshots.hashCode() + (readme?.hashCode() ?: 0)
+        h = 31 * h + (font?.hashCode() ?: 0)
         return h
     }
 }

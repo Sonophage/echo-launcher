@@ -35,6 +35,7 @@ class ViewModelKeptPartsTest {
                 preview = null,
                 sysicons = mapOf("psx" to ThemeImage(png, "png")),
                 media = mapOf("sound_back" to ThemeImage("RIFF....WAVE".toByteArray(), "wav")),
+                font = ThemeImage(byteArrayOf(0, 1, 0, 0, 9), "ttf"),
             )))
             val vm = StudioViewModel(CoroutineScope(Dispatchers.Default))
             vm.openFile(source)
@@ -47,6 +48,7 @@ class ViewModelKeptPartsTest {
             assertEquals(setOf("psx"), exported.sysicons.keys)
             assertEquals("ECHO_ARCS", exported.manifest.waveDesign)
             assertEquals("NINTENDO", exported.manifest.buttonSet)
+            assertEquals(ThemeImage(byteArrayOf(0, 1, 0, 0, 9), "ttf"), exported.font, "the font")
             assertEquals("true", exported.manifest.settings?.get("pref_xmb_row_cover_art")?.toString(), "display settings")
         } finally {
             source.delete()

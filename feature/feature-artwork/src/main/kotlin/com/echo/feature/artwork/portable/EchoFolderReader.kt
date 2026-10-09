@@ -146,10 +146,10 @@ class EchoFolderReader @Inject constructor(
         return applied
     }
 
-    // the first font in Look/Fonts becomes ECHO's font; with none there, ECHO goes back to Sora.
-    // True when the font in use changed.
+    // the first font in Look/Fonts becomes ECHO's font; with none there, ECHO goes back to Sora. An applied
+    // theme's font wins over it (EchoFontFiles). True when the font in use changed.
     private suspend fun readFont(tree: Uri): Boolean {
-        val dir = File(context.filesDir, FONT_DIR).apply { mkdirs() }
+        val dir = File(context.filesDir, com.echo.core.data.repository.EchoFontFiles.LOOK_FONT_DIR).apply { mkdirs() }
         val source = library.filesIn(tree, listOf(DIR_LOOK, "Fonts"))
             .filter { it.name.substringAfterLast('.').lowercase() in FONTS }
             .minByOrNull { it.name.lowercase() }
@@ -157,8 +157,8 @@ class EchoFolderReader @Inject constructor(
         if (source == null) {
             val had = local != null
             dir.listFiles().orEmpty().forEach { it.delete() }
-            com.echo.core.ui.theme.EchoFonts.use(null)
-            return had
+            val inUse = com.echo.core.data.repository.EchoFontFiles.refresh(context)
+            return had && inUse == null
         }
         val target = File(dir, "font.${source.name.substringAfterLast('.').lowercase()}")
         val changed = local == null || !library.sameContent(source, local)
@@ -169,14 +169,17 @@ class EchoFolderReader @Inject constructor(
             }.getOrDefault(false)
             if (!copied) return false
         }
-        val inUse = com.echo.core.ui.theme.EchoFonts.use(target)
-        if (!inUse) rejected += "${source.name} (not a font Android can read; ECHO keeps Sora)"
-        return changed && inUse
+        val inUse = com.echo.core.data.repository.EchoFontFiles.refresh(context)
+        when {
+            inUse == target -> Unit
+            inUse == null -> rejected += "${source.name} (not a font Android can read; ECHO keeps Sora)"
+            changed -> rejected += "${source.name} (the applied theme's font is in use)"
+        }
+        return changed && inUse == target
     }
 
     private companion object {
         const val MAX_SETTINGS_BYTES = 256 * 1024
-        const val FONT_DIR = "echo-font"
         val STILL_IMAGES = setOf("jpg", "jpeg", "png", "webp")
         val MOTION = mapOf("mp4" to "video/mp4", "m4v" to "video/mp4", "webm" to "video/webm", "gif" to "image/gif")
         val FONTS = setOf("ttf", "otf")

@@ -21,6 +21,7 @@ object EchoThemeFolder {
         entry.startsWith("preview/screenshots/") -> leaf(entry.removePrefix("preview/screenshots/"))?.let { "Preview/Screenshots/$it" }
         entry.startsWith("preview/") -> leaf(entry.removePrefix("preview/"))?.let { "Preview/$it" }
         entry.startsWith("icons/") -> leaf(entry.removePrefix("icons/"))?.let { "Icons/$it" }
+        entry.startsWith("fonts/") -> leaf(entry.removePrefix("fonts/"))?.let { "Fonts/$it" }
         entry.startsWith("sysicons/") -> leaf(entry.removePrefix("sysicons/"))?.let { "Icons/Consoles/$it" }
         entry.startsWith("media/") -> leaf(entry.removePrefix("media/"))
             ?.let { name -> ThemeMedia.FOLDERS[name.substringBeforeLast('.')]?.let { "$it/$name" } }
@@ -39,6 +40,10 @@ object EchoThemeFolder {
             parts.size == 3 && parts[0].equals("Icons", true) && parts[1].equals("Consoles", true) -> "sysicons/${parts[2]}"
             parts.size == 2 && parts[0].equals("Icons", true) -> "icons/${parts[1]}"
             parts.size == 2 && parts[0].equals("Wallpaper", true) -> parts[1]
+            // a font keeps the name its maker gave it in the folder; toBundle stores it as fonts/font.<ext>
+            parts.size == 2 && parts[0].equals("Fonts", true) &&
+                parts[1].substringAfterLast('.', "").lowercase() in EchoThemeCodec.FONT_EXTENSIONS ->
+                "fonts/font.${parts[1].substringAfterLast('.').lowercase()}"
             // a media file is placed only in its own slot's folder; anything else there (a README) has no place
             parts.size == 2 && ThemeMedia.FOLDERS[parts[1].substringBeforeLast('.')]?.equals(parts[0], true) == true -> "media/${parts[1]}"
             else -> null

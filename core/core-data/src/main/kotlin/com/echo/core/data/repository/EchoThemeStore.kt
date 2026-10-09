@@ -170,6 +170,17 @@ class EchoThemeStore @Inject constructor(
             staged.delete()
             if (result?.ok != true) Timber.w("EchoThemeStore: the theme's %s was not applied: %s", key, result?.message)
         }
+        // the theme's font replaces the one the last theme left; with none, the ECHO folder's or Sora is used
+        if (ThemePart.FONT in parts) {
+            val fontDir = File(context.filesDir, EchoFontFiles.THEME_FONT_DIR)
+            fontDir.deleteRecursively()
+            bundle.font?.let { font ->
+                runCatching { File(fontDir.apply { mkdirs() }, "font.${font.extension.lowercase()}").writeBytes(font.bytes) }
+                    .onFailure { Timber.w(it, "EchoThemeStore: could not store the theme's font") }
+            }
+            val inUse = EchoFontFiles.refresh(context)
+            if (bundle.font != null && inUse != EchoFontFiles.theme(context)) Timber.w("EchoThemeStore: the theme's font is not one Android can read")
+        }
         val parts0 = bundle.manifest
 
         val survey = if (wallpaperOk) WallpaperAccentProbe.survey(dest.absolutePath) else null
@@ -252,6 +263,8 @@ class EchoThemeStore @Inject constructor(
 
         File(context.filesDir, THEME_ICONS_DIR).deleteRecursively()
         File(context.filesDir, "wallpaper").listFiles()?.forEach { it.delete() }
+        File(context.filesDir, EchoFontFiles.THEME_FONT_DIR).deleteRecursively()
+        EchoFontFiles.refresh(context)
     }
 
     suspend fun delete(id: String): Unit = withContext(Dispatchers.IO) {
@@ -476,7 +489,7 @@ class EchoThemeStore @Inject constructor(
     // the look in use, as a theme: what Save as Theme writes, and what an apply keeps first
     private class Look(val bundle: EchoThemeBundle, val wallpaper: Bitmap?, val preview: Bitmap?) : java.io.Closeable {
         val isDefault: Boolean get() = bundle.wallpaper == null && bundle.motion == null && bundle.icons.isEmpty() &&
-            bundle.sysicons.isEmpty() && bundle.media.isEmpty() && bundle.manifest.accentColor.isBlank() &&
+            bundle.sysicons.isEmpty() && bundle.media.isEmpty() && bundle.font == null && bundle.manifest.accentColor.isBlank() &&
             bundle.manifest.settings.orEmpty().values.all { it is JsonNull }
 
         // the look's content without its name or date, so the same look gives the same print
@@ -574,6 +587,12 @@ class EchoThemeStore @Inject constructor(
             uiMedia.pathFor(slot)?.let(::File)?.takeIf { it.isFile }?.let { slot.key to ThemeImage(it.readBytes(), it.extension.lowercase()) }
         }.toMap()
 
+        // the font: a theme's, or for Save as Theme the ECHO folder's when no theme set one. The look kept before
+        // a theme leaves the folder's out, so taking it back hands the font back to the folder
+        val font = (EchoFontFiles.theme(context) ?: EchoFontFiles.look(context).takeUnless { toTakeBack })
+            ?.takeIf { it.extension.lowercase() in EchoThemeCodec.FONT_EXTENSIONS && it.length() <= EchoThemeCodec.MAX_FONT_BYTES }
+            ?.let { ThemeImage(it.readBytes(), it.extension.lowercase()) }
+
         val preview = wallpaperBitmap?.let { downscale(it, maxEdge = 480) }
         val previewBytes = preview?.let {
             ByteArrayOutputStream().also { out -> it.compress(Bitmap.CompressFormat.PNG, 90, out) }.toByteArray()
@@ -586,6 +605,7 @@ class EchoThemeStore @Inject constructor(
             sysicons = sysicons,
             motion = motion,
             media = media,
+            font = font,
         )
         return Look(bundle, wallpaperBitmap, preview)
     }

@@ -13,6 +13,7 @@ object EchoThemeTemplate {
         "Icons/README.txt" to icons(),
         "Icons/Consoles/README.txt" to consoles(),
         "Wallpaper/README.txt" to WALLPAPER.trimIndent(),
+        "Fonts/README.txt" to FONTS.trimIndent(),
         "${ThemeMedia.SOUNDS}/README.txt" to media(ThemeMedia.SOUNDS, "Interface sounds and menu music."),
         "${ThemeMedia.BOOT}/README.txt" to media(ThemeMedia.BOOT, "The boot animation and its sound."),
         "${ThemeMedia.GAME_START}/README.txt" to media(ThemeMedia.GAME_START, "What plays when a game starts: GameBoot and the launch disc."),
@@ -53,6 +54,7 @@ object EchoThemeTemplate {
                      The theme's name is its folder's name.
         Icons/       Menu and crossbar icons. Console icons go in Icons/Consoles.
         Wallpaper/   wallpaper.png, and motion.mp4, motion.webm or motion.gif for a moving one.
+        Fonts/       One font, .ttf or .otf, that ECHO draws all its text with.
         Sounds/      Interface sounds and menu music.
         Boot/        The boot animation and its sound.
         GameStart/   GameBoot and the launch disc.
@@ -79,6 +81,12 @@ object EchoThemeTemplate {
     private val PREVIEW = """
         hero.jpg       the picture on the theme's card and at the top of its page (or hero.png, hero.webp)
         Screenshots/   up to ${EchoThemeCodec.MAX_SCREENSHOTS} pictures (.jpg, .png, .webp) for its page, shown in name order
+    """
+
+    private val FONTS = """
+        One font file, ${EchoThemeCodec.FONT_EXTENSIONS.sorted().joinToString(" or ") { ".$it" }}, up to ${EchoThemeCodec.MAX_FONT_BYTES / (1024 * 1024)} MB, named as you like.
+        ECHO draws all its text with it, in place of a font in the ECHO folder's Look/Fonts.
+        A font Android cannot read is skipped and ECHO keeps its own.
     """
 
     private val WALLPAPER = """

@@ -44,6 +44,8 @@ class EchoThemeStorePartsTest {
         runBlocking { context.echoDataStore.edit { it.clear() } }
         File(context.filesDir, "pfpthemes").deleteRecursively()
         File(context.filesDir, UiMediaStore.UI_MEDIA_DIR).deleteRecursively()
+        File(context.filesDir, EchoFontFiles.THEME_FONT_DIR).deleteRecursively()
+        File(context.filesDir, EchoFontFiles.LOOK_FONT_DIR).deleteRecursively()
         mockkConstructor(MediaMetadataRetriever::class)
         every { anyConstructed<MediaMetadataRetriever>().setDataSource(any<String>()) } returns Unit
         every { anyConstructed<MediaMetadataRetriever>().extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION) } returns "100"
@@ -225,6 +227,37 @@ class EchoThemeStorePartsTest {
             listOf("display_wave_design", "display_gameboot_style", "display_launch_disc_style", "controller_display_type")
                 .map { prefs[stringPreferencesKey(it)] },
         )
+    }
+
+    // owner, 2026-10-09: a theme's font wins over the ECHO folder's Look/Fonts. A theme without one hands the font
+    // back to the folder, Save as Theme carries the font in use, and the look kept before a theme leaves the
+    // folder's font out, so taking it back hands the font back to the folder too
+    @Test
+    fun `a theme's font wins over the folder's, and leaving the theme hands the font back`() = runTest {
+        val folderFont = File(context.filesDir, "${EchoFontFiles.LOOK_FONT_DIR}/font.ttf").apply { parentFile!!.mkdirs(); writeBytes(byteArrayOf(1, 2, 3)) }
+        context.echoDataStore.edit { it[com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE] = 0x00AA33 }
+        val store = EchoThemeStore(context, media)
+        val typed = assertNotNull(store.importBundle(register(EchoThemeCodec.write(EchoThemeBundle(
+            EchoThemeManifest(name = "Typed", accentColor = "#112233"), wallpaper = null, preview = null,
+            font = ThemeImage(byteArrayOf(7, 7, 7), "otf"),
+        )))))
+        val plain = assertNotNull(store.importBundle(register(theme(EchoThemeManifest(name = "Plain", accentColor = "#445566"), media = emptyMap()))))
+        assertTrue(com.echo.themekit.ThemePart.FONT in typed.parts)
+
+        assertTrue(store.apply(typed.id))
+        assertEquals(listOf(7, 7, 7), EchoFontFiles.theme(context)?.readBytes()?.map { it.toInt() })
+        assertEquals("otf", EchoFontFiles.refresh(context)?.extension, "the theme's font is the one drawn")
+        val mine = assertNotNull(store.saveCurrentLook("Mine"))
+        assertEquals(ThemeImage(byteArrayOf(7, 7, 7), "otf"), EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${mine.id}.echo-theme"))?.font)
+        val before = assertNotNull(store.themes.value.firstOrNull { it.name == "Before Typed" })
+        assertEquals(null, EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${before.id}.echo-theme"))?.font, "the folder's font stays the folder's")
+
+        assertTrue(store.apply(plain.id))
+        assertEquals(null, EchoFontFiles.theme(context), "a whole theme without a font clears the last theme's")
+        assertEquals(folderFont, EchoFontFiles.refresh(context), "and the folder's font is drawn again")
+        val saved = assertNotNull(store.saveCurrentLook("Folder"))
+        assertEquals(ThemeImage(byteArrayOf(1, 2, 3), "ttf"), EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${saved.id}.echo-theme"))?.font,
+            "Save as Theme carries the font in use")
     }
 
     private fun theme(manifest: EchoThemeManifest, media: Map<String, ThemeImage>) =

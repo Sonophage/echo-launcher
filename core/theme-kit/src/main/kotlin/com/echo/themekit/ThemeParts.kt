@@ -5,6 +5,7 @@ enum class ThemePart(val label: String) {
     ICONS("Icons"),
     WALLPAPER("Wallpaper"),
     COLOURS("Colours and layout"),
+    FONT("Font"),
     WAVE("Wave"),
     SOUNDS("Sounds"),
     BOOT("Boot"),
@@ -22,6 +23,7 @@ fun EchoThemeBundle.parts(): Set<ThemePart> = buildSet {
     if (m.accentColor.isNotBlank() || m.iconColor != EchoThemeManifest.ICON_COLOR_AUTO ||
         m.textColor != EchoThemeManifest.ICON_COLOR_AUTO || m.layout != null
     ) add(ThemePart.COLOURS)
+    if (font != null) add(ThemePart.FONT)
     if (m.waveDesign != null) add(ThemePart.WAVE)
     if (media.keys.any { ThemeMedia.FOLDERS[it] == ThemeMedia.SOUNDS }) add(ThemePart.SOUNDS)
     if (media.keys.any { ThemeMedia.FOLDERS[it] == ThemeMedia.BOOT }) add(ThemePart.BOOT)

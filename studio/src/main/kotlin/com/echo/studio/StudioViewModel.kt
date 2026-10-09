@@ -90,10 +90,11 @@ data class StudioState(
     val source: EchoThemeSource? = null,
     // parts Studio does not edit, kept as opened so an export does not drop them (owner, 2026-10-07): the
     // sounds and boot and game-start media, the console icons, and the wave design, game-start styles and
-    // button set
+    // button set, focus, motion, settings and the font
     val keptMedia: Map<String, com.echo.themekit.ThemeImage> = emptyMap(),
     val keptSysicons: Map<String, com.echo.themekit.ThemeImage> = emptyMap(),
     val keptManifest: EchoThemeManifest? = null,
+    val keptFont: com.echo.themekit.ThemeImage? = null,
     val busy: Boolean = false,
     val statusMessage: String? = null,
     val dialog: StudioDialog? = null,
@@ -237,6 +238,7 @@ class StudioViewModel(private val scope: CoroutineScope) {
                     ?: com.echo.themekit.CrossbarLayoutSpec.DEFAULT,
                 source = manifest.source,
                 keptMedia = bundle.media,
+                keptFont = bundle.font,
                 keptSysicons = bundle.sysicons,
                 keptManifest = manifest,
                 statusMessage = status,
@@ -468,6 +470,7 @@ class StudioViewModel(private val scope: CoroutineScope) {
             motion = motion,
             sysicons = snapshot.keptSysicons,
             media = snapshot.keptMedia,
+            font = snapshot.keptFont,
         )
         runCatching { file.outputStream().use { EchoThemeCodec.write(bundle, it) } }
             .onSuccess { _state.update { it.copy(statusMessage = "Exported ${file.name}") } }

@@ -295,9 +295,10 @@ manager:
 - `Artwork/`: art for each game, one folder per console.
 - `Import/`: other launchers' media to bring in.
 - `Look/`: ECHO's sounds, boot audio, wallpaper and icons as files.
-- `Themes/`: one folder per theme. A theme folder holds `theme.json` (colours, wave design,
-  game-start styles and button set), `Icons/` (console icons in `Icons/Consoles/`), `Wallpaper/`,
-  `Sounds/`, `Boot/` and `GameStart/`, and every part is optional: a theme with only `Sounds/` is a
+- `Themes/`: one folder per theme. A theme folder holds `theme.json` (colours, layout, wave design,
+  game-start styles, button set, focus style, motion and display settings), `Icons/` (console icons in `Icons/Consoles/`), `Wallpaper/`,
+  `Fonts/` (one `.ttf` or `.otf`, used in place of `Look/Fonts`), `Sounds/`, `Boot/` and `GameStart/`,
+  and every part is optional: a theme with only `Sounds/` is a
   sound pack. For the theme store, `README.md` holds its details (author, version, description,
   tags, between two `---` lines) and its page text, and `Preview/` its `hero.jpg` and up to eight
   `Screenshots/`. `Template/` names every file a theme takes; copy it, rename the copy and fill it.

@@ -52,6 +52,25 @@ class EchoThemeFolderTest {
         assertNotNull(theme.wallpaper)
     }
 
+    // owner, 2026-10-09: a theme carries its font in Fonts/, under whatever name its maker gave the file
+    @Test
+    fun `a font in Fonts is the theme's font, and survives the theme's file and folder`() {
+        val ttf = byteArrayOf(0, 1, 0, 0) + ByteArray(12) { it.toByte() }
+        val files = mapOf(
+            "theme.json" to """{"manifest":"echo-theme","name":"Type","accentColor":""}""".toByteArray(),
+            "Fonts/Inter-Regular.ttf" to ttf,
+            "Fonts/README.txt" to "notes".toByteArray(),
+        )
+        val theme = assertNotNull(EchoThemeFolder.toBundle(files))
+        assertEquals(ThemeImage(ttf, "ttf"), theme.font)
+        assertEquals(setOf(ThemePart.FONT), theme.parts())
+
+        val back = assertNotNull(EchoThemeCodec.read(EchoThemeCodec.write(theme)))
+        assertEquals(theme.font, back.font)
+        assertEquals(setOf("theme.json", "Fonts/font.ttf"), EchoThemeFolder.toFiles(back).keys)
+        assertNull(EchoThemeFolder.toBundle(files - "Fonts/Inter-Regular.ttf" + ("Fonts/Inter.woff2" to ttf))?.font, "a web font is not one Android reads")
+    }
+
     @Test
     fun `notes in several folders, or one folder written in two cases, do not break a theme`() {
         val files = mapOf(
