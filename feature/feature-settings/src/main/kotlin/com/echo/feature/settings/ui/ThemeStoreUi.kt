@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 import com.echo.core.ui.components.ContextMenuHeader
 import com.echo.core.ui.components.ContextMenuRowLabel
@@ -445,7 +448,7 @@ internal fun ThemePageOverlay(
                 if (page.current) "WHERE EACH PART CAME FROM" else "EVERYTHING, OR ONLY THE PARTS YOU WANT",
                 u,
             )
-            Box(Modifier.contextMenuRow(focused = page.cursor == 0, dim = 1f, u = u) { onRow(0) }) {
+            Box(Modifier.inViewWhen(page.cursor == 0).contextMenuRow(focused = page.cursor == 0, dim = 1f, u = u) { onRow(0) }) {
                 ContextMenuRowLabel(page.actionLabel, focused = page.cursor == 0, u = u)
             }
             ThemePart.entries.forEachIndexed { i, part ->
@@ -454,7 +457,7 @@ internal fun ThemePageOverlay(
                 val has = part in page.parts
                 val source = partSources[part]?.let { "From $it" } ?: "Your own"
                 Row(
-                    Modifier.fillMaxWidth().contextMenuRow(focused = focused, dim = if (has || page.current) 1f else 0.4f, u = u) { onRow(row) },
+                    Modifier.inViewWhen(focused).fillMaxWidth().contextMenuRow(focused = focused, dim = if (has || page.current) 1f else 0.4f, u = u) { onRow(row) },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // the part, with where it comes from beneath it: side by side, a narrow rail cut it to "From Ry…"
@@ -512,3 +515,12 @@ internal fun readmeText(markdown: String): String =
             if (plain.trimStart().startsWith("- ")) plain.replaceFirst("- ", "\u2022 ") else plain
         }
         .trim()
+
+// the rail scrolls to the focused row (owner, 2026-10-09): ten parts are more than a handheld's screen holds, and
+// the last ones were moved to and ticked out of sight
+private fun Modifier.inViewWhen(focused: Boolean): Modifier = composed {
+    val requester = remember { BringIntoViewRequester() }
+    // a frame first: on the page's first frame the row has no place yet, and the request did nothing
+    LaunchedEffect(focused) { if (focused) { androidx.compose.runtime.withFrameNanos { }; requester.bringIntoView() } }
+    bringIntoViewRequester(requester)
+}
