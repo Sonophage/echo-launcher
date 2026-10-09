@@ -199,7 +199,7 @@ footer a{color:var(--soft)}
           <tr><td>The island (now playing / last opened)</td><td><kbd>Select</kbd>; again to put it back</td><td></td><td>Tap the island</td></tr>
           <tr><td>Open the player for what is playing</td><td><kbd>Select</kbd> twice</td><td></td><td>Double-tap the island</td></tr>
           <tr><td>Group by system or genre (App Drawer); artist, album or genre (Music); author, title or genre (Books)</td><td><kbd>X</kbd></td><td></td><td></td></tr>
-          <tr><td>Swap the two screens</td><td><kbd>L3</kbd> or <kbd>R3</kbd></td><td></td><td>Swap, on the companion's bar</td></tr>
+          <tr><td>Swap the two screens</td><td>Click <kbd>L3</kbd> or <kbd>R3</kbd>, one stick only (both at once swap twice)</td><td></td><td>Swap, on the companion's bar</td></tr>
           <tr><td>Notifications and the top panel</td><td><kbd>Start</kbd> (twice when a notification is waiting)</td><td></td><td>Tap the right island twice</td></tr>
           <tr><td>Home, from any screen</td><td><kbd>Guide</kbd>, or hold <kbd>Start</kbd></td><td></td><td></td></tr>
         </table></div>
@@ -212,9 +212,9 @@ footer a{color:var(--soft)}
 
       <section id="home" data-group="Using ECHO">
         <h2>Home and Last Played</h2>
-        <p>The first column is <strong>Last Played</strong>: games, apps, music, video and books together, newest first. Whatever is focused fills the screen, with the wave behind it in the colour of its art. <kbd>LT</kbd>/<kbd>RT</kbd> filter it (All, Games, Music, Books, Video, Apps).</p>
+        <p>The first column is <strong>Last Played</strong>: games, apps, music, video and books together, newest first. Whatever is focused fills the screen, with the wave behind it in the colour of its art, and beside it its play time, platform, year, genre, developer and your achievements. <kbd>LT</kbd>/<kbd>RT</kbd> filter it (All, Games, Music, Books, Video, Apps).</p>
         <div class="shots">
-          <figure><img src="docs/screenshots/last-played.jpg?v=2.9.0" alt="Last Played" loading="lazy"><figcaption>Last Played</figcaption></figure>
+          <figure><img src="docs/screenshots/last-played.jpg?v=2.9.0" alt="Last Played" loading="lazy"><figcaption>Last Played: details and achievements</figcaption></figure>
           <figure><img src="docs/screenshots/last-played-rail.jpg?v=2.9.0" alt="The Recent rail" loading="lazy"><figcaption>The Recent rail: Pinned first, then by day</figcaption></figure>
         </div>
         <ul>
@@ -282,7 +282,7 @@ footer a{color:var(--soft)}
           <tr><td>PSP</td><td>PPSSPP / PPSSPP Gold</td></tr>
           <tr><td>PS Vita</td><td>Vita3K, EmuCoreV</td></tr>
           <tr><td>PS1</td><td>DuckStation, ePSXe, FPse, FPseNG, ARMSX1</td></tr>
-          <tr><td>PS2</td><td>NetherSX2 / AetherSX2, ARMSX2, Play!, EmuCoreX</td></tr>
+          <tr><td>PS2</td><td>NetherSX2 / AetherSX2 and its Turnip builds, ARMSX2, Play!, EmuCoreX</td></tr>
           <tr><td>PS3</td><td>aPS3e, ARMSX3</td></tr>
           <tr><td>GameCube / Wii</td><td>Dolphin, Dolphin MMJR / MMJR2, PrimeHack</td></tr>
           <tr><td>Wii U</td><td>Cemu</td></tr>
@@ -290,14 +290,20 @@ footer a{color:var(--soft)}
           <tr><td>3DS</td><td>Azahar, AzaharPlus, Citra, Citra MMJ, Lime3DS, Mandarine, Borked3DS, Panda3DS</td></tr>
           <tr><td>Switch</td><td>Eden, Yuzu, Sudachi, Citron, Sumi, Uzuy, Suyu, Kenji-NX, Benji-SC, Skyline</td></tr>
           <tr><td>N64</td><td>M64Plus FZ, Mupen64Plus-AE</td></tr>
-          <tr><td>GB / GBC / GBA</td><td>mGBA, My Boy!, My OldBoy!, Pizza Boy, Linkboy, SkyEmu, GBA.emu, GBC.emu</td></tr>
+          <tr><td>GB / GBC / GBA</td><td>mGBA, My Boy!, My OldBoy!, Pizza Boy, Linkboy, SkyEmu, GBA.emu, GBC.emu (and NooDS for GBA)</td></tr>
           <tr><td>NES / SNES</td><td>NES.emu, iNES / Snes9x EX+</td></tr>
           <tr><td>Genesis / Master System / Game Gear</td><td>MD.emu, Pizza Boy SC, MasterGear</td></tr>
           <tr><td>Saturn</td><td>Yaba Sanshiro 2, Saturn.emu</td></tr>
-          <tr><td>Dreamcast, NAOMI, Atomiswave</td><td>Flycast, Redream</td></tr>
-          <tr><td>Arcade</td><td>MAME4droid 2024, MAME4droid 0.139</td></tr>
-          <tr><td>Xbox / Xbox 360</td><td>X1 BOX (xemu) / X360 Mobile, aX360e</td></tr>
+          <tr><td>PC Engine / Neo Geo / Neo Geo Pocket / WonderSwan / Lynx / Atari 2600 / C64</td><td>PCE.emu, NEO.emu, NGP.emu, Swan.emu, Lynx.emu, 2600.emu, C64.emu</td></tr>
+          <tr><td>Arcade (MAME, CPS)</td><td>MAME4droid 2024, MAME4droid 0.139</td></tr>
+          <tr><td>Virtual Boy</td><td>Virtual Virtual Boy</td></tr>
+          <tr><td>Dreamcast, NAOMI, Atomiswave</td><td>Flycast, Redream (Dreamcast only)</td></tr>
+          <tr><td>Xbox</td><td>X1 BOX (xemu)</td></tr>
+          <tr><td>Xbox 360</td><td>X360 Mobile, aX360e</td></tr>
+          <tr><td>Symbian</td><td>EKA2L1</td></tr>
           <tr><td>Anything with a libretro core</td><td>RetroArch</td></tr>
+          <tr><td>Windows (PC)</td><td>GameNative, GameHub, BannerHub, Winlator, DroidDeck</td></tr>
+          <tr><td>Android</td><td>Android games you have installed, found with Find Games or marked with Mark as Game</td></tr>
         </table></div>
         <p>For anything not listed, <em class="path">Emulators ▸ Custom Emulators ▸ Add Custom Emulator</em> detects an app's launch settings and lets you test-launch a ROM before saving.</p>
       </section>
@@ -510,7 +516,7 @@ footer a{color:var(--soft)}
           <li><strong>Recent</strong> is Last Played, with its filters; with a second screen it leaves the XMB and lives here. It follows the crossbar's column (Music shows recent music), and RIGHT closes its list to show the selected item in full.</li>
           <li><strong>A session clock</strong> counts while a game you launched runs, and while music plays the companion is its <strong>remote</strong> (<kbd>A</kbd> play/pause, up and down skip; <kbd>B</kbd> goes to Recent, <kbd>Y</kbd> has Stop &amp; Close).</li>
           <li><strong>The App Drawer, Search and Settings open on the bottom screen.</strong> The controller still drives them. The other screen shows the drawer's focused game as Recent does, and Search's results while you type below. A menu opens on the screen that asked for it, and the theme store shows the theme in focus on the other screen.</li>
-          <li><strong>Tap a screen to give it the controller</strong>; on the companion, <kbd>B</kbd> hands it back. <strong>Swap</strong> (or <kbd>L3</kbd> / <kbd>R3</kbd>) puts the XMB on the bottom. <em class="path">Quick settings ▸ Screens</em> switches between Dual and Single.</li>
+          <li><strong>Tap a screen to give it the controller</strong>; on the companion, <kbd>B</kbd> hands it back. <strong>Swap</strong> (or a click of one stick, <kbd>L3</kbd> or <kbd>R3</kbd>) puts the XMB on the bottom. <em class="path">Quick settings ▸ Screens</em> switches between Dual and Single.</li>
           <li>Games open on the main screen; DS and 3DS emulators keep the bottom screen while a game runs. <a href="https://github.com/dakingeman/inlay">Inlay</a> is a gamepad keyboard that works well here.</li>
         </ul>
       </section>

@@ -42,6 +42,13 @@ released; it becomes the next release's notes.
 - Inside a shelf, the strip on the left shows the shelves with their covers instead of a blank card.
 - GameBoot's Preview in Settings plays the style you chose (it always played the disc).
 
+### Polish
+- Recent shows a game's achievements under its details, on one screen or two.
+- The video player's Options and every settings picker (Controller Type, Scroll Speed and the rest) open as
+  the side rail, as every other menu does; the current choice is ticked.
+- In the Library column, Library Settings is the last row, after Books, as in every other column.
+- Dead code removed: about 35 functions nothing in ECHO called, with the types and constants only they used, and the 61 tests that only exercised them.
+
 ### Two screens (AYN Thor)
 - With the App Drawer on the second screen, the other screen shows the focused game as Recent
   does: its art and logo, play time, year, genre, developer and achievements.

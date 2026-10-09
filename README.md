@@ -106,7 +106,8 @@ artwork, wallpaper art, book covers and app icons belong to their owners.*
 
 The first column is **Last Played**: everything you opened most recently, games, apps, music,
 video and books together, newest first. Whatever is focused fills the screen, with the wave behind
-it in the colour of its art. Press LEFT, or swipe right, to bring in the **Recent rail**.
+it in the colour of its art, and beside it its play time, platform, year, genre, developer and your
+achievements (7/75). Press LEFT, or swipe right, to bring in the **Recent rail**.
 
 | | |
 |:---:|:---:|
@@ -354,7 +355,7 @@ the top screen, and the bottom screen is a **companion**. Devices with one scree
 - **Tap a screen to give it the controller.** On the companion, the d-pad's left and right change
   page, up and down move through Recent, LT and RT change its filter, A opens and **B** hands the
   controller back to the XMB. The screen the controller is on has a light outline.
-- **Swap** (on the companion's bar, or **L3** / **R3**) puts the XMB on the bottom screen and the
+- **Swap** (on the companion's bar, or a click of one stick, **L3** or **R3**) puts the XMB on the bottom screen and the
   companion on the top, and back. ECHO remembers it. The controller stays with the XMB.
 - **Games always open on the main screen.** DS and 3DS emulators keep the bottom screen while a
   game runs, and ECHO comes back to it when you return.
@@ -540,7 +541,7 @@ access to all of your storage.
 | Home: back to the crossbar from any screen | **Guide**, or hold **Start** | | |
 | Confirm in pickers (Add, Apply) | **Start** | | The button in the footer |
 | Give the controller to the other screen (two screens) | **B** on the companion returns it to the XMB | | Tap that screen |
-| Swap the two screens | **L3** or **R3** | | Swap, on the companion's bar |
+| Swap the two screens | Click **L3** or **R3**, one stick only (both at once swap twice) | | Swap, on the companion's bar |
 
 - **D-pad ◀ backs out** of a folder, flyout or settings page wherever LEFT is not already doing
   something. Turn it off with *Controls ▸ Controller ▸ Left Backs Out*.
@@ -775,7 +776,7 @@ Installed emulators are detected from a built-in catalog, plus one profile per i
 | NES / SNES | NES.emu, iNES / Snes9x EX+ |
 | Genesis / Master System / Game Gear | MD.emu, Pizza Boy SC, MasterGear |
 | Saturn | Yaba Sanshiro 2, Saturn.emu |
-| PC Engine / Neo Geo / Neo Geo Pocket / WonderSwan / Lynx / Atari 2600 / C64 | the `*.emu` family |
+| PC Engine / Neo Geo / Neo Geo Pocket / WonderSwan / Lynx / Atari 2600 / C64 | PCE.emu, NEO.emu, NGP.emu, Swan.emu, Lynx.emu, 2600.emu, C64.emu |
 | Arcade (MAME, CPS) | MAME4droid 2024, MAME4droid 0.139 |
 | Virtual Boy | Virtual Virtual Boy |
 | Dreamcast, NAOMI, Atomiswave | Flycast, Redream (Dreamcast only) |
@@ -783,6 +784,8 @@ Installed emulators are detected from a built-in catalog, plus one profile per i
 | Xbox 360 | X360 Mobile, aX360e |
 | Symbian | EKA2L1 |
 | Anything with a libretro core | RetroArch |
+| Windows (PC) | GameNative, GameHub, BannerHub, Winlator, DroidDeck |
+| Android | Android games you have installed, found with Find Games or marked with Mark as Game |
 
 A game launches with, in order: its own override (**≡ ▸ Settings ▸ Change Emulator**), then its
 card's emulator, then the platform default, then the recommended one. If a launch fails you get a
