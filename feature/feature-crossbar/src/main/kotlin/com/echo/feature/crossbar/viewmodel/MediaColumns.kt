@@ -282,20 +282,21 @@ internal fun CrossbarUiState.booksRootSections(): List<CrossbarItem> {
         }
         add(
             CrossbarItem(
-                id       = mediaFoldersItemId(MediaRootKind.BOOK),
-                title    = "Folders",
-                subtitle = countLabel(shelves.size, "folder", "folders"),
-                type          = CrossbarItemType.MEDIA_ROOT,
-                mediaRootKind = MediaRootKind.BOOK,
-            )
-        )
-        add(
-            CrossbarItem(
                 id       = ALL_BOOKS_ITEM_ID,
                 title    = "Books",
                 subtitle = countLabel(totalBooks, "book", "books"),
                 coverUri = MEMORY_CARD_ASSET_URI,
                 type     = CrossbarItemType.MEMORY_CARD,
+            )
+        )
+        // the settings row is last, as in every other column (owner, 2026-10-08)
+        add(
+            CrossbarItem(
+                id       = mediaFoldersItemId(MediaRootKind.BOOK),
+                title    = "Folders",
+                subtitle = countLabel(shelves.size, "folder", "folders"),
+                type          = CrossbarItemType.MEDIA_ROOT,
+                mediaRootKind = MediaRootKind.BOOK,
             )
         )
     }.withColumnCovers(mediaCovers.books)

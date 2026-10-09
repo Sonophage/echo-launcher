@@ -239,8 +239,6 @@ internal fun Modifier.settingsSelectedPlate(selected: Boolean): Modifier = this
         else Modifier
     )
 
-private val PICKER_SHAPE = RoundedCornerShape(PANEL_CARD_RADIUS.dp)
-private val PICKER_EDGE = Color.White.copy(alpha = 0.12f)
 
 data class SettingsPickerOption(val label: String, val help: String? = null)
 
@@ -249,8 +247,6 @@ internal class SettingsPickerRequest(
     val options: List<SettingsPickerOption>,
     val selectedIndex: Int,
     val onPick: (Int) -> Unit,
-
-    val anchorY: Float,
 )
 
 internal val LocalSettingsPicker =
@@ -917,87 +913,25 @@ fun SettingsScaffold(
     }
 }
 
+// a picker is the kit's side rail, as every other choice list (owner, 2026-10-08: the floating dropdown
+// was the last of the old style); the current choice is ticked
+internal fun SettingsPickerRequest.menu(cursor: Int): com.echo.core.ui.components.MenuState<Int> =
+    com.echo.core.ui.components.MenuState(
+        title = title,
+        rows = options.mapIndexed { i, option ->
+            com.echo.core.ui.components.MenuRow(i, option.label, checked = i == selectedIndex)
+        },
+        selectedIndex = cursor,
+    )
+
 @Composable
 private fun SettingsPickerPanel(picker: SettingsPickerRequest, cursor: Int, onDismiss: () -> Unit) {
-    val density = LocalDensity.current
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-
-            .clickable(
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication = null,
-                onClick = onDismiss,
-            )
-
-            .background(Color.Black.copy(alpha = 0.22f)),
-    ) {
-        val panelHeight = PICKER_ROW_HEIGHT * picker.options.size + PICKER_PADDING * 2
-        val anchorDp = with(density) { picker.anchorY.toDp() }
-
-        val top = anchorDp.coerceIn(
-            PICKER_EDGE_MARGIN,
-            (maxHeight - panelHeight - PICKER_EDGE_MARGIN).coerceAtLeast(PICKER_EDGE_MARGIN),
-        )
-        Column(
-            modifier = Modifier
-                .padding(start = 48.dp)
-                .offset(y = top)
-
-                .widthIn(min = 150.dp, max = SETTINGS_COLUMN_MAX_WIDTH)
-                .clip(PICKER_SHAPE)
-
-                .background(PanelBase.copy(alpha = 0.96f), PICKER_SHAPE)
-                .border(1.dp, PICKER_EDGE, PICKER_SHAPE)
-                .padding(PICKER_PADDING),
-        ) {
-            picker.options.forEachIndexed { index, option ->
-                val focused = index == cursor
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(PICKER_ROW_HEIGHT)
-                        .clip(PICKER_SHAPE)
-
-                        .clickable {
-                            picker.onPick(index)
-                            onDismiss()
-                        }
-                        .background(
-                            if (focused) PanelCardFocusFill else Color.Transparent,
-                            PICKER_SHAPE,
-                        )
-
-                        .then(
-                            if (focused) Modifier.border(PANEL_FOCUS_RING_WIDTH.dp, PanelFocusRing, PICKER_SHAPE)
-                            else Modifier
-                        )
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = if (index == picker.selectedIndex) "\u2713" else " ",
-                        color = Color.White,
-                        fontSize = 15.sp,
-                        modifier = Modifier.padding(end = 12.dp),
-                    )
-                    Text(
-                        text = option.label,
-                        color = Color.White.copy(alpha = if (focused) 1f else 0.75f),
-                        fontSize = 15.sp,
-                        fontWeight = if (focused) FontWeight.Medium else FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-    }
+    com.echo.core.ui.components.EchoContextMenuOverlay(
+        state = picker.menu(cursor),
+        onRowActivated = { index -> picker.onPick(index); onDismiss() },
+        onDismiss = onDismiss,
+    )
 }
-
-private val PICKER_ROW_HEIGHT = 42.dp
-private val PICKER_PADDING = 8.dp
-private val PICKER_EDGE_MARGIN = 24.dp
 
 data class SettingsPaneText(val eyebrow: String, val title: String, val body: String?)
 
@@ -1327,25 +1261,21 @@ fun SettingsPickerRow(
 ) {
     val picker = LocalSettingsPicker.current
 
-    var anchorY by remember { mutableStateOf(0f) }
-    Box(modifier = Modifier.onGloballyPositioned { anchorY = it.localToRoot(Offset.Zero).y }) {
-        SettingsRow(
-            label = label,
-            sublabel = sublabel,
-            value = options.getOrNull(selectedIndex)?.label ?: "",
-            focusKey = focusKey,
-            enabled = enabled,
-            onClick = {
-                picker.value = SettingsPickerRequest(
-                    title = label,
-                    options = options,
-                    selectedIndex = selectedIndex,
-                    onPick = onPick,
-                    anchorY = anchorY,
-                )
-            },
-        )
-    }
+    SettingsRow(
+        label = label,
+        sublabel = sublabel,
+        value = options.getOrNull(selectedIndex)?.label ?: "",
+        focusKey = focusKey,
+        enabled = enabled,
+        onClick = {
+            picker.value = SettingsPickerRequest(
+                title = label,
+                options = options,
+                selectedIndex = selectedIndex,
+                onPick = onPick,
+            )
+        },
+    )
 }
 
 // a job in progress, as a settings row: done / total when the count is known, "Working…" when it is not

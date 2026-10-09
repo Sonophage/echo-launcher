@@ -41,7 +41,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -73,11 +72,7 @@ import androidx.media3.ui.PlayerView
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.domain.model.Video
 import com.echo.core.ui.components.ControllerPrompt
-import com.echo.core.ui.components.ControllerHintStyle
-import com.echo.core.ui.components.EchoControllerHints
 import com.echo.core.ui.components.ControllerPromptItem
-import com.echo.core.ui.theme.menuCursor
-import com.echo.core.ui.theme.menuCursorEdge
 import kotlinx.coroutines.delay
 import timber.log.Timber
 import androidx.compose.runtime.collectAsState
@@ -127,6 +122,8 @@ fun VideoPlayerScreen(
     var controlsVisible by remember { mutableStateOf(true) }
     var controlsPoke by remember { mutableIntStateOf(0) }
     var optionsOpen by remember { mutableStateOf(false) }
+    // a changed track is read from the player, which Compose does not observe; this redraws the menu
+    var trackStamp by remember { mutableIntStateOf(0) }
     var optionsRow by remember { mutableIntStateOf(0) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var focus by remember { mutableStateOf(VideoControl.PLAY_PAUSE) }
@@ -222,18 +219,23 @@ fun VideoPlayerScreen(
         }
     }
 
+    fun changeOption(row: Int) {
+        when (row) {
+            0 -> { speedIndex = (speedIndex + 1) % SPEEDS.size; player.playbackParameters = PlaybackParameters(SPEEDS[speedIndex]) }
+            1 -> cycleTrack(player, C.TRACK_TYPE_TEXT, allowOff = true)
+            2 -> cycleTrack(player, C.TRACK_TYPE_AUDIO, allowOff = false)
+            3 -> screenModeIndex = (screenModeIndex + 1) % SCREEN_MODES.size
+        }
+        trackStamp++
+    }
+
     LaunchedEffect(pendingGamepadAction) {
         val action = pendingGamepadAction ?: return@LaunchedEffect
         if (optionsOpen) {
             when (action) {
                 GamepadAction.NAVIGATE_UP   -> optionsRow = (optionsRow - 1 + OPTION_COUNT) % OPTION_COUNT
                 GamepadAction.NAVIGATE_DOWN -> optionsRow = (optionsRow + 1) % OPTION_COUNT
-                GamepadAction.SELECT, GamepadAction.NAVIGATE_RIGHT -> when (optionsRow) {
-                    0 -> { speedIndex = (speedIndex + 1) % SPEEDS.size; player.playbackParameters = PlaybackParameters(SPEEDS[speedIndex]) }
-                    1 -> cycleTrack(player, C.TRACK_TYPE_TEXT, allowOff = true)
-                    2 -> cycleTrack(player, C.TRACK_TYPE_AUDIO, allowOff = false)
-                    3 -> screenModeIndex = (screenModeIndex + 1) % SCREEN_MODES.size
-                }
+                GamepadAction.SELECT, GamepadAction.NAVIGATE_RIGHT -> changeOption(optionsRow)
                 GamepadAction.BACK, GamepadAction.OPEN_CONTEXT_MENU -> optionsOpen = false
                 else -> Unit
             }
@@ -313,12 +315,20 @@ fun VideoPlayerScreen(
         }
 
         if (optionsOpen && errorMessage == null) {
-            OptionsOverlay(
-                selectedRow = optionsRow,
-                speed = SPEEDS[speedIndex],
-                subtitleLabel = currentTrackLabel(player, C.TRACK_TYPE_TEXT),
-                audioLabel = currentTrackLabel(player, C.TRACK_TYPE_AUDIO),
-                screenMode = SCREEN_MODES[screenModeIndex].second,
+            // the kit's rail menu, as every other Options (owner, 2026-10-08)
+            val menu = remember(optionsRow, speedIndex, screenModeIndex, trackStamp) {
+                videoOptionsMenu(
+                    selectedRow = optionsRow,
+                    speed = SPEEDS[speedIndex],
+                    subtitleLabel = currentTrackLabel(player, C.TRACK_TYPE_TEXT),
+                    audioLabel = currentTrackLabel(player, C.TRACK_TYPE_AUDIO),
+                    screenMode = SCREEN_MODES[screenModeIndex].second,
+                )
+            }
+            com.echo.core.ui.components.EchoContextMenuOverlay(
+                state = menu,
+                onRowActivated = { row -> optionsRow = row; changeOption(row) },
+                onDismiss = { optionsOpen = false },
             )
         }
     }
@@ -492,65 +502,23 @@ private fun speedLabel(speed: Float): String =
 
 private val TitleShadow = Shadow(Color(0xBF000000), Offset(0f, 2f), 4f)
 
-@Composable
-private fun OptionsOverlay(
+// each row names its current value; A or RIGHT steps it
+internal fun videoOptionsMenu(
     selectedRow: Int,
     speed: Float,
     subtitleLabel: String,
     audioLabel: String,
     screenMode: String,
-) {
-    val rows = listOf(
+): com.echo.core.ui.components.MenuState<Int> = com.echo.core.ui.components.MenuState(
+    title = "Options",
+    rows = listOf(
         "Playback Speed" to "${speed}×",
         "Subtitles" to subtitleLabel,
         "Audio Track" to audioLabel,
         "Screen Mode" to screenMode,
-    )
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
-        Column(
-            modifier = Modifier
-                .padding(40.dp)
-                .width(320.dp)
-                .background(Color(0xF0101018), RoundedCornerShape(14.dp))
-                .padding(vertical = 16.dp),
-        ) {
-            Text(
-                "Options",
-                color = menuCursorEdge(),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            )
-            rows.forEachIndexed { i, (label, value) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuCursor(i == selectedRow)
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(label, color = Color.White, fontSize = 15.sp)
-                    Text(value, color = menuCursorEdge(), fontSize = 14.sp)
-                }
-            }
-            Spacer(Modifier.height(4.dp))
-            EchoControllerHints(
-                items = listOf(
-                    ControllerPromptItem(
-                        listOf(GamepadAction.SELECT, GamepadAction.NAVIGATE_RIGHT),
-                        "Change",
-                    ),
-                    ControllerPromptItem(
-                        listOf(GamepadAction.OPEN_CONTEXT_MENU, GamepadAction.BACK),
-                        "Close",
-                    ),
-                ),
-                style = ControllerHintStyle.OVERLAY,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-            )
-        }
-    }
-}
+    ).mapIndexed { i, (label, value) -> com.echo.core.ui.components.MenuRow(i, "$label · $value") },
+    selectedIndex = selectedRow,
+)
 
 @UnstableApi
 private fun cycleTrack(player: Player, trackType: Int, allowOff: Boolean) {

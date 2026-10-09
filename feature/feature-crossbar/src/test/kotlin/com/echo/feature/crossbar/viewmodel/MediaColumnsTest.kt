@@ -123,14 +123,16 @@ class MediaColumnsTest {
     }
 
     @Test
-    fun `books is always last`() {
+    // owner, 2026-10-08: Library Settings sat between Series and Books; it ends the column, as elsewhere
+    fun `books comes just before the settings row, which is last`() {
         val full = CrossbarUiState(
             bookLibraries = listOf(bookLibrary(5), bookLibrary(6)),
             bookSeries = listOf(BookSeries("Discworld", 41, null)),
             defaultReader = "org.readera",
         )
-        assertEquals("all_books", ids(full.booksRootSections()).last())
-        assertEquals("all_books", ids(CrossbarUiState().booksRootSections()).last())
+        val folders = CrossbarViewModel.mediaFoldersItemId(com.echo.core.data.repository.MediaRootKind.BOOK)
+        assertEquals(listOf("all_books", folders), ids(full.booksRootSections()).takeLast(2))
+        assertEquals(listOf("all_books", folders), ids(CrossbarUiState().booksRootSections()).takeLast(2))
         assertEquals("11 books", subtitleOf(full.booksRootSections(), "all_books"))
     }
 
