@@ -29,6 +29,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.BoxScope
+import com.echo.core.ui.design.IsTitan2
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -114,7 +119,10 @@ fun LastPlayedPage(
             if (rail) {
                 RecentList(items, selectedIndex, focused, listState, filter, now, empty, u, onCardTapped, onCardPressed, wave)
             } else {
-                Letterbox(focused, now, empty, u, wave, achievements, { onCardPressed(selectedIndex, it) }) { onCardTapped(selectedIndex) }
+                Letterbox(focused, now, empty, u, wave, achievements, { onCardPressed(selectedIndex, it) }, { onCardTapped(selectedIndex) }) {
+                    // owner, 2026-10-09: the Titan 2's square screen has room for the rest of Recent under the icon
+                    if (IsTitan2 && items.size > 1) RecentStrip(items, selectedIndex, u, onCardTapped, onCardPressed, Modifier.align(BiasAlignment(0f, 0.12f)))
+                }
             }
         }
     }
@@ -130,6 +138,7 @@ private fun Letterbox(
     achievements: String?,
     onArtPressed: (Boolean) -> Unit,
     onArtTapped: () -> Unit,
+    extra: @Composable BoxScope.() -> Unit = {},
 ) {
     Box(
         Modifier
@@ -144,7 +153,9 @@ private fun Letterbox(
         BackdropArt(item, BiasAlignment(0f, -0.2f))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.92f))))
         wave?.invoke()
-        AppIconArt(item, u.dp(150))
+        // on the Titan 2 the icon is larger and higher, so the strip of recents fits under it
+        if (IsTitan2) AppIconArt(item, u.dp(230), BiasAlignment(0f, -0.42f)) else AppIconArt(item, u.dp(150))
+        extra()
         Column(
             Modifier
                 .align(Alignment.BottomStart)
@@ -270,7 +281,9 @@ private fun RecentList(
         }
 
         Column(
-            Modifier.align(Alignment.BottomStart).padding(start = u.dp(RAIL_PANEL_WIDTH + 60), end = u.dp(80), bottom = u.dp(80)),
+            Modifier.align(Alignment.BottomStart).padding(start = u.dp(RAIL_PANEL_WIDTH + 60), end = u.dp(80),
+                // on the Titan 2 the footer is taller than 80 design units, so the words ran into it
+                bottom = if (IsTitan2) HintBarHeight + u.dp(40) else u.dp(80)),
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
             if (focused == null) {
@@ -313,6 +326,49 @@ private fun Modifier.tapOrHold(onTap: () -> Unit, onPressed: (Boolean) -> Unit):
                 onTap = { onTap() },
             )
         }
+
+// owner, 2026-10-09: the Titan 2's strip of recents: each one's icon or art in a row, the chosen one ringed. A tap
+// picks it and holding launches it, as on its row in the rail
+@Composable
+private fun RecentStrip(
+    items: List<CrossbarItem>,
+    selectedIndex: Int,
+    u: DesignUnits,
+    onTapped: (Int) -> Unit,
+    onPressed: (Int, Boolean) -> Unit,
+    modifier: Modifier,
+) {
+    val state = rememberLazyListState()
+    LaunchedEffect(selectedIndex) { if (selectedIndex in items.indices) state.animateScrollToItem((selectedIndex - 2).coerceAtLeast(0)) }
+    val tile = u.dp(96)
+    val shape = RoundedCornerShape(u.dp(22))
+    LazyRow(
+        state = state,
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(u.dp(18), Alignment.CenterHorizontally),
+        contentPadding = PaddingValues(horizontal = u.dp(80), vertical = u.dp(12)),
+    ) {
+        itemsIndexed(items, key = { _, it -> it.id }) { index, item ->
+            val on = index == selectedIndex
+            Box(
+                Modifier
+                    .size(tile)
+                    .graphicsLayer(alpha = if (on) 1f else 0.55f, scaleX = if (on) 1.08f else 1f, scaleY = if (on) 1.08f else 1f)
+                    .clip(shape)
+                    .then(if (on) Modifier.border(u.dp(3), Color.White, shape) else Modifier)
+                    .tapOrHold({ onTapped(index) }, { onPressed(index, it) }),
+                contentAlignment = Alignment.Center,
+            ) {
+                val art = item.tileArt ?: item.shelfCoverArt ?: item.backdropArt.firstOrNull()
+                when {
+                    item.packageName != null && art == null -> AndroidAppIcon(packageName = item.packageName, title = item.title, size = tile * 0.82f)
+                    art != null -> AsyncImage(rememberArtworkModel(art), item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    else -> Icon(kindGlyph(item), item.title, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(tile * 0.5f))
+                }
+            }
+        }
+    }
+}
 
 private class RailRow(val day: RecentDay, val item: IndexedValue<CrossbarItem>?)
 
@@ -364,9 +420,9 @@ private fun BackdropArt(item: CrossbarItem?, alignment: Alignment) {
 internal fun isAppWithoutArt(item: CrossbarItem): Boolean = item.backdropArt.isEmpty() && item.packageName != null
 
 @Composable
-private fun AppIconArt(item: CrossbarItem?, iconSize: Dp) {
+private fun AppIconArt(item: CrossbarItem?, iconSize: Dp, alignment: Alignment = Alignment.Center) {
     if (item == null || !isAppWithoutArt(item)) return
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize(), contentAlignment = alignment) {
         AndroidAppIcon(packageName = item.packageName, title = item.title, size = iconSize)
     }
 }
