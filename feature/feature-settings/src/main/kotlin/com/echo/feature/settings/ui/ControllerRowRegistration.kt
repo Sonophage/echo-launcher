@@ -43,7 +43,6 @@ internal fun rememberControllerRowRegistration(
     selectable: Boolean,
     enabled: Boolean = true,
     onSelect: (() -> Unit)?,
-    onLongPress: (() -> Unit)? = null,
     trailingActionsFor: (rowKey: String) -> List<ControllerNavItem> = { emptyList() },
 ): ControllerRowRegistration {
     val focusRegistry = LocalSettingsFocusRegistry.current
@@ -70,7 +69,6 @@ internal fun rememberControllerRowRegistration(
         selectable = selectable,
         enabled = enabled,
         onSelect = onSelect,
-        onLongPress = onLongPress,
         trailingActions = trailingActionsFor(rowKey),
     )
     DisposableEffect(Unit) {

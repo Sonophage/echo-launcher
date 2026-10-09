@@ -503,7 +503,6 @@ fun SettingsScaffold(
         userSteered = true
 
         cursorVisible.value = true
-        navigationState.markControllerInput()
 
         val revivalPress = touchScrolled.value
         if (revivalPress) {
@@ -647,7 +646,6 @@ fun SettingsScaffold(
             userSteered = true
             cursorVisible.value = false
             touchScrolled.value = true
-            navigationState.markTouchInput()
 
             sliderNodeState.value = null
             notifyTouchInput()
@@ -691,7 +689,6 @@ fun SettingsScaffold(
                         awaitFirstDown(requireUnconsumed = false)
                         cursorVisible.value = false
                         touchScrolled.value = true
-                        navigationState.markTouchInput()
                         notifyTouchInput()
                     }
                 }
@@ -1057,7 +1054,6 @@ fun SettingsRow(
         claimInitialFocus = click != null,
         selectable = click != null,
         onSelect = click,
-        onLongPress = onLongPress,
         trailingActionsFor = { rowKey ->
             actions.mapIndexed { index, action ->
                 ControllerNavItem(
@@ -1066,7 +1062,6 @@ fun SettingsRow(
                     selectable = true,
                     enabled = true,
                     onSelect = action.onClick,
-                    onLongPress = action.onLongPress,
                 )
             }
         },

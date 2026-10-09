@@ -20,19 +20,17 @@ class NavigationEngineGeometryTest {
     fun `order fallback when geometry is unavailable`() {
         val engine = NavigationEngine()
         engine.replaceNodes(listOf(node("a"), node("b"), node("c")))
-        engine.markReady()
         assertEquals("a", engine.focusedKey)
-        assertEquals("b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-        assertEquals("c", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
+        assertEquals("b", engine.moveVerticalActive(1))
+        assertEquals("c", engine.moveVerticalActive(1))
     }
 
     @Test
     fun `removal falls back to order when no geometry existed`() {
         val engine = NavigationEngine()
         engine.replaceNodes(listOf(node("a"), node("b"), node("c"), node("d")))
-        engine.markReady()
-        engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN))
-        engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN))
+        engine.moveVerticalActive(1)
+        engine.moveVerticalActive(1)
         engine.replaceNodes(listOf(node("a"), node("b"), node("d")))
         assertEquals("d", engine.focusedKey)
     }

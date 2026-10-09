@@ -8,32 +8,13 @@ class NavigationContext(
 ) {
     internal var nodes: List<NavigationNode> = emptyList()
     private var geometry: Map<String, Float> = emptyMap()
-    private var ready: Boolean = false
 
     var focusedKey: String? = null
         private set
 
-    var editHandler: EditModeHandler? = null
-        private set
-
-    fun markReady() {
-        ready = true
-    }
-
     fun allGeometry(): Map<String, Float> = geometry
 
     fun hasGeometry(): Boolean = geometry.isNotEmpty()
-
-    fun editHandlerFor(key: String): EditModeHandler? {
-        if (editHandler != null) return null
-        val node = findNode(key) ?: return null
-        return node.onEditStart?.invoke()?.also { editHandler = it }
-    }
-
-    fun clearEditHandler() {
-        editHandler?.onExit()
-        editHandler = null
-    }
 
     fun updateNodes(
         newNodes: List<NavigationNode>,
@@ -149,14 +130,11 @@ class NavigationContext(
             return
         }
         if (isKnownKey(key)) {
-            if (key != focusedKey) clearEditHandler()
             focusedKey = key
         }
     }
 
     fun confirm(): Boolean {
-        val handler = editHandler
-        if (handler != null) return handler.onConfirm()
         val key = focusedKey ?: return false
         val owner = ownerOf(key)
         val node = if (owner != null) {

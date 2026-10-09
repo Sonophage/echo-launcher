@@ -26,17 +26,15 @@ class NavigationEngineListBehaviorTest {
     private fun engineWith(vararg nodes: NavigationNode): NavigationEngine {
         val engine = NavigationEngine()
         engine.replaceNodes(listOf(*nodes))
-        engine.markReady()
         return engine
     }
 
     @Test
     fun `empty list has no focus, no movement and no selection`() {
         val engine = NavigationEngine()
-        engine.markReady()
         assertNull(engine.focusedKey)
-        assertNull(engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-        assertNull(engine.dispatch(NavigationCommand.Direction(NavigationDirection.UP)))
+        assertNull(engine.moveVerticalActive(1))
+        assertNull(engine.moveVerticalActive(-1))
         assertFalse(engine.confirmDirect())
     }
 
@@ -49,27 +47,27 @@ class NavigationEngineListBehaviorTest {
     @Test
     fun `up and down movement traverse the list in order`() {
         val engine = engineWith(node("a"), node("b"), node("c"))
-        assertEquals("b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-        assertEquals("c", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-        assertEquals("b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.UP)))
-        assertEquals("a", engine.dispatch(NavigationCommand.Direction(NavigationDirection.UP)))
+        assertEquals("b", engine.moveVerticalActive(1))
+        assertEquals("c", engine.moveVerticalActive(1))
+        assertEquals("b", engine.moveVerticalActive(-1))
+        assertEquals("a", engine.moveVerticalActive(-1))
     }
 
     @Test
     fun `movement clamps at both boundaries - no wrapping`() {
         val engine = engineWith(node("a"), node("b"))
-        assertEquals("a", engine.dispatch(NavigationCommand.Direction(NavigationDirection.UP)))
-        assertEquals("b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-        assertEquals("b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
+        assertEquals("a", engine.moveVerticalActive(-1))
+        assertEquals("b", engine.moveVerticalActive(1))
+        assertEquals("b", engine.moveVerticalActive(1))
     }
 
     @Test
     fun `navigation skips non focusable landmarks`() {
         val engine = engineWith(node("hdr", focusable = false), node("a"), node("b"))
         assertEquals("a", engine.focusedKey)
-        assertEquals("b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-        assertEquals("a", engine.dispatch(NavigationCommand.Direction(NavigationDirection.UP)))
-        assertEquals("a", engine.dispatch(NavigationCommand.Direction(NavigationDirection.UP)))
+        assertEquals("b", engine.moveVerticalActive(1))
+        assertEquals("a", engine.moveVerticalActive(-1))
+        assertEquals("a", engine.moveVerticalActive(-1))
     }
 
     @Test
@@ -79,7 +77,7 @@ class NavigationEngineListBehaviorTest {
             node("b", onSelect = { }),
         )
         assertTrue(engine.confirmDirect())
-        engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN))
+        engine.moveVerticalActive(1)
         assertTrue(engine.confirmDirect())
     }
 
@@ -92,8 +90,8 @@ class NavigationEngineListBehaviorTest {
     @Test
     fun `movement skips disabled nodes`() {
         val engine = engineWith(node("a"), node("disabled", enabled = false), node("b"))
-        assertEquals("b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
-        assertEquals("a", engine.dispatch(NavigationCommand.Direction(NavigationDirection.UP)))
+        assertEquals("b", engine.moveVerticalActive(1))
+        assertEquals("a", engine.moveVerticalActive(-1))
     }
 
     @Test
@@ -106,7 +104,7 @@ class NavigationEngineListBehaviorTest {
     @Test
     fun `stable key preserves focus across list updates`() {
         val engine = engineWith(node("a"), node("b"), node("c"))
-        engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN))
+        engine.moveVerticalActive(1)
         engine.replaceNodes(listOf(node("a"), node("b"), node("c"), node("d")))
         assertEquals("b", engine.focusedKey)
         engine.replaceNodes(listOf(node("x"), node("b"), node("c")))
@@ -116,8 +114,8 @@ class NavigationEngineListBehaviorTest {
     @Test
     fun `removing the focused node recovers to the nearest survivor by order`() {
         val engine = engineWith(node("a"), node("b"), node("c"), node("d"))
-        engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN))
-        engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN))
+        engine.moveVerticalActive(1)
+        engine.moveVerticalActive(1)
         engine.replaceNodes(listOf(node("a"), node("b"), node("d")))
         assertEquals("d", engine.focusedKey)
     }
@@ -145,7 +143,6 @@ class NavigationEngineListBehaviorTest {
         var selected = ""
         val engine = NavigationEngine()
         engine.replaceNodes(listOf(node("a", onSelect = { selected = "first" })))
-        engine.markReady()
         engine.replaceNodes(listOf(node("a", onSelect = { selected = "second" })))
         assertTrue(engine.confirmDirect())
         assertEquals("second", selected)
@@ -160,15 +157,15 @@ class NavigationEngineListBehaviorTest {
             )),
         )
         assertEquals("row", engine.focusedKey)
-        assertEquals("row:a", engine.dispatch(NavigationCommand.Direction(NavigationDirection.RIGHT)))
-        assertEquals("row:b", engine.dispatch(NavigationCommand.Direction(NavigationDirection.RIGHT)))
-        assertNull(engine.dispatch(NavigationCommand.Direction(NavigationDirection.RIGHT)))
+        assertEquals("row:a", engine.moveHorizontalActive(1))
+        assertEquals("row:b", engine.moveHorizontalActive(1))
+        assertNull(engine.moveHorizontalActive(1))
         assertEquals("row:b", engine.focusedKey)
-        assertEquals("row:a", engine.dispatch(NavigationCommand.Direction(NavigationDirection.LEFT)))
-        assertEquals("row", engine.dispatch(NavigationCommand.Direction(NavigationDirection.LEFT)))
+        assertEquals("row:a", engine.moveHorizontalActive(-1))
+        assertEquals("row", engine.moveHorizontalActive(-1))
         assertNull(
             "LEFT from the row moves nothing and must report null, so a caller can fall through to what is left of it",
-            engine.dispatch(NavigationCommand.Direction(NavigationDirection.LEFT)),
+            engine.moveHorizontalActive(-1),
         )
         assertEquals("row", engine.focusedKey)
     }
@@ -176,8 +173,8 @@ class NavigationEngineListBehaviorTest {
     @Test
     fun `horizontal movement is a no-op on rows without children`() {
         val engine = engineWith(node("a"), node("b"))
-        assertNull(engine.dispatch(NavigationCommand.Direction(NavigationDirection.RIGHT)))
-        assertNull(engine.dispatch(NavigationCommand.Direction(NavigationDirection.LEFT)))
+        assertNull(engine.moveHorizontalActive(1))
+        assertNull(engine.moveHorizontalActive(-1))
     }
 
     @Test
@@ -188,9 +185,9 @@ class NavigationEngineListBehaviorTest {
             node("bottom"),
         )
         engine.setFocused("row:a")
-        assertEquals("bottom", engine.dispatch(NavigationCommand.Direction(NavigationDirection.DOWN)))
+        assertEquals("bottom", engine.moveVerticalActive(1))
         engine.setFocused("row:a")
-        assertEquals("top", engine.dispatch(NavigationCommand.Direction(NavigationDirection.UP)))
+        assertEquals("top", engine.moveVerticalActive(-1))
     }
 
     @Test
