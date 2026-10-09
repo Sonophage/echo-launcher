@@ -123,8 +123,6 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
   .sec{padding:120px 16px 0}
   .hero{padding:120px 16px 56px !important}
   .bar{padding:16px !important}
-  .bar nav>a:not(.dl){display:none}
-  .bar nav{gap:10px}
   .mnav-word{display:none}
   .mnav summary{padding:11px 13px}
   .mnav-panel{position:fixed;left:16px;right:16px;top:76px;width:auto;max-height:calc(100vh - 96px)}
@@ -160,13 +158,7 @@ echo-boot:not(:defined){position:fixed;inset:0;z-index:1000;background:#04060C}
         <img src="docs/echo-logo.png" alt="ECHO" style="width:30px;height:30px;border-radius:8px">
         <span style="font-weight:300;letter-spacing:.42em;font-size:14px">ECHO</span>
       </a>
-      <nav style="display:flex;align-items:center;gap:26px;font-size:13px;letter-spacing:.06em;flex-wrap:wrap">
-        <a href="#recent" style="color:#c3ccd4">Recent</a>
-        <a href="#games" style="color:#c3ccd4">Games</a>
-        <a href="#emulators" style="color:#c3ccd4">Emulators</a>
-        <a href="#media" style="color:#c3ccd4">Media</a>
-        <a href="#dual" style="color:#c3ccd4">Two screens</a>
-        <a href="docs.html" style="color:#c3ccd4">Docs</a>
+      <nav style="display:flex;align-items:center;gap:12px;font-size:13px;letter-spacing:.06em;flex-wrap:wrap">
         <details class="mnav">
           <summary aria-label="All chapters"><span class="mnav-bars" aria-hidden="true"><i></i><i></i></span><span class="mnav-word">Chapters</span></summary>
           <div class="mnav-panel" id="mnav-list"></div>
