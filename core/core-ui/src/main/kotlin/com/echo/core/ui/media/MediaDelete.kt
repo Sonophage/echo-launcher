@@ -29,6 +29,7 @@ suspend fun deleteMediaFile(context: Context, uri: String): Boolean = withContex
 
 fun postDeleteResult(deleted: Boolean, title: String) = SystemToasts.post(
     if (deleted) "Deleted" else "Couldn't delete",
-    if (deleted) title else "$title: delete it in Files",
+    // a folder added before 2.13.5 was granted read only; relinking it grants write
+    if (deleted) title else "$title: relink its folder to allow deleting, or delete it in Files",
     if (deleted) ToastKind.SUCCESS else ToastKind.ERROR,
 )

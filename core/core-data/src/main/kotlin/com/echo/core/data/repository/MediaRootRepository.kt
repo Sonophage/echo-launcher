@@ -56,12 +56,14 @@ class MediaRootRepository @Inject constructor(
         writeRoots(kind, next.toList())
     }
 
+    // read and write: Delete From Device needs write, and with only read every delete was refused (seen on the
+    // Konker, 2026-10-10). A provider that gives no write still gets read
     fun persist(uri: Uri) {
+        val resolver = context.contentResolver
         runCatching {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION,
-            )
+            resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        }.recoverCatching {
+            resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }.onFailure { Timber.w(it, "Could not persist media root permission for %s", uri) }
     }
 
