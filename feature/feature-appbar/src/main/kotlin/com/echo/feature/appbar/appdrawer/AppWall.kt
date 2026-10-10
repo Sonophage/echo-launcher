@@ -86,17 +86,34 @@ import com.echo.core.ui.design.IsTitan2
 // owner, 2026-10-05: the drawer is the "Drawer and Search Variations" design's 6a: a dark room lit by the
 // selected app's colour, its big icon faint on the wall, and the apps standing as cases in three columns
 @Composable
-internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits) {
+internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits, wallpaper: (@Composable () -> Unit)? = null) {
     val tint by animateColorAsState(icon?.color ?: NeutralTint, tween(500), label = "wallTint")
-    Box(Modifier.fillMaxSize().background(ShelfRoom).roomGlow(tint).wallStripes()) {
-        when {
-            app?.art != null -> AsyncImage(rememberBlurSourceModel(app.art), null, contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().blur(u.dp(28)).graphicsLayer(alpha = 0.25f))
-            icon != null -> Image(icon.bitmap, null, Modifier.offset(u.dp(-120), u.dp(120)).size(u.dp(600)).rotate(-12f).graphicsLayer(alpha = 0.06f))
+    Box(Modifier.fillMaxSize()) {
+        // owner, 2026-10-09: the app's colour is a tint over the wallpaper, which still shows; without one (the
+        // second screen's drawer) the room stays solid
+        if (wallpaper != null) {
+            wallpaper()
+            Box(Modifier.fillMaxSize().background(ShelfRoom.copy(alpha = WALL_VEIL)).background(tint.copy(alpha = WALL_TINT)))
+        } else {
+            Box(Modifier.fillMaxSize().background(ShelfRoom))
         }
-        Box(Modifier.fillMaxSize().vignette())
+        // over a wallpaper the tint is the app's colour; the room's glow would cover the wallpaper again
+        Box(Modifier.fillMaxSize().then(if (wallpaper == null) Modifier.roomGlow(tint) else Modifier).wallStripes()) {
+            when {
+                app?.art != null -> AsyncImage(rememberBlurSourceModel(app.art), null, contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().blur(u.dp(28)).graphicsLayer(alpha = 0.25f))
+                // owner, 2026-10-09: the app's icon, large and faint, in the bottom left corner
+                icon != null -> Image(icon.bitmap, null, Modifier.align(Alignment.BottomStart).offset(u.dp(-90), u.dp(110))
+                    .size(u.dp(520)).rotate(-12f).graphicsLayer(alpha = 0.09f))
+            }
+            Box(Modifier.fillMaxSize().vignette())
+        }
     }
 }
+
+// how much of the room's dark and of the app's colour lie over the wallpaper
+private const val WALL_VEIL = 0.40f
+private const val WALL_TINT = 0.22f
 
 // what a case's spine says: the console for a game in the library, else the kind of app
 internal fun caseLabel(app: InstalledApp): String = when {

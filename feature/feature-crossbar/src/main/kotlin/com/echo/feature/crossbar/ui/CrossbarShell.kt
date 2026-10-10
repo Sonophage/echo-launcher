@@ -1274,6 +1274,19 @@ fun CrossbarShell(
                     .getOrDefault(AppFilter.DEFAULT)
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
                     AppDrawerScreen(
+                        // a still copy of the wallpaper, under the app's tint: no wave, no second motion video
+                        wallpaper = {
+                            CrossbarBackground(
+                                waveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
+                                customWallpaperPath = uiState.customWallpaperPath,
+                                waveOverWallpaper = false,
+                                wallpaperAccent = uiState.wallpaperAccent,
+                                motionWallpaperPath = null,
+                                motionDecision = com.echo.core.ui.motion.MotionWallpaperPolicy.Decision.POSTER,
+                                waveDrawnByCaller = true,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        },
                         initialFilter = initialFilter,
                         genreFilter = uiState.genreFilter,
                         chipsByGenre = uiState.gameGrouping == com.echo.feature.crossbar.viewmodel.GameGrouping.GENRE,

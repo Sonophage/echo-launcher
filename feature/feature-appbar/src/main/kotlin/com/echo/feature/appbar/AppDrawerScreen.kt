@@ -96,6 +96,8 @@ fun AppDrawerScreen(
     // owner, 2026-10-08: with two screens the focused app is drawn large on the other one, so the drawer
     // reports it and drops its own info column to give the shelf the room
     heroOnOtherScreen: Boolean = false,
+    // the wallpaper under the app's tint (owner, 2026-10-09); the crossbar passes it, the second screen does not
+    wallpaper: (@Composable () -> Unit)? = null,
     // the focused app, and the drawer's own Launch and Options for it, for the other screen's hero
     onFocusedApp: (app: InstalledApp?, launch: () -> Unit, options: () -> Unit) -> Unit = { _, _, _ -> },
 
@@ -253,6 +255,7 @@ fun AppDrawerScreen(
         onCancelUninstall = { viewModel.cancelUninstall() },
         onGrantUsageAccess = onOpenPermissions ?: { viewModel.openUsageAccessSettings() },
         heroOnOtherScreen = heroOnOtherScreen,
+        wallpaper = wallpaper,
         modifier = modifier,
     )
 }
@@ -275,6 +278,8 @@ internal fun AppDrawerContent(
     onBandLaunch: (InstalledApp) -> Unit = { onAppLaunched(it.packageName) },
     onBandOptions: (InstalledApp) -> Unit = onAppMenu,
     heroOnOtherScreen: Boolean = false,
+    // the wallpaper under the app's tint (owner, 2026-10-09); the crossbar passes it, the second screen does not
+    wallpaper: (@Composable () -> Unit)? = null,
     onMenuRowActivated: (Int) -> Unit = {},
 
     onLetterRailTouch: (Int) -> Unit = {},
@@ -286,7 +291,7 @@ internal fun AppDrawerContent(
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         val focused = state.visibleApps.getOrNull(state.selectedIndex)
         val focusedIcon = rememberAppIcon(focused?.packageName?.takeIf { focused.gameId == null })
-        WallBackdrop(focused, focusedIcon, u)
+        WallBackdrop(focused, focusedIcon, u, wallpaper)
 
         // owner, 2026-10-05: the design's 6a: the chosen app's details in a column on the left, the apps as cases
         // in three columns on the right, the bar's sections above and the hints below
