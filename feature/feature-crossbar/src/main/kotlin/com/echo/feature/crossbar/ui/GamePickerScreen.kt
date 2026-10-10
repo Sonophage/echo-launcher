@@ -20,7 +20,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +32,7 @@ import com.echo.core.ui.components.ControllerPromptItem
 import com.echo.core.ui.components.EchoHintBar
 import com.echo.core.ui.components.StatusStripHeight
 import androidx.compose.ui.text.style.TextOverflow
+import com.echo.core.ui.theme.screenBackdrop
 import com.echo.core.ui.theme.LocalEchoTextColors
 import com.echo.core.ui.theme.StorefrontColors
 import com.echo.core.ui.theme.deriveStorefrontColors
@@ -103,7 +103,7 @@ fun GamePickerScreen(
 
             .padding(top = StatusStripHeight)
 
-            .background(Brush.verticalGradient(listOf(sf.backgroundDeep, sf.backgroundMid))),
+            .background(sf.screenBackdrop),
     ) {
         LazyColumn(
             state = listState,

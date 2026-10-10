@@ -38,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,6 +52,7 @@ import com.echo.core.ui.components.EchoCheckBadge
 import com.echo.core.ui.components.EchoMonogram
 import com.echo.core.ui.components.EchoSearchField
 import com.echo.core.ui.components.StatusStripHeight
+import com.echo.core.ui.theme.screenBackdrop
 import com.echo.core.ui.theme.StorefrontColors
 import com.echo.core.ui.theme.deriveStorefrontColors
 import com.echo.feature.crossbar.viewmodel.AppPickerEntry
@@ -85,7 +85,7 @@ fun AppPickerScreen(
         modifier = modifier
             .fillMaxSize()
 
-            .background(Brush.verticalGradient(listOf(sf.backgroundDeep, sf.backgroundMid))),
+            .background(sf.screenBackdrop),
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(top = StatusStripHeight)) {
             AppPickerHeader(
@@ -325,28 +325,31 @@ private fun AppPickerTile(
             .clickable(onClick = onClick)
             .padding(vertical = 4.dp),
     ) {
+        // the frame's corners follow the tile's, set out by the frame's room, so it reads as the tile's own ring
+        val frame = RoundedCornerShape(artworkSize * MONOGRAM_CORNER + FRAME_ROOM / 2)
+        val inner = RoundedCornerShape(artworkSize * MONOGRAM_CORNER + FRAME_ROOM / 2 - 2.dp)
         Box(modifier = Modifier.size(artworkSize + FRAME_ROOM)) {
             Box(
                 Modifier
                     .matchParentSize()
-                    .background(colors.selectionGlow.copy(alpha = colors.selectionGlow.alpha * focus)),
+                    .background(colors.selectionGlow.copy(alpha = colors.selectionGlow.alpha * focus), frame),
             )
             Box(
                 Modifier
                     .matchParentSize()
-                    .border(TILE_BORDER, colors.tileSelectedEdge.copy(alpha = focus)),
+                    .border(TILE_BORDER, colors.tileSelectedEdge.copy(alpha = focus), frame),
             )
             Box(
                 Modifier
                     .matchParentSize()
                     .padding(2.dp)
-                    .border(TILE_BORDER, colors.tileSelectedInner.copy(alpha = focus)),
+                    .border(TILE_BORDER, colors.tileSelectedInner.copy(alpha = focus), inner),
             )
 
             Box(
                 Modifier
                     .matchParentSize()
-                    .background(colors.tileSelectedInner.copy(alpha = 0.10f * check)),
+                    .background(colors.tileSelectedInner.copy(alpha = 0.10f * check), frame),
             )
             EchoMonogram(
                 label = entry.label,

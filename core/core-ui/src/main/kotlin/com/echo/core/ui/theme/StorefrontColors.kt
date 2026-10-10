@@ -3,6 +3,7 @@ package com.echo.core.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 
@@ -74,6 +75,11 @@ private fun Color.isVividHue(): Boolean {
     val min = minOf(red, green, blue)
     return max - min >= 0.10f && max >= 0.30f
 }
+
+// a full screen that covers the crossbar (the app and game pickers): the scrim's colours made solid, since the
+// scrim's own alpha let the crossbar's icons and rows show through between the tiles
+val StorefrontColors.screenBackdrop: Brush
+    get() = Brush.verticalGradient(listOf(backgroundDeep.copy(alpha = 1f), backgroundMid.copy(alpha = 1f)))
 
 @Composable
 fun deriveStorefrontColors(): StorefrontColors {
