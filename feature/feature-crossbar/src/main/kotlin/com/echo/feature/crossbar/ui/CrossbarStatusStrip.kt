@@ -174,15 +174,8 @@ fun rememberBatteryReading(): BatteryReading {
 }
 
 
-// the newest notification, for the right-hand island's peek
-data class NoticePeek(val postedAt: Long, val title: String, val detail: String?, val packageName: String?)
-
 // one row of the notification card
 data class NoticeRow(val key: String, val title: String, val detail: String?, val packageName: String?, val canDismiss: Boolean)
-
-// owner, 2026-10-05: a notification newer than any seen peeks from the right, once; one already there when
-// the strip appears, or an older one left after a dismissal, does not
-internal fun noticePeekDue(seenAt: Long, newest: NoticePeek?): Boolean = newest != null && newest.postedAt > seenAt
 
 
 // the islands' cards grow out of their orb, down below the bar, and go back into it
@@ -204,7 +197,6 @@ fun CrossbarStatusStrip(
     onLiveAreaTapped: (() -> Unit)? = null,
 
     noticeCount: Int = 0,
-    noticePeek: NoticePeek? = null,
     // the card's rows, newest first, and the pad's row on it (null when the pad is not on the card)
     noticeRows: List<NoticeRow> = emptyList(),
     noticeCursor: Int? = null,
@@ -213,7 +205,6 @@ fun CrossbarStatusStrip(
     // the card is out (the view model times it); a press on the island, and a new notification arriving
     noticeCardOut: Boolean = false,
     onNoticeIslandPressed: () -> Unit = {},
-    onNewNotice: () -> Unit = {},
     // the right-hand island with no notifications: the user's picture, else the ECHO mark
     profileAvatar: String? = null,
 
@@ -380,16 +371,8 @@ fun CrossbarStatusStrip(
             Box(contentAlignment = Alignment.Center) { centre?.invoke(this, u, tight) }
         }
 
-        // owner, 2026-10-05: the right-hand island peeks a new notification, as the left one shows what is live.
-        // A tap on the island brings the card out; a second tap (on the card) opens the notifications
-        // owner, 2026-10-05: only what arrives after ECHO is up peeks; the notifications already waiting at boot,
-        // which load a moment after the strip, do not
-        var seenAt by remember { mutableStateOf(maxOf(noticePeek?.postedAt ?: 0L, System.currentTimeMillis())) }
-        LaunchedEffect(noticePeek) {
-            if (!noticePeekDue(seenAt, noticePeek)) return@LaunchedEffect
-            seenAt = noticePeek?.postedAt ?: return@LaunchedEffect
-            onNewNotice()
-        }
+        // owner, 2026-10-09: a new notification opens nothing; the right orb glows and sends one wave. A tap on the
+        // island brings the card out, and a second tap (on the card) opens the notifications
         val peeking = noticeRows.takeIf { noticeCardOut && it.isNotEmpty() }
 
         val endGutter = chromeGutter(end = true)

@@ -22,8 +22,6 @@ enum class NoticeIslandPress { SHOW_CARD, OPEN_PANEL }
 internal fun noticeIslandPress(cardOut: Boolean, hasNotice: Boolean): NoticeIslandPress =
     if (!cardOut && hasNotice) NoticeIslandPress.SHOW_CARD else NoticeIslandPress.OPEN_PANEL
 
-internal const val NOTICE_CARD_MS = 4_000L
-
 // the notification card's rows, newest first; the card shows as many as fit (owner, 2026-10-05)
 val CrossbarUiState.noticeCardRows: List<com.echo.core.ui.notification.AndroidNotice>
     get() = androidNotices.sortedByDescending { it.postedAt }

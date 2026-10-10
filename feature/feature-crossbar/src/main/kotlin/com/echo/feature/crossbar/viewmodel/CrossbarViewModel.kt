@@ -3746,7 +3746,7 @@ class CrossbarViewModel @Inject constructor(
                 librarySearch.openSearch(SearchScope.ALL)
             }
             GlobalStep.CLOSE_SEARCH -> librarySearch.closeSearch()
-            GlobalStep.NOTIFICATIONS -> panel.pressNoticeIsland()
+            GlobalStep.NOTIFICATIONS -> panel.pressStart()
             GlobalStep.HOME -> {
                 menuSound.play(MenuSound.BACK)
                 _uiState.update {

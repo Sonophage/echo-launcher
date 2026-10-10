@@ -273,7 +273,6 @@ class CrossbarPanel(
         }
     }
 
-    private var noticeCardJob: kotlinx.coroutines.Job? = null
 
     // owner, 2026-10-05: Home (Guide or View) and a tap on the notification island do the same thing: the first
     // press brings the newest notification out as the card, the second opens the panel
@@ -281,25 +280,24 @@ class CrossbarPanel(
         val s = uiState.value
         if (s.notificationsOpen) return toggleNotifications()
         when (noticeIslandPress(cardOut = s.noticeCardOut, hasNotice = s.androidNotices.isNotEmpty())) {
-            NoticeIslandPress.SHOW_CARD -> { menuSound.play(MenuSound.SCROLL); showNoticeCard(pinned = true) }
+            NoticeIslandPress.SHOW_CARD -> { menuSound.play(MenuSound.SCROLL); showNoticeCard() }
             NoticeIslandPress.OPEN_PANEL -> toggleNotifications()
         }
     }
 
-    // a press brings the card out pinned, to stay until it is closed; a new notification brings it out on its
-    // own for a few seconds, unless it is already pinned
-    fun showNoticeCard(pinned: Boolean = false) {
-        if (!pinned && uiState.value.noticeCardPinned) return
-        noticeCardJob?.cancel()
-        uiState.update { it.copy(noticeCardOut = true, noticeCardPinned = pinned, noticeCardCursor = 0) }
-        if (!pinned) noticeCardJob = scope.launch {
-            kotlinx.coroutines.delay(NOTICE_CARD_MS)
-            closeNoticeCard()
-        }
+    // owner, 2026-10-09: Start opens the notification panel at once (and closes it); the card is the island's tap
+    fun pressStart() {
+        if (uiState.value.noticeCardOut) closeNoticeCard()
+        toggleNotifications()
+    }
+
+    // a press brings the card out pinned, to stay until it is closed (owner, 2026-10-09: a new notification no
+    // longer brings it out on its own)
+    fun showNoticeCard() {
+        uiState.update { it.copy(noticeCardOut = true, noticeCardPinned = true, noticeCardCursor = 0) }
     }
 
     fun closeNoticeCard() {
-        noticeCardJob?.cancel()
         uiState.update { it.copy(noticeCardOut = false, noticeCardPinned = false) }
     }
 
@@ -326,7 +324,6 @@ class CrossbarPanel(
         menuSound.play(MenuSound.BACK)
         AndroidNotifications.dismiss(key)
         // the card stays for the rest, and stays put while the user works through them
-        noticeCardJob?.cancel()
         uiState.update {
             val left = it.noticeCardRows.size - 1
             it.copy(noticeCardPinned = true, noticeCardCursor = it.noticeCardCursor.coerceIn(0, (left - 1).coerceAtLeast(0)))
@@ -335,7 +332,6 @@ class CrossbarPanel(
     }
 
     fun toggleNotifications() {
-        noticeCardJob?.cancel()
         menuSound.play(if (uiState.value.notificationsOpen) MenuSound.BACK else MenuSound.SYSTEM_BROWSE)
         uiState.update {
             it.copy(

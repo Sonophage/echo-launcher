@@ -224,7 +224,6 @@ fun CrossbarShellContainer(
         onDrawerTypedCharConsumed = viewModel::onDrawerTypedCharConsumed,
         onNotificationsToggled = viewModel.panel::toggleNotifications,
         onNoticeIslandPressed = viewModel.panel::pressNoticeIsland,
-        onNewNotice = { viewModel.panel.showNoticeCard() },
         onNoticeOpen = viewModel.panel::openNoticeFromCard,
         onNoticeDismiss = viewModel.panel::dismissNoticeFromCard,
         onLaunchRecentTop = viewModel.recents::launchRecentTop,
@@ -416,7 +415,6 @@ fun CrossbarShell(
     onDrawerTypedCharConsumed: () -> Unit = {},
     onNotificationsToggled: () -> Unit = {},
     onNoticeIslandPressed: () -> Unit = {},
-    onNewNotice: () -> Unit = {},
     onNoticeOpen: (String) -> Unit = {},
     onNoticeDismiss: (String) -> Unit = {},
     onLaunchRecentTop: () -> Unit = {},
@@ -1087,9 +1085,6 @@ fun CrossbarShell(
                 holding = islandIsRecent && uiState.launchHold == uiState.recentTop?.id,
 
                 noticeCount = uiState.launcherNotices.size + androidNotices.size,
-                noticePeek = androidNotices.maxByOrNull { it.postedAt }?.let {
-                    NoticePeek(it.postedAt, it.title?.takeIf { t -> t.isNotBlank() } ?: it.appLabel, it.text, it.packageName)
-                },
                 profileAvatar = uiState.profileAvatar,
                 noticeCardOut = uiState.noticeCardOut,
                 noticeRows = uiState.noticeCardRows.map {
@@ -1099,7 +1094,6 @@ fun CrossbarShell(
                 onNoticeOpen = onNoticeOpen,
                 onNoticeDismiss = onNoticeDismiss,
                 onNoticeIslandPressed = onNoticeIslandPressed,
-                onNewNotice = onNewNotice,
 
                 // owner, 2026-10-06: the strip's centre is only a screen's own tab row; the crossbar's filters and sorts
                 // are in the footer
