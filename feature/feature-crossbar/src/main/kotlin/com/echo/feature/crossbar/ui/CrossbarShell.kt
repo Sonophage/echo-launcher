@@ -869,6 +869,13 @@ fun CrossbarShell(
                         ),
                 )
             } else {
+            if (uiState.lastPlayedEmpty) {
+                LastPlayedEmpty(
+                    onGames = uiState.categories.indexOfFirst { it.id == com.echo.core.domain.model.BuiltInCategory.GAMES }
+                        .takeIf { it >= 0 }?.let { games -> { onCategorySelected(games) } },
+                    onAppDrawer = onOpenAppDrawer,
+                )
+            }
             val metadataAsSubtitle = uiState.gameMetadataVisible
 
             val fanItem = uiState.currentItems.getOrNull(uiState.selectedItemIndex)

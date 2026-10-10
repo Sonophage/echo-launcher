@@ -37,6 +37,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.BoxScope
 import com.echo.core.ui.design.IsTitan2
+import com.echo.core.domain.model.GamepadAction
+import com.echo.core.ui.design.PanelButton
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -590,6 +592,34 @@ private fun MediaStage(item: CrossbarItem, kind: RecentKind, now: Long, u: Desig
                         Text(it, color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13), fontWeight = FontWeight.Light, maxLines = 1)
                     }
                 }
+            }
+        }
+    }
+}
+
+// owner, 2026-10-09: Last Played with nothing played yet: the ECHO mark, a line, and the two ways to something to
+// play, the Game column and the App Drawer. The buttons name the pad's own way there: Right, and LB
+@Composable
+internal fun LastPlayedEmpty(onGames: (() -> Unit)?, onAppDrawer: () -> Unit, modifier: Modifier = Modifier) {
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
+        Column(
+            Modifier.align(Alignment.CenterStart).padding(start = u.dp(120), top = u.dp(90)),
+            verticalArrangement = Arrangement.spacedBy(u.dp(16)),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u.dp(14))) {
+                androidx.compose.foundation.Image(
+                    androidx.compose.ui.res.painterResource(com.echo.core.ui.R.drawable.echo_logo), null,
+                    Modifier.size(u.dp(40)),
+                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.White),
+                )
+                Text("ECHO", style = u.eyebrow(Color.White.copy(alpha = 0.8f)))
+            }
+            Text("Start something.", color = Color.White, fontSize = u.sp(48), fontWeight = FontWeight.Light)
+            Text("What you play shows up here.", color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(20), fontWeight = FontWeight.Light)
+            Row(Modifier.padding(top = u.dp(12)), horizontalArrangement = Arrangement.spacedBy(u.dp(14))) {
+                onGames?.let { PanelButton(GamepadAction.NAVIGATE_RIGHT, "Games", u, onClick = it) }
+                PanelButton(GamepadAction.PREV_PAGE, "App Drawer", u, onClick = onAppDrawer)
             }
         }
     }

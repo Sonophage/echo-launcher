@@ -784,6 +784,11 @@ data class CrossbarUiState(
     val canFilterRecents: Boolean
         get() = onLastPlayedHome
 
+    // owner, 2026-10-09: Last Played with nothing played yet shows a prompt, not a bare crossbar
+    val lastPlayedEmpty: Boolean
+        get() = categories.getOrNull(selectedCategoryIndex)?.id == BuiltInCategory.RECENTLY_PLAYED &&
+            !isInSubItem && recentFilter == RecentFilter.ALL && currentItems.isEmpty()
+
     val focusedItemHasContextMenu: Boolean
         get() = focusedItem?.hasContextMenu(this) == true
 
