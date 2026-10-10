@@ -45,11 +45,17 @@ fun appIconAccent(icon: ImageBitmap): Color? {
 }
 
 // the scrim over art or a wallpaper behind the crossbar and Recent: the accent mixed into the dark, darkest at the
-// edges, so white text stays readable and what is under it still shows
-fun backdropScrim(accent: Color): Brush {
-    val base = lerp(AppBackdropBase, accent, 0.22f)
+// edges, so white text stays readable and what is under it still shows. [tint] is how much of the accent is mixed in
+fun backdropScrim(accent: Color, tint: Float = ART_SCRIM_TINT): Brush {
+    val base = lerp(AppBackdropBase, accent, tint)
     return Brush.horizontalGradient(0.0f to base.copy(alpha = 0.65f), 0.5f to base.copy(alpha = 0.50f), 1.0f to base.copy(alpha = 0.75f))
 }
+
+const val ART_SCRIM_TINT = 0.22f
+
+// owner, 2026-10-10: an app's tint over the wallpaper was too faint to read as the app's colour; art keeps the
+// lighter tint, since the art carries its own colour
+const val APP_SCRIM_TINT = 0.45f
 
 // [overWallpaper]: a wallpaper is under it, so the backdrop is only the app's icon, faint in the corner, and with
 // [scrim] the app-coloured scrim over the wallpaper (owner, 2026-10-09: the wallpaper shows, tinted). The crossbar
@@ -67,7 +73,7 @@ fun CrossbarAppIconBackdrop(
     val accent = icon?.color ?: fallbackAccent
     if (overWallpaper) {
         androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize()) {
-            if (scrim) Box(Modifier.fillMaxSize().background(backdropScrim(accent)))
+            if (scrim) Box(Modifier.fillMaxSize().background(backdropScrim(accent, APP_SCRIM_TINT)))
             icon?.let { AppIconWatermark(it.bitmap, maxHeight * WATERMARK_SHARE) }
         }
     } else {

@@ -734,9 +734,10 @@ fun CrossbarShell(
                             null -> Unit
                         }
 
-                        // owner, 2026-10-09: an app's backdrop takes the same scrim as art, so the wallpaper under
-                        // it shows, tinted
-                        Box(Modifier.fillMaxSize().background(backdropScrim(crossbarGameAccent)))
+                        // owner, 2026-10-09: an app's backdrop takes the scrim art does, so the wallpaper under
+                        // it shows, tinted; more strongly for an app (owner, 2026-10-10)
+                        val tint = if (bg is CrossbarBackdrop.AppIcon) APP_SCRIM_TINT else ART_SCRIM_TINT
+                        Box(Modifier.fillMaxSize().background(backdropScrim(crossbarGameAccent, tint)))
 
                         if (backgroundSnap != null) {
                             Box(Modifier.fillMaxSize().background(Color(0x5905050C)))
