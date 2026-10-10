@@ -277,6 +277,11 @@ private fun ActionTab(
 }
 
 private const val ORB = 44
+
+// how far the A orb stands above the screen's bottom edge, higher than the footer itself: text set over the footer
+// clears this, not HintBarHeight
+val HintOrbClearance: Dp
+    @Composable get() = hintBarUnits().dp(ORB_BOTTOM + ORB)
 // the centre's fixed width; the card is wider and stands over the hints beside it while it is out
 private const val ACTION_SLOT = 180
 private const val ORB_BOTTOM = 16

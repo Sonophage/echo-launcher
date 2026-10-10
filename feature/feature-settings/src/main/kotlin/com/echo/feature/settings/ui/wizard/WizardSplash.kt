@@ -49,7 +49,7 @@ import com.echo.core.ui.wave.LocalWaveDesign
 import com.echo.core.ui.wave.WaveDesign
 import com.echo.core.ui.components.EchoHintBar
 import com.echo.core.ui.components.HintAction
-import com.echo.core.ui.components.HintBarHeight
+import com.echo.core.ui.components.HintOrbClearance
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.runtime.CompositionLocalProvider
@@ -168,7 +168,7 @@ fun WizardSplash(onBegin: () -> Unit) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = HintBarHeight)
+                    .padding(bottom = HintOrbClearance + u.dp(12))
                     .graphicsLayer { alpha = fade },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
