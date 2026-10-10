@@ -124,8 +124,7 @@ class SettingsHierarchyTest {
         assertEquals(
             // owner, 2026-10-07: every crossbar setting in the Crossbar tab (settings_layout); Categories opens from it
             "Look holds what you see",
-            // owner, 2026-10-07: the theme store is its own tab, after Theme
-            listOf("settings_themes", "settings_theme_store", "settings_appearance", "settings_layout", "settings_boot", "settings_audio"),
+            listOf("settings_themes", "settings_appearance", "settings_layout", "settings_boot", "settings_audio"),
             settingsEntriesIn(SettingsSectionId.LOOK).map { it.id },
         )
         assertEquals(
@@ -144,6 +143,9 @@ class SettingsHierarchyTest {
             listOf("settings_about", "settings_logs", "settings_backup", "settings_performance", "settings_credits"),
             settingsEntriesIn(SettingsSectionId.SYSTEM).map { it.id },
         )
+        // owner, 2026-10-09: the theme store is its own section, right before Setup
+        assertEquals("the Store is its own section", listOf("settings_theme_store"), settingsEntriesIn(SettingsSectionId.STORE).map { it.id })
+        assertEquals(SettingsSectionId.SETUP, SettingsSectionId.entries[SettingsSectionId.STORE.ordinal + 1])
         assertEquals(
             "the wizard is its own section, apart from Permissions",
             listOf("settings_initial_setup"),

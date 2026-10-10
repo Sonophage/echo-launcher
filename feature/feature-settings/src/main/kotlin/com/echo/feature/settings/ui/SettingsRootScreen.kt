@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.PermMedia
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.AutoFixHigh
@@ -113,5 +114,6 @@ fun SettingsSectionId.icon(): ImageVector = when (this) {
     SettingsSectionId.CONTROLS -> Icons.Filled.SportsEsports
     SettingsSectionId.ACCOUNTS -> Icons.Filled.ManageAccounts
     SettingsSectionId.SYSTEM -> Icons.Outlined.Info
+    SettingsSectionId.STORE -> Icons.Filled.Storefront
     SettingsSectionId.SETUP -> Icons.Filled.AutoFixHigh
 }

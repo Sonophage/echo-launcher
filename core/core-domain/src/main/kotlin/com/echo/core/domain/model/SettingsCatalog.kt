@@ -16,6 +16,8 @@ enum class SettingsSectionId(
     // owner, 2026-10-05: every account lives here, the artwork services' too, each kind on its own tab
     ACCOUNTS("settings_section_accounts", "Accounts", "Permissions, achievements, artwork services & Discord"),
     SYSTEM("settings_section_system", "System", "About, logs, backup, performance & credits"),
+    // owner, 2026-10-09: the theme store is its own section, right before Setup, no longer a tab under Look
+    STORE("settings_section_store", "Store", "Saved and online themes, and your look"),
     SETUP("settings_section_setup", "Setup", "The guided setup wizard"),
 }
 
@@ -43,9 +45,6 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_emulators_retroarch", "RetroArch", "Core detection & linking", SettingsSectionId.EMULATORS),
 
     SettingsEntry("settings_themes", "Theme", "Colour scheme, accent & theme packs", SettingsSectionId.LOOK),
-    // owner, 2026-10-07: the theme store is its own tab, a full panel. Parts are taken on each theme's page,
-    // which replaced the Mix screen
-    SettingsEntry("settings_theme_store", "Store", "Saved and online themes, and your look", SettingsSectionId.LOOK),
     SettingsEntry("settings_appearance", "Wallpaper", "Wallpaper, wave & background motion", SettingsSectionId.LOOK),
     // owner, 2026-10-07: every crossbar setting in one tab; its categories open from there
     SettingsEntry("settings_layout", "Crossbar", "Sizes, rows, Last Played, status bar, categories & icons", SettingsSectionId.LOOK),
@@ -67,6 +66,10 @@ val SETTINGS_CATALOG: List<SettingsEntry> = listOf(
     SettingsEntry("settings_backup", "Backup & Restore", "Export & import", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_performance", "Performance", "Thermal & battery saver", SettingsSectionId.SYSTEM),
     SettingsEntry("settings_credits", "Credits", "Artwork & attributions", SettingsSectionId.SYSTEM),
+
+    // owner, 2026-10-07: the theme store is a full panel; parts are taken on each theme's page, which replaced the
+    // Mix screen. owner, 2026-10-09: its own section, before Setup
+    SettingsEntry("settings_theme_store", "Store", "Saved and online themes, and your look", SettingsSectionId.STORE),
 
     SettingsEntry("settings_initial_setup", "Setup Wizard", "Guided folder & account setup", SettingsSectionId.SETUP),
 )

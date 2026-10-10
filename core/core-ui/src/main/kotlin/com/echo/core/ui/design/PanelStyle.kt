@@ -65,6 +65,7 @@ fun panelSectionTint(section: SettingsSectionId?): Color = when (section) {
     SettingsSectionId.CONTROLS -> Color(0xFF2C5FD8)
     SettingsSectionId.ACCOUNTS -> Color(0xFF2A8A9A)
     SettingsSectionId.SYSTEM -> Color(0xFF4A5470)
+    SettingsSectionId.STORE -> Color(0xFFB0367A)
     SettingsSectionId.SETUP -> Color(0xFFC0632A)
     null -> Color(0xFF222222)
 }

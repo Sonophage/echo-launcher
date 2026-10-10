@@ -566,7 +566,7 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 | <img src="docs/screenshots/settings-look-and-feel.jpg" width="420"> | <img src="docs/screenshots/theme-color-scheme.jpg" width="420"> |
 | Look | Colour Scheme, previewed on the live crossbar |
 | <img src="docs/screenshots/theme-store.jpg" width="420"> | <img src="docs/screenshots/theme-page.jpg" width="420"> |
-| Look ▸ Store: themes online and on this device | A theme's page: take all of it, or only the parts you want |
+| Settings ▸ Store: themes online and on this device | A theme's page: take all of it, or only the parts you want |
 | <img src="docs/screenshots/settings-controller.jpg" width="420"> | <img src="docs/screenshots/glyphs-playstation.jpg" width="420"> |
 | Controller ▸ Type picks the button glyphs | The same screen with PlayStation glyphs |
 | <img src="docs/screenshots/settings-touch.jpg" width="420"> | <img src="docs/screenshots/settings-wallpaper.jpg" width="420"> |
@@ -574,7 +574,7 @@ Paths are in *Settings*; **≡** is the Y button (long-press on touch).
 | <img src="docs/screenshots/settings-layout.jpg" width="420"> | <img src="docs/screenshots/settings-sound.jpg" width="420"> |
 | Crossbar: sizes and position, rows, Last Played, the top bar, categories and icons | Sound: menu sounds and your own menu music |
 
-### Theme store — *Look ▸ Store*
+### Theme store — *Settings ▸ Store*
 
 A hero shows the theme in focus, over two shelves of cards: **Online** (the
 [echo-themes](https://github.com/Sonophage/echo-themes) store, each marked New, Update or Downloaded) and
