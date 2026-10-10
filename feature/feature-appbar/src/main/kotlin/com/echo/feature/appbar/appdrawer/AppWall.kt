@@ -11,6 +11,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import com.echo.core.ui.design.AppIconWatermark
 import com.echo.core.ui.design.ShelfRoom
 import com.echo.core.ui.design.DRAWER_LOGO_SHARE
 import com.echo.core.ui.design.DRAWER_MARK_SHARE
@@ -103,8 +104,7 @@ internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits,
                 app?.art != null -> AsyncImage(rememberBlurSourceModel(app.art), null, contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().blur(u.dp(28)).graphicsLayer(alpha = 0.25f))
                 // owner, 2026-10-09: the app's icon, large and faint, in the bottom left corner
-                icon != null -> Image(icon.bitmap, null, Modifier.align(Alignment.BottomStart).offset(u.dp(-90), u.dp(110))
-                    .size(u.dp(520)).rotate(-12f).graphicsLayer(alpha = 0.09f))
+                icon != null -> AppIconWatermark(icon.bitmap, u.dp(520))
             }
             Box(Modifier.fillMaxSize().vignette())
         }

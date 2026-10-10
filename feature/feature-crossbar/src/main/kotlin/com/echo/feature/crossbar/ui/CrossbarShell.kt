@@ -729,11 +729,14 @@ fun CrossbarShell(
                             is CrossbarBackdrop.AppIcon -> CrossbarAppIconBackdrop(
                                 packageName = bg.packageName,
                                 fallbackAccent = crossbarGameAccent,
+                                overWallpaper = true,
                             )
                             null -> Unit
                         }
 
-                        if (bg !is CrossbarBackdrop.AppIcon) {
+                        // owner, 2026-10-09: an app's backdrop takes the same scrim as art, so the wallpaper under
+                        // it shows, tinted
+                        run {
                             val scrimBase = androidx.compose.ui.graphics.lerp(
                                 Color(0xFF05050C), crossbarGameAccent, 0.22f,
                             )

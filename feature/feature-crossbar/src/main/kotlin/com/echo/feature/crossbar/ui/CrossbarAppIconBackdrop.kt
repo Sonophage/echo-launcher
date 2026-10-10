@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.lerp
+import com.echo.core.ui.design.AppIconWatermark
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.themekit.AccentDeriver
 import com.echo.themekit.ArgbImage
@@ -43,13 +44,26 @@ fun appIconAccent(icon: ImageBitmap): Color? {
     return AccentDeriver.deriveAccent(ArgbImage(icon.width, icon.height, pixels))?.let { Color(it) }
 }
 
+// [overWallpaper]: the crossbar draws the wallpaper under it and its own app-coloured scrim over it, so the backdrop
+// is only the app's icon, faint in the corner (owner, 2026-10-09: the wallpaper shows, tinted). Elsewhere (Recent,
+// over black) it is the solid gradient, which alone keeps white text readable
 @Composable
 fun CrossbarAppIconBackdrop(
     packageName: String,
     fallbackAccent: Color,
     modifier: Modifier = Modifier,
+    overWallpaper: Boolean = false,
 ) {
-    val accent = rememberAppIcon(packageName, sizePx = SOURCE_PX, colorOf = ::appIconAccent)?.color ?: fallbackAccent
-
-    Box(modifier.fillMaxSize().background(Brush.linearGradient(appBackdropStops(accent))))
+    val icon = rememberAppIcon(packageName, sizePx = SOURCE_PX, colorOf = ::appIconAccent)
+    val accent = icon?.color ?: fallbackAccent
+    if (overWallpaper) {
+        androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize()) {
+            icon?.let { AppIconWatermark(it.bitmap, maxHeight * WATERMARK_SHARE) }
+        }
+    } else {
+        Box(modifier.fillMaxSize().background(Brush.linearGradient(appBackdropStops(accent))))
+    }
 }
+
+// the corner icon as a share of the screen's height
+private const val WATERMARK_SHARE = 0.75f
