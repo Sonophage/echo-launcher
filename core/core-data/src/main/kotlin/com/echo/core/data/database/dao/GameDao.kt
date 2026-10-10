@@ -256,6 +256,10 @@ interface GameDao {
     @Query("UPDATE games SET is_missing = 1 WHERE rom_path IN (:romPaths)")
     suspend fun markMissing(romPaths: List<String>)
 
+    // the highest id ever given a game; ids are AUTOINCREMENT, so never reused
+    @Query("SELECT seq FROM sqlite_sequence WHERE name = 'games'")
+    suspend fun lastIssuedId(): Long?
+
     @Query("DELETE FROM games WHERE platform_id = :platformId AND is_missing = 1")
     suspend fun deleteMissing(platformId: String): Int
 

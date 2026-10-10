@@ -14,13 +14,16 @@ class GoneGameArtworkSweep @Inject constructor(
     private val internal: InternalArtworkStore,
 ) {
     suspend fun run(): Int {
+        // read first: a game added after it gets a higher id (ids are never reused), and its art may already be
+        // saved, so it is spared. Not the highest live id: the newest game, once deleted, kept its art (seen on
+        // the Konker, 2026-10-10)
+        val issued = gameDao.lastIssuedId() ?: 0L
         val live = gameDao.getAll().mapTo(HashSet()) { it.id }
-        // a game added after this read has a higher id, and its art may already be saved; spare it
         val report = internal.reapUnreferenced(
             referenced = references.all(),
             liveGameIds = live,
             keptKinds = ArtworkKind.entries.toSet(),
-            spareAbove = live.maxOrNull() ?: 0L,
+            spareAbove = issued,
         )
         if (report.deleted > 0) Timber.i("Artwork of removed games: ${report.deleted} files, ${report.bytes} bytes")
         return report.deleted
