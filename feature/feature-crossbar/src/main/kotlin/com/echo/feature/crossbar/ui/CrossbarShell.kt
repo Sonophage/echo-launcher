@@ -100,7 +100,8 @@ import com.echo.core.ui.components.EchoContextMenuOverlay
 import com.echo.core.ui.components.HintBarHeight
 import com.echo.core.ui.components.StatusStripHeight
 import com.echo.core.ui.components.DiscLaunchCeremony
-import com.echo.core.ui.components.CrossbarLetterRail
+import com.echo.core.ui.components.SideRail
+import com.echo.core.ui.components.letterRungs
 import com.echo.core.ui.components.letterAnchors
 import com.echo.core.ui.components.ControllerHintEdgeGap
 import com.echo.core.ui.preview.DevicePreviews
@@ -1169,9 +1170,9 @@ fun CrossbarShell(
             val rootActionsVisible = uiState.stripShowsCrossbarContext && !uiState.isInSubItem
 
             if (uiState.stripShowsCrossbarContext && chromeFade > 0f) {
-                CrossbarLetterRail(
+                SideRail(
                     letters = remember(uiState.currentItems) {
-                        letterAnchors(uiState.currentItems.map { it.title })?.map { it.letter }.orEmpty()
+                        letterRungs(letterAnchors(uiState.currentItems.map { it.title })?.map { it.letter }.orEmpty())
                     },
                     cursor = uiState.letterJump?.cursor,
                     onTouch = onLetterRailTouch,

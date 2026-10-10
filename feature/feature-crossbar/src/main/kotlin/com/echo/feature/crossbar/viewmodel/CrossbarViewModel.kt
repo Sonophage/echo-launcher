@@ -79,6 +79,7 @@ import com.echo.feature.crossbar.gamepad.GamepadInputHandler
 import com.echo.core.ui.components.LetterJumpState
 import com.echo.core.ui.components.at
 import com.echo.core.ui.components.move
+import com.echo.feature.crossbar.gamepad.RailStick
 import com.echo.feature.crossbar.gamepad.ShoulderHold
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -2637,6 +2638,17 @@ class CrossbarViewModel @Inject constructor(
                 if (released == GamepadAction.SELECT && _uiState.value.activeAppDrawerFilter != null) {
                     _uiState.update { it.copy(drawerSelectReleases = it.drawerSelectReleases + 1) }
                 }
+            }
+        }
+        viewModelScope.launch {
+            // the right stick opens the side rail as a held shoulder does; its steps arrive as up and down
+            gamepadInputHandler.railStick.collect { stick ->
+                markControllerInput()
+                onUserInteraction()
+                val open = stick is RailStick.Open
+                if (_uiState.value.activeAppDrawerFilter != null) {
+                    _uiState.update { it.copy(drawerLetterRailHeld = open) }
+                } else if (open) openLetterJump() else closeLetterJump()
             }
         }
         viewModelScope.launch {

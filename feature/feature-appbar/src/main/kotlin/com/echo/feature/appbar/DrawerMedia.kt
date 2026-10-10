@@ -71,14 +71,14 @@ internal fun mediaChips(cases: List<InstalledApp>, by: MediaGrouping): List<Syst
 internal fun List<InstalledApp>.ofMediaChip(id: String?, by: MediaGrouping): List<InstalledApp> =
     if (id == null) this else filter { DrawerMediaChipKey(it, by) == id }
 
-// what X says it will do next in a media section
+// X's hint in a media section: the grouping the rail shows now (owner, 2026-10-09: it named the next one)
 internal fun mediaGroupingHint(section: AppFilter, by: MediaGrouping): String? {
-    val (maker, title) = when (section) {
-        AppFilter.MUSIC -> "Artist" to "Album"
-        AppFilter.BOOKS -> "Author" to "Title"
+    val (maker, titles) = when (section) {
+        AppFilter.MUSIC -> "By Artist" to "Albums A–Z"
+        AppFilter.BOOKS -> "By Author" to "Titles A–Z"
         else -> return null
     }
-    return "Group by " + when (by.next) { MediaGrouping.MAKER -> maker; MediaGrouping.TITLE -> title; MediaGrouping.GENRE -> "Genre" }
+    return when (by) { MediaGrouping.MAKER -> maker; MediaGrouping.TITLE -> titles; MediaGrouping.GENRE -> "By Genre" }
 }
 
 // "12/40", or nothing when the game has no set or the set is empty

@@ -2,6 +2,9 @@ package com.echo.core.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -141,15 +145,46 @@ fun rungAt(along: Float, extent: Float, spanPx: Float, pitchPx: Float, rungCount
     return ((along - lead) / pitchPx).toInt().coerceIn(0, rungCount - 1)
 }
 
+// the item a finger at [along] picks: the rung under it, and within a rung that stands for several items (an
+// initial's artists) its place down the rung picks among them, so every item is reachable and the glyph under the
+// finger is always the chosen item's
+fun railItemAt(along: Float, extent: Float, spanPx: Float, pitchPx: Float, drawn: List<Int>, count: Int): Int {
+    val rung = rungAt(along, extent, spanPx, pitchPx, drawn.size)
+    val start = drawn[rung]
+    val end = drawn.getOrNull(rung + 1) ?: count
+    val lead = (extent - spanPx) / 2f
+    val within = ((along - lead - rung * pitchPx) / pitchPx).coerceIn(0f, 0.999f)
+    return (start + (within * (end - start)).toInt()).coerceIn(start, (end - 1).coerceAtLeast(start))
+}
+
+// the glyph each drawn rung shows. On a screen too short for every initial a rung stands for several, so the chosen
+// rung shows the chosen item's own glyph: J for Jhené Aiko, not the I its rung starts at (seen on the Konker)
+fun railGlyphs(letters: List<RailRung>, rungs: List<Int>, cursor: Int?): List<String> {
+    val active = cursor?.let { c -> rungs.indexOfLast { it <= c }.coerceAtLeast(0) }
+    return rungs.mapIndexed { rung, item -> letters[if (rung == active) cursor!! else item].glyph }
+}
+
+// the first item of each run of one glyph: one rung per initial, as the letter rail has
+fun glyphRuns(rungs: List<RailRung>): List<Int> =
+    rungs.indices.filter { it == 0 || rungs[it].glyph != rungs[it - 1].glyph }
+
+// one rung: [glyph] is drawn on the rail, a letter or a group's initial; [name] is shown beside the chosen rung when
+// it says more than the glyph (a system, a genre, an artist)
+data class RailRung(val glyph: String, val name: String = glyph)
+
+fun letterRungs(letters: List<Char>): List<RailRung> = letters.map { RailRung(it.toString()) }
+
 fun letterMenuFor(titles: List<String>): List<Char> {
     if (titles.size < LETTER_JUMP_MIN_ITEMS) return emptyList()
     val letters = titles.map(::initialOf).distinct().sorted()
     return if (letters.size < LETTER_JUMP_MIN_LETTERS) emptyList() else letters
 }
 
+// owner, 2026-10-09: one side rail for letters and for groups. The crossbar's jumps to a letter; the App Drawer's
+// filters by a letter, or by a system, genre, artist or album when its section has groups
 @Composable
-fun CrossbarLetterRail(
-    letters: List<Char>,
+fun SideRail(
+    letters: List<RailRung>,
     cursor: Int?,
     onTouch: (Int) -> Unit,
     onReleased: () -> Unit,
@@ -163,10 +198,12 @@ fun CrossbarLetterRail(
         // owner, 2026-10-05: the rail sits on the screen's centre line, clear of the header and the footer: the
         // same margin above and below, with room for the chosen letter to grow at either end
         val edge = maxOf(top, bottom)
-        val firstPass = railMetrics(maxHeight - edge * 2, letters.size)
+        val railHeight = maxHeight
+        val runs = remember(letters) { glyphRuns(letters) }
+        val firstPass = railMetrics(maxHeight - edge * 2, runs.size)
         val growth = firstPass.badge * (ACTIVE_SCALE - 1f) / 2f
-        val metrics = railMetrics(maxHeight - (edge + growth) * 2, letters.size)
-        val rungs = remember(letters.size, metrics.rungs) { bucketIndices(letters.size, metrics.rungs) }
+        val metrics = railMetrics(maxHeight - (edge + growth) * 2, runs.size)
+        val rungs = remember(runs, metrics.rungs) { bucketIndices(runs.size, metrics.rungs).map { runs[it] } }
 
         if (cursor != null) {
             Box(
@@ -185,32 +222,93 @@ fun CrossbarLetterRail(
                 ) {
                     Rungs(letters, rungs, cursor, metrics)
                 }
+                // the chosen group's full name, beside its rung
+                cursor?.let { letters.getOrNull(it) }?.takeIf { it.name != it.glyph }?.let { rung ->
+                    val active = rungs.indexOfLast { it <= cursor }.coerceAtLeast(0)
+                    val span = metrics.badge * rungs.size + metrics.gap * (rungs.size - 1)
+                    val lead = (railHeight - span) / 2
+                    RailName(
+                        rung.name,
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(end = RailEdgeGap + metrics.badge * ACTIVE_SCALE + RailEdgeGap)
+                            .offset { androidx.compose.ui.unit.IntOffset(0, (lead + metrics.pitch * active + metrics.badge / 2).roundToPx()) }
+                            .graphicsLayer { translationY = -size.height / 2 },
+                    )
+                }
             }
         }
 
+        // owner, 2026-10-09: while the rail waits, a soft glow on the screen's edge at its middle, slowly pulsing,
+        // shows it is there
+        if (cursor == null) RailCue(Modifier.align(Alignment.CenterEnd).width(RailEdgeZone).height(railHeight * RAIL_CUE_SHARE))
         Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .fillMaxHeight()
                 .width(RailEdgeZone)
                 .padding(top = edge + growth, bottom = edge + growth)
-                .railSlide(rungs, metrics, onTouch = onTouch, onReleased = onReleased),
+                .railSlide(rungs, letters.size, metrics, onTouch = onTouch, onReleased = onReleased),
         )
     }
 }
 
+// the rail's cue: a half-glow hugging the right edge, breathing between faint and soft
+@Composable
+private fun RailCue(modifier: Modifier) {
+    val breath by androidx.compose.animation.core.rememberInfiniteTransition(label = "railCue").animateFloat(
+        initialValue = RAIL_CUE_MIN_ALPHA,
+        targetValue = RAIL_CUE_MAX_ALPHA,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            tween(RAIL_CUE_BREATH_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            androidx.compose.animation.core.RepeatMode.Reverse,
+        ),
+        label = "railCueBreath",
+    )
+    Box(modifier.drawBehind {
+        val reach = size.height / 2
+        drawCircle(
+            androidx.compose.ui.graphics.Brush.radialGradient(
+                listOf(Color.White.copy(alpha = breath), Color.Transparent),
+                center = Offset(size.width, size.height / 2), radius = reach,
+            ),
+            radius = reach, center = Offset(size.width, size.height / 2),
+        )
+    })
+}
+
+private const val RAIL_CUE_SHARE = 0.32f
+private const val RAIL_CUE_MIN_ALPHA = 0.07f
+private const val RAIL_CUE_MAX_ALPHA = 0.24f
+private const val RAIL_CUE_BREATH_MS = 2200
+
+@Composable
+private fun RailName(name: String, modifier: Modifier) {
+    Text(
+        name,
+        color = Color.White,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 1,
+        modifier = modifier
+            .background(Color.Black.copy(alpha = 0.72f), androidx.compose.foundation.shape.RoundedCornerShape(50))
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+    )
+}
+
 @Composable
 private fun Rungs(
-    letters: List<Char>,
+    letters: List<RailRung>,
     rungs: List<Int>,
     cursor: Int?,
     metrics: RailMetrics,
 ) {
     val activeRung = cursor?.let { c -> rungs.indexOfLast { it <= c }.coerceAtLeast(0) }
-    rungs.forEachIndexed { rung, letter ->
+    val glyphs = railGlyphs(letters, rungs, cursor)
+    rungs.forEachIndexed { rung, _ ->
         val wave = activeRung?.let { railWave(rung - it) } ?: 0f
         RailLetter(
-            letter = letters[letter],
+            glyph = glyphs[rung],
             wave = wave,
             metrics = metrics,
             modifier = Modifier.zIndex(wave),
@@ -220,7 +318,7 @@ private fun Rungs(
 
 @Composable
 private fun RailLetter(
-    letter: Char,
+    glyph: String,
     wave: Float,
     metrics: RailMetrics,
     modifier: Modifier = Modifier,
@@ -238,7 +336,7 @@ private fun RailLetter(
             },
     ) {
         Text(
-            text = letter.toString(),
+            text = glyph,
             color = Color.White,
             fontSize = metrics.glyph,
             fontWeight = if (wave >= 1f) FontWeight.Bold else FontWeight.Medium,
@@ -248,10 +346,11 @@ private fun RailLetter(
 
 private fun Modifier.railSlide(
     rungs: List<Int>,
+    count: Int,
     metrics: RailMetrics,
     onTouch: (Int) -> Unit,
     onReleased: () -> Unit,
-): Modifier = pointerInput(rungs, metrics) {
+): Modifier = pointerInput(rungs, count, metrics) {
     val geometry = geometryOf(metrics)
     val slop = viewConfiguration.touchSlop
     awaitEachGesture {
@@ -266,7 +365,7 @@ private fun Modifier.railSlide(
                 sliding = abs(dy) > slop && abs(dy) > abs(dx)
             }
             if (sliding) {
-                report(change.position, geometry, rungs, onTouch)
+                report(change.position, geometry, rungs, count, onTouch)
                 change.consume()
             }
         }
@@ -285,7 +384,8 @@ private fun PointerInputScope.report(
     at: Offset,
     geometry: RailGeometry,
     rungs: List<Int>,
+    count: Int,
     onTouch: (Int) -> Unit,
 ) {
-    onTouch(rungs[rungAt(at.y, size.height.toFloat(), geometry.spanPx, geometry.pitchPx, rungs.size)])
+    onTouch(railItemAt(at.y, size.height.toFloat(), geometry.spanPx, geometry.pitchPx, rungs, count))
 }

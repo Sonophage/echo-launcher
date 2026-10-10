@@ -53,13 +53,15 @@ class SystemFilterTest {
         assertEquals("systems as before", listOf("rom:5"), list.ofChip("snes", byGenre = false).map { it.packageName })
     }
 
-    // owner, 2026-10-08: X in the drawer's Games section switches systems and genres, and says which it will do
+    // owner, 2026-10-08: X in the drawer's Games section switches systems and genres, and says which it will do;
+    // owner, 2026-10-09: then A to Z, then back to systems; the hint names the grouping in use, as the rail shows it
     @Test
-    fun `X groups in the Games section only, and the hint names the other grouping`() {
+    fun `X groups in the Games section only, and the hint names the grouping the rail shows`() {
         assertEquals(true, groupingToggleApplies(com.echo.core.domain.model.GamepadAction.CHANGE_SORT, AppFilter.GAMES))
         assertEquals(false, groupingToggleApplies(com.echo.core.domain.model.GamepadAction.CHANGE_SORT, AppFilter.APPS))
         assertEquals(false, groupingToggleApplies(com.echo.core.domain.model.GamepadAction.SELECT, AppFilter.GAMES))
-        assertEquals("Group by Genre", groupingHintLabel(byGenre = false))
-        assertEquals("Group by System", groupingHintLabel(byGenre = true))
+        assertEquals("By System", groupingHintLabel(byGenre = false))
+        assertEquals("By Genre", groupingHintLabel(byGenre = true))
+        assertEquals("A–Z", groupingHintLabel(byGenre = true, byLetter = true))
     }
 }

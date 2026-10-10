@@ -153,10 +153,21 @@ data class AppDrawerUiState(
     val genreFilter: com.echo.core.domain.model.GameGenre? = null,
     // the Game column is grouped by genre, so the Games section's buttons are genres
     val chipsByGenre: Boolean = false,
-
-    val chipFocus: Boolean = false,
+    // owner, 2026-10-09: X's third step in Games, after systems and genres: the rail shows letters
+    val gamesByLetter: Boolean = false,
 
 ) {
+    // owner, 2026-10-09: the side rail is the section's groups when it has them (systems or genres in Games;
+    // artists, albums or genres in Music; authors in Books), else its letters. Either way it filters
+    val railByGroup: Boolean get() = showSystemChips && !(activeFilter == AppFilter.GAMES && gamesByLetter)
+    val railRungs: List<com.echo.core.ui.components.RailRung> get() =
+        if (railByGroup) systemChips.map { com.echo.core.ui.components.RailRung(if (it.id == null) ALL_GLYPH else initialOf(it.label).toString(), it.label) }
+        else com.echo.core.ui.components.letterRungs(letterMenu)
+    // the rung of the filter in use
+    val railPick: Int get() =
+        if (railByGroup) systemChips.indexOfFirst { it.id == systemFilter }.coerceAtLeast(0)
+        else letterMenu.indexOf(letterFilter).coerceAtLeast(0)
+
     // owner, 2026-10-08: grouped by genre the buttons show even with one genre, so X visibly does something;
     // systems, artists and authors still need two to be worth a row
     val showSystemChips: Boolean get() = when (activeFilter) {
@@ -189,6 +200,33 @@ data class AppDrawerUiState(
         selectedIndex = 0,
     )
 }
+
+// X's next grouping in Music or Books: the next one with groups to show, so the hint never names a grouping the rail
+// cannot draw; with none to show it simply steps on
+internal fun nextMediaGrouping(state: AppDrawerUiState, cases: List<InstalledApp>): MediaGrouping =
+    generateSequence(state.mediaGrouping.next) { it.next }.take(MediaGrouping.entries.size)
+        .firstOrNull { by -> state.copy(mediaGrouping = by, systemChips = mediaChips(cases, by)).showSystemChips }
+        ?: state.mediaGrouping.next
+
+// the rail's filter in use: a group's id, or a letter
+internal val AppDrawerUiState.railFilter: Any? get() = if (railByGroup) systemFilter else letterFilter
+
+// the filter in use as words, for the footer beside the section; null when the rail shows everything
+internal val AppDrawerUiState.railFilterName: String? get() =
+    if (railByGroup) systemChips.firstOrNull { it.id != null && it.id == systemFilter }?.label else letterFilter?.toString()
+
+internal fun AppDrawerUiState.withRailFilter(value: Any?): AppDrawerUiState =
+    if (railByGroup) copy(systemFilter = value as String?) else copy(letterFilter = value as Char?)
+
+internal fun AppDrawerUiState.withRailRung(rung: Int): AppDrawerUiState =
+    if (railByGroup) copy(systemFilter = systemChips.getOrNull(rung)?.id) else copy(letterFilter = letterMenu.getOrNull(rung))
+
+// owner, 2026-10-09: the rail lists groups A to Z by name, All first, so its letters run in order
+internal fun byName(chips: List<SystemChip>): List<SystemChip> =
+    chips.filter { it.id == null } + chips.filter { it.id != null }.sortedBy { it.label.lowercase() }
+
+// the All rung's mark on the rail
+internal const val ALL_GLYPH = "•"
 
 @HiltViewModel
 class AppDrawerViewModel @Inject constructor(
@@ -280,42 +318,13 @@ class AppDrawerViewModel @Inject constructor(
 
     fun setFilter(filter: AppFilter) {
         if (filter != _uiState.value.activeFilter) menuSound.play(MenuSound.SYSTEM_BROWSE)
-        _uiState.update { it.copy(activeFilter = filter, selectedIndex = 0, letterFilter = null, systemFilter = null, chipFocus = false) }
+        _uiState.update { it.copy(activeFilter = filter, selectedIndex = 0, letterFilter = null, systemFilter = null) }
         applyFilter()
-    }
-
-    fun selectSystem(id: String?) {
-        if (id != _uiState.value.systemFilter) menuSound.play(MenuSound.SYSTEM_BROWSE)
-        _uiState.update { it.copy(systemFilter = id, selectedIndex = 0) }
-        applyFilter()
-    }
-
-    // owner, 2026-10-04: LB/RB walk the Games tab's system filters
-    fun onSystemChipTapped(id: String?) {
-        _uiState.update { it.copy(usingTouch = true) }
-        selectSystem(id)
-    }
-
-    private fun handleChipRow(action: GamepadAction) {
-        val state = _uiState.value
-        val chips = state.systemChips
-        val at = chips.indexOfFirst { it.id == state.systemFilter }.coerceAtLeast(0)
-        when (action) {
-            GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT -> {
-                val next = (at + if (action == GamepadAction.NAVIGATE_LEFT) -1 else 1).coerceIn(0, chips.lastIndex)
-                if (next != at) selectSystem(chips[next].id)
-            }
-            GamepadAction.NAVIGATE_DOWN, GamepadAction.SELECT -> {
-                menuSound.play(MenuSound.SCROLL)
-                _uiState.update { it.copy(chipFocus = false) }
-            }
-            else -> Unit
-        }
     }
 
     fun onAppTapped(index: Int) {
         if (index != _uiState.value.selectedIndex) menuSound.play(MenuSound.SCROLL)
-        _uiState.update { it.copy(selectedIndex = index, usingTouch = true, chipFocus = false) }
+        _uiState.update { it.copy(selectedIndex = index, usingTouch = true) }
     }
 
     fun launchApp(packageName: String) {
@@ -344,11 +353,32 @@ class AppDrawerViewModel @Inject constructor(
     fun onMediaMenuHandled() = _uiState.update { it.copy(pendingMediaMenu = null) }
 
     // X in Music or Books: artists or authors, then album or title letters, then genres
-    fun toggleMediaGrouping() {
+    // X in Games: systems, then genres, then A to Z. Systems and genres are the Game column's grouping, which
+    // [toggleColumn] flips (owner, 2026-10-08); A to Z is the drawer's own
+    fun cycleGamesGrouping(toggleColumn: () -> Unit) {
         menuSound.play(MenuSound.SELECT)
-        _uiState.update { it.copy(mediaGrouping = it.mediaGrouping.next, systemFilter = null, selectedIndex = 0) }
+        val state = _uiState.value
+        when {
+            state.gamesByLetter -> { _uiState.update { it.copy(gamesByLetter = false, letterFilter = null, selectedIndex = 0) }; toggleColumn() }
+            state.chipsByGenre -> _uiState.update { it.copy(gamesByLetter = true, systemFilter = null, selectedIndex = 0) }
+            else -> toggleColumn()
+        }
         applyFilter()
     }
+
+    // owner, 2026-10-09: X skips a grouping with nothing to show (no genre tags), so the hint always names what the
+    // rail shows; with none to show, the rail falls back to letters and the hint said By Genre over them
+    fun toggleMediaGrouping() {
+        menuSound.play(MenuSound.SELECT)
+        val next = nextMediaGrouping(_uiState.value, tabApps(_uiState.value))
+        _uiState.update { it.copy(mediaGrouping = next, systemFilter = null, selectedIndex = 0) }
+        applyFilter()
+    }
+
+    // the section's cases before any rail filter; the genre narrows Games first, so each system counts what it shows
+    private fun tabApps(state: AppDrawerUiState): List<InstalledApp> =
+        state.allApps.filter { app -> state.activeFilter.matches(app) }
+            .let { if (state.activeFilter == AppFilter.GAMES) it.ofGenre(state.genreFilter) else it }
 
     fun onGameMenuHandled() = _uiState.update { it.copy(pendingGameMenu = null) }
 
@@ -480,10 +510,9 @@ class AppDrawerViewModel @Inject constructor(
     fun openLetterJump() {
         val state = _uiState.value
         if (state.menuApp != null || state.confirmUninstall != null || state.letterCursor != null) return
-        if (state.letterMenu.isEmpty()) return
-        val start = state.letterMenu.indexOf(state.letterFilter).coerceAtLeast(0)
-        filterAtGestureStart = state.letterFilter
-        landOn(start)
+        if (state.railRungs.isEmpty()) return
+        filterAtGestureStart = state.railFilter
+        landOn(state.railPick)
     }
 
     fun closeLetterJump() = _uiState.update { it.copy(letterCursor = null) }
@@ -491,8 +520,8 @@ class AppDrawerViewModel @Inject constructor(
     fun onLetterRailTouch(rung: Int) {
         val state = _uiState.value
         if (state.menuApp != null || state.confirmUninstall != null) return
-        if (rung !in state.letterMenu.indices) return
-        if (state.letterCursor == null) filterAtGestureStart = state.letterFilter
+        if (rung !in state.railRungs.indices) return
+        if (state.letterCursor == null) filterAtGestureStart = state.railFilter
         if (state.letterCursor == rung) return
         landOn(rung)
     }
@@ -500,23 +529,24 @@ class AppDrawerViewModel @Inject constructor(
     fun onLetterRailReleased() {
         val state = _uiState.value
         if (state.letterCursor == null) return
-        val landed = state.letterFilter
-        val keep = if (landed != null && landed == filterAtGestureStart) null else landed
-        _uiState.update { it.copy(letterCursor = null, letterFilter = keep) }
+        // landing where the gesture began takes the filter off
+        val landed = state.railFilter
+        val clear = landed != null && landed == filterAtGestureStart
+        _uiState.update { if (clear) it.withRailFilter(null).copy(letterCursor = null) else it.copy(letterCursor = null) }
         applyFilter()
     }
 
     fun clearLetterFilter() {
-        if (_uiState.value.letterFilter == null) return
+        if (_uiState.value.railFilter == null) return
         menuSound.play(MenuSound.BACK)
-        _uiState.update { it.copy(letterFilter = null, selectedIndex = 0) }
+        _uiState.update { it.withRailFilter(null).copy(selectedIndex = 0) }
         applyFilter()
     }
 
     private fun moveLetterJump(delta: Int) {
         val state = _uiState.value
         val cursor = state.letterCursor ?: return
-        val next = (cursor + delta).coerceIn(0, state.letterMenu.lastIndex)
+        val next = (cursor + delta).coerceIn(0, state.railRungs.lastIndex)
         if (next == cursor) return
         landOn(next)
     }
@@ -524,9 +554,8 @@ class AppDrawerViewModel @Inject constructor(
     private fun landOn(rung: Int) {
         menuSound.play(MenuSound.SCROLL)
         _uiState.update {
-            it.copy(
+            it.withRailRung(rung).copy(
                 letterCursor = rung,
-                letterFilter = it.letterMenu.getOrNull(rung),
                 selectedIndex = 0,
                 usingTouch = false,
             )
@@ -534,7 +563,7 @@ class AppDrawerViewModel @Inject constructor(
         applyFilter()
     }
 
-    private var filterAtGestureStart: Char? = null
+    private var filterAtGestureStart: Any? = null
 
     private var launchHold: kotlinx.coroutines.Job? = null
 
@@ -587,7 +616,7 @@ class AppDrawerViewModel @Inject constructor(
                 GamepadAction.NAVIGATE_UP   -> moveLetterJump(-1)
                 GamepadAction.NAVIGATE_DOWN -> moveLetterJump(+1)
                 GamepadAction.BACK -> {
-                    _uiState.update { it.copy(letterCursor = null, letterFilter = filterAtGestureStart) }
+                    _uiState.update { it.withRailFilter(filterAtGestureStart).copy(letterCursor = null) }
                     applyFilter()
                 }
                 else -> Unit
@@ -630,12 +659,6 @@ class AppDrawerViewModel @Inject constructor(
             return
         }
 
-        if (state.chipFocus) {
-            if (state.usingTouch) _uiState.update { it.copy(usingTouch = false) }
-            handleChipRow(action)
-            return
-        }
-
         val size  = state.visibleApps.size
         if (size == 0) return
 
@@ -649,10 +672,7 @@ class AppDrawerViewModel @Inject constructor(
                 val cells = wallLayout(size)
                 val next = wallMove(action, cur, cells)
 
-                if (next == cur && action == GamepadAction.NAVIGATE_UP && state.showSystemChips && cells[cur].row == 0) {
-                    menuSound.play(MenuSound.SCROLL)
-                    _uiState.update { it.copy(chipFocus = true) }
-                } else if (next != cur) {
+                if (next != cur) {
                     _uiState.update { it.copy(selectedIndex = next) }
                     menuSound.play(MenuSound.SCROLL)
                 }
@@ -677,14 +697,14 @@ class AppDrawerViewModel @Inject constructor(
         val state = _uiState.value
 
         // the genre narrows the Games section first, so each system chip counts what it will show
-        val tabApps = state.allApps.filter { app -> state.activeFilter.matches(app) }
-            .let { if (state.activeFilter == AppFilter.GAMES) it.ofGenre(state.genreFilter) else it }
+        val tabApps = tabApps(state)
         val chips = when (state.activeFilter) {
             AppFilter.GAMES -> if (state.chipsByGenre) genreChips(tabApps) else systemChips(tabApps)
             AppFilter.MUSIC, AppFilter.BOOKS -> mediaChips(tabApps, state.mediaGrouping)
             else -> emptyList()
-        }
-        val system = state.systemFilter?.takeIf { id -> chips.any { it.id == id } }
+        }.let(::byName)
+        val grouped = state.copy(systemChips = chips).railByGroup
+        val system = state.systemFilter?.takeIf { id -> grouped && chips.any { it.id == id } }
 
         val inTab = if (state.activeFilter.isMedia) tabApps.ofMediaChip(system, state.mediaGrouping)
             else tabApps.ofChip(system, state.chipsByGenre)
@@ -696,7 +716,8 @@ class AppDrawerViewModel @Inject constructor(
                 }
             }
 
-        val letters = letterMenuFor(inTab.map { it.label })
+        // owner, 2026-10-09: no letters where the rail shows groups
+        val letters = if (grouped) emptyList() else letterMenuFor(inTab.map { it.label })
         val pick = state.letterFilter?.takeIf { it in letters }
         val kept = { app: InstalledApp -> pick == null || initialOf(app.label) == pick }
 
@@ -709,7 +730,6 @@ class AppDrawerViewModel @Inject constructor(
                 letterFilter = pick,
                 systemChips = chips,
                 systemFilter = system,
-                chipFocus = it.chipFocus && it.copy(systemChips = chips).showSystemChips,
             )
         }
     }

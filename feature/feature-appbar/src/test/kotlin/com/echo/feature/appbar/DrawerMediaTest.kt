@@ -42,10 +42,10 @@ class DrawerMediaTest {
         assertEquals(listOf("All", "K-Pop"), mediaChips(albums, MediaGrouping.GENRE).map { it.label })
         assertEquals(listOf("Longitudes"), albums.ofMediaChip("L", MediaGrouping.TITLE).map { it.label })
         assertEquals(listOf("Longitudes"), albums.ofMediaChip("Vela Quartet", MediaGrouping.MAKER).map { it.label })
-        assertEquals("Group by Album", mediaGroupingHint(AppFilter.MUSIC, MediaGrouping.MAKER))
-        assertEquals("Group by Genre", mediaGroupingHint(AppFilter.MUSIC, MediaGrouping.TITLE))
-        assertEquals("Group by Artist", mediaGroupingHint(AppFilter.MUSIC, MediaGrouping.GENRE))
-        assertEquals("Group by Title", mediaGroupingHint(AppFilter.BOOKS, MediaGrouping.MAKER))
+        assertEquals("By Artist", mediaGroupingHint(AppFilter.MUSIC, MediaGrouping.MAKER))
+        assertEquals("Albums A–Z", mediaGroupingHint(AppFilter.MUSIC, MediaGrouping.TITLE))
+        assertEquals("By Genre", mediaGroupingHint(AppFilter.MUSIC, MediaGrouping.GENRE))
+        assertEquals("By Author", mediaGroupingHint(AppFilter.BOOKS, MediaGrouping.MAKER))
         assertNull("videos have no grouping", mediaGroupingHint(AppFilter.VIDEOS, MediaGrouping.MAKER))
     }
 
@@ -84,5 +84,15 @@ class DrawerMediaTest {
         )
         assertEquals(listOf("new", "mid", "old"), recentBadges(coins))
         assertEquals(listOf("new", "mid"), recentBadges(coins, max = 2))
+    }
+
+    // owner, 2026-10-09 (seen on the Konker): a library with no genre tags has no genre groups, so the rail fell back
+    // to letters while X's hint said By Genre. X now skips a grouping with nothing to show
+    @Test
+    fun `X skips a grouping with nothing to show, so the hint matches the rail`() {
+        val untagged = albumCases(listOf(t("1", "Halfaxa", "Grimes"), t("2", "Longitudes", "Vela Quartet"), t("3", "Visions", "Grimes")))
+        val onAlbums = AppDrawerUiState(activeFilter = AppFilter.MUSIC, mediaGrouping = MediaGrouping.TITLE)
+        assertEquals(MediaGrouping.MAKER, nextMediaGrouping(onAlbums, untagged))
+        assertEquals("with genre tags, genres come next", MediaGrouping.GENRE, nextMediaGrouping(onAlbums, albums))
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -39,7 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.EchoContextMenuOverlay
 import com.echo.core.ui.components.StatusStripHeight
-import com.echo.core.ui.components.CrossbarLetterRail
+import com.echo.core.ui.components.SideRail
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.preview.CombinedPreviews
@@ -48,7 +49,6 @@ import com.echo.feature.appbar.appdrawer.AppWall
 import com.echo.feature.appbar.appdrawer.UninstallConfirmDialog
 import com.echo.feature.appbar.appdrawer.WallBackdrop
 import com.echo.feature.appbar.appdrawer.WallInfo
-import com.echo.feature.appbar.appdrawer.SystemChipRow
 import com.echo.feature.appbar.appdrawer.actionLabel
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.design.IsTitan2
@@ -115,7 +115,7 @@ fun AppDrawerScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(genreFilter) { viewModel.setGenreFilter(genreFilter) }
     LaunchedEffect(chipsByGenre) { viewModel.setChipsByGenre(chipsByGenre) }
-    val focusedApp = state.visibleApps.getOrNull(state.selectedIndex).takeIf { !state.chipFocus }
+    val focusedApp = state.visibleApps.getOrNull(state.selectedIndex)
     LaunchedEffect(focusedApp) {
         onFocusedApp(focusedApp, { focusedApp?.let { viewModel.launchApp(it.packageName) } }, { focusedApp?.let(viewModel::openAppMenu) })
     }
@@ -142,13 +142,15 @@ fun AppDrawerScreen(
                 overlayOpen -> viewModel.handleGamepadAction(pendingGamepadAction)
 
                 pendingGamepadAction == GamepadAction.BACK ->
-                    if (state.letterFilter != null) viewModel.clearLetterFilter() else closeDrawer()
-                // owner, 2026-10-06: RB is Search, the drawer's own here; LB (Apps) shuts the drawer. The Games
-                // tab's system filters are the chip row above the wall, reached with up
+                    if (state.railFilter != null) viewModel.clearLetterFilter() else closeDrawer()
+                // owner, 2026-10-06: RB is Search, the drawer's own here; LB (Apps) shuts the drawer. A section's
+                // systems, genres or artists are the side rail's rungs (owner, 2026-10-09)
                 pendingGamepadAction == GamepadAction.OPEN_SEARCH ||
                     pendingGamepadAction == GamepadAction.NEXT_PAGE -> onOpenAppSearch("")
                 pendingGamepadAction == GamepadAction.PREV_PAGE -> closeDrawer()
-                groupingToggleApplies(pendingGamepadAction, state.activeFilter) && onToggleGrouping != null -> onToggleGrouping()
+                // X steps systems, genres and A to Z, the same cycle the footer's tap steps
+                groupingToggleApplies(pendingGamepadAction, state.activeFilter) && onToggleGrouping != null ->
+                    viewModel.cycleGamesGrouping(onToggleGrouping)
                 pendingGamepadAction == GamepadAction.CHANGE_SORT && mediaGroupingHint(state.activeFilter, MediaGrouping.MAKER) != null ->
                     viewModel.toggleMediaGrouping()
                 else -> viewModel.handleGamepadAction(pendingGamepadAction)
@@ -244,12 +246,8 @@ fun AppDrawerScreen(
         onMenuRowActivated = viewModel::onMenuRowActivated,
         onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
-        onSystemChip = { id ->
-            onTouchInteraction()
-            viewModel.onSystemChipTapped(id)
-        },
         groupingHint = mediaGroupingHint(state.activeFilter, state.mediaGrouping)?.let { it to viewModel::toggleMediaGrouping }
-            ?: onToggleGrouping?.let { toggle -> groupingHintLabel(chipsByGenre) to toggle },
+            ?: onToggleGrouping?.let { toggle -> groupingHintLabel(chipsByGenre, state.gamesByLetter) to { viewModel.cycleGamesGrouping(toggle) } },
         onCloseMenu = { viewModel.closeAppMenu() },
         onConfirmUninstall = { viewModel.confirmUninstall() },
         onCancelUninstall = { viewModel.cancelUninstall() },
@@ -281,7 +279,6 @@ internal fun AppDrawerContent(
 
     onLetterRailTouch: (Int) -> Unit = {},
     onLetterRailReleased: () -> Unit = {},
-    onSystemChip: (String?) -> Unit = {},
     // the X hint in the Games section and what a tap on it does
     groupingHint: Pair<String, () -> Unit>? = null,
 ) {
@@ -305,7 +302,9 @@ internal fun AppDrawerContent(
             }
             Row(Modifier.weight(1f).fillMaxWidth().padding(start = u.dp(46), end = u.dp(52))) {
                 if (!heroOnOtherScreen && !strip) {
-                    Box(Modifier.width(u.dp(420)).fillMaxHeight().padding(top = u.dp(24))) {
+                    Column(Modifier.width(u.dp(420)).fillMaxHeight().padding(top = u.dp(24)), verticalArrangement = Arrangement.spacedBy(u.dp(16))) {
+                        // owner, 2026-10-09: the page's name over the chosen app, with the rail's filter when one is on
+                        Text(drawerHeading(state).uppercase(), style = u.eyebrow(Color.White.copy(alpha = 0.7f)), maxLines = 1)
                         focused?.let { app ->
                             WallInfo(app, focusedIcon, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
                                 holding = state.holdingPackage == app.packageName, details = state.gameDetails?.takeIf { it.gameId == app.gameId })
@@ -314,16 +313,6 @@ internal fun AppDrawerContent(
                     Spacer(Modifier.width(u.dp(56)))
                 }
                 Column(Modifier.weight(1f).fillMaxHeight().padding(top = u.dp(12))) {
-                    if (state.showSystemChips) {
-                        SystemChipRow(
-                            chips = state.systemChips,
-                            selected = state.systemFilter,
-                            focused = state.chipFocus,
-                            u = u,
-                            onChip = onSystemChip,
-                            modifier = Modifier.fillMaxWidth().padding(bottom = u.dp(4)),
-                        )
-                    }
                     Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                         when {
                             state.isLoading -> EchoTrio(color = Color.White, modifier = Modifier.align(Alignment.Center))
@@ -337,7 +326,7 @@ internal fun AppDrawerContent(
                             }
                             else -> AppWall(
                                 apps = state.visibleApps,
-                                selectedIndex = if (state.chipFocus) -1 else state.selectedIndex,
+                                selectedIndex = state.selectedIndex,
                                 usingTouch = state.usingTouch,
                                 u = u,
                                 onAppTapped = onAppTapped,
@@ -361,7 +350,8 @@ internal fun AppDrawerContent(
                 primary = focused?.let { com.echo.core.ui.components.HintAction(GamepadAction.SELECT, actionLabel(it)) },
                 filter = {
                     com.echo.core.ui.components.TriggerFilter(
-                        sectionLabel(state.activeFilter, state.genreFilter),
+                        // the rail's filter beside the section, since nothing else says the list is narrowed
+                        drawerHeading(state),
                         onTapped = { onFilterSelected(state.activeFilter.stepped(1, state.sections)) },
                     )
                 },
@@ -378,8 +368,8 @@ internal fun AppDrawerContent(
             )
         }
 
-        CrossbarLetterRail(
-            letters = state.letterMenu,
+        SideRail(
+            letters = state.railRungs,
             cursor = state.letterCursor,
             onTouch = onLetterRailTouch,
             onReleased = onLetterRailReleased,
@@ -512,3 +502,8 @@ private fun AppDrawerPreviewContent() {
         onGrantUsageAccess = {},
     )
 }
+
+// the section, the genre the crossbar narrows Games to, and the rail's filter: "Games · NDS", "Music · Jhené Aiko".
+// The footer word and the heading over the chosen app both say it, since nothing else shows the list is narrowed
+internal fun drawerHeading(state: AppDrawerUiState): String =
+    listOfNotNull(sectionLabel(state.activeFilter, state.genreFilter), state.railFilterName).joinToString(" · ")

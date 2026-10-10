@@ -30,7 +30,13 @@ internal fun List<InstalledApp>.ofChip(id: String?, byGenre: Boolean): List<Inst
 internal fun groupingToggleApplies(action: com.echo.core.domain.model.GamepadAction, section: AppFilter): Boolean =
     action == com.echo.core.domain.model.GamepadAction.CHANGE_SORT && section == AppFilter.GAMES
 
-internal fun groupingHintLabel(byGenre: Boolean): String = if (byGenre) "Group by System" else "Group by Genre"
+// X's hint in Games: the grouping the rail shows now, which X steps systems, genres, A to Z (owner, 2026-10-09: the
+// hint named the next grouping and so never matched the rail)
+internal fun groupingHintLabel(byGenre: Boolean, byLetter: Boolean = false): String = when {
+    byLetter -> "A–Z"
+    byGenre -> "By Genre"
+    else -> "By System"
+}
 
 // the Games section narrowed to one genre; null keeps them all
 internal fun List<InstalledApp>.ofGenre(genre: com.echo.core.domain.model.GameGenre?): List<InstalledApp> =

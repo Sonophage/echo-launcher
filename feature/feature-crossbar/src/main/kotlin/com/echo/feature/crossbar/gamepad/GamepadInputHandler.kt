@@ -26,6 +26,15 @@ private const val STICK_DEAD_ZONE_FLOOR = 0.35f
 
 private const val STICK_RELEASE_FACTOR = 0.6f
 
+// the rail stick's direction: -1 up, 1 down, 0 at rest. Once pushed it holds until it falls back under the release
+// line, as the left stick does, so a stick resting near the edge does not open and close the rail
+internal fun railStickDirection(y: Float, current: Int, activation: Float): Int = when {
+    y < -activation -> -1
+    y > activation -> 1
+    current != 0 && abs(y) > activation * STICK_RELEASE_FACTOR && (y < 0) == (current < 0) -> current
+    else -> 0
+}
+
 private const val HAT_DEAD_ZONE = 0.5f
 
 private const val DUPLICATE_WINDOW_MS = 80L
@@ -55,6 +64,13 @@ internal fun ScrollSpeed.tuning(): RepeatTuning = when (this) {
 
 private enum class TabSource { KEY, LEFT_AXIS, RIGHT_AXIS }
 
+// owner, 2026-10-09: the right stick drives the side rail. Pushed up or down it opens the rail, held it steps the
+// rail's rungs (NAVIGATE_UP and DOWN, as a held D-pad repeats), and back at rest it closes the rail
+sealed interface RailStick {
+    data object Open : RailStick
+    data object Close : RailStick
+}
+
 sealed interface ShoulderHold {
     val action: GamepadAction
     data class Start(override val action: GamepadAction) : ShoulderHold
@@ -69,6 +85,11 @@ class GamepadInputHandler @Inject constructor(
 ) {
     private val _actions = MutableSharedFlow<GamepadAction>(extraBufferCapacity = 16)
     val actions: SharedFlow<GamepadAction> = _actions.asSharedFlow()
+
+    private val _railStick = MutableSharedFlow<RailStick>(extraBufferCapacity = 8)
+    val railStick: SharedFlow<RailStick> = _railStick.asSharedFlow()
+    private var railDirection = 0
+    private var railRepeat: Job? = null
 
     private val _shoulderHolds = MutableSharedFlow<ShoulderHold>(extraBufferCapacity = 8)
     val shoulderHolds: SharedFlow<ShoulderHold> = _shoulderHolds.asSharedFlow()
@@ -177,6 +198,7 @@ class GamepadInputHandler @Inject constructor(
         val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
 
         val triggersFired = handleTriggers(event)
+        val railFired = steerRail(rightStickY(event))
 
         val stickAction = stickDirection(x, y, stickFlatFor(event.deviceId))
         val hatAction = hatDirection(hatX, hatY)
@@ -202,7 +224,42 @@ class GamepadInputHandler @Inject constructor(
 
         prevHatX = hatX
         prevHatY = hatY
-        return motionAction != null || triggersFired
+        return motionAction != null || triggersFired || railFired
+    }
+
+    // the right stick's up and down: RZ on most pads (the Konker's AYANEO Controller), RY on some. An axis whose range
+    // starts at 0 is a trigger, never a stick, so a pad with its triggers on Z and RZ does not open the rail
+    private fun rightStickY(event: MotionEvent): Float {
+        val device = runCatching { InputDevice.getDevice(event.deviceId) }.getOrNull() ?: return 0f
+        val axis = listOf(MotionEvent.AXIS_RZ, MotionEvent.AXIS_RY)
+            .firstOrNull { device.getMotionRange(it, event.source)?.let { range -> range.min < 0f } == true } ?: return 0f
+        return event.getAxisValue(axis)
+    }
+
+    private fun steerRail(y: Float): Boolean {
+        val direction = railStickDirection(y, railDirection, maxOf(stickSensitivity.deadZone, STICK_DEAD_ZONE_FLOOR))
+        if (direction == railDirection) return direction != 0
+        railRepeat?.cancel()
+        railRepeat = null
+        if (railDirection == 0) _railStick.tryEmit(RailStick.Open)
+        railDirection = direction
+        if (direction == 0) {
+            _railStick.tryEmit(RailStick.Close)
+            return true
+        }
+        // the first step waits the repeat's delay: the rail is open by then, and a flick changes nothing
+        val step = if (direction < 0) GamepadAction.NAVIGATE_UP else GamepadAction.NAVIGATE_DOWN
+        railRepeat = scope?.launch {
+            val t = scrollSpeed.tuning()
+            delay(t.initialDelayMs)
+            var steps = 0
+            while (true) {
+                emit(step)
+                steps++
+                delay(rampedInterval(rampStepFor(steps, abs(y), stickSensitivity.fullTilt), t.baseIntervalMs, t.fastIntervalMs, t.rampSteps))
+            }
+        }
+        return true
     }
 
     private fun steer(motionAction: GamepadAction?) {

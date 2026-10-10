@@ -328,27 +328,66 @@ class AppDrawerViewModelTest {
         assertEquals(null, viewModel.uiState.value.pendingCrossBarAdd)
     }
 
+    // owner, 2026-10-09: the chip row is gone; a section's systems are the side rail's rungs, A to Z by name, and
+    // the rail filters by them as it does by letters
     @Test
-    fun `a refresh that hides the system chips takes the focus off them, so left and right move the wall again`() = runTest {
-        val roms = listOf(
-            com.echo.core.domain.model.Game(id = 1, title = "One", platformId = "psp"),
-            com.echo.core.domain.model.Game(id = 2, title = "Two", platformId = "snes"),
-        )
-        every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf(roms)
-        val vm = drawerOver(fakeApps())
+    fun `the side rail lists a section's systems by name and filters by them`() = runTest {
+        fun game(id: Long, title: String, platform: String) =
+            com.echo.core.domain.model.Game(id = id, title = title, platformId = platform, romPath = "/r/$id")
+        every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf(listOf(
+            game(1, "Zeta", "psp"), game(2, "Alpha", "psp"), game(3, "Mid", "snes"), game(4, "Beta", "gb")))
+        val platforms = mockk<com.echo.core.data.database.dao.PlatformDao>(relaxed = true)
+        io.mockk.coEvery { platforms.getById(any()) } returns null
+        coEvery { repository.getInstalledApps() } returns emptyList()
+        val vm = AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), platforms, appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
         testDispatcher.scheduler.advanceUntilIdle()
         vm.setFilter(AppFilter.GAMES)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertTrue("the fixture must show the chip row", vm.uiState.value.showSystemChips)
-        vm.handleGamepadAction(GamepadAction.NAVIGATE_UP)
-        assertTrue(vm.uiState.value.chipFocus)
 
-        every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf(emptyList())
-        vm.refresh()
+        val state = vm.uiState.value
+        assertTrue("Games with three systems shows them on the rail", state.railByGroup)
+        assertEquals("by name, not by count (PSP has most)", listOf("All", "GB", "PSP", "SNES"), state.railRungs.map { it.name })
+        assertEquals(listOf(ALL_GLYPH, "G", "P", "S"), state.railRungs.map { it.glyph })
+        assertEquals("no letters where the rail shows groups", emptyList<Char>(), state.letterMenu)
+
+        vm.onLetterRailTouch(3)
+        vm.onLetterRailReleased()
         testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(listOf("Mid"), vm.uiState.value.visibleApps.map { it.label })
+        assertEquals("SNES", vm.uiState.value.railFilterName)
 
-        assertFalse("the chip row is hidden", vm.uiState.value.showSystemChips)
-        assertFalse(vm.uiState.value.chipFocus)
+        vm.onLetterRailTouch(3)
+        vm.onLetterRailReleased()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals("landing on the system in use again shows them all", 4, vm.uiState.value.visibleApps.size)
+        assertEquals(null, vm.uiState.value.railFilterName)
+    }
+
+    // owner, 2026-10-09: A to Z is X's step after genres in Games, so letters stay reachable where there are groups
+    @Test
+    fun `X in Games steps systems, genres, then A to Z, and back`() = runTest {
+        every { games.observeAllGames() } returns kotlinx.coroutines.flow.flowOf((1..12).map { i ->
+            com.echo.core.domain.model.Game(id = i.toLong(), title = "${'A' + i} game", platformId = listOf("psp", "snes", "gb")[i % 3], romPath = "/r/$i", genre = listOf("Action", "Puzzle")[i % 2])
+        })
+        coEvery { repository.getInstalledApps() } returns emptyList()
+        val vm = AppDrawerViewModel(repository, mockk(relaxed = true), games, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.setFilter(AppFilter.GAMES)
+        // the Game column's grouping, which the crossbar owns; here a flag the toggle flips
+        var byGenre = false
+        val toggle = { byGenre = !byGenre; vm.setChipsByGenre(byGenre) }
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("systems", vm.uiState.value.railByGroup)
+
+        vm.cycleGamesGrouping(toggle); testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("genres", byGenre && vm.uiState.value.railByGroup)
+
+        vm.cycleGamesGrouping(toggle); testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse("A to Z: the rail shows letters", vm.uiState.value.railByGroup)
+        assertTrue(vm.uiState.value.letterMenu.size >= 3)
+
+        vm.cycleGamesGrouping(toggle); testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("back to systems", !byGenre && vm.uiState.value.railByGroup)
     }
 
     @Test
