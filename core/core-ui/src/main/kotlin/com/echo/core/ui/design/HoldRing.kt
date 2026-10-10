@@ -110,20 +110,25 @@ fun Modifier.echoPulse(trigger: Int, color: Color): Modifier {
 }
 
 // the brand's ring, as the echo wave draws its rings: a soft halo under a crisp line. The track runs all the
-// way round; the arc fills clockwise from the top to fraction. The halo lies just inside the line, so an orb
-// clipped to its own circle keeps it
-fun androidx.compose.ui.graphics.drawscope.DrawScope.drawEchoRing(fraction: Float, color: Color, track: Color, stroke: Float) {
+// way round; the arc fills clockwise from the top to fraction, or [fromBottom] up both sides from the bottom, so a
+// part-full ring leaves its gap at the top. The halo lies just inside the line, so an orb clipped to its own circle
+// keeps it
+fun androidx.compose.ui.graphics.drawscope.DrawScope.drawEchoRing(fraction: Float, color: Color, track: Color, stroke: Float, fromBottom: Boolean = false) {
     val topLeft = Offset(stroke / 2, stroke / 2)
     val arcSize = Size(size.width - stroke, size.height - stroke)
     drawArc(track, 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
     val sweep = 360f * fraction.coerceIn(0f, 1f)
     if (sweep <= 0f) return
+    val start = echoRingStart(sweep, fromBottom)
     val halo = stroke * 3f
     val inset = stroke + halo / 2
-    drawArc(color.copy(alpha = color.alpha * 0.25f), -90f, sweep, false, Offset(inset, inset),
+    drawArc(color.copy(alpha = color.alpha * 0.25f), start, sweep, false, Offset(inset, inset),
         Size(size.width - inset * 2, size.height - inset * 2), style = Stroke(halo, cap = StrokeCap.Round))
-    drawArc(color, -90f, sweep, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+    drawArc(color, start, sweep, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
 }
+
+// the arc's start angle (0 is three o'clock, clockwise): the top, or centred on the bottom (90) for a mirrored fill
+fun echoRingStart(sweep: Float, fromBottom: Boolean): Float = if (fromBottom) 90f - sweep / 2f else -90f
 
 // kit "Echo": while active, rings keep spreading from an orb and fading out, each a halo under a line as the
 // echo wave's are, with the wave's own fade (rippleEnvelope). Drawn outside the orb, so put it before any clip

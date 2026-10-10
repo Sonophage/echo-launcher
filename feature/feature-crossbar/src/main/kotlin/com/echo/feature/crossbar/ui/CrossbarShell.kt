@@ -1117,8 +1117,8 @@ fun CrossbarShell(
             )
             }
 
-            // owner, 2026-10-06: the battery is the ring round the profile orb, at the strip's right; the line that
-            // stood up the left edge is gone
+            // owner, 2026-10-09: the battery is the ring round the left orb (it was the profile orb's, at the right);
+            // the line that stood up the left edge is gone
 
             val panelStage = uiState.panelStage()
             CompositionLocalProvider(LocalBackdropWave provides homeWave) {

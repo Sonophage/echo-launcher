@@ -150,7 +150,7 @@ data class StripLiveActivity(val art: Any?, val title: String, val detail: Strin
 
 data class BatteryReading(val level: Int = 0, val charging: Boolean = false)
 
-// one reading for the strip's percentage and the battery ring round the profile orb
+// one reading for the strip's percentage and the battery ring round the left orb
 @Composable
 fun rememberBatteryReading(): BatteryReading {
     val context = LocalContext.current
@@ -318,6 +318,7 @@ fun CrossbarStatusStrip(
                     glow = islandGlow,
                     u = u,
                     stageIcon = stageIcon?.bitmap,
+                    battery = battery,
                     onTapped = when {
                         minimized -> ({})
                         islandMode == IslandMode.CARD && orbLevel < 0 -> onLiveAreaTapped ?: {}
@@ -327,8 +328,17 @@ fun CrossbarStatusStrip(
                 )
             }
         }
-        // owner, 2026-10-06: the battery reading sits beside the left island, level with its orb; with no island it
-        // takes the orb's place
+        // owner, 2026-10-09: the left circle is always there and holds the battery; with nothing live it is the battery
+        // alone
+        androidx.compose.animation.AnimatedVisibility(
+            visible = islandMode == IslandMode.NONE,
+            enter = fadeIn(tween(220)),
+            exit = fadeOut(tween(160)),
+            modifier = Modifier.align(Alignment.TopStart),
+        ) {
+            BatteryOrb(battery, u, Modifier.padding(start = chromeGutter(), top = u.dp(10)))
+        }
+        // owner, 2026-10-06: the battery reading sits beside the left island, level with its orb
         Text(
             text       = "$batteryLevel%",
             color      = if (batteryRingLow(batteryLevel, battery.charging)) LowBatteryTint else StripPrimary.copy(alpha = 0.7f),
@@ -336,7 +346,7 @@ fun CrossbarStatusStrip(
             fontWeight = FontWeight.Light,
             maxLines   = 1,
             modifier   = Modifier.align(Alignment.TopStart)
-                .padding(start = chromeGutter() + if (islandMode != IslandMode.NONE) u.dp(44 + 22) else 0.dp, top = u.dp(10))
+                .padding(start = chromeGutter() + u.dp(44 + 22), top = u.dp(10))
                 .height(u.dp(44)).wrapContentHeight(Alignment.CenterVertically),
         )
         androidx.compose.animation.AnimatedVisibility(
@@ -387,7 +397,7 @@ fun CrossbarStatusStrip(
         // reading sits beside the left island
         val statusSlot: @Composable () -> Unit = {
             Box(Modifier.padding(end = endGutter)) {
-                NoticeOrb(noticeCount, profileAvatar, islandGlow, u, onNoticeIslandPressed, connected = peeking != null, battery = battery)
+                NoticeOrb(noticeCount, profileAvatar, islandGlow, u, onNoticeIslandPressed, connected = peeking != null)
             }
         }
         val clockSlot: @Composable () -> Unit = {
@@ -449,10 +459,14 @@ private fun NoticeOrb(
     u: DesignUnits,
     onTapped: () -> Unit,
     connected: Boolean = false,
-    battery: BatteryReading = BatteryReading(),
 ) {
-    // the mark's slow swell while it charges
-    val pulse = rememberChargeShimmer(battery.charging)
+    // owner, 2026-10-09: one echo wave when a notification arrives, not a ripple that keeps going
+    var arrivals by remember { mutableIntStateOf(0) }
+    var lastCount by remember { mutableIntStateOf(count) }
+    LaunchedEffect(count) {
+        if (count > lastCount) arrivals++
+        lastCount = count
+    }
     Row(
         Modifier
             // no clip: the echo rings spread past the orb, so the press shows as an unbounded round ripple
@@ -470,20 +484,16 @@ private fun NoticeOrb(
         Box(
             Modifier
                 .size(u.dp(44))
-                // the same ring and inset as the left island's orb, so the two read as a pair; joined to its card,
-                // the ring gives way so the orb and the card are one shape. owner, 2026-10-06: the ring is the battery,
-                // filled to the charge, glowing with a light running round it while it charges
-                .echoRipples(battery.charging && !connected, Color.White)
-                .then(if (connected) Modifier else Modifier.drawBehind { drawBatteryRing(battery, u.dp(2).toPx()) })
+                // owner, 2026-10-09: a soft glow while notifications wait, and one wave as each arrives; the battery
+                // moved to the left circle. The bare track keeps the two orbs a pair; joined to its card it gives way
+                .echoPulse(arrivals, accent)
+                .then(if (count > 0 && !connected) Modifier.drawBehind { drawNoticeGlow(accent) } else Modifier)
+                .then(if (connected) Modifier else Modifier.drawBehind { drawEchoRing(0f, Color.White, EchoRingTrack, u.dp(2).toPx()) })
                 .padding(u.dp(5))
                 .clip(CircleShape)
                 .background(NoticeOrbFill),
             contentAlignment = Alignment.Center,
         ) {
-            // the mark glows with the ring while it charges
-            if (battery.charging) Canvas(Modifier.fillMaxSize()) {
-                drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.10f + 0.18f * chargePulse(pulse)), Color.Transparent)))
-            }
             // owner, 2026-10-07: the orb is always the profile picture, the count beside it
             ProfileAvatar(avatar, null)
         }
@@ -520,7 +530,34 @@ private fun chargePulse(travel: Float): Float = 0.5f + 0.5f * kotlin.math.sin(tr
 // the mark glows; owner, 2026-10-07: no light running round the ring
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBatteryRing(battery: BatteryReading, stroke: Float) {
     val tint = if (batteryRingLow(battery.level, battery.charging)) LowBatteryTint else Color.White
-    drawEchoRing(batteryRingSweep(battery.level) / 360f, tint.copy(alpha = if (battery.charging) 0.9f else 0.75f), EchoRingTrack, stroke)
+    drawEchoRing(batteryRingSweep(battery.level) / 360f, tint.copy(alpha = if (battery.charging) 0.9f else 0.75f), EchoRingTrack, stroke, fromBottom = true)
+}
+
+// a soft glow round the notification orb while notifications wait
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawNoticeGlow(accent: Color) {
+    val r = size.minDimension / 2
+    drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = 0.35f), Color.Transparent), center, r * 1.6f), r * 1.6f)
+}
+
+// owner, 2026-10-09: the left circle with nothing live: the battery ring, and while it charges the echo spreading
+// and the middle glowing in a slow swell
+@Composable
+private fun BatteryOrb(battery: BatteryReading, u: DesignUnits, modifier: Modifier = Modifier) {
+    val pulse = rememberChargeShimmer(battery.charging)
+    Box(
+        modifier
+            .size(u.dp(44))
+            .echoRipples(battery.charging, Color.White)
+            .drawBehind { drawBatteryRing(battery, u.dp(2).toPx()) }
+            .padding(u.dp(5))
+            .clip(CircleShape)
+            .background(NoticeOrbFill)
+            .semantics { contentDescription = "Battery ${battery.level}%" + if (battery.charging) ", charging" else "" },
+    ) {
+        if (battery.charging) Canvas(Modifier.fillMaxSize()) {
+            drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.10f + 0.18f * chargePulse(pulse)), Color.Transparent)))
+        }
+    }
 }
 
 // the orbs' shared track, so the left and the right rings match
@@ -780,19 +817,20 @@ private fun RestOrb(
     stageIcon: ImageBitmap?,
     onTapped: () -> Unit,
     modifier: Modifier = Modifier,
+    battery: BatteryReading = BatteryReading(),
 ) {
     val music = activity.stage as? PanelStage.Music
-    val progress = music?.let { it.islandProgress(it.livePositionMs()) }
     var presses by remember { mutableIntStateOf(0) }
     Box(
         modifier
             .size(u.dp(44))
             .echoPulse(presses, glow)
-            // owner, 2026-10-06: the two orbs match: the brand ring, and the echo spreading while music plays
-            .echoRipples(music?.playing == true, glow)
+            // owner, 2026-10-06: the echo spreading while music plays; owner, 2026-10-09: and while it charges, since
+            // the ring is the battery now, filled up both sides from the bottom (the music card keeps the progress)
+            .echoRipples(music?.playing == true || battery.charging, glow)
             .clip(CircleShape)
             .clickable(onClickLabel = activity.title) { presses++; onTapped() }
-            .drawBehind { drawEchoRing(progress ?: 0f, glow, EchoRingTrack, u.dp(2).toPx()) }
+            .drawBehind { drawBatteryRing(battery, u.dp(2).toPx()) }
             .padding(u.dp(5))
             .clip(CircleShape)
             .background(Brush.linearGradient(listOf(tint, lerp(tint, Color.Black, 0.6f)))),
