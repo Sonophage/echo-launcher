@@ -70,7 +70,7 @@ class PhotoRepositoryImpl @Inject constructor(
 
         photoDao.deleteForLibrary(id)
         libraryDao.delete(id)
-        deleteOrphanedThumbnails(thumbs) { photoDao.countReferencingThumbnail(it) > 0 }
+        deleteOrphanedThumbnails(context, thumbs) { photoDao.countReferencingThumbnail(it) > 0 }
         Timber.i("Photo library removed: $id")
     }
 
@@ -91,8 +91,11 @@ class PhotoRepositoryImpl @Inject constructor(
         photos: List<Photo>,
         scannedAt: Long,
     ) {
+        val thumbs = photoDao.getForLibrary(libraryId).mapNotNull { it.thumbnailUri }
         photoDao.replaceForLibrary(libraryId, photos.map { it.toEntity() })
         libraryDao.updateScanResult(libraryId, photos.size, scannedAt)
+        // owner, 2026-10-10: a rescan clears out the thumbnails of photos no longer there
+        deleteOrphanedThumbnails(context, thumbs) { photoDao.countReferencingThumbnail(it) > 0 }
         Timber.i("Replaced ${photos.size} photos for library $libraryId")
     }
 
@@ -108,7 +111,7 @@ class PhotoRepositoryImpl @Inject constructor(
         photoDao.deleteById(id)
         photo?.let { libraryDao.recount(it.libraryId) }
         if (thumb != null) {
-            deleteOrphanedThumbnails(listOf(thumb)) { photoDao.countReferencingThumbnail(it) > 0 }
+            deleteOrphanedThumbnails(context, listOf(thumb)) { photoDao.countReferencingThumbnail(it) > 0 }
         }
     }
 

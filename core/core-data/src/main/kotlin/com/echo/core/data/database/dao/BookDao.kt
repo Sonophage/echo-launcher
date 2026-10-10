@@ -31,6 +31,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE library_id = :libraryId")
     suspend fun getForLibrary(libraryId: String): List<BookEntity>
 
+    @Query("SELECT COUNT(*) FROM books WHERE cover_uri = :uri")
+    suspend fun countReferencingCover(uri: String): Int
+
     @Query("SELECT * FROM books WHERE id = :id")
     suspend fun getById(id: String): BookEntity?
 

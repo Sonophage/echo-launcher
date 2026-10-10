@@ -142,6 +142,8 @@ private class FakeMusicTrackDao : MusicTrackDao {
     override suspend fun setGenreOverride(ids: List<String>, genre: String?) = ids.forEach { id -> mutate(id) { it.copy(genreOverride = genre) } }
     override suspend fun markPlayed(id: String, playedAt: Long) = mutate(id) { it.copy(lastPlayedAt = playedAt) }
     override suspend fun clearLastPlayed(id: String) = mutate(id) { it.copy(lastPlayedAt = null) }
+    override suspend fun artUrisForFolder(folderId: String) = byFolder[folderId].orEmpty().mapNotNull { it.artUri }
+    override suspend fun countReferencingArt(uri: String) = byFolder.values.flatten().count { it.artUri == uri }
     override fun observeRecentlyPlayed(limit: Int): Flow<List<MusicTrackEntity>> = flowOf(
         byFolder.values.flatten()
             .filter { it.lastPlayedAt != null }

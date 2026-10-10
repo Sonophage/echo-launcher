@@ -67,8 +67,10 @@ class MusicRepositoryImpl @Inject constructor(
         folderDao.setEnabled(id, enabled, System.currentTimeMillis())
 
     override suspend fun removeFolder(id: String) {
+        val art = trackDao.artUrisForFolder(id)
         trackDao.deleteForFolder(id)
         folderDao.delete(id)
+        deleteOrphanedThumbnails(context, art) { trackDao.countReferencingArt(it) > 0 }
         Timber.i("Music folder removed: $id")
     }
 
@@ -97,8 +99,11 @@ class MusicRepositoryImpl @Inject constructor(
         tracks: List<MusicTrack>,
         scannedAt: Long,
     ) {
+        val art = trackDao.artUrisForFolder(folderId)
         trackDao.replaceForFolder(folderId, tracks.map { it.toEntity() })
         folderDao.updateScanResult(folderId, tracks.size, scannedAt)
+        // owner, 2026-10-10: a rescan clears out the art of albums no longer there
+        deleteOrphanedThumbnails(context, art) { trackDao.countReferencingArt(it) > 0 }
         Timber.i("Replaced ${tracks.size} tracks for music folder $folderId")
     }
 

@@ -85,6 +85,12 @@ interface MusicTrackDao {
     @Query("UPDATE music_tracks SET last_played_at = NULL WHERE id = :id")
     suspend fun clearLastPlayed(id: String)
 
+    @Query("SELECT art_uri FROM music_tracks WHERE folder_id = :folderId AND art_uri IS NOT NULL")
+    suspend fun artUrisForFolder(folderId: String): List<String>
+
+    @Query("SELECT COUNT(*) FROM music_tracks WHERE art_uri = :uri")
+    suspend fun countReferencingArt(uri: String): Int
+
     @Query(
         "SELECT * FROM music_tracks WHERE last_played_at IS NOT NULL " +
             "ORDER BY last_played_at DESC LIMIT :limit"

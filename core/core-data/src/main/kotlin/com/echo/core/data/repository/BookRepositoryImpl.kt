@@ -65,7 +65,11 @@ class BookRepositoryImpl @Inject constructor(
     override suspend fun setLibraryTreeUri(id: String, treeUri: String) =
         libraryDao.setTreeUri(id, treeUri, System.currentTimeMillis())
 
-    override suspend fun removeLibrary(id: String) = libraryDao.delete(id)
+    override suspend fun removeLibrary(id: String) {
+        val covers = bookDao.getForLibrary(id).mapNotNull { it.coverUri }
+        libraryDao.delete(id)
+        deleteOrphanedThumbnails(context, covers) { bookDao.countReferencingCover(it) > 0 }
+    }
 
     override fun observeAllBooks(): Flow<List<Book>> =
         bookDao.observeAll().map { list -> list.map { it.toDomain() } }
@@ -91,8 +95,11 @@ class BookRepositoryImpl @Inject constructor(
         books: List<Book>,
         scannedAt: Long,
     ) {
+        val covers = bookDao.getForLibrary(libraryId).mapNotNull { it.coverUri }
         bookDao.replaceForLibrary(libraryId, books.map { it.toEntity() })
         libraryDao.updateScanResult(libraryId, books.size, scannedAt)
+        // owner, 2026-10-10: a rescan clears out the covers of books no longer there
+        deleteOrphanedThumbnails(context, covers) { bookDao.countReferencingCover(it) > 0 }
     }
 
     override suspend fun setGenreOverride(id: String, genre: String?) =
@@ -102,6 +109,7 @@ class BookRepositoryImpl @Inject constructor(
         val book = bookDao.getById(id)
         bookDao.deleteById(id)
         book?.let { libraryDao.recount(it.libraryId) }
+        book?.coverUri?.let { cover -> deleteOrphanedThumbnails(context, listOf(cover)) { bookDao.countReferencingCover(it) > 0 } }
     }
 
     override fun observeDefaultReader(): Flow<String?> =

@@ -79,7 +79,7 @@ class VideoRepositoryImpl @Inject constructor(
 
         videoDao.deleteForLibrary(id)
         libraryDao.delete(id)
-        deleteOrphanedThumbnails(thumbs) { videoDao.countReferencingThumbnail(it) > 0 }
+        deleteOrphanedThumbnails(context, thumbs) { videoDao.countReferencingThumbnail(it) > 0 }
         Timber.i("Video library removed: $id")
     }
 
@@ -100,8 +100,11 @@ class VideoRepositoryImpl @Inject constructor(
         videos: List<Video>,
         scannedAt: Long,
     ) {
+        val thumbs = videoDao.getForLibrary(libraryId).flatMap { listOfNotNull(it.thumbnailUri, it.customThumbnailUri) }
         videoDao.replaceForLibrary(libraryId, videos.map { it.toEntity() })
         libraryDao.updateScanResult(libraryId, videos.size, scannedAt)
+        // owner, 2026-10-10: a rescan clears out the thumbnails of videos no longer there
+        deleteOrphanedThumbnails(context, thumbs) { videoDao.countReferencingThumbnail(it) > 0 }
         Timber.i("Replaced ${videos.size} videos for library $libraryId")
     }
 
@@ -122,7 +125,7 @@ class VideoRepositoryImpl @Inject constructor(
         val thumbs = video?.let { listOfNotNull(it.thumbnailUri, it.customThumbnailUri) }.orEmpty()
         videoDao.deleteById(id)
         video?.let { libraryDao.recount(it.libraryId) }
-        deleteOrphanedThumbnails(thumbs) { videoDao.countReferencingThumbnail(it) > 0 }
+        deleteOrphanedThumbnails(context, thumbs) { videoDao.countReferencingThumbnail(it) > 0 }
     }
 
     override fun observeFavorites(): Flow<List<Video>> =
