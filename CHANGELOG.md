@@ -10,3 +10,5 @@ released; it becomes the next release's notes.
 - Removing the newest game in the library now deletes its art too.
 - A game whose file is gone, or that you remove, comes off Pinned and loses its Playing or Backlog mark. Its play history stays.
 - DroidDeck's games show up: ECHO reads the .steam files DroidDeck writes into the windows folder. A game you had under a launcher you have since uninstalled, such as GameNative, moves to DroidDeck with its play history.
+- A PC game whose launcher is no longer installed is hidden by a STEAM scan, and comes back if you reinstall the launcher.
+- A game's menu has Open Folder, which opens its folder in Files. App Info is at the top of an app's menu.
