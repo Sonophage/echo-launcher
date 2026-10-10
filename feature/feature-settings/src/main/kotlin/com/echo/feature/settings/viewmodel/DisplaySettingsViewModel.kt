@@ -65,7 +65,7 @@ private val KEY_ICON_LEGIBILITY    = stringPreferencesKey("display_icon_legibili
 private val KEY_FADE_BY_DISTANCE = booleanPreferencesKey("display_fade_by_distance")
 
 
-private val KEY_RECENTS_INCLUDE_APPS = booleanPreferencesKey("display_recents_include_apps")
+private val KEY_RECENTS_INCLUDE_APPS = com.echo.core.data.repository.InterfacePreferences.KEY_RECENTS_INCLUDE_APPS
 
 private val KEY_TEXT_SHADOW = booleanPreferencesKey("display_text_shadow")
 

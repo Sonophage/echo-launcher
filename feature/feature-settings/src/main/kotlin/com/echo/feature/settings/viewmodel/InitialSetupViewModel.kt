@@ -58,6 +58,8 @@ data class InitialSetupUiState(
     val bookRoots: List<RootFolderRow> = emptyList(),
 
     val isHomeLauncher: Boolean = false,
+    // apps on the Recent shelf, the setting Display ▸ Last Played also has
+    val recentsIncludeApps: Boolean = false,
 
     val folderAccess: List<FolderAccessRow> = emptyList(),
 
@@ -234,6 +236,11 @@ class InitialSetupViewModel @Inject constructor(
 
     fun refreshGrants() {
         scratch.update { it.copy(isHomeLauncher = launcherShortcuts.isDefaultLauncher()) }
+        viewModelScope.launch {
+            val on = runCatching { context.echoDataStore.data.first()[com.echo.core.data.repository.InterfacePreferences.KEY_RECENTS_INCLUDE_APPS] }
+                .getOrNull() ?: false
+            scratch.update { it.copy(recentsIncludeApps = on) }
+        }
         viewModelScope.launch { scratch.update { it.copy(folderAccess = folderAccess.rows()) } }
     }
 
@@ -349,6 +356,11 @@ class InitialSetupViewModel @Inject constructor(
     fun setGaming(on: Boolean) = scratch.update { it.copy(gaming = on) }
 
     fun setMedia(on: Boolean) = scratch.update { it.copy(media = on) }
+
+    fun setRecentsIncludeApps(on: Boolean) {
+        scratch.update { it.copy(recentsIncludeApps = on) }
+        viewModelScope.launch { context.echoDataStore.edit { it[com.echo.core.data.repository.InterfacePreferences.KEY_RECENTS_INCLUDE_APPS] = on } }
+    }
 
     fun nextStep() {
         if (scratch.value.step == SetupStep.FEATURES) applyFeatures()

@@ -144,6 +144,7 @@ fun InitialSetupScreen(
                     onAsk = askPermission,
                     onSetAsHome = { systemScreen.launch(viewModel.homeRoleIntent()) },
                     onGrantFolder = regrantFolder,
+                    onRecentsIncludeApps = viewModel::setRecentsIncludeApps,
                 )
                 continueRow()
             }
@@ -240,6 +241,7 @@ private fun PermissionsPage(
     onAsk: (com.echo.feature.settings.permissions.AppPermission) -> Unit,
     onSetAsHome: () -> Unit,
     onGrantFolder: (com.echo.feature.settings.viewmodel.FolderAccessRow) -> Unit,
+    onRecentsIncludeApps: (Boolean) -> Unit = {},
 ) {
     LifecycleResumeEffect(Unit) {
         onRefresh()
@@ -248,6 +250,13 @@ private fun PermissionsPage(
 
     val rows = remember(state.media) { AppPermissions.forWizard(Build.VERSION.SDK_INT, state.media) }
     AppPermissionRows(rows, grantToken, onAsk, firstFocusKey = "perm_first")
+    // owner, 2026-10-09: off on a new install, so Recent stayed empty for someone who only opens apps
+    SettingsToggleRow(
+        label = "Apps On The Recent Shelf",
+        sublabel = "Show recently used apps beside games, music, books and video. Needs Recently used apps",
+        checked = state.recentsIncludeApps,
+        onToggle = onRecentsIncludeApps,
+    )
     RestrictedSettingsRow(rows, grantToken)
     SettingsValueRow(
         label = "ECHO as Home",

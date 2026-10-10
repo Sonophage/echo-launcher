@@ -28,6 +28,9 @@ enum class ButtonHints(val label: String) {
 }
 
 object InterfacePreferences {
+    // recently used apps on the Recent shelf beside games and media; off on a new install. The crossbar reads it;
+    // Display settings and Setup's Permissions step set it (owner, 2026-10-09: one key, not a copy in each)
+    val KEY_RECENTS_INCLUDE_APPS = booleanPreferencesKey("display_recents_include_apps")
     val KEY_SHOW_DEVICE_NOTIFICATIONS = booleanPreferencesKey("interface_show_device_notifications")
     val KEY_ISLAND_SHOWS_RECENT = booleanPreferencesKey("interface_island_shows_recent")
     val KEY_LAST_PLAYED_SIZE = intPreferencesKey("interface_last_played_size")

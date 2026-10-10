@@ -27,8 +27,9 @@ object AppPermissions {
     val ALL: List<AppPermission> = listOf(
         AppPermission(
             id = USAGE_ACCESS,
-            label = "Usage access",
-            why = "Sorts the app drawer by what you have opened recently",
+            // owner, 2026-10-09: named for what it gives, the apps used last in the App Drawer and on Recent
+            label = "Recently used apps",
+            why = "Lets the App Drawer and the Recent shelf show the apps you used last",
             route = GrantRoute.SYSTEM_SCREEN,
         ),
         AppPermission(
