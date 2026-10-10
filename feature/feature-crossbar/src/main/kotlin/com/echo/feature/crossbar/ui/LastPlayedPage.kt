@@ -15,6 +15,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -419,13 +422,22 @@ private fun BackdropArt(item: CrossbarItem?, alignment: Alignment) {
 // an Android game, so an app marked as a game (it has a game row) keeps its icon too
 internal fun isAppWithoutArt(item: CrossbarItem): Boolean = item.backdropArt.isEmpty() && item.packageName != null
 
+// owner, 2026-10-09: the app's icon again, large and faint in the bottom corner, as on its App Drawer case
 @Composable
 private fun AppIconArt(item: CrossbarItem?, iconSize: Dp, alignment: Alignment = Alignment.Center) {
     if (item == null || !isAppWithoutArt(item)) return
+    val mark = iconSize * APP_MARK_GROW
+    AndroidAppIcon(
+        packageName = item.packageName, title = item.title, size = mark,
+        modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.BottomEnd, unbounded = true)
+            .offset(mark * 0.23f, mark * 0.14f).rotate(-14f).graphicsLayer(alpha = 0.16f),
+    )
     Box(Modifier.fillMaxSize(), contentAlignment = alignment) {
         AndroidAppIcon(packageName = item.packageName, title = item.title, size = iconSize)
     }
 }
+
+private const val APP_MARK_GROW = 2.6f
 
 @Composable
 private fun ProgressBar(fraction: Float, height: Dp, modifier: Modifier, color: Color = Color.White) {
