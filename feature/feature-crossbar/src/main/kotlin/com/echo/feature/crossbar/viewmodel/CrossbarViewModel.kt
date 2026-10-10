@@ -3520,6 +3520,15 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
+    // the file manager at the game's folder; the path in a dialog when nothing can open it
+    internal fun openGameFolder(gameId: Long) {
+        closeContextMenu()
+        viewModelScope.launch {
+            val path = gameRepository.getById(gameId)?.romPath
+            if (path == null || !com.echo.core.data.media.FolderOpen.open(context, path)) showGameFileLocation(gameId)
+        }
+    }
+
     fun dismissInfoDialog() = _uiState.update { it.copy(infoDialog = null) }
 
     internal fun exportGameFromMenu(gameId: Long) {

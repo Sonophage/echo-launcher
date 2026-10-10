@@ -373,6 +373,7 @@ class CrossbarGames(
                 }
             }
             "file_location"          -> vm.showGameFileLocation(gameId)
+            "open_folder"            -> vm.openGameFolder(gameId)
             "change_emulator"        -> vm.openEmulatorPickerMenu(gameId)
             "shelves"                -> vm.openShelvesPickerMenu(gameId)
 

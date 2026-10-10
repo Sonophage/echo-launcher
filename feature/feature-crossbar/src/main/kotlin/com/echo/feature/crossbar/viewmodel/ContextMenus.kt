@@ -82,7 +82,12 @@ internal fun gameContextMenuItems(
         add(CrossbarContextMenuItem("detail_REFRESH", "Refresh Artwork", group = MenuGroup.METADATA))
 
         if (!item.isAndroidApp) add(CrossbarContextMenuItem("change_emulator", "Change Emulator", group = MenuGroup.SETTINGS))
-        add(CrossbarContextMenuItem("file_location", "View File Location", group = MenuGroup.SETTINGS))
+        // owner, 2026-10-10: a ROM game opens the folder it is in; a PC or Android game has none, so it shows what it has
+        if (item.isAndroidApp || item.platformId == PlatformIds.WINDOWS) {
+            add(CrossbarContextMenuItem("file_location", "View File Location", group = MenuGroup.SETTINGS))
+        } else {
+            add(CrossbarContextMenuItem("open_folder", "Open Folder", group = MenuGroup.SETTINGS, pinnedToRoot = true))
+        }
 
         hideLocation?.let { (_, _, label) ->
             add(CrossbarContextMenuItem("hide_here", "Hide from $label", group = MenuGroup.REMOVE))
@@ -90,7 +95,7 @@ internal fun gameContextMenuItems(
         if (inMissingBucket) {
             add(CrossbarContextMenuItem("remove_missing", "Remove permanently", isDestructive = true, group = MenuGroup.REMOVE))
         } else if (item.platformId == PlatformIds.ANDROID && item.packageName != null) {
-            add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.SETTINGS))
+            add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.SETTINGS, pinnedToRoot = true))
             add(CrossbarContextMenuItem("unmark_game", "Unmark as Game", group = MenuGroup.REMOVE))
             add(CrossbarContextMenuItem("remove_app", "Remove from Library", isDestructive = true, group = MenuGroup.REMOVE))
             add(CrossbarContextMenuItem("uninstall", "Uninstall", isDestructive = true, group = MenuGroup.REMOVE))
@@ -125,7 +130,8 @@ internal fun appContextMenuItems(
     // owner, 2026-10-08: art through Artwork Studio, as a game's; the old app editor changed little but the title
     add(CrossbarContextMenuItem("app_artwork", "Artwork", group = MenuGroup.METADATA))
     add(CrossbarContextMenuItem("rename", "Rename Shortcut", group = MenuGroup.SETTINGS))
-    if (packageName != null) add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.SETTINGS))
+    // owner, 2026-10-10: Android's App Info shows at the top of an app's menu, not inside Settings
+    if (packageName != null) add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.SETTINGS, pinnedToRoot = true))
 
     add(CrossbarContextMenuItem("move", "Move to Category", group = MenuGroup.CATEGORY))
     add(CrossbarContextMenuItem("add", "Add to Category", group = MenuGroup.CATEGORY))
