@@ -30,9 +30,10 @@ fun legibleTextPx(px: Float): Float = maxOf(px, LEGIBILITY_FLOOR_PX)
 fun mediaDesignScale(widthDp: Float, heightDp: Float): Float =
     minOf(widthDp / MEDIA_DESIGN_WIDTH, heightDp / MEDIA_DESIGN_HEIGHT)
 
-class DesignUnits(val scale: Float, private val density: Density, val square: Boolean = false) {
+// [textScale] sizes text only, never boxes: a theme's text size (LocalPanelTextScale)
+class DesignUnits(val scale: Float, private val density: Density, val square: Boolean = false, val textScale: Float = 1f) {
     fun dp(px: Number): Dp = (px.toFloat() * scale).dp
-    fun sp(px: Number): TextUnit = with(density) { legibleTextPx(dp(px).toPx()).toSp() }
+    fun sp(px: Number): TextUnit = with(density) { legibleTextPx(dp(px).toPx() * textScale).toSp() }
 
     fun eyebrow(color: Color = Color.White.copy(alpha = 0.55f)) = EchoTextStyle.copy(
         color = color,

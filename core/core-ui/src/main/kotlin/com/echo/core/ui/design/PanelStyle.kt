@@ -23,8 +23,12 @@ private const val PANEL_DESIGN_WIDTH = 1200f
 const val PANEL_DESIGN_HEIGHT = 752f
 private const val SQUARE_ASPECT = 1.4f
 
-fun panelDesignUnits(widthDp: Float, heightDp: Float, density: Density): DesignUnits =
-    DesignUnits(minOf(widthDp / PANEL_DESIGN_WIDTH, heightDp / PANEL_DESIGN_HEIGHT), density, panelIsSquare(widthDp, heightDp))
+fun panelDesignUnits(widthDp: Float, heightDp: Float, density: Density, textScale: Float = 1f): DesignUnits =
+    DesignUnits(minOf(widthDp / PANEL_DESIGN_WIDTH, heightDp / PANEL_DESIGN_HEIGHT), density, panelIsSquare(widthDp, heightDp), textScale)
+
+// the applied theme's text size against ECHO's (CrossbarLayoutSpec.textScale), provided by the crossbar for the
+// pages that open over it; 1 is ECHO's own
+val LocalPanelTextScale = androidx.compose.runtime.staticCompositionLocalOf { 1f }
 
 fun panelIsSquare(widthDp: Float, heightDp: Float): Boolean = widthDp < heightDp * SQUARE_ASPECT
 

@@ -119,6 +119,7 @@ import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.core.ui.theme.crossbarScrimAnchors
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import com.echo.core.ui.design.LocalPanelTextScale
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.components.contextMenuInk
 
@@ -704,7 +705,7 @@ fun SettingsScaffold(
                     }
                 ),
         ) {
-            val u = panelDesignUnits(maxWidth.value, maxHeight.value, density)
+            val u = panelDesignUnits(maxWidth.value, maxHeight.value, density, LocalPanelTextScale.current)
             val tabs = tabEntries.isNotEmpty()
             val paneShown = !fullWidth && (tabs || paneText != null) && maxWidth - SETTINGS_COLUMN_MAX_WIDTH >= SETTINGS_HELP_PANE_MIN_WIDTH
             backdrop?.invoke()

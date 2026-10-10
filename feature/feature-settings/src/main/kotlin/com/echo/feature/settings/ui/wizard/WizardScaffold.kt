@@ -25,6 +25,7 @@ import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.settings.ui.LocalSettingsScrollStateRegistrar
 import com.echo.feature.settings.ui.SettingsScaffold
 import com.echo.feature.settings.ui.LocalSettingsRailUnits
+import com.echo.core.ui.design.LocalPanelTextScale
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.theme.LocalEchoColors
 import androidx.compose.runtime.CompositionLocalProvider
@@ -61,7 +62,8 @@ fun WizardScaffold(
     val skip by rememberUpdatedState(onSkip)
     val window = LocalWindowInfo.current.containerSize
     val density = LocalDensity.current
-    val railUnits = with(density) { panelDesignUnits(window.width.toDp().value, window.height.toDp().value, density) }
+    val textScale = LocalPanelTextScale.current
+    val railUnits = with(density) { panelDesignUnits(window.width.toDp().value, window.height.toDp().value, density, textScale) }
     val step = if (stepNumber != null && stepCount > 0) "$title · Step $stepNumber of $stepCount" else title
     SettingsScaffold(
         title = title,

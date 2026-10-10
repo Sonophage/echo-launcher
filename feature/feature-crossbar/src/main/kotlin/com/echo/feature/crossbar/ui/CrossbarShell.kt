@@ -605,6 +605,7 @@ fun CrossbarShell(
 
           com.echo.core.ui.icons.LocalCustomIcons provides uiState.customIcons,
           LocalCrossbarLayout provides uiState.layoutSpec,
+          com.echo.core.ui.design.LocalPanelTextScale provides uiState.layoutSpec.textScale(),
           LocalFocusStyle provides uiState.focusStyle,
           LocalCrossbarMotion provides uiState.motion,
 

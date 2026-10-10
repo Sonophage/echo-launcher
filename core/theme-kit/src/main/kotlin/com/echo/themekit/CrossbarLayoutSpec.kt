@@ -32,4 +32,8 @@ data class CrossbarLayoutSpec(
     // Theme Studio's preview both read it
     fun selectedIconScale(): Float =
         (categoryIconSelectedDp / categoryIconDp) / (DEFAULT.categoryIconSelectedDp / DEFAULT.categoryIconDp)
+
+    // how much larger a theme sets text than ECHO does, from its crossbar row text; Settings sizes its words by it,
+    // so a theme's text size reaches the pages that open over the crossbar. ECHO's own layout is 1
+    fun textScale(): Float = itemTextSp / DEFAULT.itemTextSp
 }

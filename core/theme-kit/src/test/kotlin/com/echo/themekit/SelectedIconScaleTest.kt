@@ -16,4 +16,10 @@ class SelectedIconScaleTest {
         assertEquals(1.25f, CrossbarLayoutSpec(categoryIconSelectedDp = 90f, categoryIconDp = 56f).selectedIconScale(), 0.0001f)
         assertEquals(56f / 72f, CrossbarLayoutSpec(categoryIconSelectedDp = 56f, categoryIconDp = 56f).selectedIconScale(), 0.0001f)
     }
+
+    @Test
+    fun `a theme's text size is read against ECHO's, which is 1`() {
+        assertEquals(1f, CrossbarLayoutSpec.DEFAULT.textScale(), 0.0001f)
+        assertEquals(1.25f, CrossbarLayoutSpec(itemTextSp = 22.5f).textScale(), 0.0001f)
+    }
 }
