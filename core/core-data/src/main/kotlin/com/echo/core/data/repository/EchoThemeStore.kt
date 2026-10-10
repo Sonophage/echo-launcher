@@ -439,7 +439,7 @@ class EchoThemeStore @Inject constructor(
         }
 
         val saved = runCatching {
-            val id = "pfp_${System.currentTimeMillis()}"
+            val id = newId()
             val name = bundle.manifest.name.ifBlank { nextDefaultName() }
 
             val stored = File(dir, "$id.$THEME_EXT")
@@ -614,9 +614,17 @@ class EchoThemeStore @Inject constructor(
         return Look(bundle, wallpaperBitmap, preview)
     }
 
+    // a theme's id is the millisecond it was stored, and the next free one when two land in the same millisecond;
+    // before, the second overwrote the first (what made "saves your own look first, once" fail now and then)
+    private fun newId(): String {
+        var stamp = System.currentTimeMillis()
+        while (File(dir, "pfp_$stamp.$THEME_EXT").exists()) stamp++
+        return "pfp_$stamp"
+    }
+
     private fun save(look: Look): SavedTheme {
         dir.mkdirs()
-        val id = "pfp_${System.currentTimeMillis()}"
+        val id = newId()
         val manifest = look.bundle.manifest
 
         FileOutputStream(File(dir, "$id.$THEME_EXT")).use { out -> EchoThemeCodec.write(look.bundle, out) }
