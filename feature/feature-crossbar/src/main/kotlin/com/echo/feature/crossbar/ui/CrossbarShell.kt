@@ -726,18 +726,21 @@ fun CrossbarShell(
                                     .then(if (backgroundSnap != null) Modifier.crossbarStillOverVideo() else Modifier),
                             )
 
+                            // owner, 2026-10-10: an app's tint is its own icon's colour, as on Recent. The crossbar's
+                            // accent is the theme's for an app with no item colour, which washed the wallpaper grey
                             is CrossbarBackdrop.AppIcon -> CrossbarAppIconBackdrop(
                                 packageName = bg.packageName,
                                 fallbackAccent = crossbarGameAccent,
                                 overWallpaper = true,
+                                scrim = true,
                             )
                             null -> Unit
                         }
 
-                        // owner, 2026-10-09: an app's backdrop takes the scrim art does, so the wallpaper under
-                        // it shows, tinted; more strongly for an app (owner, 2026-10-10)
-                        val tint = if (bg is CrossbarBackdrop.AppIcon) APP_SCRIM_TINT else ART_SCRIM_TINT
-                        Box(Modifier.fillMaxSize().background(backdropScrim(crossbarGameAccent, tint)))
+                        // owner, 2026-10-09: art takes a scrim so the wallpaper under it shows, tinted
+                        if (bg !is CrossbarBackdrop.AppIcon) {
+                            Box(Modifier.fillMaxSize().background(backdropScrim(crossbarGameAccent, ART_SCRIM_TINT)))
+                        }
 
                         if (backgroundSnap != null) {
                             Box(Modifier.fillMaxSize().background(Color(0x5905050C)))
