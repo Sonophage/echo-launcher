@@ -955,12 +955,14 @@ private fun SettingsHelpPane(
             .padding(start = u.dp(48), end = u.dp(64), top = u.dp(32)),
         verticalArrangement = Arrangement.spacedBy(u.dp(16)),
     ) {
-        Text(
-            text = page.eyebrow.uppercase(),
-            color = Color.White.copy(alpha = 0.55f),
-            fontSize = u.sp(13),
-            letterSpacing = 0.18.em,
-        )
+        page.eyebrow.takeIf { it.isNotBlank() }?.let {
+            Text(
+                text = it.uppercase(),
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = u.sp(13),
+                letterSpacing = 0.18.em,
+            )
+        }
         Text(
             text = info?.label ?: page.title,
             color = Color.White,

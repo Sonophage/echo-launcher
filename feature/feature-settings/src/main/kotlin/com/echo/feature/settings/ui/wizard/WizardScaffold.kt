@@ -73,8 +73,9 @@ fun WizardScaffold(
         panelTint = LocalEchoColors.current.accentColor,
 
         showRail = false,
-        // the heading is drawn once, top left; the pane carries the step's hint, or the focused row's reason
-        paneText = SettingsPaneText(eyebrow = step, title = hint ?: heading, body = null),
+        // the heading and the step are drawn once, top left; the pane carries the step's hint, or the focused row's
+        // reason, with no eyebrow of its own (it repeated "Setup · Step 1 of 5")
+        paneText = SettingsPaneText(eyebrow = "", title = hint ?: heading, body = null),
         header = { SettingsPageTitle(step, heading) },
         // the kit footer every settings page uses, with the wizard's own actions
         helperFooterItems = listOfNotNull(
