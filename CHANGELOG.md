@@ -5,4 +5,4 @@ released; it becomes the next release's notes.
 
 ## Unreleased (since 2.13.4)
 
-Nothing yet.
+- On the crossbar, an app's background is tinted its own colour again. 2.13.4 washed it grey for apps such as Spotify, Stremio and Immich.
