@@ -128,7 +128,9 @@ class RescanTriggerBusTest {
             listOf(outcome)
         }
 
-        val busScope = kotlinx.coroutines.CoroutineScope(testScheduler)
+        // the test's own dispatcher: a scope holding only the scheduler runs on Dispatchers.Default, so the scan
+        // had sometimes not started when the first check ran (failed once in CI, 2026-10-10)
+        val busScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
         val bus = RescanTriggerBus(scanner, discoveryScanner, busScope)
 
         bus.submit(RescanTrigger.AppResumed)
