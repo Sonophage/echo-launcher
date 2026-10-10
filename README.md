@@ -5,6 +5,12 @@
 **Extensible Console Handheld Operator: a controller-first Android home screen inspired by the XMB.**
 
 <p align="center">
+  <a href="https://echo.sonophage.dev"><img src="https://img.shields.io/badge/site-echo.sonophage.dev-7a5cff" alt="Site"></a>
+  <a href="https://echo.sonophage.dev/docs.html"><img src="https://img.shields.io/badge/docs-read%20the%20guide-2f80ed" alt="Documentation"></a>
+  <a href="#with-obtainium-recommended-updates-arrive-by-themselves"><img src="https://img.shields.io/badge/Obtainium-get%20updates-6d4aff" alt="Get it with Obtainium"></a>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/header.jpg" alt="ECHO: Last Played with Skyrim's art filling the screen, the App Drawer's VHS cases, and Search's shelf" width="900">
 </p>
 
