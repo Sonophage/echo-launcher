@@ -133,6 +133,9 @@ internal const val TITAN_SPINE_SHARE = 0.09f
 internal const val TITAN_ICON_SHARE = 0.42f
 internal const val TITAN_MARK_SHARE = 0.8f
 
+// the spine's "VHS" tab as a share of the spine's width: Sora Black "VHS" is about 2.4 of its size wide
+private const val VHS_TAB_SHARE = 0.38f
+
 internal fun titanSpineWidth(base: Dp, caseWidth: Dp, titan2: Boolean): Dp =
     if (titan2) maxOf(base, caseWidth * TITAN_SPINE_SHARE) else base
 
@@ -158,9 +161,10 @@ private fun VhsSpine(label: String, tint: Color, u: DesignUnits, grow: Float, wi
             repeat(3) { Box(Modifier.size(u.dp(14) * grow, 1.dp).background(CaseInk.copy(alpha = 0.6f))) }
         }
         Box(Modifier.fillMaxWidth().height(u.dp(20) * grow).background(CaseInk), contentAlignment = Alignment.Center) {
-            // the legibility floor made the Titan 2's "VHS" wider than its spine; there it is sized to the spine
-            val vhs = if (IsTitan2) with(LocalDensity.current) { (width * 0.42f).toSp() } else u.sp(6)
-            Text("VHS", color = CaseLabel, fontSize = vhs, fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
+            // the legibility floor made "VHS" wider than the spine and the theme's 24 sp body line taller than the tab, so
+            // it read as the top of "VH"; it is sized to the spine on every device, one line exactly its own height
+            val vhs = with(LocalDensity.current) { (width * VHS_TAB_SHARE).toSp() }
+            Text("VHS", color = CaseLabel, fontSize = vhs, lineHeight = vhs, fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
         }
     }
 }
