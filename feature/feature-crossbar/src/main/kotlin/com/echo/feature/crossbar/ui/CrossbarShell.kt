@@ -736,20 +736,7 @@ fun CrossbarShell(
 
                         // owner, 2026-10-09: an app's backdrop takes the same scrim as art, so the wallpaper under
                         // it shows, tinted
-                        run {
-                            val scrimBase = androidx.compose.ui.graphics.lerp(
-                                Color(0xFF05050C), crossbarGameAccent, 0.22f,
-                            )
-                            Box(
-                                Modifier.fillMaxSize().background(
-                                    Brush.horizontalGradient(
-                                        0.0f to scrimBase.copy(alpha = 0.65f),
-                                        0.5f to scrimBase.copy(alpha = 0.50f),
-                                        1.0f to scrimBase.copy(alpha = 0.75f),
-                                    )
-                                )
-                            )
-                        }
+                        Box(Modifier.fillMaxSize().background(backdropScrim(crossbarGameAccent)))
 
                         if (backgroundSnap != null) {
                             Box(Modifier.fillMaxSize().background(Color(0x5905050C)))
@@ -854,6 +841,19 @@ fun CrossbarShell(
             ) {
             val onLastPlayedHome = uiState.onLastPlayedHome
             if (onLastPlayedHome) {
+                // a still copy of the wallpaper for an app's backdrop: no wave, no second motion video
+                CompositionLocalProvider(LocalRecentWallpaper provides {
+                    CrossbarBackground(
+                        waveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
+                        customWallpaperPath = uiState.customWallpaperPath,
+                        waveOverWallpaper = false,
+                        wallpaperAccent = uiState.wallpaperAccent,
+                        motionWallpaperPath = null,
+                        motionDecision = com.echo.core.ui.motion.MotionWallpaperPolicy.Decision.POSTER,
+                        waveDrawnByCaller = true,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }) {
                 LastPlayedPage(
                     items = uiState.currentItems,
                     selectedIndex = uiState.selectedItemIndex,
@@ -873,6 +873,7 @@ fun CrossbarShell(
                             stepScale = uiState.touchSensitivity.stepScale,
                         ),
                 )
+                }
             } else {
             if (uiState.lastPlayedEmpty) {
                 LastPlayedEmpty(

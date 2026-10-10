@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 
 // owner, 2026-10-09: an app's icon, large, faint and turned, in the bottom left corner over the wallpaper's tint;
@@ -19,8 +20,9 @@ fun BoxScope.AppIconWatermark(icon: ImageBitmap, size: Dp) {
     Image(
         icon, null,
         Modifier.align(Alignment.BottomStart).offset(-size * 0.17f, size * 0.21f).size(size).rotate(-12f)
-            .graphicsLayer(alpha = APP_WATERMARK_ALPHA),
+            .graphicsLayer(alpha = APP_WATERMARK_ALPHA).testTag(APP_WATERMARK_TAG),
     )
 }
 
 private const val APP_WATERMARK_ALPHA = 0.09f
+const val APP_WATERMARK_TAG = "appIconWatermark"

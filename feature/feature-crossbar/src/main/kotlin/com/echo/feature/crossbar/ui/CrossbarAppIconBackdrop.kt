@@ -44,24 +44,36 @@ fun appIconAccent(icon: ImageBitmap): Color? {
     return AccentDeriver.deriveAccent(ArgbImage(icon.width, icon.height, pixels))?.let { Color(it) }
 }
 
-// [overWallpaper]: the crossbar draws the wallpaper under it and its own app-coloured scrim over it, so the backdrop
-// is only the app's icon, faint in the corner (owner, 2026-10-09: the wallpaper shows, tinted). Elsewhere (Recent,
-// over black) it is the solid gradient, which alone keeps white text readable
+// the scrim over art or a wallpaper behind the crossbar and Recent: the accent mixed into the dark, darkest at the
+// edges, so white text stays readable and what is under it still shows
+fun backdropScrim(accent: Color): Brush {
+    val base = lerp(AppBackdropBase, accent, 0.22f)
+    return Brush.horizontalGradient(0.0f to base.copy(alpha = 0.65f), 0.5f to base.copy(alpha = 0.50f), 1.0f to base.copy(alpha = 0.75f))
+}
+
+// [overWallpaper]: a wallpaper is under it, so the backdrop is only the app's icon, faint in the corner, and with
+// [scrim] the app-coloured scrim over the wallpaper (owner, 2026-10-09: the wallpaper shows, tinted). The crossbar
+// draws its own scrim; Recent asks for this one. Without a wallpaper it is the solid gradient, which alone keeps
+// white text readable
 @Composable
 fun CrossbarAppIconBackdrop(
     packageName: String,
     fallbackAccent: Color,
     modifier: Modifier = Modifier,
     overWallpaper: Boolean = false,
+    scrim: Boolean = false,
 ) {
     val icon = rememberAppIcon(packageName, sizePx = SOURCE_PX, colorOf = ::appIconAccent)
     val accent = icon?.color ?: fallbackAccent
     if (overWallpaper) {
         androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize()) {
+            if (scrim) Box(Modifier.fillMaxSize().background(backdropScrim(accent)))
             icon?.let { AppIconWatermark(it.bitmap, maxHeight * WATERMARK_SHARE) }
         }
     } else {
-        Box(modifier.fillMaxSize().background(Brush.linearGradient(appBackdropStops(accent))))
+        androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize().background(Brush.linearGradient(appBackdropStops(accent)))) {
+            icon?.let { AppIconWatermark(it.bitmap, maxHeight * WATERMARK_SHARE) }
+        }
     }
 }
 

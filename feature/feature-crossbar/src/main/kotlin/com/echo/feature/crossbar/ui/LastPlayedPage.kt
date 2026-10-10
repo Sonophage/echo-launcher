@@ -15,9 +15,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -402,13 +399,21 @@ private fun RecentRow(item: CrossbarItem, focused: Boolean, dim: Float, now: Lon
 }
 
 
+// the wallpaper the crossbar draws, handed to Recent, which sits on black; null on the second screen
+val LocalRecentWallpaper = androidx.compose.runtime.staticCompositionLocalOf<(@Composable () -> Unit)?> { null }
+
 // the art fills the page like a wallpaper, so the wave draws over it. An app with no art gets the crossbar's
-// own app backdrop, its icon's colour, rather than black (owner, 2026-10-08)
+// own app backdrop, its icon's colour, rather than black (owner, 2026-10-08); owner, 2026-10-09: over the
+// wallpaper, tinted, with the icon faint in the bottom left corner, as the crossbar and the App Drawer
 @Composable
 private fun BackdropArt(item: CrossbarItem?, alignment: Alignment) {
     val art = item?.backdropArt?.firstOrNull()
     if (art == null) {
-        item?.takeIf(::isAppWithoutArt)?.packageName?.let { CrossbarAppIconBackdrop(it, fallbackAccent = PanelBase) }
+        val wallpaper = LocalRecentWallpaper.current
+        item?.takeIf(::isAppWithoutArt)?.packageName?.let { pkg ->
+            wallpaper?.invoke()
+            CrossbarAppIconBackdrop(pkg, fallbackAccent = PanelBase, overWallpaper = wallpaper != null, scrim = true)
+        }
         return
     }
     AsyncImage(
@@ -424,22 +429,15 @@ private fun BackdropArt(item: CrossbarItem?, alignment: Alignment) {
 // an Android game, so an app marked as a game (it has a game row) keeps its icon too
 internal fun isAppWithoutArt(item: CrossbarItem): Boolean = item.backdropArt.isEmpty() && item.packageName != null
 
-// owner, 2026-10-09: the app's icon again, large and faint in the bottom corner, as on its App Drawer case
+// the app's faint corner icon is the backdrop's (AppIconWatermark, bottom left), as on the crossbar and in the drawer
 @Composable
 private fun AppIconArt(item: CrossbarItem?, iconSize: Dp, alignment: Alignment = Alignment.Center) {
     if (item == null || !isAppWithoutArt(item)) return
-    val mark = iconSize * APP_MARK_GROW
-    AndroidAppIcon(
-        packageName = item.packageName, title = item.title, size = mark,
-        modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.BottomEnd, unbounded = true)
-            .offset(mark * 0.23f, mark * 0.14f).rotate(-14f).graphicsLayer(alpha = 0.16f),
-    )
     Box(Modifier.fillMaxSize(), contentAlignment = alignment) {
         AndroidAppIcon(packageName = item.packageName, title = item.title, size = iconSize)
     }
 }
 
-private const val APP_MARK_GROW = 2.6f
 
 @Composable
 private fun ProgressBar(fraction: Float, height: Dp, modifier: Modifier, color: Color = Color.White) {
