@@ -225,6 +225,25 @@ class EchoThemeStorePartsTest {
         assertEquals("BRACKET" to "SNAPPY", kept.focusStyle to kept.motion)
     }
 
+    // owner, 2026-10-09 (seen on the Konker: Ryoku's pings outlived "Before Ryoku"): a sound slot the kept look had
+    // nothing in is cleared when the look is taken back, as its styles and settings are
+    @Test
+    fun `taking a look back clears the sounds the theme added to its empty slots`() = runTest {
+        context.echoDataStore.edit { it[com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE] = 0x00AA33 }
+        val store = EchoThemeStore(context, media)
+        val pings = assertNotNull(store.importBundle(register(theme(
+            EchoThemeManifest(name = "Pings", accentColor = "#112233"),
+            media = mapOf("sound_back" to ThemeImage(wav(), "wav")),
+        ))))
+        assertTrue(store.apply(pings.id))
+        assertNotNull(media.pathFor(UiMediaSlot.SOUND_BACK), "the theme's Back sound is in use")
+
+        val before = assertNotNull(store.themes.value.firstOrNull { it.name == "Before Pings" })
+        assertTrue(store.apply(before.id))
+
+        assertEquals(null, media.pathFor(UiMediaSlot.SOUND_BACK), "the look had no Back sound, so taking it back clears the theme's")
+    }
+
     @Test
     fun `a look with nothing picked is kept as ECHO's defaults, so taking it back undoes everything a theme picked`() = runTest {
         context.echoDataStore.edit { it[com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE] = 0x00AA33 }

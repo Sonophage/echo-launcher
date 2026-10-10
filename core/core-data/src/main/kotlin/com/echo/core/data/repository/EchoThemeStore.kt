@@ -170,6 +170,10 @@ class EchoThemeStore @Inject constructor(
             staged.delete()
             if (result?.ok != true) Timber.w("EchoThemeStore: the theme's %s was not applied: %s", key, result?.message)
         }
+        for (key in bundle.manifest.clearsMedia.orEmpty()) {
+            if (key in bundle.media || mediaParts[ThemeMedia.FOLDERS[key]] !in parts) continue
+            com.echo.core.domain.model.UiMediaSlot.fromKey(key)?.let { uiMedia.clear(it) }
+        }
         // the theme's font replaces the one the last theme left; with none, the ECHO folder's or Sora is used
         if (ThemePart.FONT in parts) {
             val fontDir = File(context.filesDir, EchoFontFiles.THEME_FONT_DIR)
@@ -586,10 +590,13 @@ class EchoThemeStore @Inject constructor(
             },
         )
 
-        // the sounds, boot and game-start media in use
+        // the sounds, boot and game-start media in use; the look kept before a theme also names its empty slots,
+        // so taking it back clears what the theme filled
         val media = com.echo.core.domain.model.UiMediaSlot.entries.mapNotNull { slot ->
             uiMedia.pathFor(slot)?.let(::File)?.takeIf { it.isFile }?.let { slot.key to ThemeImage(it.readBytes(), it.extension.lowercase()) }
         }.toMap()
+        val emptyMedia = com.echo.core.domain.model.UiMediaSlot.entries.map { it.key }.filter { it !in media }
+            .takeIf { toTakeBack && it.isNotEmpty() }
 
         // the font: a theme's, or for Save as Theme the ECHO folder's when no theme set one. The look kept before
         // a theme leaves the folder's out, so taking it back hands the font back to the folder
@@ -602,7 +609,7 @@ class EchoThemeStore @Inject constructor(
             ByteArrayOutputStream().also { out -> it.compress(Bitmap.CompressFormat.PNG, 90, out) }.toByteArray()
         }
         val bundle = EchoThemeBundle(
-            manifest = manifest,
+            manifest = manifest.copy(clearsMedia = emptyMedia),
             wallpaper = wallpaperPng,
             preview = previewBytes,
             icons = icons,

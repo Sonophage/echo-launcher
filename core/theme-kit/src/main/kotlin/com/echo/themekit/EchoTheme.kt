@@ -34,6 +34,11 @@ data class EchoThemeManifest(
 
     // the look settings in ThemeSettings.KEYS (owner, 2026-10-09); anything else is ignored
     val settings: JsonObject? = null,
+
+    // the media slots (ThemeMedia keys) this look has nothing in, so applying it clears them. Only the look kept
+    // before a theme sets it: a theme's empty slot keeps the person's own, but taking a look back must also take
+    // back the sounds the theme added
+    val clearsMedia: List<String>? = null,
 ) {
     companion object {
         // owner, 2026-10-07: the format is .echo-theme. A bundle marked pfptheme, from before the rename,
