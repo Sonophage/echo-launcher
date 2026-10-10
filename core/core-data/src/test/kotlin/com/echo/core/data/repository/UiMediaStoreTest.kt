@@ -136,10 +136,11 @@ class UiMediaStoreTest {
         assertTrue(wavFile(UiMediaSlot.SOUND_BACK).isFile)
     }
 
+    // six frames, about 157 ms: past MP3_SOUND_MIN_MS, so this checks the Xing timing and not the short-MP3 rule
     @Test
     fun `a null MMR duration falls back to the Xing table and passes for a tiny VBR clip`() = runTest {
         probeReturns(null)
-        val cursor = xingVbrMp3(frames = 3)
+        val cursor = xingVbrMp3(frames = 6)
         val result = store.import(UiMediaSlot.SOUND_SCROLL, register(cursor, name = "snd_cursor.mp3"))
 
         assertTrue(result.ok, result.message ?: "Xing-timed clip must pass")

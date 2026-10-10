@@ -54,6 +54,12 @@ object UiMediaLimits {
     const val MSG_TOO_LARGE_BYTES_VIDEO = "File is too large — videos must be under 25 MB"
     const val MSG_UNDECODABLE = "Couldn't read that file — try a different one"
 
+    // a sound slot plays through SoundPool, which cannot load an MP3 this short (a 0.04 s one failed on the Konker
+    // with only a logcat warning, and the slot played nothing); the same sound as WAV plays.
+    // ponytail: the cut-off is a guess between the 0.04 s that failed and the 0.30 s ECHO theme sounds that play
+    const val MP3_SOUND_MIN_MS = 100L
+    const val MSG_MP3_TOO_SHORT = "Too short to play as MP3 — save it as WAV"
+
     const val MSG_NO_DURATION =
         "Couldn't read that file's length — try a different file, or convert it to MP3/WAV/OGG/M4A"
 
@@ -68,6 +74,7 @@ object UiMediaLimits {
             if (spec.kind == Kind.VIDEO) MSG_UNSUPPORTED_FORMAT_VIDEO else MSG_UNSUPPORTED_FORMAT_AUDIO
         probe.durationMs == null -> MSG_NO_DURATION
         probe.durationMs > spec.hardMaxMs -> tooLong(spec)
+        spec.kind == Kind.SOUND && probe.mime == "audio/mpeg" && probe.durationMs < MP3_SOUND_MIN_MS -> MSG_MP3_TOO_SHORT
         probe.bytes > spec.maxBytes -> tooLarge(spec)
         else -> null
     }

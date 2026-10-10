@@ -32,6 +32,15 @@ class UiMediaLimitsTest {
         }
     }
 
+    // a 0.04 s MP3 would not load in SoundPool on the Konker and its slot played nothing; as WAV it plays
+    @Test fun `a sound too short to load as MP3 is turned away, and the same as WAV is kept`() {
+        val spec = UiMediaLimits.NAVIGATION
+        assertEquals(UiMediaLimits.MSG_MP3_TOO_SHORT, UiMediaLimits.validate(spec, probe(mime = "audio/mpeg", durationMs = 40L)))
+        assertNull(UiMediaLimits.validate(spec, probe(mime = "audio/wav", durationMs = 40L)), "a short WAV plays")
+        assertNull(UiMediaLimits.validate(spec, probe(mime = "audio/mpeg", durationMs = UiMediaLimits.MP3_SOUND_MIN_MS)))
+        assertNull(UiMediaLimits.validate(UiMediaLimits.BOOT, probe(mime = "audio/mpeg", durationMs = 40L)), "a boot track is not a SoundPool sound")
+    }
+
     @Test fun `launch sound accepts exactly at 3 s and rejects over`() {
         assertNull(UiMediaLimits.validate(UiMediaLimits.LAUNCH, probe(durationMs = 3_000L)))
         assertNotNull(UiMediaLimits.validate(UiMediaLimits.LAUNCH, probe(durationMs = 3_001L)))
@@ -111,8 +120,9 @@ class UiMediaLimitsTest {
         assertTrue(tooLong.contains("0.5 s"), "must name the cap: $tooLong")
     }
 
+    // the one floor is an MP3 sound too short for SoundPool (MSG_MP3_TOO_SHORT); any other short sound plays
     @Test fun `audio has no floor - a zero-duration probe passes the range check`() {
-        assertNull(UiMediaLimits.validate(UiMediaLimits.NAVIGATION, probe(durationMs = 0L)))
+        assertNull(UiMediaLimits.validate(UiMediaLimits.NAVIGATION, probe(mime = "audio/wav", durationMs = 0L)))
         for (spec in listOf(
             UiMediaLimits.NAVIGATION, UiMediaLimits.CONFIRM,
             UiMediaLimits.BACK, UiMediaLimits.ERROR, UiMediaLimits.NOTIFICATION, UiMediaLimits.LAUNCH,
