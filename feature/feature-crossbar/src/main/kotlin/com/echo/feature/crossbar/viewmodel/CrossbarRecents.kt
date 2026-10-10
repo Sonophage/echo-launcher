@@ -54,6 +54,9 @@ class CrossbarRecents(
                 val row = when {
                     key.startsWith("g:") -> key.removePrefix("g:").toLongOrNull()
                         ?.let { id -> runCatching { vm.gameRepository.getById(id) }.getOrNull() }
+                        // a game whose file is gone is not pinned (owner, 2026-10-10); one hidden before the
+                        // library began unpinning them still has its pin
+                        ?.takeUnless { it.isMissing }
                         ?.let { game -> with(vm) { listOf(game).toCrossbarItems() }.firstOrNull() }
                     key.startsWith("a:") -> apps[key.removePrefix("a:")]?.let { app ->
                         CrossbarItem(id = key, title = app.label, subtitle = "App", packageName = app.packageName, isAndroidApp = true)

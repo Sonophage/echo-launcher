@@ -253,8 +253,15 @@ interface GameDao {
     @Query("UPDATE games SET is_missing = 0, last_seen_at = :seenAt WHERE rom_path IN (:romPaths)")
     suspend fun markSeen(romPaths: List<String>, seenAt: Long)
 
-    @Query("UPDATE games SET is_missing = 1 WHERE rom_path IN (:romPaths)")
+    // owner, 2026-10-10: a game that goes loses its Playing or Backlog mark; its play history stays
+    @Query("UPDATE games SET is_missing = 1, play_state = NULL WHERE rom_path IN (:romPaths)")
     suspend fun markMissing(romPaths: List<String>)
+
+    @Query("SELECT id FROM games WHERE rom_path IN (:romPaths)")
+    suspend fun idsForRomPaths(romPaths: List<String>): List<Long>
+
+    @Query("SELECT id FROM games WHERE platform_id = :platformId AND is_missing = 1")
+    suspend fun missingIds(platformId: String): List<Long>
 
     // the highest id ever given a game; ids are AUTOINCREMENT, so never reused
     @Query("SELECT seq FROM sqlite_sequence WHERE name = 'games'")

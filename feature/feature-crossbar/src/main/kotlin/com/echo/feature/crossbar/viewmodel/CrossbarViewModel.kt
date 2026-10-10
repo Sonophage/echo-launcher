@@ -3364,7 +3364,7 @@ class CrossbarViewModel @Inject constructor(
                     }
                 } else when (itemId) {
                     "launch"    -> launching.launchAppWithDisc(pkg, selectedItemArt())
-                    "pin_recent", "unpin_recent" -> { closeContextMenu(); recents.togglePinned("a:$pkg") }
+                    "pin_recent", "unpin_recent" -> { closeContextMenu(); recents.togglePinned(com.echo.core.data.repository.RecentPins.appKey(pkg)) }
                     "app_artwork" -> viewModelScope.launch { artworkTools.openArtworkStudio(ensureAppShortcut(pkg)) }
                     "app_info"  -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg) }
                     "uninstall" -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.uninstall(context, pkg) }
@@ -5052,7 +5052,7 @@ class CrossbarViewModel @Inject constructor(
         internal val RECENTLY_PLAYED_LIMIT = com.echo.core.data.repository.InterfacePreferences.LAST_PLAYED_SIZES.max()
 
         internal val KEY_RECENT_APP_DISMISSALS = stringSetPreferencesKey("recent_app_dismissals")
-        internal val KEY_RECENT_PINS = androidx.datastore.preferences.core.stringPreferencesKey("recent_pins")
+        internal val KEY_RECENT_PINS = com.echo.core.data.repository.RecentPins.KEY
         internal const val ADD_MENU_ITEM_ID = "add_menu"
         internal const val QUICK_SEARCH_ITEM_ID = "quick_search"
         internal const val SEARCH_ITEM_ID = "library_search"

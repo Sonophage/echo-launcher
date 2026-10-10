@@ -111,12 +111,12 @@ internal fun groupRecentsByDay(
 // owner, 2026-10-06: games and apps pinned under Recent, in the order they were pinned. A pin is "g:<game id>"
 // or "a:<package>"; a pinned row's id is its own, and the item's dated row is dropped (withoutPinned)
 internal fun pinKey(item: CrossbarItem): String? = when {
-    item.gameId != null -> "g:${item.gameId}"
-    item.packageName != null -> "a:${item.packageName}"
+    item.gameId != null -> com.echo.core.data.repository.RecentPins.gameKey(item.gameId)
+    item.packageName != null -> com.echo.core.data.repository.RecentPins.appKey(item.packageName)
     else -> null
 }
 
-internal fun parsePins(raw: String?): List<String> = raw?.split('\n')?.filter { it.isNotBlank() }?.distinct().orEmpty()
+internal fun parsePins(raw: String?): List<String> = com.echo.core.data.repository.RecentPins.parse(raw)
 
 internal fun togglePin(pins: List<String>, key: String): List<String> = if (key in pins) pins - key else pins + key
 

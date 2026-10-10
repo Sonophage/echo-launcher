@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
 
 class GameDateAddedTest {
     private val dao = mockk<GameDao>(relaxed = true)
-    private val repo = GameRepositoryImpl(dao, mockk<PlaySessionDao>(relaxed = true), mockk<PlatformDao>(relaxed = true))
+    private val repo = GameRepositoryImpl(mockk(relaxed = true), dao, mockk<PlaySessionDao>(relaxed = true), mockk<PlatformDao>(relaxed = true))
 
     private fun game(id: Long = 0, dateAdded: Long? = null) = Game(
         id = id,

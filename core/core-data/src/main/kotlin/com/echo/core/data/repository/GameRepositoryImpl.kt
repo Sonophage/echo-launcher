@@ -21,6 +21,7 @@ import java.io.File
 import javax.inject.Inject
 
 class GameRepositoryImpl @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val gameDao: GameDao,
     private val playSessionDao: PlaySessionDao,
     private val platformDao: PlatformDao,
@@ -123,6 +124,7 @@ class GameRepositoryImpl @Inject constructor(
 
     override suspend fun delete(id: Long) {
         gameDao.deleteById(id)
+        RecentPins.unpinGames(context, listOf(id))
         Timber.i("Game deleted: id=$id")
     }
 
@@ -211,9 +213,18 @@ class GameRepositoryImpl @Inject constructor(
     override suspend fun markSeen(romPaths: List<String>, seenAt: Long) =
         gameDao.markSeen(romPaths, seenAt)
 
-    override suspend fun markMissing(romPaths: List<String>) =
+    // owner, 2026-10-10: a game that goes comes off Pinned and loses its Playing or Backlog mark (the query clears
+    // that); Recent already leaves out a missing game, and its play history stays
+    override suspend fun markMissing(romPaths: List<String>) {
         gameDao.markMissing(romPaths)
+        RecentPins.unpinGames(context, gameDao.idsForRomPaths(romPaths))
+    }
 
-    override suspend fun deleteMissing(platformId: String): Int =
-        gameDao.deleteMissing(platformId).also { Timber.i("Deleted $it missing games on $platformId") }
+    override suspend fun deleteMissing(platformId: String): Int {
+        val ids = gameDao.missingIds(platformId)
+        return gameDao.deleteMissing(platformId).also {
+            RecentPins.unpinGames(context, ids)
+            Timber.i("Deleted $it missing games on $platformId")
+        }
+    }
 }
