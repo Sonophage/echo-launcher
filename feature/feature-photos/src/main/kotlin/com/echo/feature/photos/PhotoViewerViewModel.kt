@@ -62,7 +62,7 @@ enum class PhotoViewerAction(val label: String, val group: MenuGroup = MenuGroup
     INFO("View Information"),
     SET_WALLPAPER("Set as Launcher Wallpaper", MenuGroup.SETTINGS),
     LOCATION("Open File Location", MenuGroup.SETTINGS),
-    REMOVE("Remove From Library", MenuGroup.REMOVE),
+    REMOVE("Delete From Device", MenuGroup.REMOVE),
 }
 
 enum class PhotoControl(val label: String) {
@@ -580,7 +580,11 @@ class PhotoViewerViewModel @Inject constructor(
         val s = _uiState.value
         val photo = s.photo ?: return
         viewModelScope.launch {
-            photoRepository.removePhoto(photo.id)
+            val deleted = com.echo.core.ui.media.deleteFromDevice(photo.uri, { com.echo.core.ui.media.deleteMediaFile(context, it) }) {
+                photoRepository.removePhoto(photo.id)
+            }
+            com.echo.core.ui.media.postDeleteResult(deleted, photo.displayName)
+            if (!deleted) return@launch _uiState.update { it.copy(confirmRemove = false) }
             val remaining = s.photos.filterNot { it.id == photo.id }
             if (remaining.isEmpty()) {
                 _uiState.update { it.copy(confirmRemove = false, closed = true) }

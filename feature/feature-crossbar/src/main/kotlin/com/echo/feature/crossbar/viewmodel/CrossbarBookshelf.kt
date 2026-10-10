@@ -1,5 +1,8 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.ui.media.deleteFromDevice
+import com.echo.core.ui.media.deleteMediaFile
+import com.echo.core.ui.media.postDeleteResult
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.domain.model.BuiltInCategory
@@ -267,7 +270,11 @@ class CrossbarBookshelf(
             "edit_genre" -> vm.genres.openPicker(GenreTarget.Book(bookId))
 
             "book_remove_recent" -> vm.appAction { bookRepository.clearBookLastOpened(bookId) }
-            "book_remove" -> vm.appAction { bookRepository.removeBook(bookId) }
+            "book_remove" -> vm.appAction {
+                val book = bookRepository.getBook(bookId) ?: return@appAction
+                val deleted = deleteFromDevice(book.uri, { deleteMediaFile(vm.context, it) }) { bookRepository.removeBook(bookId) }
+                postDeleteResult(deleted, book.title ?: book.displayName)
+            }
         }
     }
 

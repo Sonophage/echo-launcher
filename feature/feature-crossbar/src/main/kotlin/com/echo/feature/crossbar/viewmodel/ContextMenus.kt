@@ -160,7 +160,7 @@ internal fun videoFileContextMenuItems(
     if (inPlaylist) {
         add(CrossbarContextMenuItem("video_remove_playlist", "Remove from this Playlist", isDestructive = true, confirms = false, group = MenuGroup.REMOVE))
     }
-    add(CrossbarContextMenuItem("video_remove", "Remove From Library", isDestructive = true, group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("video_remove", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
 internal fun videoLibraryContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
@@ -177,7 +177,7 @@ internal fun videoPlaylistContextMenuItems(): List<CrossbarContextMenuItem> = li
 internal fun photoFileContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
     CrossbarContextMenuItem("photo_open", "Open"),
     CrossbarContextMenuItem("photo_set_wallpaper", "Set as Launcher Wallpaper", group = MenuGroup.SETTINGS),
-    CrossbarContextMenuItem("photo_remove", "Remove From Library", isDestructive = true, group = MenuGroup.REMOVE),
+    CrossbarContextMenuItem("photo_remove", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE),
 )
 
 internal fun photoLibraryContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
@@ -190,7 +190,7 @@ internal fun bookContextMenuItems(hasOpenStamp: Boolean): List<CrossbarContextMe
     add(CrossbarContextMenuItem("book_open", "Read"))
     add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.METADATA))
     if (hasOpenStamp) add(CrossbarContextMenuItem("book_remove_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
-    add(CrossbarContextMenuItem("book_remove", "Remove From Library", isDestructive = true, group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("book_remove", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
 // an album's own menu (the Albums view, the App Drawer's Music)
@@ -222,7 +222,7 @@ internal fun musicTrackContextMenuItems(
     if (playlistId != null) {
         add(CrossbarContextMenuItem("remove_from_playlist", "Remove from this Playlist", isDestructive = true, confirms = false, group = MenuGroup.REMOVE))
     }
-    add(CrossbarContextMenuItem("remove_track", "Remove From Library", isDestructive = true, group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("remove_track", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
 internal fun playlistRowContextMenuItems(): List<CrossbarContextMenuItem> = listOf(

@@ -1,5 +1,8 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.ui.media.deleteFromDevice
+import com.echo.core.ui.media.deleteMediaFile
+import com.echo.core.ui.media.postDeleteResult
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.domain.model.BuiltInCategory
@@ -317,7 +320,11 @@ class CrossbarVideo(
                 )
             }
             "video_remove_recent" -> vm.appAction { videoRepository.clearLastWatched(videoId) }
-            "video_remove" -> vm.appAction { videoRepository.removeVideo(videoId) }
+            "video_remove" -> vm.appAction {
+                val video = videoRepository.getVideo(videoId) ?: return@appAction
+                val deleted = deleteFromDevice(video.uri, { deleteMediaFile(vm.context, it) }) { videoRepository.removeVideo(videoId) }
+                postDeleteResult(deleted, video.title ?: video.displayName)
+            }
         }
     }
 

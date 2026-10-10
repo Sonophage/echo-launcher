@@ -37,7 +37,7 @@ enum class VideoDetailAction(val label: String, val group: MenuGroup = MenuGroup
     RENAME("Rename Title", MenuGroup.SETTINGS),
     THUMBNAIL("Change Thumbnail", MenuGroup.SETTINGS),
     LOCATION("Open File Location", MenuGroup.SETTINGS),
-    REMOVE("Remove From Library", MenuGroup.REMOVE),
+    REMOVE("Delete From Device", MenuGroup.REMOVE),
 }
 
 data class VideoPlaylistOption(val id: Long, val name: String, val checked: Boolean)
@@ -372,8 +372,11 @@ class VideoDetailViewModel @Inject constructor(
     fun confirmRemove() {
         val v = _uiState.value.video ?: return
         viewModelScope.launch {
-            videoRepository.removeVideo(v.id)
-            _uiState.update { it.copy(confirmRemove = false, closed = true) }
+            val deleted = com.echo.core.ui.media.deleteFromDevice(v.uri, { com.echo.core.ui.media.deleteMediaFile(context, it) }) {
+                videoRepository.removeVideo(v.id)
+            }
+            com.echo.core.ui.media.postDeleteResult(deleted, v.title ?: v.displayName)
+            _uiState.update { it.copy(confirmRemove = false, closed = deleted) }
         }
     }
 

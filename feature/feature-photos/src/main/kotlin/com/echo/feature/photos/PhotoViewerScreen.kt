@@ -206,10 +206,10 @@ fun PhotoViewerScreen(
 
         if (state.confirmRemove) {
             EchoConfirmOverlay(
-                title = "Remove from library?",
-                message = "\"${photo.displayName}\" will be removed from this library. " +
-                    "The photo on disk is not deleted.",
-                confirmLabel = "Remove",
+                // owner, 2026-10-09: removing a photo deletes it from the device
+                title = "Delete from device?",
+                message = "\"${photo.displayName}\" will be deleted from this device. This cannot be undone.",
+                confirmLabel = "Delete",
                 cancelLabel = "Cancel",
                 confirmFocused = false,
                 cancelFocused = true,

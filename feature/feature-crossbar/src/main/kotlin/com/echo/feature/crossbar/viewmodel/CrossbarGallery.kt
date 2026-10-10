@@ -1,5 +1,8 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.ui.media.deleteFromDevice
+import com.echo.core.ui.media.deleteMediaFile
+import com.echo.core.ui.media.postDeleteResult
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.domain.model.BuiltInCategory
@@ -235,7 +238,11 @@ class CrossbarGallery(
             "photo_open"          -> openPhoto(photoId)
 
             "photo_set_wallpaper" -> openPhotoViewer(photoId, wallpaperPreview = true)
-            "photo_remove"        -> vm.appAction { photoRepository.removePhoto(photoId) }
+            "photo_remove"        -> vm.appAction {
+                val photo = photoRepository.getPhoto(photoId) ?: return@appAction
+                val deleted = deleteFromDevice(photo.uri, { deleteMediaFile(vm.context, it) }) { photoRepository.removePhoto(photoId) }
+                postDeleteResult(deleted, photo.displayName)
+            }
         }
     }
 

@@ -282,10 +282,10 @@ fun VideoDetailScreen(
 
         if (state.confirmRemove) {
             EchoConfirmOverlay(
-                title = "Remove from library?",
-                message = "\"${video.displayTitle}\" will be removed from this library. " +
-                    "The file on disk is not deleted.",
-                confirmLabel = "Remove",
+                // owner, 2026-10-09: removing a video deletes it from the device
+                title = "Delete from device?",
+                message = "\"${video.displayTitle}\" will be deleted from this device. This cannot be undone.",
+                confirmLabel = "Delete",
                 cancelLabel = "Cancel",
                 confirmFocused = false,
                 cancelFocused = true,
@@ -472,7 +472,7 @@ private val PromptRowClearance = 44.dp
 internal fun videoDetailHelperItems(state: VideoDetailUiState): List<ControllerPromptItem> = when {
     state.launchError != null -> listOf(ControllerPromptItem(GamepadAction.SELECT, "Dismiss"))
     state.confirmRemove -> listOf(
-        ControllerPromptItem(GamepadAction.SELECT, "Remove"),
+        ControllerPromptItem(GamepadAction.SELECT, "Delete"),
         ControllerPromptItem(GamepadAction.BACK, "Cancel"),
     )
     state.creatingPlaylist || state.isEditingTitle ->

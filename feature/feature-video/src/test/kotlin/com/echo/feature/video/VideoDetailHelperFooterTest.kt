@@ -68,7 +68,7 @@ class VideoDetailHelperFooterTest {
         assertEquals(listOf("Navigate", "Select", "Close"), labels(baseState.copy(showOptions = true)))
         assertEquals(listOf("Navigate", "Select", "Close"), labels(baseState.copy(showPlaylistPicker = true)))
         assertEquals(listOf("Close"), labels(baseState.copy(infoVisible = true)))
-        assertEquals(listOf("Remove", "Cancel"), labels(baseState.copy(confirmRemove = true)))
+        assertEquals(listOf("Delete", "Cancel"), labels(baseState.copy(confirmRemove = true)))
         assertEquals(listOf("Cancel"), labels(baseState.copy(isEditingTitle = true)))
     }
 

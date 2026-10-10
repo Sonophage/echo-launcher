@@ -1,5 +1,8 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.ui.media.deleteFromDevice
+import com.echo.core.ui.media.deleteMediaFile
+import com.echo.core.ui.media.postDeleteResult
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.domain.model.BuiltInCategory
@@ -528,7 +531,8 @@ class CrossbarMusic(
             "remove_from_recent" -> vm.appAction { musicRepository.clearTrackLastPlayed(trackId) }
             "remove_track" -> vm.appAction {
                 val track = musicRepository.getTrack(trackId) ?: return@appAction
-                removeSingleTrack(track.folderId, trackId)
+                val deleted = deleteFromDevice(track.uri, { deleteMediaFile(vm.context, it) }) { removeSingleTrack(track.folderId, trackId) }
+                postDeleteResult(deleted, track.title ?: track.displayName)
             }
         }
     }
