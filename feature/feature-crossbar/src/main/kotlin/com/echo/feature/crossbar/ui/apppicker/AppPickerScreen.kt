@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.echo.core.ui.icons.rememberAppIcon
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -351,17 +353,27 @@ private fun AppPickerTile(
                     .matchParentSize()
                     .background(colors.tileSelectedInner.copy(alpha = 0.10f * check), frame),
             )
-            EchoMonogram(
-                label = entry.label,
-                size = artworkSize,
-                corner = artworkSize * MONOGRAM_CORNER,
-                glyphSize = (artworkSize.value * MONOGRAM_GLYPH).sp,
-                focused = false,
-                colors = colors,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .semantics { contentDescription = entry.label },
-            )
+            // owner, 2026-10-09: the app's own icon, as the App Drawer shows it; the letter only while it loads or
+            // when the app has none
+            val icon = rememberAppIcon(entry.packageName)
+            if (icon != null) {
+                Image(
+                    icon.bitmap, entry.label,
+                    Modifier.align(Alignment.Center).size(artworkSize).clip(RoundedCornerShape(artworkSize * MONOGRAM_CORNER)),
+                )
+            } else {
+                EchoMonogram(
+                    label = entry.label,
+                    size = artworkSize,
+                    corner = artworkSize * MONOGRAM_CORNER,
+                    glyphSize = (artworkSize.value * MONOGRAM_GLYPH).sp,
+                    focused = false,
+                    colors = colors,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .semantics { contentDescription = entry.label },
+                )
+            }
 
             EchoCheckBadge(
                 fill = colors.tileSelectedEdge,
