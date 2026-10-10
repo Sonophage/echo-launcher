@@ -99,10 +99,48 @@ class LibraryScannerTest {
             completeSource(newGames = emptyList(), present = setOf("/roms/psx/crash.bin")),
         )
 
-        val outcome = scanner.scanPlatform("psx", removeMissing = false)
+        val outcome = scanner.scanPlatform("psx")
 
         assertEquals(1, outcome.added)
         coVerify(exactly = 1) { gameRepository.upsert(game) }
+    }
+
+    // owner, 2026-10-10: every scan hides games whose file is gone, not only the Remove Missing one
+    @Test
+    fun `a plain scan hides missing games and deletes none`() = runTest {
+        val scanner = scannerFor()
+        coEvery { scanSourceResolver.sourcesFor(card) } returns listOf(completeSource(present = setOf("/roms/psx/a.bin")))
+
+        scanner.scanPlatform("psx")
+
+        coVerify(exactly = 1) { reconciler.reconcile(any(), eq(setOf("/roms/psx/a.bin")), eq(false), any()) }
+        coVerify(exactly = 0) { gameRepository.deleteMissing(any()) }
+    }
+
+    @Test
+    fun `Remove Missing deletes the platform's missing games after a trusted survey`() = runTest {
+        val scanner = scannerFor()
+        coEvery { scanSourceResolver.sourcesFor(card) } returns listOf(completeSource(present = setOf("/roms/psx/a.bin")))
+        coEvery { gameRepository.deleteMissing("psx") } returns 2
+
+        val outcome = scanner.scanPlatform("psx", deleteMissing = true)
+
+        assertEquals(2, outcome.deleted)
+        coVerify(exactly = 1) { gameRepository.deleteMissing("psx") }
+    }
+
+    // a card pulled mid-scan: the reconciler skips, so nothing it hid earlier is deleted on this scan's word
+    @Test
+    fun `Remove Missing deletes nothing when the survey is not trusted`() = runTest {
+        val scanner = scannerFor()
+        coEvery { scanSourceResolver.sourcesFor(card) } returns listOf(completeSource(present = null))
+        coEvery { reconciler.reconcile(any(), any(), any(), any()) } returns
+            LibraryReconciler.Result(markedSeen = 0, markedMissing = 0, skipped = true)
+
+        val outcome = scanner.scanPlatform("psx", deleteMissing = true)
+
+        assertEquals(0, outcome.deleted)
+        coVerify(exactly = 0) { gameRepository.deleteMissing(any()) }
     }
 
     @Test
@@ -113,7 +151,7 @@ class LibraryScannerTest {
             completeSource(present = null),
         )
 
-        val outcome = scanner.scanPlatform("psx", removeMissing = true)
+        val outcome = scanner.scanPlatform("psx")
 
         assertFalse(outcome.surveyTrusted)
         coVerify(exactly = 1) { reconciler.reconcile(any(), isNull(), any(), any()) }
@@ -127,7 +165,7 @@ class LibraryScannerTest {
             { flowOf(ScanResult.Error("card went away mid-walk")) },
         )
 
-        val outcome = scanner.scanPlatform("psx", removeMissing = true)
+        val outcome = scanner.scanPlatform("psx")
 
         assertFalse(outcome.surveyTrusted)
         assertEquals("card went away mid-walk", outcome.errorMessage)
@@ -139,7 +177,7 @@ class LibraryScannerTest {
         val scanner = scannerFor()
         coEvery { scanSourceResolver.sourcesFor(card) } returns listOf(completeSource())
 
-        scanner.scanPlatform("psx", removeMissing = true)
+        scanner.scanPlatform("psx")
 
         coVerify(exactly = 0) { memoryCardRepository.recordScan(any(), any()) }
         coVerify(exactly = 0) { memoryCardRepository.recountGames(any()) }
@@ -151,7 +189,7 @@ class LibraryScannerTest {
         val game = Game(title = "Crash", platformId = "psx", romPath = "/roms/psx/crash.bin")
         coEvery { scanSourceResolver.sourcesFor(card) } returns listOf(completeSource(newGames = listOf(game)))
 
-        scanner.scanPlatform("psx", removeMissing = false)
+        scanner.scanPlatform("psx")
 
         coVerify(exactly = 1) { memoryCardRepository.recordScan("psx", any()) }
         coVerify(exactly = 1) { memoryCardRepository.recountGames("psx") }
@@ -162,7 +200,7 @@ class LibraryScannerTest {
         val scanner = scannerFor()
         coEvery { gameRepository.getByPlatform("psx") } throws RuntimeException("db closed")
 
-        val outcome = scanner.scanPlatform("psx", removeMissing = false)
+        val outcome = scanner.scanPlatform("psx")
 
         assertEquals(ScanStatus.FAILED, outcome.status)
         assertFalse(outcome.surveyTrusted)
@@ -177,7 +215,7 @@ class LibraryScannerTest {
             flow<ScanResult> { throw RuntimeException("provider exploded") }
         })
 
-        val outcome = scanner.scanPlatform("psx", removeMissing = false)
+        val outcome = scanner.scanPlatform("psx")
 
         assertEquals(ScanStatus.FAILED, outcome.status)
         assertFalse(outcome.surveyTrusted)
@@ -193,7 +231,7 @@ class LibraryScannerTest {
         coEvery { scanSourceResolver.sourcesFor(card) } returns
             listOf(completeSource(newGames = listOf(ok, bad), present = setOf("/roms/psx/crash.bin", "/roms/psx/spyro.bin")))
 
-        val outcome = scanner.scanPlatform("psx", removeMissing = true)
+        val outcome = scanner.scanPlatform("psx")
 
         assertEquals(ScanStatus.FAILED, outcome.status)
         assertEquals(1, outcome.added)
@@ -212,9 +250,9 @@ class LibraryScannerTest {
             }
         })
 
-        val first = async { scanner.scanPlatform("psx", removeMissing = false) }
+        val first = async { scanner.scanPlatform("psx") }
         advanceUntilIdle()
-        val second = scanner.scanPlatform("psx", removeMissing = false)
+        val second = scanner.scanPlatform("psx")
 
         assertEquals(ScanStatus.SKIPPED_BUSY, second.status)
         gate.complete()
@@ -227,7 +265,7 @@ class LibraryScannerTest {
         val scanner = scannerFor()
         coEvery { scanSourceResolver.sourcesFor(card) } returns emptyList()
 
-        val outcome = scanner.scanPlatform("psx", removeMissing = false)
+        val outcome = scanner.scanPlatform("psx")
 
         assertEquals(ScanStatus.SKIPPED_NO_SOURCE, outcome.status)
         coVerify(exactly = 0) { gameRepository.upsert(any()) }
@@ -240,7 +278,7 @@ class LibraryScannerTest {
             flow<ScanResult> { throw CancellationException("scope cancelled") }
         })
 
-        scanner.scanPlatform("psx", removeMissing = false)
+        scanner.scanPlatform("psx")
     }
 
     @Test
@@ -280,7 +318,7 @@ class LibraryScannerTest {
             "Final Fantasy VII (Disc 3).cue",
         )
 
-        val outcome = scanner.scanPlatform("psx", removeMissing = false)
+        val outcome = scanner.scanPlatform("psx")
 
         assertEquals(ScanStatus.COMPLETED, outcome.status)
         assertEquals(1, outcome.added)
@@ -310,7 +348,7 @@ class LibraryScannerTest {
         )
         coEvery { m3uPlaylistReader.read(stale) } returns null
 
-        val outcome = scanner.scanPlatform("psx", removeMissing = false)
+        val outcome = scanner.scanPlatform("psx")
 
         assertEquals(ScanStatus.COMPLETED, outcome.status)
         coVerify(exactly = 1) {
@@ -333,7 +371,7 @@ class LibraryScannerTest {
         coEvery { memoryCardRepository.getById("gba") } returns noExtensions
         coEvery { scanSourceResolver.sourcesFor(card) } returns listOf(completeSource())
 
-        val outcomes = scanner.scanAllEnabled(removeMissing = true)
+        val outcomes = scanner.scanAllEnabled()
 
         assertEquals(1, outcomes.size)
         assertEquals("psx", outcomes.single().platformId)

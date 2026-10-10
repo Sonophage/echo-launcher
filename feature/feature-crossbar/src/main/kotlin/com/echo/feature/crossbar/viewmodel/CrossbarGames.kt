@@ -193,6 +193,7 @@ class CrossbarGames(
             if (entry.platformId != platformId) return@forEach
             vm.gameRepository.delete(entry.id)
         }
+        vm.goneGameArt.run()
         Timber.i("Android library removal: ${packages.size} app(s) removed from $platformId")
     }
 
@@ -386,6 +387,7 @@ class CrossbarGames(
                 val gid = gameId
                 vm.appAction {
                     vm.gameRepository.delete(gid)
+                    vm.goneGameArt.run()
                     memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
                 }
             }

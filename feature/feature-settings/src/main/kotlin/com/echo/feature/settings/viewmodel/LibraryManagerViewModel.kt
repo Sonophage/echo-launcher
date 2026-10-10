@@ -132,6 +132,7 @@ class LibraryManagerViewModel @Inject constructor(
     private val libraryScanner: LibraryScanner,
     private val pcGameExporter: com.echo.feature.settings.pc.PcGameExporter,
     private val standardRomFolders: StandardRomFolders,
+    private val goneGameArt: com.echo.feature.artwork.store.GoneGameArtworkSweep,
 ) : ViewModel() {
     private val _scratch = MutableStateFlow(LibraryManagerUiState())
 
@@ -204,6 +205,7 @@ class LibraryManagerViewModel @Inject constructor(
     fun removeApp(gameId: Long) {
         viewModelScope.launch {
             gameRepository.delete(gameId)
+            goneGameArt.run()
             memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
         }
     }
@@ -492,7 +494,7 @@ class LibraryManagerViewModel @Inject constructor(
         )
     }
 
-    fun scanConsole(platformId: String, removeMissing: Boolean = false) {
+    fun scanConsole(platformId: String, deleteMissing: Boolean = false) {
         if (platformId in _scratch.value.scanningPlatformIds) return
 
         if (platformId == PSVITA_PLATFORM_ID) {
@@ -500,11 +502,12 @@ class LibraryManagerViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _scratch.update { it.copy(scanningPlatformIds = it.scanningPlatformIds + platformId) }
-            val outcome = libraryScanner.scanPlatform(platformId, removeMissing)
+            val outcome = libraryScanner.scanPlatform(platformId, deleteMissing)
+            if (outcome.deleted > 0) goneGameArt.run()
             _scratch.update {
                 it.copy(
                     scanningPlatformIds = it.scanningPlatformIds - platformId,
-                    message = scanOutcomeMessage(outcome, removeMissing),
+                    message = scanOutcomeMessage(outcome),
                 )
             }
             Timber.i(
@@ -514,11 +517,11 @@ class LibraryManagerViewModel @Inject constructor(
         }
     }
 
-    fun scanAllConsoles(removeMissing: Boolean = false) {
+    fun scanAllConsoles(deleteMissing: Boolean = false) {
         viewModelScope.launch {
             memoryCardRepository.getAll()
                 .filter { it.isScannable() }
-                .forEach { scanConsole(it.platformId, removeMissing) }
+                .forEach { scanConsole(it.platformId, deleteMissing) }
         }
     }
 

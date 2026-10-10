@@ -25,7 +25,7 @@ class LibraryRescanCoordinatorTest {
     @Before
     fun setUp() {
         libraryScanner = mockk(relaxed = true)
-        coEvery { libraryScanner.scanAllEnabled(true) } returns listOf(outcome)
+        coEvery { libraryScanner.scanAllEnabled() } returns listOf(outcome)
     }
 
     private fun coordinator(scope: kotlinx.coroutines.CoroutineScope, rescanOnReturn: Boolean = true) =
@@ -35,7 +35,7 @@ class LibraryRescanCoordinatorTest {
     fun `onResume scans the first time`() = runTest {
         coordinator(this).onResume()
         advanceUntilIdle()
-        coVerify(exactly = 1) { libraryScanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { libraryScanner.scanAllEnabled() }
     }
 
     @Test
@@ -45,7 +45,7 @@ class LibraryRescanCoordinatorTest {
         advanceUntilIdle()
         coordinator.onResume()
         advanceUntilIdle()
-        coVerify(exactly = 1) { libraryScanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { libraryScanner.scanAllEnabled() }
     }
 
     @Test
@@ -55,28 +55,28 @@ class LibraryRescanCoordinatorTest {
             coordinator.onResume()
             advanceUntilIdle()
         }
-        coVerify(exactly = 1) { libraryScanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { libraryScanner.scanAllEnabled() }
     }
 
     @Test
     fun `with Rescan on Return off, coming back does not scan`() = runTest {
         coordinator(this, rescanOnReturn = false).onResume()
         advanceUntilIdle()
-        coVerify(exactly = 0) { libraryScanner.scanAllEnabled(any()) }
+        coVerify(exactly = 0) { libraryScanner.scanAllEnabled() }
     }
 
     @Test
     fun `with Rescan on Return off, inserting a card still scans`() = runTest {
         coordinator(this, rescanOnReturn = false).onMediaMounted()
         advanceUntilIdle()
-        coVerify(exactly = 1) { libraryScanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { libraryScanner.scanAllEnabled() }
     }
 
     @Test
     fun `a mount triggers a scan after the debounce`() = runTest {
         coordinator(this).onMediaMounted()
         advanceUntilIdle()
-        coVerify(exactly = 1) { libraryScanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { libraryScanner.scanAllEnabled() }
     }
 
     @Test
@@ -84,7 +84,7 @@ class LibraryRescanCoordinatorTest {
         val coordinator = coordinator(this)
         repeat(5) { coordinator.onMediaMounted() }
         advanceUntilIdle()
-        coVerify(exactly = 1) { libraryScanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { libraryScanner.scanAllEnabled() }
     }
 
     @Test
@@ -94,6 +94,6 @@ class LibraryRescanCoordinatorTest {
         advanceUntilIdle()
         coordinator.onMediaMounted()
         advanceUntilIdle()
-        coVerify(exactly = 2) { libraryScanner.scanAllEnabled(true) }
+        coVerify(exactly = 2) { libraryScanner.scanAllEnabled() }
     }
 }

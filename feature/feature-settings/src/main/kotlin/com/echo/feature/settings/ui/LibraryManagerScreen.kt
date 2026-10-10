@@ -124,7 +124,7 @@ private fun LibraryManagerContent(
     onOpenCardDetail: (String) -> Unit,
     onStartAddConsole: () -> Unit,
     onRequestRomFolderSetup: () -> Unit,
-    onScanAllConsoles: (removeMissing: Boolean) -> Unit,
+    onScanAllConsoles: (deleteMissing: Boolean) -> Unit,
     onDismissMessage: () -> Unit,
     onPlatformChosen: (PlatformOption) -> Unit,
     onEmulatorChosen: (EmulatorOption) -> Unit,
@@ -189,7 +189,7 @@ private fun LibraryListContent(
     onOpenCardDetail: (String) -> Unit,
     onStartAddConsole: () -> Unit,
     onRequestRomFolderSetup: () -> Unit,
-    onScanAllConsoles: (removeMissing: Boolean) -> Unit,
+    onScanAllConsoles: (deleteMissing: Boolean) -> Unit,
     onDismissMessage: () -> Unit,
     modifier: Modifier,
     rescanOnReturn: Boolean,
@@ -242,13 +242,13 @@ private fun LibraryListContent(
                 sublabel = when {
                     state.scanningPlatformIds.isNotEmpty() -> "Scanning ${state.scanningPlatformIds.size}…"
                     state.cards.none { it.treeUri != null || it.romDirectory != null } -> "Configure a ROM folder first"
-                    else -> "Scan every enabled console's folder"
+                    else -> "Find new games and hide ones whose file is gone"
                 },
                 onClick  = if (anyScannable) ({ onScanAllConsoles(false) }) else null,
             )
             SettingsRow(
                 label    = "Re-Scan All (Remove Missing)",
-                sublabel = "Also removes games whose ROM file no longer exists",
+                sublabel = "Also deletes games whose ROM file is gone, with their art and play history",
                 onClick  = if (anyScannable) ({ confirmRescanAll = true }) else null,
             )
 
@@ -267,7 +267,8 @@ private fun LibraryListContent(
     if (confirmRescanAll) {
         SettingsConfirmOverlay(
             title = "Re-Scan and Remove Missing Games?",
-            message = "Removes library entries whose ROM file is gone. This can take a while with a large library.",
+            message = "Deletes games whose ROM file is gone, with their art and play history. Put in any card your games " +
+                "are on first. This can take a while with a large library.",
             confirmLabel = "Re-Scan",
             onConfirm = { confirmRescanAll = false; onScanAllConsoles(true) },
             onCancel = { confirmRescanAll = false },

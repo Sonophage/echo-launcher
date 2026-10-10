@@ -39,6 +39,7 @@ data class PlatformScanOutcome(
     val status: ScanStatus,
     val added: Int = 0,
     val markedMissing: Int = 0,
+    val deleted: Int = 0,
     val surveyTrusted: Boolean = false,
     val errorMessage: String? = null,
 )
@@ -60,7 +61,9 @@ class LibraryScanner @Inject constructor(
 ) {
     private val busyPlatforms = ConcurrentHashMap.newKeySet<String>()
 
-    suspend fun scanPlatform(platformId: String, removeMissing: Boolean): PlatformScanOutcome {
+    // every scan hides games whose file is gone, so a card that is out brings them back with their history when it
+    // returns; [deleteMissing] deletes them, which only the owner's confirmed Remove Missing asks for (owner, 2026-10-10)
+    suspend fun scanPlatform(platformId: String, deleteMissing: Boolean = false): PlatformScanOutcome {
         val card = memoryCardRepository.getById(platformId)
             ?: return PlatformScanOutcome(
                 platformId  = platformId,
@@ -73,7 +76,7 @@ class LibraryScanner @Inject constructor(
             return PlatformScanOutcome(platformId, card.displayName, ScanStatus.SKIPPED_BUSY)
         }
         return try {
-            withContext(ioDispatcher) { scanLocked(card, removeMissing) }
+            withContext(ioDispatcher) { scanLocked(card, deleteMissing) }
         } catch (ce: CancellationException) {
             throw ce
         } catch (e: Exception) {
@@ -87,15 +90,15 @@ class LibraryScanner @Inject constructor(
         }
     }
 
-    suspend fun scanAllEnabled(removeMissing: Boolean): List<PlatformScanOutcome> {
+    suspend fun scanAllEnabled(): List<PlatformScanOutcome> {
         val eligible = memoryCardRepository.getAll().filter { it.isScannable() }
-        val outcomes = eligible.map { scanPlatform(it.platformId, removeMissing) }
+        val outcomes = eligible.map { scanPlatform(it.platformId) }
 
         menuSound.play(com.echo.core.ui.sound.MenuSound.NOTIFICATION)
         return outcomes
     }
 
-    private suspend fun scanLocked(card: MemoryCard, removeMissing: Boolean): PlatformScanOutcome {
+    private suspend fun scanLocked(card: MemoryCard, deleteMissing: Boolean): PlatformScanOutcome {
         val platformId = card.platformId
 
         val baseline = try {
@@ -172,30 +175,31 @@ class LibraryScanner @Inject constructor(
 
         discSetReconciler.reconcilePlatform(platformId, dbGames, scannedGames)
 
-        var removed = 0
-        if (removeMissing) {
-            removed = libraryReconciler.reconcile(dbGames, present, scanErrored).markedMissing
-        }
+        val reconciled = libraryReconciler.reconcile(dbGames, present, scanErrored)
+        val removed = reconciled.markedMissing
+        // only after a survey that can be trusted, so a card that went away mid-scan deletes nothing
+        val deleted = if (deleteMissing && !reconciled.skipped) gameRepository.deleteMissing(platformId) else 0
 
-        if (added > 0 || removed > 0) {
+        if (added > 0 || removed > 0 || deleted > 0) {
             memoryCardRepository.recordScan(platformId, System.currentTimeMillis())
             memoryCardRepository.recountGames(platformId)
         }
 
-        Timber.i("Library scan complete for $platformId: $added new, $removed marked missing")
+        Timber.i("Library scan complete for $platformId: $added new, $removed marked missing, $deleted deleted")
         return PlatformScanOutcome(
             platformId    = platformId,
             displayName   = card.displayName,
             status        = ScanStatus.COMPLETED,
             added         = added,
             markedMissing = removed,
+            deleted       = deleted,
             surveyTrusted = !scanErrored && present != null,
             errorMessage  = if (scanErrored) firstSourceError else null,
         )
     }
 }
 
-fun scanOutcomeMessage(outcome: PlatformScanOutcome, removeMissing: Boolean): String =
+fun scanOutcomeMessage(outcome: PlatformScanOutcome): String =
     when (outcome.status) {
         ScanStatus.SKIPPED_NO_SOURCE ->
             "${outcome.displayName}: ${outcome.errorMessage ?: "ROM folder not configured."}"
@@ -204,8 +208,14 @@ fun scanOutcomeMessage(outcome: PlatformScanOutcome, removeMissing: Boolean): St
         ScanStatus.COMPLETED ->
             "${outcome.displayName}: " + buildString {
                 append(if (outcome.added == 0) "no new ROMs" else "${outcome.added} new ROM(s) added")
-                if (removeMissing) {
-                    append(if (outcome.markedMissing == 0) ", none missing" else ", ${outcome.markedMissing} marked missing")
+                if (outcome.surveyTrusted) {
+                    append(
+                        when {
+                            outcome.deleted > 0 -> ", ${outcome.deleted} missing removed"
+                            outcome.markedMissing > 0 -> ", ${outcome.markedMissing} missing"
+                            else -> ", none missing"
+                        },
+                    )
                 }
                 outcome.errorMessage?.let { append(" ($it)") }
             }

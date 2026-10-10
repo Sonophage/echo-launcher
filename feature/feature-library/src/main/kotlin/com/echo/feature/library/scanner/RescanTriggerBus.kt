@@ -49,7 +49,7 @@ class RescanTriggerBus @Inject constructor(
 
             runCatching { romRootDiscoveryScanner.discover() }
                 .onFailure { Timber.w(it, "Library Rescan — console discovery failed ($source)") }
-            val outcomes = libraryScanner.scanAllEnabled(removeMissing = true)
+            val outcomes = libraryScanner.scanAllEnabled()
             Timber.i(
                 "Library Rescan — done: ${outcomes.sumOf { it.added }} new, " +
                     "${outcomes.sumOf { it.markedMissing }} marked missing",

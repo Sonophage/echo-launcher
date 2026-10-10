@@ -213,4 +213,7 @@ class GameRepositoryImpl @Inject constructor(
 
     override suspend fun markMissing(romPaths: List<String>) =
         gameDao.markMissing(romPaths)
+
+    override suspend fun deleteMissing(platformId: String): Int =
+        gameDao.deleteMissing(platformId).also { Timber.i("Deleted $it missing games on $platformId") }
 }

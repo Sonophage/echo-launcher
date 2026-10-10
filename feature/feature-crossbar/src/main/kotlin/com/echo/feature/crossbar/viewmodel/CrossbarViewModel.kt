@@ -1374,6 +1374,7 @@ class CrossbarViewModel @Inject constructor(
     private val launcherShortcutRepository: LauncherShortcutRepository,
     private val libraryScanner: LibraryScanner,
     private val artworkRepository: ArtworkRepository,
+    internal val goneGameArt: com.echo.feature.artwork.store.GoneGameArtworkSweep,
     @ApplicationContext internal val context: Context,
     internal val gamepadInputHandler: GamepadInputHandler,
     private val remapCoordinator: com.echo.core.data.repository.RemapCoordinator,
@@ -3455,6 +3456,7 @@ class CrossbarViewModel @Inject constructor(
     internal suspend fun removeGameFromLibrary(gameId: Long) {
         val game = gameRepository.getById(gameId) ?: return
         gameRepository.delete(gameId)
+        goneGameArt.run()
         memoryCardRepository.recountGames(game.platformId)
         loadItemsForCategory(currentCategory())
     }

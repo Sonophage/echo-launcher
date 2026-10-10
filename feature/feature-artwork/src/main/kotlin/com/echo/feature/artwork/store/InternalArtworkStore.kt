@@ -148,12 +148,13 @@ class InternalArtworkStore @Inject constructor(
         referenced: Set<String>,
         liveGameIds: Set<Long>,
         keptKinds: Set<ArtworkKind>,
+        spareAbove: Long = Long.MAX_VALUE,
     ): ReapReport = withContext(Dispatchers.IO) {
         var deleted = 0
         var bytes = 0L
         root.listFiles()?.forEach { dir ->
             val gameId = dir.name.toLongOrNull()
-            if (!dir.isDirectory || gameId == null) return@forEach
+            if (!dir.isDirectory || gameId == null || gameId > spareAbove) return@forEach
             val gameIsGone = gameId !in liveGameIds
             dir.listFiles()?.forEach { f ->
                 if (!f.isFile) return@forEach

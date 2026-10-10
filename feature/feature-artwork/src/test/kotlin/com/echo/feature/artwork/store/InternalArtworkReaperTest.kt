@@ -139,4 +139,21 @@ class InternalArtworkReaperTest {
         assertEquals(2, report.deleted)
         assertEquals(140L, report.bytes)
     }
+
+    // owner, 2026-10-10: a game taken out of the library takes its art with it; a game added after the library was
+    // read may already have art saved, and keeps it
+    @Test
+    fun `with every kind kept, a removed game's art goes and a live or newer game's stays`() = runTest {
+        val gone = write(2L, "boxart.jpg")
+        val live = write(3L, "boxart.jpg")
+        val newer = write(9L, "boxart.jpg")
+
+        store.reapUnreferenced(
+            referenced = emptySet(), liveGameIds = setOf(1L, 3L), keptKinds = ArtworkKind.entries.toSet(), spareAbove = 3L,
+        )
+
+        assertFalse(gone.exists(), "a removed game's art was left behind")
+        assertTrue(live.exists(), "a live game's art was deleted")
+        assertTrue(newer.exists(), "a game newer than the read lost its art")
+    }
 }

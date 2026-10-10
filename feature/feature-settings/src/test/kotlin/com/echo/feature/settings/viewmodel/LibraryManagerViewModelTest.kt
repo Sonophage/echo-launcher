@@ -55,6 +55,7 @@ class LibraryManagerViewModelTest {
     private val vitaGameScanner = mockk<VitaGameScanner>(relaxed = true)
     private val libraryScanner = mockk<LibraryScanner>(relaxed = true)
     private val pcGameExporter = mockk<com.echo.feature.settings.pc.PcGameExporter>(relaxed = true)
+    private val goneGameArt = mockk<com.echo.feature.artwork.store.GoneGameArtworkSweep>(relaxed = true)
 
     private lateinit var vm: LibraryManagerViewModel
 
@@ -82,6 +83,7 @@ class LibraryManagerViewModelTest {
             libraryScanner,
             pcGameExporter,
             StandardRomFolders(memoryCardRepository, folderHintResolver, romScanner),
+            goneGameArt,
         )
     }
 
@@ -154,7 +156,7 @@ class LibraryManagerViewModelTest {
         val outcome = PlatformScanOutcome("psx", "PlayStation Memory Card", ScanStatus.SKIPPED_NO_SOURCE)
         assertEquals(
             "PlayStation Memory Card: ROM folder not configured.",
-            scanOutcomeMessage(outcome, removeMissing = false),
+            scanOutcomeMessage(outcome),
         )
     }
 
@@ -166,7 +168,7 @@ class LibraryManagerViewModelTest {
         )
         assertEquals(
             "PlayStation Memory Card: Memory Card not found.",
-            scanOutcomeMessage(outcome, removeMissing = false),
+            scanOutcomeMessage(outcome),
         )
     }
 
@@ -175,7 +177,7 @@ class LibraryManagerViewModelTest {
         val outcome = PlatformScanOutcome("psx", "PlayStation Memory Card", ScanStatus.SKIPPED_BUSY)
         assertEquals(
             "PlayStation Memory Card: scan already in progress.",
-            scanOutcomeMessage(outcome, removeMissing = false),
+            scanOutcomeMessage(outcome),
         )
     }
 
@@ -187,7 +189,7 @@ class LibraryManagerViewModelTest {
         )
         assertEquals(
             "PlayStation Memory Card: disk full",
-            scanOutcomeMessage(outcome, removeMissing = false),
+            scanOutcomeMessage(outcome),
         )
     }
 
@@ -196,16 +198,16 @@ class LibraryManagerViewModelTest {
         val outcome = PlatformScanOutcome("psx", "PlayStation Memory Card", ScanStatus.FAILED)
         assertEquals(
             "PlayStation Memory Card: scan failed.",
-            scanOutcomeMessage(outcome, removeMissing = false),
+            scanOutcomeMessage(outcome),
         )
     }
 
     @Test
-    fun `COMPLETED without removeMissing reports the added count only`() {
+    fun `COMPLETED without a survey reports the added count only`() {
         val outcome = PlatformScanOutcome("psx", "PlayStation Memory Card", ScanStatus.COMPLETED, added = 3)
         assertEquals(
             "PlayStation Memory Card: 3 new ROM(s) added",
-            scanOutcomeMessage(outcome, removeMissing = false),
+            scanOutcomeMessage(outcome),
         )
     }
 
@@ -214,29 +216,57 @@ class LibraryManagerViewModelTest {
         val outcome = PlatformScanOutcome("psx", "PlayStation Memory Card", ScanStatus.COMPLETED)
         assertEquals(
             "PlayStation Memory Card: no new ROMs",
-            scanOutcomeMessage(outcome, removeMissing = false),
+            scanOutcomeMessage(outcome),
         )
     }
 
     @Test
-    fun `COMPLETED with removeMissing and no missing reports none missing`() {
-        val outcome = PlatformScanOutcome("psx", "PlayStation Memory Card", ScanStatus.COMPLETED)
+    fun `COMPLETED after a trusted survey with nothing missing reports none missing`() {
+        val outcome = PlatformScanOutcome("psx", "PlayStation Memory Card", ScanStatus.COMPLETED, surveyTrusted = true)
         assertEquals(
             "PlayStation Memory Card: no new ROMs, none missing",
-            scanOutcomeMessage(outcome, removeMissing = true),
+            scanOutcomeMessage(outcome),
         )
     }
 
     @Test
-    fun `COMPLETED with removeMissing and missing reports marked missing`() {
+    fun `COMPLETED after a trusted survey reports the missing games it hid`() {
         val outcome = PlatformScanOutcome(
             "psx", "PlayStation Memory Card", ScanStatus.COMPLETED,
-            added = 1, markedMissing = 2,
+            added = 1, markedMissing = 2, surveyTrusted = true,
         )
         assertEquals(
-            "PlayStation Memory Card: 1 new ROM(s) added, 2 marked missing",
-            scanOutcomeMessage(outcome, removeMissing = true),
+            "PlayStation Memory Card: 1 new ROM(s) added, 2 missing",
+            scanOutcomeMessage(outcome),
         )
+    }
+
+    @Test
+    fun `COMPLETED with Remove Missing reports the games it deleted`() {
+        val outcome = PlatformScanOutcome(
+            "psx", "PlayStation Memory Card", ScanStatus.COMPLETED,
+            markedMissing = 2, deleted = 2, surveyTrusted = true,
+        )
+        assertEquals(
+            "PlayStation Memory Card: no new ROMs, 2 missing removed",
+            scanOutcomeMessage(outcome),
+        )
+    }
+
+    // a card that went away mid-scan proves nothing about what is missing
+    @Test
+    fun `COMPLETED after an untrusted survey says nothing about missing games`() {
+        val outcome = PlatformScanOutcome("psx", "PlayStation Memory Card", ScanStatus.COMPLETED, surveyTrusted = false)
+        assertEquals("PlayStation Memory Card: no new ROMs", scanOutcomeMessage(outcome))
+    }
+
+    @Test
+    fun `Remove Missing sweeps the deleted games' art`() = runTest(dispatcher) {
+        coEvery { libraryScanner.scanPlatform("psx", true) } returns
+            PlatformScanOutcome("psx", "PlayStation Memory Card", ScanStatus.COMPLETED, deleted = 2, surveyTrusted = true)
+        vm.scanConsole("psx", deleteMissing = true)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { goneGameArt.run() }
     }
 
     @Test
@@ -247,7 +277,7 @@ class LibraryManagerViewModelTest {
         )
         assertEquals(
             "PlayStation Memory Card: no new ROMs (one source failed)",
-            scanOutcomeMessage(outcome, removeMissing = false),
+            scanOutcomeMessage(outcome),
         )
     }
 }

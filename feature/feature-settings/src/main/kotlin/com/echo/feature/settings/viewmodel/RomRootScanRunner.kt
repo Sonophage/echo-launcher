@@ -76,7 +76,7 @@ class RomRootScanRunner @Inject constructor(
         skipped = discovery.skipped
 
         haveCard.filter { it != "windows" }.forEach { platformId ->
-            val outcome = libraryScanner.scanPlatform(platformId, removeMissing = true)
+            val outcome = libraryScanner.scanPlatform(platformId)
             if (outcome.status == ScanStatus.COMPLETED &&
                 (outcome.added > 0 || outcome.markedMissing > 0)
             ) {

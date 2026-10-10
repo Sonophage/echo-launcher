@@ -386,15 +386,15 @@ class CrossbarFolders(
             }
 
             vm.addBackgroundTask(BackgroundTaskInfo(id = taskId, label = "Scanning ${card.displayName}…", progress = null))
-            val outcome = libraryScanner.scanPlatform(platformId, removeMissing = true)
+            val outcome = libraryScanner.scanPlatform(platformId)
             when (outcome.status) {
                 ScanStatus.COMPLETED -> vm.completeBackgroundTask(
                     taskId,
-                    scanOutcomeMessage(outcome, removeMissing = true),
+                    scanOutcomeMessage(outcome),
                 )
                 else -> vm.failBackgroundTask(
                     taskId,
-                    scanOutcomeMessage(outcome, removeMissing = true),
+                    scanOutcomeMessage(outcome),
                 )
             }
         }

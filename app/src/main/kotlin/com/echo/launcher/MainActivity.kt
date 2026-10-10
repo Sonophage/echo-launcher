@@ -71,6 +71,9 @@ class MainActivity : ComponentActivity() {
     lateinit var uiMediaStore: com.echo.core.data.repository.UiMediaStore
 
     @Inject
+    lateinit var goneGameArt: com.echo.feature.artwork.store.GoneGameArtworkSweep
+
+    @Inject
     lateinit var launchDispatcher: com.echo.feature.launcher.LaunchDispatcher
 
     @Inject
@@ -151,6 +154,8 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             runCatching { uiMediaStore.pruneOrphans() }
                 .onFailure { Timber.w(it, "Startup UI-media prune failed") }
+            runCatching { goneGameArt.run() }
+                .onFailure { Timber.w(it, "Startup artwork sweep failed") }
         }
 
         setContent {

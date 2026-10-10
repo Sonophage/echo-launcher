@@ -256,6 +256,9 @@ interface GameDao {
     @Query("UPDATE games SET is_missing = 1 WHERE rom_path IN (:romPaths)")
     suspend fun markMissing(romPaths: List<String>)
 
+    @Query("DELETE FROM games WHERE platform_id = :platformId AND is_missing = 1")
+    suspend fun deleteMissing(platformId: String): Int
+
     @Query(
         """
         SELECT * FROM games

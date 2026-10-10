@@ -27,23 +27,23 @@ class RescanTriggerBusTest {
     @Test
     fun `two mounts inside debounce window produce one scan`() = runTest {
         val scanner = mockk<LibraryScanner>(relaxed = true)
-        coEvery { scanner.scanAllEnabled(true) } returns listOf(outcome)
+        coEvery { scanner.scanAllEnabled() } returns listOf(outcome)
         val bus = RescanTriggerBus(scanner, discoveryScanner, this)
 
         bus.submit(RescanTrigger.MediaMounted)
         advanceTimeBy(1_000)
         bus.submit(RescanTrigger.MediaMounted)
         advanceTimeBy(1_999)
-        coVerify(exactly = 0) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 0) { scanner.scanAllEnabled() }
         advanceTimeBy(1)
         advanceUntilIdle()
-        coVerify(exactly = 1) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { scanner.scanAllEnabled() }
     }
 
     @Test
     fun `resume during an in-flight scan does not start a second`() = runTest {
         val scanner = mockk<LibraryScanner>(relaxed = true)
-        coEvery { scanner.scanAllEnabled(true) } coAnswers {
+        coEvery { scanner.scanAllEnabled() } coAnswers {
             delay(1_000)
             listOf(outcome)
         }
@@ -54,13 +54,13 @@ class RescanTriggerBusTest {
         bus.submit(RescanTrigger.AppResumed)
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { scanner.scanAllEnabled() }
     }
 
     @Test
     fun `unplug edge is not swallowed by resume throttle`() = runTest {
         val scanner = mockk<LibraryScanner>(relaxed = true)
-        coEvery { scanner.scanAllEnabled(true) } returns listOf(outcome)
+        coEvery { scanner.scanAllEnabled() } returns listOf(outcome)
         val bus = RescanTriggerBus(scanner, discoveryScanner, this)
 
         bus.submit(RescanTrigger.AppResumed)
@@ -69,13 +69,13 @@ class RescanTriggerBusTest {
         advanceTimeBy(2_000)
         advanceUntilIdle()
 
-        coVerify(exactly = 2) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 2) { scanner.scanAllEnabled() }
     }
 
     @Test
     fun `scanner exception does not kill the bus`() = runTest {
         val scanner = mockk<LibraryScanner>(relaxed = true)
-        coEvery { scanner.scanAllEnabled(true) } throws IllegalStateException("boom")
+        coEvery { scanner.scanAllEnabled() } throws IllegalStateException("boom")
         val bus = RescanTriggerBus(scanner, discoveryScanner, this)
 
         bus.submit(RescanTrigger.AppResumed)
@@ -83,47 +83,47 @@ class RescanTriggerBusTest {
         bus.submit(RescanTrigger.AppResumed)
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { scanner.scanAllEnabled() }
     }
 
     @Test
     fun `resume inside throttle window is skipped`() = runTest {
         val scanner = mockk<LibraryScanner>(relaxed = true)
-        coEvery { scanner.scanAllEnabled(true) } returns listOf(outcome)
+        coEvery { scanner.scanAllEnabled() } returns listOf(outcome)
         var now = 100_000L
         val bus = RescanTriggerBus(scanner, discoveryScanner, this) { now }
 
         bus.submit(RescanTrigger.AppResumed)
         advanceUntilIdle()
-        coVerify(exactly = 1) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { scanner.scanAllEnabled() }
 
         now += RescanTriggerBus.RESUME_THROTTLE_MS - 60_000
         bus.submit(RescanTrigger.AppResumed)
         advanceUntilIdle()
-        coVerify(exactly = 1) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { scanner.scanAllEnabled() }
     }
 
     @Test
     fun `resume past the throttle boundary runs again`() = runTest {
         val scanner = mockk<LibraryScanner>(relaxed = true)
-        coEvery { scanner.scanAllEnabled(true) } returns listOf(outcome)
+        coEvery { scanner.scanAllEnabled() } returns listOf(outcome)
         var now = 100_000L
         val bus = RescanTriggerBus(scanner, discoveryScanner, this) { now }
 
         bus.submit(RescanTrigger.AppResumed)
         advanceUntilIdle()
-        coVerify(exactly = 1) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { scanner.scanAllEnabled() }
 
         now += RescanTriggerBus.RESUME_THROTTLE_MS
         bus.submit(RescanTrigger.AppResumed)
         advanceUntilIdle()
-        coVerify(exactly = 2) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 2) { scanner.scanAllEnabled() }
     }
 
     @Test
     fun `cancelling the scope stops the in-flight scan`() = runTest {
         val scanner = mockk<LibraryScanner>(relaxed = true)
-        coEvery { scanner.scanAllEnabled(true) } coAnswers {
+        coEvery { scanner.scanAllEnabled() } coAnswers {
             delay(10_000)
             listOf(outcome)
         }
@@ -134,21 +134,21 @@ class RescanTriggerBusTest {
         bus.submit(RescanTrigger.AppResumed)
         advanceTimeBy(1_000)
 
-        coVerify(exactly = 1) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { scanner.scanAllEnabled() }
 
         busScope.cancel()
         advanceUntilIdle()
 
         bus.submit(RescanTrigger.AppResumed)
         advanceUntilIdle()
-        coVerify(exactly = 1) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { scanner.scanAllEnabled() }
     }
 
     @Test
     fun `discovery runs before the incremental scan on every trigger`() = runTest {
         val order = mutableListOf<String>()
         val scanner = mockk<LibraryScanner>(relaxed = true)
-        coEvery { scanner.scanAllEnabled(true) } coAnswers {
+        coEvery { scanner.scanAllEnabled() } coAnswers {
             order.add("scanAllEnabled")
             listOf(outcome)
         }
@@ -167,13 +167,13 @@ class RescanTriggerBusTest {
     @Test
     fun `discovery failure does not block the incremental scan`() = runTest {
         val scanner = mockk<LibraryScanner>(relaxed = true)
-        coEvery { scanner.scanAllEnabled(true) } returns listOf(outcome)
+        coEvery { scanner.scanAllEnabled() } returns listOf(outcome)
         coEvery { discoveryScanner.discover() } throws IllegalStateException("saf revoked")
         val bus = RescanTriggerBus(scanner, discoveryScanner, this)
 
         bus.submit(RescanTrigger.AppResumed)
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { scanner.scanAllEnabled(true) }
+        coVerify(exactly = 1) { scanner.scanAllEnabled() }
     }
 }

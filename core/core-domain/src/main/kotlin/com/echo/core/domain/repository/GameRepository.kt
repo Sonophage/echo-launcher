@@ -89,4 +89,7 @@ interface GameRepository {
     fun observeMissing(): Flow<List<Game>>
     suspend fun markSeen(romPaths: List<String>, seenAt: Long)
     suspend fun markMissing(romPaths: List<String>)
+
+    // deletes the platform's games marked missing, with their play history; returns how many
+    suspend fun deleteMissing(platformId: String): Int
 }
