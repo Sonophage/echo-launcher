@@ -96,4 +96,19 @@ class DroidDeckSteamFilesTest {
         coVerify(exactly = 0) { games.upsert(any()) }
         coVerify(exactly = 0) { games.attachLauncherHandle(149L, any(), any(), any()) }
     }
+
+    // owner, 2026-10-10: a PC game whose launcher is uninstalled is hidden by the scan, and shown again if it returns
+    @Test
+    fun `a game whose launcher is not installed is hidden, and one whose launcher is back is shown`() = runTest {
+        val orphan = Game(id = 145L, title = "Hades", platformId = "windows", packageName = "app.gamenative",
+            storefront = "STEAM", storefrontGameId = "1145360")
+        val back = Game(id = 160L, title = "Nine Sols", platformId = "windows", packageName = "com.droiddeck.launcher",
+            storefront = "STEAM", storefrontGameId = "1809540", isMissing = true)
+        coEvery { games.getByPlatform("windows") } returns listOf(orphan, back)
+
+        scanner.scan()
+
+        coVerify(exactly = 1) { games.markMissingIds(listOf(145L)) }
+        coVerify(exactly = 1) { games.markSeenIds(listOf(160L)) }
+    }
 }

@@ -90,6 +90,10 @@ interface GameRepository {
     suspend fun markSeen(romPaths: List<String>, seenAt: Long)
     suspend fun markMissing(romPaths: List<String>)
 
+    // hides, or shows again, games that have no file of their own, by id
+    suspend fun markMissingIds(ids: List<Long>)
+    suspend fun markSeenIds(ids: List<Long>)
+
     // deletes the platform's games marked missing, with their play history; returns how many
     suspend fun deleteMissing(platformId: String): Int
 }

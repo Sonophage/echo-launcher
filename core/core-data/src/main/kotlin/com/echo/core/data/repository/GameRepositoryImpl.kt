@@ -220,6 +220,16 @@ class GameRepositoryImpl @Inject constructor(
         RecentPins.unpinGames(context, gameDao.idsForRomPaths(romPaths))
     }
 
+    override suspend fun markMissingIds(ids: List<Long>) {
+        if (ids.isEmpty()) return
+        gameDao.markMissingIds(ids)
+        RecentPins.unpinGames(context, ids)
+    }
+
+    override suspend fun markSeenIds(ids: List<Long>) {
+        if (ids.isNotEmpty()) gameDao.markSeenIds(ids)
+    }
+
     override suspend fun deleteMissing(platformId: String): Int {
         val ids = gameDao.missingIds(platformId)
         return gameDao.deleteMissing(platformId).also {

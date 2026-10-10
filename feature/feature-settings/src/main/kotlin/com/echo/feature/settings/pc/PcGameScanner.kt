@@ -146,6 +146,8 @@ class PcGameScanner @Inject constructor(
             }
         }
 
+        if (overrideFolder == null) hideGamesOfMissingLaunchers(pm)
+
         val restore = restoreFromEchoExports(echoExports, pm)
         val relink = relinkClaimedArtwork(restore.claims, restore.identitySeeds)
 
@@ -407,6 +409,16 @@ class PcGameScanner @Inject constructor(
     // called (DroidDeck names its files "<Name> (<id>)" and shortens long names)
     private suspend fun findBySteamId(launch: PcLaunch): Game? =
         sameSteamGame(gameRepository.getByPlatform(WINDOWS_PLATFORM_ID), launch.packageName, launch.storefrontGameId)
+
+    // owner, 2026-10-10: a PC game has no file of its own, so it is missing when the launcher it opens in is not
+    // installed: hidden, unpinned and unmarked like any missing game, and shown again if the launcher comes back
+    private suspend fun hideGamesOfMissingLaunchers(pm: PackageManager) {
+        val (gone, back) = gameRepository.getByPlatform(WINDOWS_PLATFORM_ID)
+            .filter { it.packageName != null }
+            .partition { game -> runCatching { pm.getApplicationInfo(game.packageName!!, 0) }.isFailure }
+        gameRepository.markMissingIds(gone.filterNot { it.isMissing }.map { it.id })
+        gameRepository.markSeenIds(back.filter { it.isMissing }.map { it.id })
+    }
 
     // the same Steam game under a launcher that is no longer installed
     private suspend fun findOrphanedSteamGame(launch: PcLaunch, pm: PackageManager): Game? {

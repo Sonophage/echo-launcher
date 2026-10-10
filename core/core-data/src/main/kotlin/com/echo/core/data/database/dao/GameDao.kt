@@ -257,6 +257,13 @@ interface GameDao {
     @Query("UPDATE games SET is_missing = 1, play_state = NULL WHERE rom_path IN (:romPaths)")
     suspend fun markMissing(romPaths: List<String>)
 
+    // a game with no file of its own (a PC game) is missing when its launcher is gone (owner, 2026-10-10)
+    @Query("UPDATE games SET is_missing = 1, play_state = NULL WHERE id IN (:ids)")
+    suspend fun markMissingIds(ids: List<Long>)
+
+    @Query("UPDATE games SET is_missing = 0 WHERE id IN (:ids)")
+    suspend fun markSeenIds(ids: List<Long>)
+
     @Query("SELECT id FROM games WHERE rom_path IN (:romPaths)")
     suspend fun idsForRomPaths(romPaths: List<String>): List<Long>
 
