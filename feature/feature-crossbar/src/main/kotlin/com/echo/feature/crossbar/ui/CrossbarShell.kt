@@ -376,6 +376,9 @@ fun CrossbarShellContainer(
     uiState.discCeremony?.let { ceremony ->
         if (ceremony.style == com.echo.core.data.repository.GameBootStyle.LENS) {
             val cue = com.echo.core.ui.sound.LocalLaunchDiscCue.current
+            // drawn outside the shell's providers, so it is handed the wave design in use; without it the wave was
+            // LocalWaveDesign's default, PSP (owner, 2026-10-09)
+            CompositionLocalProvider(com.echo.core.ui.wave.LocalWaveDesign provides uiState.waveDesign) {
             com.echo.core.ui.components.LensLaunchCeremony(
                 title = "",
                 coverArt = ceremony.art,
@@ -387,6 +390,7 @@ fun CrossbarShellContainer(
                 soundCue = cue,
                 modifier = Modifier.fillMaxSize(),
             )
+            }
             return@let
         }
         DiscLaunchCeremony(
