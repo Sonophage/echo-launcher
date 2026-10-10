@@ -190,7 +190,7 @@ private fun CrossbarCross(model: CrossbarPreviewModel) {
 private fun CategoryCell(model: CrossbarPreviewModel, category: SampleContent.Category, selected: Boolean) {
     val spec = model.layout
 
-    val iconSize = spec.categoryIconDp.dp
+    val iconSize = (spec.categoryIconDp * if (selected) spec.selectedIconScale() else 1f).dp
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(CategorySlotWidth).height(CatBarHeight).padding(top = 4.dp),

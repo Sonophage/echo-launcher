@@ -26,4 +26,10 @@ data class CrossbarLayoutSpec(
     companion object {
         val DEFAULT = CrossbarLayoutSpec()
     }
+
+    // how much larger the selected category icon is drawn than ECHO draws it: the theme's selected-to-resting
+    // ratio over the default's, so ECHO's own layout (72 to 56) draws exactly as before, at 1. The crossbar and
+    // Theme Studio's preview both read it
+    fun selectedIconScale(): Float =
+        (categoryIconSelectedDp / categoryIconDp) / (DEFAULT.categoryIconSelectedDp / DEFAULT.categoryIconDp)
 }

@@ -6,8 +6,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 // owner, 2026-10-09: a theme's layout sizes the crossbar. A size read from CrossbarLayoutSpec.DEFAULT ignores the
-// applied theme, so the crossbar reads LocalCrossbarLayout instead. categoryIconSelectedDp is left to the focus
-// styles: the selected category icon is drawn the same size as the rest today
+// applied theme, so the crossbar reads LocalCrossbarLayout instead
 class ThemeLayoutReachesCrossbarTest {
     @Test
     fun `the crossbar takes its sizes from the applied theme, not from the default`() {

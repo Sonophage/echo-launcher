@@ -166,7 +166,9 @@ private fun CrossbarCategoryItem(
     modifier: Modifier = Modifier,
 ) {
     // owner, 2026-10-04: smaller, and drawn with the Recent filters' icons
-    val iconSize = (LocalCrossbarLayout.current.categoryIconDp * XMB_ICON_SCALE).dp
+    val layout = LocalCrossbarLayout.current
+    // the theme's selected size, on top of the focus style's own scale
+    val iconSize = (layout.categoryIconDp * XMB_ICON_SCALE * if (isSelected) layout.selectedIconScale() else 1f).dp
     val focusStyle = LocalFocusStyle.current
     val motion = LocalCrossbarMotion.current
     val itemAlpha by animateFloatAsState(
