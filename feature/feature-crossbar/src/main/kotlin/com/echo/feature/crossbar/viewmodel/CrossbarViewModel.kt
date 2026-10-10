@@ -3228,6 +3228,11 @@ class CrossbarViewModel @Inject constructor(
 
         menu.genreTarget?.let { return genres.onPick(it, itemId) }
 
+        if (itemId == CLEAR_RECENT) {
+            closeContextMenu()
+            recents.clearRecent()
+            return
+        }
         if (itemId == MOVE_ROW || itemId == MOVE_COLUMN) {
             closeContextMenu()
             move.lift(column = itemId == MOVE_COLUMN)

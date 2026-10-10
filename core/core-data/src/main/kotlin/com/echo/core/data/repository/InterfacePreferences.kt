@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.domain.model.ControllerHintPolicy
 import kotlinx.coroutines.flow.first
@@ -31,6 +32,9 @@ object InterfacePreferences {
     // recently used apps on the Recent shelf beside games and media; off on a new install. The crossbar reads it;
     // Display settings and Setup's Permissions step set it (owner, 2026-10-09: one key, not a copy in each)
     val KEY_RECENTS_INCLUDE_APPS = booleanPreferencesKey("display_recents_include_apps")
+    // owner, 2026-10-10: Clear Recent empties the shelf without touching play history; anything last used at or
+    // before this time is left off it until it is used again. The crossbar and Display settings both write it
+    val KEY_RECENT_CLEARED_AT = longPreferencesKey("recent_cleared_at")
     val KEY_SHOW_DEVICE_NOTIFICATIONS = booleanPreferencesKey("interface_show_device_notifications")
     val KEY_ISLAND_SHOWS_RECENT = booleanPreferencesKey("interface_island_shows_recent")
     val KEY_LAST_PLAYED_SIZE = intPreferencesKey("interface_last_played_size")

@@ -651,6 +651,8 @@ open class BackupManager @Inject constructor(
             longPreferencesKey("theme_icon_color"),
             longPreferencesKey("custom_icons_stamp"),
             longPreferencesKey("ui_media_stamp"),
+            // a moment, so it means the same on any device: what was used before it stays off Recent
+            com.echo.core.data.repository.InterfacePreferences.KEY_RECENT_CLEARED_AT,
         )
     }
 }

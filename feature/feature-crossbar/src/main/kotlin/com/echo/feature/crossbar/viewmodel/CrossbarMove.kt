@@ -30,6 +30,7 @@ data class MoveSession(
 internal const val MOVE_ROW = "move_row"
 internal const val MOVE_COLUMN = "move_column"
 internal const val RENAME_COLUMN = "rename_column"
+internal const val CLEAR_RECENT = "clear_recent"
 internal const val CHANGE_COLUMN_ICON = "change_column_icon"
 internal const val CHANGE_SYSTEM_ICON = "change_system_icon"
 internal const val CHANGE_SYSTEM_ART = "change_system_art"
@@ -122,6 +123,8 @@ class CrossbarMove(
         if (state.columnMovable()) add(row(MOVE_COLUMN, "Move Column"))
         if (state.columnEditable()) add(row(RENAME_COLUMN, "Rename Column"))
         if (state.columnEditable() && state.columnIconSlot() != null) add(row(CHANGE_COLUMN_ICON, "Change Column Icon"))
+        // owner, 2026-10-10: Recent can be emptied from any of its rows, after a confirm
+        if (state.onLastPlayedHome) add(row(CLEAR_RECENT, "Clear Recent").copy(confirms = true))
     }
 
     fun promptRenameColumn() {

@@ -191,6 +191,10 @@ internal fun withRecentDismissal(raw: Set<String>, packageName: String, at: Long
     raw.filterNot { it.substringBeforeLast(DISMISSAL_SEPARATOR) == packageName }.toSet() +
         "$packageName$DISMISSAL_SEPARATOR$at"
 
+// what was used after Clear Recent; an item with no time counts as never used (owner, 2026-10-10)
+internal fun <T> List<T>.usedSince(clearedAt: Long, at: (T) -> Long?): List<T> =
+    if (clearedAt <= 0L) this else filter { (at(it) ?: 0L) > clearedAt }
+
 internal fun dismissedFromRecents(lastUsedAt: Long, dismissedAt: Long?): Boolean =
     dismissedAt != null && lastUsedAt <= dismissedAt
 

@@ -329,6 +329,8 @@ class DisplaySettingsViewModel @Inject constructor(
 
     fun setRecentsIncludeApps(v: Boolean) = save { it[KEY_RECENTS_INCLUDE_APPS] = v }
 
+    fun clearRecent() = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_RECENT_CLEARED_AT] = System.currentTimeMillis() }
+
     fun setTextShadow(v: Boolean) = save { it[KEY_TEXT_SHADOW] = v }
 
     fun setShowDeviceNotifications(v: Boolean) = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_SHOW_DEVICE_NOTIFICATIONS] = v }

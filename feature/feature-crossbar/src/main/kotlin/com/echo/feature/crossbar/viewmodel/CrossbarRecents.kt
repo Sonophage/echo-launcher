@@ -3,6 +3,7 @@ package com.echo.feature.crossbar.viewmodel
 import com.echo.core.domain.model.GamepadAction
 import androidx.datastore.preferences.core.edit
 import com.echo.core.data.datastore.echoDataStore
+import com.echo.core.data.repository.InterfacePreferences
 import com.echo.core.domain.model.HiddenPlacement
 import com.echo.core.domain.model.HideLocationType
 import com.echo.core.domain.model.PlayState
@@ -85,7 +86,33 @@ class CrossbarRecents(
 
     // the games Last Played shows: played, and not taken off it since
     private fun recentGames(): Flow<List<com.echo.core.domain.model.Game>> =
-        combine(vm.gameRepository.observeRecentlyPlayed(CrossbarViewModel.RECENTLY_PLAYED_LIMIT), recentDismissals(), ::notDismissedGames)
+        combine(vm.gameRepository.observeRecentlyPlayed(CrossbarViewModel.RECENTLY_PLAYED_LIMIT), recentDismissals(), clearedAt()) { games, dismissed, cleared ->
+            notDismissedGames(games, dismissed).usedSince(cleared) { it.lastPlayedAt }
+        }
+
+    private fun clearedAt(): Flow<Long> =
+        vm.context.echoDataStore.data.map { it[InterfacePreferences.KEY_RECENT_CLEARED_AT] ?: 0L }.distinctUntilChanged()
+
+    private fun recentTracks() =
+        combine(vm.musicRepository.observeRecentlyPlayedTracks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT), clearedAt()) { tracks, cleared ->
+            tracks.usedSince(cleared) { it.lastPlayedAt }
+        }
+
+    private fun recentBooks() =
+        combine(vm.bookshelf.observeRecentBookRows(CrossbarViewModel.RECENTLY_PLAYED_LIMIT), clearedAt()) { rows, cleared ->
+            rows.usedSince(cleared) { it.first }
+        }
+
+    private fun recentVideos() =
+        combine(vm.videoRepository.observeRecentlyWatched(), clearedAt()) { videos, cleared -> videos.usedSince(cleared) { it.lastWatchedAt } }
+
+    // owner, 2026-10-10: empties the shelf, as Remove from Recent does for one item; pins stay, history stays
+    internal fun clearRecent() {
+        menuSound.play(MenuSound.SELECT)
+        scope.launch {
+            vm.context.echoDataStore.edit { it[InterfacePreferences.KEY_RECENT_CLEARED_AT] = System.currentTimeMillis() }
+        }
+    }
 
     internal fun emptyRecentItem(): CrossbarItem = CrossbarItem(
         id       = CrossbarViewModel.EMPTY_CATEGORY_ITEM_ID,
@@ -108,12 +135,14 @@ class CrossbarRecents(
             vm.context.echoDataStore.data
                 .map { it[CrossbarViewModel.KEY_RECENT_APP_DISMISSALS].orEmpty() }
                 .distinctUntilChanged(),
-        ) { includeApps, _, dismissals -> includeApps to dismissals }
-            .map { (includeApps, dismissals) ->
+            clearedAt(),
+        ) { includeApps, _, dismissals, cleared -> Triple(includeApps, dismissals, cleared) }
+            .map { (includeApps, dismissals, cleared) ->
                 if (!includeApps) return@map emptyList()
                 val dismissedAt = parseRecentDismissals(dismissals)
                 vm.appCategoryRepository.visibleInstalledApps()
                     .filter { it.lastUsedAt > 0L }
+                    .usedSince(cleared) { it.lastUsedAt }
 
                     .filterNot { dismissedFromRecents(it.lastUsedAt, dismissedAt[it.packageName]) }
 
@@ -188,9 +217,9 @@ class CrossbarRecents(
         scope.launch {
             combine(
                 recentGames(),
-                vm.musicRepository.observeRecentlyPlayedTracks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
-                vm.bookshelf.observeRecentBookRows(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
-                vm.videoRepository.observeRecentlyWatched(),
+                recentTracks(),
+                recentBooks(),
+                recentVideos(),
                 recentAppRows(),
             ) { games, tracks, books, videos, appRows ->
                 val visibleGames = with(vm) { games.notHiddenAt(HideLocationType.RECENTS) }
@@ -304,9 +333,9 @@ class CrossbarRecents(
     internal fun recentRows(filter: Flow<RecentFilter>): Flow<RecentRows> =
         combine(
             recentGames(),
-            vm.musicRepository.observeRecentlyPlayedTracks(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
-            vm.bookshelf.observeRecentBookRows(CrossbarViewModel.RECENTLY_PLAYED_LIMIT),
-            vm.videoRepository.observeRecentlyWatched(),
+            recentTracks(),
+            recentBooks(),
+            recentVideos(),
 
             recentFilterAndApps(filter),
         ) { games, tracks, books, videos, filterAndApps -> filterAndApps.first to Triple(games, tracks, Triple(books, videos, filterAndApps)) }

@@ -68,6 +68,7 @@ fun DisplaySettingsScreen(
 
 
     var confirmClassic by remember { mutableStateOf(false) }
+    var confirmClearRecent by remember { mutableStateOf(false) }
 
     var focusedSlot by remember { mutableStateOf<UiMediaSlot?>(null) }
 
@@ -388,6 +389,12 @@ fun DisplaySettingsScreen(
                     onPick   = { viewModel.setLastPlayedSize(IP.LAST_PLAYED_SIZES[it]) },
                 )
 
+                SettingsRow(
+                    label    = "Clear Recent",
+                    sublabel = "Empty the Recent shelf. Pins and play history stay, and anything you use again comes back",
+                    onClick  = { confirmClearRecent = true },
+                )
+
                 SettingsGroup("Status Bar")
 
                 SettingsToggleRow(
@@ -627,6 +634,16 @@ fun DisplaySettingsScreen(
                 )
             }
         }
+    }
+
+    if (confirmClearRecent) {
+        SettingsConfirmOverlay(
+            title = "Clear Recent?",
+            message = "Empties the Recent shelf. Pinned items, play history and resume points stay.",
+            confirmLabel = "Clear",
+            onConfirm = { confirmClearRecent = false; viewModel.clearRecent() },
+            onCancel = { confirmClearRecent = false },
+        )
     }
 
     // owner, 2026-10-07: the kit's confirm, not a panel of its own
