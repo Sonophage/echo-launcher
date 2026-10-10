@@ -444,12 +444,16 @@ class EchoThemeStore @Inject constructor(
 
         val saved = runCatching {
             val id = newId()
-            val name = bundle.manifest.name.ifBlank { nextDefaultName() }
+            val name = bundle.manifest.name.ifBlank { nextDefaultName() }.let { uniqueName(it, except = replacing) }
 
             val stored = File(dir, "$id.$THEME_EXT")
             replacing?.let(::removeFiles)
             undismiss(com.echo.themekit.EchoThemeFolder.folderName(name, id))
-            if (!staging.renameTo(stored)) {
+            if (bundle.manifest.name.isNotBlank() && name != bundle.manifest.name) {
+                // renamed to keep its own folder: the stored copy carries the new name
+                FileOutputStream(stored).use { EchoThemeCodec.write(bundle.copy(manifest = bundle.manifest.copy(name = name)), it) }
+                staging.delete()
+            } else if (!staging.renameTo(stored)) {
                 staging.copyTo(stored, overwrite = true)
                 staging.delete()
             }
@@ -632,9 +636,9 @@ class EchoThemeStore @Inject constructor(
     private fun save(look: Look): SavedTheme {
         dir.mkdirs()
         val id = newId()
-        val manifest = look.bundle.manifest
+        val manifest = look.bundle.manifest.let { it.copy(name = uniqueName(it.name)) }
 
-        FileOutputStream(File(dir, "$id.$THEME_EXT")).use { out -> EchoThemeCodec.write(look.bundle, out) }
+        FileOutputStream(File(dir, "$id.$THEME_EXT")).use { out -> EchoThemeCodec.write(look.bundle.copy(manifest = manifest), out) }
         look.wallpaper?.let {
             FileOutputStream(File(dir, "$id.wallpaper.jpg")).use { out -> it.compress(Bitmap.CompressFormat.JPEG, 92, out) }
         }
@@ -684,6 +688,15 @@ class EchoThemeStore @Inject constructor(
                     previewPath = File(dir, "$id.preview.jpg").takeIf { it.isFile }?.absolutePath,
                 ).let(readSidecars(id, file))
             }
+
+    // the name, or "<name> 2", "<name> 3"…, so no two saved themes share a name and with it an ECHO/Themes folder
+    // (seen on the Konker: two "Before Ryoku" cards, both "In use"). [except] is the theme being replaced
+    private fun uniqueName(name: String, except: String? = null): String {
+        val taken = _themes.value.filter { it.id != except }.map { folderName(it).lowercase() }.toSet()
+        fun free(candidate: String) = com.echo.themekit.EchoThemeFolder.folderName(candidate, "").lowercase() !in taken
+        if (free(name)) return name
+        return generateSequence(2) { it + 1 }.map { "$name $it" }.first(::free)
+    }
 
     private fun nextDefaultName(): String {
         val existing = _themes.value.map { it.name }.toSet()

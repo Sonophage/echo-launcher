@@ -225,6 +225,26 @@ class EchoThemeStorePartsTest {
         assertEquals("BRACKET" to "SNAPPY", kept.focusStyle to kept.motion)
     }
 
+    // seen on the Konker: two "Before Ryoku" cards, both "In use", sharing one ECHO/Themes folder
+    @Test
+    fun `no two saved themes share a name, but a theme replaced keeps its own`() = runTest {
+        val store = EchoThemeStore(context, media)
+        context.echoDataStore.edit { it[com.echo.core.data.wallpaper.ThemeAccent.KEY_ACCENT_OVERRIDE] = 0x00AA33 }
+        assertEquals("Mine", assertNotNull(store.saveCurrentLook("Mine")).name)
+        assertEquals("Mine 2", assertNotNull(store.saveCurrentLook("Mine")).name)
+
+        val arcs = assertNotNull(store.importBundle(register(theme(EchoThemeManifest(name = "Arcs", accentColor = "#112233"), media = emptyMap()))))
+        val again = assertNotNull(store.importBundle(register(theme(EchoThemeManifest(name = "Arcs", accentColor = "#445566"), media = emptyMap()))))
+        assertEquals("Arcs" to "Arcs 2", arcs.name to again.name)
+        val reread = assertNotNull(EchoThemeCodec.read(File(context.filesDir, "pfpthemes/${again.id}.echo-theme")))
+        assertEquals("Arcs 2", reread.manifest.name, "the stored copy carries the new name")
+
+        // an update from the store replaces its theme, so it keeps the name
+        val update = store.importBundleDetailed(replacing = arcs.id) { theme(EchoThemeManifest(name = "Arcs", accentColor = "#778899"), media = emptyMap()).inputStream() }
+        assertTrue(update is EchoThemeStore.ImportResult.Success)
+        assertEquals(listOf("Arcs", "Arcs 2"), store.themes.value.map { it.name }.filter { it.startsWith("Arcs") }.sorted())
+    }
+
     // owner, 2026-10-09 (seen on the Konker: Ryoku's pings outlived "Before Ryoku"): a sound slot the kept look had
     // nothing in is cleared when the look is taken back, as its styles and settings are
     @Test

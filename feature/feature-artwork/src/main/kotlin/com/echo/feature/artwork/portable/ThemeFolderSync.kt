@@ -26,7 +26,8 @@ class ThemeFolderSync @Inject constructor(
     suspend fun writeOut(tree: Uri): Int {
         val existing = library.dirsIn(tree, listOf(DIR_THEMES)).map { it.name.lowercase() }.toSet()
         var written = 0
-        // ponytail: two saved themes with one folder name share it; the first written keeps it
+        // themes saved before names were made unique (EchoThemeStore.uniqueName) can still share a folder name;
+        // the first written keeps it
         for (theme in store.themes.value.distinctBy { store.folderName(it).lowercase() }) {
             val folder = store.folderName(theme)
             if (folder.lowercase() in existing || folder.equals(TEMPLATE, ignoreCase = true)) continue
