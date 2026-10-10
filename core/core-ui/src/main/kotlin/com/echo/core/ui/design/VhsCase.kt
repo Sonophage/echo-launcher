@@ -103,13 +103,19 @@ fun VhsCoverArt(model: Any?, u: DesignUnits) {
 val VHS_ICON_MIN = 64.dp
 
 // an app's cover: its colour with ECHO's echo rings, its icon large and faint and again small and sharp, and its
-// name. Without an icon, glyph stands in for it. [iconMin] keeps the icon from shrinking below that size
+// name. Without an icon, glyph stands in for it. [iconMin] keeps the icon from shrinking below that size. When [grows],
+// the logo and the faint logo are those shares of the face's width, never smaller than their fixed sizes, and the
+// name grows with them when [nameGrows]
 @Composable
-fun VhsAppFace(label: String, icon: AppIconArt?, tint: Color, u: DesignUnits, iconMin: Dp = VHS_ICON_MIN, glyph: @Composable () -> Unit) {
+fun VhsAppFace(
+    label: String, icon: AppIconArt?, tint: Color, u: DesignUnits, iconMin: Dp = VHS_ICON_MIN,
+    grows: Boolean = IsTitan2, logoShare: Float = TITAN_ICON_SHARE, markShare: Float = TITAN_MARK_SHARE, nameGrows: Boolean = true,
+    glyph: @Composable () -> Unit,
+) {
     BoxWithConstraints(Modifier.fillMaxSize().clip(RoundedCornerShape(u.dp(4))).background(tint)) {
-        val mark = titanFaceSize(u.dp(130), maxWidth, TITAN_MARK_SHARE, IsTitan2)
+        val mark = faceSize(u.dp(130), maxWidth, markShare, grows)
         val grow = mark / u.dp(130)
-        val logo = titanFaceSize(maxOf(u.dp(72), iconMin), maxWidth, TITAN_ICON_SHARE, IsTitan2)
+        val logo = faceSize(maxOf(u.dp(72), iconMin), maxWidth, logoShare, grows)
         Box(Modifier.fillMaxSize().coverRings()) {
             icon?.let { Image(it.bitmap, null, Modifier.align(Alignment.BottomEnd).offset(u.dp(30) * grow, u.dp(18) * grow).size(mark).rotate(-14f).graphicsLayer(alpha = 0.16f)) }
         }
@@ -120,8 +126,9 @@ fun VhsAppFace(label: String, icon: AppIconArt?, tint: Color, u: DesignUnits, ic
         ) {
             if (icon != null) Image(icon.bitmap, null, Modifier.size(logo).shadow(u.dp(8), RoundedCornerShape(u.dp(18) * grow)))
             else glyph()
-            Text(label.uppercase(), color = Color.White, fontSize = u.sp(13) * grow, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.04.em,
-                lineHeight = u.sp(15) * grow, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            val name = if (nameGrows) grow else 1f
+            Text(label.uppercase(), color = Color.White, fontSize = u.sp(13) * name, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.04.em,
+                lineHeight = u.sp(15) * name, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -133,14 +140,18 @@ internal const val TITAN_SPINE_SHARE = 0.09f
 internal const val TITAN_ICON_SHARE = 0.42f
 internal const val TITAN_MARK_SHARE = 0.8f
 
+// owner, 2026-10-09: the App Drawer's logo and faint logo are larger on every device, grown with the case
+const val DRAWER_LOGO_SHARE = 0.6f
+const val DRAWER_MARK_SHARE = 1.1f
+
 // the spine's "VHS" tab as a share of the spine's width: Sora Black "VHS" is about 2.4 of its size wide
 private const val VHS_TAB_SHARE = 0.38f
 
 internal fun titanSpineWidth(base: Dp, caseWidth: Dp, titan2: Boolean): Dp =
     if (titan2) maxOf(base, caseWidth * TITAN_SPINE_SHARE) else base
 
-internal fun titanFaceSize(base: Dp, faceWidth: Dp, share: Float, titan2: Boolean): Dp =
-    if (titan2) maxOf(base, faceWidth * share) else base
+internal fun faceSize(base: Dp, faceWidth: Dp, share: Float, grows: Boolean): Dp =
+    if (grows) maxOf(base, faceWidth * share) else base
 
 // owner, 2026-10-05: the spine reads as a VHS tape's: a cream label with the colour band and a play mark at the
 // top, the kind running down it, tracking rules, and a black VHS tab at the foot

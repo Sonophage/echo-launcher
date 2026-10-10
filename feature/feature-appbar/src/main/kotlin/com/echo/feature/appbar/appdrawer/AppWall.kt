@@ -12,6 +12,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import com.echo.core.ui.design.ShelfRoom
+import com.echo.core.ui.design.DRAWER_LOGO_SHARE
+import com.echo.core.ui.design.DRAWER_MARK_SHARE
 import com.echo.core.ui.design.VhsAppFace
 import com.echo.core.ui.design.VhsCase
 import com.echo.core.ui.design.VhsCoverArt
@@ -193,7 +195,7 @@ private fun AppCase(app: InstalledApp, height: Dp, focused: Boolean, dimmed: Boo
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
         if (app.art != null) VhsCoverArt(app.art, u)
-        else VhsAppFace(app.label, icon, tint, u) {
+        else VhsAppFace(app.label, icon, tint, u, grows = true, logoShare = DRAWER_LOGO_SHARE, markShare = DRAWER_MARK_SHARE, nameGrows = false) {
             Text(initialOf(app.label).toString(), color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(40), fontWeight = FontWeight.ExtraLight)
         }
     }
