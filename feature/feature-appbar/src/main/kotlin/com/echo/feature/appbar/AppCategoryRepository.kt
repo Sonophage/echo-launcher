@@ -9,6 +9,7 @@ import android.os.UserHandle
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import com.echo.core.data.database.dao.AppOverrideDao
 import com.echo.core.data.database.dao.CategoryDao
 import com.echo.core.data.database.entity.AppOverrideEntity
@@ -37,7 +38,11 @@ class AppCategoryRepository @Inject constructor(
     private val classifier: AppClassifier,
     private val categoryDao: CategoryDao,
     private val appOverrideDao: AppOverrideDao,
+    private val hiddenPlacementDao: com.echo.core.data.database.dao.HiddenPlacementDao,
+    private val gameRepository: com.echo.core.domain.repository.GameRepository,
 ) {
+    private val forgetScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
     @Volatile private var cache: List<InstalledApp> = emptyList()
 
     // an install, update or removal empties the cache and tells every reader (owner, 2026-10-04: a new
@@ -48,7 +53,13 @@ class AppCategoryRepository @Inject constructor(
         context.getSystemService(LauncherApps::class.java)?.registerCallback(
             object : LauncherApps.Callback() {
                 override fun onPackageAdded(packageName: String?, user: UserHandle?) = onPackagesChanged()
-                override fun onPackageRemoved(packageName: String?, user: UserHandle?) = onPackagesChanged()
+                override fun onPackageRemoved(packageName: String?, user: UserHandle?) {
+                    onPackagesChanged()
+                    // an update arrives as onPackageChanged, so this is an uninstall from this profile
+                    if (packageName != null && user == android.os.Process.myUserHandle()) {
+                        forgetScope.launch { runCatching { forgetUninstalled(packageName) }.onFailure { Timber.w(it, "Forgetting $packageName failed") } }
+                    }
+                }
                 override fun onPackageChanged(packageName: String?, user: UserHandle?) = onPackagesChanged()
                 override fun onPackagesAvailable(packageNames: Array<out String>?, user: UserHandle?, replacing: Boolean) = onPackagesChanged()
                 override fun onPackagesUnavailable(packageNames: Array<out String>?, user: UserHandle?, replacing: Boolean) = onPackagesChanged()
@@ -68,6 +79,16 @@ class AppCategoryRepository @Inject constructor(
         val lastUsed = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { installedAppRepository.loadLastUsedTimestamps() }
         cache = cache.map { it.copy(lastUsedAt = lastUsed[it.packageName] ?: 0L) }
         lastUsedChanges.update { it + 1 }
+    }
+
+    // owner, 2026-10-10: an uninstalled app leaves nothing behind: its name and hide override, its places in
+    // columns, the spots it was hidden from, and its entry in the Android library (with its play history)
+    internal suspend fun forgetUninstalled(pkg: String) {
+        appOverrideDao.delete(pkg)
+        categoryDao.removeAppFromAllCategories(pkg)
+        hiddenPlacementDao.deleteAllForItem(com.echo.core.domain.model.HiddenPlacement.appKey(pkg))
+        gameRepository.getAppEntry(pkg)?.let { gameRepository.delete(it.id) }
+        Timber.i("Forgot uninstalled app $pkg")
     }
 
     internal fun onPackagesChanged() {

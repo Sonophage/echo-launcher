@@ -27,6 +27,8 @@ class AppCategoryCacheTest {
         classifier = mockk(relaxed = true),
         categoryDao = mockk<CategoryDao> { every { observeAppItems() } returns flowOf(emptyList()) },
         appOverrideDao = mockk<AppOverrideDao> { every { observeAll() } returns flowOf(emptyList()) },
+        hiddenPlacementDao = mockk(relaxed = true),
+        gameRepository = mockk(relaxed = true),
     )
 
     @Test
