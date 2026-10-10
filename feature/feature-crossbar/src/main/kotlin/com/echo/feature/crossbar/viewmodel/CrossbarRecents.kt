@@ -320,7 +320,7 @@ class CrossbarRecents(
             val music = tracks.recentMusicRows()
             val filters = RecentFilter.shown(stockedRecentFilters(visibleGames, music, books, videos, appRows))
             // the pinned rows lead (owner, 2026-10-07), so the cursor meets them in the order the rail draws them
-            RecentRows(filters, pinnedForFilter(pinned, shownFilter) + mergeRecents(
+            RecentRows(filters, pinnedForFilter(pinned, shownFilter) + withoutPinned(mergeRecents(
                 games  = visibleGames.map { it.lastPlayedAt ?: 0L }.zip(with(vm) { visibleGames.toCrossbarItems() }),
 
                 music  = music,
@@ -329,7 +329,7 @@ class CrossbarRecents(
                 apps   = appRows,
                 filter = shownFilter,
                 limit  = limit,
-            ), tracks)
+            ), pinned), tracks)
         }
 
     internal suspend fun loadColumn(keepCursorOnRow: Boolean) {

@@ -335,4 +335,15 @@ class RecentAppDismissalTest {
         assertEquals("an app's dismissal is not a game's", listOf(7L),
             notDismissedGames(listOf(g), parseRecentDismissals(withRecentDismissal(emptySet(), "7", 2_000L))).map { it.id })
     }
+
+    // owner, 2026-10-09: a pinned game or app shows once, under Pinned, not again under Today or Earlier
+    @Test
+    fun `a pinned item leaves its dated row`() {
+        val skyrim = CrossbarItem(id = "recent-1", title = "Skyrim", gameId = 1L)
+        val spotify = CrossbarItem(id = "recent-app-spotify", title = "Spotify", packageName = "com.spotify.music")
+        val gris = CrossbarItem(id = "recent-2", title = "Gris", gameId = 2L)
+        val pinned = listOf(skyrim.copy(id = pinnedRowId("g:1")), spotify.copy(id = pinnedRowId("a:com.spotify.music")))
+        assertEquals(listOf("Gris"), withoutPinned(listOf(skyrim, spotify, gris), pinned).map { it.title })
+        assertEquals("nothing pinned, nothing goes", 3, withoutPinned(listOf(skyrim, spotify, gris), emptyList()).size)
+    }
 }
