@@ -60,6 +60,11 @@ screen's padded column.
   comes from `LocalMenuBackdropArt` and its wave from `LocalBackdropWave` (`design/GlowWave.kt`),
   both provided by `CrossbarShell`. Do not pass art per screen. Any side-rail picker is drawn
   through it: `rowBadge` replaces the letter badge (the Colour Scheme picker's swatches).
+- A menu row's `group` is its section (`MenuGroup`, `components/Menu.kt`), in this order: Do, About,
+  Organize, Edit, Settings, Edit Layout, Remove. Do and About are the top level, then one divider;
+  each other section is a submenu, or its row inline when it has one. A destructive row is always
+  in Remove. The fold (`rowsShown`) and the divider (`dividerIndex`) are the only places this is
+  decided; a builder only names the section. The divider is not a row: a drawn index is a row's index.
 - `GlowMaskedWave(side)` shows the wave only inside a screen's glow.
 - `WaveLayers(style)` draws the wave; the design (PSP, Echo Rings, Echo Arcs) comes from
   `LocalWaveDesign`. The wave sits just above the backdrop (wallpaper or full-screen art) and below

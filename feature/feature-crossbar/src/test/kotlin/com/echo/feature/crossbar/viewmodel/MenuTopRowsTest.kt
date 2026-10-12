@@ -2,13 +2,15 @@ package com.echo.feature.crossbar.viewmodel
 
 import com.echo.core.domain.model.BUILT_IN_CATEGORIES
 import com.echo.core.domain.model.BuiltInCategory
+import com.echo.core.ui.components.MenuGroup
 import com.echo.core.ui.components.MenuState
 import com.echo.core.ui.components.rowsShown
+import com.echo.core.ui.components.submenuFor
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-// owner, 2026-10-10: a ROM game's menu opens its folder, and an app's shows Android's App Info, both at the top of
-// the menu rather than inside Settings
+// App Info is in About, at the top of the menu; Open Folder is in Settings (owner, 2026-10-12). This replaces the
+// 2026-10-10 rule that put both at the top
 class MenuTopRowsTest {
     private val state = CrossbarUiState(
         categories = BUILT_IN_CATEGORIES,
@@ -17,11 +19,15 @@ class MenuTopRowsTest {
 
     private fun top(rows: List<CrossbarContextMenuItem>) = MenuState(title = "x", rows = rows).rowsShown().mapNotNull { it.action }
 
+    private fun inSettings(rows: List<CrossbarContextMenuItem>) =
+        MenuState(title = "x", rows = rows).submenuFor(MenuGroup.SETTINGS)?.rowsShown()?.mapNotNull { it.action }.orEmpty()
+
     @Test
-    fun `a ROM game offers Open Folder at the top`() {
+    fun `a ROM game offers Open Folder in Settings, not at the top`() {
         val game = CrossbarItem(id = "g1", title = "Tetris", gameId = 1L, platformId = "gb")
-        val shown = top(gameContextMenuItems(game, state, discCount = 1, onRecentShelf = false, hideLocation = null))
-        assertTrue("Open Folder is not at the top: $shown", "open_folder" in shown)
+        val rows = gameContextMenuItems(game, state, discCount = 1, onRecentShelf = false, hideLocation = null)
+        assertTrue("Open Folder is at the top: ${top(rows)}", "open_folder" !in top(rows))
+        assertTrue("Open Folder is not in Settings: ${inSettings(rows)}", "open_folder" in inSettings(rows))
     }
 
     @Test

@@ -112,11 +112,12 @@ class CrossbarMove(
     private fun pinnedSystems(): Set<String> = vm.enabledCards.filter { it.pinned }.map { it.platformId }.toSet()
 
     // the edit rows for the focused row of the crossbar (owner, 2026-10-07): Move and Change Icon for the row
-    // when it can, then Move Column, Rename Column and Change Column Icon for its column
+    // when it can, then Move Column, Rename Column and Change Column Icon for its column. They are the Edit Layout
+    // section; Clear Recent is in Remove (owner, 2026-10-12)
     fun menuRows(state: CrossbarUiState, item: CrossbarItem): List<CrossbarContextMenuItem> = buildList {
         if (state.currentItems.getOrNull(state.selectedItemIndex)?.id != item.id) return@buildList
-        fun row(id: String, label: String) =
-            CrossbarContextMenuItem(id, label, group = MenuGroup.CATEGORY, pinnedToRoot = true, confirms = false)
+        fun row(id: String, label: String, group: MenuGroup = MenuGroup.EDIT_LAYOUT) =
+            CrossbarContextMenuItem(id, label, group = group, confirms = false)
         if (state.rowMoveGroups(pinnedSystems()).getOrNull(state.selectedItemIndex) != null) add(row(MOVE_ROW, "Move"))
         if (systemIconSlot(item) != null && !state.isInSubItem) add(row(CHANGE_SYSTEM_ICON, "Change Icon"))
         if (systemArtSlotFor(item) != null && !state.isInSubItem) add(row(CHANGE_SYSTEM_ART, "Change Art"))
@@ -124,7 +125,7 @@ class CrossbarMove(
         if (state.columnEditable()) add(row(RENAME_COLUMN, "Rename Column"))
         if (state.columnEditable() && state.columnIconSlot() != null) add(row(CHANGE_COLUMN_ICON, "Change Column Icon"))
         // owner, 2026-10-10: Recent can be emptied from any of its rows, after a confirm
-        if (state.onLastPlayedHome) add(row(CLEAR_RECENT, "Clear Recent").copy(confirms = true))
+        if (state.onLastPlayedHome) add(row(CLEAR_RECENT, "Clear Recent", MenuGroup.REMOVE).copy(confirms = true))
     }
 
     fun promptRenameColumn() {

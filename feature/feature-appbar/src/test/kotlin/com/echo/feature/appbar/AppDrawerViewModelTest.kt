@@ -19,6 +19,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.echo.core.ui.components.rowsShown
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppDrawerViewModelTest {
@@ -339,7 +340,7 @@ class AppDrawerViewModelTest {
         val app = viewModel.uiState.value.menuApp!!.packageName
         assertEquals(AppMenuAction.ADD_TO_CROSS_BAR, viewModel.uiState.value.appMenu!!.rows[0].action)
 
-        viewModel.handleGamepadAction(GamepadAction.SELECT)
+        chooseDrawn(AppMenuAction.ADD_TO_CROSS_BAR)
 
         assertEquals(app, viewModel.uiState.value.pendingCrossBarAdd)
         viewModel.onCrossBarAddHandled()
@@ -436,12 +437,23 @@ class AppDrawerViewModelTest {
     private fun openUninstallPrompt() {
         viewModel.handleGamepadAction(GamepadAction.OPEN_CONTEXT_MENU)
         testDispatcher.scheduler.advanceUntilIdle()
-        val actions = viewModel.uiState.value.menuActions
-        val target = actions.indexOf(AppMenuAction.UNINSTALL)
-        assertTrue("the menu offered no Uninstall row: $actions", target >= 0)
-        repeat(target) { viewModel.handleGamepadAction(GamepadAction.NAVIGATE_DOWN) }
-        viewModel.handleGamepadAction(GamepadAction.SELECT)
+        chooseDrawn(AppMenuAction.UNINSTALL)
         testDispatcher.scheduler.advanceUntilIdle()
+    }
+
+    // walks the cursor to the row as a player does: through its section's submenu when it is folded
+    private fun chooseDrawn(action: AppMenuAction) {
+        fun press(match: (com.echo.core.ui.components.MenuRow<AppMenuAction>) -> Boolean) {
+            val menu = viewModel.uiState.value.appMenu!!
+            val target = menu.rowsShown().indexOfFirst(match)
+            assertTrue("no such row among ${menu.rowsShown().map { it.label }}", target >= 0)
+            repeat(target - (menu.selectedIndex ?: 0)) { viewModel.handleGamepadAction(GamepadAction.NAVIGATE_DOWN) }
+            viewModel.handleGamepadAction(GamepadAction.SELECT)
+        }
+        if (viewModel.uiState.value.appMenu!!.rowsShown().none { it.action == action }) {
+            press { it.opensSubmenu && it.group == action.group }
+        }
+        press { it.action == action }
     }
 
     @Test

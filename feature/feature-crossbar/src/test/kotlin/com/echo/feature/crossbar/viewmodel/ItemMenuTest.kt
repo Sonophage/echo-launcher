@@ -4,6 +4,7 @@ import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.domain.model.Category
 import com.echo.core.domain.model.CategoryType
 import com.echo.core.ui.components.rowsShown
+import com.echo.core.ui.components.submenuFor
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -34,7 +35,9 @@ class ItemMenuTest {
             currentItems = listOf(game()),
             activeContextMenu = CrossbarContextMenu(state = com.echo.core.ui.components.MenuState(title = "Crisis Core", rows = gameMenu(game()))),
         )
-        val shown = open.menuRows().mapNotNull { it.action }
+        // Shelves is in Organize: drawn inline when it is the section's one row, else one press into its submenu
+        val organize = open.activeContextMenu!!.state.submenuFor(com.echo.core.ui.components.MenuGroup.ORGANIZE)
+        val shown = open.menuRows().mapNotNull { it.action } + organize?.rowsShown().orEmpty().mapNotNull { it.action }
         assertTrue("Shelves is not on the open menu: $shown", "shelves" in shown)
     }
 
@@ -42,7 +45,9 @@ class ItemMenuTest {
     fun `an app's menu offers what its pills did, Launch, Edit and Favorite`() {
         val menu = appContextMenuItems(state(), categoryId = null, onRecentShelf = false)
         val shown = com.echo.core.ui.components.MenuState(title = "Spotify", rows = menu).rowsShown().mapNotNull { it.action }
-        listOf("launch", "favorite").forEach { assertTrue("'$it' is not on the app menu's first level: $shown", it in shown) }
+        assertTrue("Launch is not on the app menu's first level: $shown", "launch" in shown)
+        // only Do and About are at the top level; Favorites is in Organize (owner, 2026-10-12)
+        assertTrue("Favorites is not in Organize", menu.first { it.action == "favorite" }.group == com.echo.core.ui.components.MenuGroup.ORGANIZE)
         // owner, 2026-10-08: Artwork through Artwork Studio replaces the old Edit App Details
         assertTrue("Artwork is on the app menu", menu.any { it.action == "app_artwork" })
         assertTrue("the old editor is gone", menu.none { it.action == "edit_app" })

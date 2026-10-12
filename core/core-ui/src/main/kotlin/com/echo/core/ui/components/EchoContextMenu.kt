@@ -79,6 +79,7 @@ fun <T> EchoContextMenuOverlay(
     val title = state.title
     val subtitle = state.subtitle
     val rows = state.rowsShown()
+    val dividerIndex = state.dividerIndex()
     val selectedIndex = state.selectedIndex ?: NoMenuSelection
     val listState = rememberLazyListState()
 
@@ -116,17 +117,21 @@ fun <T> EchoContextMenuOverlay(
                 itemsIndexed(rows) { index, row ->
                     val dim = contextMenuDim(if (selectedIndex >= 0) kotlin.math.abs(index - selectedIndex) else 1, rows.lastIndex)
 
-                    CrossbarRailRow(
-                        label = row.label,
-                        focused = index == selectedIndex,
-                        destructive = row.isDestructive,
-                        checked = row.checked,
-                        opensSubmenu = row.opensSubmenu,
-                        dim = dim,
-                        u = u,
-                        badge = rowBadge?.let { { it(index, index == selectedIndex) } },
-                        onClick = { onRowActivated(index) },
-                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        // drawn inside the row's item, not as an item of its own, so a drawn index stays a row's index
+                        if (index == dividerIndex) MenuDivider(u)
+                        CrossbarRailRow(
+                            label = row.label,
+                            focused = index == selectedIndex,
+                            destructive = row.isDestructive,
+                            checked = row.checked,
+                            opensSubmenu = row.opensSubmenu,
+                            dim = dim,
+                            u = u,
+                            badge = rowBadge?.let { { it(index, index == selectedIndex) } },
+                            onClick = { onRowActivated(index) },
+                        )
+                    }
                 }
             }
         }
@@ -237,6 +242,18 @@ fun ContextMenuRowLabel(
     )
 }
 
+// the one line between the top-level rows (Do, About) and the sections below them
+@Composable
+private fun MenuDivider(u: DesignUnits) {
+    Box(
+        Modifier
+            .padding(bottom = RailRowGap)
+            .width(u.dp(RAIL_DIVIDER_WIDTH))
+            .height(1.dp)
+            .background(Color.White.copy(alpha = 0.22f)),
+    )
+}
+
 @Composable
 private fun CrossbarRailRow(
     label: String,
@@ -318,6 +335,7 @@ val RailRowGap = 13.dp
 private const val DimFadeMs = 160
 // the menu's sizes are panel design units, as the Recent rail's are, so the two read alike
 internal const val RAIL_MAX_TEXT = 380
+private const val RAIL_DIVIDER_WIDTH = 200
 internal val RailInk = Color(0xFF1A0C03)
 private val RailDestructive = Color(0xFFE2606A)
 

@@ -53,7 +53,7 @@ private const val PAN_STEP_PX = 160f
 
 private const val WALLPAPER_MAX_DIM = 2560
 
-enum class PhotoViewerAction(val label: String, val group: MenuGroup = MenuGroup.MAIN) {
+enum class PhotoViewerAction(val label: String, val group: MenuGroup = MenuGroup.DO) {
     ROTATE_LEFT("Rotate Left"),
     ROTATE_RIGHT("Rotate Right"),
     ZOOM_IN("Zoom In"),

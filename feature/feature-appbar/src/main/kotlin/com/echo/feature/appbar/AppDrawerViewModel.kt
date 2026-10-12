@@ -71,11 +71,11 @@ enum class AppFilter(val label: String, val subtitle: String) {
 }
 
 enum class AppMenuAction(val label: String, val group: MenuGroup) {
-    ADD_TO_CROSS_BAR("Add to Cross Bar", MenuGroup.MAIN),
-    APP_INFO("App Info", MenuGroup.SETTINGS),
+    ADD_TO_CROSS_BAR("Add to Cross Bar", MenuGroup.ORGANIZE),
+    APP_INFO("App Info", MenuGroup.ABOUT),
     LAUNCH_OTHER_SCREEN("Launch on Other Screen", MenuGroup.SETTINGS),
-    MARK_GAME("Mark as Game", MenuGroup.LIBRARY),
-    UNMARK_GAME("Unmark as Game", MenuGroup.LIBRARY),
+    MARK_GAME("Mark as Game", MenuGroup.ORGANIZE),
+    UNMARK_GAME("Unmark as Game", MenuGroup.ORGANIZE),
     // owner, 2026-10-05: hide an app that is never used from the whole layout; undone in Settings > Library > Hidden Items
     HIDE_EVERYWHERE("Hide Everywhere", MenuGroup.REMOVE),
     UNINSTALL("Uninstall", MenuGroup.REMOVE),

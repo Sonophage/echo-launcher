@@ -27,15 +27,15 @@ import com.echo.core.ui.components.MenuSelect
 import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.components.MenuGroup
 
-enum class VideoDetailAction(val label: String, val group: MenuGroup = MenuGroup.MAIN) {
+enum class VideoDetailAction(val label: String, val group: MenuGroup = MenuGroup.DO) {
     PLAY("Play"),
     RESUME("Resume"),
     RESTART("Start from Beginning"),
-    INFO("Information"),
-    FAVORITE("Favorite", MenuGroup.LIBRARY),
-    PLAYLIST("Add to Playlist", MenuGroup.LIBRARY),
-    RENAME("Rename Title", MenuGroup.SETTINGS),
-    THUMBNAIL("Change Thumbnail", MenuGroup.SETTINGS),
+    INFO("Information", MenuGroup.ABOUT),
+    FAVORITE("Favorite", MenuGroup.ORGANIZE),
+    PLAYLIST("Add to Playlist", MenuGroup.ORGANIZE),
+    RENAME("Rename Title", MenuGroup.EDIT),
+    THUMBNAIL("Change Thumbnail", MenuGroup.EDIT),
     LOCATION("Open File Location", MenuGroup.SETTINGS),
     REMOVE("Delete From Device", MenuGroup.REMOVE),
 }

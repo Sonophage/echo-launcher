@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
+import com.echo.core.ui.components.MenuGroup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,9 +51,10 @@ class DestructiveConfirmTest {
         }
     }
 
+    // only Do and About are at the top level; Favorites is in Organize (owner, 2026-10-12)
     @Test
-    fun `Favorite is never buried in a submenu`() {
+    fun `Favorites is in Organize, not pinned to the top level`() {
         val favorite = everyMediaMenu.getValue("video file").first { it.action == "video_favorite" }
-        assertTrue("Favorite would cost two presses", favorite.pinnedToRoot)
+        assertEquals("Favorites left its section", MenuGroup.ORGANIZE, favorite.group)
     }
 }

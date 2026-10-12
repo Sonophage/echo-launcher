@@ -1,23 +1,25 @@
 package com.echo.core.ui.components
 
+// The seven sections every menu is ordered in. Do and About sit at the top level; each other section is a
+// submenu named by its label, unless it holds one row, which is then shown inline (owner, 2026-10-12)
 enum class MenuGroup(val label: String?) {
-    MAIN(null),
-    LIBRARY("Library"),
-    METADATA("Metadata"),
+    DO(null),
+    ABOUT(null),
+    ORGANIZE("Organize"),
+    EDIT("Edit"),
     SETTINGS("Settings"),
-    CATEGORY("Category"),
+    EDIT_LAYOUT("Edit Layout"),
     REMOVE("Remove"),
 }
 
 data class MenuRow<out T>(
     val action: T?,
     val label: String,
-    val group: MenuGroup = MenuGroup.MAIN,
+    val group: MenuGroup = MenuGroup.DO,
     val isDestructive: Boolean = false,
     val confirms: Boolean = isDestructive,
     val checked: Boolean = false,
     val hidden: Boolean = false,
-    val pinnedToRoot: Boolean = false,
     val opensSubmenu: Boolean = false,
 )
 
@@ -38,25 +40,28 @@ sealed interface MenuSelect<out T> {
     data object None : MenuSelect<Nothing>
 }
 
-private fun <T> MenuRow<T>.staysAtRoot(): Boolean =
-    group == MenuGroup.MAIN || isDestructive || pinnedToRoot
+// a destructive row is always in Remove, whatever section its builder gave it
+private val MenuRow<*>.section: MenuGroup get() = if (isDestructive) MenuGroup.REMOVE else group
 
 fun <T> List<MenuRow<T>>.foldedIntoGroups(): List<MenuRow<T>> =
-    groupBy { it.group }
+    groupBy { it.section }
         .toSortedMap(compareBy { it.ordinal })
-        .flatMap { (group, rows) ->
-            val pinned = rows.filter { it.staysAtRoot() && !it.isDestructive }
-            val bundled = rows.filterNot { it.staysAtRoot() }
-
-            pinned + when (bundled.size) {
-                0, 1 -> bundled
-                else -> listOf(MenuRow<T>(null, group.label ?: group.name, group, opensSubmenu = true))
-            } + rows.filter { it.isDestructive }
+        .flatMap { (section, rows) ->
+            val name = section.label
+            if (name == null || rows.size == 1) rows else listOf(MenuRow<T>(null, name, section, opensSubmenu = true))
         }
 
 fun <T> MenuState<T>.rowsShown(): List<MenuRow<T>> {
     val visible = rows.filterNot { it.hidden || (it.action != null && it.action in withheld) }
-    return if (parent == null) visible.foldedIntoGroups() else visible.sortedBy { it.group.ordinal }
+    return if (parent == null) visible.foldedIntoGroups() else visible.sortedBy { it.section.ordinal }
+}
+
+// The drawn index the one divider is drawn above: the first row after Do and About. Null in a submenu, in a flat
+// list, and when nothing is above it. The divider is not a row, so drawn indices stay those of rowsShown().
+fun <T> MenuState<T>.dividerIndex(): Int? {
+    if (parent != null) return null
+    val index = rowsShown().indexOfFirst { it.section.label != null }
+    return index.takeIf { it > 0 }
 }
 
 fun <T> MenuState<T>.moved(delta: Int): MenuState<T> {
@@ -70,7 +75,7 @@ fun <T> MenuState<T>.moved(delta: Int): MenuState<T> {
 fun <T> MenuState<T>.at(index: Int): MenuState<T> = copy(selectedIndex = index)
 
 fun <T> MenuState<T>.submenuFor(group: MenuGroup): MenuState<T>? {
-    val inGroup = rows.filter { it.group == group && !it.staysAtRoot() }
+    val inGroup = rows.filter { it.section == group }
     if (inGroup.isEmpty()) return null
     return copy(subtitle = group.label, rows = inGroup, selectedIndex = 0, parent = this)
 }
