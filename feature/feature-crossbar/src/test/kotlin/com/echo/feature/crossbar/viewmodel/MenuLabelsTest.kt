@@ -40,8 +40,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // Every menu and rail speaks CONTEXT.md's words (spec #2): one name per action, in Title Case with the short words
-// lower case. ITEM_MENUS is the one list of item menu builders and OTHER_RAILS the one list of every other rail
-// (ticket #16); a new builder is added to one of them, and each builder is called once per state that changes its
+// lower case. ITEM_MENUS is the one list of item menu builders and OTHER_RAILS the one list of every other rail, and
+// of the Library Manager's rows (ticket #16); a new builder is added to one of them, and each builder is called once per state that changes its
 // rows, so every label it can show is read. This module depends on every module that draws a rail, so the rules
 // are defined here once and no other module copies them
 class MenuLabelsTest {
@@ -113,6 +113,7 @@ class MenuLabelsTest {
         "video player Options" to videoOptionsMenu(0, 1.5f, "Off", "English", "Fit").rows.map { it.label },
         "photo viewer bar" to PhotoControl.entries.map { it.label },
         "photo viewer info panel" to listOf(photo, photo.copy(isFavorite = true)).flatMap { p -> PhotoInfoAction.entries.map { it.labelFor(p) } },
+        "Library Manager" to libraryManagerRowLabels(),
     )
 
     private val shown get() = ITEM_MENUS.flatMap { (menu, rows) -> rows.filterNot { it.hidden }.map { menu to it.label } } +
@@ -151,9 +152,15 @@ class MenuLabelsTest {
     }
 
     @Test
+    fun `the Library Manager's rows are read from its screen`() {
+        val labels = libraryManagerRowLabels()
+        assertTrue("read ${labels.size}: $labels", "Scan This Console" in labels && "Pin to Top" in labels && labels.size >= 15)
+    }
+
+    @Test
     fun `the rules catch what they are for`() {
         assertTrue(isTitleCase("Pin to Top") && isTitleCase("Default Emulator (PPSSPP)") && isTitleCase("Playback Speed · 1.5×") && isTitleCase("Zoom In"))
-        assertTrue(!isTitleCase("Pin To Top") && !isTitleCase("Remove from this Playlist") && !isTitleCase("Set as wallpaper") && !isTitleCase("to Top"))
+        assertTrue(!isTitleCase("Pin To Top") && !isTitleCase("Remove from this Playlist") && !isTitleCase("Set as wallpaper") && !isTitleCase("to Top") && !isTitleCase("Scan For Vita Games"))
         val avoid = avoidedTerms()
         assertTrue("Info" in avoid.filter { it.matches("Info") }.map { it.term })
         assertTrue(avoid.any { it.matches("Pin") } && avoid.none { it.matches("Pin to Top") })
@@ -164,8 +171,8 @@ class MenuLabelsTest {
         // App Info opens Android's own screen of that name, not ECHO's Details (owner, 2026-10-12: App Info in About)
         private val NAMES_OF_OTHER_SCREENS = setOf("App Info")
 
-        // spec #2's short words, and "by" (Group by Genre)
-        private val SHORT_WORDS = setOf("to", "from", "in", "on", "as", "of", "and", "by")
+        // spec #2's short words, and "by" (Group by Genre) and "for" (Scan for Vita Games)
+        private val SHORT_WORDS = setOf("to", "from", "in", "on", "as", "of", "and", "by", "for")
 
         // every word starts upper case, except a short word between the first and the last, which is all lower case
         // ("Pin to Top", but "Zoom In"). A word that does not start with a letter (a number, ·, ×) has no case
@@ -187,6 +194,15 @@ class MenuLabelsTest {
             fun matches(label: String): Boolean =
                 if (alone) label.equals(term, ignoreCase = true)
                 else Regex("\\b${Regex.escape(term)}\\b", RegexOption.IGNORE_CASE).containsMatchIn(label)
+        }
+
+        // the Library Manager's rows are drawn inline in its screen, so their fixed labels are read from the source: each
+        // SettingsRow or SettingsToggleRow whose label is a plain string. A label built from data (a system's or an
+        // app's name, an extension) is not read
+        fun libraryManagerRowLabels(): List<String> {
+            val path = "feature/feature-settings/src/main/kotlin/com/echo/feature/settings/ui/LibraryManagerScreen.kt"
+            val source = listOf(java.io.File("../../$path"), java.io.File(path)).first { it.exists() }.readText()
+            return Regex("""Settings(?:Row|ToggleRow)\(\s*label\s*=\s*"([^"$\\]*)"""").findAll(source).map { it.groupValues[1] }.toList()
         }
 
         fun avoidedTerms(): List<Avoided> {

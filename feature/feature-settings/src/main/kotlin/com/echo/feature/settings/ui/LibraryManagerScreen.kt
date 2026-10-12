@@ -447,7 +447,7 @@ private fun CardDetailContent(
 
                 SettingsGroup("Actions")
                 SettingsRow(
-                    label    = "Scan For Vita Games",
+                    label    = "Scan for Vita Games",
                     sublabel = "Reads installed titles from ux0/app in your Vita3K data folder",
                     onClick  = if (!isScanning && state.vita3KFolderLabel != null) ({ onScanVitaGames() }) else null,
                 )
