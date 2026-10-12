@@ -646,9 +646,6 @@ data class CrossbarUiState(
     val secondScreen: Boolean = false,
     // Swap: the Main Screen on the second display and the Companion Screen on the first; remembered
     val screensSwapped: Boolean = false,
-    // the open menu, and any it leads to, was asked for on the second screen and is drawn there (owner,
-    // 2026-10-08: a menu opens where it was asked for); cleared whenever no menu is open
-    val menuOnCompanion: Boolean = false,
     // the device has a second display, and whether ECHO uses it (Quick settings, owner 2026-10-06)
     val secondDisplayPresent: Boolean = false,
     val secondScreenEnabled: Boolean = true,
@@ -845,13 +842,8 @@ data class CrossbarUiState(
             activeVideoId == null && activePhotoViewer == null &&
             musicTrackPicker == null && !musicPlayerVisible
 
-    // owner, 2026-10-06: with a second screen, Settings opens there whatever opened it; the first-run wizard
-    // stays on this screen. This is what this screen draws. Search is on the Main Screen (ADR 0001).
-    val topSettingsScreen: String?
-        get() = activeSettingsScreen?.takeUnless { secondScreen && it !in CrossbarViewModel.WIZARD_SCREEN_IDS }
-
     private val chromeOverlay: Boolean
-        get() = topSettingsScreen != null ||
+        get() = activeSettingsScreen != null ||
             appPicker != null ||
             gamePickerCategoryId != null ||
             activeAppDrawerFilter != null ||
@@ -887,6 +879,9 @@ data class CrossbarUiState(
     val statusStripVisible: Boolean
         get() = !fullscreenOverlay
 }
+
+// the music player covers the crossbar on the Main Screen, with or without a Companion Screen (ADR 0001)
+internal fun CrossbarUiState.withMusicPlayer(): CrossbarUiState = copy(musicPlayerVisible = true)
 
 // the boot sequence, the launch disc or GameBoot is on screen, with its own sound; the menu music waits for it
 val CrossbarUiState.ceremonyPlaying: Boolean
@@ -1489,14 +1484,6 @@ class CrossbarViewModel @Inject constructor(
     internal var platformCache: Map<String, PlatformEntity> = emptyMap()
     internal var enabledCards: List<MemoryCard> = emptyList()
     internal val taskNotifier = BackgroundTaskNotifier(context)
-
-    init {
-        viewModelScope.launch {
-            _uiState.map { it.activeContextMenu == null }.distinctUntilChanged().collect { closed ->
-                if (closed) _uiState.update { if (it.menuOnCompanion) it.copy(menuOnCompanion = false) else it }
-            }
-        }
-    }
 
     init {
         gamepadInputHandler.scope = viewModelScope
@@ -3570,7 +3557,7 @@ class CrossbarViewModel @Inject constructor(
     // the one way the music player opens: over the crossbar on the Main Screen, with or without a Companion
     // Screen (ADR 0001)
     internal fun showMusicPlayer() {
-        _uiState.update { it.copy(musicPlayerVisible = true) }
+        _uiState.update { it.withMusicPlayer() }
     }
 
     private fun openItemMenu(item: CrossbarItem?) {

@@ -74,7 +74,7 @@ class CrossbarBottomScreen(
                 link.update { it.copy(playing = info, playingSince = session?.second.takeIf { info != null }) }
             }
         }
-        // the top screen hands Search and Settings to this one while it is attached
+        // the Crossbar knows while a Companion Screen is attached
         scope.launch {
             link.attached.collect { on -> uiState.update { it.copy(secondScreen = on) } }
         }
@@ -95,10 +95,6 @@ class CrossbarBottomScreen(
         runCatching { vm.gameRepository.getById(gameId) }.getOrNull()?.let { game -> with(vm) { listOf(game).toCrossbarItems() }.first() }
 
     fun drawerFocused(app: com.echo.feature.appbar.InstalledApp?) = link.drawerFocused(app)
-
-    fun storePreviewed(preview: com.echo.feature.settings.ui.StorePreview?) = link.storePreviewed(preview)
-
-    val storePreview get() = link.storePreview
 
     // the Swap button: the Main Screen and the Companion Screen change displays, and the controller stays with
     // the Main Screen

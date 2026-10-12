@@ -1,11 +1,6 @@
 package com.echo.feature.crossbar.bottomscreen
 
-import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
-import com.echo.feature.crossbar.viewmodel.CrossbarUiState
-import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
-import com.echo.feature.crossbar.viewmodel.SearchScope
-import com.echo.feature.crossbar.viewmodel.SearchState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -28,31 +23,6 @@ class BottomScreenRulesTest {
         assertFalse(hasInfo(CrossbarItem(id = "s", title = "Display")))
     }
 
-    // owner, 2026-10-06: with a second screen, Settings is locked to it, whatever opened it; the first-run
-    // wizard stays on the top screen. Search stays on the Main Screen (ADR 0001, MainScreenRollbackGuardTest)
-    @Test
-    fun `with a second screen settings leave the top screen, the wizard stays`() {
-        val open = CrossbarUiState(activeSettingsScreen = "settings_display")
-        assertEquals("settings_display", open.topSettingsScreen)
-
-        val dual = open.copy(secondScreen = true)
-        assertNull(dual.topSettingsScreen)
-
-        val wizard = CrossbarViewModel.WIZARD_SCREEN_IDS.first()
-        assertEquals(wizard, dual.copy(activeSettingsScreen = wizard).topSettingsScreen)
-    }
-
-    @Test
-    fun `the bottom screen shows the locked screen on top, as the top screen stacks them`() {
-        assertEquals(LockedScreen.NONE, lockedScreen(CrossbarUiState()))
-        assertEquals("Search is on the Main Screen, the keyboard over this screen's page", LockedScreen.NONE, lockedScreen(CrossbarUiState(search = SearchState(scope = SearchScope.ALL))))
-        assertEquals("the drawer is on the Main Screen", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS")))
-        assertEquals(LockedScreen.SETTINGS, lockedScreen(CrossbarUiState(activeSettingsScreen = "settings_display")))
-        assertEquals("the drawer over Settings: its hovered app, not Settings", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", activeSettingsScreen = "settings_display")))
-        assertEquals("the drawer's own search over the drawer", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", search = SearchState(scope = SearchScope.APPS))))
-        assertEquals("the wizard is not drawn here", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeSettingsScreen = CrossbarViewModel.WIZARD_SCREEN_IDS.first())))
-    }
-
     // owner, 2026-10-06: dual or single screen is a quick setting, offered only where there is a second display
     @Test
     fun `Screens is a quick setting only on a device with a second display`() {
@@ -60,17 +30,6 @@ class BottomScreenRulesTest {
         assertTrue(com.echo.feature.crossbar.viewmodel.QuickSetting.SECOND_SCREEN in dual)
         assertEquals("Android settings stays last", com.echo.feature.crossbar.viewmodel.QuickSetting.ANDROID_SETTINGS, dual.last())
         assertFalse(com.echo.feature.crossbar.viewmodel.QuickSetting.SECOND_SCREEN in com.echo.feature.crossbar.viewmodel.quickSettingsFor(secondDisplay = false))
-    }
-
-    // the remote must have a way out the owner can find (owner, 2026-10-08: "how do I exit the music player"):
-    // B leaves for Recent, Y opens Stop & Close; left and right stay free for the pages
-    @Test
-    fun `the music remote has a way out`() {
-        assertEquals(MusicRemoteKey.LEAVE, musicRemoteKey(GamepadAction.BACK))
-        assertEquals(MusicRemoteKey.OPTIONS, musicRemoteKey(GamepadAction.OPEN_CONTEXT_MENU))
-        assertEquals(MusicRemoteKey.PLAY_PAUSE, musicRemoteKey(GamepadAction.SELECT))
-        assertNull("left walks the pages", musicRemoteKey(GamepadAction.NAVIGATE_LEFT))
-        assertNull("right walks the pages", musicRemoteKey(GamepadAction.NAVIGATE_RIGHT))
     }
 
     @Test

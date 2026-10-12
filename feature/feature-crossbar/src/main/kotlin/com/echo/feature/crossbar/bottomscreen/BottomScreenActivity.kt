@@ -129,8 +129,8 @@ class BottomScreenActivity : ComponentActivity() {
         super.onStop()
     }
 
-    // a screen locked here (Settings) takes keys, so its text fields get the keyboard. Typing (Search or a
-    // name prompt, when the XMB is drawn here in Swap) takes key focus at once, so the keyboard opens.
+    // nothing is locked here unless the XMB is drawn here in Swap: then typing (Search or a name prompt) takes
+    // keys and key focus at once, so the keyboard opens.
     // The controller's presses then arrive here and are passed on, so they still drive ECHO.
     private fun onLocked(locked: LockedScreenOpen) {
         this.locked = locked

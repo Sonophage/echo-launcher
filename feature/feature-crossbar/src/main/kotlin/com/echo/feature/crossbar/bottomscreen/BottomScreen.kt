@@ -29,62 +29,28 @@ import com.echo.core.ui.design.panelDesignUnits
 import com.echo.feature.crossbar.ui.GameInfoScreen
 import com.echo.feature.crossbar.ui.LastPlayedPage
 import androidx.compose.foundation.lazy.rememberLazyListState
-import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoAction
 import com.echo.feature.crossbar.viewmodel.firstSection
 import com.echo.feature.crossbar.viewmodel.RecentFilter
-import com.echo.feature.settings.ui.SettingsNavHost
-import androidx.compose.runtime.collectAsState
-
-// what the bottom screen shows over its own pages: Settings, which a second screen takes from the top one
-// (owner, 2026-10-06), whatever opened it
-internal enum class LockedScreen { NONE, SETTINGS }
-
-// stacked as CrossbarShell stacks them: the drawer over Settings. The App Drawer and Search are on the Main
-// Screen (ADR 0001): while the drawer is open this screen shows its hovered app, and while Search is open it
-// shows the keyboard, which the Thor puts here, over its page
-internal fun lockedScreen(s: CrossbarUiState): LockedScreen = when {
-    s.activeAppDrawerFilter != null -> LockedScreen.NONE
-    s.activeSettingsScreen != null && s.activeSettingsScreen !in CrossbarViewModel.WIZARD_SCREEN_IDS -> LockedScreen.SETTINGS
-    else -> LockedScreen.NONE
-}
 
 // the Companion Screen: the Details the Companion rule picks (companionContent), with Swap, and Resume while a
-// game runs; over them, Settings while it still opens here. It takes touch only: a tap never moves the
+// game runs. The App Drawer, Search and Settings are on the Main Screen (ADR 0001); while Search is open the
+// keyboard, which the Thor puts here, shows over this screen. It takes touch only: a tap never moves the
 // controller from the Main Screen (ADR 0001).
 @Composable
 fun BottomScreen(
     state: BottomScreenState,
     crossbar: CrossbarViewModel,
     modifier: Modifier = Modifier,
-    // true while a locked screen is open here, so its text fields can take the keyboard
+    // nothing is locked here now; told so on show, so keys taken for typing in Swap are handed back
     onLocked: (LockedScreenOpen) -> Unit = {},
 ) {
-    val ui by crossbar.uiState.collectAsState()
-    val locked = lockedScreen(ui)
-    LaunchedEffect(locked) { onLocked(LockedScreenOpen(open = locked != LockedScreen.NONE, typing = false)) }
+    LaunchedEffect(Unit) { onLocked(LockedScreenOpen(open = false, typing = false)) }
     val shown = state.shown as? CompanionContent.Details
     CompositionLocalProvider(LocalPadPrompts provides false) {
         BoxWithConstraints(modifier.fillMaxSize().background(PanelBase)) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
-            // a menu asked for here (Y on Recent) opens here, over the page
-            val companionMenu: @Composable () -> Unit = {
-                ui.activeContextMenu?.takeIf { ui.menuOnCompanion }?.let { menu ->
-                    com.echo.core.ui.components.EchoContextMenuOverlay(
-                        state = menu.state,
-                        onRowActivated = crossbar::onContextMenuItemActivatedAt,
-                        onDismiss = crossbar::closeContextMenu,
-                    )
-                }
-            }
-            when (locked) {
-                LockedScreen.SETTINGS -> {
-                    SettingsHere(ui, crossbar)
-                    return@BoxWithConstraints
-                }
-                LockedScreen.NONE -> Unit
-            }
             shown?.let { details ->
                 val info = details.info
                 if (showsGameInfo(info.item)) {
@@ -138,37 +104,8 @@ fun BottomScreen(
                 // the Main Screen and this screen change displays
                 PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.bottomScreen.toggleSwap() }
             }
-            companionMenu()
         }
     }
 }
 
 data class LockedScreenOpen(val open: Boolean, val typing: Boolean)
-
-// Settings as the top screen hosts it (CrossbarShell)
-@Composable
-private fun SettingsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel) {
-    val screenId = ui.activeSettingsScreen ?: return
-    // the store reports its focused theme, which the crossbar's screen shows large
-    CompositionLocalProvider(com.echo.feature.settings.ui.LocalStorePreview provides crossbar.bottomScreen::storePreviewed) {
-    SettingsNavHost(
-        screenId = screenId,
-        onBack = crossbar::onSettingsBack,
-        pendingGamepadAction = ui.pendingSettingsAction,
-        onGamepadActionConsumed = crossbar::consumeSettingsAction,
-        onPromptTapped = crossbar::onPromptTapped,
-        showControllerHint = ui.showSettingsHint,
-        leftBacksOut = ui.leftBacksOut,
-        lastInputWasTouch = ui.lastInputWasTouch,
-        onTouchInteraction = crossbar::markTouchInput,
-        onOpenColorSchemePicker = crossbar.look::openColorSchemePicker,
-        onOpenCustomIcons = crossbar::openCustomIcons,
-        onPreviewBootSequence = crossbar.launching::previewBootSequence,
-        onPreviewGameBoot = crossbar.launching::previewGameBoot,
-        onAddAndroidApps = crossbar::openAndroidLibraryPicker,
-        onGoToLibrary = crossbar::goToLibrary,
-        onOpenScreen = crossbar::onOpenSettingsScreen,
-        modifier = Modifier.fillMaxSize(),
-    )
-    }
-}
