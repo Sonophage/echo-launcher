@@ -156,6 +156,19 @@ class BottomScreenRulesTest {
         assertFalse("already showing: leave focus alone", link.needsCompanion(enabled = true))
     }
 
+    // HOME starts one Companion window and ECHO may start another over it; the covered one stops after the
+    // new one starts, and that must not mark the Companion Screen as gone
+    @Test
+    fun `a second Companion window stopping does not detach the one on show`() {
+        val link = BottomScreenLink()
+        link.attach(true)
+        link.attach(true)
+        link.attach(false)
+        assertTrue("one window still on show", link.attached.value)
+        link.attach(false)
+        assertFalse("both gone", link.attached.value)
+    }
+
     @Test
     fun `a drawer album draws as music on the other screen, an app as an app`() {
         val album = com.echo.feature.appbar.InstalledApp("media:MUSIC:born pink", "BORN PINK", null, isGame = false, isEmulator = false,
