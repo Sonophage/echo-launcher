@@ -35,8 +35,7 @@ class CrossbarBottomScreen(
     private val link: BottomScreenLink,
     private val lastLaunch: StateFlow<OpenSession?>,
 ) {
-    // a Companion Screen is on show: attached on a second display, or shown in place by Swap on one
-    private val companionShown = combine(link.attached, uiState.map { it.companionInPlace }) { attached, inPlace -> attached || inPlace }
+    private val companionShown = combine(link.attached, uiState.map { it.companionInPlace }, ::companionOnShow)
         .distinctUntilChanged()
 
     fun observe() {
@@ -66,18 +65,7 @@ class CrossbarBottomScreen(
         }
         // Search, a menu, Settings and the colour scheme picker open on the Main Screen, which the Companion rule reads
         scope.launch {
-            uiState.map { s ->
-                BottomScreenState(
-                    searching = s.search != null,
-                    menuOpen = s.activeContextMenu != null,
-                    settingsOpen = s.activeSettingsScreen != null,
-                    colorScheme = s.colorSchemePicker?.let { it.options.getOrNull(it.selectedIndex) },
-                )
-            }.distinctUntilChanged().collect { main ->
-                link.update {
-                    it.copy(searching = main.searching, menuOpen = main.menuOpen, settingsOpen = main.settingsOpen, colorScheme = main.colorScheme)
-                }
-            }
+            uiState.map(::mainScreenOpen).distinctUntilChanged().collect { open -> link.update { it.copy(open = open) } }
         }
         scope.launch {
             combine(companionShown, link.hostShown, lastLaunch) { on, shown, last ->

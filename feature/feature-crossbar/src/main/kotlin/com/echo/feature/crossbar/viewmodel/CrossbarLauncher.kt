@@ -8,6 +8,7 @@ import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.domain.model.Game
 import com.echo.core.domain.model.resolve
 import com.echo.feature.appbar.LauncherShortcutRepository
+import com.echo.feature.crossbar.bottomscreen.mainScreenOnSecondDisplay
 import com.echo.feature.launcher.LaunchDispatchResult
 import com.echo.feature.launcher.LaunchRecoveryAction
 import com.echo.feature.launcher.ResolvedLaunch
@@ -48,7 +49,7 @@ class CrossbarLauncher(
     // a launch with no Launch Screen yet opens on the Main Screen's display, the second one while swapped
     internal fun observeMainScreenDisplay() {
         scope.launch {
-            uiState.map { it.secondScreen && it.screensSwapped }.distinctUntilChanged()
+            uiState.map(::mainScreenOnSecondDisplay).distinctUntilChanged()
                 .collect { vm.launchScreens.mainOnSecond = it }
         }
     }

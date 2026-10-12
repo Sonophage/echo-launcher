@@ -35,15 +35,15 @@ sealed interface SettingPreview {
 fun companionContent(main: BottomScreenState, last: CompanionContent?): CompanionContent? {
     main.playing?.let { return CompanionContent.Details(it, playing = true, playingSince = main.playingSince) }
     val kept = (last as? CompanionContent.Details)?.copy(playing = false, playingSince = null) ?: last
-    main.colorScheme?.let { return CompanionContent.Setting(SettingsFocusInfo(it.label, null, it.sublabel), SettingPreview.Colors(it)) }
-    if (main.settingsOpen) {
+    main.open.colorScheme?.let { return CompanionContent.Setting(SettingsFocusInfo(it.label, null, it.sublabel), SettingPreview.Colors(it)) }
+    if (main.open.settings) {
         main.theme?.let { return CompanionContent.Setting(SettingsFocusInfo(it.name, null, it.line), SettingPreview.Theme(it)) }
         return main.setting?.let { CompanionContent.Setting(it) } ?: kept
     }
     // ponytail: the owner is what was shown when the menu opened; a menu opened within the 150 ms the cursor
     // takes to settle keeps the item before it, until the menu closes. Track the menu's own item if that shows.
-    if (main.menuOpen && kept != null) return kept
-    val hovered = if (main.searching) main.hovered else main.drawer ?: main.hovered
+    if (main.open.menu && kept != null) return kept
+    val hovered = if (main.open.search) main.hovered else main.drawer ?: main.hovered
     return hovered?.let { CompanionContent.Details(it) } ?: kept
 }
 
@@ -51,6 +51,18 @@ fun companionContent(main: BottomScreenState, last: CompanionContent?): Companio
 // Search is open, else the Crossbar's cursor
 fun mainScreenHover(s: CrossbarUiState): CrossbarItem? =
     s.search?.let { it.rows.getOrNull(it.selectedIndex) } ?: s.focusedItem.takeIf { s.search == null }
+
+// the context menu the Main Screen draws: every menu, with or without a Companion Screen (ADR 0001). CrossbarShell
+// draws by this, so MainScreenRollbackGuardTest sees it
+fun mainScreenMenu(s: CrossbarUiState): com.echo.feature.crossbar.viewmodel.CrossbarContextMenu? = s.activeContextMenu
+
+// what is open on the Main Screen, which the Companion rule reads
+fun mainScreenOpen(s: CrossbarUiState): MainScreenOpen = MainScreenOpen(
+    search = s.search != null,
+    menu = s.activeContextMenu != null,
+    settings = s.activeSettingsScreen != null,
+    colorScheme = s.colorSchemePicker?.let { it.options.getOrNull(it.selectedIndex) },
+)
 
 // the items with Details on the Companion Screen: games, installed apps, songs, videos, books, photos and a
 // system's card. A settings row or a folder has none, so hovering one keeps the last thing shown
@@ -102,4 +114,10 @@ fun reshowsKeyboard(windowFocused: Boolean, s: CrossbarUiState): Boolean =
 
 // the display ECHO started on shows the Companion Screen: swapped with the Companion Screen attached on the other
 // display, or shown in place on one display
-fun firstDisplayShowsCompanion(s: CrossbarUiState): Boolean = (s.secondScreen && s.screensSwapped) || s.companionInPlace
+fun firstDisplayShowsCompanion(s: CrossbarUiState): Boolean = mainScreenOnSecondDisplay(s) || s.companionInPlace
+
+// Swap has put the Main Screen on the second display, with the Companion Screen attached on the first
+fun mainScreenOnSecondDisplay(s: CrossbarUiState): Boolean = s.secondScreen && s.screensSwapped
+
+// a Companion Screen is on show: attached on a second display, or shown in place by Swap on one
+fun companionOnShow(attached: Boolean, companionInPlace: Boolean): Boolean = attached || companionInPlace
