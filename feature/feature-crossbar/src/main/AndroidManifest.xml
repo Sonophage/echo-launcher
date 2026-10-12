@@ -36,6 +36,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <!-- Moves key focus to the Companion's display for the keyboard there, then closes. Its own task,
+             as a new task brought to the front is what moves focus. Translucent, so the Companion window
+             under it is never stopped. -->
+        <activity
+            android:name="com.echo.feature.crossbar.bottomscreen.CompanionFocusActivity"
+            android:exported="false"
+            android:taskAffinity="${applicationId}.focus"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     </application>
 
 </manifest>
