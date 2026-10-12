@@ -94,6 +94,11 @@ fun companionKeys(s: CrossbarUiState): CompanionKeys = when {
     else -> CompanionKeys.CLAIM
 }
 
+// the Main Screen's window got focus back while typing with a Companion attached: that is the end of the Companion's
+// CLAIM, and the focus round trip hid the keyboard, so the Main Screen shows it again for its field
+fun reshowsKeyboard(windowFocused: Boolean, s: CrossbarUiState): Boolean =
+    windowFocused && s.secondScreen && companionKeys(s) == CompanionKeys.CLAIM
+
 // the display ECHO started on shows the Companion Screen: swapped with the Companion Screen attached on the other
 // display, or shown in place on one display
 fun firstDisplayShowsCompanion(s: CrossbarUiState): Boolean = (s.secondScreen && s.screensSwapped) || s.companionInPlace

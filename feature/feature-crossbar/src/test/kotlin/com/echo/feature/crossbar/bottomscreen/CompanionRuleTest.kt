@@ -177,4 +177,19 @@ class CompanionRuleTest {
         assertEquals("Search in Swap is in the Companion's window", CompanionKeys.HOLD, companionKeys(search.copy(screensSwapped = true)))
         assertEquals(CompanionKeys.NONE, companionKeys(dual.copy(screensSwapped = true)))
     }
+
+    // on the Thor the Companion's claim moves focus away from the Main Screen and back, and Android hides the
+    // keyboard on the way: the field kept its cursor, A typed nothing (7a73e691). The Main Screen shows it again
+    // when its window gets focus back while typing; only then, so a keyboard put away is not brought back
+    @Test
+    fun `the Main Screen shows the keyboard again when focus comes back from the Companion's claim`() {
+        val dual = CrossbarUiState(secondDisplayPresent = true, secondScreenEnabled = true, secondScreen = true)
+        val search = dual.copy(search = SearchState(scope = SearchScope.ALL))
+        assertTrue("Search open, focus back from the claim", reshowsKeyboard(windowFocused = true, search))
+        assertTrue("a name prompt too", reshowsKeyboard(windowFocused = true, dual.copy(renameAppTarget = "a")))
+        assertFalse("losing focus shows nothing", reshowsKeyboard(windowFocused = false, search))
+        assertFalse("not typing", reshowsKeyboard(windowFocused = true, dual))
+        assertFalse("in Swap this window is the Companion and has no field", reshowsKeyboard(windowFocused = true, search.copy(screensSwapped = true)))
+        assertFalse("one screen: no claim, the keyboard was never hidden", reshowsKeyboard(windowFocused = true, search.copy(secondScreen = false)))
+    }
 }
