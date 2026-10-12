@@ -46,6 +46,11 @@ name as `-s`; the IP and port change.
 ./gradlew :app:assembleDebug && adb -s $D install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
+The owner's AYN Thor (two displays, USB) is driven by `tools/thor.sh`: `install`, `key A DPAD_DOWN`
+(controller keys), `shot NAME` (both displays, half size, into `build/thor/`) and `ime` (which window
+each display's keyboard answers to, whether it is shown, which display has key focus). Run it
+before and after a change to the Companion Screen, Swap or typing: those bugs show only on the device.
+
 Usage access and notification access can need granting again after an install. Record what you
 check (see `echo-ui`), and say in the commit what was and was not seen on the device.
 

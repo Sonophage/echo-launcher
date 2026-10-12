@@ -1,4 +1,6 @@
 #!/bin/sh
+fail=0
+
 # A change to the module graph must change the docs that describe it (owner, 2026-10-04).
 # The graph is the include(...) lines of settings.gradle.kts and the project(...) dependencies of
 # each build.gradle.kts; other build edits (a version bump) pass. checkStructure in the gate and CI
@@ -9,7 +11,38 @@ if [ -n "$graph" ]; then
         echo "pre-commit: the module graph changed, but CLAUDE.md and .claude/skills/ did not:"
         echo "$graph"
         echo "Update the module map or the skill that covers the change. If neither is affected, commit with --no-verify."
-        exit 1
+        fail=1
     fi
 fi
-exit 0
+
+# Kotlin lines this commit adds, as "file: line". Only added lines are checked: old ones are rewritten
+# when the code beside them changes (ADR 0001), so a line that is edited is checked too.
+added=$(git diff --cached -U0 --diff-filter=AM -- '*.kt' | awk '/^\+\+\+ b\//{f=substr($0,7);next} /^\+/{print f": "substr($0,2)}')
+
+# CONTEXT.md's avoided terms. Only the ones a grep can judge: several words, or an acronym (XMB).
+# A term with a "(when ...)" qualifier, or a single common word, is the reviewer's call.
+terms=$(mktemp)
+trap 'rm -f "$terms"' EXIT
+sed -n 's/^_Avoid_: //p' CONTEXT.md | tr ',' '\n' | grep -v '(' | sed 's/^ *//;s/ *$//' | grep -E ' |^[A-Z]{2,}$' > "$terms"
+if [ -s "$terms" ] && [ -n "$added" ]; then
+    hits=$(printf '%s\n' "$added" | grep -i -w -F -f "$terms")
+    if [ -n "$hits" ]; then
+        echo "pre-commit: these added lines use a term CONTEXT.md says to avoid:"
+        echo "$hits"
+        echo "Use the glossary's term (CONTEXT.md). If the term is right here, commit with --no-verify."
+        fail=1
+    fi
+fi
+
+# An owner's decision is written beside the code as (owner, YYYY-MM-DD) (CLAUDE.md, Conventions).
+# Only comments are read: after //, or a line of a /* */ block.
+notes=$(printf '%s\n' "$added" | grep -E '//|^[^:]*: *(/?\*)' \
+    | grep -i -E '\(owner\b|\bowner:|\bowner[- ](decision|reported|asked|said|request|call)' \
+    | grep -v -E 'owner, 20[0-9]{2}-[0-9]{2}-[0-9]{2}')
+if [ -n "$notes" ]; then
+    echo "pre-commit: an owner note without the (owner, YYYY-MM-DD) form:"
+    echo "$notes"
+    fail=1
+fi
+
+exit $fail
