@@ -65,7 +65,12 @@ fun DisplaySettingsScreen(
     viewModel: DisplaySettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
-
+    // Layout is written for this window, the size the Crossbar reads its layout from
+    val window = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    LaunchedEffect(window.smallestScreenWidthDp, window.screenWidthDp, window.screenHeightDp, density) {
+        viewModel.onWindow(window, density)
+    }
 
     var confirmClassic by remember { mutableStateOf(false) }
     var confirmClearRecent by remember { mutableStateOf(false) }

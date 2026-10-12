@@ -399,8 +399,17 @@ private fun RecentRow(item: CrossbarItem, focused: Boolean, dim: Float, now: Lon
 }
 
 
-// the wallpaper the crossbar draws, handed to Recent, which sits on black; null on the second screen
+// the wallpaper the crossbar draws, handed to Recent, which sits on black, and to the Companion Screen's app Details
 val LocalRecentWallpaper = androidx.compose.runtime.staticCompositionLocalOf<(@Composable () -> Unit)?> { null }
+
+// an app's backdrop: the wallpaper (LocalRecentWallpaper) tinted the app's colour, with its icon faint in the bottom
+// left corner. Recent and the Companion Screen's app Details draw it
+@Composable
+internal fun AppBackdrop(packageName: String) {
+    val wallpaper = LocalRecentWallpaper.current
+    wallpaper?.invoke()
+    CrossbarAppIconBackdrop(packageName, fallbackAccent = PanelBase, overWallpaper = wallpaper != null, scrim = true)
+}
 
 // the art fills the page like a wallpaper, so the wave draws over it. An app with no art gets the crossbar's
 // own app backdrop, its icon's colour, rather than black (owner, 2026-10-08); owner, 2026-10-09: over the
@@ -409,11 +418,7 @@ val LocalRecentWallpaper = androidx.compose.runtime.staticCompositionLocalOf<(@C
 private fun BackdropArt(item: CrossbarItem?, alignment: Alignment) {
     val art = item?.backdropArt?.firstOrNull()
     if (art == null) {
-        val wallpaper = LocalRecentWallpaper.current
-        item?.takeIf(::isAppWithoutArt)?.packageName?.let { pkg ->
-            wallpaper?.invoke()
-            CrossbarAppIconBackdrop(pkg, fallbackAccent = PanelBase, overWallpaper = wallpaper != null, scrim = true)
-        }
+        item?.takeIf(::isAppWithoutArt)?.packageName?.let { AppBackdrop(it) }
         return
     }
     AsyncImage(
@@ -530,13 +535,10 @@ private fun filterGlyph(filter: RecentFilter): ImageVector = when (filter) {
     RecentFilter.APPS -> Icons.Outlined.Apps
 }
 
-// false where the page shows something that is not from Recent: the App Drawer's focus on the other screen
-internal val LocalFromRecent = androidx.compose.runtime.staticCompositionLocalOf { true }
-
 @Composable
 private fun Eyebrow(item: CrossbarItem, u: DesignUnits) {
     Text(
-        (if (LocalFromRecent.current) "From recent · ${kindLabel(item)}" else kindLabel(item)).uppercase(),
+        "From recent · ${kindLabel(item)}".uppercase(),
         style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(13), letterSpacing = 0.18.em),
         maxLines = 1,
     )

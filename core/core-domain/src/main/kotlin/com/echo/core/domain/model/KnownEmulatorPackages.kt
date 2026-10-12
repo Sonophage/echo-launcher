@@ -70,4 +70,20 @@ object KnownEmulatorPackages {
     fun isEmulator(packageName: String): Boolean =
         packageName in packages ||
             families.any { packageName == it || packageName.startsWith("$it.") }
+
+    // DS and 3DS emulators draw both screens themselves, so ECHO always opens them on the Main Screen's display
+    private val dualScreen = setOf(
+        "me.magnum.melonds", "me.magnum.melonds.nightly", "me.magnum.melondualds",
+        "com.dsemu.drastic", "com.hydra.noods", "com.sky.SkyEmu",
+        "org.azahar_emu.azahar", "io.github.azaharplus.android", "org.citra.citra_emu",
+        "org.citra.citra_emu.canary", "org.citra.emu", "io.github.lime3ds.android",
+        "io.github.mandarine3ds.mandarine", "io.github.borked3ds.android", "com.panda3ds.pandroid",
+    )
+
+    // the DS and 3DS platform ids
+    val dualScreenPlatforms = setOf("nds", "ds", "n3ds", "3ds")
+
+    // a game passes its platform too, so a DS game run by RetroArch counts
+    fun isDualScreen(packageName: String?, platformId: String? = null): Boolean =
+        packageName in dualScreen || platformId in dualScreenPlatforms
 }

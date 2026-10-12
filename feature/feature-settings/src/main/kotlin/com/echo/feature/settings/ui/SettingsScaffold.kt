@@ -230,6 +230,10 @@ data class SettingsFocusInfo(val label: String, val value: String?, val sublabel
 
 internal val LocalSettingsFocusInfo = compositionLocalOf<MutableState<SettingsFocusInfo?>?> { null }
 
+// set by a host with a Companion Screen to hear the focused setting (null while none is, or a touch has hidden the
+// cursor), whether or not the Main Screen draws its own help pane; null when nothing listens
+val LocalSettingsFocusReport = compositionLocalOf<((SettingsFocusInfo?) -> Unit)?> { null }
+
 private val SETTINGS_ROW_SHAPE = RoundedCornerShape(PANEL_CARD_RADIUS.dp)
 
 internal fun Modifier.settingsSelectedPlate(selected: Boolean): Modifier = this
@@ -350,6 +354,12 @@ fun SettingsScaffold(
         if (showRail) com.echo.core.domain.model.settingsRailRows(screenId) else emptyList()
     }
     val focusInfo = remember { mutableStateOf<SettingsFocusInfo?>(null) }
+    val focusReport = LocalSettingsFocusReport.current
+    if (focusReport != null) {
+        LaunchedEffect(focusReport) {
+            androidx.compose.runtime.snapshotFlow { focusInfo.value?.takeIf { cursorVisible.value } }.collect { focusReport(it) }
+        }
+    }
     val openTab = { id: String ->
         if (id != screenId) {
             menuSounds(MenuSound.SYSTEM_BROWSE)
@@ -829,7 +839,9 @@ fun SettingsScaffold(
                             // every settings page draws its rows as the kit's rail rows (owner, 2026-10-04),
                             // as the first-run wizard does
                             CompositionLocalProvider(
-                                LocalSettingsFocusInfo provides focusInfo.takeIf { paneShown },
+                                // rows write the focused setting for the help pane, and for a Companion Screen
+                                // listening even where the pane is not drawn
+                                LocalSettingsFocusInfo provides focusInfo.takeIf { paneShown || focusReport != null },
                                 LocalSettingsRailUnits provides (LocalSettingsRailUnits.current ?: u),
                             ) {
                                 content()
@@ -860,7 +872,9 @@ fun SettingsScaffold(
 
                             items = hints,
                             onAction = LocalSettingsPromptAction.current,
-                            primary = primaryHint(hints, focusInfo.value?.takeIf { cursorVisible.value }?.label),
+                            // the Main Screen's footer names the focused row only beside its own pane, Companion
+                            // Screen or not (ADR 0001)
+                            primary = primaryHint(hints, focusInfo.value?.takeIf { cursorVisible.value && paneShown }?.label),
                             centre = help?.let {
                                 {
                                     Text(

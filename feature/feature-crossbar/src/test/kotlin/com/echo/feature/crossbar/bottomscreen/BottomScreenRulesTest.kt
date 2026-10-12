@@ -1,32 +1,14 @@
 package com.echo.feature.crossbar.bottomscreen
 
-import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
-import com.echo.feature.crossbar.viewmodel.CrossbarUiState
-import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
-import com.echo.feature.crossbar.viewmodel.SearchScope
-import com.echo.feature.crossbar.viewmodel.SearchState
-import com.echo.feature.crossbar.viewmodel.GameInfoState
-import com.echo.feature.crossbar.viewmodel.RecentFilter as F
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-// owner, 2026-10-06: the bottom screen follows the cursor, and while a game ECHO launched runs it shows
-// that game instead
+// the Companion Screen's rules besides what it shows, which CompanionRuleTest covers
 class BottomScreenRulesTest {
-    private val skyrim = GameInfoState(CrossbarItem(id = "1", title = "Skyrim", gameId = 1L))
-    private val castlevania = GameInfoState(CrossbarItem(id = "2", title = "Castlevania", gameId = 2L))
-
-    @Test
-    fun `the running game wins over the cursor, and the cursor comes back when it ends`() {
-        assertEquals(castlevania, BottomScreenState(focused = skyrim, playing = castlevania).shownInfo())
-        assertEquals(skyrim, BottomScreenState(focused = skyrim, playing = null).shownInfo())
-        assertNull("nothing to show means the Recent shelf", BottomScreenState().shownInfo())
-    }
-
     @Test
     fun `a game is playing only while ECHO is behind it`() {
         assertEquals(2L, playingGameId(hostShown = false, lastLaunchGameId = 2L))
@@ -41,54 +23,6 @@ class BottomScreenRulesTest {
         assertFalse(hasInfo(CrossbarItem(id = "s", title = "Display")))
     }
 
-    // owner, 2026-10-06: with a second screen, the App Drawer, Search and Settings are locked to it,
-    // whatever opened them; the first-run wizard stays on the top screen
-    @Test
-    fun `with a second screen the drawer, search and settings leave the top screen, the wizard stays`() {
-        val search = SearchState(scope = SearchScope.ALL)
-        val open = CrossbarUiState(search = search, activeAppDrawerFilter = "APPS", activeSettingsScreen = "settings_display")
-        assertEquals(search, open.topSearch)
-        assertEquals("APPS", open.topDrawerFilter)
-
-        val dual = open.copy(secondScreen = true)
-        assertNull(dual.topSearch)
-        assertNull(dual.topDrawerFilter)
-        assertNull(dual.topSettingsScreen)
-
-        val wizard = CrossbarViewModel.WIZARD_SCREEN_IDS.first()
-        assertEquals(wizard, dual.copy(activeSettingsScreen = wizard).topSettingsScreen)
-    }
-
-    @Test
-    fun `the bottom screen shows the locked screen on top, as the top screen stacks them`() {
-        assertEquals(LockedScreen.NONE, lockedScreen(CrossbarUiState()))
-        assertEquals(LockedScreen.SEARCH, lockedScreen(CrossbarUiState(search = SearchState(scope = SearchScope.ALL))))
-        assertEquals(LockedScreen.APPS, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS")))
-        assertEquals(LockedScreen.SETTINGS, lockedScreen(CrossbarUiState(activeSettingsScreen = "settings_display")))
-        assertEquals("the drawer over Settings", LockedScreen.APPS, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", activeSettingsScreen = "settings_display")))
-        assertEquals("the drawer's own search over the drawer", LockedScreen.SEARCH, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", search = SearchState(scope = SearchScope.APPS))))
-        assertEquals("the wizard is not drawn here", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeSettingsScreen = CrossbarViewModel.WIZARD_SCREEN_IDS.first())))
-    }
-
-    // owner, 2026-10-06: with a second screen, Last Played is its Recent page and leaves the XMB
-    @Test
-    fun `Last Played cannot be reached on the XMB while a second screen shows it`() {
-        val lastPlayed = com.echo.core.domain.model.Category(
-            id = com.echo.core.domain.model.BuiltInCategory.RECENTLY_PLAYED, name = "Last Played", iconKey = "",
-            type = com.echo.core.domain.model.CategoryType.BUILT_IN, position = 0, isVisible = true,
-        )
-        assertTrue(CrossbarUiState().categoryReachable(lastPlayed))
-        assertFalse(CrossbarUiState(secondScreen = true).categoryReachable(lastPlayed))
-    }
-
-    // the page button lit is the page drawn, so the controller moves what is on screen
-    @Test
-    fun `Info stands down for Recent while there is nothing to show`() {
-        assertEquals(BottomPage.RECENT, BottomScreenState(page = BottomPage.INFO).shownPage())
-        assertEquals(BottomPage.INFO, BottomScreenState(page = BottomPage.INFO, focused = skyrim).shownPage())
-        assertEquals(BottomPage.RECENT, BottomScreenState(page = BottomPage.RECENT, focused = skyrim).shownPage())
-    }
-
     // owner, 2026-10-06: dual or single screen is a quick setting, offered only where there is a second display
     @Test
     fun `Screens is a quick setting only on a device with a second display`() {
@@ -98,59 +32,6 @@ class BottomScreenRulesTest {
         assertFalse(com.echo.feature.crossbar.viewmodel.QuickSetting.SECOND_SCREEN in com.echo.feature.crossbar.viewmodel.quickSettingsFor(secondDisplay = false))
     }
 
-    // owner, 2026-10-08: the Music page is there only while music plays; Info only with info; left and right
-    // walk what is there
-    @Test
-    fun `the pages are what can be shown, and stepping walks only those`() {
-        val shelf = BottomScreenState()
-        assertEquals(listOf(BottomPage.RECENT), shelf.pages())
-        assertEquals("Info with nothing to show falls back to Recent", BottomPage.RECENT, shelf.copy(page = BottomPage.INFO).shownPage())
-
-        val playing = BottomScreenState(focused = skyrim, music = true, page = BottomPage.MUSIC)
-        assertEquals(listOf(BottomPage.INFO, BottomPage.RECENT, BottomPage.MUSIC), playing.pages())
-        assertEquals(BottomPage.INFO, playing.steppedPage(1))
-        assertEquals(BottomPage.RECENT, playing.steppedPage(-1))
-        assertEquals("music stopped: its page goes", BottomPage.RECENT, playing.copy(music = false).shownPage())
-    }
-
-    // owner, 2026-10-08: the companion fits the crossbar's column
-    @Test
-    fun `Recent narrows to the column's kind, and to All when that kind holds nothing`() {
-        val stocked = listOf(F.ALL, F.GAMES, F.MUSIC, F.APPS)
-        assertEquals(F.MUSIC, recentFilterFor("music", gaming = false, shown = stocked))
-        assertEquals(F.GAMES, recentFilterFor("games", gaming = true, shown = stocked))
-        assertEquals("a gaming column of your own", F.GAMES, recentFilterFor("my_rpgs", gaming = true, shown = stocked))
-        assertEquals(F.APPS, recentFilterFor("android", gaming = false, shown = stocked))
-        assertEquals("no recent video: All", F.ALL, recentFilterFor("videos", gaming = false, shown = stocked))
-        assertEquals("Photos has no kind of its own", F.ALL, recentFilterFor("photos", gaming = false, shown = stocked))
-    }
-
-    // the remote must have a way out the owner can find (owner, 2026-10-08: "how do I exit the music player"):
-    // B leaves for Recent, Y opens Stop & Close; left and right stay free for the pages
-    @Test
-    fun `the music remote has a way out`() {
-        assertEquals(MusicRemoteKey.LEAVE, musicRemoteKey(GamepadAction.BACK))
-        assertEquals(MusicRemoteKey.OPTIONS, musicRemoteKey(GamepadAction.OPEN_CONTEXT_MENU))
-        assertEquals(MusicRemoteKey.PLAY_PAUSE, musicRemoteKey(GamepadAction.SELECT))
-        assertNull("left walks the pages", musicRemoteKey(GamepadAction.NAVIGATE_LEFT))
-        assertNull("right walks the pages", musicRemoteKey(GamepadAction.NAVIGATE_RIGHT))
-    }
-
-    // the item in full view must be reachable on the companion, swapped or not (owner, 2026-10-08), and
-    // left and right must still reach the other pages once the list is where it goes
-    @Test
-    fun `left and right close and open Recent's list before changing page`() {
-        val open = BottomScreenState(music = true, page = BottomPage.RECENT)
-        val full = open.sideStep(GamepadAction.NAVIGATE_RIGHT)
-        assertFalse("right closes the list", full.recentListOpen)
-        assertEquals(BottomPage.RECENT, full.page)
-        assertEquals("right again goes on to Music", BottomPage.MUSIC, full.sideStep(GamepadAction.NAVIGATE_RIGHT).page)
-        val back = full.sideStep(GamepadAction.NAVIGATE_LEFT)
-        assertTrue("left opens it again", back.recentListOpen)
-        assertEquals(BottomPage.RECENT, back.page)
-        assertEquals("left with the list open leaves Recent", BottomPage.MUSIC, back.sideStep(GamepadAction.NAVIGATE_LEFT).page)
-    }
-
     @Test
     fun `the second screen is put back only when it is wanted and not already showing`() {
         val link = BottomScreenLink()
@@ -158,6 +39,19 @@ class BottomScreenRulesTest {
         assertFalse("turned off in Quick settings", link.needsCompanion(enabled = false))
         link.attach(true)
         assertFalse("already showing: leave focus alone", link.needsCompanion(enabled = true))
+    }
+
+    // HOME starts one Companion window and ECHO may start another over it; the covered one stops after the
+    // new one starts, and that must not mark the Companion Screen as gone
+    @Test
+    fun `a second Companion window stopping does not detach the one on show`() {
+        val link = BottomScreenLink()
+        link.attach(true)
+        link.attach(true)
+        link.attach(false)
+        assertTrue("one window still on show", link.attached.value)
+        link.attach(false)
+        assertFalse("both gone", link.attached.value)
     }
 
     @Test

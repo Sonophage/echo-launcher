@@ -12,7 +12,7 @@ import kotlin.test.assertNull
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE)
 class BookIntentResolverTest {
-    private val resolver = BookIntentResolver(ApplicationProvider.getApplicationContext())
+    private val resolver = BookIntentResolver(ApplicationProvider.getApplicationContext(), io.mockk.mockk(relaxed = true))
 
     private fun book(mime: String?) = Book(
         id = "b1",

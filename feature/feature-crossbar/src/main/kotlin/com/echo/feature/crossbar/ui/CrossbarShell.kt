@@ -152,9 +152,6 @@ fun CrossbarShellContainer(
     onSettingsLongPress: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val drawerFocus by viewModel.bottomScreen.drawerFocus.collectAsStateWithLifecycle()
-    val drawerInfo by viewModel.bottomScreen.drawerInfo.collectAsStateWithLifecycle()
-    val storePreview by viewModel.bottomScreen.storePreview.collectAsStateWithLifecycle()
     val recentGameId = uiState.currentItems.getOrNull(uiState.selectedItemIndex)?.gameId.takeIf { uiState.onLastPlayedHome }
     val recentAchievements by remember(recentGameId) { viewModel.gameDetail.achievementsStatFor(recentGameId) }
         .collectAsState(initial = null)
@@ -208,9 +205,16 @@ fun CrossbarShellContainer(
 
     Box(Modifier.fillMaxSize()) {
     val playbackPositions = remember(viewModel) { PlaybackPositions(viewModel.musicPositionMs, viewModel.externalPositionMs) }
+    // Settings reports its focused setting and the Theme Store its focused theme only while a Companion Screen is
+    // on show to preview them; the Main Screen draws the same either way (ADR 0001)
+    val companionShown = com.echo.feature.crossbar.bottomscreen.companionOnShow(uiState.secondScreen, uiState.companionInPlace)
+    val settingFocused = remember(viewModel) { { info: com.echo.feature.settings.ui.SettingsFocusInfo? -> viewModel.bottomScreen.settingFocused(info) } }
+    val themeFocused = remember(viewModel) { { p: com.echo.feature.settings.ui.StorePreview? -> viewModel.bottomScreen.themeFocused(p) } }
     CompositionLocalProvider(
         LocalPlaybackPositions provides playbackPositions,
         com.echo.core.ui.wave.LocalWaveDesign provides uiState.waveDesign,
+        com.echo.feature.settings.ui.LocalSettingsFocusReport provides settingFocused.takeIf { companionShown },
+        com.echo.feature.settings.ui.LocalStorePreview provides themeFocused.takeIf { companionShown },
     ) {
     CrossbarShell(
         uiState = uiState,
@@ -306,10 +310,8 @@ fun CrossbarShellContainer(
         onGameInfoPanelClose = viewModel.gameDetail::closeGameInfoPanel,
         onGameInfoScrollMax = viewModel.gameDetail::onGameInfoScrollMax,
         onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
-        drawerFocus = drawerFocus,
-        drawerInfo = drawerInfo,
+        onDrawerFocused = viewModel.bottomScreen::drawerFocused,
         recentAchievements = recentAchievements,
-        storePreview = storePreview,
         onProfileSet = viewModel.panel::onProfileSetTapped,
         onProfileBadge = viewModel.panel::onProfileBadgeTapped,
         onProfileFilter = viewModel.panel::onProfileFilterTapped,
@@ -506,10 +508,9 @@ fun CrossbarShell(
     onGameInfoPanelClose: () -> Unit = {},
     onGameInfoScrollMax: (Int) -> Unit = {},
     onPanelProfileTapped: (com.echo.feature.crossbar.viewmodel.ProfileSpot, Int) -> Unit = { _, _ -> },
-    drawerFocus: com.echo.feature.crossbar.bottomscreen.DrawerFocus? = null,
-    drawerInfo: com.echo.feature.crossbar.viewmodel.GameInfoState? = null,
+    // the App Drawer's hovered app, for the Companion Screen to show
+    onDrawerFocused: (com.echo.feature.appbar.InstalledApp?) -> Unit = {},
     recentAchievements: String? = null,
-    storePreview: com.echo.feature.settings.ui.StorePreview? = null,
     onProfileSet: (Int) -> Unit = {},
     onProfileBadge: (Int) -> Unit = {},
     onProfileFilter: (com.echo.feature.crossbar.viewmodel.BadgeFilter) -> Unit = {},
@@ -836,27 +837,18 @@ fun CrossbarShell(
             val strip = LocalContext.current
             val androidAccess = remember(notificationsOpen) { AndroidNotifications.isEnabled(strip) }
 
-            if (uiState.topDrawerFilter == null &&
-                uiState.topSearch == null &&
-                uiState.topSettingsScreen == null &&
+            if (uiState.activeAppDrawerFilter == null &&
+                uiState.search == null &&
+                uiState.activeSettingsScreen == null &&
                 uiState.activeVideoId == null &&
                 // Custom Icons is a side rail now, so the crossbar stays drawn behind it and shows each pick live
                 uiState.activePhotoViewer == null
             ) {
             val onLastPlayedHome = uiState.onLastPlayedHome
             if (onLastPlayedHome) {
-                // a still copy of the wallpaper for an app's backdrop: no wave, no second motion video
+                // a still copy of the wallpaper for an app's backdrop
                 CompositionLocalProvider(LocalRecentWallpaper provides {
-                    CrossbarBackground(
-                        waveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
-                        customWallpaperPath = uiState.customWallpaperPath,
-                        waveOverWallpaper = false,
-                        wallpaperAccent = uiState.wallpaperAccent,
-                        motionWallpaperPath = null,
-                        motionDecision = com.echo.core.ui.motion.MotionWallpaperPolicy.Decision.POSTER,
-                        waveDrawnByCaller = true,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    StillWallpaper(uiState.customWallpaperPath, uiState.wallpaperAccent)
                 }) {
                 LastPlayedPage(
                     items = uiState.currentItems,
@@ -1086,7 +1078,7 @@ fun CrossbarShell(
             val battery = rememberBatteryReading()
             CompositionLocalProvider(LocalDensity provides baseDensity) {
             CrossbarStatusStrip(
-                live = liveActivity.takeIf { !notificationsOpen && uiState.topSettingsScreen == null },
+                live = liveActivity.takeIf { !notificationsOpen && uiState.activeSettingsScreen == null },
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
 
@@ -1112,7 +1104,7 @@ fun CrossbarShell(
 
                 compact = !crossbarContext,
                 // Search has its own field across the top, so the island rests as its orb there too (owner, 2026-10-05)
-                minimized = uiState.topDrawerFilter != null || uiState.topSearch != null,
+                minimized = uiState.activeAppDrawerFilter != null || uiState.search != null,
                 battery = battery,
 
                 // owner, 2026-10-06: the panel's tabs and the drawer's sections are in their footers now, as LT/RT and
@@ -1206,7 +1198,7 @@ fun CrossbarShell(
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(aboveContextRail),
             ) {
                 CompositionLocalProvider(LocalDensity provides baseDensity) {
-                    val hintItem = uiState.focusedItem?.takeIf { uiState.topSettingsScreen == null }
+                    val hintItem = uiState.focusedItem?.takeIf { uiState.activeSettingsScreen == null }
                     val hintIcon = rememberAppIcon(hintItem?.packageName)
                     CrossbarHintBar(
                         prompts = promptsFor(uiState),
@@ -1230,7 +1222,7 @@ fun CrossbarShell(
             ) {
             if (uiState.colorSchemePicker == null) {
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
-                                    uiState.topSettingsScreen?.let { screenId ->
+                                    uiState.activeSettingsScreen?.let { screenId ->
                         SettingsNavHost(
                             screenId = screenId,
                             onBack = onCloseSettingsScreen,
@@ -1277,24 +1269,13 @@ fun CrossbarShell(
                 }
             }
 
-            uiState.topDrawerFilter?.let { filterName ->
+            uiState.activeAppDrawerFilter?.let { filterName ->
                 val initialFilter = runCatching { AppFilter.valueOf(filterName) }
                     .getOrDefault(AppFilter.DEFAULT)
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
                     AppDrawerScreen(
-                        // a still copy of the wallpaper, under the app's tint: no wave, no second motion video
-                        wallpaper = {
-                            CrossbarBackground(
-                                waveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
-                                customWallpaperPath = uiState.customWallpaperPath,
-                                waveOverWallpaper = false,
-                                wallpaperAccent = uiState.wallpaperAccent,
-                                motionWallpaperPath = null,
-                                motionDecision = com.echo.core.ui.motion.MotionWallpaperPolicy.Decision.POSTER,
-                                waveDrawnByCaller = true,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        },
+                        // a still copy of the wallpaper, under the app's tint
+                        wallpaper = { StillWallpaper(uiState.customWallpaperPath, uiState.wallpaperAccent) },
                         initialFilter = initialFilter,
                         genreFilter = uiState.genreFilter,
                         chipsByGenre = uiState.gameGrouping == com.echo.feature.crossbar.viewmodel.GameGrouping.GENRE,
@@ -1316,38 +1297,16 @@ fun CrossbarShell(
                         onGameMenu = onGameMenuFromDrawer,
                         onOpenAppSearch = onOpenAppSearch,
                         onOpenPermissions = { onOpenSettingsScreen("settings_permissions") },
+                        onFocusedApp = onDrawerFocused,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
             }
 
-            // with two screens, the App Drawer is on the companion and its focused app is drawn large here
-            // (owner, 2026-10-08), over the crossbar it would otherwise leave idle
-            if (uiState.secondScreen && uiState.activeAppDrawerFilter != null && uiState.search == null) {
-                // as the Recent screen draws an item (owner, 2026-10-08), so a game's details and achievements fit
-                val info = drawerInfo
-                if (drawerFocus != null && info != null) CompositionLocalProvider(LocalFromRecent provides false) {
-                    LastPlayedPage(
-                        items = listOf(info.item),
-                        selectedIndex = 0,
-                        listState = androidx.compose.foundation.lazy.rememberLazyListState(),
-                        filter = com.echo.feature.crossbar.viewmodel.RecentFilter.ALL,
-                        railVisible = false,
-                        onCardTapped = { drawerFocus.onLaunch() },
-                        achievements = info.achievementsStat,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            }
-
-            // with two screens, the theme store is on the companion and its focused theme shows here (owner, 2026-10-08)
-            if (uiState.secondScreen && uiState.activeSettingsScreen != null) storePreview?.let { StorePreviewHero(it) }
-
-            // with two screens, Search types on the companion and shows its results here (owner, 2026-10-08)
-            (uiState.topSearch ?: uiState.search?.takeIf { uiState.secondScreen })?.let { search ->
+            // Search, its field and its results, is on the Main Screen; with a Companion Screen the keyboard
+            // shows there (ADR 0001)
+            uiState.search?.let { search ->
                 SearchScreen(
-                    part = if (uiState.topSearch == null) com.echo.feature.crossbar.ui.SearchPart.RESULTS
-                    else com.echo.feature.crossbar.ui.SearchPart.ALL,
                     state = search,
                     onQueryChange = onSearchQueryChange,
                     onActivateAt = onSearchActivatedAt,
@@ -1409,8 +1368,8 @@ fun CrossbarShell(
                 )
             }
 
-            // a menu asked for on the second screen is drawn there
-            uiState.activeContextMenu?.takeUnless { uiState.menuOnCompanion && uiState.secondScreen }?.let { menu ->
+            // every menu is drawn here, on the Main Screen (ADR 0001)
+            com.echo.feature.crossbar.bottomscreen.mainScreenMenu(uiState)?.let { menu ->
 
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
                     EchoContextMenuOverlay(
@@ -1842,22 +1801,5 @@ private fun hintTile(item: CrossbarItem, icon: ImageBitmap?): (@Composable () ->
         }
         icon != null -> { -> androidx.compose.foundation.Image(icon, null, Modifier.fillMaxSize()) }
         else -> null
-    }
-}
-
-// the store's focused theme on the crossbar's screen: its picture filling the screen, its name over it
-@Composable
-private fun StorePreviewHero(preview: com.echo.feature.settings.ui.StorePreview) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
-        val u = com.echo.core.ui.design.panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
-        preview.picture?.let {
-            AsyncImage(model = rememberArtworkModel(it), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        }
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
-        Column(Modifier.align(Alignment.BottomStart).padding(start = u.dp(64), bottom = u.dp(56)), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-            Text("PREVIEW", style = u.eyebrow(), color = Color.White.copy(alpha = 0.75f))
-            Text(preview.name, color = Color.White, fontSize = u.sp(40), fontWeight = androidx.compose.ui.text.font.FontWeight.Light, maxLines = 1)
-            if (preview.line.isNotBlank()) Text(preview.line, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(15), maxLines = 1)
-        }
     }
 }

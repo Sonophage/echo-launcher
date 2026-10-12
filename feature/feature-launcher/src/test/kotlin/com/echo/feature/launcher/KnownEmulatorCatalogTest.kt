@@ -37,6 +37,17 @@ class KnownEmulatorCatalogTest {
         assertTrue(untagged.isEmpty(), "Add to KnownEmulatorPackages (no EMU badge): $untagged")
     }
 
+    // a DS or 3DS emulator draws both screens itself, so it must always open on the Main Screen's display
+    @Test
+    fun `every DS and 3DS emulator in the catalog opens on the Main Screen's display`() {
+        val dsPackages = KnownEmulatorCatalog.entries.filter { it.platformIds.any(KnownEmulatorPackages.dualScreenPlatforms::contains) }.flatMap { it.packageNames }
+        assertTrue(dsPackages.size >= 8, "found only $dsPackages; the scan is broken")
+        val missed = dsPackages.filterNot { KnownEmulatorPackages.isDualScreen(it) }
+        assertTrue(missed.isEmpty(), "Add to KnownEmulatorPackages' DS and 3DS set: $missed")
+        assertTrue(KnownEmulatorPackages.isDualScreen("com.retroarch", platformId = "nds"), "a DS game run by RetroArch")
+        assertTrue(!KnownEmulatorPackages.isDualScreen("com.retroarch", platformId = "psx"), "RetroArch alone is not a DS emulator")
+    }
+
     @Test
     fun `component entries pin an activity`() {
         val missing = KnownEmulatorCatalog.entries

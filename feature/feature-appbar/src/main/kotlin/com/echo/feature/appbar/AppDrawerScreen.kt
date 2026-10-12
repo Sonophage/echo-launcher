@@ -93,13 +93,10 @@ fun AppDrawerScreen(
     // owner, 2026-10-05: one place grants access; the empty Recently Used page sends people to Permissions
     onOpenPermissions: (() -> Unit)? = null,
 
-    // owner, 2026-10-08: with two screens the focused app is drawn large on the other one, so the drawer
-    // reports it and drops its own info column to give the shelf the room
-    heroOnOtherScreen: Boolean = false,
-    // the wallpaper under the app's tint (owner, 2026-10-09); the crossbar passes it, the second screen does not
+    // the wallpaper under the app's tint (owner, 2026-10-09)
     wallpaper: (@Composable () -> Unit)? = null,
-    // the focused app, and the drawer's own Launch and Options for it, for the other screen's hero
-    onFocusedApp: (app: InstalledApp?, launch: () -> Unit, options: () -> Unit) -> Unit = { _, _, _ -> },
+    // the focused app, for the Companion Screen to show; null once the drawer closes
+    onFocusedApp: (InstalledApp?) -> Unit = {},
 
     // the crossbar's genre filter: the Games section shows that genre only (owner, 2026-10-08)
     genreFilter: com.echo.core.domain.model.GameGenre? = null,
@@ -118,10 +115,8 @@ fun AppDrawerScreen(
     LaunchedEffect(genreFilter) { viewModel.setGenreFilter(genreFilter) }
     LaunchedEffect(chipsByGenre) { viewModel.setChipsByGenre(chipsByGenre) }
     val focusedApp = state.visibleApps.getOrNull(state.selectedIndex)
-    LaunchedEffect(focusedApp) {
-        onFocusedApp(focusedApp, { focusedApp?.let { viewModel.launchApp(it.packageName) } }, { focusedApp?.let(viewModel::openAppMenu) })
-    }
-    DisposableEffect(Unit) { onDispose { onFocusedApp(null, {}, {}) } }
+    LaunchedEffect(focusedApp) { onFocusedApp(focusedApp) }
+    DisposableEffect(Unit) { onDispose { onFocusedApp(null) } }
     LaunchedEffect(state.activeFilter, state.sections) { onTabsShown(state.activeFilter, state.sections) }
     LaunchedEffect(tabPick) {
         tabPick?.let {
@@ -254,7 +249,6 @@ fun AppDrawerScreen(
         onConfirmUninstall = { viewModel.confirmUninstall() },
         onCancelUninstall = { viewModel.cancelUninstall() },
         onGrantUsageAccess = onOpenPermissions ?: { viewModel.openUsageAccessSettings() },
-        heroOnOtherScreen = heroOnOtherScreen,
         wallpaper = wallpaper,
         modifier = modifier,
     )
@@ -277,8 +271,7 @@ internal fun AppDrawerContent(
     modifier: Modifier = Modifier,
     onBandLaunch: (InstalledApp) -> Unit = { onAppLaunched(it.packageName) },
     onBandOptions: (InstalledApp) -> Unit = onAppMenu,
-    heroOnOtherScreen: Boolean = false,
-    // the wallpaper under the app's tint (owner, 2026-10-09); the crossbar passes it, the second screen does not
+    // the wallpaper under the app's tint (owner, 2026-10-09)
     wallpaper: (@Composable () -> Unit)? = null,
     onMenuRowActivated: (Int) -> Unit = {},
 
@@ -299,14 +292,14 @@ internal fun AppDrawerContent(
             Spacer(Modifier.height(StatusStripHeight))
             // owner, 2026-10-09: on the Titan 2's square screen the chosen app's details are a strip across the top and
             // the cases take the whole width under it
-            val strip = IsTitan2 && !heroOnOtherScreen
+            val strip = IsTitan2
             if (strip) focused?.let { app ->
                 WallInfoStrip(app, focusedIcon, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
                     holding = state.holdingPackage == app.packageName, details = state.gameDetails?.takeIf { it.gameId == app.gameId },
                     modifier = Modifier.fillMaxWidth().padding(start = u.dp(46), end = u.dp(52), top = u.dp(16)))
             }
             Row(Modifier.weight(1f).fillMaxWidth().padding(start = u.dp(46), end = u.dp(52))) {
-                if (!heroOnOtherScreen && !strip) {
+                if (!strip) {
                     Column(Modifier.width(u.dp(420)).fillMaxHeight().padding(top = u.dp(24)), verticalArrangement = Arrangement.spacedBy(u.dp(16))) {
                         // owner, 2026-10-09: the page's name over the chosen app, with the rail's filter when one is on
                         Text(drawerHeading(state).uppercase(), style = u.eyebrow(Color.White.copy(alpha = 0.7f)), maxLines = 1)

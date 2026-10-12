@@ -82,6 +82,7 @@ internal fun gameContextMenuItems(
         add(CrossbarContextMenuItem("detail_REFRESH", "Refresh Artwork", group = MenuGroup.METADATA))
 
         if (!item.isAndroidApp) add(CrossbarContextMenuItem("change_emulator", "Change Emulator", group = MenuGroup.SETTINGS))
+        launchOnOtherScreenRow(state, item.packageName, item.platformId)?.let(::add)
         // owner, 2026-10-10: a ROM game opens the folder it is in; a PC or Android game has none, so it shows what it has
         if (item.isAndroidApp || item.platformId == PlatformIds.WINDOWS) {
             add(CrossbarContextMenuItem("file_location", "View File Location", group = MenuGroup.SETTINGS))
@@ -104,6 +105,12 @@ internal fun gameContextMenuItems(
         }
     }
 }
+
+// launches it on the display that is not its Launch Screen, which then becomes its Launch Screen. Only with a
+// second display, and never for a DS or 3DS emulator, which always opens on the Main Screen's display
+internal fun launchOnOtherScreenRow(state: CrossbarUiState, packageName: String?, platformId: String?): CrossbarContextMenuItem? =
+    if (!state.secondDisplayPresent || com.echo.core.domain.model.KnownEmulatorPackages.isDualScreen(packageName, platformId)) null
+    else CrossbarContextMenuItem("launch_other_screen", "Launch on Other Screen", group = MenuGroup.SETTINGS)
 
 // owner, 2026-10-06: a game or app pins to, or unpins from, the list under Recent
 internal fun recentPinRow(pinned: Boolean): CrossbarContextMenuItem =
@@ -130,6 +137,7 @@ internal fun appContextMenuItems(
     // owner, 2026-10-08: art through Artwork Studio, as a game's; the old app editor changed little but the title
     add(CrossbarContextMenuItem("app_artwork", "Artwork", group = MenuGroup.METADATA))
     add(CrossbarContextMenuItem("rename", "Rename Shortcut", group = MenuGroup.SETTINGS))
+    launchOnOtherScreenRow(state, packageName, platformId = null)?.let(::add)
     // owner, 2026-10-10: Android's App Info shows at the top of an app's menu, not inside Settings
     if (packageName != null) add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.SETTINGS, pinnedToRoot = true))
 

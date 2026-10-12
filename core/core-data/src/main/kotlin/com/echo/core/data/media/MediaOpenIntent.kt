@@ -30,8 +30,9 @@ object MediaOpenIntent {
         chooserTitle: String,
         noHandlerMessage: String,
         logLabel: String,
+        display: Int,
     ): String? = try {
-        context.startActivity(intent, LaunchTransition.options(context))
+        context.startActivity(intent, LaunchTransition.options(context, display))
         Timber.i("Opened $logLabel (app=${intent.`package` ?: "system"})")
         null
     } catch (e: Exception) {

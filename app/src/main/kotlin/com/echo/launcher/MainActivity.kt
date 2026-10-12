@@ -3,6 +3,7 @@ package com.echo.launcher
 import com.echo.feature.crossbar.viewmodel.ceremonyPlaying
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.drop
 import com.echo.core.domain.model.GamepadAction
 import android.Manifest
 import android.annotation.SuppressLint
@@ -38,7 +39,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import com.echo.feature.crossbar.gamepad.GamepadInputHandler
+import com.echo.feature.crossbar.gamepad.AskedKeyboard
 import com.echo.feature.crossbar.gamepad.backHidesKeyboard
+import com.echo.feature.crossbar.viewmodel.typing
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.launcher.notification.EchoNotificationListener
 import com.echo.launcher.receiver.InstallShortcutReceiver
@@ -112,6 +115,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         startMenuMusicIfWanted()
+        reshowKeyboardAfterClaims()
         // shows the second screen each time ECHO comes to the front, and at once when Dual is chosen
         // again in Quick settings
         lifecycleScope.launch {
@@ -120,6 +124,11 @@ class MainActivity : ComponentActivity() {
                     if (on) com.echo.feature.crossbar.bottomscreen.BottomScreenActivity.showBeside(this@MainActivity)
                 }
             }
+        }
+        // Search and a name prompt focus their field, which asks for the keyboard
+        lifecycleScope.launch {
+            crossbarViewModel.uiState.map { it.typing }.distinctUntilChanged()
+                .collect { keyboard.typing(it) }
         }
         ContextCompat.registerReceiver(
             this,
@@ -161,8 +170,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             com.echo.feature.crossbar.ui.EchoRoot(menuSoundPlayer, uiMediaStore, uiMediaAudioPlayer) {
                 val ui by crossbarViewModel.uiState.collectAsState()
-                if (ui.secondScreen && ui.screensSwapped) {
-                    // owner, 2026-10-06: swapped, this screen shows the companion and the XMB moves to the second one
+                if (com.echo.feature.crossbar.bottomscreen.firstDisplayShowsCompanion(ui)) {
+                    // Swap: the Companion Screen is drawn here, and the Main Screen is on the second display, or
+                    // hidden until the next Swap on a device with one display (ADR 0001)
                     val bottom by bottomScreenLink.state.collectAsState()
                     com.echo.feature.crossbar.bottomscreen.BottomScreen(bottom, crossbarViewModel)
                 } else {
@@ -305,19 +315,35 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // owner, 2026-10-06: with a second screen, a tap gives the controller to the screen tapped; this one
-    // shows the XMB, or the companion when the screens are swapped
-    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-            crossbarViewModel.touchedScreen(showsCompanion = crossbarViewModel.uiState.value.screensSwapped)
+    private val keyboard = AskedKeyboard()
+
+    // the Companion's keyboard claim moves Android's focused display away from this window and back, and
+    // Android hides the keyboard on the way; this window keeps its own focus throughout, so the claim's end
+    // is heard through the link and the keyboard is shown again for the field
+    private fun reshowKeyboardAfterClaims() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                bottomScreenLink.keyboardClaims.drop(1).collect {
+                    if (com.echo.feature.crossbar.bottomscreen.reshowsKeyboard(hasWindowFocus(), crossbarViewModel.uiState.value)) {
+                        WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.ime())
+                        keyboard.typing(true)
+                    }
+                }
+            }
         }
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        // a tap on the field while typing brings the keyboard back
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) keyboard.touched()
         return super.dispatchTouchEvent(event)
     }
 
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (minimalKeyboardKey(event)) return true
-        if (backHidesKeyboard(event, gamepadInputHandler)) return true
+        // with a Companion Screen the Thor draws the keyboard there (ime_show_on_second), out of this window's insets
+        if (backHidesKeyboard(event, gamepadInputHandler, keyboard, keyboardElsewhere = crossbarViewModel.uiState.value.secondScreen)) return true
 
         if (gamepadInputHandler.onKeyEvent(event)) return true
         if (openSearchOnTypedCharacter(event)) return true

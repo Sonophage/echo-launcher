@@ -644,14 +644,10 @@ data class CrossbarUiState(
 
     // a second screen is showing ECHO (the AYN Thor's bottom screen)
     val secondScreen: Boolean = false,
-    // owner, 2026-10-06: the XMB on the second screen and the companion (Info, Recent, the drawer,
-    // Search, Settings) on the main one; remembered
+    // Swap: the Main Screen on the second display and the Companion Screen on the first; remembered
     val screensSwapped: Boolean = false,
-    // the companion takes the controller, after a tap on its screen, until B or a tap on the XMB
-    val companionActive: Boolean = false,
-    // the open menu, and any it leads to, was asked for on the second screen and is drawn there (owner,
-    // 2026-10-08: a menu opens where it was asked for); cleared whenever no menu is open
-    val menuOnCompanion: Boolean = false,
+    // Swap on one display: the Companion Screen shown in place of the Main Screen; never remembered (swap())
+    val companionInPlace: Boolean = false,
     // the device has a second display, and whether ECHO uses it (Quick settings, owner 2026-10-06)
     val secondDisplayPresent: Boolean = false,
     val secondScreenEnabled: Boolean = true,
@@ -828,9 +824,7 @@ data class CrossbarUiState(
         }
 
     fun categoryReachable(category: Category): Boolean =
-        (category.id != BuiltInCategory.SHELVES || shelfCards.isNotEmpty()) &&
-            // owner, 2026-10-06: with a second screen, Last Played is the bottom screen's Recent page
-            !(secondScreen && category.id == BuiltInCategory.RECENTLY_PLAYED)
+        category.id != BuiltInCategory.SHELVES || shelfCards.isNotEmpty()
 
     val enterOpensAppDrawer: Boolean
         get() = search == null &&
@@ -850,26 +844,14 @@ data class CrossbarUiState(
             activeVideoId == null && activePhotoViewer == null &&
             musicTrackPicker == null && !musicPlayerVisible
 
-    // owner, 2026-10-06: with a second screen, the App Drawer, Search and Settings open there whatever
-    // opened them (LB, RB, a tap on either screen); the controller still drives them. The first-run
-    // wizard stays on this screen. These are what this screen draws.
-    val topSearch: SearchState?
-        get() = search?.takeUnless { secondScreen }
-
-    val topDrawerFilter: String?
-        get() = activeAppDrawerFilter?.takeUnless { secondScreen }
-
-    val topSettingsScreen: String?
-        get() = activeSettingsScreen?.takeUnless { secondScreen && it !in CrossbarViewModel.WIZARD_SCREEN_IDS }
-
     private val chromeOverlay: Boolean
-        get() = topSettingsScreen != null ||
+        get() = activeSettingsScreen != null ||
             appPicker != null ||
             gamePickerCategoryId != null ||
-            topDrawerFilter != null ||
+            activeAppDrawerFilter != null ||
             gameInfo != null ||
             profile != null ||
-            topSearch != null
+            search != null
 
     private val fullscreenOverlay: Boolean
         get() = showBootSequence ||
@@ -899,6 +881,9 @@ data class CrossbarUiState(
     val statusStripVisible: Boolean
         get() = !fullscreenOverlay
 }
+
+// the music player covers the crossbar on the Main Screen, with or without a Companion Screen (ADR 0001)
+internal fun CrossbarUiState.withMusicPlayer(): CrossbarUiState = copy(musicPlayerVisible = true)
 
 // the boot sequence, the launch disc or GameBoot is on screen, with its own sound; the menu music waits for it
 val CrossbarUiState.ceremonyPlaying: Boolean
@@ -1351,6 +1336,9 @@ internal fun CrossbarUiState.withSettingsOpen(screenId: String): CrossbarUiState
 internal fun CrossbarUiState.withGameInfoOpen(info: GameInfoState): CrossbarUiState =
     withDrawerAndSearchClosed().copy(gameInfo = info, profile = null)
 
+// Search or a name prompt is open: a field that asks for the keyboard
+val CrossbarUiState.typing: Boolean get() = search != null || namePromptOpen
+
 // a prompt with a text field is open; the same four withNamePromptText fills
 val CrossbarUiState.namePromptOpen: Boolean
     get() = renameAppTarget != null || collectionNameDialog != null || playlistNameDialog != null || saveThemeNameDialog != null
@@ -1421,6 +1409,7 @@ class CrossbarViewModel @Inject constructor(
     internal val achievementController: com.echo.feature.achievements.AchievementController,
     internal val achievementCredentials: com.echo.core.data.achievement.AchievementCredentialsProvider,
     internal val discordSocial: com.echo.core.data.discord.DiscordSocialRepository,
+    internal val launchScreens: com.echo.core.data.launch.LaunchScreens,
     bottomScreenLink: com.echo.feature.crossbar.bottomscreen.BottomScreenLink,
 ) : ViewModel() {
     @Volatile
@@ -1502,14 +1491,6 @@ class CrossbarViewModel @Inject constructor(
     internal val taskNotifier = BackgroundTaskNotifier(context)
 
     init {
-        viewModelScope.launch {
-            _uiState.map { it.activeContextMenu == null }.distinctUntilChanged().collect { closed ->
-                if (closed) _uiState.update { if (it.menuOnCompanion) it.copy(menuOnCompanion = false) else it }
-            }
-        }
-    }
-
-    init {
         gamepadInputHandler.scope = viewModelScope
 
         musicPlayer.onTrackStarted = { track ->
@@ -1557,6 +1538,7 @@ class CrossbarViewModel @Inject constructor(
         collectGamepadActions()
         consumeWindowsSetupPrompt()
         launching.observeLaunchRecoveryRequests()
+        launching.observeMainScreenDisplay()
         observeSetupState()
 
         pcShortcutImporter.watchPinChanges(viewModelScope)
@@ -2503,19 +2485,13 @@ class CrossbarViewModel @Inject constructor(
 
     // owner, 2026-10-08: Game Info from the App Drawer's Options did nothing, since the drawer's game is seldom in
     // the crossbar's column; the column's row when it is there, else the game from the library
-    // owner, 2026-10-08: Y on an album, video or book in the App Drawer gives the menu its own column gives it;
-    // asked from the companion's drawer, it opens there, where the controller is
+    // owner, 2026-10-08: Y on an album, video or book in the App Drawer gives it the menu it has in its own column
     fun openDrawerMediaMenu(media: com.echo.feature.appbar.DrawerMedia, title: String) {
         when (media.kind) {
             com.echo.feature.appbar.MediaKind.MUSIC -> music.openAlbumMenu(media.ref, title)
             com.echo.feature.appbar.MediaKind.VIDEO -> video.openVideoFileContextMenu(media.ref, title)
             com.echo.feature.appbar.MediaKind.BOOK -> bookshelf.openBookMenu(media.ref, title)
         }
-    }
-
-    internal fun openDrawerMediaMenuOnCompanion(media: com.echo.feature.appbar.DrawerMedia, title: String) {
-        _uiState.update { it.copy(menuOnCompanion = true) }
-        openDrawerMediaMenu(media, title)
     }
 
     // owner, 2026-10-08: an album, video or book picked in the App Drawer opens as the crossbar's own column opens
@@ -2746,11 +2722,15 @@ class CrossbarViewModel @Inject constructor(
     private fun dispatchGamepadAction(action: GamepadAction) {
         val state = _uiState.value
 
-        // L3 or R3 (owner, 2026-10-08): the same as the Swap button, from either screen, over anything open
-        if (action == GamepadAction.SWAP_SCREENS) {
-            if (state.secondDisplayPresent && state.secondScreenEnabled) bottomScreen.toggleSwap()
+        // L3 or R3: the same as the Swap button, over anything open, on one display or two; and B from the Companion
+        // Screen shown in place (pressSwaps)
+        if (com.echo.feature.crossbar.bottomscreen.pressSwaps(state, action)) {
+            bottomScreen.toggleSwap()
             return
         }
+        // the Companion Screen shown in place ignores every other press: the hidden Main Screen never acts on a press
+        // it cannot show
+        if (state.companionInPlace) return
 
         if (state.letterJump != null) {
             when (action) {
@@ -2987,13 +2967,11 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
-        // owner, 2026-10-06: with a second screen the controller drives the screen last touched; Home
-        // and anything the companion does not use still reach the XMB
-        if (state.secondScreen && state.companionActive && action != GamepadAction.HOME && bottomScreen.onButton(action)) return
-
         if (orbPressHandled(action, state)) return
 
         when (action) {
+            // Swapped at the top of this dispatcher (pressSwaps)
+            GamepadAction.SWAP_SCREENS -> Unit
             GamepadAction.NAVIGATE_UP   -> {
                 if (!moveItemCursor(-1)) {
                     gamepadInputHandler.cancelRepeat()
@@ -3364,6 +3342,7 @@ class CrossbarViewModel @Inject constructor(
                     }
                 } else when (itemId) {
                     "launch"    -> launching.launchAppWithDisc(pkg, selectedItemArt())
+                    "launch_other_screen" -> launching.launchAppWithDisc(pkg, selectedItemArt(), otherScreen = true)
                     "pin_recent", "unpin_recent" -> { closeContextMenu(); recents.togglePinned(com.echo.core.data.repository.RecentPins.appKey(pkg)) }
                     "app_artwork" -> viewModelScope.launch { artworkTools.openArtworkStudio(ensureAppShortcut(pkg)) }
                     "app_info"  -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg) }
@@ -3493,7 +3472,7 @@ class CrossbarViewModel @Inject constructor(
         }.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         menuSound.play(MenuSound.LAUNCH)
         try {
-            context.startActivity(intent)
+            launching.startOnMainScreen(intent)
         } catch (e: android.content.ActivityNotFoundException) {
             Timber.w(e, "No app can handle Quick Search")
             _uiState.update {
@@ -3549,12 +3528,6 @@ class CrossbarViewModel @Inject constructor(
     }
 
     // a library game's Options from the App Drawer: the same menu as on the crossbar, drawn over the drawer
-    // the drawer on the companion asked: the menu opens there, where the controller is (owner, 2026-10-08)
-    internal fun openGameMenuOnCompanion(gameId: Long) {
-        _uiState.update { it.copy(menuOnCompanion = true) }
-        openGameMenu(gameId)
-    }
-
     fun openGameMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
@@ -3592,24 +3565,10 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    // a Recent item's Options from the second screen (owner, 2026-10-08): its own menu, with no Move, which
-    // belongs to the crossbar's focused row
-    internal fun openRecentItemMenu(item: CrossbarItem) {
-        _uiState.update { it.copy(menuOnCompanion = true) }
-        openItemMenu(item)
-    }
-
-    // Y on the companion's music remote: the player's options open on that screen
-    internal fun openMusicOptionsOnCompanion() {
-        _uiState.update { it.copy(menuOnCompanion = true) }
-        music.openMusicPlayerOptions()
-    }
-
-    // the one way the music player opens: with a second screen it is the companion's Music page, and the
-    // crossbar's screen stays free to browse (owner, 2026-10-08); on one screen it covers the crossbar
+    // the one way the music player opens: over the crossbar on the Main Screen, with or without a Companion
+    // Screen (ADR 0001)
     internal fun showMusicPlayer() {
-        if (_uiState.value.secondScreen) bottomScreen.showPage(com.echo.feature.crossbar.bottomscreen.BottomPage.MUSIC)
-        else _uiState.update { it.copy(musicPlayerVisible = true) }
+        _uiState.update { it.withMusicPlayer() }
     }
 
     private fun openItemMenu(item: CrossbarItem?) {
@@ -3991,22 +3950,6 @@ class CrossbarViewModel @Inject constructor(
         if (_uiState.value.secondDisplayPresent != present) _uiState.update { it.copy(secondDisplayPresent = present) }
     }
 
-    // a tap on a screen that shows the companion (true) or the XMB (false); with a second screen, the
-    // controller then drives that screen's content
-    fun touchedScreen(showsCompanion: Boolean) {
-        if (_uiState.value.secondScreen) bottomScreen.setCompanionActive(showsCompanion)
-    }
-
-    // a column that cannot be reached now (Last Played, once a second screen shows it) is left for
-    // the nearest one that can
-    internal fun leaveUnreachableCategory() {
-        val s = _uiState.value
-        val current = s.categories.getOrNull(s.selectedCategoryIndex) ?: return
-        if (s.categoryReachable(current)) return
-        val next = s.stepToReachableCategory(+1).takeIf { it != s.selectedCategoryIndex } ?: s.stepToReachableCategory(-1)
-        if (next != s.selectedCategoryIndex) onCategorySelected(next)
-    }
-
     private fun CrossbarUiState.stepToReachableCategory(delta: Int): Int {
         var next = selectedCategoryIndex + delta
         while (next in categories.indices) {
@@ -4133,8 +4076,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
     // opens or launches an item as the column does: a video, book, track or album opens in ECHO; a game,
-    // shortcut or app launches. False when the item is none of these. The bottom screen's Recent page
-    // opens its items through this too.
+    // shortcut or app launches. False when the item is none of these.
     internal fun openItem(item: CrossbarItem): Boolean {
         when (item.type) {
             CrossbarItemType.VIDEO_FILE -> {

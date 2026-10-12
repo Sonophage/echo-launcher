@@ -80,6 +80,7 @@ class LaunchDispatcherTest {
             autoCoreMemory = autoCoreMemory,
             gameRepository = gameRepository,
             ledger = ledger,
+            launchScreens = mockk(relaxed = true),
             launchListeners = setOf(GameLaunchListener { launched += it }),
         )
     }

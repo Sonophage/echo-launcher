@@ -83,7 +83,12 @@ fun Icon1VideoOverlay(
             }
         },
         update = { view -> applyCenterCrop(view, videoSize) },
-        modifier = modifier.graphicsLayer { this.alpha = alpha },
+        // clip: the centre crop scales the video past the view's bounds, and Compose draws an AndroidView with no
+        // parent clip of its own, so unclipped the video spilt below Game Info's band (owner, 2026-10-12)
+        modifier = modifier.graphicsLayer {
+            this.alpha = alpha
+            clip = true
+        },
     )
 }
 

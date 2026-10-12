@@ -1,6 +1,6 @@
 package com.echo.feature.settings.viewmodel
 
-import android.content.Context
+import android.content.res.Configuration
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import com.echo.themekit.CrossbarFormFactor
@@ -13,14 +13,14 @@ internal object ClassicCrossbarLayout {
 
     data class Target(val bucketKey: String, val preset: CrossbarLayoutAdjust)
 
-    fun forWindow(context: Context): Target {
-        val config = context.resources.configuration
+    // config and density are the window's (the activity's), as the Crossbar reads them, not the application's
+    fun forWindow(config: Configuration, density: Float): Target {
         return Target(
             bucketKey = CrossbarFormFactor.forSmallestWidthDp(config.smallestScreenWidthDp).key,
             preset = CrossbarLayoutPreset.computeForWindowDp(
                 widthDp = config.screenWidthDp.toFloat(),
                 heightDp = config.screenHeightDp.toFloat(),
-                density = context.resources.displayMetrics.density,
+                density = density,
             ),
         )
     }

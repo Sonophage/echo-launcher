@@ -53,6 +53,7 @@ class LaunchDispatcher @Inject constructor(
     private val autoCoreMemory: AutoCoreMemory,
     private val gameRepository: com.echo.core.domain.repository.GameRepository,
     private val ledger: PlaySessionLedger,
+    private val launchScreens: com.echo.core.data.launch.LaunchScreens,
     private val launchListeners: Set<@JvmSuppressWildcards GameLaunchListener> = emptySet(),
 ) {
     private val _recoveryRequests = MutableStateFlow<LaunchRecoveryRequest?>(null)
@@ -69,14 +70,17 @@ class LaunchDispatcher @Inject constructor(
     private var hostStopped = false
     private var watchdog: Job? = null
 
-    suspend fun launch(game: Game, resolved: ResolvedLaunch?, intent: Intent): LaunchDispatchResult {
+    // otherScreen: Launch on Other Screen, which also makes that display the game's Launch Screen
+    suspend fun launch(game: Game, resolved: ResolvedLaunch?, intent: Intent, otherScreen: Boolean = false): LaunchDispatchResult {
         // GameBoot's disc and card wear the game's cover, its icon slot, as every cover spot does (owner, 2026-10-05)
         val cover = com.echo.core.domain.model.coverArtOf(game.iconUri, game.artworkUri)
         gameBootGate.awaitPresentation(game.displayTitle, cover, backdropArt = game.artworkUri, cardArt = cover)
+        val packageName = listOfNotNull(intent.component?.packageName, intent.`package`, resolved?.profile?.packageName)
+            .firstOrNull { it.isNotBlank() }
         return try {
             context.startActivity(
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).withoutTransition(),
-                LaunchTransition.options(context),
+                LaunchTransition.options(context, launchScreens.displayFor(packageName, game.platformId, otherScreen, gameId = game.id)),
             )
 
             resolved?.profile?.takeIf { it.isRetroArchProfile() }?.let { profile ->
@@ -85,8 +89,6 @@ class LaunchDispatcher @Inject constructor(
             val dispatchedAt = clock.now()
             val dispatchedAtWall = wallClock.now()
 
-            val packageName = listOfNotNull(intent.component?.packageName, intent.`package`, resolved?.profile?.packageName)
-                .firstOrNull { it.isNotBlank() }
             scope.launch {
                 runCatching { gameRepository.markOpened(game.id, dispatchedAtWall) }
                     .onFailure { Timber.w(it, "Could not stamp gameId=${game.id} on the Last Played shelf") }
@@ -131,7 +133,7 @@ class LaunchDispatcher @Inject constructor(
         return try {
             context.startActivity(
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED).withoutTransition(),
-                LaunchTransition.options(context),
+                LaunchTransition.options(context, launchScreens.displayFor(pkg, game.platformId, gameId = game.id)),
             )
             val at = clock.now()
             val atWall = wallClock.now()

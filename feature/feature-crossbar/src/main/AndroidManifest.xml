@@ -14,16 +14,38 @@
 
     <application>
         <!-- ECHO on a second screen (the AYN Thor's bottom screen). Its own task, kept out of Recents,
-             so it never joins the Home task MainActivity runs in. -->
+             so it never joins the Home task MainActivity runs in.
+
+             It is the second display's home (SECONDARY_HOME), so HOME puts the Companion Screen there and
+             not Android's own launcher; MainActivity's restart in onResume stays as the fallback. Android
+             uses it only while ECHO is the default home, and it refuses a singleTask or singleInstance
+             activity as a secondary home and falls back to the system's one, so this is singleTop.
+             Exported, because the system resolves and starts it. -->
         <activity
             android:name="com.echo.feature.crossbar.bottomscreen.BottomScreenActivity"
-            android:exported="false"
-            android:launchMode="singleTask"
+            android:exported="true"
+            android:launchMode="singleTop"
             android:taskAffinity="${applicationId}.bottom"
             android:excludeFromRecents="true"
             android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode"
-            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.SECONDARY_HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <!-- Moves key focus to the Companion's display for the keyboard there, then closes. Its own task,
+             as a new task brought to the front is what moves focus. Translucent, so the Companion window
+             under it is never stopped. -->
+        <activity
+            android:name="com.echo.feature.crossbar.bottomscreen.CompanionFocusActivity"
+            android:exported="false"
+            android:taskAffinity="${applicationId}.focus"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     </application>
 
 </manifest>
