@@ -45,6 +45,7 @@ internal fun gameContextMenuItems(
         }
 
         add(CrossbarContextMenuItem("shelves", "Shelves", group = MenuGroup.ORGANIZE))
+        add(favoritesRow(item.isFavorite))
         // owner, 2026-10-08: filter the game lists by this game's genre, or clear the filter
         genreFilterRow(item.genre, state.genreFilter)?.let(::add)
         // owner, 2026-10-08: the drawer's Games buttons switch between systems and genres from here
@@ -112,6 +113,13 @@ internal fun launchOnOtherScreenRow(state: CrossbarUiState, packageName: String?
     if (!state.secondDisplayPresent || com.echo.core.domain.model.KnownEmulatorPackages.isDualScreen(packageName, platformId)) null
     else CrossbarContextMenuItem("launch_other_screen", "Launch on Other Screen", group = MenuGroup.SETTINGS)
 
+// Favorites is one set over games, apps, videos and photos, with one pair of rows (owner, 2026-10-12)
+internal fun favoritesLabel(isFavorite: Boolean): String =
+    if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+
+internal fun favoritesRow(isFavorite: Boolean): CrossbarContextMenuItem =
+    CrossbarContextMenuItem(if (isFavorite) "unfavorite" else "favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE)
+
 // owner, 2026-10-06: a game or app pins to, or unpins from, the list under Recent
 internal fun recentPinRow(pinned: Boolean): CrossbarContextMenuItem =
     if (pinned) CrossbarContextMenuItem("unpin_recent", "Unpin from Recent", group = MenuGroup.ORGANIZE)
@@ -122,11 +130,13 @@ internal fun appContextMenuItems(
     categoryId: String?,
     onRecentShelf: Boolean,
     packageName: String? = null,
+    isFavorite: Boolean = false,
+    pinnedInCategory: Boolean = false,
 ): List<CrossbarContextMenuItem> = buildList {
     add(CrossbarContextMenuItem("launch", "Launch"))
 
     add(CrossbarContextMenuItem("mark_game", "Mark as Game", group = MenuGroup.ORGANIZE))
-    add(CrossbarContextMenuItem("favorite", "Add to Favorites", group = MenuGroup.ORGANIZE))
+    add(favoritesRow(isFavorite))
     packageName?.let { add(recentPinRow("a:$it" in state.recentPins)) }
     if (onRecentShelf) {
         // Remove clears it until it is used again; Hide keeps it off the panel until unhidden (owner, 2026-10-05)
@@ -145,7 +155,10 @@ internal fun appContextMenuItems(
     add(CrossbarContextMenuItem("add", "Add to Category", group = MenuGroup.ORGANIZE))
     if (categoryId != null) {
         add(CrossbarContextMenuItem("remove", "Remove from Category", group = MenuGroup.REMOVE))
-        add(CrossbarContextMenuItem("pin", "Pin to Top", group = MenuGroup.ORGANIZE))
+        add(
+            if (pinnedInCategory) CrossbarContextMenuItem("unpin", "Unpin from Top", group = MenuGroup.ORGANIZE)
+            else CrossbarContextMenuItem("pin", "Pin to Top", group = MenuGroup.ORGANIZE),
+        )
 
         if (!onRecentShelf) {
             add(CrossbarContextMenuItem("hide_from_category", "Hide from ${state.categoryDisplayNameOf(categoryId)}", group = MenuGroup.REMOVE))
@@ -167,7 +180,7 @@ internal fun videoFileContextMenuItems(
     // owner, 2026-10-08: a video can be the wallpaper; MotionWallpaper decides whether it fits its limits
     add(CrossbarContextMenuItem("video_wallpaper", "Set as Wallpaper"))
 
-    add(CrossbarContextMenuItem("video_favorite", if (isFavorite) "Remove from Favorites" else "Add to Favorites", group = MenuGroup.ORGANIZE))
+    add(CrossbarContextMenuItem("video_favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE))
     add(CrossbarContextMenuItem("video_add_playlist", "Add to Playlist", group = MenuGroup.ORGANIZE))
     if (hasWatchStamp) add(CrossbarContextMenuItem("video_remove_recent", "Remove from Recent", group = MenuGroup.REMOVE))
 
@@ -188,8 +201,9 @@ internal fun videoPlaylistContextMenuItems(): List<CrossbarContextMenuItem> = li
     CrossbarContextMenuItem("delete_video_playlist", "Delete Playlist", isDestructive = true, group = MenuGroup.REMOVE),
 )
 
-internal fun photoFileContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
+internal fun photoFileContextMenuItems(isFavorite: Boolean = false): List<CrossbarContextMenuItem> = listOf(
     CrossbarContextMenuItem("photo_open", "Open"),
+    CrossbarContextMenuItem(if (isFavorite) "photo_unfavorite" else "photo_favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE),
     CrossbarContextMenuItem("photo_set_wallpaper", "Set as Launcher Wallpaper", group = MenuGroup.SETTINGS),
     CrossbarContextMenuItem("photo_remove", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE),
 )

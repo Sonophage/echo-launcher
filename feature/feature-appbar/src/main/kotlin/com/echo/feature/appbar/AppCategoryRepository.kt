@@ -193,6 +193,10 @@ class AppCategoryRepository @Inject constructor(
         categoryDao.setItemPinned(categoryId, pkg, true)
     }
 
+    suspend fun unpinFromCategory(pkg: String, categoryId: String) {
+        categoryDao.setItemPinned(categoryId, pkg, false)
+    }
+
     suspend fun setHidden(pkg: String, hidden: Boolean) {
         val ov = appOverrideDao.getByPackage(pkg) ?: AppOverrideEntity(pkg)
         appOverrideDao.upsert(ov.copy(isHidden = hidden))

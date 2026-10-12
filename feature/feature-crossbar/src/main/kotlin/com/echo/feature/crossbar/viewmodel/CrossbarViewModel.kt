@@ -3151,10 +3151,17 @@ class CrossbarViewModel @Inject constructor(
         val pkg = item.packageName ?: return
         val categoryId = categoryIdOverride ?: currentCategory()?.id
 
-        val items = appContextMenuItems(_uiState.value, categoryId, onRecentShelf = item.id.startsWith(RECENT_APP_ID_PREFIX), packageName = pkg)
-        _uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = pkg, categoryContext = categoryId)
-        )}
+        viewModelScope.launch {
+            // an app is a favourite through its shortcut row in games, so read it fresh for the pair
+            val isFavorite = gameRepository.getAppEntry(pkg)?.isFavorite == true
+            val items = appContextMenuItems(
+                _uiState.value, categoryId, onRecentShelf = item.id.startsWith(RECENT_APP_ID_PREFIX), packageName = pkg,
+                isFavorite = isFavorite, pinnedInCategory = item.pinnedInCategory,
+            )
+            _uiState.update { it.copy(
+                activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = pkg, categoryContext = categoryId)
+            )}
+        }
     }
 
     private fun openCategoryPicker(pkg: String, fromCategory: String?, action: String) {
@@ -3367,10 +3374,12 @@ class CrossbarViewModel @Inject constructor(
                         memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
                     }
                     "favorite"          -> gameActions.addAppToFavorites(pkg, menu.title)
+                    "unfavorite"        -> appAction { gameRepository.getAppEntry(pkg)?.let { gameRepository.setFavorite(it.id, false) } }
                     "move"      -> openCategoryPicker(pkg, menu.categoryContext, "move")
                     "add"       -> openCategoryPicker(pkg, menu.categoryContext, "add")
                     "remove"    -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.removeFromCategory(pkg, cat) } }
                     "pin"       -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.pinToCategory(pkg, cat) } }
+                    "unpin"     -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.unpinFromCategory(pkg, cat) } }
                     "hide_from_category" -> menu.categoryContext?.let { cat ->
                         persistHide(HiddenPlacement.appKey(pkg), menu.title, HideLocationType.CATEGORY, cat, categoryDisplayName(cat))
                     }
@@ -3393,14 +3402,7 @@ class CrossbarViewModel @Inject constructor(
     internal fun openShelvesPickerMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
-            val current = PlayState.fromName(game.playState)
-            val items = buildList {
-                add(CrossbarContextMenuItem("shelf_favorite", "Favorites", checked = game.isFavorite))
-                PlayState.entries.forEach { state ->
-                    add(CrossbarContextMenuItem("pstate_${state.name}", state.label, checked = current == state))
-                }
-                add(CrossbarContextMenuItem("pstate_none", "Unmarked", checked = current == null))
-            }
+            val items = shelvesPickerItems(PlayState.fromName(game.playState))
             _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Shelves", rows = items), gameId = gameId))}
         }
     }

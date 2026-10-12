@@ -309,9 +309,6 @@ class CrossbarGames(
                 "REFRESH"  -> vm.artworkTools.fetchArtworkFor(gid)
                 else -> Timber.w("Details row '$what' has no handler")
             }
-        } else if (itemId == "shelf_favorite") {
-            val onShelf = menu.items.firstOrNull { it.action == "shelf_favorite" }?.checked == true
-            toggleGameFavorite(gameId, !onShelf)
         } else if (itemId.startsWith("genre_pick_")) {
             val gid = gameId
             val choice = itemId.removePrefix("genre_pick_")
