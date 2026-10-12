@@ -315,6 +315,18 @@ class MainActivity : ComponentActivity() {
 
     private val keyboard = AskedKeyboard()
 
+    // the Companion's keyboard claim takes focus from this window and gives it back, and Android hides the
+    // keyboard on the way; shown again here for the field, once focus has settled
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (com.echo.feature.crossbar.bottomscreen.reshowsKeyboard(hasFocus, crossbarViewModel.uiState.value)) {
+            window.decorView.post {
+                WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.ime())
+                keyboard.typing(true)
+            }
+        }
+    }
+
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         // a tap on the field while typing brings the keyboard back
         if (event.actionMasked == MotionEvent.ACTION_DOWN) keyboard.touched()
