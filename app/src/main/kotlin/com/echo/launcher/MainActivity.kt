@@ -40,7 +40,7 @@ import timber.log.Timber
 import com.echo.feature.crossbar.gamepad.GamepadInputHandler
 import com.echo.feature.crossbar.gamepad.AskedKeyboard
 import com.echo.feature.crossbar.gamepad.backHidesKeyboard
-import com.echo.feature.crossbar.viewmodel.namePromptOpen
+import com.echo.feature.crossbar.viewmodel.typing
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.launcher.notification.EchoNotificationListener
 import com.echo.launcher.receiver.InstallShortcutReceiver
@@ -125,7 +125,7 @@ class MainActivity : ComponentActivity() {
         }
         // Search and a name prompt focus their field, which asks for the keyboard
         lifecycleScope.launch {
-            crossbarViewModel.uiState.map { it.search != null || it.namePromptOpen }.distinctUntilChanged()
+            crossbarViewModel.uiState.map { it.typing }.distinctUntilChanged()
                 .collect { keyboard.typing(it) }
         }
         ContextCompat.registerReceiver(

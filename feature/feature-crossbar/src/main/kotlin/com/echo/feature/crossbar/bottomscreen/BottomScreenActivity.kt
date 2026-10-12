@@ -1,6 +1,5 @@
 package com.echo.feature.crossbar.bottomscreen
 
-import com.echo.feature.crossbar.viewmodel.namePromptOpen
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.ActivityManager
@@ -61,16 +60,10 @@ class BottomScreenActivity : ComponentActivity() {
                     // started this window: Android starts the second display's home again when it finishes, and
                     // that home is this window, so it would close and reopen without end
                     LaunchedEffect(ui.secondScreenEnabled) { if (!ui.secondScreenEnabled && !startedAsHome) finishAndRemoveTask() }
-                    if (ui.screensSwapped) {
-                        // swapped: the XMB is drawn here, the companion on the main screen. Search and a name
-                        // prompt (New Genre, Rename, Edit Note) take the keys while open, or the keyboard cannot
-                        // reach them and Android reports ECHO as not responding (owner, 2026-10-08)
-                        val typing = ui.namePromptOpen || ui.search != null
-                        LaunchedEffect(typing) { onLocked(LockedScreenOpen(open = typing, typing = typing)) }
-                        CrossbarShellContainer(viewModel = vm)
-                    } else {
-                        BottomScreen(state, vm, onLocked = ::onLocked)
-                    }
+                    val keys = companionKeys(ui)
+                    LaunchedEffect(keys) { onKeys(keys) }
+                    // swapped: the XMB is drawn here, the companion on the main screen
+                    if (ui.screensSwapped) CrossbarShellContainer(viewModel = vm) else BottomScreen(state, vm)
                 }
             }
         }
@@ -81,7 +74,6 @@ class BottomScreenActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         link.attach(true)
-        claimKeyboard()
     }
 
     // Android moves key focus to the display an activity starts on, and this window takes no keys, so
@@ -89,12 +81,14 @@ class BottomScreenActivity : ComponentActivity() {
     // brought back to the front, which returns key focus to the top screen.
     override fun onResume() {
         super.onResume()
-        if (!claimingKeyboard && link.hostShown.value && !locked.open) handFocusBack()
+        if (!claimingKeyboard && link.hostShown.value && keys != CompanionKeys.HOLD) handFocusBack()
     }
 
     // the Thor shows a keyboard opened on the top screen here (ime_show_on_second), and this screen's
     // keyboard answers to the last window focused on it: the stock launcher, under this window, unless this
-    // window takes focus once. It does on each start, then hands focus back (owner, 2026-10-07)
+    // window takes focus once (owner, 2026-10-07). On the Thor a claim on each start did not hold: when
+    // Search opened, this screen's keyboard still answered to the stock launcher. So it is claimed when typing
+    // starts, then focus is handed back (CompanionKeys.CLAIM)
     private var claimingKeyboard = false
 
     private fun claimKeyboard() {
@@ -112,12 +106,12 @@ class BottomScreenActivity : ComponentActivity() {
     private fun endKeyboardClaim() {
         if (!claimingKeyboard) return
         claimingKeyboard = false
-        if (locked.open) return
+        if (keys == CompanionKeys.HOLD) return
         takeKeys(false)
         if (link.hostShown.value) handFocusBack()
     }
 
-    private var locked = LockedScreenOpen(open = false, typing = false)
+    private var keys = CompanionKeys.NONE
 
     private fun handFocusBack() {
         getSystemService(ActivityManager::class.java)?.appTasks.orEmpty()
@@ -130,17 +124,18 @@ class BottomScreenActivity : ComponentActivity() {
         super.onStop()
     }
 
-    // nothing is locked here unless the XMB is drawn here in Swap: then typing (Search or a name prompt) takes
-    // keys and key focus at once, so the keyboard opens.
-    // The controller's presses then arrive here and are passed on, so they still drive ECHO.
-    private fun onLocked(locked: LockedScreenOpen) {
-        this.locked = locked
-        if (locked.open) {
+    // HOLD: the XMB is drawn here in Swap, and typing (Search or a name prompt) takes keys and key focus at once,
+    // so the keyboard opens; without them the keyboard cannot reach the field and Android reports ECHO as not
+    // responding (owner, 2026-10-08). The controller's presses then arrive here and are passed on, so they still
+    // drive ECHO. CLAIM: typing on the Main Screen, focus is taken once so the keyboard is drawn here
+    private fun onKeys(keys: CompanionKeys) {
+        this.keys = keys
+        if (keys == CompanionKeys.HOLD) {
             takeKeys(true)
-            if (locked.typing) {
-                keyboard.typing(true)
-                takeFocus()
-            }
+            keyboard.typing(true)
+            takeFocus()
+        } else if (keys == CompanionKeys.CLAIM) {
+            claimKeyboard()
         } else {
             // the Thor keeps its keyboard on this screen (ime_fixed): left up, it would stay over ECHO
             keyboard.typing(false)
@@ -208,8 +203,7 @@ class BottomScreenActivity : ComponentActivity() {
 }
 
 // takes Android's key focus to the Companion's display and closes at once (BottomScreenActivity.takeFocus).
-// Translucent, so the Companion window under it is only paused: stopped, its onStart would claim the
-// keyboard again and start this without end.
+// Translucent, so the Companion window under it is only paused, not stopped and started again.
 class CompanionFocusActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -1336,6 +1336,9 @@ internal fun CrossbarUiState.withSettingsOpen(screenId: String): CrossbarUiState
 internal fun CrossbarUiState.withGameInfoOpen(info: GameInfoState): CrossbarUiState =
     withDrawerAndSearchClosed().copy(gameInfo = info, profile = null)
 
+// Search or a name prompt is open: a field that asks for the keyboard
+val CrossbarUiState.typing: Boolean get() = search != null || namePromptOpen
+
 // a prompt with a text field is open; the same four withNamePromptText fills
 val CrossbarUiState.namePromptOpen: Boolean
     get() = renameAppTarget != null || collectionNameDialog != null || playlistNameDialog != null || saveThemeNameDialog != null

@@ -162,4 +162,19 @@ class CompanionRuleTest {
         assertFalse("a Swap remembered from two displays never starts ECHO on the Companion Screen", firstDisplayShowsCompanion(single.copy(screensSwapped = true)))
         assertEquals("one screen chosen in Quick settings counts as one display", Swap.InPlace(shown = true), swap(CrossbarUiState(secondDisplayPresent = true, secondScreenEnabled = false)))
     }
+
+    // the Thor draws the keyboard on the Companion Screen's display (ime_show_on_second), and only for the window
+    // last focused there. Typing on the Main Screen: the Companion's window takes focus once, so the keyboard is
+    // drawn over it, and gives it back, so the controller and the field stay on the Main Screen (ADR 0001). In Swap
+    // the field is in the Companion's window, which holds the keys while typing. Not typing: it takes no keys
+    @Test
+    fun `typing on the Main Screen claims the keyboard for the Companion, in Swap the Companion holds the keys`() {
+        val dual = CrossbarUiState(secondDisplayPresent = true, secondScreenEnabled = true, secondScreen = true)
+        val search = dual.copy(search = SearchState(scope = SearchScope.ALL))
+        assertEquals(CompanionKeys.NONE, companionKeys(dual))
+        assertEquals("Search on the Main Screen", CompanionKeys.CLAIM, companionKeys(search))
+        assertEquals("a name prompt on the Main Screen", CompanionKeys.CLAIM, companionKeys(dual.copy(renameAppTarget = "a")))
+        assertEquals("Search in Swap is in the Companion's window", CompanionKeys.HOLD, companionKeys(search.copy(screensSwapped = true)))
+        assertEquals(CompanionKeys.NONE, companionKeys(dual.copy(screensSwapped = true)))
+    }
 }

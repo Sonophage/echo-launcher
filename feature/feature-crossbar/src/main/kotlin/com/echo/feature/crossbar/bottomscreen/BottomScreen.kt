@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -53,10 +52,7 @@ fun BottomScreen(
     state: BottomScreenState,
     crossbar: CrossbarViewModel,
     modifier: Modifier = Modifier,
-    // nothing is locked here now; told so on show, so keys taken for typing in Swap are handed back
-    onLocked: (LockedScreenOpen) -> Unit = {},
 ) {
-    LaunchedEffect(Unit) { onLocked(LockedScreenOpen(open = false, typing = false)) }
     val shown = state.shown as? CompanionContent.Details
     CompositionLocalProvider(LocalPadPrompts provides false) {
         BoxWithConstraints(modifier.fillMaxSize().background(PanelBase)) {
@@ -154,5 +150,3 @@ private fun SettingView(setting: CompanionContent.Setting, u: com.echo.core.ui.d
         }
     }
 }
-
-data class LockedScreenOpen(val open: Boolean, val typing: Boolean)
