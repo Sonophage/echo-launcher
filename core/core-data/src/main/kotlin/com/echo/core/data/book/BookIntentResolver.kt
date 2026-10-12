@@ -18,6 +18,7 @@ data class ReaderApp(
 @Singleton
 class BookIntentResolver @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val launchScreens: com.echo.core.data.launch.LaunchScreens,
 ) {
     fun buildViewIntent(book: Book, readerPackage: String?): Intent =
         MediaOpenIntent.build(
@@ -29,7 +30,7 @@ class BookIntentResolver @Inject constructor(
     fun launch(book: Book, defaultReader: String?): String? {
         if (BuiltInReader.isBuiltIn(defaultReader)) {
             return try {
-                context.startActivity(BuiltInReader.intent(context, book).withoutTransition(), LaunchTransition.options(context))
+                context.startActivity(BuiltInReader.intent(context, book).withoutTransition(), LaunchTransition.options(context, launchScreens.mainDisplay()))
                 null
             } catch (e: Exception) {
                 "The built-in reader could not open this book."
@@ -43,6 +44,7 @@ class BookIntentResolver @Inject constructor(
             noHandlerMessage =
                 "No reader could open this book. Install one, or pick it from Folders → Default Reader.",
             logLabel = "book \"${book.displayTitle}\"",
+            display = launchScreens.mainDisplay(),
         )
     }
 
@@ -67,7 +69,7 @@ class BookIntentResolver @Inject constructor(
             ?.withoutTransition()
             ?: return "${readerLabel(packageName) ?: "That reader"} is not installed."
         return try {
-            context.startActivity(intent, LaunchTransition.options(context))
+            context.startActivity(intent, LaunchTransition.options(context, launchScreens.displayFor(packageName)))
             null
         } catch (e: Exception) {
             "${readerLabel(packageName) ?: "That reader"} could not be opened."

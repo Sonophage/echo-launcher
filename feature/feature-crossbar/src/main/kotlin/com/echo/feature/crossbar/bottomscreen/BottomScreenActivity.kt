@@ -6,7 +6,6 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.app.ActivityOptions
 import android.content.Intent
-import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.view.Display
 import android.view.KeyEvent
@@ -202,10 +201,7 @@ class BottomScreenActivity : ComponentActivity() {
     companion object {
         // shows the bottom screen on a second display, when the device has one; nothing otherwise
         // the device's second display, if it has one
-        fun secondDisplay(activity: Activity): Display? =
-            activity.getSystemService(DisplayManager::class.java)
-                ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).orEmpty()
-                .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+        fun secondDisplay(activity: Activity): Display? = com.echo.core.data.launch.LaunchScreens.secondDisplay(activity)
 
         fun showBeside(activity: Activity) {
             val target = secondDisplay(activity) ?: return

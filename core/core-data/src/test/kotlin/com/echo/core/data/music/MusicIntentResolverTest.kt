@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 @Config(manifest = Config.NONE)
 class MusicIntentResolverTest {
 
-    private val resolver = MusicIntentResolver(ApplicationProvider.getApplicationContext())
+    private val resolver = MusicIntentResolver(ApplicationProvider.getApplicationContext(), io.mockk.mockk(relaxed = true))
 
     private fun track(mime: String? = "audio/mpeg") = MusicTrack(
         id = "t1",

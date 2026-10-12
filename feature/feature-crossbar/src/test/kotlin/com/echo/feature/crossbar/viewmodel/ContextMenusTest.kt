@@ -424,4 +424,22 @@ class ContextMenusTest {
         val bare = ids(gameContextMenuItems(game(), state().copy(gameInfo = GameInfoState(game())), 1, false, null))
         assertFalse("a game without a manual lists no Manual row", "info_manual" in bare)
     }
+
+    // Launch on Other Screen means nothing with one display, and a DS or 3DS emulator always opens on the
+    // Main Screen's display, so the row is offered only where it can move something
+    @Test
+    fun `Launch on Other Screen is offered for a game and an app only on a device with a second display`() {
+        val dual = state().copy(secondDisplayPresent = true)
+        assertTrue("launch_other_screen" in ids(gameContextMenuItems(game(), dual, 1, false, null)))
+        assertFalse("launch_other_screen" in ids(gameContextMenuItems(game(), state(), 1, false, null)))
+        assertTrue("launch_other_screen" in ids(appContextMenuItems(dual, categoryId = null, onRecentShelf = false, packageName = "com.app")))
+        assertFalse("launch_other_screen" in ids(appContextMenuItems(state(), categoryId = null, onRecentShelf = false, packageName = "com.app")))
+    }
+
+    @Test
+    fun `Launch on Other Screen is not offered for a DS game or a DS emulator`() {
+        val dual = state().copy(secondDisplayPresent = true)
+        assertFalse("launch_other_screen" in ids(gameContextMenuItems(game(platformId = "nds"), dual, 1, false, null)))
+        assertFalse("launch_other_screen" in ids(appContextMenuItems(dual, categoryId = null, onRecentShelf = false, packageName = "me.magnum.melonds")))
+    }
 }

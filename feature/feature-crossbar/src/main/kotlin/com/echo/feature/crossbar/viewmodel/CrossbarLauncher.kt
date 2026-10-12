@@ -45,6 +45,14 @@ class CrossbarLauncher(
         }
     }
 
+    // a launch with no Launch Screen yet opens on the Main Screen's display, the second one while swapped
+    internal fun observeMainScreenDisplay() {
+        scope.launch {
+            uiState.map { it.secondScreen && it.screensSwapped }.distinctUntilChanged()
+                .collect { vm.launchScreens.mainOnSecond = it }
+        }
+    }
+
     // Y Resume (kit 06, level 2): back into the game as it was left
     internal fun resumeGame(gameId: Long) {
         scope.launch {
@@ -118,7 +126,8 @@ class CrossbarLauncher(
         launchGameDirectly(gameId)
     }
 
-    internal fun launchGameDirectly(gameId: Long, discId: Long? = null) {
+    // otherScreen: Launch on Other Screen
+    internal fun launchGameDirectly(gameId: Long, discId: Long? = null, otherScreen: Boolean = false) {
         scope.launch {
             val selected = vm.gameRepository.getById(gameId) ?: run {
                 Timber.w("Direct launch requested for missing game id=$gameId")
@@ -129,15 +138,15 @@ class CrossbarLauncher(
                 Timber.i("Direct launch refused for missing game: ${game.title}")
                 return@launch
             }
-            launchResolvedGame(game)
+            launchResolvedGame(game, otherScreen)
         }
     }
 
-    private suspend fun launchResolvedGame(game: Game) {
+    private suspend fun launchResolvedGame(game: Game, otherScreen: Boolean) {
         val shortcutId = game.shortcutId
         val packageName = game.packageName
         if (shortcutId != null && packageName != null) {
-            launcherShortcutRepository.launch(packageName, shortcutId)
+            launcherShortcutRepository.launch(packageName, shortcutId, otherScreen)
                 .onFailure { e ->
                     Timber.w(e, "Direct shortcut launch failed")
                     launchDispatcher.recordPreflightFailure(game, null, "Couldn't launch: ${e.message}")
@@ -149,7 +158,7 @@ class CrossbarLauncher(
                 val parsed = Intent.parseUri(game.launchIntentUri, Intent.URI_INTENT_SCHEME)
                 com.echo.core.common.security.ShortcutIntentSanitizer.sanitize(parsed, vm.context.packageManager)
                     ?: error("Captured shortcut is not safe to launch")
-            }.onSuccess { intent -> launchIntentFromCrossbar(intent, game, null) }
+            }.onSuccess { intent -> launchIntentFromCrossbar(intent, game, null, otherScreen) }
                 .onFailure { e ->
                     Timber.w(e, "Direct stored-intent launch failed")
                     launchDispatcher.recordPreflightFailure(game, null, "Couldn't launch: ${e.message}")
@@ -158,7 +167,7 @@ class CrossbarLauncher(
         }
         if (game.romPath.isNullOrBlank() && !game.packageName.isNullOrBlank()) {
             intentResolver.resolveNativeApp(game).fold(
-                onSuccess = { intent -> launchIntentFromCrossbar(intent, game, null) },
+                onSuccess = { intent -> launchIntentFromCrossbar(intent, game, null, otherScreen) },
                 onFailure = { e ->
                     Timber.w(e, "Direct native-app launch failed")
                     launchDispatcher.recordPreflightFailure(game, null, e.message ?: "Could not launch ${game.title}")
@@ -194,7 +203,7 @@ class CrossbarLauncher(
             return
         }
         intentResolver.resolve(game, profile).fold(
-            onSuccess = { intent -> launchIntentFromCrossbar(intent, game, resolvedLaunch) },
+            onSuccess = { intent -> launchIntentFromCrossbar(intent, game, resolvedLaunch, otherScreen) },
             onFailure = { e ->
                 Timber.w(e, "Direct emulator launch failed: ${profile.name}")
                 launchDispatcher.recordPreflightFailure(game, resolvedLaunch, e.message ?: "Could not launch ${profile.name}")
@@ -202,8 +211,8 @@ class CrossbarLauncher(
         )
     }
 
-    private suspend fun launchIntentFromCrossbar(intent: Intent, game: Game, resolved: ResolvedLaunch?) {
-        when (val result = launchDispatcher.launch(game, resolved, intent)) {
+    private suspend fun launchIntentFromCrossbar(intent: Intent, game: Game, resolved: ResolvedLaunch?, otherScreen: Boolean) {
+        when (val result = launchDispatcher.launch(game, resolved, intent, otherScreen)) {
             is LaunchDispatchResult.Rejected -> Timber.w("Direct launch rejected: ${result.message}")
             LaunchDispatchResult.Accepted -> Unit
         }
@@ -228,7 +237,9 @@ class CrossbarLauncher(
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION)
             vm.context.startActivity(
                 launch,
-                com.echo.core.common.launch.LaunchTransition.options(vm.context),
+                com.echo.core.common.launch.LaunchTransition.options(
+                    vm.context, vm.launchScreens.displayFor(launch.component?.packageName ?: launch.`package`),
+                ),
             )
         }.onFailure { e ->
             Timber.e(e, "Failed to launch captured shortcut: $label")
@@ -279,10 +290,10 @@ class CrossbarLauncher(
 
     internal suspend fun awaitDiscHandOff(art: Any?) = mediaLaunchGate.awaitHandOff(art)
 
-    internal fun launchAppWithDisc(packageName: String, art: Any?) {
+    internal fun launchAppWithDisc(packageName: String, art: Any?, otherScreen: Boolean = false) {
         scope.launch {
             awaitDiscHandOff(art ?: appLauncherIcon(packageName))
-            vm.appCategoryRepository.launch(packageName)
+            vm.appCategoryRepository.launch(packageName, otherScreen)
         }
     }
 

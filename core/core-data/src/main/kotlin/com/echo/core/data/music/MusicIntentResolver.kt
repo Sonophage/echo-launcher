@@ -16,6 +16,7 @@ data class MusicPlayerApp(
 @Singleton
 class MusicIntentResolver @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val launchScreens: com.echo.core.data.launch.LaunchScreens,
 ) {
     fun buildIntent(track: MusicTrack, defaultPlayerPackage: String?): Intent =
         MediaOpenIntent.build(
@@ -33,6 +34,7 @@ class MusicIntentResolver @Inject constructor(
             noHandlerMessage =
                 "No music player could open this track. Install a player or pick one from Music → Folders → Default Music Player.",
             logLabel = "music track \"${track.displayTitle}\"",
+            display = launchScreens.mainDisplay(),
         )
 
     fun availablePlayers(): List<MusicPlayerApp> =
