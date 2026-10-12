@@ -256,6 +256,24 @@ class AppDrawerViewModelTest {
         assertFalse(viewModel.uiState.value.allApps.any { it.packageName == "com.example.browser" })
     }
 
+    // with one display there is no other screen to launch on, so the row would do nothing
+    @Test
+    fun `Launch on Other Screen is in the drawer's app menu only with a second display, and launches there`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        val browser = viewModel.uiState.value.allApps.first { it.packageName == "com.example.browser" }
+        every { repository.hasOtherScreen() } returns false
+        viewModel.openAppMenu(browser)
+        assertFalse(AppMenuAction.LAUNCH_OTHER_SCREEN in viewModel.uiState.value.menuActions)
+
+        every { repository.hasOtherScreen() } returns true
+        viewModel.openAppMenu(browser)
+        assertTrue(AppMenuAction.LAUNCH_OTHER_SCREEN in viewModel.uiState.value.menuActions)
+
+        viewModel.onMenuAction(AppMenuAction.LAUNCH_OTHER_SCREEN)
+        testDispatcher.scheduler.advanceUntilIdle()
+        verify(exactly = 1) { repository.launchApp("com.example.browser", otherScreen = true) }
+    }
+
     private fun drawerWithNothingUsed(usageAccess: Boolean): AppDrawerViewModel {
         coEvery { repository.getInstalledApps() } returns fakeApps().map { it.copy(lastUsedAt = 0L) }
         every { repository.hasUsageAccess() } returns usageAccess

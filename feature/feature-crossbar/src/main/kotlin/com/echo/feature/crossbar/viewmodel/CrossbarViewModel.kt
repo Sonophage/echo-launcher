@@ -1412,6 +1412,7 @@ class CrossbarViewModel @Inject constructor(
     internal val achievementController: com.echo.feature.achievements.AchievementController,
     internal val achievementCredentials: com.echo.core.data.achievement.AchievementCredentialsProvider,
     internal val discordSocial: com.echo.core.data.discord.DiscordSocialRepository,
+    internal val launchScreens: com.echo.core.data.launch.LaunchScreens,
     bottomScreenLink: com.echo.feature.crossbar.bottomscreen.BottomScreenLink,
 ) : ViewModel() {
     @Volatile
@@ -1548,6 +1549,7 @@ class CrossbarViewModel @Inject constructor(
         collectGamepadActions()
         consumeWindowsSetupPrompt()
         launching.observeLaunchRecoveryRequests()
+        launching.observeMainScreenDisplay()
         observeSetupState()
 
         pcShortcutImporter.watchPinChanges(viewModelScope)
@@ -3349,6 +3351,7 @@ class CrossbarViewModel @Inject constructor(
                     }
                 } else when (itemId) {
                     "launch"    -> launching.launchAppWithDisc(pkg, selectedItemArt())
+                    "launch_other_screen" -> launching.launchAppWithDisc(pkg, selectedItemArt(), otherScreen = true)
                     "pin_recent", "unpin_recent" -> { closeContextMenu(); recents.togglePinned(com.echo.core.data.repository.RecentPins.appKey(pkg)) }
                     "app_artwork" -> viewModelScope.launch { artworkTools.openArtworkStudio(ensureAppShortcut(pkg)) }
                     "app_info"  -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg) }

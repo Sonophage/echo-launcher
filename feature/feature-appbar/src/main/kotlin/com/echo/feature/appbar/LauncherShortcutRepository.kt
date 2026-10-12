@@ -31,6 +31,7 @@ sealed interface ShortcutHarvestResult {
 @Singleton
 class LauncherShortcutRepository @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val launchScreens: com.echo.core.data.launch.LaunchScreens,
 ) {
     private val launcherApps =
         context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
@@ -86,10 +87,10 @@ class LauncherShortcutRepository @Inject constructor(
         )
     }
 
-    fun launch(hostPackage: String, shortcutId: String): Result<Unit> = runCatching {
+    fun launch(hostPackage: String, shortcutId: String, otherScreen: Boolean = false): Result<Unit> = runCatching {
         launcherApps.startShortcut(
             hostPackage, shortcutId, null,
-            LaunchTransition.options(context),
+            LaunchTransition.options(context, launchScreens.displayFor(hostPackage, otherScreen = otherScreen)),
             Process.myUserHandle(),
         )
     }.onFailure { Timber.e(it, "startShortcut failed: $hostPackage / $shortcutId") }
