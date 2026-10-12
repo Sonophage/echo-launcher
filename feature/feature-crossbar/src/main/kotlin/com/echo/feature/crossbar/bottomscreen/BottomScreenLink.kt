@@ -29,20 +29,17 @@ data class BottomScreenState(
     // Recent's list beside the item (true) or the item in full view, as the top screen's Last Played shows it
     val recentListOpen: Boolean = true,
     val page: BottomPage = BottomPage.INFO,
-    // music is playing, so the companion offers its remote (owner, 2026-10-08)
-    val music: Boolean = false,
 )
 
 // the page in view: Info stands down for Recent while there is no info to show, so the button lit is
 // the page drawn and the controller moves what is on screen
 fun BottomScreenState.shownPage(): BottomPage = if (page in pages()) page else BottomPage.RECENT
 
-// the pages the companion can show now, in pill order: Info when there is info, Recent always, Music while
-// something plays
+// the pages the companion can show now, in pill order: Info when there is info, Recent always. The music
+// player is on the Main Screen (ADR 0001)
 fun BottomScreenState.pages(): List<BottomPage> = listOfNotNull(
     BottomPage.INFO.takeIf { shownInfo() != null },
     BottomPage.RECENT,
-    BottomPage.MUSIC.takeIf { music },
 )
 
 // the companion fits the crossbar's column (owner, 2026-10-08): Recent shows that column's kind, when Recent holds
@@ -57,19 +54,6 @@ fun recentFilterFor(categoryId: String?, gaming: Boolean, shown: List<com.echo.f
         else -> null
     }
     return kind?.takeIf { it in shown } ?: com.echo.feature.crossbar.viewmodel.RecentFilter.ALL
-}
-
-enum class MusicRemoteKey { PLAY_PAUSE, PREV, NEXT, LEAVE, OPTIONS }
-
-// the music remote: A plays or pauses, up and down skip, B leaves the player for Recent with the music still
-// playing, Y opens the player's options (Stop & Close among them) on this screen. Left and right stay the pages'
-fun musicRemoteKey(action: GamepadAction): MusicRemoteKey? = when (action) {
-    GamepadAction.SELECT -> MusicRemoteKey.PLAY_PAUSE
-    GamepadAction.NAVIGATE_UP -> MusicRemoteKey.PREV
-    GamepadAction.NAVIGATE_DOWN -> MusicRemoteKey.NEXT
-    GamepadAction.BACK -> MusicRemoteKey.LEAVE
-    GamepadAction.OPEN_CONTEXT_MENU -> MusicRemoteKey.OPTIONS
-    else -> null
 }
 
 // left and right on the companion: on Recent they first close the list to show the item in full, and open it
@@ -95,7 +79,7 @@ fun BottomScreenState.steppedPage(delta: Int): BottomPage {
 
 // owner, 2026-10-06: on a device with a second screen, the bottom screen follows the top one. It is a
 // second activity with no view model of its own: it draws the crossbar's state and acts through the
-// crossbar, as the top screen does, so Search and Settings have one owner on both.
+// crossbar, as the top screen does, so Search has one owner on both.
 @Singleton
 class BottomScreenLink @Inject constructor() {
     private val _state = MutableStateFlow(BottomScreenState())
@@ -120,12 +104,6 @@ class BottomScreenLink @Inject constructor() {
     val drawerFocus: StateFlow<com.echo.feature.appbar.InstalledApp?> = _drawerFocus.asStateFlow()
 
     fun drawerFocused(app: com.echo.feature.appbar.InstalledApp?) { _drawerFocus.value = app }
-
-    // the theme the store has in focus on the companion, for the crossbar's screen (owner, 2026-10-08)
-    private val _storePreview = MutableStateFlow<com.echo.feature.settings.ui.StorePreview?>(null)
-    val storePreview: StateFlow<com.echo.feature.settings.ui.StorePreview?> = _storePreview.asStateFlow()
-
-    fun storePreviewed(preview: com.echo.feature.settings.ui.StorePreview?) { _storePreview.value = preview }
 
     // counted, not set: HOME starts one Companion window and ECHO can start a second over it, and the covered
     // one stops after the new one has started

@@ -3,7 +3,10 @@ package com.echo.feature.crossbar.bottomscreen
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.domain.model.Category
 import com.echo.core.domain.model.CategoryType
+import com.echo.core.ui.components.MenuState
+import com.echo.feature.crossbar.viewmodel.CrossbarContextMenu
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
+import com.echo.feature.crossbar.viewmodel.withMusicPlayer
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -18,6 +21,7 @@ class MainScreenRollbackGuardTest {
         val waveShown: Boolean,
         val hasBlockingOverlay: Boolean,
         val enterOpensAppDrawer: Boolean,
+        val musicPlayerShown: Boolean,
     )
 
     private fun mainScreen(s: CrossbarUiState) = MainScreen(
@@ -25,6 +29,7 @@ class MainScreenRollbackGuardTest {
         waveShown = s.waveShown,
         hasBlockingOverlay = s.hasBlockingOverlay,
         enterOpensAppDrawer = s.enterOpensAppDrawer,
+        musicPlayerShown = s.musicPlayerVisible,
     )
 
     private fun column(id: String, position: Int) =
@@ -36,17 +41,23 @@ class MainScreenRollbackGuardTest {
         categories = listOf(column(BuiltInCategory.RECENTLY_PLAYED, 0), column(BuiltInCategory.ANDROID, 1)),
     )
 
-    // one case for each thing that once left the Main Screen for the Companion Screen. When a ticket brings
-    // one back, add its case here.
-    private val cases = mapOf(
-        "Recent is a column on the Crossbar" to crossbar,
-        "the App Drawer opens on the Main Screen" to crossbar.copy(activeAppDrawerFilter = "APPS"),
+    // one case for each thing that once left the Main Screen for the Companion Screen: what the player does,
+    // applied to the Crossbar with and without a Companion Screen. When a ticket brings one back, add its case.
+    private val cases: Map<String, (CrossbarUiState) -> CrossbarUiState> = mapOf(
+        "Recent is a column on the Crossbar" to { it },
+        "the App Drawer opens on the Main Screen" to { it.copy(activeAppDrawerFilter = "APPS") },
+        "Settings opens on the Main Screen" to { it.copy(activeSettingsScreen = "settings_display") },
+        "the Theme Store opens on the Main Screen" to { it.copy(activeSettingsScreen = "settings_theme_store") },
+        "the music player opens on the Main Screen when a track starts" to { it.withMusicPlayer() },
+        "a context menu opens on the Main Screen" to {
+            it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Options", rows = emptyList())))
+        },
     )
 
     @Test
     fun `the Main Screen is the same with and without a Companion Screen attached`() {
-        cases.forEach { (case, state) ->
-            assertEquals(case, mainScreen(state), mainScreen(state.copy(secondScreen = true)))
+        cases.forEach { (case, act) ->
+            assertEquals(case, mainScreen(act(crossbar)), mainScreen(act(crossbar.copy(secondScreen = true))))
         }
     }
 }

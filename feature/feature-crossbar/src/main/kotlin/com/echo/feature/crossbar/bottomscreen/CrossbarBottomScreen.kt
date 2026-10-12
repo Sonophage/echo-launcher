@@ -65,19 +65,10 @@ class CrossbarBottomScreen(
                     item?.let { i -> vm.gameDetail.load(GameInfoState(i)).let { info -> link.update { it.copy(drawer = info) } } }
                 }
         }
-        // the companion follows the crossbar's column: Recent narrows to its kind, and the Music column shows the
-        // remote while something plays
+        // the companion follows the crossbar's column: Recent narrows to its kind
         scope.launch {
             uiState.map { it.currentCategoryOrNull() }.distinctUntilChanged { a, b -> a?.id == b?.id }.collect { category ->
-                val state = link.state.value
-                pickRecentFilter(recentFilterFor(category?.id, category?.isGamingCategory == true, state.recentFilters))
-                if (category?.id == com.echo.core.domain.model.BuiltInCategory.MUSIC && state.music) showPage(BottomPage.MUSIC)
-            }
-        }
-        // music starting turns the companion into its remote; music ending takes the page away
-        scope.launch {
-            uiState.map { it.musicPlayback.track != null }.distinctUntilChanged().collect { on ->
-                link.update { it.copy(music = on, page = if (on && !it.music) BottomPage.MUSIC else it.page) }
+                pickRecentFilter(recentFilterFor(category?.id, category?.isGamingCategory == true, link.state.value.recentFilters))
             }
         }
         scope.launch {
@@ -105,7 +96,7 @@ class CrossbarBottomScreen(
                 }
             }
         }
-        // the top screen hands Search and Settings to this one while it is attached
+        // the top screen hands Search to this one while it is attached
         scope.launch {
             link.attached.collect { on -> uiState.update { it.copy(secondScreen = on) } }
         }
@@ -160,10 +151,6 @@ class CrossbarBottomScreen(
 
     fun drawerFocused(app: com.echo.feature.appbar.InstalledApp?) = link.drawerFocused(app)
 
-    fun storePreviewed(preview: com.echo.feature.settings.ui.StorePreview?) = link.storePreviewed(preview)
-
-    val storePreview get() = link.storePreview
-
     // the Swap button: the XMB and the companion change screens, and the controller follows the XMB's
     // cursor to its new screen (owner, 2026-10-06)
     fun toggleSwap() {
@@ -184,14 +171,6 @@ class CrossbarBottomScreen(
     fun onButton(action: GamepadAction): Boolean {
         val state = link.state.value
         val page = state.shownPage()
-        if (page == BottomPage.MUSIC) when (musicRemoteKey(action)) {
-            MusicRemoteKey.PLAY_PAUSE -> return true.also { vm.music.musicPlayPause() }
-            MusicRemoteKey.PREV -> return true.also { vm.music.musicPrev() }
-            MusicRemoteKey.NEXT -> return true.also { vm.music.musicNext() }
-            MusicRemoteKey.LEAVE -> return true.also { showPage(BottomPage.RECENT) }
-            MusicRemoteKey.OPTIONS -> return true.also { vm.openMusicOptionsOnCompanion() }
-            null -> Unit
-        }
         when (action) {
             GamepadAction.BACK -> setCompanionActive(false)
             GamepadAction.NAVIGATE_LEFT, GamepadAction.NAVIGATE_RIGHT -> link.update { it.sideStep(action) }

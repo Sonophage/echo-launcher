@@ -130,7 +130,7 @@ class BottomScreenActivity : ComponentActivity() {
         super.onStop()
     }
 
-    // a screen locked here (the App Drawer, Search, Settings) takes keys, so its text fields get the
+    // a screen locked here (Search) takes keys, so its text fields get the
     // keyboard; Search takes key focus at once, as it does on the top screen, so the keyboard opens.
     // The controller's presses then arrive here and are passed on, so they still drive ECHO.
     private fun onLocked(locked: LockedScreenOpen) {

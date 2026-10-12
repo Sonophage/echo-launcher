@@ -38,27 +38,20 @@ import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoAction
 import com.echo.feature.crossbar.viewmodel.firstSection
 import com.echo.feature.crossbar.viewmodel.SearchScope
-import com.echo.feature.settings.ui.SettingsNavHost
 import androidx.compose.runtime.collectAsState
 
-enum class BottomPage(val label: String) { INFO("Info"), RECENT("Recent"), MUSIC("Music") }
+enum class BottomPage(val label: String) { INFO("Info"), RECENT("Recent") }
 
-// what the bottom screen shows over its own pages: the screens a second screen takes from the top one
-// (owner, 2026-10-06), whatever opened them
-internal enum class LockedScreen { NONE, SETTINGS, SEARCH }
+// what the bottom screen shows over its own pages: Search, which a second screen takes from the top one
+// (owner, 2026-10-06), whatever opened it. The App Drawer and Settings are on the Main Screen (ADR 0001)
+internal enum class LockedScreen { NONE, SEARCH }
 
-// stacked as CrossbarShell stacks them: Search over the drawer (the drawer's own search), the drawer over Settings.
-// The App Drawer is on the Main Screen (ADR 0001), so while it is open this screen shows its hovered app
-internal fun lockedScreen(s: CrossbarUiState): LockedScreen = when {
-    s.search != null -> LockedScreen.SEARCH
-    s.activeAppDrawerFilter != null -> LockedScreen.NONE
-    s.activeSettingsScreen != null && s.activeSettingsScreen !in CrossbarViewModel.WIZARD_SCREEN_IDS -> LockedScreen.SETTINGS
-    else -> LockedScreen.NONE
-}
+internal fun lockedScreen(s: CrossbarUiState): LockedScreen =
+    if (s.search != null) LockedScreen.SEARCH else LockedScreen.NONE
 
 // the bottom screen: Info (the running game, else the App Drawer's hovered app, else the cursor's item) or
-// the Recent shelf, and, over them, Search and Settings, which open here on a device with a second screen. Touch
-// drives it, and the controller drives the locked screens through the crossbar as it does on top.
+// the Recent shelf, and, over them, Search, which opens here on a device with a second screen. Touch
+// drives it, and the controller drives Search through the crossbar as it does on top.
 @Composable
 fun BottomScreen(
     state: BottomScreenState,
@@ -81,21 +74,7 @@ fun BottomScreen(
                 .then(if (driven) Modifier.border(3.dp, Color.White.copy(alpha = 0.55f)) else Modifier),
         ) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
-            // a menu asked for here (Y on Recent) opens here, over the page
-            val companionMenu: @Composable () -> Unit = {
-                ui.activeContextMenu?.takeIf { ui.menuOnCompanion }?.let { menu ->
-                    com.echo.core.ui.components.EchoContextMenuOverlay(
-                        state = menu.state,
-                        onRowActivated = crossbar::onContextMenuItemActivatedAt,
-                        onDismiss = crossbar::closeContextMenu,
-                    )
-                }
-            }
             when (locked) {
-                LockedScreen.SETTINGS -> {
-                    SettingsHere(ui, crossbar)
-                    return@BoxWithConstraints
-                }
                 LockedScreen.SEARCH -> {
                     ui.search?.let { search ->
                         SearchScreen(
@@ -114,28 +93,7 @@ fun BottomScreen(
                 }
                 LockedScreen.NONE -> Unit
             }
-            if (page == BottomPage.MUSIC) {
-                // the music remote: the player itself, so the top screen stays free to browse (owner, 2026-10-08)
-                // the scrubber reads the playing position, which only the crossbar's window provided
-                androidx.compose.runtime.CompositionLocalProvider(
-                    com.echo.feature.crossbar.ui.LocalPlaybackPositions provides
-                        remember(crossbar) { com.echo.feature.crossbar.ui.PlaybackPositions(crossbar.musicPositionMs, crossbar.externalPositionMs) },
-                ) {
-                com.echo.feature.crossbar.ui.MusicPlayerScreen(
-                    state = ui.musicPlayback,
-                    onPlayPause = crossbar.music::musicPlayPause,
-                    onPrev = crossbar.music::musicPrev,
-                    onNext = crossbar.music::musicNext,
-                    onSeekTo = crossbar.music::musicSeekTo,
-                    onShuffle = crossbar.music::musicToggleShuffle,
-                    onRepeat = crossbar.music::musicCycleRepeat,
-                    accentArgb = ui.musicAccentArgb,
-                    onBack = { crossbar.bottomScreen.showPage(BottomPage.RECENT) },
-                    showFooter = false,
-                    modifier = Modifier.fillMaxSize().padding(bottom = u.dp(84)),
-                )
-                }
-            } else if (info != null) {
+            if (info != null) {
                 // Info's sections (the sheet, the video) open here without touching the top screen
                 // it opens on achievements, as the top screen's Game Info does
                 var open by remember(info.item.id, info.achievementSet, info.content != null) { mutableStateOf(info.firstSection()) }
@@ -196,8 +154,6 @@ fun BottomScreen(
                     PanelButton(if (p == page) GamepadAction.SELECT else GamepadAction.OPEN_CONTEXT_MENU, p.label, u) { crossbar.bottomScreen.showPage(p) }
                 }
                 Spacer(Modifier.weight(1f))
-                // the remote's way out: Y's options hold Stop & Close; B, or a tap on the player, goes back to Recent
-                if (page == BottomPage.MUSIC) PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u) { crossbar.openMusicOptionsOnCompanion() }
                 // Resume launches the game again, so it is a hold like every launch
                 if (state.playing != null) PanelButton(GamepadAction.SELECT, "Resume", u, holdMs = LAUNCH_HOLD_MS) { crossbar.bottomScreen.resume() }
                 PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Apps", u) { crossbar.onOpenAppDrawer() }
@@ -205,37 +161,8 @@ fun BottomScreen(
                 // the XMB and this screen change places (owner, 2026-10-06)
                 PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.bottomScreen.toggleSwap() }
             }
-            companionMenu()
         }
     }
 }
 
 data class LockedScreenOpen(val open: Boolean, val typing: Boolean)
-
-// Settings as the top screen hosts it (CrossbarShell)
-@Composable
-private fun SettingsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel) {
-    val screenId = ui.activeSettingsScreen ?: return
-    // the store reports its focused theme, which the crossbar's screen shows large
-    CompositionLocalProvider(com.echo.feature.settings.ui.LocalStorePreview provides crossbar.bottomScreen::storePreviewed) {
-    SettingsNavHost(
-        screenId = screenId,
-        onBack = crossbar::onSettingsBack,
-        pendingGamepadAction = ui.pendingSettingsAction,
-        onGamepadActionConsumed = crossbar::consumeSettingsAction,
-        onPromptTapped = crossbar::onPromptTapped,
-        showControllerHint = ui.showSettingsHint,
-        leftBacksOut = ui.leftBacksOut,
-        lastInputWasTouch = ui.lastInputWasTouch,
-        onTouchInteraction = crossbar::markTouchInput,
-        onOpenColorSchemePicker = crossbar.look::openColorSchemePicker,
-        onOpenCustomIcons = crossbar::openCustomIcons,
-        onPreviewBootSequence = crossbar.launching::previewBootSequence,
-        onPreviewGameBoot = crossbar.launching::previewGameBoot,
-        onAddAndroidApps = crossbar::openAndroidLibraryPicker,
-        onGoToLibrary = crossbar::goToLibrary,
-        onOpenScreen = crossbar::onOpenSettingsScreen,
-        modifier = Modifier.fillMaxSize(),
-    )
-    }
-}

@@ -152,7 +152,6 @@ fun CrossbarShellContainer(
     onSettingsLongPress: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val storePreview by viewModel.bottomScreen.storePreview.collectAsStateWithLifecycle()
     val recentGameId = uiState.currentItems.getOrNull(uiState.selectedItemIndex)?.gameId.takeIf { uiState.onLastPlayedHome }
     val recentAchievements by remember(recentGameId) { viewModel.gameDetail.achievementsStatFor(recentGameId) }
         .collectAsState(initial = null)
@@ -306,7 +305,6 @@ fun CrossbarShellContainer(
         onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
         onDrawerFocused = viewModel.bottomScreen::drawerFocused,
         recentAchievements = recentAchievements,
-        storePreview = storePreview,
         onProfileSet = viewModel.panel::onProfileSetTapped,
         onProfileBadge = viewModel.panel::onProfileBadgeTapped,
         onProfileFilter = viewModel.panel::onProfileFilterTapped,
@@ -506,7 +504,6 @@ fun CrossbarShell(
     // the App Drawer's hovered app, for the Companion Screen to show
     onDrawerFocused: (com.echo.feature.appbar.InstalledApp?) -> Unit = {},
     recentAchievements: String? = null,
-    storePreview: com.echo.feature.settings.ui.StorePreview? = null,
     onProfileSet: (Int) -> Unit = {},
     onProfileBadge: (Int) -> Unit = {},
     onProfileFilter: (com.echo.feature.crossbar.viewmodel.BadgeFilter) -> Unit = {},
@@ -835,7 +832,7 @@ fun CrossbarShell(
 
             if (uiState.activeAppDrawerFilter == null &&
                 uiState.topSearch == null &&
-                uiState.topSettingsScreen == null &&
+                uiState.activeSettingsScreen == null &&
                 uiState.activeVideoId == null &&
                 // Custom Icons is a side rail now, so the crossbar stays drawn behind it and shows each pick live
                 uiState.activePhotoViewer == null
@@ -1083,7 +1080,7 @@ fun CrossbarShell(
             val battery = rememberBatteryReading()
             CompositionLocalProvider(LocalDensity provides baseDensity) {
             CrossbarStatusStrip(
-                live = liveActivity.takeIf { !notificationsOpen && uiState.topSettingsScreen == null },
+                live = liveActivity.takeIf { !notificationsOpen && uiState.activeSettingsScreen == null },
 
                 onLiveAreaTapped = if (islandIsRecent) onLaunchRecentTop else onNotificationsToggled,
 
@@ -1203,7 +1200,7 @@ fun CrossbarShell(
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().zIndex(aboveContextRail),
             ) {
                 CompositionLocalProvider(LocalDensity provides baseDensity) {
-                    val hintItem = uiState.focusedItem?.takeIf { uiState.topSettingsScreen == null }
+                    val hintItem = uiState.focusedItem?.takeIf { uiState.activeSettingsScreen == null }
                     val hintIcon = rememberAppIcon(hintItem?.packageName)
                     CrossbarHintBar(
                         prompts = promptsFor(uiState),
@@ -1227,7 +1224,7 @@ fun CrossbarShell(
             ) {
             if (uiState.colorSchemePicker == null) {
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
-                                    uiState.topSettingsScreen?.let { screenId ->
+                                    uiState.activeSettingsScreen?.let { screenId ->
                         SettingsNavHost(
                             screenId = screenId,
                             onBack = onCloseSettingsScreen,
@@ -1319,9 +1316,6 @@ fun CrossbarShell(
                 }
             }
 
-            // with two screens, the theme store is on the companion and its focused theme shows here (owner, 2026-10-08)
-            if (uiState.secondScreen && uiState.activeSettingsScreen != null) storePreview?.let { StorePreviewHero(it) }
-
             // with two screens, Search types on the companion and shows its results here (owner, 2026-10-08)
             (uiState.topSearch ?: uiState.search?.takeIf { uiState.secondScreen })?.let { search ->
                 SearchScreen(
@@ -1388,8 +1382,8 @@ fun CrossbarShell(
                 )
             }
 
-            // a menu asked for on the second screen is drawn there
-            uiState.activeContextMenu?.takeUnless { uiState.menuOnCompanion && uiState.secondScreen }?.let { menu ->
+            // every menu is drawn here, on the Main Screen (ADR 0001)
+            uiState.activeContextMenu?.let { menu ->
 
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
                     EchoContextMenuOverlay(
@@ -1821,22 +1815,5 @@ private fun hintTile(item: CrossbarItem, icon: ImageBitmap?): (@Composable () ->
         }
         icon != null -> { -> androidx.compose.foundation.Image(icon, null, Modifier.fillMaxSize()) }
         else -> null
-    }
-}
-
-// the store's focused theme on the crossbar's screen: its picture filling the screen, its name over it
-@Composable
-private fun StorePreviewHero(preview: com.echo.feature.settings.ui.StorePreview) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
-        val u = com.echo.core.ui.design.panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
-        preview.picture?.let {
-            AsyncImage(model = rememberArtworkModel(it), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        }
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
-        Column(Modifier.align(Alignment.BottomStart).padding(start = u.dp(64), bottom = u.dp(56)), verticalArrangement = Arrangement.spacedBy(u.dp(6))) {
-            Text("PREVIEW", style = u.eyebrow(), color = Color.White.copy(alpha = 0.75f))
-            Text(preview.name, color = Color.White, fontSize = u.sp(40), fontWeight = androidx.compose.ui.text.font.FontWeight.Light, maxLines = 1)
-            if (preview.line.isNotBlank()) Text(preview.line, color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(15), maxLines = 1)
-        }
     }
 }

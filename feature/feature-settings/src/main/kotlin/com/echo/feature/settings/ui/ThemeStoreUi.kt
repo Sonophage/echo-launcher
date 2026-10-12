@@ -83,12 +83,11 @@ import com.echo.feature.settings.viewmodel.ThemePage
 import com.echo.feature.settings.viewmodel.ThemesSettingsViewModel
 import com.echo.themekit.ThemePart
 
-// the theme the store has in focus, for a second screen to show large (owner, 2026-10-08): with two screens the
-// store is on the companion and the crossbar's screen shows the theme. picture is its wallpaper, or on its page
-// the screenshot in view
+// the theme the store has in focus, for a Companion Screen to preview. The store is on the Main Screen and
+// always draws its own hero (ADR 0001). picture is its wallpaper, or on its page the screenshot in view
 data class StorePreview(val name: String, val line: String, val picture: String?, val accentArgb: Long? = null)
 
-// set by a host with a second screen; null on one screen, where the store's own hero shows the theme
+// set by a host that wants the focused theme reported; null when nothing listens
 val LocalStorePreview = androidx.compose.runtime.compositionLocalOf<((StorePreview?) -> Unit)?> { null }
 
 // a card in the theme store: a saved theme or an online one
@@ -267,8 +266,7 @@ fun ThemeStoreScreen(
         ) {
             // the hero stays put above the shelves, so it is never scrolled under the tab row
             Column(Modifier.fillMaxSize()) {
-            // with a second screen the theme shows large there, so the shelves take this screen
-            if (LocalStorePreview.current == null) StoreHero(featured, featuredSection == "online")
+            StoreHero(featured, featuredSection == "online")
             // two shelves: the store scrolls itself (the first to the top, the last to the bottom), since the
             // scaffold's own scrolling measures rows from the top of the page and would slide one under the hero
             val scroll = rememberScrollState()
