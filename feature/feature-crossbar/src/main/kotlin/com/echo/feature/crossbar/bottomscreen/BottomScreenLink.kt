@@ -81,6 +81,13 @@ class BottomScreenLink @Inject constructor() {
 
     fun hostShown(shown: Boolean) { _hostShown.value = shown }
 
+    // counts the Companion's keyboard claims that have handed focus back: the Main Screen's window keeps its own
+    // focus through the claim, so it hears of the end here, not in onWindowFocusChanged
+    private val _keyboardClaims = MutableStateFlow(0)
+    val keyboardClaims: StateFlow<Int> = _keyboardClaims.asStateFlow()
+
+    fun keyboardClaimEnded() { _keyboardClaims.update { it + 1 } }
+
     fun bind(crossbar: CrossbarViewModel) { _crossbar.value = crossbar }
 
     // a crossbar going away clears only itself, not one that has replaced it

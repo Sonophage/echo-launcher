@@ -109,6 +109,7 @@ class BottomScreenActivity : ComponentActivity() {
         if (keys == CompanionKeys.HOLD) return
         takeKeys(false)
         if (link.hostShown.value) handFocusBack()
+        link.keyboardClaimEnded()
     }
 
     private var keys = CompanionKeys.NONE

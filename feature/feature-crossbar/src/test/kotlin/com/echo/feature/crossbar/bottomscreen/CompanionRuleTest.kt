@@ -182,7 +182,7 @@ class CompanionRuleTest {
     // keyboard on the way: the field kept its cursor, A typed nothing (7a73e691). The Main Screen shows it again
     // when its window gets focus back while typing; only then, so a keyboard put away is not brought back
     @Test
-    fun `the Main Screen shows the keyboard again when focus comes back from the Companion's claim`() {
+    fun `the Main Screen shows the keyboard again when the Companion's claim ends`() {
         val dual = CrossbarUiState(secondDisplayPresent = true, secondScreenEnabled = true, secondScreen = true)
         val search = dual.copy(search = SearchState(scope = SearchScope.ALL))
         assertTrue("Search open, focus back from the claim", reshowsKeyboard(windowFocused = true, search))

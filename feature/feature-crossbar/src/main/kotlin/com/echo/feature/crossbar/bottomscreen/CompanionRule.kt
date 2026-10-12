@@ -94,8 +94,9 @@ fun companionKeys(s: CrossbarUiState): CompanionKeys = when {
     else -> CompanionKeys.CLAIM
 }
 
-// the Main Screen's window got focus back while typing with a Companion attached: that is the end of the Companion's
-// CLAIM, and the focus round trip hid the keyboard, so the Main Screen shows it again for its field
+// the Companion's CLAIM has ended while typing with a Companion attached and the Main Screen's window has focus: the
+// claim moved the focused display away and back, which hid the keyboard, so the Main Screen shows it again for its
+// field. The window keeps its own focus through the claim (seen on the Thor), so the end comes through the link
 fun reshowsKeyboard(windowFocused: Boolean, s: CrossbarUiState): Boolean =
     windowFocused && s.secondScreen && companionKeys(s) == CompanionKeys.CLAIM
 

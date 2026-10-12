@@ -3,6 +3,7 @@ package com.echo.launcher
 import com.echo.feature.crossbar.viewmodel.ceremonyPlaying
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.drop
 import com.echo.core.domain.model.GamepadAction
 import android.Manifest
 import android.annotation.SuppressLint
@@ -114,6 +115,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         startMenuMusicIfWanted()
+        reshowKeyboardAfterClaims()
         // shows the second screen each time ECHO comes to the front, and at once when Dual is chosen
         // again in Quick settings
         lifecycleScope.launch {
@@ -315,14 +317,18 @@ class MainActivity : ComponentActivity() {
 
     private val keyboard = AskedKeyboard()
 
-    // the Companion's keyboard claim takes focus from this window and gives it back, and Android hides the
-    // keyboard on the way; shown again here for the field, once focus has settled
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (com.echo.feature.crossbar.bottomscreen.reshowsKeyboard(hasFocus, crossbarViewModel.uiState.value)) {
-            window.decorView.post {
-                WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.ime())
-                keyboard.typing(true)
+    // the Companion's keyboard claim moves Android's focused display away from this window and back, and
+    // Android hides the keyboard on the way; this window keeps its own focus throughout, so the claim's end
+    // is heard through the link and the keyboard is shown again for the field
+    private fun reshowKeyboardAfterClaims() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                bottomScreenLink.keyboardClaims.drop(1).collect {
+                    if (com.echo.feature.crossbar.bottomscreen.reshowsKeyboard(hasWindowFocus(), crossbarViewModel.uiState.value)) {
+                        WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.ime())
+                        keyboard.typing(true)
+                    }
+                }
             }
         }
     }
