@@ -161,8 +161,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             com.echo.feature.crossbar.ui.EchoRoot(menuSoundPlayer, uiMediaStore, uiMediaAudioPlayer) {
                 val ui by crossbarViewModel.uiState.collectAsState()
-                if (ui.secondScreen && ui.screensSwapped) {
-                    // owner, 2026-10-06: swapped, this screen shows the companion and the XMB moves to the second one
+                if (com.echo.feature.crossbar.bottomscreen.firstDisplayShowsCompanion(ui)) {
+                    // Swap: the Companion Screen is drawn here, and the Main Screen is on the second display, or
+                    // hidden until the next Swap on a device with one display (ADR 0001)
                     val bottom by bottomScreenLink.state.collectAsState()
                     com.echo.feature.crossbar.bottomscreen.BottomScreen(bottom, crossbarViewModel)
                 } else {
