@@ -40,6 +40,7 @@ class TogglePairTest {
             appContextMenuItems(state.copy(recentPins = if (it) listOf("a:com.app") else emptyList()), null, false, "com.app")
         },
         Toggle("game pin in its column", setOf("pin_category", "unpin_category")) { gameContextMenuItems(game(pinned = it), state, 1, false, null) },
+        Toggle("app Mark as Game", setOf("mark_game", "unmark_game")) { appContextMenuItems(state, null, false, "com.app", isGame = it) },
         Toggle("app Pin to Top", setOf("pin", "unpin")) { appContextMenuItems(state, "retro", false, "com.app", pinnedInCategory = it) },
     )
 
@@ -47,6 +48,7 @@ class TogglePairTest {
     private fun undo(label: String): String = when {
         label.startsWith("Add to ") -> "Remove from " + label.removePrefix("Add to ")
         label.startsWith("Pin to ") -> "Unpin from " + label.removePrefix("Pin to ")
+        label.startsWith("Mark as ") -> "Unmark as " + label.removePrefix("Mark as ")
         label.startsWith("Allow ") -> "Block " + label.removePrefix("Allow ")
         else -> error("'$label' is not the off half of a known pair")
     }

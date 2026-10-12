@@ -68,7 +68,7 @@ class MenuLabelsTest {
         "Android game" to gameContextMenuItems(game(PlatformIds.ANDROID, "com.game"), inRetro, 1, false, null),
         "PC game" to gameContextMenuItems(game(PlatformIds.WINDOWS), inRetro.copy(categories = listOf(games), selectedCategoryIndex = 0), 1, false, null),
         "app" to appContextMenuItems(inRetro, "retro", onRecentShelf = true, packageName = "com.app") +
-            appContextMenuItems(inRetro, "retro", onRecentShelf = false, packageName = "com.app", isFavorite = true, pinnedInCategory = true),
+            appContextMenuItems(inRetro, "retro", onRecentShelf = false, packageName = "com.app", isFavorite = true, pinnedInCategory = true, isGame = true),
         "video file" to videoFileContextMenuItems(isFavorite = true, resumePositionMs = 5, hasWatchStamp = true, inPlaylist = true) +
             videoFileContextMenuItems(isFavorite = false, resumePositionMs = 0, hasWatchStamp = false, inPlaylist = false),
         "Shelves" to shelvesPickerItems(current = null),

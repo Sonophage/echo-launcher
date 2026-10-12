@@ -245,6 +245,18 @@ class CrossbarGames(
         }
     }
 
+    // Unmark as Game, from a game's menu or an app's: the row is an app shortcut again
+    internal suspend fun unmarkAsGame(gameId: Long) {
+        vm.gameRepository.getById(gameId)?.let { g ->
+            vm.gameRepository.upsert(g.copy(
+                platformId  = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
+                contentType = GameContentType.ANDROID_APP,
+            ))
+        }
+        memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
+        vm.loadItemsForCategory(vm.currentCategory())
+    }
+
     internal fun toggleGameFavorite(gameId: Long, isFavorite: Boolean) {
         scope.launch {
             vm.gameRepository.setFavorite(gameId, isFavorite)
@@ -391,16 +403,7 @@ class CrossbarGames(
 
             "unmark_game"            -> {
                 val gid = gameId
-                vm.appAction {
-                    vm.gameRepository.getById(gid)?.let { g ->
-                        vm.gameRepository.upsert(g.copy(
-                            platformId  = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
-                            contentType = GameContentType.ANDROID_APP,
-                        ))
-                    }
-                    memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
-                    vm.loadItemsForCategory(vm.currentCategory())
-                }
+                vm.appAction { unmarkAsGame(gid) }
             }
         }
     }

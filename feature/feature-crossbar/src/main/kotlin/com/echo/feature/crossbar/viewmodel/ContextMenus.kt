@@ -121,10 +121,14 @@ internal fun appContextMenuItems(
     packageName: String? = null,
     isFavorite: Boolean = false,
     pinnedInCategory: Boolean = false,
+    isGame: Boolean = false,
 ): List<CrossbarContextMenuItem> = buildList {
     add(CrossbarContextMenuItem("launch", "Launch"))
 
-    add(CrossbarContextMenuItem("mark_game", "Mark as Game", group = MenuGroup.ORGANIZE))
+    add(
+        if (isGame) CrossbarContextMenuItem("unmark_game", "Unmark as Game", group = MenuGroup.ORGANIZE)
+        else CrossbarContextMenuItem("mark_game", "Mark as Game", group = MenuGroup.ORGANIZE),
+    )
     add(favoritesRow(isFavorite))
     packageName?.let { add(recentPinRow("a:$it" in state.recentPins)) }
     if (onRecentShelf) {

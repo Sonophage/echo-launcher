@@ -416,9 +416,7 @@ class AppDrawerViewModel @Inject constructor(
 
         viewModelScope.launch {
             val entry = gameRepository.getAppEntry(app.packageName)
-            val isGame = entry != null &&
-                entry.platformId == ANDROID_PLATFORM_ID &&
-                entry.contentType == com.echo.core.domain.model.GameContentType.GAME
+            val isGame = entry?.isMarkedAsGame == true
             _uiState.update {
                 if (it.menuApp?.packageName == app.packageName) it.copy(menuAppIsGame = isGame) else it
             }

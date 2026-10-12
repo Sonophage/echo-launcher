@@ -71,6 +71,9 @@ data class Game(
 ) {
     val displayTitle: String get() = userTitleOverride ?: scrapedTitle ?: title
 
+    // an app's row after Mark as Game: a game in the Android system. Its menus offer Unmark as Game
+    val isMarkedAsGame: Boolean get() = platformId == PlatformIds.ANDROID && contentType == GameContentType.GAME
+
     val discFaceUri: String? get() = listOfNotNull(artworkUri, iconUri)
         .firstOrNull { it.isNotBlank() }
 }
