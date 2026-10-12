@@ -20,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import com.echo.core.ui.components.rowsShown
+import com.echo.core.ui.components.MenuGroup
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppDrawerViewModelTest {
@@ -273,6 +274,53 @@ class AppDrawerViewModelTest {
         viewModel.onMenuAction(AppMenuAction.LAUNCH_OTHER_SCREEN)
         testDispatcher.scheduler.advanceUntilIdle()
         verify(exactly = 1) { repository.launchApp("com.example.browser", otherScreen = true) }
+    }
+
+    private fun appRow(id: Long, favorite: Boolean = false, game: Boolean = false) = com.echo.core.domain.model.Game(
+        id = id, title = "Browser", packageName = "com.example.browser", isFavorite = favorite,
+        platformId = if (game) com.echo.core.domain.model.PlatformIds.ANDROID else com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
+        contentType = if (game) com.echo.core.domain.model.GameContentType.GAME else com.echo.core.domain.model.GameContentType.ANDROID_APP,
+    )
+
+    private fun openBrowserMenu() {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.openAppMenu(viewModel.uiState.value.allApps.first { it.packageName == "com.example.browser" })
+        testDispatcher.scheduler.advanceUntilIdle()
+    }
+
+    private val drawnActions get() = viewModel.uiState.value.appMenu!!.rows.map { it.action }
+
+    // Favorites is one set over games, apps, videos and photos; an app is in it through its row in games, and the
+    // pair is under Organize (spec #2 story 20, owner 2026-10-12)
+    @Test
+    fun `the drawer's app menu shows the Favorites half that fits and sets the app's row in games`() = runTest {
+        coEvery { games.getAppEntry("com.example.browser") } returns appRow(7, favorite = true)
+        openBrowserMenu()
+        assertTrue("a favourite offers Remove from Favorites: $drawnActions", AppMenuAction.REMOVE_FROM_FAVORITES in drawnActions)
+        assertFalse(AppMenuAction.ADD_TO_FAVORITES in drawnActions)
+        assertEquals(MenuGroup.ORGANIZE, AppMenuAction.REMOVE_FROM_FAVORITES.group)
+        chooseDrawn(AppMenuAction.REMOVE_FROM_FAVORITES)
+        testDispatcher.scheduler.advanceUntilIdle()
+        io.mockk.coVerify { games.setFavorite(7, false) }
+
+        // an app not yet in games gets its shortcut row, which is then the favourite
+        coEvery { games.getAppEntry("com.example.browser") } returns null
+        coEvery { games.upsert(any()) } returns 9L
+        openBrowserMenu()
+        assertTrue("an app off the list offers Add to Favorites: $drawnActions", AppMenuAction.ADD_TO_FAVORITES in drawnActions)
+        chooseDrawn(AppMenuAction.ADD_TO_FAVORITES)
+        testDispatcher.scheduler.advanceUntilIdle()
+        io.mockk.coVerify { games.upsert(match { it.packageName == "com.example.browser" && it.platformId == com.echo.core.domain.model.PlatformIds.APP_SHORTCUT }) }
+        io.mockk.coVerify { games.setFavorite(9, true) }
+    }
+
+    // the drawn menu, not only menuActions, shows Unmark as Game once the app's row is read (ticket #15)
+    @Test
+    fun `the drawer's drawn menu offers Unmark as Game for an app marked as a game`() = runTest {
+        coEvery { games.getAppEntry("com.example.browser") } returns appRow(7, game = true)
+        openBrowserMenu()
+        assertTrue("drawn: $drawnActions", AppMenuAction.UNMARK_GAME in drawnActions)
+        assertFalse(AppMenuAction.MARK_GAME in drawnActions)
     }
 
     private fun drawerWithNothingUsed(usageAccess: Boolean): AppDrawerViewModel {

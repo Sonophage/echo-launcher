@@ -4312,16 +4312,7 @@ class CrossbarViewModel @Inject constructor(
                 context.packageManager.getApplicationInfo(packageName, 0)
             ).toString()
         }.getOrDefault(packageName)
-        return gameRepository.upsert(
-            Game(
-                title         = label,
-
-                platformId    = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
-                packageName   = packageName,
-                isManualEntry = true,
-                contentType   = GameContentType.ANDROID_APP,
-            )
-        )
+        return gameRepository.upsert(com.echo.core.domain.model.appShortcut(packageName, label))
     }
 
     fun onOpenSettingsScreen(screenId: String) {

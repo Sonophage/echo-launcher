@@ -93,3 +93,12 @@ fun appCovers(games: List<Game>): Map<String, String> =
             owned.singleOrNull()?.let { g -> coverArtOf(g.iconUri, g.artworkUri)?.let { pkg to it } }
         }
         .toMap()
+
+// a new row in games for an Android app, so it can be a favourite, have art or be renamed like a game
+fun appShortcut(packageName: String, title: String): Game = Game(
+    title         = title,
+    platformId    = PlatformIds.APP_SHORTCUT,
+    packageName   = packageName,
+    isManualEntry = true,
+    contentType   = GameContentType.ANDROID_APP,
+)
