@@ -32,7 +32,6 @@ import com.echo.feature.crossbar.ui.GameInfoScreen
 import com.echo.feature.crossbar.ui.LastPlayedPage
 import com.echo.feature.crossbar.ui.RecentFilterRow
 import androidx.compose.foundation.lazy.rememberLazyListState
-import com.echo.feature.crossbar.ui.SearchScreen
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoAction
@@ -43,21 +42,21 @@ import androidx.compose.runtime.collectAsState
 
 enum class BottomPage(val label: String) { INFO("Info"), RECENT("Recent"), MUSIC("Music") }
 
-// what the bottom screen shows over its own pages: the screens a second screen takes from the top one
-// (owner, 2026-10-06), whatever opened them
-internal enum class LockedScreen { NONE, SETTINGS, SEARCH }
+// what the bottom screen shows over its own pages: Settings, which a second screen takes from the top one
+// (owner, 2026-10-06), whatever opened it
+internal enum class LockedScreen { NONE, SETTINGS }
 
-// stacked as CrossbarShell stacks them: Search over the drawer (the drawer's own search), the drawer over Settings.
-// The App Drawer is on the Main Screen (ADR 0001), so while it is open this screen shows its hovered app
+// stacked as CrossbarShell stacks them: the drawer over Settings. The App Drawer and Search are on the Main
+// Screen (ADR 0001): while the drawer is open this screen shows its hovered app, and while Search is open it
+// shows the keyboard, which the Thor puts here, over its page
 internal fun lockedScreen(s: CrossbarUiState): LockedScreen = when {
-    s.search != null -> LockedScreen.SEARCH
     s.activeAppDrawerFilter != null -> LockedScreen.NONE
     s.activeSettingsScreen != null && s.activeSettingsScreen !in CrossbarViewModel.WIZARD_SCREEN_IDS -> LockedScreen.SETTINGS
     else -> LockedScreen.NONE
 }
 
 // the bottom screen: Info (the running game, else the App Drawer's hovered app, else the cursor's item) or
-// the Recent shelf, and, over them, Search and Settings, which open here on a device with a second screen. Touch
+// the Recent shelf, and, over them, Settings, which opens here on a device with a second screen. Touch
 // drives it, and the controller drives the locked screens through the crossbar as it does on top.
 @Composable
 fun BottomScreen(
@@ -70,7 +69,7 @@ fun BottomScreen(
     val ui by crossbar.uiState.collectAsState()
     val page = state.shownPage()
     val locked = lockedScreen(ui)
-    LaunchedEffect(locked) { onLocked(LockedScreenOpen(open = locked != LockedScreen.NONE, typing = locked == LockedScreen.SEARCH)) }
+    LaunchedEffect(locked) { onLocked(LockedScreenOpen(open = locked != LockedScreen.NONE, typing = false)) }
     val info = state.shownInfo().takeIf { page == BottomPage.INFO }
     // the screen the controller drives is outlined (owner, 2026-10-06: a tap gives the controller to the screen tapped)
     val driven = ui.secondScreen && ui.companionActive
@@ -94,22 +93,6 @@ fun BottomScreen(
             when (locked) {
                 LockedScreen.SETTINGS -> {
                     SettingsHere(ui, crossbar)
-                    return@BoxWithConstraints
-                }
-                LockedScreen.SEARCH -> {
-                    ui.search?.let { search ->
-                        SearchScreen(
-                            state = search,
-                            onQueryChange = crossbar.librarySearch::onSearchQueryChange,
-                            onActivateAt = crossbar.librarySearch::onSearchActivatedAt,
-                            onBack = crossbar.librarySearch::closeSearch,
-                            onFocusAt = crossbar.librarySearch::onSearchFocusedAt,
-                            onOptionsAt = crossbar.librarySearch::onSearchOptionsAt,
-                            onKindPicked = crossbar.librarySearch::pickSearchKind,
-                            // the keyboard and field here, the results on the crossbar's screen (owner, 2026-10-08)
-                            part = com.echo.feature.crossbar.ui.SearchPart.FIELD,
-                        )
-                    }
                     return@BoxWithConstraints
                 }
                 LockedScreen.NONE -> Unit
