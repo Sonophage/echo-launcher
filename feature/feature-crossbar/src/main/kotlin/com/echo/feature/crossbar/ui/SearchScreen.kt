@@ -118,11 +118,9 @@ fun SearchScreen(
     onKindPicked: (SearchKind?) -> Unit = {},
     // the crossbar's wave, which runs behind the shelf (owner, 2026-10-05: in place of the design's pegboard)
     waveStyle: com.echo.core.ui.wave.WaveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
-    // with two screens, the field types on one and the results show on the other (owner, 2026-10-08)
-    part: SearchPart = SearchPart.ALL,
 ) {
     val focusRequester = remember { FocusRequester() }
-    if (part != SearchPart.RESULTS) LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
     val empty = state.rows.singleOrNull()?.takeIf { it.type == CrossbarItemType.EMPTY }
     val focused = state.rows.getOrNull(state.selectedIndex)?.takeIf { empty == null }
@@ -137,10 +135,7 @@ fun SearchScreen(
             .filmGrain(0.16f),
     ) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
-        // the results half never has the keyboard, so it lays out as if none were up
-        val imeUp = part != SearchPart.RESULTS && WindowInsets.ime.getBottom(LocalDensity.current) > 0
-        val showField = part != SearchPart.RESULTS
-        val showResults = part != SearchPart.FIELD
+        val imeUp = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
         if (art != null) {
             AsyncImage(
@@ -163,7 +158,7 @@ fun SearchScreen(
                 .then(if (imeUp) Modifier.imePadding() else Modifier),
             verticalArrangement = Arrangement.spacedBy(u.dp(12)),
         ) {
-            if (showField) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 EchoSearchField(
                     query = state.query,
                     active = true,
@@ -186,15 +181,7 @@ fun SearchScreen(
                         modifier = Modifier.padding(start = u.dp(16)))
                 }
             }
-            if (part == SearchPart.FIELD) {
-                Text("Results are on the other screen", color = Color.White.copy(alpha = 0.6f), fontSize = u.sp(13),
-                    modifier = Modifier.align(Alignment.CenterHorizontally))
-            }
-            if (part == SearchPart.RESULTS && state.query.isNotBlank()) {
-                Text("“${state.query}”${if (state.total > 0) " · ${state.total} result${if (state.total == 1) "" else "s"}" else ""}",
-                    color = Color.White.copy(alpha = 0.75f), fontSize = u.sp(15), modifier = Modifier.padding(horizontal = u.dp(64)))
-            }
-            if (showResults) when {
+            when {
                 empty != null -> Box(Modifier.padding(horizontal = u.dp(64))) { EmptyNotice(empty, u) }
                 focused != null -> {
                     // the Titan 2's keyboard is hardware: its keyboard strip is a sliver, so there is room for what this is
@@ -204,7 +191,7 @@ fun SearchScreen(
             }
         }
 
-        if (!imeUp && part == SearchPart.ALL || part == SearchPart.RESULTS) {
+        if (!imeUp) {
             EchoHintBar(
                 // owner, 2026-10-06: the kind filter is the footer's, LT/RT and the current kind with its count
                 filter = searchKindFilter(state)?.let { (label, next) -> { TriggerFilter(label) { onKindPicked(next) } } },
@@ -227,10 +214,6 @@ fun SearchScreen(
         }
     }
 }
-
-// which half of Search a screen draws: ALL on one screen; with two, FIELD where the keyboard is and RESULTS on the
-// other screen, both from the one SearchState
-enum class SearchPart { ALL, FIELD, RESULTS }
 
 // the kind filter's word (All, then each kind the results hold, with its count) and the kind a tap moves to
 internal fun searchKindFilter(state: SearchState): Pair<String, SearchKind?>? {

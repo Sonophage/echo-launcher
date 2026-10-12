@@ -834,7 +834,7 @@ fun CrossbarShell(
             val androidAccess = remember(notificationsOpen) { AndroidNotifications.isEnabled(strip) }
 
             if (uiState.activeAppDrawerFilter == null &&
-                uiState.topSearch == null &&
+                uiState.search == null &&
                 uiState.topSettingsScreen == null &&
                 uiState.activeVideoId == null &&
                 // Custom Icons is a side rail now, so the crossbar stays drawn behind it and shows each pick live
@@ -1109,7 +1109,7 @@ fun CrossbarShell(
 
                 compact = !crossbarContext,
                 // Search has its own field across the top, so the island rests as its orb there too (owner, 2026-10-05)
-                minimized = uiState.activeAppDrawerFilter != null || uiState.topSearch != null,
+                minimized = uiState.activeAppDrawerFilter != null || uiState.search != null,
                 battery = battery,
 
                 // owner, 2026-10-06: the panel's tabs and the drawer's sections are in their footers now, as LT/RT and
@@ -1322,11 +1322,10 @@ fun CrossbarShell(
             // with two screens, the theme store is on the companion and its focused theme shows here (owner, 2026-10-08)
             if (uiState.secondScreen && uiState.activeSettingsScreen != null) storePreview?.let { StorePreviewHero(it) }
 
-            // with two screens, Search types on the companion and shows its results here (owner, 2026-10-08)
-            (uiState.topSearch ?: uiState.search?.takeIf { uiState.secondScreen })?.let { search ->
+            // Search, its field and its results, is on the Main Screen; with a Companion Screen the keyboard
+            // shows there (ADR 0001)
+            uiState.search?.let { search ->
                 SearchScreen(
-                    part = if (uiState.topSearch == null) com.echo.feature.crossbar.ui.SearchPart.RESULTS
-                    else com.echo.feature.crossbar.ui.SearchPart.ALL,
                     state = search,
                     onQueryChange = onSearchQueryChange,
                     onActivateAt = onSearchActivatedAt,

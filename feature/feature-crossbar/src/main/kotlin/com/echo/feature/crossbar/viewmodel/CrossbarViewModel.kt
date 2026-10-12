@@ -848,11 +848,8 @@ data class CrossbarUiState(
             activeVideoId == null && activePhotoViewer == null &&
             musicTrackPicker == null && !musicPlayerVisible
 
-    // owner, 2026-10-06: with a second screen, Search and Settings open there whatever opened them; the
-    // first-run wizard stays on this screen. These are what this screen draws.
-    val topSearch: SearchState?
-        get() = search?.takeUnless { secondScreen }
-
+    // owner, 2026-10-06: with a second screen, Settings opens there whatever opened it; the first-run wizard
+    // stays on this screen. This is what this screen draws. Search is on the Main Screen (ADR 0001).
     val topSettingsScreen: String?
         get() = activeSettingsScreen?.takeUnless { secondScreen && it !in CrossbarViewModel.WIZARD_SCREEN_IDS }
 
@@ -863,7 +860,7 @@ data class CrossbarUiState(
             activeAppDrawerFilter != null ||
             gameInfo != null ||
             profile != null ||
-            topSearch != null
+            search != null
 
     private val fullscreenOverlay: Boolean
         get() = showBootSequence ||

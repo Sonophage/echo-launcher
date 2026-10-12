@@ -4,6 +4,8 @@ import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.domain.model.Category
 import com.echo.core.domain.model.CategoryType
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
+import com.echo.feature.crossbar.viewmodel.SearchScope
+import com.echo.feature.crossbar.viewmodel.SearchState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -18,6 +20,7 @@ class MainScreenRollbackGuardTest {
         val waveShown: Boolean,
         val hasBlockingOverlay: Boolean,
         val enterOpensAppDrawer: Boolean,
+        val search: SearchState?,
     )
 
     private fun mainScreen(s: CrossbarUiState) = MainScreen(
@@ -25,6 +28,7 @@ class MainScreenRollbackGuardTest {
         waveShown = s.waveShown,
         hasBlockingOverlay = s.hasBlockingOverlay,
         enterOpensAppDrawer = s.enterOpensAppDrawer,
+        search = s.search,
     )
 
     private fun column(id: String, position: Int) =
@@ -41,6 +45,7 @@ class MainScreenRollbackGuardTest {
     private val cases = mapOf(
         "Recent is a column on the Crossbar" to crossbar,
         "the App Drawer opens on the Main Screen" to crossbar.copy(activeAppDrawerFilter = "APPS"),
+        "Search, its field and its results, opens on the Main Screen" to crossbar.copy(search = SearchState(scope = SearchScope.ALL)),
     )
 
     @Test
