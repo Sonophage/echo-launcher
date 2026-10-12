@@ -40,8 +40,7 @@ class KnownEmulatorCatalogTest {
     // a DS or 3DS emulator draws both screens itself, so it must always open on the Main Screen's display
     @Test
     fun `every DS and 3DS emulator in the catalog opens on the Main Screen's display`() {
-        val ds = setOf("nds", "ds", "n3ds", "3ds")
-        val dsPackages = KnownEmulatorCatalog.entries.filter { it.platformIds.any(ds::contains) }.flatMap { it.packageNames }
+        val dsPackages = KnownEmulatorCatalog.entries.filter { it.platformIds.any(KnownEmulatorPackages.dualScreenPlatforms::contains) }.flatMap { it.packageNames }
         assertTrue(dsPackages.size >= 8, "found only $dsPackages; the scan is broken")
         val missed = dsPackages.filterNot { KnownEmulatorPackages.isDualScreen(it) }
         assertTrue(missed.isEmpty(), "Add to KnownEmulatorPackages' DS and 3DS set: $missed")

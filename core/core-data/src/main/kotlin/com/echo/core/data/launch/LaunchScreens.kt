@@ -20,7 +20,7 @@ import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 
 // the Launch Screen (CONTEXT.md): the display a game or app opens on. A launch made by ECHO goes to the
-// display ECHO last launched that package on, or to the Main Screen's display the first time. The choice
+// display ECHO last launched that game or app on, or to the Main Screen's display the first time. The choice
 // is device-local, as display ids mean nothing on another device, so the backup does not carry it.
 @Singleton
 class LaunchScreens @Inject constructor(
@@ -29,18 +29,23 @@ class LaunchScreens @Inject constructor(
     // set by the crossbar: true while a Swap has put the Main Screen on the second display
     @Volatile var mainOnSecond: Boolean = false
 
+    // the Main Screen's display. Media opened in another app (music, video, photo, book) and an app ECHO opens
+    // without knowing its package (the camera, a browser, a system settings screen) open here, not through
+    // displayFor: the Launch Screen is for games and apps (CONTEXT.md)
     fun mainDisplay(): Int = if (mainOnSecond) secondDisplay(context)?.displayId ?: Display.DEFAULT_DISPLAY else Display.DEFAULT_DISPLAY
 
     fun hasOtherScreen(): Boolean = secondDisplay(context) != null
 
-    // the display to start packageName on, which becomes its Launch Screen. Remembered before the start, so
-    // a start that fails still counts as where ECHO launched it. Pass platformId for a game, so a DS game run
-    // by RetroArch opens as a DS emulator does
-    fun displayFor(packageName: String?, platformId: String? = null, otherScreen: Boolean = false): Int {
+    // the display to start packageName on, which becomes the Launch Screen of the game (gameId) or else the app.
+    // Remembered before the start, so a start that fails still counts as where ECHO launched it. Pass platformId for
+    // a game, so a DS game run by RetroArch opens as a DS emulator does
+    fun displayFor(packageName: String?, platformId: String? = null, otherScreen: Boolean = false, gameId: Long? = null): Int {
         val dualScreen = KnownEmulatorPackages.isDualScreen(packageName, platformId)
         val displays = listOf(Display.DEFAULT_DISPLAY) + listOfNotNull(secondDisplay(context)?.displayId)
-        val display = launchScreen(packageName?.let(remembered::get), dualScreen, otherScreen, mainDisplay(), displays)
-        if (packageName != null && !dualScreen && remembered.put(packageName, display) != display) save()
+        val key = launchScreenKey(packageName, gameId)
+        val before = key?.let(remembered::get)
+        val display = resolveLaunchScreen(remembered, key, dualScreen, otherScreen, mainDisplay(), displays)
+        if (key != null && remembered[key] != before) save()
         return display
     }
 
@@ -64,7 +69,7 @@ class LaunchScreens @Inject constructor(
     companion object {
         private val KEY = stringSetPreferencesKey("display_launch_screens")
 
-        // the device's second display, if it has one: the AYN Thor's bottom screen
+        // the device's second display, if it has one: the AYN Thor's lower display
         fun secondDisplay(context: Context): Display? =
             context.getSystemService(DisplayManager::class.java)
                 ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).orEmpty()
@@ -75,6 +80,19 @@ class LaunchScreens @Inject constructor(
         private fun decode(set: Set<String>): Map<String, Int> =
             set.mapNotNull { entry -> entry.substringAfterLast('=').toIntOrNull()?.let { entry.substringBeforeLast('=') to it } }.toMap()
     }
+}
+
+// what a Launch Screen is remembered by: a game by its id, so two games on one emulator keep their own screens; an
+// app by its package (owner, 2026-10-12). A package name has no ':', so the two never meet
+internal fun launchScreenKey(packageName: String?, gameId: Long?): String? = gameId?.let { "game:$it" } ?: packageName
+
+// the Launch Screen for key, remembered in [remembered] unless a DS or 3DS emulator opens it
+internal fun resolveLaunchScreen(
+    remembered: MutableMap<String, Int>, key: String?, dualScreen: Boolean, otherScreen: Boolean, mainDisplay: Int, displays: List<Int>,
+): Int {
+    val display = launchScreen(key?.let(remembered::get), dualScreen, otherScreen, mainDisplay, displays)
+    if (key != null && !dualScreen) remembered[key] = display
+    return display
 }
 
 // Seam B. A DS or 3DS emulator always opens on the Main Screen's display, as it draws both screens itself; a

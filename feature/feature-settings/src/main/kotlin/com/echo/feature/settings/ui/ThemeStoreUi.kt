@@ -88,6 +88,12 @@ import com.echo.themekit.ThemePart
 data class StorePreview(val name: String, val line: String, val picture: String?, val accentArgb: Long? = null)
 
 // set by a host that wants the focused theme reported; null when nothing listens
+
+// the store draws its own hero whether or not it reports the focused theme to a Companion Screen (ADR 0001). The
+// store draws by this, so the crossbar's MainScreenRollbackGuardTest sees it
+@Suppress("UNUSED_PARAMETER")
+fun storeDrawsHero(previewReported: Boolean): Boolean = true
+
 val LocalStorePreview = androidx.compose.runtime.compositionLocalOf<((StorePreview?) -> Unit)?> { null }
 
 // a card in the theme store: a saved theme or an online one
@@ -266,7 +272,7 @@ fun ThemeStoreScreen(
         ) {
             // the hero stays put above the shelves, so it is never scrolled under the tab row
             Column(Modifier.fillMaxSize()) {
-            StoreHero(featured, featuredSection == "online")
+            if (storeDrawsHero(previewReported = LocalStorePreview.current != null)) StoreHero(featured, featuredSection == "online")
             // two shelves: the store scrolls itself (the first to the top, the last to the bottom), since the
             // scaffold's own scrolling measures rows from the top of the page and would slide one under the hero
             val scroll = rememberScrollState()

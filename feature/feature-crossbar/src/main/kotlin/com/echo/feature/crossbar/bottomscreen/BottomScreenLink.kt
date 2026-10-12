@@ -16,24 +16,30 @@ data class BottomScreenState(
     val hovered: GameInfoState? = null,
     // the app hovered in the App Drawer while it is open on the Main Screen (ADR 0001)
     val drawer: GameInfoState? = null,
-    // Search is open on the Main Screen, over the drawer when it was opened from there
-    val searching: Boolean = false,
-    // a context menu is open on the Main Screen
-    val menuOpen: Boolean = false,
-    // Settings is open on the Main Screen
-    val settingsOpen: Boolean = false,
+    // what is open on the Main Screen: Search, a menu, Settings, the colour scheme picker
+    val open: MainScreenOpen = MainScreenOpen(),
     // the setting focused there; null while nothing is, or a touch has hidden the cursor
     val setting: com.echo.feature.settings.ui.SettingsFocusInfo? = null,
     // the theme focused in the Theme Store
     val theme: com.echo.feature.settings.ui.StorePreview? = null,
-    // the colour scheme highlighted in the picker, while it is open
-    val colorScheme: com.echo.feature.crossbar.viewmodel.ColorSchemeOption? = null,
     // the game ECHO launched, while it runs in front of ECHO
     val playing: GameInfoState? = null,
     // when that game was launched, for the session clock
     val playingSince: Long? = null,
     // what the Companion Screen shows, kept by update through the Companion rule
     val shown: CompanionContent? = null,
+)
+
+// what is open on the Main Screen (mainScreenOpen)
+data class MainScreenOpen(
+    // Search, over the drawer when it was opened from there
+    val search: Boolean = false,
+    // a context menu
+    val menu: Boolean = false,
+    // Settings
+    val settings: Boolean = false,
+    // the colour scheme highlighted in the picker, while it is open
+    val colorScheme: com.echo.feature.crossbar.viewmodel.ColorSchemeOption? = null,
 )
 
 // the bridge between the Main Screen and the Companion Screen, and the one owner of the Companion's state
@@ -48,11 +54,11 @@ class BottomScreenLink @Inject constructor() {
     private val _crossbar = MutableStateFlow<CrossbarViewModel?>(null)
     val crossbar: StateFlow<CrossbarViewModel?> = _crossbar.asStateFlow()
 
-    // the bottom screen is on show, so the crossbar has something to keep current
+    // the window on the second display is on show, so the crossbar has something to keep current
     private val _attached = MutableStateFlow(false)
     val attached: StateFlow<Boolean> = _attached.asStateFlow()
 
-    // ECHO's own screen is in front on the top display
+    // ECHO's own window is in front on the first display
     private val _hostShown = MutableStateFlow(true)
     val hostShown: StateFlow<Boolean> = _hostShown.asStateFlow()
 
@@ -94,7 +100,7 @@ class BottomScreenLink @Inject constructor() {
     fun unbind(crossbar: CrossbarViewModel) { _crossbar.compareAndSet(crossbar, null) }
 }
 
-// the companion's session clock: "NOW PLAYING · 12 MIN", in hours past an hour; minutes round down, so a game
+// the Companion Screen's session clock: "NOW PLAYING · 12 MIN", in hours past an hour; minutes round down, so a game
 // just launched reads "JUST STARTED"
 fun sessionLabel(since: Long?, now: Long): String {
     val minutes = since?.let { (now - it) / 60_000L } ?: return "NOW PLAYING"

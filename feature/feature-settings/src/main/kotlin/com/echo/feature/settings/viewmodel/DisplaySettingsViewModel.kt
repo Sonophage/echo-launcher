@@ -186,13 +186,23 @@ class DisplaySettingsViewModel @Inject constructor(
 
     private var pendingUiMediaSlot: UiMediaSlot? = null
 
+    // the window Settings is drawn in, set by the screen (onWindow). The Crossbar picks its layout from its window's
+    // size, and after Swap that window is on the other display, so the application's configuration is the wrong one
+    private val window = MutableStateFlow(
+        ClassicCrossbarLayout.forWindow(context.resources.configuration, context.resources.displayMetrics.density),
+    )
+
+    fun onWindow(config: android.content.res.Configuration, density: Float) {
+        window.value = ClassicCrossbarLayout.forWindow(config, density)
+    }
+
     val uiState: StateFlow<DisplaySettingsUiState> = combine(
-        context.echoDataStore.data,
+        context.echoDataStore.data.combine(window, ::Pair),
         _wallpaperMessage,
         _wallpaperImporting,
         _wallpaperPreviewVisible,
         controllerLayout.prefs,
-    ) { prefs, msg, importing, previewVisible, layout ->
+    ) { (prefs, target), msg, importing, previewVisible, layout ->
 
         val assigned = uiMediaStore.assignments()
         fun label(slot: UiMediaSlot): String = when {
@@ -243,8 +253,8 @@ class DisplaySettingsViewModel @Inject constructor(
             gameBootVideoAssigned = UiMediaSlot.GAMEBOOT_VIDEO in assigned,
             xyLayout             = layout.xyLayout,
 
-            classicLayoutApplied     = ClassicCrossbarLayout.isApplied(prefs, ClassicCrossbarLayout.forWindow(context)),
-            layoutAdjust             = ClassicCrossbarLayout.current(prefs, ClassicCrossbarLayout.forWindow(context).bucketKey),
+            classicLayoutApplied     = ClassicCrossbarLayout.isApplied(prefs, target),
+            layoutAdjust             = ClassicCrossbarLayout.current(prefs, target.bucketKey),
         )
     }
 
@@ -339,10 +349,10 @@ class DisplaySettingsViewModel @Inject constructor(
     fun setVideoSeekStepSeconds(v: Int) = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_VIDEO_SEEK_STEP_SECONDS] = v }
     fun setVideoControlsHideMs(v: Int) = save { it[com.echo.core.data.repository.InterfacePreferences.KEY_VIDEO_CONTROLS_HIDE_MS] = v }
 
-    fun applyClassicLayout() = save { ClassicCrossbarLayout.write(it, ClassicCrossbarLayout.forWindow(context)) }
+    fun applyClassicLayout() = save { ClassicCrossbarLayout.write(it, window.value) }
 
     fun setLayout(transform: (com.echo.themekit.CrossbarLayoutAdjust) -> com.echo.themekit.CrossbarLayoutAdjust) =
-        save { ClassicCrossbarLayout.update(it, ClassicCrossbarLayout.forWindow(context).bucketKey, transform) }
+        save { ClassicCrossbarLayout.update(it, window.value.bucketKey, transform) }
 
     fun resetLayout() = setLayout { com.echo.themekit.CrossbarLayoutAdjust.DEFAULT }
 

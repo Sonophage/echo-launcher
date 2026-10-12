@@ -93,7 +93,7 @@ fun GameInfoScreen(
     launchHold: String? = null,
     onSectionPicked: (GameInfoAction?) -> Unit = {},
     onAchievementFilter: (BadgeFilter) -> Unit = {},
-    // on the bottom screen, which is touch only and has its own bar: no controller footer or shoulders
+    // on the Companion Screen, which is touch only and has its own bar: no controller footer or shoulders
     companion: Boolean = false,
 ) {
     val item = info.item
@@ -236,7 +236,7 @@ fun GameInfoScreen(
             ),
         )
 
-        // the bottom screen has no footer and is touch only: its views stay a row of tabs to tap
+        // the Companion Screen has no footer and is touch only: its views stay a row of tabs to tap
         if (companion && walk) {
             StripSections(
                 labels = sections.map(::gameInfoSectionLabel),

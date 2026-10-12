@@ -26,7 +26,7 @@ class AskedKeyboard {
         if (typing) up = true
     }
 
-    // owner decision: B with the keyboard up hides it; the next B goes back. True when this B hides it.
+    // B with the keyboard up hides it; the next B goes back (owner, 2026-10-12). True when this B hides it.
     // keyboardElsewhere: the keyboard is drawn on another display, so the window's insets cannot show it
     fun backHides(insetsShowKeyboard: Boolean, keyboardElsewhere: Boolean): Boolean {
         val hides = insetsShowKeyboard || (keyboardElsewhere && up)

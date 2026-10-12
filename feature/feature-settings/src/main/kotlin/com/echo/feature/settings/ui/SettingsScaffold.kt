@@ -360,7 +360,7 @@ fun SettingsScaffold(
             androidx.compose.runtime.snapshotFlow { focusInfo.value?.takeIf { cursorVisible.value } }.collect { focusReport(it) }
         }
     }
-    val openTab ={ id: String ->
+    val openTab = { id: String ->
         if (id != screenId) {
             menuSounds(MenuSound.SYSTEM_BROWSE)
             openScreen(id)

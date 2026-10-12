@@ -137,11 +137,12 @@ class InstalledAppRepository @Inject constructor(
 
     fun uninstallApp(packageName: String) = com.echo.core.data.apps.AppSystemActions.uninstall(context, packageName)
 
+    // a system settings screen: on the Main Screen's display
     fun openUsageAccessSettings() {
         val intent = com.echo.core.data.permission.UsageAccess.settingsIntent()
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         runCatching {
-            context.startActivity(intent)
+            context.startActivity(intent, LaunchTransition.options(context, launchScreens.mainDisplay()))
         }.onFailure { e ->
             Timber.w(e, "Could not open usage access settings")
         }

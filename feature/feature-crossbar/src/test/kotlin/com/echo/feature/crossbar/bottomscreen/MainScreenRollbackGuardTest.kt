@@ -9,6 +9,7 @@ import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.SearchScope
 import com.echo.feature.crossbar.viewmodel.SearchState
 import com.echo.feature.crossbar.viewmodel.withMusicPlayer
+import com.echo.feature.settings.ui.storeDrawsHero
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -16,8 +17,9 @@ import org.junit.Test
 // not change what the Main Screen shows or where things open on it. This test fails if anything moves off
 // the Main Screen again because a Companion Screen is attached.
 class MainScreenRollbackGuardTest {
-    // what the Main Screen derives from the Crossbar's state. When a ticket brings a screen back to the Main
-    // Screen, add what it reads here.
+    // what the Main Screen derives from the Crossbar's state, and the conditions its composables decide by: the menu
+    // CrossbarShell draws, and whether the Theme Store draws its own hero while Settings reports to a Companion
+    // Screen. When a ticket brings a screen back to the Main Screen, add what it reads here.
     private data class MainScreen(
         val reachableColumns: List<String>,
         val waveShown: Boolean,
@@ -25,6 +27,8 @@ class MainScreenRollbackGuardTest {
         val enterOpensAppDrawer: Boolean,
         val musicPlayerShown: Boolean,
         val search: SearchState?,
+        val menu: CrossbarContextMenu?,
+        val storeHero: Boolean?,
     )
 
     private fun mainScreen(s: CrossbarUiState) = MainScreen(
@@ -34,6 +38,9 @@ class MainScreenRollbackGuardTest {
         enterOpensAppDrawer = s.enterOpensAppDrawer,
         musicPlayerShown = s.musicPlayerVisible,
         search = s.search,
+        menu = mainScreenMenu(s),
+        storeHero = storeDrawsHero(previewReported = companionOnShow(s.secondScreen, s.companionInPlace))
+            .takeIf { s.activeSettingsScreen == THEME_STORE },
     )
 
     private fun column(id: String, position: Int) =
@@ -52,7 +59,7 @@ class MainScreenRollbackGuardTest {
         "the App Drawer opens on the Main Screen" to { it.copy(activeAppDrawerFilter = "APPS") },
         "Search, its field and its results, opens on the Main Screen" to { it.copy(search = SearchState(scope = SearchScope.ALL)) },
         "Settings opens on the Main Screen" to { it.copy(activeSettingsScreen = "settings_display") },
-        "the Theme Store opens on the Main Screen" to { it.copy(activeSettingsScreen = "settings_theme_store") },
+        "the Theme Store opens on the Main Screen" to { it.copy(activeSettingsScreen = THEME_STORE) },
         "the music player opens on the Main Screen when a track starts" to { it.withMusicPlayer() },
         "a context menu opens on the Main Screen" to {
             it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Options", rows = emptyList())))
@@ -66,3 +73,5 @@ class MainScreenRollbackGuardTest {
         }
     }
 }
+
+private const val THEME_STORE = "settings_theme_store"

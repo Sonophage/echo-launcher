@@ -70,7 +70,7 @@ class LaunchDispatcher @Inject constructor(
     private var hostStopped = false
     private var watchdog: Job? = null
 
-    // otherScreen: Launch on Other Screen, which also makes that display the emulator's Launch Screen
+    // otherScreen: Launch on Other Screen, which also makes that display the game's Launch Screen
     suspend fun launch(game: Game, resolved: ResolvedLaunch?, intent: Intent, otherScreen: Boolean = false): LaunchDispatchResult {
         // GameBoot's disc and card wear the game's cover, its icon slot, as every cover spot does (owner, 2026-10-05)
         val cover = com.echo.core.domain.model.coverArtOf(game.iconUri, game.artworkUri)
@@ -80,7 +80,7 @@ class LaunchDispatcher @Inject constructor(
         return try {
             context.startActivity(
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).withoutTransition(),
-                LaunchTransition.options(context, launchScreens.displayFor(packageName, game.platformId, otherScreen)),
+                LaunchTransition.options(context, launchScreens.displayFor(packageName, game.platformId, otherScreen, gameId = game.id)),
             )
 
             resolved?.profile?.takeIf { it.isRetroArchProfile() }?.let { profile ->
@@ -133,7 +133,7 @@ class LaunchDispatcher @Inject constructor(
         return try {
             context.startActivity(
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED).withoutTransition(),
-                LaunchTransition.options(context, launchScreens.displayFor(pkg, game.platformId)),
+                LaunchTransition.options(context, launchScreens.displayFor(pkg, game.platformId, gameId = game.id)),
             )
             val at = clock.now()
             val atWall = wallClock.now()

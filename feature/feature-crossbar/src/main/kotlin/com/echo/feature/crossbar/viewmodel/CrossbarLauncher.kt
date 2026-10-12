@@ -8,6 +8,7 @@ import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.domain.model.Game
 import com.echo.core.domain.model.resolve
 import com.echo.feature.appbar.LauncherShortcutRepository
+import com.echo.feature.crossbar.bottomscreen.mainScreenOnSecondDisplay
 import com.echo.feature.launcher.LaunchDispatchResult
 import com.echo.feature.launcher.LaunchRecoveryAction
 import com.echo.feature.launcher.ResolvedLaunch
@@ -48,7 +49,7 @@ class CrossbarLauncher(
     // a launch with no Launch Screen yet opens on the Main Screen's display, the second one while swapped
     internal fun observeMainScreenDisplay() {
         scope.launch {
-            uiState.map { it.secondScreen && it.screensSwapped }.distinctUntilChanged()
+            uiState.map(::mainScreenOnSecondDisplay).distinctUntilChanged()
                 .collect { vm.launchScreens.mainOnSecond = it }
         }
     }
@@ -106,12 +107,14 @@ class CrossbarLauncher(
 
     internal fun launchCamera() {
         runCatching {
-            vm.context.startActivity(
-                Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
+            startOnMainScreen(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }.onFailure { Timber.w(it, "Could not launch a camera app") }
     }
+
+    // an app ECHO opens without knowing its package (the camera, Quick Search's browser) has no Launch Screen, so it
+    // opens on the Main Screen's display
+    internal fun startOnMainScreen(intent: Intent) =
+        vm.context.startActivity(intent, com.echo.core.common.launch.LaunchTransition.options(vm.context, vm.launchScreens.mainDisplay()))
 
     internal fun setPlatformEmulator(platformId: String, profileId: String?) {
         vm.appAction { vm.memoryCardRepository.setEmulator(platformId, profileId) }
