@@ -1,6 +1,15 @@
 package com.echo.feature.crossbar.bottomscreen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import com.echo.core.domain.model.resolve
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -34,7 +43,8 @@ import com.echo.feature.crossbar.viewmodel.GameInfoAction
 import com.echo.feature.crossbar.viewmodel.firstSection
 import com.echo.feature.crossbar.viewmodel.RecentFilter
 
-// the Companion Screen: the Details the Companion rule picks (companionContent), with Swap, and Resume while a
+// the Companion Screen: the Details, or in Settings the focused setting, that the Companion rule picks
+// (companionContent), with Swap, and Resume while a
 // game runs. The App Drawer, Search and Settings are on the Main Screen (ADR 0001); while Search is open the
 // keyboard, which the Thor puts here, shows over this screen. It takes touch only: a tap never moves the
 // controller from the Main Screen (ADR 0001).
@@ -51,6 +61,7 @@ fun BottomScreen(
     CompositionLocalProvider(LocalPadPrompts provides false) {
         BoxWithConstraints(modifier.fillMaxSize().background(PanelBase)) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
+            (state.shown as? CompanionContent.Setting)?.let { SettingView(it, u) }
             shown?.let { details ->
                 val info = details.info
                 if (showsGameInfo(info.item)) {
@@ -103,6 +114,42 @@ fun BottomScreen(
                 if (shown?.playing == true) PanelButton(GamepadAction.SELECT, "Resume", u, holdMs = LAUNCH_HOLD_MS) { crossbar.bottomScreen.resume() }
                 // the Main Screen and this screen change displays
                 PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.bottomScreen.toggleSwap() }
+            }
+        }
+    }
+}
+
+// the setting focused in Settings on the Main Screen: its description in large type, over a preview of the focused
+// theme (its wallpaper, or its page's screenshot) or colour scheme where there is one
+@Composable
+private fun SettingView(setting: CompanionContent.Setting, u: com.echo.core.ui.design.DesignUnits) {
+    Box(Modifier.fillMaxSize()) {
+        when (val preview = setting.preview) {
+            is SettingPreview.Theme -> {
+                preview.store.picture?.let {
+                    coil3.compose.AsyncImage(it, preview.store.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                }
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Transparent, 1f to PanelBase)))
+            }
+            is SettingPreview.Colors -> {
+                val swatch = Color(preview.option.swatch)
+                val palette = preview.option.scheme?.resolve(java.time.LocalDate.now().monthValue)
+                val (top, bottom) = palette?.let { Color(it.backgroundTop) to Color(it.backgroundBottom) } ?: (swatch to PanelBase)
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to top, 1f to bottom)))
+                Box(Modifier.align(Alignment.TopEnd).padding(u.dp(48)).size(u.dp(120)).clip(CircleShape).background(swatch))
+            }
+            null -> Unit
+        }
+        Column(
+            Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = u.dp(48), end = u.dp(48), bottom = u.dp(110)),
+            verticalArrangement = Arrangement.spacedBy(u.dp(16)),
+        ) {
+            Text(setting.info.label, color = Color.White, fontSize = u.sp(56), lineHeight = u.sp(60), fontWeight = FontWeight.ExtraLight)
+            setting.info.value?.takeIf { it.isNotBlank() }?.let {
+                Text(it, color = Color.White, fontSize = u.sp(30), fontWeight = FontWeight.Light)
+            }
+            setting.info.sublabel?.takeIf { it.isNotBlank() }?.let {
+                Text(it, color = Color.White.copy(alpha = 0.8f), fontSize = u.sp(30), lineHeight = u.sp(40), fontWeight = FontWeight.Light)
             }
         }
     }

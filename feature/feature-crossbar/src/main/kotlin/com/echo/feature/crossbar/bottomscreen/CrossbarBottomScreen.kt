@@ -64,10 +64,19 @@ class CrossbarBottomScreen(
                     item?.let { i -> vm.gameDetail.load(GameInfoState(i)).let { info -> link.update { it.copy(drawer = info) } } }
                 }
         }
-        // Search and a menu open on the Main Screen, which the Companion rule reads
+        // Search, a menu, Settings and the colour scheme picker open on the Main Screen, which the Companion rule reads
         scope.launch {
-            uiState.map { (it.search != null) to (it.activeContextMenu != null) }.distinctUntilChanged().collect { (searching, menu) ->
-                link.update { it.copy(searching = searching, menuOpen = menu) }
+            uiState.map { s ->
+                BottomScreenState(
+                    searching = s.search != null,
+                    menuOpen = s.activeContextMenu != null,
+                    settingsOpen = s.activeSettingsScreen != null,
+                    colorScheme = s.colorSchemePicker?.let { it.options.getOrNull(it.selectedIndex) },
+                )
+            }.distinctUntilChanged().collect { main ->
+                link.update {
+                    it.copy(searching = main.searching, menuOpen = main.menuOpen, settingsOpen = main.settingsOpen, colorScheme = main.colorScheme)
+                }
             }
         }
         scope.launch {
@@ -99,6 +108,12 @@ class CrossbarBottomScreen(
         runCatching { vm.gameRepository.getById(gameId) }.getOrNull()?.let { game -> with(vm) { listOf(game).toCrossbarItems() }.first() }
 
     fun drawerFocused(app: com.echo.feature.appbar.InstalledApp?) = link.drawerFocused(app)
+
+    // the setting focused in Settings, and the theme focused in the Theme Store, which Settings reports while a
+    // Companion Screen is on show
+    fun settingFocused(info: com.echo.feature.settings.ui.SettingsFocusInfo?) = link.update { it.copy(setting = info) }
+
+    fun themeFocused(preview: com.echo.feature.settings.ui.StorePreview?) = link.update { it.copy(theme = preview) }
 
     // Swap (the Swap button, L3 or R3), as swap() decides: two displays change places and it is remembered, and the
     // controller stays with the Main Screen; one display shows the Companion Screen in place, in memory only

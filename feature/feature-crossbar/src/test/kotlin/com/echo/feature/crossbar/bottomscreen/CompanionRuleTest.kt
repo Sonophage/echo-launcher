@@ -1,6 +1,11 @@
 package com.echo.feature.crossbar.bottomscreen
 
 import com.echo.feature.crossbar.bottomscreen.CompanionContent.Details
+import com.echo.feature.crossbar.bottomscreen.CompanionContent.Setting
+import com.echo.core.domain.model.CrossbarColorScheme
+import com.echo.feature.crossbar.viewmodel.ColorSchemeOption
+import com.echo.feature.settings.ui.SettingsFocusInfo
+import com.echo.feature.settings.ui.StorePreview
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
@@ -66,6 +71,51 @@ class CompanionRuleTest {
         val played = Details(castlevania, playing = true, playingSince = 1_000L)
         assertEquals(Details(skyrim), companionContent(BottomScreenState(hovered = skyrim), last = played))
         assertEquals(Details(castlevania), companionContent(BottomScreenState(), last = played))
+    }
+
+    // ticket #8: while Settings is open on the Main Screen, the Companion Screen shows the focused setting's
+    // description in large type; the Main Screen keeps its own
+    private val wave = SettingsFocusInfo("Wave Style", "PSP", "The animated wave behind the Crossbar")
+
+    @Test
+    fun `in Settings the focused setting's description is shown, not the item hovered before`() {
+        val main = BottomScreenState(hovered = skyrim, settingsOpen = true, setting = wave)
+        assertEquals(Setting(wave), companionContent(main, last = Details(skyrim)))
+    }
+
+    @Test
+    fun `in Settings with no setting focused, the last thing shown is kept`() {
+        assertEquals(Setting(wave), companionContent(BottomScreenState(hovered = skyrim, settingsOpen = true), last = Setting(wave)))
+        assertEquals("a touch hides the cursor: the game is kept", Details(skyrim), companionContent(BottomScreenState(settingsOpen = true), last = Details(skyrim)))
+    }
+
+    // a theme focused in the Theme Store: its name, its line, and a preview of its wallpaper and accent
+    private val neon = StorePreview("Neon Night", "by Echo  ·  version 2", "https://example.com/neon.png", 0xFF7FD8D8L)
+
+    @Test
+    fun `in the Theme Store the focused theme is previewed`() {
+        val main = BottomScreenState(settingsOpen = true, setting = wave, theme = neon)
+        assertEquals(
+            Setting(SettingsFocusInfo("Neon Night", null, "by Echo  ·  version 2"), SettingPreview.Theme(neon)),
+            companionContent(main, last = null),
+        )
+    }
+
+    // the colour scheme highlighted in the picker, which Settings opens over itself
+    private val sunset = ColorSchemeOption(CrossbarColorScheme.SUNSET_ORANGE, "Sunset Orange", null, 0xFFFF8800L)
+
+    @Test
+    fun `in the colour scheme picker the highlighted scheme is previewed`() {
+        val main = BottomScreenState(settingsOpen = true, setting = wave, colorScheme = sunset)
+        assertEquals(
+            Setting(SettingsFocusInfo("Sunset Orange", null, null), SettingPreview.Colors(sunset)),
+            companionContent(main, last = Setting(wave)),
+        )
+    }
+
+    @Test
+    fun `Settings closed, the hovered item is shown again`() {
+        assertEquals(Details(skyrim), companionContent(BottomScreenState(hovered = skyrim, setting = wave), last = Setting(wave)))
     }
 
     // what the Main Screen has hovered: Search's focused result while Search is open, else the Crossbar's cursor
