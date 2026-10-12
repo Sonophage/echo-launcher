@@ -80,7 +80,8 @@ object KnownEmulatorPackages {
         "io.github.mandarine3ds.mandarine", "io.github.borked3ds.android", "com.panda3ds.pandroid",
     )
 
-    private val dualScreenPlatforms = setOf("nds", "ds", "n3ds", "3ds")
+    // the DS and 3DS platform ids
+    val dualScreenPlatforms = setOf("nds", "ds", "n3ds", "3ds")
 
     // a game passes its platform too, so a DS game run by RetroArch counts
     fun isDualScreen(packageName: String?, platformId: String? = null): Boolean =
