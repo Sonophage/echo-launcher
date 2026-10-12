@@ -93,11 +93,11 @@ class HintPromptsTest {
     fun `the rail owns the bar while it is open`() {
         val menu = CrossbarContextMenu(state = MenuState(title = "Crisis Core", rows = listOf(
                 CrossbarContextMenuItem("icon_display", "Icon Display"),
-                CrossbarContextMenuItem("file_location", "View File Location"),
+                CrossbarContextMenuItem("open_folder", "Open Folder"),
             ), selectedIndex = 1))
         val prompts = promptsFor(state(menu = menu))
         assertEquals("Select", prompts.primary?.verb)
-        assertEquals("View File Location", prompts.primary?.target)
+        assertEquals("Open Folder", prompts.primary?.target)
         assertEquals("Close", prompts.back.verb)
         assertTrue("the rail's own actions must not be repeated on the right", prompts.right.isEmpty())
     }
@@ -118,7 +118,7 @@ class HintPromptsTest {
     fun `inside a submenu Back climbs a level, and the hint says so`() {
         val root = CrossbarContextMenu(state = MenuState(title = "Gran Turismo 4", rows = listOf(
                 CrossbarContextMenuItem("icon_display", "Icon Display", group = MenuGroup.SETTINGS),
-                CrossbarContextMenuItem("file_location", "View File Location", group = MenuGroup.SETTINGS),
+                CrossbarContextMenuItem("open_folder", "Open Folder", group = MenuGroup.SETTINGS),
             )))
         assertEquals("Close", promptsFor(state(menu = root)).back.verb)
 

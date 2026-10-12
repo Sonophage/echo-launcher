@@ -410,18 +410,20 @@ class ContextMenusTest {
     }
 
     @Test
-    fun `with Game Info open, Options carries its Info, Video and Manual, since the kit's page has no buttons`() {
+    fun `with Game Info open, Options carries its Details and Video, since the kit's page has no buttons`() {
         val info = GameInfoState(game(), content = DetailPanelContent(title = "Crisis Core", platformName = "PSP"),
             videoUri = "/v.mp4", manualPath = "/m.pdf")
         val open = ids(gameContextMenuItems(game(), state().copy(gameInfo = info), 1, false, null))
-        assertTrue(listOf("info_about", "info_video", "info_manual").all { it in open })
+        assertTrue(listOf("info_about", "info_video").all { it in open })
         assertFalse("Game Info does not offer itself", "game_info" in open)
+        // spec #2: the game's own Manual row opens the same manual, so Game Info adds no second one
+        assertEquals("one Manual row", 1, open.count { it == "detail_MANUAL" || it == "info_manual" })
 
         val closed = ids(gameContextMenuItems(game(), state(), 1, false, null))
         assertFalse("the crossbar's menu has no Game Info extras", closed.any { it?.startsWith("info_") == true })
 
         val bare = ids(gameContextMenuItems(game(), state().copy(gameInfo = GameInfoState(game())), 1, false, null))
-        assertFalse("a game without a manual lists no Manual row", "info_manual" in bare)
+        assertFalse("a game with no video lists no Video row", "info_video" in bare)
     }
 
     // Launch on Other Screen means nothing with one display, and a DS or 3DS emulator always opens on the

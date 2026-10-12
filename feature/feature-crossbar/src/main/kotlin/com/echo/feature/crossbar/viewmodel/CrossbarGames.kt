@@ -337,7 +337,6 @@ class CrossbarGames(
             "game_info"              -> vm.openGameInfoFor(gameId)
             "info_about"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.INFO) }
             "info_video"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.VIDEO) }
-            "info_manual"            -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.MANUAL) }
             "choose_disc"             -> vm.openDiscPickerMenu(gameId)
             "export_game"            -> vm.exportGameFromMenu(gameId)
             "app_info"               -> { vm.closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(vm.context, menu.packageName ?: return) }
@@ -370,7 +369,6 @@ class CrossbarGames(
                     vm.loadItemsForCategory(vm.currentCategory())
                 }
             }
-            "file_location"          -> vm.showGameFileLocation(gameId)
             "open_folder"            -> vm.openGameFolder(gameId)
             "change_emulator"        -> vm.openEmulatorPickerMenu(gameId)
             "shelves"                -> vm.openShelvesPickerMenu(gameId)

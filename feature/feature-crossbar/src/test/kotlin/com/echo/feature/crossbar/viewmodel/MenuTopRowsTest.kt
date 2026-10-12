@@ -6,6 +6,7 @@ import com.echo.core.ui.components.MenuGroup
 import com.echo.core.ui.components.MenuState
 import com.echo.core.ui.components.rowsShown
 import com.echo.core.ui.components.submenuFor
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -28,6 +29,19 @@ class MenuTopRowsTest {
         val rows = gameContextMenuItems(game, state, discCount = 1, onRecentShelf = false, hideLocation = null)
         assertTrue("Open Folder is at the top: ${top(rows)}", "open_folder" !in top(rows))
         assertTrue("Open Folder is not in Settings: ${inSettings(rows)}", "open_folder" in inSettings(rows))
+    }
+
+    // a PC or Android game opens its folder too, and shows its path or package when it has none to open
+    // (owner, 2026-10-12)
+    @Test
+    fun `a PC or Android game offers the same Open Folder row in Settings`() {
+        listOf(
+            CrossbarItem(id = "g3", title = "Hades", gameId = 3L, platformId = com.echo.core.domain.model.PlatformIds.WINDOWS),
+            CrossbarItem(id = "g2", title = "Genshin", gameId = 2L, platformId = "android", packageName = "com.game", isAndroidApp = true),
+        ).forEach { game ->
+            val rows = gameContextMenuItems(game, state, discCount = 1, onRecentShelf = false, hideLocation = null)
+            assertEquals("${game.title}: Open Folder", MenuGroup.SETTINGS, rows.singleOrNull { it.action == "open_folder" }?.group)
+        }
     }
 
     @Test

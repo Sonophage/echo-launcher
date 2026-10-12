@@ -30,13 +30,12 @@ internal fun gameContextMenuItems(
 
     return buildList {
         add(CrossbarContextMenuItem("play", "Play", hidden = true))
-        if (state.gameInfo == null) add(CrossbarContextMenuItem("game_info", "Game Info", group = MenuGroup.ABOUT))
+        if (state.gameInfo == null) add(CrossbarContextMenuItem("game_info", "Details", group = MenuGroup.ABOUT))
         // the kit's Game Info has no buttons, so its extras live in Options (owner, 2026-10-04)
         state.gameInfo?.takeIf { it.item.gameId == item.gameId }?.let { info ->
             val offered = gameInfoActions(info)
-            if (GameInfoAction.INFO in offered) add(CrossbarContextMenuItem("info_about", "Info", group = MenuGroup.ABOUT))
+            if (GameInfoAction.INFO in offered) add(CrossbarContextMenuItem("info_about", "Details", group = MenuGroup.ABOUT))
             if (GameInfoAction.VIDEO in offered) add(CrossbarContextMenuItem("info_video", "Video"))
-            if (GameInfoAction.MANUAL in offered) add(CrossbarContextMenuItem("info_manual", "Manual", group = MenuGroup.ABOUT))
         }
 
         if (discCount > 1) add(CrossbarContextMenuItem("choose_disc", "Choose Disc"))
@@ -67,7 +66,7 @@ internal fun gameContextMenuItems(
                 add(
                     CrossbarContextMenuItem(
                         if (pinned) "unpin_category" else "pin_category",
-                        if (pinned) "Unpin" else "Pin",
+                        if (pinned) "Unpin from Top" else "Pin to Top",
                         group = MenuGroup.ORGANIZE,
                     ),
                 )
@@ -84,18 +83,14 @@ internal fun gameContextMenuItems(
 
         if (!item.isAndroidApp) add(CrossbarContextMenuItem("change_emulator", "Change Emulator", group = MenuGroup.SETTINGS))
         launchOnOtherScreenRow(state, item.packageName, item.platformId)?.let(::add)
-        // owner, 2026-10-10: a ROM game opens the folder it is in; a PC or Android game has none, so it shows what it has
-        if (item.isAndroidApp || item.platformId == PlatformIds.WINDOWS) {
-            add(CrossbarContextMenuItem("file_location", "View File Location", group = MenuGroup.SETTINGS))
-        } else {
-            add(CrossbarContextMenuItem("open_folder", "Open Folder", group = MenuGroup.SETTINGS))
-        }
+        // every game opens the folder it is in; with no folder to open, it shows the path or package (owner, 2026-10-12)
+        add(CrossbarContextMenuItem("open_folder", "Open Folder", group = MenuGroup.SETTINGS))
 
         hideLocation?.let { (_, _, label) ->
             add(CrossbarContextMenuItem("hide_here", "Hide from $label", group = MenuGroup.REMOVE))
         }
         if (inMissingBucket) {
-            add(CrossbarContextMenuItem("remove_missing", "Remove permanently", isDestructive = true, group = MenuGroup.REMOVE))
+            add(CrossbarContextMenuItem("remove_missing", "Remove from Library", isDestructive = true, group = MenuGroup.REMOVE))
         } else if (item.platformId == PlatformIds.ANDROID && item.packageName != null) {
             add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.ABOUT))
             add(CrossbarContextMenuItem("unmark_game", "Unmark as Game", group = MenuGroup.ORGANIZE))
@@ -185,9 +180,9 @@ internal fun videoFileContextMenuItems(
     if (hasWatchStamp) add(CrossbarContextMenuItem("video_remove_recent", "Remove from Recent", group = MenuGroup.REMOVE))
 
     if (inPlaylist) {
-        add(CrossbarContextMenuItem("video_remove_playlist", "Remove from this Playlist", isDestructive = true, confirms = false, group = MenuGroup.REMOVE))
+        add(CrossbarContextMenuItem("video_remove_playlist", "Remove from Playlist", isDestructive = true, confirms = false, group = MenuGroup.REMOVE))
     }
-    add(CrossbarContextMenuItem("video_remove", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("video_remove", "Delete", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
 internal fun videoLibraryContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
@@ -205,7 +200,7 @@ internal fun photoFileContextMenuItems(isFavorite: Boolean = false): List<Crossb
     CrossbarContextMenuItem("photo_open", "Open"),
     CrossbarContextMenuItem(if (isFavorite) "photo_unfavorite" else "photo_favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE),
     CrossbarContextMenuItem("photo_set_wallpaper", "Set as Launcher Wallpaper", group = MenuGroup.SETTINGS),
-    CrossbarContextMenuItem("photo_remove", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE),
+    CrossbarContextMenuItem("photo_remove", "Delete", isDestructive = true, group = MenuGroup.REMOVE),
 )
 
 internal fun photoLibraryContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
@@ -218,7 +213,7 @@ internal fun bookContextMenuItems(hasOpenStamp: Boolean): List<CrossbarContextMe
     add(CrossbarContextMenuItem("book_open", "Read"))
     add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.EDIT))
     if (hasOpenStamp) add(CrossbarContextMenuItem("book_remove_recent", "Remove from Recent", group = MenuGroup.REMOVE))
-    add(CrossbarContextMenuItem("book_remove", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("book_remove", "Delete", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
 // an album's own menu (the Albums view, the App Drawer's Music)
@@ -248,9 +243,9 @@ internal fun musicTrackContextMenuItems(
     if (hasPlayStamp) add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.REMOVE))
 
     if (playlistId != null) {
-        add(CrossbarContextMenuItem("remove_from_playlist", "Remove from this Playlist", isDestructive = true, confirms = false, group = MenuGroup.REMOVE))
+        add(CrossbarContextMenuItem("remove_from_playlist", "Remove from Playlist", isDestructive = true, confirms = false, group = MenuGroup.REMOVE))
     }
-    add(CrossbarContextMenuItem("remove_track", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("remove_track", "Delete", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
 internal fun playlistRowContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
@@ -268,12 +263,12 @@ internal fun musicPlayerMenuItems(playback: com.echo.feature.crossbar.music.Musi
         com.echo.feature.crossbar.music.RepeatMode.ONE -> "Repeat: One"
     }),
     CrossbarContextMenuItem("music_background", "Play in Background"),
-    CrossbarContextMenuItem("music_close", "Stop & Close"),
+    CrossbarContextMenuItem("music_close", "Stop"),
 )
 
 internal fun nowPlayingContextMenuItems(isPlaying: Boolean): List<CrossbarContextMenuItem> = listOf(
     CrossbarContextMenuItem("music_playpause", if (isPlaying) "Pause" else "Resume"),
-    CrossbarContextMenuItem("music_close", "Stop and Close"),
+    CrossbarContextMenuItem("music_close", "Stop"),
 )
 
 internal fun platformContextMenuItems(
@@ -312,10 +307,10 @@ internal fun platformContextMenuItems(
     }
     add(CrossbarContextMenuItem("library_manager", "Open in Library Manager", group = MenuGroup.SETTINGS))
 
-    if (pinned) add(CrossbarContextMenuItem("unpin", "Unpin", group = MenuGroup.ORGANIZE))
-    else add(CrossbarContextMenuItem("pin", "Pin To Top", group = MenuGroup.ORGANIZE))
+    if (pinned) add(CrossbarContextMenuItem("unpin", "Unpin from Top", group = MenuGroup.ORGANIZE))
+    else add(CrossbarContextMenuItem("pin", "Pin to Top", group = MenuGroup.ORGANIZE))
 
-    add(CrossbarContextMenuItem("hide", "Hide From Games", group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("hide", "Hide from Games", group = MenuGroup.REMOVE))
 
     if (platformId != PlatformIds.WINDOWS) {
         add(CrossbarContextMenuItem("remove", "Remove System", isDestructive = true, group = MenuGroup.REMOVE))

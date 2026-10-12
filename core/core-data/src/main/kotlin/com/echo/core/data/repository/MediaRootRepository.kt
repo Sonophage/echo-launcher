@@ -56,7 +56,7 @@ class MediaRootRepository @Inject constructor(
         writeRoots(kind, next.toList())
     }
 
-    // read and write: Delete From Device needs write, and with only read every delete was refused (seen on the
+    // read and write: Delete needs write, and with only read every delete was refused (seen on the
     // Konker, 2026-10-10). A provider that gives no write still gets read
     fun persist(uri: Uri) {
         val resolver = context.contentResolver

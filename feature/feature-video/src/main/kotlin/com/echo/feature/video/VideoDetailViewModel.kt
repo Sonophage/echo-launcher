@@ -31,13 +31,13 @@ enum class VideoDetailAction(val label: String, val group: MenuGroup = MenuGroup
     PLAY("Play"),
     RESUME("Resume"),
     RESTART("Start from Beginning"),
-    INFO("Information", MenuGroup.ABOUT),
+    INFO("Details", MenuGroup.ABOUT),
     FAVORITE("Favorite", MenuGroup.ORGANIZE),
     PLAYLIST("Add to Playlist", MenuGroup.ORGANIZE),
     RENAME("Rename Title", MenuGroup.EDIT),
     THUMBNAIL("Change Thumbnail", MenuGroup.EDIT),
-    LOCATION("Open File Location", MenuGroup.SETTINGS),
-    REMOVE("Delete From Device", MenuGroup.REMOVE),
+    LOCATION("Open Folder", MenuGroup.SETTINGS),
+    REMOVE("Delete", MenuGroup.REMOVE),
 }
 
 data class VideoPlaylistOption(val id: Long, val name: String, val checked: Boolean)
@@ -209,7 +209,10 @@ class VideoDetailViewModel @Inject constructor(
             VideoDetailAction.RENAME  -> startEditTitle()
             VideoDetailAction.THUMBNAIL -> _uiState.update { it.copy(pickThumbnail = true) }
             VideoDetailAction.INFO    -> _uiState.update { it.copy(infoVisible = true) }
-            VideoDetailAction.LOCATION -> showMessage(video.relativePath?.let { "In: $it" } ?: video.displayName)
+            // the folder the video is in, in the file manager; its path when nothing can open it (owner, 2026-10-12)
+            VideoDetailAction.LOCATION -> if (!com.echo.core.data.media.FolderOpen.openDocumentFolder(context, video.uri)) {
+                showMessage(video.relativePath?.let { "In: $it" } ?: video.displayName)
+            }
             VideoDetailAction.REMOVE  -> _uiState.update { it.copy(confirmRemove = true) }
         }
     }

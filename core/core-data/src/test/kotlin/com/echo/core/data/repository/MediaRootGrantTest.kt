@@ -12,7 +12,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-// seen on the Konker, 2026-10-10: a media folder was kept with read access only, so Delete From Device was refused
+// seen on the Konker, 2026-10-10: a media folder was kept with read access only, so Delete was refused
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE)
 class MediaRootGrantTest {
