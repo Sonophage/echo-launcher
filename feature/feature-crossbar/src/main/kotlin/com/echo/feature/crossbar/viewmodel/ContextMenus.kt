@@ -77,8 +77,8 @@ internal fun gameContextMenuItems(
 
         if (!item.isAndroidApp) add(CrossbarContextMenuItem("change_emulator", "Change Emulator", group = MenuGroup.SETTINGS))
         launchOnOtherScreenRow(state, item.packageName, item.platformId)?.let(::add)
-        // every game opens the folder it is in; with no folder to open, it shows the path or package (owner, 2026-10-12)
-        add(CrossbarContextMenuItem("open_folder", "Open Folder", group = MenuGroup.SETTINGS))
+        // the row opens the game's folder (owner, 2026-10-12); a game with no file (PC, Android) has no row
+        if (item.romPath != null) add(CrossbarContextMenuItem("open_folder", "Open Folder", group = MenuGroup.SETTINGS))
 
         hideLocation?.let { (_, _, label) ->
             add(CrossbarContextMenuItem("hide_here", "Hide from $label", group = MenuGroup.REMOVE))

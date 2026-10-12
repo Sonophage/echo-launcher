@@ -51,6 +51,7 @@ class MenuLabelsTest {
     private fun game(platformId: String = "psp", packageName: String? = null, pinned: Boolean = false, favorite: Boolean = false) = CrossbarItem(
         id = "g1", title = "Crisis Core", gameId = 1L, platformId = platformId, packageName = packageName,
         genre = GameGenre.entries.first(), pinnedInCategory = pinned, isFavorite = favorite,
+        romPath = if (packageName == null) "/storage/emulated/0/ROMs/psp/Crisis Core.iso" else null,
     )
     private val inRetro = CrossbarUiState(categories = listOf(games, retro, other), selectedCategoryIndex = 1, secondDisplayPresent = true)
     private val hide = Triple(HideLocationType.CATEGORY, "retro", "Retro")

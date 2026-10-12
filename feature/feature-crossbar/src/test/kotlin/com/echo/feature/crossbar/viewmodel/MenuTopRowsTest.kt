@@ -25,22 +25,22 @@ class MenuTopRowsTest {
 
     @Test
     fun `a ROM game offers Open Folder in Settings, not at the top`() {
-        val game = CrossbarItem(id = "g1", title = "Tetris", gameId = 1L, platformId = "gb")
+        val game = CrossbarItem(id = "g1", title = "Tetris", gameId = 1L, platformId = "gb", romPath = "/storage/emulated/0/ROMs/gb/Tetris.gb")
         val rows = gameContextMenuItems(game, state, discCount = 1, onRecentShelf = false, hideLocation = null)
         assertTrue("Open Folder is at the top: ${top(rows)}", "open_folder" !in top(rows))
         assertTrue("Open Folder is not in Settings: ${inSettings(rows)}", "open_folder" in inSettings(rows))
     }
 
-    // a PC or Android game opens its folder too, and shows its path or package when it has none to open
-    // (owner, 2026-10-12)
+    // the row opens the game's folder (owner, 2026-10-12); a game with no file has no folder, so no row that could
+    // only show a package name
     @Test
-    fun `a PC or Android game offers the same Open Folder row in Settings`() {
+    fun `a game with no file, such as a PC or Android game, has no Open Folder row`() {
         listOf(
             CrossbarItem(id = "g3", title = "Hades", gameId = 3L, platformId = com.echo.core.domain.model.PlatformIds.WINDOWS),
             CrossbarItem(id = "g2", title = "Genshin", gameId = 2L, platformId = "android", packageName = "com.game", isAndroidApp = true),
         ).forEach { game ->
             val rows = gameContextMenuItems(game, state, discCount = 1, onRecentShelf = false, hideLocation = null)
-            assertEquals("${game.title}: Open Folder", MenuGroup.SETTINGS, rows.singleOrNull { it.action == "open_folder" }?.group)
+            assertTrue("${game.title} offers Open Folder with no folder to open", rows.none { it.action == "open_folder" })
         }
     }
 

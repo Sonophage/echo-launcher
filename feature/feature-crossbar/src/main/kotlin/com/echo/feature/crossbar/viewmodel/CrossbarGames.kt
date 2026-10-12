@@ -126,7 +126,9 @@ class CrossbarGames(
                 game?.discSetKey?.let { vm.gameRepository.getDiscSetMembers(it).size } ?: 0
             }.getOrDefault(0)
 
-            openGameContextMenuCore(item, discCount, onRecentShelf = game?.lastPlayedAt != null)
+            // the library's file, not the row's: a row built outside the game list may not carry it
+            val row = game?.let { item.copy(romPath = it.romPath) } ?: item
+            openGameContextMenuCore(row, discCount, onRecentShelf = game?.lastPlayedAt != null)
         }
     }
 

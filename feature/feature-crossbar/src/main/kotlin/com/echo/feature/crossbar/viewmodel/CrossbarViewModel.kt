@@ -3485,24 +3485,16 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    internal fun showGameFileLocation(gameId: Long) {
-        viewModelScope.launch {
-            val game = gameRepository.getById(gameId) ?: return@launch
-            val location = game.romPath
-                ?: game.packageName?.let { "Package: $it" }
-                ?: "No file location on record"
-            _uiState.update {
-                it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = location))
-            }
-        }
-    }
-
-    // the file manager at the game's folder; the path in a dialog when nothing can open it
+    // the file manager at the game's folder; the path in a dialog when nothing can open it. Only a game with a file
+    // has the row
     internal fun openGameFolder(gameId: Long) {
         closeContextMenu()
         viewModelScope.launch {
-            val path = gameRepository.getById(gameId)?.romPath
-            if (path == null || !com.echo.core.data.media.FolderOpen.open(context, path)) showGameFileLocation(gameId)
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val path = game.romPath ?: return@launch
+            if (!com.echo.core.data.media.FolderOpen.open(context, path)) {
+                _uiState.update { it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = path)) }
+            }
         }
     }
 
