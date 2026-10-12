@@ -170,11 +170,8 @@ class BottomScreenActivity : ComponentActivity() {
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-            if (locked.typing) keyboardUp = true
-            // a tap gives the controller to this screen's content: the companion, or the XMB when swapped
-            link.crossbar.value?.let { it.bottomScreen.setCompanionActive(!it.uiState.value.screensSwapped) }
-        }
+        // a tap while typing brings the keyboard up; it never moves the controller from the Main Screen (ADR 0001)
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && locked.typing) keyboardUp = true
         return super.dispatchTouchEvent(event)
     }
 

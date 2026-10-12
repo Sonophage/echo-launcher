@@ -1,8 +1,6 @@
 package com.echo.feature.crossbar.bottomscreen
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -30,18 +28,15 @@ import com.echo.core.ui.design.PanelButton
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.feature.crossbar.ui.GameInfoScreen
 import com.echo.feature.crossbar.ui.LastPlayedPage
-import com.echo.feature.crossbar.ui.RecentFilterRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.echo.feature.crossbar.ui.SearchScreen
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoAction
 import com.echo.feature.crossbar.viewmodel.firstSection
-import com.echo.feature.crossbar.viewmodel.SearchScope
+import com.echo.feature.crossbar.viewmodel.RecentFilter
 import com.echo.feature.settings.ui.SettingsNavHost
 import androidx.compose.runtime.collectAsState
-
-enum class BottomPage(val label: String) { INFO("Info"), RECENT("Recent"), MUSIC("Music") }
 
 // what the bottom screen shows over its own pages: the screens a second screen takes from the top one
 // (owner, 2026-10-06), whatever opened them
@@ -56,9 +51,9 @@ internal fun lockedScreen(s: CrossbarUiState): LockedScreen = when {
     else -> LockedScreen.NONE
 }
 
-// the bottom screen: Info (the running game, else the App Drawer's hovered app, else the cursor's item) or
-// the Recent shelf, and, over them, Search and Settings, which open here on a device with a second screen. Touch
-// drives it, and the controller drives the locked screens through the crossbar as it does on top.
+// the Companion Screen: the Details the Companion rule picks (companionContent), with Swap, and Resume while a
+// game runs; over them, Search and Settings while they still open here. It takes touch only: a tap never moves
+// the controller from the Main Screen (ADR 0001).
 @Composable
 fun BottomScreen(
     state: BottomScreenState,
@@ -68,18 +63,11 @@ fun BottomScreen(
     onLocked: (LockedScreenOpen) -> Unit = {},
 ) {
     val ui by crossbar.uiState.collectAsState()
-    val page = state.shownPage()
     val locked = lockedScreen(ui)
     LaunchedEffect(locked) { onLocked(LockedScreenOpen(open = locked != LockedScreen.NONE, typing = locked == LockedScreen.SEARCH)) }
-    val info = state.shownInfo().takeIf { page == BottomPage.INFO }
-    // the screen the controller drives is outlined (owner, 2026-10-06: a tap gives the controller to the screen tapped)
-    val driven = ui.secondScreen && ui.companionActive
-    val recentList = rememberLazyListState()
+    val shown = state.shown as? CompanionContent.Details
     CompositionLocalProvider(LocalPadPrompts provides false) {
-        BoxWithConstraints(
-            modifier.fillMaxSize().background(PanelBase)
-                .then(if (driven) Modifier.border(3.dp, Color.White.copy(alpha = 0.55f)) else Modifier),
-        ) {
+        BoxWithConstraints(modifier.fillMaxSize().background(PanelBase)) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
             // a menu asked for here (Y on Recent) opens here, over the page
             val companionMenu: @Composable () -> Unit = {
@@ -114,95 +102,57 @@ fun BottomScreen(
                 }
                 LockedScreen.NONE -> Unit
             }
-            if (page == BottomPage.MUSIC) {
-                // the music remote: the player itself, so the top screen stays free to browse (owner, 2026-10-08)
-                // the scrubber reads the playing position, which only the crossbar's window provided
-                androidx.compose.runtime.CompositionLocalProvider(
-                    com.echo.feature.crossbar.ui.LocalPlaybackPositions provides
-                        remember(crossbar) { com.echo.feature.crossbar.ui.PlaybackPositions(crossbar.musicPositionMs, crossbar.externalPositionMs) },
-                ) {
-                com.echo.feature.crossbar.ui.MusicPlayerScreen(
-                    state = ui.musicPlayback,
-                    onPlayPause = crossbar.music::musicPlayPause,
-                    onPrev = crossbar.music::musicPrev,
-                    onNext = crossbar.music::musicNext,
-                    onSeekTo = crossbar.music::musicSeekTo,
-                    onShuffle = crossbar.music::musicToggleShuffle,
-                    onRepeat = crossbar.music::musicCycleRepeat,
-                    accentArgb = ui.musicAccentArgb,
-                    onBack = { crossbar.bottomScreen.showPage(BottomPage.RECENT) },
-                    showFooter = false,
-                    modifier = Modifier.fillMaxSize().padding(bottom = u.dp(84)),
-                )
+            shown?.let { details ->
+                val info = details.info
+                if (showsGameInfo(info.item)) {
+                    // Info's sections (the sheet, the video) open here without touching the Main Screen
+                    // it opens on achievements, as the Main Screen's Game Info does
+                    var open by remember(info.item.id, info.achievementSet, info.content != null) { mutableStateOf(info.firstSection()) }
+                    GameInfoScreen(
+                        info = info.copy(open = open),
+                        androidNotices = emptyList(),
+                        onAction = {},
+                        onCardFocused = {},
+                        onNoticeTapped = {},
+                        onClosePanel = { open = null },
+                        onSectionPicked = { open = it },
+                        companion = true,
+                    )
+                } else {
+                    // a song, video, book, photo or system as Recent draws an item in full view; a tap does nothing
+                    LastPlayedPage(
+                        items = listOf(info.item),
+                        selectedIndex = 0,
+                        listState = rememberLazyListState(),
+                        filter = RecentFilter.ALL,
+                        railVisible = false,
+                        onCardTapped = {},
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
-            } else if (info != null) {
-                // Info's sections (the sheet, the video) open here without touching the top screen
-                // it opens on achievements, as the top screen's Game Info does
-                var open by remember(info.item.id, info.achievementSet, info.content != null) { mutableStateOf(info.firstSection()) }
-                GameInfoScreen(
-                    info = info.copy(open = open),
-                    androidNotices = emptyList(),
-                    onAction = {},
-                    onCardFocused = {},
-                    onNoticeTapped = {},
-                    onClosePanel = { open = null },
-                    onSectionPicked = { open = it },
-                    companion = true,
-                )
-                if (state.playing != null) {
+                if (details.playing) {
                     // the session clock ticks each minute while the game runs
-                    val now by androidx.compose.runtime.produceState(System.currentTimeMillis(), state.playingSince) {
+                    val now by androidx.compose.runtime.produceState(System.currentTimeMillis(), details.playingSince) {
                         while (true) { value = System.currentTimeMillis(); kotlinx.coroutines.delay(30_000L) }
                     }
                     Text(
-                        sessionLabel(state.playingSince, now),
+                        sessionLabel(details.playingSince, now),
                         style = u.eyebrow(),
                         color = Color.White.copy(alpha = 0.85f),
                         modifier = Modifier.align(Alignment.TopStart).padding(start = u.dp(40), top = u.dp(28)),
                     )
                 }
-            } else {
-                // the Last Played screen, as the top screen draws it, with its filters above it
-                val recentGameId = state.recent.getOrNull(state.recentSelected)?.gameId
-                val recentAchievements by remember(recentGameId) { crossbar.gameDetail.achievementsStatFor(recentGameId) }
-                    .collectAsState(initial = null)
-                LastPlayedPage(
-                    items = state.recent.ifEmpty { listOf(crossbar.recents.emptyRecentItem()) },
-                    selectedIndex = state.recentSelected,
-                    listState = recentList,
-                    filter = state.recentFilter,
-                    railVisible = state.recentListOpen,
-                    onCardTapped = crossbar.bottomScreen::tapRecent,
-                    onCardPressed = crossbar.bottomScreen::pressRecent,
-                    achievements = recentAchievements,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                RecentFilterRow(
-                    filter = state.recentFilter,
-                    u = u,
-                    filters = state.recentFilters,
-                    onFilterTapped = crossbar.bottomScreen::pickRecentFilter,
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = u.dp(12)),
-                )
             }
+            // the Companion Screen's only controls: Resume while a game runs, and Swap
             Row(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = u.dp(40), vertical = u.dp(24)),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(u.dp(12)),
             ) {
-                // the page in view is drawn as the primary button
-                // Info only when there is something to show: on a shelf or a folder it did nothing when tapped
-                state.pages().forEach { p ->
-                    PanelButton(if (p == page) GamepadAction.SELECT else GamepadAction.OPEN_CONTEXT_MENU, p.label, u) { crossbar.bottomScreen.showPage(p) }
-                }
                 Spacer(Modifier.weight(1f))
-                // the remote's way out: Y's options hold Stop & Close; B, or a tap on the player, goes back to Recent
-                if (page == BottomPage.MUSIC) PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u) { crossbar.openMusicOptionsOnCompanion() }
                 // Resume launches the game again, so it is a hold like every launch
-                if (state.playing != null) PanelButton(GamepadAction.SELECT, "Resume", u, holdMs = LAUNCH_HOLD_MS) { crossbar.bottomScreen.resume() }
-                PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Apps", u) { crossbar.onOpenAppDrawer() }
-                PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Search", u) { crossbar.librarySearch.openSearch(SearchScope.ALL) }
-                // the XMB and this screen change places (owner, 2026-10-06)
+                if (shown?.playing == true) PanelButton(GamepadAction.SELECT, "Resume", u, holdMs = LAUNCH_HOLD_MS) { crossbar.bottomScreen.resume() }
+                // the Main Screen and this screen change displays
                 PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.bottomScreen.toggleSwap() }
             }
             companionMenu()

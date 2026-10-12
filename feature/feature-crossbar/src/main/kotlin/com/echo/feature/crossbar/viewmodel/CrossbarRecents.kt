@@ -331,8 +331,7 @@ class CrossbarRecents(
     }
     internal class RecentRows(val filters: List<RecentFilter>, val items: List<CrossbarItem>, val tracks: List<com.echo.core.domain.model.MusicTrack>)
 
-    // the Last Played rows for [filter]: the column on the top screen, and on a device with a second
-    // screen the bottom screen's Recent page (owner, 2026-10-06), so both read the same list
+    // the Last Played rows for [filter], for the Recent column
     internal fun recentRows(filter: Flow<RecentFilter>): Flow<RecentRows> =
         combine(
             recentGames(),

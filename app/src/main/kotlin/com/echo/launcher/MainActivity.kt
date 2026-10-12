@@ -305,15 +305,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // owner, 2026-10-06: with a second screen, a tap gives the controller to the screen tapped; this one
-    // shows the XMB, or the companion when the screens are swapped
-    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-            crossbarViewModel.touchedScreen(showsCompanion = crossbarViewModel.uiState.value.screensSwapped)
-        }
-        return super.dispatchTouchEvent(event)
-    }
-
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (minimalKeyboardKey(event)) return true
