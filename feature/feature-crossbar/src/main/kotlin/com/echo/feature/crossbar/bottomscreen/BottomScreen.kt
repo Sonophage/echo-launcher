@@ -37,6 +37,9 @@ import com.echo.core.ui.design.PanelButton
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.feature.crossbar.ui.GameInfoScreen
 import com.echo.feature.crossbar.ui.LastPlayedPage
+import com.echo.feature.crossbar.ui.LocalRecentWallpaper
+import com.echo.feature.crossbar.ui.StillWallpaper
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoAction
@@ -58,7 +61,12 @@ fun BottomScreen(
 ) {
     LaunchedEffect(Unit) { onLocked(LockedScreenOpen(open = false, typing = false)) }
     val shown = state.shown as? CompanionContent.Details
-    CompositionLocalProvider(LocalPadPrompts provides false) {
+    val ui by crossbar.uiState.collectAsState()
+    // an app's Details sit on the wallpaper, tinted, as Recent draws an app
+    CompositionLocalProvider(
+        LocalPadPrompts provides false,
+        LocalRecentWallpaper provides { StillWallpaper(ui.customWallpaperPath, ui.wallpaperAccent) },
+    ) {
         BoxWithConstraints(modifier.fillMaxSize().background(PanelBase)) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
             (state.shown as? CompanionContent.Setting)?.let { SettingView(it, u) }

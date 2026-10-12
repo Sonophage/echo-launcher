@@ -846,18 +846,9 @@ fun CrossbarShell(
             ) {
             val onLastPlayedHome = uiState.onLastPlayedHome
             if (onLastPlayedHome) {
-                // a still copy of the wallpaper for an app's backdrop: no wave, no second motion video
+                // a still copy of the wallpaper for an app's backdrop
                 CompositionLocalProvider(LocalRecentWallpaper provides {
-                    CrossbarBackground(
-                        waveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
-                        customWallpaperPath = uiState.customWallpaperPath,
-                        waveOverWallpaper = false,
-                        wallpaperAccent = uiState.wallpaperAccent,
-                        motionWallpaperPath = null,
-                        motionDecision = com.echo.core.ui.motion.MotionWallpaperPolicy.Decision.POSTER,
-                        waveDrawnByCaller = true,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    StillWallpaper(uiState.customWallpaperPath, uiState.wallpaperAccent)
                 }) {
                 LastPlayedPage(
                     items = uiState.currentItems,
@@ -1283,19 +1274,8 @@ fun CrossbarShell(
                     .getOrDefault(AppFilter.DEFAULT)
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
                     AppDrawerScreen(
-                        // a still copy of the wallpaper, under the app's tint: no wave, no second motion video
-                        wallpaper = {
-                            CrossbarBackground(
-                                waveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
-                                customWallpaperPath = uiState.customWallpaperPath,
-                                waveOverWallpaper = false,
-                                wallpaperAccent = uiState.wallpaperAccent,
-                                motionWallpaperPath = null,
-                                motionDecision = com.echo.core.ui.motion.MotionWallpaperPolicy.Decision.POSTER,
-                                waveDrawnByCaller = true,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        },
+                        // a still copy of the wallpaper, under the app's tint
+                        wallpaper = { StillWallpaper(uiState.customWallpaperPath, uiState.wallpaperAccent) },
                         initialFilter = initialFilter,
                         genreFilter = uiState.genreFilter,
                         chipsByGenre = uiState.gameGrouping == com.echo.feature.crossbar.viewmodel.GameGrouping.GENRE,

@@ -101,16 +101,18 @@ fun GameInfoScreen(
     val notices = info.notices(androidNotices)
     val stats = gameInfoStats(info, notices.size, now)
     val appIcon = rememberAppIcon(item.packageName.takeIf { info.isApp })
+    // on the Companion Screen an app sits on the app backdrop Recent gives it, in place of the band
+    val appBackdrop = item.packageName.takeIf { companion && info.isApp }
 
     BoxWithConstraints(
         modifier
             .fillMaxSize()
-            .background(PanelBase)
+            .then(if (appBackdrop == null) Modifier.background(PanelBase) else Modifier)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
     ) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
         val drop = if (u.square) (maxHeight - u.dp(PANEL_DESIGN_HEIGHT)) / 2 else 0.dp
-        Box(Modifier.fillMaxWidth().height(u.dp(430) + drop)) {
+        if (appBackdrop != null) AppBackdrop(appBackdrop) else Box(Modifier.fillMaxWidth().height(u.dp(430) + drop)) {
             val art = item.backdropArt.firstOrNull()
             when {
                 info.isApp -> Box(

@@ -160,3 +160,19 @@ private fun WallpaperBackground(
     }
 }
 
+// a still copy of the wallpaper, under an app's tint: no wave, no second motion video. Recent, the App Drawer and
+// the Companion Screen's app Details draw it
+@Composable
+fun StillWallpaper(customWallpaperPath: String?, wallpaperAccent: Long?) {
+    CrossbarBackground(
+        waveStyle = WaveStyle.OFF,
+        customWallpaperPath = customWallpaperPath,
+        waveOverWallpaper = false,
+        wallpaperAccent = wallpaperAccent,
+        motionWallpaperPath = null,
+        motionDecision = MotionWallpaperPolicy.Decision.POSTER,
+        waveDrawnByCaller = true,
+        modifier = Modifier.fillMaxSize(),
+    )
+}
+
