@@ -88,3 +88,13 @@ When a change makes a skill wrong, fix the skill in the same commit.
   that names the test that fails without the change and what was checked on a device.
 - A test must fail when the behaviour it guards is broken. Break the code on purpose once and see
   the named test fail.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub issues for this repo, through `gh`. Specs and tickets carry the `ready-for-agent` label. See `.claude/docs/issue-tracker.md`.
+
+### Domain docs
+
+Single context: `CONTEXT.md` at the root for the glossary, `.claude/docs/adr/` for decisions. Use the glossary's terms; flag any conflict with an ADR.

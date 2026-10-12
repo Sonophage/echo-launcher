@@ -64,9 +64,11 @@ replay_pid*
 
 # AI-assistant configuration and local state — kept out of version control. The project's own
 # instructions (CLAUDE.md) and skills (.claude/skills/) are tracked (owner, 2026-10-04):
-# checkStructure reads CLAUDE.md, so it has to be in every clone and in CI.
+# checkStructure reads CLAUDE.md, so it has to be in every clone and in CI. The mn- flow's issue
+# tracker notes and ADRs (.claude/docs/) are tracked too, so worktrees see them (owner, 2026-10-12).
 .claude/*
 !.claude/skills/
+!.claude/docs/
 .codex/
 .agents/
 
