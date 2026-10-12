@@ -644,11 +644,8 @@ data class CrossbarUiState(
 
     // a second screen is showing ECHO (the AYN Thor's bottom screen)
     val secondScreen: Boolean = false,
-    // owner, 2026-10-06: the XMB on the second screen and the companion (Info, Recent,
-    // Search, Settings) on the main one; remembered
+    // Swap: the Main Screen on the second display and the Companion Screen on the first; remembered
     val screensSwapped: Boolean = false,
-    // the companion takes the controller, after a tap on its screen, until B or a tap on the XMB
-    val companionActive: Boolean = false,
     // the open menu, and any it leads to, was asked for on the second screen and is drawn there (owner,
     // 2026-10-08: a menu opens where it was asked for); cleared whenever no menu is open
     val menuOnCompanion: Boolean = false,
@@ -2974,10 +2971,6 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
-        // owner, 2026-10-06: with a second screen the controller drives the screen last touched; Home
-        // and anything the companion does not use still reach the XMB
-        if (state.secondScreen && state.companionActive && action != GamepadAction.HOME && bottomScreen.onButton(action)) return
-
         if (orbPressHandled(action, state)) return
 
         when (action) {
@@ -3574,24 +3567,10 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    // a Recent item's Options from the second screen (owner, 2026-10-08): its own menu, with no Move, which
-    // belongs to the crossbar's focused row
-    internal fun openRecentItemMenu(item: CrossbarItem) {
-        _uiState.update { it.copy(menuOnCompanion = true) }
-        openItemMenu(item)
-    }
-
-    // Y on the companion's music remote: the player's options open on that screen
-    internal fun openMusicOptionsOnCompanion() {
-        _uiState.update { it.copy(menuOnCompanion = true) }
-        music.openMusicPlayerOptions()
-    }
-
-    // the one way the music player opens: with a second screen it is the companion's Music page, and the
-    // crossbar's screen stays free to browse (owner, 2026-10-08); on one screen it covers the crossbar
+    // the one way the music player opens: over the crossbar on the Main Screen, with or without a Companion
+    // Screen (ADR 0001)
     internal fun showMusicPlayer() {
-        if (_uiState.value.secondScreen) bottomScreen.showPage(com.echo.feature.crossbar.bottomscreen.BottomPage.MUSIC)
-        else _uiState.update { it.copy(musicPlayerVisible = true) }
+        _uiState.update { it.copy(musicPlayerVisible = true) }
     }
 
     private fun openItemMenu(item: CrossbarItem?) {
@@ -3973,12 +3952,6 @@ class CrossbarViewModel @Inject constructor(
         if (_uiState.value.secondDisplayPresent != present) _uiState.update { it.copy(secondDisplayPresent = present) }
     }
 
-    // a tap on a screen that shows the companion (true) or the XMB (false); with a second screen, the
-    // controller then drives that screen's content
-    fun touchedScreen(showsCompanion: Boolean) {
-        if (_uiState.value.secondScreen) bottomScreen.setCompanionActive(showsCompanion)
-    }
-
     private fun CrossbarUiState.stepToReachableCategory(delta: Int): Int {
         var next = selectedCategoryIndex + delta
         while (next in categories.indices) {
@@ -4105,8 +4078,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
     // opens or launches an item as the column does: a video, book, track or album opens in ECHO; a game,
-    // shortcut or app launches. False when the item is none of these. The bottom screen's Recent page
-    // opens its items through this too.
+    // shortcut or app launches. False when the item is none of these.
     internal fun openItem(item: CrossbarItem): Boolean {
         when (item.type) {
             CrossbarItemType.VIDEO_FILE -> {

@@ -4,7 +4,6 @@ import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoState
-import com.echo.feature.crossbar.viewmodel.RecentFilter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,52 +11,23 @@ import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// the Main Screen's state the Companion Screen follows, and what it shows from it (companionContent)
 data class BottomScreenState(
-    // the game or app under the XMB's cursor
-    val focused: GameInfoState? = null,
+    // the item hovered on the Main Screen: the Crossbar's cursor, or Search's focused result while Search is open
+    val hovered: GameInfoState? = null,
     // the app hovered in the App Drawer while it is open on the Main Screen (ADR 0001)
     val drawer: GameInfoState? = null,
+    // Search is open on the Main Screen, over the drawer when it was opened from there
+    val searching: Boolean = false,
+    // a context menu is open on the Main Screen
+    val menuOpen: Boolean = false,
     // the game ECHO launched, while it runs in front of ECHO
     val playing: GameInfoState? = null,
-    // when that game was launched, for the session clock (owner, 2026-10-08)
+    // when that game was launched, for the session clock
     val playingSince: Long? = null,
-    // the Recent page: the Last Played screen, which leaves the top screen for this one (owner, 2026-10-06)
-    val recent: List<CrossbarItem> = emptyList(),
-    val recentFilters: List<RecentFilter> = listOf(RecentFilter.ALL),
-    val recentFilter: RecentFilter = RecentFilter.ALL,
-    val recentSelected: Int = 0,
-    // Recent's list beside the item (true) or the item in full view, as the top screen's Last Played shows it
-    val recentListOpen: Boolean = true,
-    val page: BottomPage = BottomPage.INFO,
-    // music is playing, so the companion offers its remote (owner, 2026-10-08)
-    val music: Boolean = false,
+    // what the Companion Screen shows, kept by update through the Companion rule
+    val shown: CompanionContent? = null,
 )
-
-// the page in view: Info stands down for Recent while there is no info to show, so the button lit is
-// the page drawn and the controller moves what is on screen
-fun BottomScreenState.shownPage(): BottomPage = if (page in pages()) page else BottomPage.RECENT
-
-// the pages the companion can show now, in pill order: Info when there is info, Recent always, Music while
-// something plays
-fun BottomScreenState.pages(): List<BottomPage> = listOfNotNull(
-    BottomPage.INFO.takeIf { shownInfo() != null },
-    BottomPage.RECENT,
-    BottomPage.MUSIC.takeIf { music },
-)
-
-// the companion fits the crossbar's column (owner, 2026-10-08): Recent shows that column's kind, when Recent holds
-// any; any other column, or a kind with nothing in it, shows All. A gaming column of your own counts as games
-fun recentFilterFor(categoryId: String?, gaming: Boolean, shown: List<com.echo.feature.crossbar.viewmodel.RecentFilter>): com.echo.feature.crossbar.viewmodel.RecentFilter {
-    val kind = when {
-        categoryId == com.echo.core.domain.model.BuiltInCategory.MUSIC -> com.echo.feature.crossbar.viewmodel.RecentFilter.MUSIC
-        categoryId == com.echo.core.domain.model.BuiltInCategory.VIDEO -> com.echo.feature.crossbar.viewmodel.RecentFilter.VIDEO
-        categoryId == com.echo.core.domain.model.BuiltInCategory.LIBRARY -> com.echo.feature.crossbar.viewmodel.RecentFilter.BOOKS
-        categoryId == com.echo.core.domain.model.BuiltInCategory.ANDROID -> com.echo.feature.crossbar.viewmodel.RecentFilter.APPS
-        gaming -> com.echo.feature.crossbar.viewmodel.RecentFilter.GAMES
-        else -> null
-    }
-    return kind?.takeIf { it in shown } ?: com.echo.feature.crossbar.viewmodel.RecentFilter.ALL
-}
 
 enum class MusicRemoteKey { PLAY_PAUSE, PREV, NEXT, LEAVE, OPTIONS }
 
@@ -72,30 +42,9 @@ fun musicRemoteKey(action: GamepadAction): MusicRemoteKey? = when (action) {
     else -> null
 }
 
-// left and right on the companion: on Recent they first close the list to show the item in full, and open it
-// again, as on the top screen (recentRailStep); past that they walk the pages (owner, 2026-10-08: the game's
-// info in full view, on either screen)
-fun BottomScreenState.sideStep(action: GamepadAction): BottomScreenState {
-    val left = action == GamepadAction.NAVIGATE_LEFT
-    if (shownPage() == BottomPage.RECENT) {
-        when (com.echo.feature.crossbar.viewmodel.recentRailStep(action, onLastPlayedHome = true, railVisible = recentListOpen)) {
-            com.echo.feature.crossbar.viewmodel.RailStep.Open -> return copy(recentListOpen = true)
-            com.echo.feature.crossbar.viewmodel.RailStep.Close -> return copy(recentListOpen = false)
-            com.echo.feature.crossbar.viewmodel.RailStep.Pass -> Unit
-        }
-    }
-    return copy(page = steppedPage(if (left) -1 else 1))
-}
-
-// left and right walk the pages there are, round the ends
-fun BottomScreenState.steppedPage(delta: Int): BottomPage {
-    val all = pages()
-    return all[(all.indexOf(shownPage()) + delta).mod(all.size)]
-}
-
-// owner, 2026-10-06: on a device with a second screen, the bottom screen follows the top one. It is a
-// second activity with no view model of its own: it draws the crossbar's state and acts through the
-// crossbar, as the top screen does, so Search and Settings have one owner on both.
+// the bridge between the Main Screen and the Companion Screen, and the one owner of the Companion's state
+// (ADR 0001). The Companion Screen is a second activity with no view model of its own: it draws this state and
+// acts through the Crossbar.
 @Singleton
 class BottomScreenLink @Inject constructor() {
     private val _state = MutableStateFlow(BottomScreenState())
@@ -113,7 +62,9 @@ class BottomScreenLink @Inject constructor() {
     private val _hostShown = MutableStateFlow(true)
     val hostShown: StateFlow<Boolean> = _hostShown.asStateFlow()
 
-    fun update(change: (BottomScreenState) -> BottomScreenState) = _state.update(change)
+    // every change goes through the Companion rule, which keeps what is shown
+    fun update(change: (BottomScreenState) -> BottomScreenState) =
+        _state.update { old -> change(old).let { it.copy(shown = companionContent(it, last = old.shown)) } }
 
     // the App Drawer's focused app while the drawer is open on the Main Screen; null once it closes
     private val _drawerFocus = MutableStateFlow<com.echo.feature.appbar.InstalledApp?>(null)
@@ -147,10 +98,6 @@ class BottomScreenLink @Inject constructor() {
     // a crossbar going away clears only itself, not one that has replaced it
     fun unbind(crossbar: CrossbarViewModel) { _crossbar.compareAndSet(crossbar, null) }
 }
-
-// the info the bottom screen shows: the running game while it is in front, else the App Drawer's hovered
-// app while the drawer is open, else the cursor's item. None means the Recent shelf stands in.
-fun BottomScreenState.shownInfo(): GameInfoState? = playing ?: drawer ?: focused
 
 // the companion's session clock: "NOW PLAYING · 12 MIN", in hours past an hour; minutes round down, so a game
 // just launched reads "JUST STARTED"
