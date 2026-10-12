@@ -10,16 +10,11 @@ Open work and recent decisions are in the handoff, outside this repo:
 
 ## The gate
 
-Run this before a commit that changes code. It is the full check.
+Run `tools/gate.sh` before a commit that changes code. It is the full check: `checkStructure`, every
+module's unit tests (the four JVM modules run `test`, not `testDebugUnitTest`) and `lintDebug`. It
+deletes old results, then counts the new ones from the test XML; quote its `gate:` line, not Gradle's
+summary.
 
-```sh
-./gradlew checkStructure testDebugUnitTest :core:core-archive:test :core:core-navigation:test \
-  :core:theme-kit:test :studio:test lintDebug --continue
-```
-
-- The four JVM modules run `test`, not `testDebugUnitTest`. Without them the count looks complete
-  but is short.
-- Count results from `**/build/test-results/**/TEST-*.xml`. Do not trust a summary line.
 - `feature-settings` tests can hang (a Robolectric DataStore deadlock). If the gate runs past five
   minutes, get a stack with `jstack` before you stop it.
 
@@ -39,7 +34,9 @@ Run this before a commit that changes code. It is the full check.
 The pre-commit hook (`.githooks/pre-commit`) stops a commit that adds or removes an `include(...)`
 in `settings.gradle.kts` or a `project(...)` dependency in a `build.gradle.kts` without also
 changing `CLAUDE.md` or a skill. Other build edits, such as a version bump, pass. Turn it on once per clone with
-`git config core.hooksPath .githooks`.
+`git config core.hooksPath .githooks`. The same hook stops added Kotlin lines that use a term
+`CONTEXT.md` says to avoid (those of several words, and XMB) or write an owner note in a form other
+than `(owner, YYYY-MM-DD)`.
 
 ## Module map
 
