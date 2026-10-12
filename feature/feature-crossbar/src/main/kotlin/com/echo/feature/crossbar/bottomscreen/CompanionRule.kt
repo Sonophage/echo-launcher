@@ -45,3 +45,19 @@ private val MEDIA_TYPES = setOf(
 
 // a game or app is drawn as Game Info; a song, video, book, photo or system as Recent draws an item in full view
 internal fun showsGameInfo(item: CrossbarItem): Boolean = item.gameId != null || item.isAndroidApp
+
+// Swap (L3, R3 or the Swap button). With the Companion Screen on a second display, the two screens change displays,
+// remembered across restarts; with one display (or one screen chosen in Quick settings), the Companion Screen is
+// shown in place of the Main Screen until the next Swap, held in memory only, so ECHO always starts on the Main
+// Screen (ADR 0001)
+sealed interface Swap {
+    data class Displays(val swapped: Boolean) : Swap
+    data class InPlace(val shown: Boolean) : Swap
+}
+
+fun swap(s: CrossbarUiState): Swap =
+    if (s.secondDisplayPresent && s.secondScreenEnabled) Swap.Displays(!s.screensSwapped) else Swap.InPlace(!s.companionInPlace)
+
+// the display ECHO started on shows the Companion Screen: swapped with the Companion Screen attached on the other
+// display, or shown in place on one display
+fun firstDisplayShowsCompanion(s: CrossbarUiState): Boolean = (s.secondScreen && s.screensSwapped) || s.companionInPlace

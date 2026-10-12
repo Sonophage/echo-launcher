@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 // keeps the Companion Screen's state current from the Main Screen's, and acts on its taps. Nothing is loaded
-// while no Companion Screen is attached, so a one-screen device pays nothing.
+// while no Companion Screen is on show, so a one-screen device pays nothing until Swap shows it.
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class CrossbarBottomScreen(
     private val vm: CrossbarViewModel,
@@ -35,9 +35,13 @@ class CrossbarBottomScreen(
     private val link: BottomScreenLink,
     private val lastLaunch: StateFlow<OpenSession?>,
 ) {
+    // a Companion Screen is on show: attached on a second display, or shown in place by Swap on one
+    private val companionShown = combine(link.attached, uiState.map { it.companionInPlace }) { attached, inPlace -> attached || inPlace }
+        .distinctUntilChanged()
+
     fun observe() {
         scope.launch {
-            link.attached.flatMapLatest { on ->
+            companionShown.flatMapLatest { on ->
                 if (!on) flowOf(null)
                 // the cursor settles before the info is read, so scrolling a column reads only where it stops
                 else uiState.map { mainScreenHover(it)?.takeIf(::companionShows) }
@@ -51,7 +55,7 @@ class CrossbarBottomScreen(
         // the App Drawer is on the Main Screen (ADR 0001) and the companion shows the app hovered in it, with a
         // game's details and achievements; it loads once the cursor settles, as Info does
         scope.launch {
-            link.attached.flatMapLatest { on -> if (on) link.drawerFocus else flowOf(null) }
+            companionShown.flatMapLatest { on -> if (on) link.drawerFocus else flowOf(null) }
                 .distinctUntilChanged { a, b -> a?.packageName == b?.packageName && a?.gameId == b?.gameId }
                 .debounce(SETTLE_MS)
                 .collectLatest { app ->
@@ -67,7 +71,7 @@ class CrossbarBottomScreen(
             }
         }
         scope.launch {
-            combine(link.attached, link.hostShown, lastLaunch) { on, shown, last ->
+            combine(companionShown, link.hostShown, lastLaunch) { on, shown, last ->
                 if (on) playingGameId(shown, last?.gameId)?.let { it to last?.launchedAt } else null
             }.distinctUntilChanged().collectLatest { session ->
                 val info = session?.first?.let { itemFor(it) }?.let { vm.gameDetail.load(GameInfoState(it)) }
@@ -96,10 +100,13 @@ class CrossbarBottomScreen(
 
     fun drawerFocused(app: com.echo.feature.appbar.InstalledApp?) = link.drawerFocused(app)
 
-    // the Swap button: the Main Screen and the Companion Screen change displays, and the controller stays with
-    // the Main Screen
+    // Swap (the Swap button, L3 or R3), as swap() decides: two displays change places and it is remembered, and the
+    // controller stays with the Main Screen; one display shows the Companion Screen in place, in memory only
     fun toggleSwap() {
-        scope.launch { vm.context.echoDataStore.edit { it[KEY_SWAP_SCREENS] = it[KEY_SWAP_SCREENS] != true } }
+        when (val next = swap(uiState.value)) {
+            is Swap.Displays -> scope.launch { vm.context.echoDataStore.edit { it[KEY_SWAP_SCREENS] = next.swapped } }
+            is Swap.InPlace -> uiState.update { it.copy(companionInPlace = next.shown) }
+        }
     }
 
     // dual or single screen: off, the second screen is left to Android and ECHO uses one screen

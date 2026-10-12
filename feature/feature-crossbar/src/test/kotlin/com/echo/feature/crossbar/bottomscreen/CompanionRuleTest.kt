@@ -91,4 +91,25 @@ class CompanionRuleTest {
         assertFalse(companionShows(CrossbarItem(id = "s", title = "Display")))
         assertFalse(companionShows(CrossbarItem(id = "f", title = "Videos", type = CrossbarItemType.VIDEO_FOLDER)))
     }
+
+    // Swap (L3, R3 or the Swap button). With the Companion Screen on a second display, the two screens change
+    // displays and ECHO remembers it across restarts; with one display, the Companion Screen is shown in place of
+    // the Main Screen and only until the next Swap, so ECHO always starts on the Main Screen
+    @Test
+    fun `with two displays Swap exchanges the displays and is remembered`() {
+        val dual = CrossbarUiState(secondDisplayPresent = true, secondScreenEnabled = true, secondScreen = true)
+        assertEquals(Swap.Displays(swapped = true), swap(dual))
+        assertEquals(Swap.Displays(swapped = false), swap(dual.copy(screensSwapped = true)))
+        assertTrue("after a restart the first display shows the Companion Screen again", firstDisplayShowsCompanion(dual.copy(screensSwapped = true)))
+    }
+
+    @Test
+    fun `with one display Swap shows the Companion Screen in place, in memory only`() {
+        val single = CrossbarUiState(secondDisplayPresent = false)
+        assertEquals(Swap.InPlace(shown = true), swap(single))
+        assertEquals("Swap again: back to the Main Screen", Swap.InPlace(shown = false), swap(single.copy(companionInPlace = true)))
+        assertTrue(firstDisplayShowsCompanion(single.copy(companionInPlace = true)))
+        assertFalse("a Swap remembered from two displays never starts ECHO on the Companion Screen", firstDisplayShowsCompanion(single.copy(screensSwapped = true)))
+        assertEquals("one screen chosen in Quick settings counts as one display", Swap.InPlace(shown = true), swap(CrossbarUiState(secondDisplayPresent = true, secondScreenEnabled = false)))
+    }
 }

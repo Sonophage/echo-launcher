@@ -646,6 +646,8 @@ data class CrossbarUiState(
     val secondScreen: Boolean = false,
     // Swap: the Main Screen on the second display and the Companion Screen on the first; remembered
     val screensSwapped: Boolean = false,
+    // Swap on one display: the Companion Screen shown in place of the Main Screen; never remembered (swap())
+    val companionInPlace: Boolean = false,
     // the device has a second display, and whether ECHO uses it (Quick settings, owner 2026-10-06)
     val secondDisplayPresent: Boolean = false,
     val secondScreenEnabled: Boolean = true,
@@ -2717,11 +2719,14 @@ class CrossbarViewModel @Inject constructor(
     private fun dispatchGamepadAction(action: GamepadAction) {
         val state = _uiState.value
 
-        // L3 or R3 (owner, 2026-10-08): the same as the Swap button, from either screen, over anything open
+        // L3 or R3 (owner, 2026-10-08): the same as the Swap button, over anything open, on one display or two
         if (action == GamepadAction.SWAP_SCREENS) {
-            if (state.secondDisplayPresent && state.secondScreenEnabled) bottomScreen.toggleSwap()
+            bottomScreen.toggleSwap()
             return
         }
+        // the Companion Screen shown in place takes touch only, as on a second display: the hidden Main Screen
+        // never acts on a press it cannot show
+        if (state.companionInPlace) return
 
         if (state.letterJump != null) {
             when (action) {
