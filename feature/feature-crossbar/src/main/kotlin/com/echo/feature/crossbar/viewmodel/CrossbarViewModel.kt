@@ -2722,13 +2722,14 @@ class CrossbarViewModel @Inject constructor(
     private fun dispatchGamepadAction(action: GamepadAction) {
         val state = _uiState.value
 
-        // L3 or R3 (owner, 2026-10-08): the same as the Swap button, over anything open, on one display or two
-        if (action == GamepadAction.SWAP_SCREENS) {
+        // L3 or R3: the same as the Swap button, over anything open, on one display or two; and B from the Companion
+        // Screen shown in place (pressSwaps)
+        if (com.echo.feature.crossbar.bottomscreen.pressSwaps(state, action)) {
             bottomScreen.toggleSwap()
             return
         }
-        // the Companion Screen shown in place takes touch only, as on a second display: the hidden Main Screen
-        // never acts on a press it cannot show
+        // the Companion Screen shown in place ignores every other press: the hidden Main Screen never acts on a press
+        // it cannot show
         if (state.companionInPlace) return
 
         if (state.letterJump != null) {
@@ -2969,6 +2970,8 @@ class CrossbarViewModel @Inject constructor(
         if (orbPressHandled(action, state)) return
 
         when (action) {
+            // Swapped at the top of this dispatcher (pressSwaps)
+            GamepadAction.SWAP_SCREENS -> Unit
             GamepadAction.NAVIGATE_UP   -> {
                 if (!moveItemCursor(-1)) {
                     gamepadInputHandler.cancelRepeat()

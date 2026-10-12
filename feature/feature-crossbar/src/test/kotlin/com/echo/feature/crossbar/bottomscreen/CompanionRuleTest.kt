@@ -3,6 +3,7 @@ package com.echo.feature.crossbar.bottomscreen
 import com.echo.feature.crossbar.bottomscreen.CompanionContent.Details
 import com.echo.feature.crossbar.bottomscreen.CompanionContent.Setting
 import com.echo.core.domain.model.CrossbarColorScheme
+import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.crossbar.viewmodel.ColorSchemeOption
 import com.echo.feature.settings.ui.SettingsFocusInfo
 import com.echo.feature.settings.ui.StorePreview
@@ -191,5 +192,15 @@ class CompanionRuleTest {
         assertFalse("not typing", reshowsKeyboard(windowFocused = true, dual))
         assertFalse("in Swap this window is the Companion and has no field", reshowsKeyboard(windowFocused = true, search.copy(screensSwapped = true)))
         assertFalse("one screen: no claim, the keyboard was never hidden", reshowsKeyboard(windowFocused = true, search.copy(secondScreen = false)))
+    }
+
+    // (owner, 2026-10-12)
+    @Test
+    fun `on one display, B returns from the Companion Screen shown in place as L3 and R3 do`() {
+        val inPlace = CrossbarUiState(companionInPlace = true)
+        assertTrue("B returns to the Main Screen", pressSwaps(inPlace, GamepadAction.BACK))
+        assertTrue("L3 or R3 returns too", pressSwaps(inPlace, GamepadAction.SWAP_SCREENS))
+        assertFalse("another button stays ignored", pressSwaps(inPlace, GamepadAction.SELECT))
+        assertFalse("on the Main Screen B goes back, it does not swap", pressSwaps(CrossbarUiState(), GamepadAction.BACK))
     }
 }

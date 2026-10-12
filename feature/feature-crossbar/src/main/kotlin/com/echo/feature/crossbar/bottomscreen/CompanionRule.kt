@@ -90,6 +90,13 @@ sealed interface Swap {
     data class InPlace(val shown: Boolean) : Swap
 }
 
+// a press that Swaps: L3 or R3 always (owner, 2026-10-08); while the Companion Screen is shown in place on one
+// display, B too, so B returns to the Main Screen as L3 and R3 do (owner, 2026-10-12). Every other press is ignored
+// there, as the hidden Main Screen cannot show it
+fun pressSwaps(s: CrossbarUiState, action: com.echo.core.domain.model.GamepadAction): Boolean =
+    action == com.echo.core.domain.model.GamepadAction.SWAP_SCREENS ||
+        (s.companionInPlace && action == com.echo.core.domain.model.GamepadAction.BACK)
+
 fun swap(s: CrossbarUiState): Swap =
     if (s.secondDisplayPresent && s.secondScreenEnabled) Swap.Displays(!s.screensSwapped) else Swap.InPlace(!s.companionInPlace)
 
