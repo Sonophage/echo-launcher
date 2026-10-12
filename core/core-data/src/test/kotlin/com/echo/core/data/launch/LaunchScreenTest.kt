@@ -3,7 +3,7 @@ package com.echo.core.data.launch
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-// Seam B: the Launch Screen. Display 0 is the top screen; 2 is the Thor's bottom screen.
+// Seam B: the Launch Screen. Display 0 is the Thor's upper display; 2 is its lower display.
 class LaunchScreenTest {
     private val both = listOf(0, 2)
 

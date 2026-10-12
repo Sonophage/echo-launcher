@@ -48,11 +48,11 @@ class BottomScreenLink @Inject constructor() {
     private val _crossbar = MutableStateFlow<CrossbarViewModel?>(null)
     val crossbar: StateFlow<CrossbarViewModel?> = _crossbar.asStateFlow()
 
-    // the bottom screen is on show, so the crossbar has something to keep current
+    // the window on the second display is on show, so the crossbar has something to keep current
     private val _attached = MutableStateFlow(false)
     val attached: StateFlow<Boolean> = _attached.asStateFlow()
 
-    // ECHO's own screen is in front on the top display
+    // ECHO's own window is in front on the first display
     private val _hostShown = MutableStateFlow(true)
     val hostShown: StateFlow<Boolean> = _hostShown.asStateFlow()
 
@@ -94,7 +94,7 @@ class BottomScreenLink @Inject constructor() {
     fun unbind(crossbar: CrossbarViewModel) { _crossbar.compareAndSet(crossbar, null) }
 }
 
-// the companion's session clock: "NOW PLAYING · 12 MIN", in hours past an hour; minutes round down, so a game
+// the Companion Screen's session clock: "NOW PLAYING · 12 MIN", in hours past an hour; minutes round down, so a game
 // just launched reads "JUST STARTED"
 fun sessionLabel(since: Long?, now: Long): String {
     val minutes = since?.let { (now - it) / 60_000L } ?: return "NOW PLAYING"

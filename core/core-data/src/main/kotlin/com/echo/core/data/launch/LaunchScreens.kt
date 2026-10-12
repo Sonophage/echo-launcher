@@ -64,7 +64,7 @@ class LaunchScreens @Inject constructor(
     companion object {
         private val KEY = stringSetPreferencesKey("display_launch_screens")
 
-        // the device's second display, if it has one: the AYN Thor's bottom screen
+        // the device's second display, if it has one: the AYN Thor's lower display
         fun secondDisplay(context: Context): Display? =
             context.getSystemService(DisplayManager::class.java)
                 ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).orEmpty()

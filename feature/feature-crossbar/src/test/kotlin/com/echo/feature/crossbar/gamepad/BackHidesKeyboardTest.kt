@@ -4,7 +4,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-// owner decision: B with the keyboard up hides it; the next B goes back. The Thor draws the keyboard on the
+// B with the keyboard up hides it; the next B goes back (owner, 2026-10-12). The Thor draws the keyboard on the
 // other display, where the typing window gets no keyboard insets, so ECHO counts the keyboard it asked for
 class BackHidesKeyboardTest {
 

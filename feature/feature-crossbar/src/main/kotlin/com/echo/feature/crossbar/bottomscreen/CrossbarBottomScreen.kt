@@ -52,7 +52,7 @@ class CrossbarBottomScreen(
                 link.update { it.copy(hovered = info) }
             }
         }
-        // the App Drawer is on the Main Screen (ADR 0001) and the companion shows the app hovered in it, with a
+        // the App Drawer is on the Main Screen (ADR 0001) and the Companion Screen shows the app hovered in it, with a
         // game's details and achievements; it loads once the cursor settles, as Info does
         scope.launch {
             companionShown.flatMapLatest { on -> if (on) link.drawerFocus else flowOf(null) }

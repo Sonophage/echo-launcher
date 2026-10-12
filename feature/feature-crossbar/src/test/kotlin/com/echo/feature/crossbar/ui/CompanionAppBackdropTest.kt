@@ -32,8 +32,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
-// owner-reported, 2026-10-12: an app's Details on the Companion Screen sit on the backdrop Recent gives an app, the
-// wallpaper tinted the app's colour with its icon faint in the bottom left corner
+// an app's Details on the Companion Screen sit on the backdrop Recent gives an app, the wallpaper tinted the app's
+// colour with its icon faint in the bottom left corner (owner, 2026-10-12)
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34], qualifiers = "w821dp-h462dp")

@@ -2485,7 +2485,7 @@ class CrossbarViewModel @Inject constructor(
 
     // owner, 2026-10-08: Game Info from the App Drawer's Options did nothing, since the drawer's game is seldom in
     // the crossbar's column; the column's row when it is there, else the game from the library
-    // owner, 2026-10-08: Y on an album, video or book in the App Drawer gives the menu its own column gives it
+    // owner, 2026-10-08: Y on an album, video or book in the App Drawer gives it the menu it has in its own column
     fun openDrawerMediaMenu(media: com.echo.feature.appbar.DrawerMedia, title: String) {
         when (media.kind) {
             com.echo.feature.appbar.MediaKind.MUSIC -> music.openAlbumMenu(media.ref, title)
