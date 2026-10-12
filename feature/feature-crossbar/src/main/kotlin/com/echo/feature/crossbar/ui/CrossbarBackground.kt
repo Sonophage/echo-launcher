@@ -160,8 +160,8 @@ private fun WallpaperBackground(
     }
 }
 
-// a still copy of the wallpaper, under an app's tint: no wave, no second motion video. Recent, the App Drawer and
-// the Companion Screen's app Details draw it
+// a still copy of the wallpaper, under an app's tint: no wave, no second motion video. Recent and the App Drawer
+// draw it, over a crossbar that already plays the motion
 @Composable
 fun StillWallpaper(customWallpaperPath: String?, wallpaperAccent: Long?) {
     CrossbarBackground(
@@ -176,3 +176,29 @@ fun StillWallpaper(customWallpaperPath: String?, wallpaperAccent: Long?) {
     )
 }
 
+
+// the wallpaper as the Main Screen plays it, its motion under the same policy (the motion style, Battery Saver, heat,
+// the app out of sight), and no wave. The Companion Screen's app Details draw it: nothing else moves on that display
+// (owner, 2026-10-12)
+@Composable
+fun PlayingWallpaper(ui: com.echo.feature.crossbar.viewmodel.CrossbarUiState) {
+    val decision = MotionWallpaperPolicy.decide(
+        MotionWallpaperPolicy.Inputs(
+            hasMotion = ui.motionWallpaperPath != null,
+            hasPoster = ui.customWallpaperPath != null,
+            style = ui.motionStyle,
+            covered = false,
+            throttled = rememberWavePowerThrottle(ui.respectBatterySaver, ui.thermalThrottleAware),
+            appVisible = com.echo.core.ui.motion.rememberAppVisible(),
+        )
+    )
+    CrossbarBackground(
+        waveStyle = WaveStyle.OFF,
+        customWallpaperPath = ui.customWallpaperPath,
+        motionWallpaperPath = ui.motionWallpaperPath,
+        motionDecision = decision,
+        wallpaperAccent = ui.wallpaperAccent,
+        waveDrawnByCaller = true,
+        modifier = Modifier.fillMaxSize(),
+    )
+}

@@ -37,7 +37,7 @@ import com.echo.core.ui.design.panelDesignUnits
 import com.echo.feature.crossbar.ui.GameInfoScreen
 import com.echo.feature.crossbar.ui.LastPlayedPage
 import com.echo.feature.crossbar.ui.LocalRecentWallpaper
-import com.echo.feature.crossbar.ui.StillWallpaper
+import com.echo.feature.crossbar.ui.PlayingWallpaper
 import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
@@ -58,10 +58,10 @@ fun BottomScreen(
 ) {
     val shown = state.shown as? CompanionContent.Details
     val ui by crossbar.uiState.collectAsState()
-    // an app's Details sit on the wallpaper, tinted, as Recent draws an app
+    // an app's Details sit on the wallpaper, tinted, as Recent draws an app; here it moves, as nothing else does
     CompositionLocalProvider(
         LocalPadPrompts provides false,
-        LocalRecentWallpaper provides { StillWallpaper(ui.customWallpaperPath, ui.wallpaperAccent) },
+        LocalRecentWallpaper provides { PlayingWallpaper(ui) },
     ) {
         BoxWithConstraints(modifier.fillMaxSize().background(PanelBase)) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
