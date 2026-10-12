@@ -138,7 +138,14 @@ class BottomScreenLink @Inject constructor() {
 
     fun storePreviewed(preview: com.echo.feature.settings.ui.StorePreview?) { _storePreview.value = preview }
 
-    fun attach(on: Boolean) { _attached.value = on }
+    // counted, not set: HOME starts one Companion window and ECHO can start a second over it, and the covered
+    // one stops after the new one has started
+    private var started = 0
+
+    fun attach(on: Boolean) {
+        started = (started + if (on) 1 else -1).coerceAtLeast(0)
+        _attached.value = started > 0
+    }
 
     // owner, 2026-10-08: the second screen is wanted and something else holds it (Android's own launcher after
     // HOME or a reinstall), so ECHO puts it back when its first screen resumes
