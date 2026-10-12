@@ -530,13 +530,10 @@ private fun filterGlyph(filter: RecentFilter): ImageVector = when (filter) {
     RecentFilter.APPS -> Icons.Outlined.Apps
 }
 
-// false where the page shows something that is not from Recent: the App Drawer's focus on the other screen
-internal val LocalFromRecent = androidx.compose.runtime.staticCompositionLocalOf { true }
-
 @Composable
 private fun Eyebrow(item: CrossbarItem, u: DesignUnits) {
     Text(
-        (if (LocalFromRecent.current) "From recent · ${kindLabel(item)}" else kindLabel(item)).uppercase(),
+        "From recent · ${kindLabel(item)}".uppercase(),
         style = EchoTextStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = u.sp(13), letterSpacing = 0.18.em),
         maxLines = 1,
     )

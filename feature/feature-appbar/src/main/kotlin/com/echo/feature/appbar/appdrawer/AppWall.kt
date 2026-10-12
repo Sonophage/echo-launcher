@@ -91,7 +91,7 @@ internal fun WallBackdrop(app: InstalledApp?, icon: AppIconArt?, u: DesignUnits,
     val tint by animateColorAsState(icon?.color ?: NeutralTint, tween(500), label = "wallTint")
     Box(Modifier.fillMaxSize()) {
         // owner, 2026-10-09: the app's colour is a tint over the wallpaper, which still shows; without one (the
-        // second screen's drawer) the room stays solid
+        // preview) the room stays solid
         if (wallpaper != null) {
             wallpaper()
             Box(Modifier.fillMaxSize().background(ShelfRoom.copy(alpha = WALL_VEIL)).background(tint.copy(alpha = WALL_TINT)))

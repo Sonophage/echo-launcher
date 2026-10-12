@@ -15,6 +15,8 @@ import javax.inject.Singleton
 data class BottomScreenState(
     // the game or app under the XMB's cursor
     val focused: GameInfoState? = null,
+    // the app hovered in the App Drawer while it is open on the Main Screen (ADR 0001)
+    val drawer: GameInfoState? = null,
     // the game ECHO launched, while it runs in front of ECHO
     val playing: GameInfoState? = null,
     // when that game was launched, for the session clock (owner, 2026-10-08)
@@ -29,12 +31,6 @@ data class BottomScreenState(
     val page: BottomPage = BottomPage.INFO,
     // music is playing, so the companion offers its remote (owner, 2026-10-08)
     val music: Boolean = false,
-)
-
-class DrawerFocus(
-    val app: com.echo.feature.appbar.InstalledApp,
-    val onLaunch: () -> Unit,
-    val onOptions: () -> Unit,
 )
 
 // the page in view: Info stands down for Recent while there is no info to show, so the button lit is
@@ -99,7 +95,7 @@ fun BottomScreenState.steppedPage(delta: Int): BottomPage {
 
 // owner, 2026-10-06: on a device with a second screen, the bottom screen follows the top one. It is a
 // second activity with no view model of its own: it draws the crossbar's state and acts through the
-// crossbar, as the top screen does, so the App Drawer, Search and Settings have one owner on both.
+// crossbar, as the top screen does, so Search and Settings have one owner on both.
 @Singleton
 class BottomScreenLink @Inject constructor() {
     private val _state = MutableStateFlow(BottomScreenState())
@@ -119,18 +115,11 @@ class BottomScreenLink @Inject constructor() {
 
     fun update(change: (BottomScreenState) -> BottomScreenState) = _state.update(change)
 
-    // the App Drawer's focused app while the drawer is open on the companion, for the crossbar's screen to draw
-    // large (owner, 2026-10-08), with the drawer's own Play and Options for a tap on it
-    private val _drawerFocus = MutableStateFlow<DrawerFocus?>(null)
-    val drawerFocus: StateFlow<DrawerFocus?> = _drawerFocus.asStateFlow()
+    // the App Drawer's focused app while the drawer is open on the Main Screen; null once it closes
+    private val _drawerFocus = MutableStateFlow<com.echo.feature.appbar.InstalledApp?>(null)
+    val drawerFocus: StateFlow<com.echo.feature.appbar.InstalledApp?> = _drawerFocus.asStateFlow()
 
-    fun drawerFocused(focus: DrawerFocus?) { _drawerFocus.value = focus }
-
-    // that app or game as the Recent screen draws it, with its details and achievements once they load
-    private val _drawerInfo = MutableStateFlow<GameInfoState?>(null)
-    val drawerInfo: StateFlow<GameInfoState?> = _drawerInfo.asStateFlow()
-
-    fun drawerInfoLoaded(info: GameInfoState?) { _drawerInfo.value = info }
+    fun drawerFocused(app: com.echo.feature.appbar.InstalledApp?) { _drawerFocus.value = app }
 
     // the theme the store has in focus on the companion, for the crossbar's screen (owner, 2026-10-08)
     private val _storePreview = MutableStateFlow<com.echo.feature.settings.ui.StorePreview?>(null)
@@ -152,9 +141,9 @@ class BottomScreenLink @Inject constructor() {
     fun unbind(crossbar: CrossbarViewModel) { _crossbar.compareAndSet(crossbar, null) }
 }
 
-// the info the bottom screen shows: the running game while it is in front, else the cursor's item.
-// None means the Recent shelf stands in.
-fun BottomScreenState.shownInfo(): GameInfoState? = playing ?: focused
+// the info the bottom screen shows: the running game while it is in front, else the App Drawer's hovered
+// app while the drawer is open, else the cursor's item. None means the Recent shelf stands in.
+fun BottomScreenState.shownInfo(): GameInfoState? = playing ?: drawer ?: focused
 
 // the companion's session clock: "NOW PLAYING · 12 MIN", in hours past an hour; minutes round down, so a game
 // just launched reads "JUST STARTED"
