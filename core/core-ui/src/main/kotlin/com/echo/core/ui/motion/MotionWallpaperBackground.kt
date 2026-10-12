@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.media3.common.C
@@ -36,7 +37,7 @@ fun MotionWallpaperBackground(
     decision: MotionWallpaperPolicy.Decision,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize().testTag(MOTION_WALLPAPER_TAG)) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(posterPath)
@@ -129,6 +130,9 @@ private fun AnimatedImageSurface(motionPath: String) {
 }
 
 private const val TAG = "MotionWallpaper"
+
+// marks the motion wallpaper while it plays, so a test can see which screens play it
+const val MOTION_WALLPAPER_TAG = "motionWallpaper"
 
 private fun applyCenterCrop(view: TextureView, size: VideoSize?) {
     val vw = size?.width?.toFloat() ?: return
