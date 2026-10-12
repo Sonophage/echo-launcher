@@ -38,7 +38,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import com.echo.feature.crossbar.gamepad.GamepadInputHandler
+import com.echo.feature.crossbar.gamepad.AskedKeyboard
 import com.echo.feature.crossbar.gamepad.backHidesKeyboard
+import com.echo.feature.crossbar.viewmodel.namePromptOpen
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.launcher.notification.EchoNotificationListener
 import com.echo.launcher.receiver.InstallShortcutReceiver
@@ -120,6 +122,11 @@ class MainActivity : ComponentActivity() {
                     if (on) com.echo.feature.crossbar.bottomscreen.BottomScreenActivity.showBeside(this@MainActivity)
                 }
             }
+        }
+        // Search and a name prompt focus their field, which asks for the keyboard
+        lifecycleScope.launch {
+            crossbarViewModel.uiState.map { it.search != null || it.namePromptOpen }.distinctUntilChanged()
+                .collect { keyboard.typing(it) }
         }
         ContextCompat.registerReceiver(
             this,
@@ -306,10 +313,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val keyboard = AskedKeyboard()
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        // a tap on the field while typing brings the keyboard back
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) keyboard.touched()
+        return super.dispatchTouchEvent(event)
+    }
+
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (minimalKeyboardKey(event)) return true
-        if (backHidesKeyboard(event, gamepadInputHandler)) return true
+        // with a Companion Screen the Thor draws the keyboard there (ime_show_on_second), out of this window's insets
+        if (backHidesKeyboard(event, gamepadInputHandler, keyboard, keyboardElsewhere = crossbarViewModel.uiState.value.secondScreen)) return true
 
         if (gamepadInputHandler.onKeyEvent(event)) return true
         if (openSearchOnTypedCharacter(event)) return true
