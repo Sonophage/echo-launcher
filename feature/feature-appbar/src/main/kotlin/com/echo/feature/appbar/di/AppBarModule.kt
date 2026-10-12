@@ -18,5 +18,6 @@ object AppBarModule {
     fun provideInstalledAppRepository(
         @ApplicationContext context: Context,
         gameDao: com.echo.core.data.database.dao.GameDao,
-    ): InstalledAppRepository = InstalledAppRepository(context, gameDao)
+        launchScreens: com.echo.core.data.launch.LaunchScreens,
+    ): InstalledAppRepository = InstalledAppRepository(context, gameDao, launchScreens)
 }

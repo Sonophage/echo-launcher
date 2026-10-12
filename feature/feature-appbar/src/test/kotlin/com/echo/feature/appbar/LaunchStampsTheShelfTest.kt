@@ -23,7 +23,7 @@ class LaunchStampsTheShelfTest {
     private fun repoFor(entry: GameEntity?): Pair<InstalledAppRepository, GameDao> {
         val dao = mockk<GameDao>(relaxed = true)
         coEvery { dao.getAppEntry(any()) } returns entry
-        return InstalledAppRepository(context, dao) to dao
+        return InstalledAppRepository(context, dao, mockk(relaxed = true)) to dao
     }
 
     private fun installLauncherIntentFor(pkg: String) {

@@ -6,6 +6,8 @@ import com.echo.core.domain.model.CategoryType
 import com.echo.core.ui.components.MenuState
 import com.echo.feature.crossbar.viewmodel.CrossbarContextMenu
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
+import com.echo.feature.crossbar.viewmodel.SearchScope
+import com.echo.feature.crossbar.viewmodel.SearchState
 import com.echo.feature.crossbar.viewmodel.withMusicPlayer
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -22,6 +24,7 @@ class MainScreenRollbackGuardTest {
         val hasBlockingOverlay: Boolean,
         val enterOpensAppDrawer: Boolean,
         val musicPlayerShown: Boolean,
+        val search: SearchState?,
     )
 
     private fun mainScreen(s: CrossbarUiState) = MainScreen(
@@ -30,6 +33,7 @@ class MainScreenRollbackGuardTest {
         hasBlockingOverlay = s.hasBlockingOverlay,
         enterOpensAppDrawer = s.enterOpensAppDrawer,
         musicPlayerShown = s.musicPlayerVisible,
+        search = s.search,
     )
 
     private fun column(id: String, position: Int) =
@@ -46,6 +50,7 @@ class MainScreenRollbackGuardTest {
     private val cases: Map<String, (CrossbarUiState) -> CrossbarUiState> = mapOf(
         "Recent is a column on the Crossbar" to { it },
         "the App Drawer opens on the Main Screen" to { it.copy(activeAppDrawerFilter = "APPS") },
+        "Search, its field and its results, opens on the Main Screen" to { it.copy(search = SearchState(scope = SearchScope.ALL)) },
         "Settings opens on the Main Screen" to { it.copy(activeSettingsScreen = "settings_display") },
         "the Theme Store opens on the Main Screen" to { it.copy(activeSettingsScreen = "settings_theme_store") },
         "the music player opens on the Main Screen when a track starts" to { it.withMusicPlayer() },

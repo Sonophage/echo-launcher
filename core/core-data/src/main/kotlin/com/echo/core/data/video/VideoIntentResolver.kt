@@ -17,6 +17,7 @@ data class VideoPlayerApp(
 @Singleton
 class VideoIntentResolver @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val launchScreens: com.echo.core.data.launch.LaunchScreens,
 ) {
     fun buildViewIntent(video: Video, playerPackage: String?): Intent =
         MediaOpenIntent.build(
@@ -33,6 +34,7 @@ class VideoIntentResolver @Inject constructor(
             noHandlerMessage =
                 "No video player could open this file. Install a player or pick one from Video → Folders → Default Video Player.",
             logLabel = "video \"${video.displayTitle}\"",
+            display = launchScreens.mainDisplay(),
         )
 
     fun launchChooser(video: Video): String? =

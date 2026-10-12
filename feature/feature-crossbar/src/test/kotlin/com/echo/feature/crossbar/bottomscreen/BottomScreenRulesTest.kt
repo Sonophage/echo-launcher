@@ -50,24 +50,6 @@ class BottomScreenRulesTest {
         assertFalse(hasInfo(CrossbarItem(id = "s", title = "Display")))
     }
 
-    // owner, 2026-10-06: with a second screen, Search is locked to it, whatever opened it
-    @Test
-    fun `with a second screen search leaves the top screen`() {
-        val search = SearchState(scope = SearchScope.ALL)
-        val open = CrossbarUiState(search = search)
-        assertEquals(search, open.topSearch)
-        assertNull(open.copy(secondScreen = true).topSearch)
-    }
-
-    @Test
-    fun `the bottom screen shows the locked screen on top, as the top screen stacks them`() {
-        assertEquals(LockedScreen.NONE, lockedScreen(CrossbarUiState()))
-        assertEquals(LockedScreen.SEARCH, lockedScreen(CrossbarUiState(search = SearchState(scope = SearchScope.ALL))))
-        assertEquals("the drawer is on the Main Screen", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS")))
-        assertEquals("Settings is on the Main Screen", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeSettingsScreen = "settings_display")))
-        assertEquals("the drawer's own search over the drawer", LockedScreen.SEARCH, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", search = SearchState(scope = SearchScope.APPS))))
-    }
-
     // the page button lit is the page drawn, so the controller moves what is on screen
     @Test
     fun `Info stands down for Recent while there is nothing to show`() {

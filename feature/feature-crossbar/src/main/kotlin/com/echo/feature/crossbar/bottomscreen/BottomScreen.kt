@@ -32,7 +32,6 @@ import com.echo.feature.crossbar.ui.GameInfoScreen
 import com.echo.feature.crossbar.ui.LastPlayedPage
 import com.echo.feature.crossbar.ui.RecentFilterRow
 import androidx.compose.foundation.lazy.rememberLazyListState
-import com.echo.feature.crossbar.ui.SearchScreen
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoAction
@@ -42,28 +41,20 @@ import androidx.compose.runtime.collectAsState
 
 enum class BottomPage(val label: String) { INFO("Info"), RECENT("Recent") }
 
-// what the bottom screen shows over its own pages: Search, which a second screen takes from the top one
-// (owner, 2026-10-06), whatever opened it. The App Drawer and Settings are on the Main Screen (ADR 0001)
-internal enum class LockedScreen { NONE, SEARCH }
-
-internal fun lockedScreen(s: CrossbarUiState): LockedScreen =
-    if (s.search != null) LockedScreen.SEARCH else LockedScreen.NONE
-
 // the bottom screen: Info (the running game, else the App Drawer's hovered app, else the cursor's item) or
-// the Recent shelf, and, over them, Search, which opens here on a device with a second screen. Touch
-// drives it, and the controller drives Search through the crossbar as it does on top.
+// the Recent shelf. The App Drawer, Search and Settings are on the Main Screen (ADR 0001); while Search is open
+// the keyboard, which the Thor puts here, shows over this screen's page. Touch drives it.
 @Composable
 fun BottomScreen(
     state: BottomScreenState,
     crossbar: CrossbarViewModel,
     modifier: Modifier = Modifier,
-    // true while a locked screen is open here, so its text fields can take the keyboard
+    // nothing is locked here now; told so on show, so keys taken for typing in Swap are handed back
     onLocked: (LockedScreenOpen) -> Unit = {},
 ) {
     val ui by crossbar.uiState.collectAsState()
     val page = state.shownPage()
-    val locked = lockedScreen(ui)
-    LaunchedEffect(locked) { onLocked(LockedScreenOpen(open = locked != LockedScreen.NONE, typing = locked == LockedScreen.SEARCH)) }
+    LaunchedEffect(Unit) { onLocked(LockedScreenOpen(open = false, typing = false)) }
     val info = state.shownInfo().takeIf { page == BottomPage.INFO }
     // the screen the controller drives is outlined (owner, 2026-10-06: a tap gives the controller to the screen tapped)
     val driven = ui.secondScreen && ui.companionActive
@@ -74,25 +65,6 @@ fun BottomScreen(
                 .then(if (driven) Modifier.border(3.dp, Color.White.copy(alpha = 0.55f)) else Modifier),
         ) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
-            when (locked) {
-                LockedScreen.SEARCH -> {
-                    ui.search?.let { search ->
-                        SearchScreen(
-                            state = search,
-                            onQueryChange = crossbar.librarySearch::onSearchQueryChange,
-                            onActivateAt = crossbar.librarySearch::onSearchActivatedAt,
-                            onBack = crossbar.librarySearch::closeSearch,
-                            onFocusAt = crossbar.librarySearch::onSearchFocusedAt,
-                            onOptionsAt = crossbar.librarySearch::onSearchOptionsAt,
-                            onKindPicked = crossbar.librarySearch::pickSearchKind,
-                            // the keyboard and field here, the results on the crossbar's screen (owner, 2026-10-08)
-                            part = com.echo.feature.crossbar.ui.SearchPart.FIELD,
-                        )
-                    }
-                    return@BoxWithConstraints
-                }
-                LockedScreen.NONE -> Unit
-            }
             if (info != null) {
                 // Info's sections (the sheet, the video) open here without touching the top screen
                 // it opens on achievements, as the top screen's Game Info does

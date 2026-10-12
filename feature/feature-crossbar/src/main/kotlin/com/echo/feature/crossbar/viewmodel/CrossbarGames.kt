@@ -331,6 +331,7 @@ class CrossbarGames(
         } else when (itemId) {
 
             "play"                   -> vm.launching.launchGameDirectly(gameId)
+            "launch_other_screen"    -> vm.launching.launchGameDirectly(gameId, otherScreen = true)
             "edit_genre"             -> vm.openGenrePickerMenu(gameId)
             "genre_only"             -> vm.filterByGenreOf(gameId)
             "genre_all"              -> vm.setGenreFilter(null)
