@@ -28,16 +28,14 @@ class BottomScreenRulesTest {
         assertFalse(hasInfo(CrossbarItem(id = "s", title = "Display")))
     }
 
-    // owner, 2026-10-06: with a second screen, Search and Settings are locked to it, whatever opened
-    // them; the first-run wizard stays on the top screen
+    // owner, 2026-10-06: with a second screen, Settings is locked to it, whatever opened it; the first-run
+    // wizard stays on the top screen. Search stays on the Main Screen (ADR 0001, MainScreenRollbackGuardTest)
     @Test
-    fun `with a second screen search and settings leave the top screen, the wizard stays`() {
-        val search = SearchState(scope = SearchScope.ALL)
-        val open = CrossbarUiState(search = search, activeSettingsScreen = "settings_display")
-        assertEquals(search, open.topSearch)
+    fun `with a second screen settings leave the top screen, the wizard stays`() {
+        val open = CrossbarUiState(activeSettingsScreen = "settings_display")
+        assertEquals("settings_display", open.topSettingsScreen)
 
         val dual = open.copy(secondScreen = true)
-        assertNull(dual.topSearch)
         assertNull(dual.topSettingsScreen)
 
         val wizard = CrossbarViewModel.WIZARD_SCREEN_IDS.first()
@@ -47,11 +45,11 @@ class BottomScreenRulesTest {
     @Test
     fun `the bottom screen shows the locked screen on top, as the top screen stacks them`() {
         assertEquals(LockedScreen.NONE, lockedScreen(CrossbarUiState()))
-        assertEquals(LockedScreen.SEARCH, lockedScreen(CrossbarUiState(search = SearchState(scope = SearchScope.ALL))))
+        assertEquals("Search is on the Main Screen, the keyboard over this screen's page", LockedScreen.NONE, lockedScreen(CrossbarUiState(search = SearchState(scope = SearchScope.ALL))))
         assertEquals("the drawer is on the Main Screen", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS")))
         assertEquals(LockedScreen.SETTINGS, lockedScreen(CrossbarUiState(activeSettingsScreen = "settings_display")))
         assertEquals("the drawer over Settings: its hovered app, not Settings", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", activeSettingsScreen = "settings_display")))
-        assertEquals("the drawer's own search over the drawer", LockedScreen.SEARCH, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", search = SearchState(scope = SearchScope.APPS))))
+        assertEquals("the drawer's own search over the drawer", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", search = SearchState(scope = SearchScope.APPS))))
         assertEquals("the wizard is not drawn here", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeSettingsScreen = CrossbarViewModel.WIZARD_SCREEN_IDS.first())))
     }
 

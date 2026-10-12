@@ -203,7 +203,7 @@ class AppCategoryRepository @Inject constructor(
         appOverrideDao.upsert(ov.copy(customLabel = label?.trim()?.takeIf { it.isNotBlank() }))
     }
 
-    fun launch(pkg: String) = installedAppRepository.launchApp(pkg)
+    fun launch(pkg: String, otherScreen: Boolean = false) = installedAppRepository.launchApp(pkg, otherScreen)
 
     private suspend fun materialize(pkg: String) {
         val ov = appOverrideDao.getByPackage(pkg)

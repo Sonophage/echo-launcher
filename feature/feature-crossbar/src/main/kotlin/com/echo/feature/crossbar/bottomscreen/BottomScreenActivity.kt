@@ -6,7 +6,6 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.app.ActivityOptions
 import android.content.Intent
-import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.view.Display
 import android.view.KeyEvent
@@ -62,10 +61,10 @@ class BottomScreenActivity : ComponentActivity() {
                     // that home is this window, so it would close and reopen without end
                     LaunchedEffect(ui.secondScreenEnabled) { if (!ui.secondScreenEnabled && !startedAsHome) finishAndRemoveTask() }
                     if (ui.screensSwapped) {
-                        // swapped: the XMB is drawn here, the companion on the main screen. A name prompt (New
-                        // Genre, Rename, Edit Note) takes the keys while it is open, or the keyboard cannot reach it
-                        // and Android reports ECHO as not responding (owner, 2026-10-08)
-                        val typing = ui.namePromptOpen
+                        // swapped: the XMB is drawn here, the companion on the main screen. Search and a name
+                        // prompt (New Genre, Rename, Edit Note) take the keys while open, or the keyboard cannot
+                        // reach them and Android reports ECHO as not responding (owner, 2026-10-08)
+                        val typing = ui.namePromptOpen || ui.search != null
                         LaunchedEffect(typing) { onLocked(LockedScreenOpen(open = typing, typing = typing)) }
                         CrossbarShellContainer(viewModel = vm)
                     } else {
@@ -130,8 +129,8 @@ class BottomScreenActivity : ComponentActivity() {
         super.onStop()
     }
 
-    // a screen locked here (the App Drawer, Search, Settings) takes keys, so its text fields get the
-    // keyboard; Search takes key focus at once, as it does on the top screen, so the keyboard opens.
+    // a screen locked here (Settings) takes keys, so its text fields get the keyboard. Typing (Search or a
+    // name prompt, when the XMB is drawn here in Swap) takes key focus at once, so the keyboard opens.
     // The controller's presses then arrive here and are passed on, so they still drive ECHO.
     private fun onLocked(locked: LockedScreenOpen) {
         this.locked = locked
@@ -205,10 +204,7 @@ class BottomScreenActivity : ComponentActivity() {
     companion object {
         // shows the bottom screen on a second display, when the device has one; nothing otherwise
         // the device's second display, if it has one
-        fun secondDisplay(activity: Activity): Display? =
-            activity.getSystemService(DisplayManager::class.java)
-                ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).orEmpty()
-                .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+        fun secondDisplay(activity: Activity): Display? = com.echo.core.data.launch.LaunchScreens.secondDisplay(activity)
 
         fun showBeside(activity: Activity) {
             val target = secondDisplay(activity) ?: return

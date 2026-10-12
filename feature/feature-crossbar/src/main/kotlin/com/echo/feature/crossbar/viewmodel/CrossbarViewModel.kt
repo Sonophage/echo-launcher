@@ -845,11 +845,8 @@ data class CrossbarUiState(
             activeVideoId == null && activePhotoViewer == null &&
             musicTrackPicker == null && !musicPlayerVisible
 
-    // owner, 2026-10-06: with a second screen, Search and Settings open there whatever opened them; the
-    // first-run wizard stays on this screen. These are what this screen draws.
-    val topSearch: SearchState?
-        get() = search?.takeUnless { secondScreen }
-
+    // owner, 2026-10-06: with a second screen, Settings opens there whatever opened it; the first-run wizard
+    // stays on this screen. This is what this screen draws. Search is on the Main Screen (ADR 0001).
     val topSettingsScreen: String?
         get() = activeSettingsScreen?.takeUnless { secondScreen && it !in CrossbarViewModel.WIZARD_SCREEN_IDS }
 
@@ -860,7 +857,7 @@ data class CrossbarUiState(
             activeAppDrawerFilter != null ||
             gameInfo != null ||
             profile != null ||
-            topSearch != null
+            search != null
 
     private val fullscreenOverlay: Boolean
         get() = showBootSequence ||
@@ -1412,6 +1409,7 @@ class CrossbarViewModel @Inject constructor(
     internal val achievementController: com.echo.feature.achievements.AchievementController,
     internal val achievementCredentials: com.echo.core.data.achievement.AchievementCredentialsProvider,
     internal val discordSocial: com.echo.core.data.discord.DiscordSocialRepository,
+    internal val launchScreens: com.echo.core.data.launch.LaunchScreens,
     bottomScreenLink: com.echo.feature.crossbar.bottomscreen.BottomScreenLink,
 ) : ViewModel() {
     @Volatile
@@ -1548,6 +1546,7 @@ class CrossbarViewModel @Inject constructor(
         collectGamepadActions()
         consumeWindowsSetupPrompt()
         launching.observeLaunchRecoveryRequests()
+        launching.observeMainScreenDisplay()
         observeSetupState()
 
         pcShortcutImporter.watchPinChanges(viewModelScope)
@@ -3345,6 +3344,7 @@ class CrossbarViewModel @Inject constructor(
                     }
                 } else when (itemId) {
                     "launch"    -> launching.launchAppWithDisc(pkg, selectedItemArt())
+                    "launch_other_screen" -> launching.launchAppWithDisc(pkg, selectedItemArt(), otherScreen = true)
                     "pin_recent", "unpin_recent" -> { closeContextMenu(); recents.togglePinned(com.echo.core.data.repository.RecentPins.appKey(pkg)) }
                     "app_artwork" -> viewModelScope.launch { artworkTools.openArtworkStudio(ensureAppShortcut(pkg)) }
                     "app_info"  -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg) }
