@@ -299,10 +299,7 @@ class CrossbarVideo(
             "video_play", "video_resume" ->
                 uiState.update { it.copy(activeVideoId = videoId, activeVideoAutoPlay = true) }
             "video_details" -> uiState.update { it.copy(activeVideoId = videoId, activeVideoAutoPlay = false) }
-            "video_favorite" -> vm.appAction {
-                val v = videoRepository.getVideo(videoId) ?: return@appAction
-                videoRepository.setFavorite(videoId, !v.isFavorite)
-            }
+            "video_favorite", "video_unfavorite" -> vm.appAction { videoRepository.setFavorite(videoId, itemId == "video_favorite") }
             "video_add_playlist" -> openVideoPlaylistPicker(videoId)
             "video_remove_playlist" -> (uiState.value.videoNav as? VideoNav.Playlist)?.let { nav ->
                 vm.appAction { videoRepository.removeVideoFromPlaylist(nav.id, videoId) }

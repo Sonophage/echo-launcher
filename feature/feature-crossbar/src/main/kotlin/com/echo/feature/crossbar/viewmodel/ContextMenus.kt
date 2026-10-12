@@ -166,7 +166,7 @@ internal fun videoFileContextMenuItems(
     // owner, 2026-10-08: a video can be the wallpaper; MotionWallpaper decides whether it fits its limits
     add(CrossbarContextMenuItem("video_wallpaper", "Set as Wallpaper"))
 
-    add(CrossbarContextMenuItem("video_favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE))
+    add(CrossbarContextMenuItem(if (isFavorite) "video_unfavorite" else "video_favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE))
     add(CrossbarContextMenuItem("video_add_playlist", "Add to Playlist", group = MenuGroup.ORGANIZE))
     if (hasWatchStamp) add(CrossbarContextMenuItem("video_remove_recent", "Remove from Recent", group = MenuGroup.REMOVE))
 

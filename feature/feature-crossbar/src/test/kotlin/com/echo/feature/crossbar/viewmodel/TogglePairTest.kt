@@ -31,7 +31,7 @@ class TogglePairTest {
     private val toggles = listOf(
         Toggle("game Favorites", setOf("favorite", "unfavorite")) { gameContextMenuItems(game(isFavorite = it), state, 1, false, null) },
         Toggle("app Favorites", setOf("favorite", "unfavorite")) { appContextMenuItems(state, null, false, "com.app", isFavorite = it) },
-        Toggle("video Favorites", setOf("video_favorite")) { videoFileContextMenuItems(isFavorite = it, 0, false, false) },
+        Toggle("video Favorites", setOf("video_favorite", "video_unfavorite")) { videoFileContextMenuItems(isFavorite = it, 0, false, false) },
         Toggle("photo Favorites", setOf("photo_favorite", "photo_unfavorite")) { photoFileContextMenuItems(isFavorite = it) },
         Toggle("game Pin to Recent", setOf("pin_recent", "unpin_recent")) {
             gameContextMenuItems(game(), state.copy(recentPins = if (it) listOf("g:1") else emptyList()), 1, false, null)
@@ -74,6 +74,8 @@ class TogglePairTest {
             val on = t.row(on = true)
             assertEquals("${t.name}: the on state does not offer to undo '${off.label}'", undo(off.label), on.label)
             assertEquals("${t.name}: the two halves sit in different sections", off.group, on.group)
+            // the action names the half, so a row chosen from a menu built before the state changed still does what it says
+            assertTrue("${t.name}: both halves run '${off.action}'", off.action != on.action)
         }
     }
 
