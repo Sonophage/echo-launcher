@@ -25,9 +25,9 @@ class MenuLabelsTest {
     private val games = Category(id = BuiltInCategory.GAMES, name = "Games", iconKey = "games", type = CategoryType.BUILT_IN, position = 0, isGamingCategory = true)
     private val retro = games.copy(id = "retro", name = "Retro", iconKey = "retro", type = CategoryType.SMART)
     private val other = retro.copy(id = "other", name = "Other")
-    private fun game(platformId: String = "psp", packageName: String? = null, pinned: Boolean = false) = CrossbarItem(
+    private fun game(platformId: String = "psp", packageName: String? = null, pinned: Boolean = false, favorite: Boolean = false) = CrossbarItem(
         id = "g1", title = "Crisis Core", gameId = 1L, platformId = platformId, packageName = packageName,
-        genre = GameGenre.entries.first(), pinnedInCategory = pinned,
+        genre = GameGenre.entries.first(), pinnedInCategory = pinned, isFavorite = favorite,
     )
     private val inRetro = CrossbarUiState(categories = listOf(games, retro, other), selectedCategoryIndex = 1, secondDisplayPresent = true)
     private val hide = Triple(HideLocationType.CATEGORY, "retro", "Retro")
@@ -39,18 +39,19 @@ class MenuLabelsTest {
 
     private val ITEM_MENUS: List<Pair<String, List<MenuRow<*>>>> = listOf(
         "game" to gameContextMenuItems(game(), inRetro, 2, true, hide) +
-            gameContextMenuItems(game(pinned = true), inRetro.copy(genreFilter = GameGenre.entries.first(), recentPins = listOf("g:1")), 1, false, null) +
+            gameContextMenuItems(game(pinned = true, favorite = true), inRetro.copy(genreFilter = GameGenre.entries.first(), recentPins = listOf("g:1")), 1, false, null) +
             gameContextMenuItems(game(), inRetro.copy(selectedPlatformId = CrossbarViewModel.MISSING_PLATFORM_ID), 1, false, null),
         "game with Game Info open" to gameContextMenuItems(game(), gameInfoOpen, 1, false, null),
         "Android game" to gameContextMenuItems(game(PlatformIds.ANDROID, "com.game"), inRetro, 1, false, null),
         "PC game" to gameContextMenuItems(game(PlatformIds.WINDOWS), inRetro.copy(categories = listOf(games), selectedCategoryIndex = 0), 1, false, null),
         "app" to appContextMenuItems(inRetro, "retro", onRecentShelf = true, packageName = "com.app") +
-            appContextMenuItems(inRetro, "retro", onRecentShelf = false, packageName = "com.app"),
+            appContextMenuItems(inRetro, "retro", onRecentShelf = false, packageName = "com.app", isFavorite = true, pinnedInCategory = true),
         "video file" to videoFileContextMenuItems(isFavorite = true, resumePositionMs = 5, hasWatchStamp = true, inPlaylist = true) +
             videoFileContextMenuItems(isFavorite = false, resumePositionMs = 0, hasWatchStamp = false, inPlaylist = false),
+        "Shelves" to shelvesPickerItems(current = null),
         "video library" to videoLibraryContextMenuItems(),
         "video playlist" to videoPlaylistContextMenuItems(),
-        "photo" to photoFileContextMenuItems(),
+        "photo" to photoFileContextMenuItems() + photoFileContextMenuItems(isFavorite = true),
         "photo library" to photoLibraryContextMenuItems(),
         "book" to bookContextMenuItems(hasOpenStamp = true),
         "album" to albumContextMenuItems(),

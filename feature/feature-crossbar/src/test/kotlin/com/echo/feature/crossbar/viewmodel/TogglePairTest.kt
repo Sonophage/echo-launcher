@@ -47,7 +47,6 @@ class TogglePairTest {
     private fun undo(label: String): String = when {
         label.startsWith("Add to ") -> "Remove from " + label.removePrefix("Add to ")
         label.startsWith("Pin to ") -> "Unpin from " + label.removePrefix("Pin to ")
-        label == "Pin" -> "Unpin"
         else -> error("'$label' is not the off half of a known pair")
     }
 
