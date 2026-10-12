@@ -20,6 +20,14 @@ data class BottomScreenState(
     val searching: Boolean = false,
     // a context menu is open on the Main Screen
     val menuOpen: Boolean = false,
+    // Settings is open on the Main Screen
+    val settingsOpen: Boolean = false,
+    // the setting focused there; null while nothing is, or a touch has hidden the cursor
+    val setting: com.echo.feature.settings.ui.SettingsFocusInfo? = null,
+    // the theme focused in the Theme Store
+    val theme: com.echo.feature.settings.ui.StorePreview? = null,
+    // the colour scheme highlighted in the picker, while it is open
+    val colorScheme: com.echo.feature.crossbar.viewmodel.ColorSchemeOption? = null,
     // the game ECHO launched, while it runs in front of ECHO
     val playing: GameInfoState? = null,
     // when that game was launched, for the session clock

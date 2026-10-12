@@ -3,20 +3,42 @@ package com.echo.feature.crossbar.bottomscreen
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
+import com.echo.feature.crossbar.viewmodel.ColorSchemeOption
 import com.echo.feature.crossbar.viewmodel.GameInfoState
+import com.echo.feature.settings.ui.SettingsFocusInfo
+import com.echo.feature.settings.ui.StorePreview
 
-// what the Companion Screen shows (ADR 0001). Settings on the Companion Screen adds its own case here.
+// what the Companion Screen shows (ADR 0001)
 sealed interface CompanionContent {
     // an item's Details; while it is the game ECHO launched and that game runs, with the session clock and Resume
     data class Details(val info: GameInfoState, val playing: Boolean = false, val playingSince: Long? = null) : CompanionContent
+
+    // the setting focused in Settings on the Main Screen, its description in large type, and a preview of the
+    // focused choice where there is one
+    data class Setting(val info: SettingsFocusInfo, val preview: SettingPreview? = null) : CompanionContent
 }
 
-// the Companion rule: the running game, else the item an open menu belongs to (the one shown when it opened),
-// else the hovered item (the App Drawer's over the Crossbar's, Search's result over both), else what it showed
-// [last], so it never goes blank. A game kept after it ends loses its clock and Resume.
+// a preview of the choice focused in Settings
+sealed interface SettingPreview {
+    // the theme focused in the Theme Store
+    data class Theme(val store: StorePreview) : SettingPreview
+
+    // the colour scheme highlighted in the picker
+    data class Colors(val option: ColorSchemeOption) : SettingPreview
+}
+
+// the Companion rule: the running game, else the colour scheme highlighted in the picker, else in Settings the
+// theme focused in the Theme Store or the focused setting, else the item an open menu belongs to (the one shown
+// when it opened), else the hovered item (the App Drawer's over the Crossbar's, Search's result over both), else
+// what it showed [last], so it never goes blank. A game kept after it ends loses its clock and Resume.
 fun companionContent(main: BottomScreenState, last: CompanionContent?): CompanionContent? {
     main.playing?.let { return CompanionContent.Details(it, playing = true, playingSince = main.playingSince) }
     val kept = (last as? CompanionContent.Details)?.copy(playing = false, playingSince = null) ?: last
+    main.colorScheme?.let { return CompanionContent.Setting(SettingsFocusInfo(it.label, null, it.sublabel), SettingPreview.Colors(it)) }
+    if (main.settingsOpen) {
+        main.theme?.let { return CompanionContent.Setting(SettingsFocusInfo(it.name, null, it.line), SettingPreview.Theme(it)) }
+        return main.setting?.let { CompanionContent.Setting(it) } ?: kept
+    }
     // ponytail: the owner is what was shown when the menu opened; a menu opened within the 150 ms the cursor
     // takes to settle keeps the item before it, until the menu closes. Track the menu's own item if that shows.
     if (main.menuOpen && kept != null) return kept

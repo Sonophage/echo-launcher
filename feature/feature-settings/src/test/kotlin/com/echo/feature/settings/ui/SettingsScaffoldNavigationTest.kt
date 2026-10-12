@@ -67,6 +67,7 @@ class SettingsScaffoldNavigationTest {
 
         screenId: String? = null,
         onInterceptAction: ((GamepadAction) -> Boolean)? = null,
+        focusReport: ((SettingsFocusInfo?) -> Unit)? = null,
         body: @Composable () -> Unit,
     ) {
         composeRule.setContent {
@@ -83,6 +84,7 @@ class SettingsScaffoldNavigationTest {
                     LocalSettingsLeftBacksOut provides leftBacksOut,
                     LocalSettingsScreenId provides screenId,
                     LocalSettingsOpenScreen provides { opened += it },
+                    LocalSettingsFocusReport provides focusReport,
                 ) {
                     SettingsScaffold(
                         title = "Settings",
@@ -184,6 +186,21 @@ class SettingsScaffoldNavigationTest {
         composeRule.waitForIdle()
 
         assertEquals(null, info.value)
+    }
+
+    // ticket #8: a Companion Screen shows the focused setting's description, so the host hears it even where the
+    // Main Screen is too narrow for its own help pane (this screen is 400dp wide, so no pane is drawn)
+    @Test
+    fun `a host listening for the focused setting hears it, though the help pane is hidden`() {
+        val heard = mutableListOf<String?>()
+        showScreen(focusReport = { heard += it?.label }) {
+            SettingsRow(label = "Theme", sublabel = "Colours and icons", onClick = {})
+            SettingsRow(label = "Sound", onClick = {})
+        }
+        press(GamepadAction.NAVIGATE_DOWN)
+
+        assertEquals("Sound", heard.lastOrNull())
+        assertTrue("the first row was heard before the cursor moved", "Theme" in heard)
     }
 
     @Test

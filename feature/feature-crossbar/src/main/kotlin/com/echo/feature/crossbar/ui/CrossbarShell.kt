@@ -205,9 +205,16 @@ fun CrossbarShellContainer(
 
     Box(Modifier.fillMaxSize()) {
     val playbackPositions = remember(viewModel) { PlaybackPositions(viewModel.musicPositionMs, viewModel.externalPositionMs) }
+    // Settings reports its focused setting and the Theme Store its focused theme only while a Companion Screen is
+    // on show to preview them; the Main Screen draws the same either way (ADR 0001)
+    val companionShown = uiState.secondScreen || uiState.companionInPlace
+    val settingFocused = remember(viewModel) { { info: com.echo.feature.settings.ui.SettingsFocusInfo? -> viewModel.bottomScreen.settingFocused(info) } }
+    val themeFocused = remember(viewModel) { { p: com.echo.feature.settings.ui.StorePreview? -> viewModel.bottomScreen.themeFocused(p) } }
     CompositionLocalProvider(
         LocalPlaybackPositions provides playbackPositions,
         com.echo.core.ui.wave.LocalWaveDesign provides uiState.waveDesign,
+        com.echo.feature.settings.ui.LocalSettingsFocusReport provides settingFocused.takeIf { companionShown },
+        com.echo.feature.settings.ui.LocalStorePreview provides themeFocused.takeIf { companionShown },
     ) {
     CrossbarShell(
         uiState = uiState,
