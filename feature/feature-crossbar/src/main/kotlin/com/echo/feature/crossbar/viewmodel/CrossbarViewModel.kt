@@ -3469,7 +3469,7 @@ class CrossbarViewModel @Inject constructor(
         }.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         menuSound.play(MenuSound.LAUNCH)
         try {
-            context.startActivity(intent)
+            launching.startOnMainScreen(intent)
         } catch (e: android.content.ActivityNotFoundException) {
             Timber.w(e, "No app can handle Quick Search")
             _uiState.update {

@@ -107,12 +107,14 @@ class CrossbarLauncher(
 
     internal fun launchCamera() {
         runCatching {
-            vm.context.startActivity(
-                Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
+            startOnMainScreen(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }.onFailure { Timber.w(it, "Could not launch a camera app") }
     }
+
+    // an app ECHO opens without knowing its package (the camera, Quick Search's browser) has no Launch Screen, so it
+    // opens on the Main Screen's display
+    internal fun startOnMainScreen(intent: Intent) =
+        vm.context.startActivity(intent, com.echo.core.common.launch.LaunchTransition.options(vm.context, vm.launchScreens.mainDisplay()))
 
     internal fun setPlatformEmulator(platformId: String, profileId: String?) {
         vm.appAction { vm.memoryCardRepository.setEmulator(platformId, profileId) }

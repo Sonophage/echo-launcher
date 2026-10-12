@@ -29,6 +29,9 @@ class LaunchScreens @Inject constructor(
     // set by the crossbar: true while a Swap has put the Main Screen on the second display
     @Volatile var mainOnSecond: Boolean = false
 
+    // the Main Screen's display. Media opened in another app (music, video, photo, book) and an app ECHO opens
+    // without knowing its package (the camera, a browser, a system settings screen) open here, not through
+    // displayFor: the Launch Screen is for games and apps (CONTEXT.md)
     fun mainDisplay(): Int = if (mainOnSecond) secondDisplay(context)?.displayId ?: Display.DEFAULT_DISPLAY else Display.DEFAULT_DISPLAY
 
     fun hasOtherScreen(): Boolean = secondDisplay(context) != null
