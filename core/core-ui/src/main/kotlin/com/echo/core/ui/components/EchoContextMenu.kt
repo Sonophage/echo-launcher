@@ -344,10 +344,10 @@ private val RailDestructive = Color(0xFFE2606A)
 fun EchoContextMenuPreview() {
     val rows = listOf(
         MenuRow("play", "Play"),
-        MenuRow("info", "Information"),
+        MenuRow("info", "Details"),
         MenuRow("fav", "Add to Favorites", checked = true),
         MenuRow<String>(null, "Settings", MenuGroup.SETTINGS, opensSubmenu = true),
-        MenuRow("remove", "Remove From Library", isDestructive = true),
+        MenuRow("remove", "Remove from Library", isDestructive = true),
     )
     EchoPreview {
         EchoContextMenuOverlay(

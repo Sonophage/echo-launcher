@@ -331,7 +331,7 @@ class AppDrawerViewModelTest {
     }
 
     @Test
-    fun `Add to Cross Bar from the controller hands the app to the cross bar, as a tap does`() = runTest {
+    fun `Add to Crossbar from the controller hands the app to the Crossbar, as a tap does`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.setFilter(AppFilter.EMULATORS)
         testDispatcher.scheduler.advanceUntilIdle()

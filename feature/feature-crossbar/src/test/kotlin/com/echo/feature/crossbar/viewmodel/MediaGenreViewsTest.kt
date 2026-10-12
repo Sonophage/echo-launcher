@@ -30,7 +30,7 @@ class MediaGenreViewsTest {
     @Test
     fun `the picker offers the tag, the library's genres once each and a new one`() {
         val rows = genrePickerRows(tagged = "Pop", current = "K-Pop", inLibrary = listOf("Rock", "K-Pop", "rock"))
-        assertEquals(listOf("As tagged · Pop", "K-Pop", "Rock", "New Genre…"), rows.map { it.label })
+        assertEquals(listOf("As Tagged · Pop", "K-Pop", "Rock", "New Genre…"), rows.map { it.label })
         assertTrue("the owner's genre is ticked", rows.first { it.label == "K-Pop" }.checked)
         assertEquals("K-Pop", genreOfPick(rows[1].action!!))
         assertNull("As tagged clears the owner's genre", genreOfPick(GENRE_PICK_TAG))

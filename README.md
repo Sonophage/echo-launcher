@@ -686,7 +686,7 @@ columns on and off.
 ### Performance — *System ▸ Performance*
 
 **Thermal Throttle Awareness** lowers background quality when the device runs hot, **Battery Saver
-Mode** freezes the background under Battery Saver, and **Rescan On Return** looks for new and
+Mode** freezes the background under Battery Saver, and **Rescan on Return** looks for new and
 missing games when you come back, at most every five minutes.
 
 ### Your library's look
@@ -931,7 +931,7 @@ it, **A** drops it there and **B** puts it back.
 | Problem | Fix |
 |---|---|
 | Home does not open ECHO | *Android Settings ▸ Apps ▸ Default apps ▸ Home app* |
-| A console shows no new games | **≡ ▸ Scan This Console**, or turn on *Rescan On Return* |
+| A console shows no new games | **≡ ▸ Scan This Console**, or turn on *Rescan on Return* |
 | A game will not launch | Check the emulator is installed, then **≡ ▸ Settings ▸ Change Emulator** and the card's **Default Emulator** |
 | Games or media went missing after a reinstall or restore | Relink the folder from the column's settings row: **≡ ▸ Relink Folder** |
 | Artwork will not download | Add a key in *Accounts ▸ Artwork* and check the connection. A key saved on another install (a restored backup) cannot be read here and shows as not set: enter it again |

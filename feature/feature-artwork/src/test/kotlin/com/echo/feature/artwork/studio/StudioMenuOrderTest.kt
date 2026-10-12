@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
  * or a tap runs the row next to the one the finger landed on.
  *
  * Found on hardware: tapping "Change Provider" ran "Change Match", and tapping
- * "View File Information" would have run "Clear Artwork".
+ * the file details row would have run "Clear Artwork".
  */
 class StudioMenuOrderTest {
     private fun <T> drawn(rows: List<MenuRow<T>>): List<T?> =

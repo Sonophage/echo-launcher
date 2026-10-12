@@ -66,16 +66,16 @@ enum class PhotoViewerAction(val label: String, val group: MenuGroup = MenuGroup
 }
 
 enum class PhotoControl(val label: String) {
-    ZOOM("Zoom"), ROTATE("Rotate"), SLIDESHOW("Slideshow"), INFO("Info"), WALLPAPER("Set as Wallpaper"), REMOVE("Remove");
+    ZOOM("Zoom"), ROTATE("Rotate"), SLIDESHOW("Slideshow"), INFO("Details"), WALLPAPER("Set as Wallpaper"), REMOVE("Delete");
 
     fun step(delta: Int): PhotoControl = entries[(ordinal + delta).coerceIn(0, entries.lastIndex)]
 }
 
 enum class PhotoInfoAction(val label: String) {
-    WALLPAPER("Set as wallpaper"), FAVORITE("Add to favourites"), ROTATE("Rotate"), REMOVE("Remove from library");
+    WALLPAPER("Set as Wallpaper"), FAVORITE("Add to Favorites"), ROTATE("Rotate"), REMOVE("Delete");
 
     fun labelFor(photo: Photo): String =
-        if (this == FAVORITE && photo.isFavorite) "Remove from favourites" else label
+        if (this == FAVORITE && photo.isFavorite) "Remove from Favorites" else label
 
     fun step(delta: Int): PhotoInfoAction = entries[(ordinal + delta).coerceIn(0, entries.lastIndex)]
 }

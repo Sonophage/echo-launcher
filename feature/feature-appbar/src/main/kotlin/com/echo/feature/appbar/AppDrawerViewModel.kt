@@ -71,7 +71,7 @@ enum class AppFilter(val label: String, val subtitle: String) {
 }
 
 enum class AppMenuAction(val label: String, val group: MenuGroup) {
-    ADD_TO_CROSS_BAR("Add to Cross Bar", MenuGroup.ORGANIZE),
+    ADD_TO_CROSS_BAR("Add to Crossbar", MenuGroup.ORGANIZE),
     APP_INFO("App Info", MenuGroup.ABOUT),
     LAUNCH_OTHER_SCREEN("Launch on Other Screen", MenuGroup.SETTINGS),
     MARK_GAME("Mark as Game", MenuGroup.ORGANIZE),

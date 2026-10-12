@@ -18,11 +18,19 @@ internal const val GENRE_PICK_PREFIX = "genre_set_"
 
 // the picker's rows: back to the tag, every genre the library already has, and a new one
 internal fun genrePickerRows(tagged: String?, current: String?, inLibrary: List<String>): List<CrossbarContextMenuItem> = buildList {
-    add(CrossbarContextMenuItem(GENRE_PICK_TAG, tagged?.let { "As tagged · $it" } ?: "As tagged · none", checked = current == null))
+    add(CrossbarContextMenuItem(GENRE_PICK_TAG, tagged?.let { "As Tagged · $it" } ?: "As Tagged · None", checked = current == null))
     inLibrary.distinctBy { it.lowercase() }.sortedBy { it.lowercase() }.forEach { g ->
         add(CrossbarContextMenuItem(GENRE_PICK_PREFIX + g, g, checked = current.equals(g, ignoreCase = true)))
     }
     add(CrossbarContextMenuItem(GENRE_PICK_NEW, "New Genre…"))
+}
+
+// a game's genre picker: back to the scraped genre, then ECHO's fixed genres
+internal fun gameGenrePickerRows(scraped: String?, current: com.echo.core.domain.model.GameGenre?): List<CrossbarContextMenuItem> = buildList {
+    add(CrossbarContextMenuItem("genre_pick_scraped", scraped?.takeIf { it.isNotBlank() }?.let { "As Scraped · $it" } ?: "As Scraped · None", checked = current == null))
+    com.echo.core.domain.model.GameGenre.entries.forEach { g ->
+        add(CrossbarContextMenuItem("genre_pick_${g.name}", g.label, checked = current == g))
+    }
 }
 
 // the genre a pick sets: null puts back the tag

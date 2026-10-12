@@ -95,14 +95,14 @@ class MenuTest {
         val rows = listOf(
             MenuRow("keep", "Keep"),
             MenuRow("delete", "Delete", isDestructive = true, confirms = false),
-            MenuRow("info", "Info"),
+            MenuRow("info", "Details"),
         )
         val state = MenuState("t", rows)
 
-        assertEquals(listOf("Keep", "Info", "Delete"), state.rowsShown().map { it.label })
+        assertEquals(listOf("Keep", "Details", "Delete"), state.rowsShown().map { it.label })
 
-        // Drawn row 1 is Info, but rows[1] is the delete. A call site that does
-        // sourceList[index] instead of chose(index) runs the delete on an Info tap.
+        // Drawn row 1 is Details, but rows[1] is the delete. A call site that does
+        // sourceList[index] instead of chose(index) runs the delete on a Details tap.
         assertEquals("info", (state.chose(1) as MenuSelect.Run).action)
         assertEquals("delete", rows[1].action)
     }

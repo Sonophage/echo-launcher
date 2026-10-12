@@ -47,7 +47,18 @@ class TogglePairTest {
     private fun undo(label: String): String = when {
         label.startsWith("Add to ") -> "Remove from " + label.removePrefix("Add to ")
         label.startsWith("Pin to ") -> "Unpin from " + label.removePrefix("Pin to ")
+        label.startsWith("Allow ") -> "Block " + label.removePrefix("Allow ")
         else -> error("'$label' is not the off half of a known pair")
+    }
+
+    // a rail outside the crossbar follows the same pairs (ticket #16). Not "Hide": CONTEXT.md keeps Hide for items
+    @Test
+    fun `Artwork Studio's Mature Content row shows its pair from the current state`() {
+        val off = com.echo.feature.artwork.studio.ArtworkStudioUiState(includeNsfw = false)
+            .labelOf(com.echo.feature.artwork.studio.StudioAction.TOGGLE_MATURE)
+        val on = com.echo.feature.artwork.studio.ArtworkStudioUiState(includeNsfw = true)
+            .labelOf(com.echo.feature.artwork.studio.StudioAction.TOGGLE_MATURE)
+        assertEquals("the on state does not offer to undo '$off'", undo(off), on)
     }
 
     private fun Toggle.row(on: Boolean): CrossbarContextMenuItem {

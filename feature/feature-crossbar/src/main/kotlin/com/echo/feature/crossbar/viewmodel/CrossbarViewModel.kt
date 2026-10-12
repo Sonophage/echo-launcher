@@ -2525,12 +2525,7 @@ class CrossbarViewModel @Inject constructor(
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val current = com.echo.core.domain.model.GameGenre.fromName(game.genreOverride)
-            val items = buildList {
-                add(CrossbarContextMenuItem("genre_pick_scraped", game.genre?.takeIf { it.isNotBlank() }?.let { "As scraped · $it" } ?: "As scraped · none", checked = current == null))
-                com.echo.core.domain.model.GameGenre.entries.forEach { g ->
-                    add(CrossbarContextMenuItem("genre_pick_${g.name}", g.label, checked = current == g))
-                }
-            }
+            val items = gameGenrePickerRows(game.genre, current)
             _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Genre", rows = items), gameId = gameId)) }
         }
     }

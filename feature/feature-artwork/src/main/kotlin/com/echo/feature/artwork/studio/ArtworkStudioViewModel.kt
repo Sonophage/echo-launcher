@@ -427,6 +427,11 @@ data class ArtworkStudioUiState(
             if (hasCurrent) add(StudioAction.CLEAR)
         }
 
+    // the words the actions rail draws for an action: the Mature Content row offers the half of its pair that undoes
+    // the current state (spec #2). Not Hide and Show: CONTEXT.md keeps Hide for items
+    fun labelOf(action: StudioAction): String =
+        if (action == StudioAction.TOGGLE_MATURE && includeNsfw) "Block Mature Content (SteamGridDB)" else action.label
+
     val resolvedActionsIndex: Int
         get() {
             val actions = availableActions
@@ -446,8 +451,8 @@ enum class StudioAction(val label: String) {
     CROP_BEFORE_APPLY("Crop Before Applying"),
     RESTORE_PREVIOUS("Restore Previous"),
     RESET_DEFAULT("Reset to Scraped Default"),
-    FILE_INFO("View File Information"),
-    TOGGLE_MATURE("Mature Content (SteamGridDB)"),
+    FILE_INFO("Details"),
+    TOGGLE_MATURE("Allow Mature Content (SteamGridDB)"),
     CHANGE_MATCH("Change Match"),
     FORGET_MATCH("Forget Match"),
     CHANGE_PROVIDER("Change Provider"),

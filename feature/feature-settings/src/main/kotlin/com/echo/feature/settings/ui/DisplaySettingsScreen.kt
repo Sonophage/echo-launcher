@@ -357,7 +357,7 @@ fun DisplaySettingsScreen(
                     label    = "Game Rows Show",
                     sublabel = "Cover art, or icons in every column — a console card shows its console icon " +
                         "instead of four covers from inside it",
-                    options  = listOf(SettingsPickerOption("Cover art"), SettingsPickerOption("Icons")),
+                    options  = listOf(SettingsPickerOption("Cover Art"), SettingsPickerOption("Icons")),
                     selectedIndex = if (state.gameRowsShowCovers) 0 else 1,
                     onPick   = { viewModel.setGameRows(it == 0) },
                 )
