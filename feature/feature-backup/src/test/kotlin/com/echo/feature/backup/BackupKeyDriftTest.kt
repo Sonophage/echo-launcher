@@ -33,7 +33,7 @@ class BackupKeyDriftTest {
         "display_swap_screens" to "which screen shows the XMB, a choice for this device's second screen",
         "display_second_screen" to "whether ECHO uses this device's second screen",
         "display_launch_screens" to
-            "each app's Launch Screen as this device's display ids, which mean nothing on another device",
+            "each game's and app's Launch Screen as this device's display ids, which mean nothing on another device",
         "open_play_session" to "a launch in progress on this device; it is settled and cleared on the next start",
         "achievements_sync_last" to "when this device last synced; a restored device has not synced yet",
 
