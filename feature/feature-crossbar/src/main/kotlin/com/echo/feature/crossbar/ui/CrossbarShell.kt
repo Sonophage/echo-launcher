@@ -152,8 +152,6 @@ fun CrossbarShellContainer(
     onSettingsLongPress: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val drawerFocus by viewModel.bottomScreen.drawerFocus.collectAsStateWithLifecycle()
-    val drawerInfo by viewModel.bottomScreen.drawerInfo.collectAsStateWithLifecycle()
     val storePreview by viewModel.bottomScreen.storePreview.collectAsStateWithLifecycle()
     val recentGameId = uiState.currentItems.getOrNull(uiState.selectedItemIndex)?.gameId.takeIf { uiState.onLastPlayedHome }
     val recentAchievements by remember(recentGameId) { viewModel.gameDetail.achievementsStatFor(recentGameId) }
@@ -306,8 +304,7 @@ fun CrossbarShellContainer(
         onGameInfoPanelClose = viewModel.gameDetail::closeGameInfoPanel,
         onGameInfoScrollMax = viewModel.gameDetail::onGameInfoScrollMax,
         onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
-        drawerFocus = drawerFocus,
-        drawerInfo = drawerInfo,
+        onDrawerFocused = viewModel.bottomScreen::drawerFocused,
         recentAchievements = recentAchievements,
         storePreview = storePreview,
         onProfileSet = viewModel.panel::onProfileSetTapped,
@@ -506,8 +503,8 @@ fun CrossbarShell(
     onGameInfoPanelClose: () -> Unit = {},
     onGameInfoScrollMax: (Int) -> Unit = {},
     onPanelProfileTapped: (com.echo.feature.crossbar.viewmodel.ProfileSpot, Int) -> Unit = { _, _ -> },
-    drawerFocus: com.echo.feature.crossbar.bottomscreen.DrawerFocus? = null,
-    drawerInfo: com.echo.feature.crossbar.viewmodel.GameInfoState? = null,
+    // the App Drawer's hovered app, for the Companion Screen to show
+    onDrawerFocused: (com.echo.feature.appbar.InstalledApp?) -> Unit = {},
     recentAchievements: String? = null,
     storePreview: com.echo.feature.settings.ui.StorePreview? = null,
     onProfileSet: (Int) -> Unit = {},
@@ -836,7 +833,7 @@ fun CrossbarShell(
             val strip = LocalContext.current
             val androidAccess = remember(notificationsOpen) { AndroidNotifications.isEnabled(strip) }
 
-            if (uiState.topDrawerFilter == null &&
+            if (uiState.activeAppDrawerFilter == null &&
                 uiState.topSearch == null &&
                 uiState.topSettingsScreen == null &&
                 uiState.activeVideoId == null &&
@@ -1112,7 +1109,7 @@ fun CrossbarShell(
 
                 compact = !crossbarContext,
                 // Search has its own field across the top, so the island rests as its orb there too (owner, 2026-10-05)
-                minimized = uiState.topDrawerFilter != null || uiState.topSearch != null,
+                minimized = uiState.activeAppDrawerFilter != null || uiState.topSearch != null,
                 battery = battery,
 
                 // owner, 2026-10-06: the panel's tabs and the drawer's sections are in their footers now, as LT/RT and
@@ -1277,7 +1274,7 @@ fun CrossbarShell(
                 }
             }
 
-            uiState.topDrawerFilter?.let { filterName ->
+            uiState.activeAppDrawerFilter?.let { filterName ->
                 val initialFilter = runCatching { AppFilter.valueOf(filterName) }
                     .getOrDefault(AppFilter.DEFAULT)
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
@@ -1316,25 +1313,7 @@ fun CrossbarShell(
                         onGameMenu = onGameMenuFromDrawer,
                         onOpenAppSearch = onOpenAppSearch,
                         onOpenPermissions = { onOpenSettingsScreen("settings_permissions") },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            }
-
-            // with two screens, the App Drawer is on the companion and its focused app is drawn large here
-            // (owner, 2026-10-08), over the crossbar it would otherwise leave idle
-            if (uiState.secondScreen && uiState.activeAppDrawerFilter != null && uiState.search == null) {
-                // as the Recent screen draws an item (owner, 2026-10-08), so a game's details and achievements fit
-                val info = drawerInfo
-                if (drawerFocus != null && info != null) CompositionLocalProvider(LocalFromRecent provides false) {
-                    LastPlayedPage(
-                        items = listOf(info.item),
-                        selectedIndex = 0,
-                        listState = androidx.compose.foundation.lazy.rememberLazyListState(),
-                        filter = com.echo.feature.crossbar.viewmodel.RecentFilter.ALL,
-                        railVisible = false,
-                        onCardTapped = { drawerFocus.onLaunch() },
-                        achievements = info.achievementsStat,
+                        onFocusedApp = onDrawerFocused,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

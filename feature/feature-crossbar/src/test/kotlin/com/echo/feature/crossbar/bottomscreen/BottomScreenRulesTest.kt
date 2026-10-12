@@ -27,6 +27,15 @@ class BottomScreenRulesTest {
         assertNull("nothing to show means the Recent shelf", BottomScreenState().shownInfo())
     }
 
+    // ADR 0001: the App Drawer is on the Main Screen, and the Companion Screen shows the app hovered in it
+    @Test
+    fun `the drawer's hovered app wins over the cursor, and the running game over both`() {
+        val pocketCasts = GameInfoState(CrossbarItem(id = "a", title = "Pocket Casts", packageName = "au.com.shiftyjelly.pocketcasts", isAndroidApp = true))
+        assertEquals(pocketCasts, BottomScreenState(focused = skyrim, drawer = pocketCasts).shownInfo())
+        assertEquals(castlevania, BottomScreenState(focused = skyrim, drawer = pocketCasts, playing = castlevania).shownInfo())
+        assertEquals("the drawer closed: the cursor again", skyrim, BottomScreenState(focused = skyrim, drawer = null).shownInfo())
+    }
+
     @Test
     fun `a game is playing only while ECHO is behind it`() {
         assertEquals(2L, playingGameId(hostShown = false, lastLaunchGameId = 2L))
@@ -41,18 +50,16 @@ class BottomScreenRulesTest {
         assertFalse(hasInfo(CrossbarItem(id = "s", title = "Display")))
     }
 
-    // owner, 2026-10-06: with a second screen, the App Drawer, Search and Settings are locked to it,
-    // whatever opened them; the first-run wizard stays on the top screen
+    // owner, 2026-10-06: with a second screen, Search and Settings are locked to it, whatever opened
+    // them; the first-run wizard stays on the top screen
     @Test
-    fun `with a second screen the drawer, search and settings leave the top screen, the wizard stays`() {
+    fun `with a second screen search and settings leave the top screen, the wizard stays`() {
         val search = SearchState(scope = SearchScope.ALL)
-        val open = CrossbarUiState(search = search, activeAppDrawerFilter = "APPS", activeSettingsScreen = "settings_display")
+        val open = CrossbarUiState(search = search, activeSettingsScreen = "settings_display")
         assertEquals(search, open.topSearch)
-        assertEquals("APPS", open.topDrawerFilter)
 
         val dual = open.copy(secondScreen = true)
         assertNull(dual.topSearch)
-        assertNull(dual.topDrawerFilter)
         assertNull(dual.topSettingsScreen)
 
         val wizard = CrossbarViewModel.WIZARD_SCREEN_IDS.first()
@@ -63,22 +70,11 @@ class BottomScreenRulesTest {
     fun `the bottom screen shows the locked screen on top, as the top screen stacks them`() {
         assertEquals(LockedScreen.NONE, lockedScreen(CrossbarUiState()))
         assertEquals(LockedScreen.SEARCH, lockedScreen(CrossbarUiState(search = SearchState(scope = SearchScope.ALL))))
-        assertEquals(LockedScreen.APPS, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS")))
+        assertEquals("the drawer is on the Main Screen", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS")))
         assertEquals(LockedScreen.SETTINGS, lockedScreen(CrossbarUiState(activeSettingsScreen = "settings_display")))
-        assertEquals("the drawer over Settings", LockedScreen.APPS, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", activeSettingsScreen = "settings_display")))
+        assertEquals("the drawer over Settings: its hovered app, not Settings", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", activeSettingsScreen = "settings_display")))
         assertEquals("the drawer's own search over the drawer", LockedScreen.SEARCH, lockedScreen(CrossbarUiState(activeAppDrawerFilter = "APPS", search = SearchState(scope = SearchScope.APPS))))
         assertEquals("the wizard is not drawn here", LockedScreen.NONE, lockedScreen(CrossbarUiState(activeSettingsScreen = CrossbarViewModel.WIZARD_SCREEN_IDS.first())))
-    }
-
-    // owner, 2026-10-06: with a second screen, Last Played is its Recent page and leaves the XMB
-    @Test
-    fun `Last Played cannot be reached on the XMB while a second screen shows it`() {
-        val lastPlayed = com.echo.core.domain.model.Category(
-            id = com.echo.core.domain.model.BuiltInCategory.RECENTLY_PLAYED, name = "Last Played", iconKey = "",
-            type = com.echo.core.domain.model.CategoryType.BUILT_IN, position = 0, isVisible = true,
-        )
-        assertTrue(CrossbarUiState().categoryReachable(lastPlayed))
-        assertFalse(CrossbarUiState(secondScreen = true).categoryReachable(lastPlayed))
     }
 
     // the page button lit is the page drawn, so the controller moves what is on screen
@@ -158,6 +154,19 @@ class BottomScreenRulesTest {
         assertFalse("turned off in Quick settings", link.needsCompanion(enabled = false))
         link.attach(true)
         assertFalse("already showing: leave focus alone", link.needsCompanion(enabled = true))
+    }
+
+    // HOME starts one Companion window and ECHO may start another over it; the covered one stops after the
+    // new one starts, and that must not mark the Companion Screen as gone
+    @Test
+    fun `a second Companion window stopping does not detach the one on show`() {
+        val link = BottomScreenLink()
+        link.attach(true)
+        link.attach(true)
+        link.attach(false)
+        assertTrue("one window still on show", link.attached.value)
+        link.attach(false)
+        assertFalse("both gone", link.attached.value)
     }
 
     @Test

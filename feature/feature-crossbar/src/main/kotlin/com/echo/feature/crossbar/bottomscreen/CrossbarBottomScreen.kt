@@ -53,15 +53,16 @@ class CrossbarBottomScreen(
                 link.update { it.copy(focused = info) }
             }
         }
-        // owner, 2026-10-08: the drawer's focused item is drawn on the crossbar's screen as Recent draws an item, so
-        // a game's details and achievements show there; it loads once the cursor settles, as Info does
+        // the App Drawer is on the Main Screen (ADR 0001) and the companion shows the app hovered in it, with a
+        // game's details and achievements; it loads once the cursor settles, as Info does
         scope.launch {
-            link.drawerFocus.map { it?.app }.distinctUntilChanged { a, b -> a?.packageName == b?.packageName && a?.gameId == b?.gameId }
+            link.attached.flatMapLatest { on -> if (on) link.drawerFocus else flowOf(null) }
+                .distinctUntilChanged { a, b -> a?.packageName == b?.packageName && a?.gameId == b?.gameId }
                 .debounce(SETTLE_MS)
                 .collectLatest { app ->
-                    val item = app?.let { a -> a.gameId?.let { itemFor(it) } ?: drawerAppItem(a) }
-                    link.drawerInfoLoaded(item?.let { GameInfoState(it) })
-                    item?.let { link.drawerInfoLoaded(vm.gameDetail.load(GameInfoState(it))) }
+                    val item = app?.let { a -> a.gameId?.let { itemFor(it) } ?: drawerCaseItem(a) }
+                    link.update { it.copy(drawer = item?.let { GameInfoState(it) }) }
+                    item?.let { i -> vm.gameDetail.load(GameInfoState(i)).let { info -> link.update { it.copy(drawer = info) } } }
                 }
         }
         // the companion follows the crossbar's column: Recent narrows to its kind, and the Music column shows the
@@ -104,12 +105,7 @@ class CrossbarBottomScreen(
                 }
             }
         }
-        // Last Played leaves the top screen while this one shows it
-        scope.launch {
-            combine(link.attached, uiState.map { it.categories to it.selectedCategoryIndex }.distinctUntilChanged()) { on, _ -> on }
-                .collect { on -> if (on) vm.leaveUnreachableCategory() }
-        }
-        // the top screen hands the App Drawer, Search and Settings to this one while it is attached
+        // the top screen hands Search and Settings to this one while it is attached
         scope.launch {
             link.attached.collect { on -> uiState.update { it.copy(secondScreen = on) } }
         }
@@ -159,23 +155,17 @@ class CrossbarBottomScreen(
         lastLaunch.value?.gameId?.let(vm.launching::resumeGame)
     }
 
-    private fun drawerAppItem(app: com.echo.feature.appbar.InstalledApp) = drawerCaseItem(app)
-
-    val drawerInfo get() = link.drawerInfo
-
     private suspend fun itemFor(gameId: Long): CrossbarItem? =
         runCatching { vm.gameRepository.getById(gameId) }.getOrNull()?.let { game -> with(vm) { listOf(game).toCrossbarItems() }.first() }
 
-    // the Swap button: the XMB and the companion change screens, and the controller follows the XMB's
-    // cursor to its new screen (owner, 2026-10-06)
-    fun drawerFocused(focus: DrawerFocus?) = link.drawerFocused(focus)
-
-    val drawerFocus get() = link.drawerFocus
+    fun drawerFocused(app: com.echo.feature.appbar.InstalledApp?) = link.drawerFocused(app)
 
     fun storePreviewed(preview: com.echo.feature.settings.ui.StorePreview?) = link.storePreviewed(preview)
 
     val storePreview get() = link.storePreview
 
+    // the Swap button: the XMB and the companion change screens, and the controller follows the XMB's
+    // cursor to its new screen (owner, 2026-10-06)
     fun toggleSwap() {
         setCompanionActive(false)
         scope.launch { vm.context.echoDataStore.edit { it[KEY_SWAP_SCREENS] = it[KEY_SWAP_SCREENS] != true } }

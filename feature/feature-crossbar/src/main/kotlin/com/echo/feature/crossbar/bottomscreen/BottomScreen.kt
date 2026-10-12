@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,14 +24,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.LocalPadPrompts
-import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.LAUNCH_HOLD_MS
 import com.echo.core.ui.design.PanelBase
 import com.echo.core.ui.design.PanelButton
 import com.echo.core.ui.design.panelDesignUnits
-import com.echo.feature.appbar.AppDrawerScreen
-import com.echo.feature.appbar.AppFilter
-import com.echo.feature.crossbar.ui.DrawerSectionRow
 import com.echo.feature.crossbar.ui.GameInfoScreen
 import com.echo.feature.crossbar.ui.LastPlayedPage
 import com.echo.feature.crossbar.ui.RecentFilterRow
@@ -50,18 +45,19 @@ enum class BottomPage(val label: String) { INFO("Info"), RECENT("Recent"), MUSIC
 
 // what the bottom screen shows over its own pages: the screens a second screen takes from the top one
 // (owner, 2026-10-06), whatever opened them
-internal enum class LockedScreen { NONE, SETTINGS, APPS, SEARCH }
+internal enum class LockedScreen { NONE, SETTINGS, SEARCH }
 
-// stacked as CrossbarShell stacks them: Search over the drawer (the drawer's own search), the drawer over Settings
+// stacked as CrossbarShell stacks them: Search over the drawer (the drawer's own search), the drawer over Settings.
+// The App Drawer is on the Main Screen (ADR 0001), so while it is open this screen shows its hovered app
 internal fun lockedScreen(s: CrossbarUiState): LockedScreen = when {
     s.search != null -> LockedScreen.SEARCH
-    s.activeAppDrawerFilter != null -> LockedScreen.APPS
+    s.activeAppDrawerFilter != null -> LockedScreen.NONE
     s.activeSettingsScreen != null && s.activeSettingsScreen !in CrossbarViewModel.WIZARD_SCREEN_IDS -> LockedScreen.SETTINGS
     else -> LockedScreen.NONE
 }
 
-// the bottom screen: Info (the running game, else the cursor's item) or the Recent shelf, and, over
-// them, the App Drawer, Search and Settings, which open here on a device with a second screen. Touch
+// the bottom screen: Info (the running game, else the App Drawer's hovered app, else the cursor's item) or
+// the Recent shelf, and, over them, Search and Settings, which open here on a device with a second screen. Touch
 // drives it, and the controller drives the locked screens through the crossbar as it does on top.
 @Composable
 fun BottomScreen(
@@ -85,7 +81,7 @@ fun BottomScreen(
                 .then(if (driven) Modifier.border(3.dp, Color.White.copy(alpha = 0.55f)) else Modifier),
         ) {
             val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
-            // a menu asked for here (Y on Recent, a game's Options in the App Drawer) opens here, over the page
+            // a menu asked for here (Y on Recent) opens here, over the page
             val companionMenu: @Composable () -> Unit = {
                 ui.activeContextMenu?.takeIf { ui.menuOnCompanion }?.let { menu ->
                     com.echo.core.ui.components.EchoContextMenuOverlay(
@@ -98,13 +94,6 @@ fun BottomScreen(
             when (locked) {
                 LockedScreen.SETTINGS -> {
                     SettingsHere(ui, crossbar)
-                    return@BoxWithConstraints
-                }
-                LockedScreen.APPS -> {
-                    AppsHere(ui, crossbar, u)
-                    // owner, 2026-10-08: a game's Options from the drawer showed nowhere, as this branch
-                    // returned before the menu was drawn
-                    companionMenu()
                     return@BoxWithConstraints
                 }
                 LockedScreen.SEARCH -> {
@@ -222,47 +211,6 @@ fun BottomScreen(
 }
 
 data class LockedScreenOpen(val open: Boolean, val typing: Boolean)
-
-// the App Drawer as the top screen hosts it (CrossbarShell), with its sections drawn above it
-@Composable
-private fun AppsHere(ui: CrossbarUiState, crossbar: CrossbarViewModel, u: DesignUnits) {
-    val filter = runCatching { AppFilter.valueOf(ui.activeAppDrawerFilter.orEmpty()) }.getOrDefault(AppFilter.DEFAULT)
-    var active by remember { mutableStateOf<AppFilter?>(null) }
-    var sections by remember { mutableStateOf<List<AppFilter>>(emptyList()) }
-    var pick by remember { mutableStateOf<AppFilter?>(null) }
-    Box(Modifier.fillMaxSize()) {
-        AppDrawerScreen(
-            initialFilter = filter,
-            onBack = crossbar::onCloseAppDrawer,
-            pendingGamepadAction = ui.pendingDrawerAction,
-            selectReleases = ui.drawerSelectReleases,
-            typedChar = ui.pendingDrawerTypedChar,
-            onTypedCharConsumed = crossbar::onDrawerTypedCharConsumed,
-            onGamepadActionConsumed = crossbar::consumeDrawerAction,
-            letterRailHeld = ui.drawerLetterRailHeld,
-            onTouchInteraction = crossbar::markTouchInput,
-            onAddToCrossBar = crossbar::addAppToOpenCategory,
-            onLaunchRom = crossbar.launching::launchGameFromDrawer,
-            onGameMenu = crossbar::openGameMenuOnCompanion,
-            onOpenAppSearch = crossbar.librarySearch::openAppSearch,
-            onTabsShown = { a, s -> active = a; sections = s },
-            tabPick = pick,
-            onTabPickConsumed = { pick = null },
-            onOpenPermissions = { crossbar.onOpenSettingsScreen("settings_permissions") },
-            heroOnOtherScreen = true,
-            genreFilter = ui.genreFilter,
-            chipsByGenre = ui.gameGrouping == com.echo.feature.crossbar.viewmodel.GameGrouping.GENRE,
-            onToggleGrouping = crossbar::toggleGameGrouping,
-            onOpenMedia = crossbar::openDrawerMedia,
-            onMediaMenu = crossbar::openDrawerMediaMenuOnCompanion,
-            onFocusedApp = { app, launch, options -> crossbar.bottomScreen.drawerFocused(app?.let { DrawerFocus(it, launch, options) }) },
-            modifier = Modifier.fillMaxSize(),
-        )
-        active?.let { a ->
-            DrawerSectionRow(a, sections, u, Modifier.align(Alignment.TopCenter).padding(top = u.dp(12))) { pick = it }
-        }
-    }
-}
 
 // Settings as the top screen hosts it (CrossbarShell)
 @Composable

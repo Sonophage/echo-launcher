@@ -56,8 +56,10 @@ class BottomScreenActivity : ComponentActivity() {
                 val crossbar by link.crossbar.collectAsState()
                 crossbar?.let { vm ->
                     val ui by vm.uiState.collectAsState()
-                    // single screen chosen in Quick settings: the second screen goes back to Android
-                    LaunchedEffect(ui.secondScreenEnabled) { if (!ui.secondScreenEnabled) finishAndRemoveTask() }
+                    // single screen chosen in Quick settings: the second screen goes back to Android. Not when HOME
+                    // started this window: Android starts the second display's home again when it finishes, and
+                    // that home is this window, so it would close and reopen without end
+                    LaunchedEffect(ui.secondScreenEnabled) { if (!ui.secondScreenEnabled && !startedAsHome) finishAndRemoveTask() }
                     if (ui.screensSwapped) {
                         // swapped: the XMB is drawn here, the companion on the main screen. A name prompt (New
                         // Genre, Rename, Edit Note) takes the keys while it is open, or the keyboard cannot reach it
@@ -183,13 +185,17 @@ class BottomScreenActivity : ComponentActivity() {
         return true
     }
 
+    // HOME put this window on the second display (the SECONDARY_HOME intent filter)
+    private val startedAsHome: Boolean get() = intent?.hasCategory(Intent.CATEGORY_SECONDARY_HOME) == true
+
     // starting itself again on its own display is what moves Android's key focus to this screen; moving
-    // its task to the front does not, as it is already in front here
+    // its task to the front does not, as it is already in front here. Started from itself, in its own task,
+    // and singleTop, so it is this window again: a new task would add a second window over one HOME started
     private fun takeFocus() {
         // this activity's own display; Activity.getDisplay needs API 30
         @Suppress("DEPRECATION") val here = windowManager.defaultDisplay.displayId
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(here).toBundle()
-        runCatching { startActivity(Intent(this, BottomScreenActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options) }
+        runCatching { startActivity(Intent(this, BottomScreenActivity::class.java), options) }
             .onFailure { Timber.w(it, "Could not take key focus for the bottom screen") }
     }
 
