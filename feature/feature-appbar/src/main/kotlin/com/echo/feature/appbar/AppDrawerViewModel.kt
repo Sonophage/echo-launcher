@@ -73,6 +73,7 @@ enum class AppFilter(val label: String, val subtitle: String) {
 enum class AppMenuAction(val label: String, val group: MenuGroup) {
     ADD_TO_CROSS_BAR("Add to Cross Bar", MenuGroup.MAIN),
     APP_INFO("App Info", MenuGroup.SETTINGS),
+    LAUNCH_OTHER_SCREEN("Launch on Other Screen", MenuGroup.SETTINGS),
     MARK_GAME("Mark as Game", MenuGroup.LIBRARY),
     UNMARK_GAME("Unmark as Game", MenuGroup.LIBRARY),
     // owner, 2026-10-05: hide an app that is never used from the whole layout; undone in Settings > Library > Hidden Items
@@ -121,6 +122,9 @@ data class AppDrawerUiState(
     val uninstallConfirmFocused: Boolean = false,
 
     val menuAppIsGame: Boolean = false,
+
+    // the device has a second display, read as the menu opens
+    val hasOtherScreen: Boolean = false,
 
     val filterCounts: Map<AppFilter, Int> = emptyMap(),
 
@@ -181,6 +185,10 @@ data class AppDrawerUiState(
             if (menuApp?.gameId != null) return@buildList
             add(AppMenuAction.ADD_TO_CROSS_BAR)
             add(AppMenuAction.APP_INFO)
+            // a DS or 3DS emulator always opens on the Main Screen's display, so it has no other screen
+            if (hasOtherScreen && !com.echo.core.domain.model.KnownEmulatorPackages.isDualScreen(menuApp?.packageName)) {
+                add(AppMenuAction.LAUNCH_OTHER_SCREEN)
+            }
             add(if (menuAppIsGame) AppMenuAction.UNMARK_GAME else AppMenuAction.MARK_GAME)
             add(AppMenuAction.HIDE_EVERYWHERE)
             if (menuApp?.isSystemApp == false) add(AppMenuAction.UNINSTALL)
@@ -327,7 +335,8 @@ class AppDrawerViewModel @Inject constructor(
         _uiState.update { it.copy(selectedIndex = index, usingTouch = true) }
     }
 
-    fun launchApp(packageName: String) {
+    // otherScreen: Launch on Other Screen
+    fun launchApp(packageName: String, otherScreen: Boolean = false) {
         val app = _uiState.value.visibleApps.firstOrNull { it.packageName == packageName }
         app?.media?.let { media ->
             menuSound.play(MenuSound.SELECT)
@@ -342,7 +351,7 @@ class AppDrawerViewModel @Inject constructor(
         }
         viewModelScope.launch {
             mediaLaunchGate.awaitHandOff(app?.icon)
-            appRepository.launchApp(packageName)
+            appRepository.launchApp(packageName, otherScreen)
         }
     }
 
@@ -401,7 +410,9 @@ class AppDrawerViewModel @Inject constructor(
             return
         }
         menuSound.play(MenuSound.SELECT)
-        _uiState.update { it.copy(menuApp = app, menuAppIsGame = false).let { s -> s.copy(appMenu = s.menuStateFor(app)) } }
+        _uiState.update {
+            it.copy(menuApp = app, menuAppIsGame = false, hasOtherScreen = appRepository.hasOtherScreen()).let { s -> s.copy(appMenu = s.menuStateFor(app)) }
+        }
 
         viewModelScope.launch {
             val entry = gameRepository.getAppEntry(app.packageName)
@@ -447,6 +458,10 @@ class AppDrawerViewModel @Inject constructor(
             AppMenuAction.APP_INFO -> {
                 appRepository.openAppInfo(app.packageName)
                 _uiState.update { it.copy(menuApp = null) }
+            }
+            AppMenuAction.LAUNCH_OTHER_SCREEN -> {
+                _uiState.update { it.copy(menuApp = null) }
+                launchApp(app.packageName, otherScreen = true)
             }
             AppMenuAction.MARK_GAME   -> { setMarkedAsGame(app, marked = true);  _uiState.update { it.copy(menuApp = null) } }
             AppMenuAction.UNMARK_GAME -> { setMarkedAsGame(app, marked = false); _uiState.update { it.copy(menuApp = null) } }

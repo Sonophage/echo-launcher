@@ -56,6 +56,7 @@ data class InstalledApp(
 class InstalledAppRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val gameDao: com.echo.core.data.database.dao.GameDao,
+    private val launchScreens: com.echo.core.data.launch.LaunchScreens,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -108,14 +109,15 @@ class InstalledAppRepository @Inject constructor(
             .also { Timber.d("Installed apps loaded: ${it.size} total") }
     }
 
-    fun launchApp(packageName: String) {
+    // otherScreen: Launch on Other Screen, which also makes that display the app's Launch Screen
+    fun launchApp(packageName: String, otherScreen: Boolean = false) {
         val intent = context.packageManager.getLaunchIntentForPackage(packageName)
         if (intent == null) {
             Timber.w("No launch intent for $packageName")
             return
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).withoutTransition()
-        context.startActivity(intent, LaunchTransition.options(context))
+        context.startActivity(intent, LaunchTransition.options(context, launchScreens.displayFor(packageName, otherScreen = otherScreen)))
         markOpenedOnTheShelf(packageName)
     }
 
@@ -128,6 +130,8 @@ class InstalledAppRepository @Inject constructor(
     }
 
     fun hasUsageAccess(): Boolean = com.echo.core.data.permission.UsageAccess.isGranted(context)
+
+    fun hasOtherScreen(): Boolean = launchScreens.hasOtherScreen()
 
     fun openAppInfo(packageName: String) = com.echo.core.data.apps.AppSystemActions.openAppInfo(context, packageName)
 

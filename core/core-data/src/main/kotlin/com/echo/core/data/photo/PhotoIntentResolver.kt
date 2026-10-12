@@ -11,13 +11,14 @@ import javax.inject.Singleton
 @Singleton
 class PhotoIntentResolver @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val launchScreens: com.echo.core.data.launch.LaunchScreens,
 ) {
     fun launch(photo: Photo, viewerPackage: String?): String? {
         val intent = MediaOpenIntent.build(photo.uri, photo.mimeType ?: IMAGE_MIME, viewerPackage)
         return if (viewerPackage == null) {
             MediaOpenIntent.launchChooser(context, intent, CHOOSER_TITLE, NO_VIEWER, label(photo))
         } else {
-            MediaOpenIntent.launch(context, intent, CHOOSER_TITLE, NO_VIEWER, label(photo))
+            MediaOpenIntent.launch(context, intent, CHOOSER_TITLE, NO_VIEWER, label(photo), launchScreens.mainDisplay())
         }
     }
 
