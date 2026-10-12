@@ -102,6 +102,11 @@ internal fun launchOnOtherScreenRow(state: CrossbarUiState, packageName: String?
     if (!state.secondDisplayPresent || com.echo.core.domain.model.KnownEmulatorPackages.isDualScreen(packageName, platformId)) null
     else CrossbarContextMenuItem("launch_other_screen", "Launch on Other Screen", group = MenuGroup.SETTINGS)
 
+// the games a game's Favorites row changes: every disc of its set, which shows as one game and is a favourite when
+// any disc is (projectGamesForDisplay); else the game alone
+internal fun favoriteIds(gameId: Long, discSet: List<com.echo.core.domain.model.Game>): List<Long> =
+    discSet.map { it.id }.ifEmpty { listOf(gameId) }
+
 internal fun favoritesRow(isFavorite: Boolean): CrossbarContextMenuItem =
     CrossbarContextMenuItem(if (isFavorite) "unfavorite" else "favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE)
 

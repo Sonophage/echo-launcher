@@ -90,6 +90,21 @@ class TogglePairTest {
         }
     }
 
+    // a disc set is one game on the crossbar, a favourite when any disc is, so its Favorites row changes every disc;
+    // else Remove from Favorites can clear the shown disc and leave the set a favourite through another
+    @Test
+    fun `Remove from Favorites on a disc set takes the whole set off Favorites`() {
+        val disc1 = com.echo.core.domain.model.Game(id = 1, title = "FF7", platformId = "psx", discSetKey = "ff7", discNumber = 1, isDiscPrimary = true)
+        val disc2 = disc1.copy(id = 2, discNumber = 2, isDiscPrimary = false, isFavorite = true)
+        val set = listOf(disc1, disc2)
+        assertTrue("the set shows as a favourite", set.projectGamesForDisplay().single().isFavorite)
+
+        val changed = favoriteIds(disc1.id, set)
+        val after = set.map { if (it.id in changed) it.copy(isFavorite = false) else it }
+        assertFalse("the set is still a favourite after Remove from Favorites", after.projectGamesForDisplay().single().isFavorite)
+        assertEquals("a single game changes only itself", listOf(5L), favoriteIds(5L, emptyList()))
+    }
+
     @Test
     fun `the Shelves picker holds play states only`() {
         val rows = shelvesPickerItems(current = null)

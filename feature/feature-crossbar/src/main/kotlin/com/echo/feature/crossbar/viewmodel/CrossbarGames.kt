@@ -259,7 +259,8 @@ class CrossbarGames(
 
     internal fun toggleGameFavorite(gameId: Long, isFavorite: Boolean) {
         scope.launch {
-            vm.gameRepository.setFavorite(gameId, isFavorite)
+            val discSet = vm.gameRepository.getById(gameId)?.discSetKey?.let { vm.gameRepository.getDiscSetMembers(it) }.orEmpty()
+            favoriteIds(gameId, discSet).forEach { vm.gameRepository.setFavorite(it, isFavorite) }
         }
     }
 
