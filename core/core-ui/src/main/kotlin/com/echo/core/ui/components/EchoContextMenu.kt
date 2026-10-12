@@ -79,7 +79,7 @@ fun <T> EchoContextMenuOverlay(
     val title = state.title
     val subtitle = state.subtitle
     val rows = state.rowsShown()
-    val dividerIndex = state.dividerIndex()
+    val dividerIndex = state.dividerIndex(rows)
     val selectedIndex = state.selectedIndex ?: NoMenuSelection
     val listState = rememberLazyListState()
 

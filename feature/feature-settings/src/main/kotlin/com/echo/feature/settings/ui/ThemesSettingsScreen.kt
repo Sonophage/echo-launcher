@@ -305,7 +305,7 @@ private fun ThemesSettingsContent(
 
 data class ThemeMenuOption(val label: String, val destructive: Boolean = false, val action: () -> Unit)
 
-// The overlay draws rows through rowsShown(), which moves destructive rows last.
+// The overlay draws rows through rowsShown(), which puts a destructive row in the Remove section.
 // Resolve the tap against the drawn rows, not against m.options.
 internal fun menuStateFor(m: ThemeMenu, selected: Int) = MenuState(
     title = m.title,

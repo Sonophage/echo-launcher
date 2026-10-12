@@ -46,6 +46,11 @@ object FolderOpen {
         return openFolderId(context, folderId, folderId)
     }
 
+    // a photo's or video's Open Folder (owner, 2026-10-12): opens the folder holding the file; when nothing could, the
+    // words to show instead, "In: " and the folder, else the file's name
+    fun openMediaFolder(context: Context, documentUri: String, relativePath: String?, displayName: String): String? =
+        if (openDocumentFolder(context, documentUri)) null else relativePath?.let { "In: $it" } ?: displayName
+
     private fun openFolderId(context: Context, id: String, folder: String): Boolean {
         val intent = Intent(Intent.ACTION_VIEW)
             .setDataAndType(DocumentsContract.buildDocumentUri(EXTERNAL_STORAGE, id), DocumentsContract.Document.MIME_TYPE_DIR)

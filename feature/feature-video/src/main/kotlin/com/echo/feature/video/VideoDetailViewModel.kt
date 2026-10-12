@@ -84,9 +84,7 @@ data class VideoDetailUiState(
             rows = optionsActions.map {
                 MenuRow(
                     action = it,
-                    label = if (it == VideoDetailAction.FAVORITE) {
-                        if (video?.isFavorite == true) "Remove from Favorites" else "Add to Favorites"
-                    } else it.label,
+                    label = if (it == VideoDetailAction.FAVORITE) com.echo.core.ui.components.favoritesLabel(video?.isFavorite == true) else it.label,
                     group = it.group,
                     isDestructive = it == VideoDetailAction.REMOVE,
                     confirms = false,
@@ -209,10 +207,8 @@ class VideoDetailViewModel @Inject constructor(
             VideoDetailAction.RENAME  -> startEditTitle()
             VideoDetailAction.THUMBNAIL -> _uiState.update { it.copy(pickThumbnail = true) }
             VideoDetailAction.INFO    -> _uiState.update { it.copy(infoVisible = true) }
-            // the folder the video is in, in the file manager; its path when nothing can open it (owner, 2026-10-12)
-            VideoDetailAction.LOCATION -> if (!com.echo.core.data.media.FolderOpen.openDocumentFolder(context, video.uri)) {
-                showMessage(video.relativePath?.let { "In: $it" } ?: video.displayName)
-            }
+            VideoDetailAction.LOCATION ->
+                com.echo.core.data.media.FolderOpen.openMediaFolder(context, video.uri, video.relativePath, video.displayName)?.let(::showMessage)
             VideoDetailAction.REMOVE  -> _uiState.update { it.copy(confirmRemove = true) }
         }
     }

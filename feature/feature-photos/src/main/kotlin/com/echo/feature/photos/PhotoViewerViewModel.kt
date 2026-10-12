@@ -72,10 +72,10 @@ enum class PhotoControl(val label: String) {
 }
 
 enum class PhotoInfoAction(val label: String) {
-    WALLPAPER("Set as Wallpaper"), FAVORITE("Add to Favorites"), ROTATE("Rotate"), REMOVE("Delete");
+    WALLPAPER("Set as Wallpaper"), FAVORITE(com.echo.core.ui.components.favoritesLabel(false)), ROTATE("Rotate"), REMOVE("Delete");
 
     fun labelFor(photo: Photo): String =
-        if (this == FAVORITE && photo.isFavorite) "Remove from Favorites" else label
+        if (this == FAVORITE) com.echo.core.ui.components.favoritesLabel(photo.isFavorite) else label
 
     fun step(delta: Int): PhotoInfoAction = entries[(ordinal + delta).coerceIn(0, entries.lastIndex)]
 }
@@ -337,13 +337,9 @@ class PhotoViewerViewModel @Inject constructor(
             PhotoViewerAction.ZOOM_OUT      -> zoomBy(1f / ZOOM_STEP)
             PhotoViewerAction.RESET_ZOOM    -> _uiState.update { it.copy(zoom = ZOOM_MIN, panX = 0f, panY = 0f) }
             PhotoViewerAction.INFO          -> _uiState.update { it.copy(infoVisible = true) }
-            PhotoViewerAction.LOCATION      -> {
-                // the folder the photo is in, in the file manager; its path when nothing can open it (owner, 2026-10-12)
-                val p = _uiState.value.photo
-                if (p == null || !com.echo.core.data.media.FolderOpen.openDocumentFolder(context, p.uri)) {
-                    showMessage(p?.relativePath?.let { "In: $it" } ?: p?.displayName ?: "")
-                }
-            }
+            PhotoViewerAction.LOCATION      -> _uiState.value.photo
+                ?.let { com.echo.core.data.media.FolderOpen.openMediaFolder(context, it.uri, it.relativePath, it.displayName) }
+                ?.let(::showMessage)
             PhotoViewerAction.REMOVE        -> _uiState.update { it.copy(confirmRemove = true) }
         }
     }

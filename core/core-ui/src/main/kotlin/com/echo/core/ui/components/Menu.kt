@@ -23,6 +23,10 @@ data class MenuRow<out T>(
     val opensSubmenu: Boolean = false,
 )
 
+// Favorites is one set over games, apps, videos and photos, with one pair of rows (owner, 2026-10-12)
+fun favoritesLabel(isFavorite: Boolean): String =
+    if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+
 data class MenuState<T>(
     val title: String,
     val rows: List<MenuRow<T>>,
@@ -57,10 +61,11 @@ fun <T> MenuState<T>.rowsShown(): List<MenuRow<T>> {
 }
 
 // The drawn index the one divider is drawn above: the first row after Do and About. Null in a submenu, in a flat
-// list, and when nothing is above it. The divider is not a row, so drawn indices stay those of rowsShown().
-fun <T> MenuState<T>.dividerIndex(): Int? {
+// list, and when nothing is above it. The divider is not a row, so drawn indices stay those of rowsShown(); a
+// caller that has the drawn rows already passes them, so the rows are folded once per frame.
+fun <T> MenuState<T>.dividerIndex(shown: List<MenuRow<T>> = rowsShown()): Int? {
     if (parent != null) return null
-    val index = rowsShown().indexOfFirst { it.section.label != null }
+    val index = shown.indexOfFirst { it.section.label != null }
     return index.takeIf { it > 0 }
 }
 

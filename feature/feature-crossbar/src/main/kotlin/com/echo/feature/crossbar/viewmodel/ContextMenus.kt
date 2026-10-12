@@ -6,6 +6,7 @@ import com.echo.core.domain.model.HideLocationType
 import com.echo.core.domain.model.PlatformIds
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.ui.components.MenuGroup
+import com.echo.core.ui.components.favoritesLabel
 
 internal fun CrossbarUiState.currentCategoryOrNull(): Category? =
     categories.getOrNull(selectedCategoryIndex)
@@ -62,14 +63,7 @@ internal fun gameContextMenuItems(
             } else {
                 if (hasOtherCustomCategory) add(CrossbarContextMenuItem("move_category", "Move to Category", group = MenuGroup.ORGANIZE))
                 add(CrossbarContextMenuItem("remove_category", "Remove from Category", group = MenuGroup.REMOVE))
-                val pinned = item.pinnedInCategory
-                add(
-                    CrossbarContextMenuItem(
-                        if (pinned) "unpin_category" else "pin_category",
-                        if (pinned) "Unpin from Top" else "Pin to Top",
-                        group = MenuGroup.ORGANIZE,
-                    ),
-                )
+                add(pinToTopRow(item.pinnedInCategory, action = "pin_category"))
             }
         }
 
@@ -108,12 +102,12 @@ internal fun launchOnOtherScreenRow(state: CrossbarUiState, packageName: String?
     if (!state.secondDisplayPresent || com.echo.core.domain.model.KnownEmulatorPackages.isDualScreen(packageName, platformId)) null
     else CrossbarContextMenuItem("launch_other_screen", "Launch on Other Screen", group = MenuGroup.SETTINGS)
 
-// Favorites is one set over games, apps, videos and photos, with one pair of rows (owner, 2026-10-12)
-internal fun favoritesLabel(isFavorite: Boolean): String =
-    if (isFavorite) "Remove from Favorites" else "Add to Favorites"
-
 internal fun favoritesRow(isFavorite: Boolean): CrossbarContextMenuItem =
     CrossbarContextMenuItem(if (isFavorite) "unfavorite" else "favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE)
+
+// a game, app or system pins to, or unpins from, the top of its column; the off action is "un" + [action]
+internal fun pinToTopRow(pinned: Boolean, action: String = "pin"): CrossbarContextMenuItem =
+    CrossbarContextMenuItem(if (pinned) "un$action" else action, if (pinned) "Unpin from Top" else "Pin to Top", group = MenuGroup.ORGANIZE)
 
 // owner, 2026-10-06: a game or app pins to, or unpins from, the list under Recent
 internal fun recentPinRow(pinned: Boolean): CrossbarContextMenuItem =
@@ -150,10 +144,7 @@ internal fun appContextMenuItems(
     add(CrossbarContextMenuItem("add", "Add to Category", group = MenuGroup.ORGANIZE))
     if (categoryId != null) {
         add(CrossbarContextMenuItem("remove", "Remove from Category", group = MenuGroup.REMOVE))
-        add(
-            if (pinnedInCategory) CrossbarContextMenuItem("unpin", "Unpin from Top", group = MenuGroup.ORGANIZE)
-            else CrossbarContextMenuItem("pin", "Pin to Top", group = MenuGroup.ORGANIZE),
-        )
+        add(pinToTopRow(pinnedInCategory))
 
         if (!onRecentShelf) {
             add(CrossbarContextMenuItem("hide_from_category", "Hide from ${state.categoryDisplayNameOf(categoryId)}", group = MenuGroup.REMOVE))
@@ -307,8 +298,7 @@ internal fun platformContextMenuItems(
     }
     add(CrossbarContextMenuItem("library_manager", "Open in Library Manager", group = MenuGroup.SETTINGS))
 
-    if (pinned) add(CrossbarContextMenuItem("unpin", "Unpin from Top", group = MenuGroup.ORGANIZE))
-    else add(CrossbarContextMenuItem("pin", "Pin to Top", group = MenuGroup.ORGANIZE))
+    add(pinToTopRow(pinned))
 
     add(CrossbarContextMenuItem("hide", "Hide from Games", group = MenuGroup.REMOVE))
 
