@@ -3,6 +3,7 @@ package com.echo.feature.crossbar.bottomscreen
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
+import com.echo.feature.crossbar.viewmodel.typing
 import com.echo.feature.crossbar.viewmodel.ColorSchemeOption
 import com.echo.feature.crossbar.viewmodel.GameInfoState
 import com.echo.feature.settings.ui.SettingsFocusInfo
@@ -79,6 +80,19 @@ sealed interface Swap {
 
 fun swap(s: CrossbarUiState): Swap =
     if (s.secondDisplayPresent && s.secondScreenEnabled) Swap.Displays(!s.screensSwapped) else Swap.InPlace(!s.companionInPlace)
+
+// what the Companion Screen's window does with key focus. The Thor draws the keyboard on the Companion Screen's
+// display (ime_show_on_second), and only for the window last focused there, so the Companion's window must take
+// focus for it to show. CLAIM: typing on the Main Screen, it takes focus once and gives it back, so the controller
+// and the field stay on the Main Screen (ADR 0001). HOLD: in Swap the field is in this window, which keeps the keys
+// while typing. NONE: touch only.
+enum class CompanionKeys { NONE, CLAIM, HOLD }
+
+fun companionKeys(s: CrossbarUiState): CompanionKeys = when {
+    !s.typing -> CompanionKeys.NONE
+    s.screensSwapped -> CompanionKeys.HOLD
+    else -> CompanionKeys.CLAIM
+}
 
 // the display ECHO started on shows the Companion Screen: swapped with the Companion Screen attached on the other
 // display, or shown in place on one display
