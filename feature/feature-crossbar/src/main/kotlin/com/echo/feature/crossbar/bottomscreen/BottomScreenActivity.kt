@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.view.Display
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.inputmethod.InputMethodManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,7 +21,9 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.LaunchedEffect
 import com.echo.feature.crossbar.ui.CrossbarShellContainer
 import com.echo.feature.crossbar.ui.EchoRoot
+import com.echo.feature.crossbar.gamepad.AskedKeyboard
 import com.echo.feature.crossbar.gamepad.backHidesKeyboard
+import com.echo.feature.crossbar.gamepad.hideKeyboard
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
 import javax.inject.Inject
@@ -137,11 +138,12 @@ class BottomScreenActivity : ComponentActivity() {
         if (locked.open) {
             takeKeys(true)
             if (locked.typing) {
-                keyboardUp = true
+                keyboard.typing(true)
                 takeFocus()
             }
         } else {
             // the Thor keeps its keyboard on this screen (ime_fixed): left up, it would stay over ECHO
+            keyboard.typing(false)
             hideKeyboard()
             takeKeys(false)
             if (link.hostShown.value) handFocusBack()
@@ -157,49 +159,38 @@ class BottomScreenActivity : ComponentActivity() {
         window.setFlags(if (take) 0 else both, both)
     }
 
-    // whether the keyboard is likely up. The Thor shows it full screen over this window, which then gets
-    // no keyboard insets, so it is tracked here: up when Search opens or the screen is touched while
-    // typing, down when B or a closing screen hides it
-    private var keyboardUp = false
-
-    private fun hideKeyboard() {
-        keyboardUp = false
-        WindowInsetsControllerCompat(window, window.decorView).hide(WindowInsetsCompat.Type.ime())
-        getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(window.decorView.windowToken, 0)
-    }
+    // the Thor shows the keyboard full screen over this window, which then gets no keyboard insets, so the
+    // keyboard ECHO asked for is what B reads here
+    private val keyboard = AskedKeyboard()
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         // a tap while typing brings the keyboard up; it never moves the controller from the Main Screen (ADR 0001)
-        if (event.actionMasked == MotionEvent.ACTION_DOWN && locked.typing) keyboardUp = true
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) keyboard.touched()
         return super.dispatchTouchEvent(event)
-    }
-
-    // owner decision: B with the keyboard up hides it; the next B goes back
-    private fun backHidesTrackedKeyboard(event: KeyEvent): Boolean {
-        if (!keyboardUp || event.action != KeyEvent.ACTION_DOWN) return false
-        if (gamepad.currentMappings.actionFor(event.keyCode) != com.echo.core.domain.model.GamepadAction.BACK) return false
-        hideKeyboard()
-        return true
     }
 
     // HOME put this window on the second display (the SECONDARY_HOME intent filter)
     private val startedAsHome: Boolean get() = intent?.hasCategory(Intent.CATEGORY_SECONDARY_HOME) == true
 
-    // starting itself again on its own display is what moves Android's key focus to this screen; moving
-    // its task to the front does not, as it is already in front here. Started from itself, in its own task,
-    // and singleTop, so it is this window again: a new task would add a second window over one HOME started
+    // a new task brought to the front on this display is what moves Android's key focus here; moving this
+    // task to the front does not, as it is already in front. Starting this singleTop window from itself only
+    // hands it a new intent and leaves focus where it was, and a new task of it would add a second window
+    // over one HOME started. So CompanionFocusActivity starts in a new task here and closes at once, and
+    // focus falls to this window under it.
     private fun takeFocus() {
         // this activity's own display; Activity.getDisplay needs API 30
         @Suppress("DEPRECATION") val here = windowManager.defaultDisplay.displayId
-        val options = ActivityOptions.makeBasic().setLaunchDisplayId(here).toBundle()
-        runCatching { startActivity(Intent(this, BottomScreenActivity::class.java), options) }
+        val options = ActivityOptions.makeCustomAnimation(this, 0, 0).setLaunchDisplayId(here).toBundle()
+        val intent = Intent(this, CompanionFocusActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        runCatching { startActivity(intent, options) }
             .onFailure { Timber.w(it, "Could not take key focus for the bottom screen") }
     }
 
     // the same override MainActivity makes, for the same lint reason
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        backHidesTrackedKeyboard(event) || backHidesKeyboard(event, gamepad) || gamepad.onKeyEvent(event) || super.dispatchKeyEvent(event)
+        backHidesKeyboard(event, gamepad, keyboard, keyboardElsewhere = true) || gamepad.onKeyEvent(event) || super.dispatchKeyEvent(event)
 
     companion object {
         // shows the bottom screen on a second display, when the device has one; nothing otherwise
@@ -213,5 +204,15 @@ class BottomScreenActivity : ComponentActivity() {
                 activity.startActivity(Intent(activity, BottomScreenActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options)
             }.onFailure { Timber.w(it, "Could not show ECHO on display ${target.displayId}") }
         }
+    }
+}
+
+// takes Android's key focus to the Companion's display and closes at once (BottomScreenActivity.takeFocus).
+// Translucent, so the Companion window under it is only paused: stopped, its onStart would claim the
+// keyboard again and start this without end.
+class CompanionFocusActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        finishAndRemoveTask()
     }
 }
