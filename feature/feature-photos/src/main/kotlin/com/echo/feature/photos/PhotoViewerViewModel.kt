@@ -59,10 +59,10 @@ enum class PhotoViewerAction(val label: String, val group: MenuGroup = MenuGroup
     ZOOM_IN("Zoom In"),
     ZOOM_OUT("Zoom Out"),
     RESET_ZOOM("Reset Zoom"),
-    INFO("View Information"),
+    INFO("Details", MenuGroup.ABOUT),
     SET_WALLPAPER("Set as Launcher Wallpaper", MenuGroup.SETTINGS),
-    LOCATION("Open File Location", MenuGroup.SETTINGS),
-    REMOVE("Delete From Device", MenuGroup.REMOVE),
+    LOCATION("Open Folder", MenuGroup.SETTINGS),
+    REMOVE("Delete", MenuGroup.REMOVE),
 }
 
 enum class PhotoControl(val label: String) {
@@ -338,8 +338,11 @@ class PhotoViewerViewModel @Inject constructor(
             PhotoViewerAction.RESET_ZOOM    -> _uiState.update { it.copy(zoom = ZOOM_MIN, panX = 0f, panY = 0f) }
             PhotoViewerAction.INFO          -> _uiState.update { it.copy(infoVisible = true) }
             PhotoViewerAction.LOCATION      -> {
+                // the folder the photo is in, in the file manager; its path when nothing can open it (owner, 2026-10-12)
                 val p = _uiState.value.photo
-                showMessage(p?.relativePath?.let { "In: $it" } ?: p?.displayName ?: "")
+                if (p == null || !com.echo.core.data.media.FolderOpen.openDocumentFolder(context, p.uri)) {
+                    showMessage(p?.relativePath?.let { "In: $it" } ?: p?.displayName ?: "")
+                }
             }
             PhotoViewerAction.REMOVE        -> _uiState.update { it.copy(confirmRemove = true) }
         }
