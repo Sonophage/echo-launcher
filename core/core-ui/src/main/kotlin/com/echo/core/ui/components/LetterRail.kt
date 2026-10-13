@@ -128,19 +128,13 @@ internal fun railWave(distance: Int): Float {
     return if (d >= 1f) 0f else (0.5f + 0.5f * kotlin.math.cos(Math.PI * d)).toFloat()
 }
 
-// which way a belly bulges: the Side Rail's to the left, a Filter Row's up
-enum class Bulge(internal val x: Float, internal val y: Float) { LEFT(-1f, 0f), UP(0f, -1f) }
-
 // owner, 2026-10-12: about a thumb width, so the item under the finger is clear of it
 val RailBellyReach = 48.dp
 
-// the belly under a finger: each of [rungs] rows moves [reach] toward [bulge] at the [touched] row, less over the
-// rail's wave, and not at all further away. One shape for the Side Rail and the Filter Row
-fun railBelly(touched: Int, rungs: Int, bulge: Bulge, reach: Dp = RailBellyReach): List<DpOffset> =
-    List(rungs) { row ->
-        val pull = reach * railWave(row - touched)
-        DpOffset(pull * bulge.x, pull * bulge.y)
-    }
+// the Side Rail's belly under a finger: each of [rungs] rows moves [reach] left at the [touched] row, less over the
+// rail's wave, and not at all further away
+fun railBelly(touched: Int, rungs: Int, reach: Dp = RailBellyReach): List<DpOffset> =
+    List(rungs) { row -> DpOffset(-reach * railWave(row - touched), 0.dp) }
 
 internal val RailEdgeZone = RailIcon + RailEdgeGap * 2
 
@@ -347,7 +341,7 @@ private fun Rungs(
 ) {
     val activeRung = cursor?.let { c -> rungs.indexOfLast { it <= c }.coerceAtLeast(0) }
     val glyphs = railGlyphs(letters, rungs, cursor)
-    val bulge = activeRung?.takeIf { bulging }?.let { railBelly(it, rungs.size, Bulge.LEFT) }
+    val bulge = activeRung?.takeIf { bulging }?.let { railBelly(it, rungs.size) }
     val focusStyle = LocalFocusStyle.current
     val accent = LocalEchoColors.current.accentColor
     rungs.forEachIndexed { rung, _ ->

@@ -75,9 +75,8 @@ screen's padded column.
   settle spring (STILL, reduced motion, snaps). `EchoTheme` provides it and `LocalFocusStyle`: a window's root
   (`EchoRoot` for both screens, the Reader) passes `EchoThemeStore.themeLook`, and a theme inside it keeps them.
   Do not provide them a second time.
-- The belly under a finger is `railBelly(touched, rungs, bulge)` (`components/LetterRail.kt`): `Bulge.LEFT` for
-  the Side Rail, `Bulge.UP` for a Filter Row, `RailBellyReach` (48 dp) at the touched row, tapering over the
-  rail's wave. Do not shape a second belly.
+- The belly under a finger is `railBelly(touched, rungs)` (`components/LetterRail.kt`): the Side Rail bulges left,
+  `RailBellyReach` (48 dp) at the touched row, tapering over the rail's wave. Do not shape a second belly.
 - A press draws the same mark: `PressMark` (`theme/PressMark.kt`) is the `LocalIndication` `EchoTheme` provides, so a
   plain `clickable` shows it while the finger is down. Never ask for a Material `ripple()`; `NoRippleTest` fails on one.
   Set `indication = null` only on a scrim or a whole-screen tap. When the tap target is wider than its icon, give the
