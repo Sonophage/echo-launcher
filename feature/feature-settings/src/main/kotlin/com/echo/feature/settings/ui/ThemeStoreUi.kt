@@ -1,5 +1,7 @@
 package com.echo.feature.settings.ui
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.echo.core.ui.theme.showsFocus
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -459,16 +461,20 @@ internal fun ThemePageOverlay(
                 if (page.current) "WHERE EACH PART CAME FROM" else "EVERYTHING, OR ONLY THE PARTS YOU WANT",
                 u,
             )
-            Box(Modifier.inViewWhen(page.cursor == 0).contextMenuRow(focused = page.cursor == 0, dim = 1f, u = u) { onRow(0) }) {
-                ContextMenuRowLabel(page.actionLabel, focused = page.cursor == 0, u = u)
+            val actionPress = remember { MutableInteractionSource() }
+            val actionLit = actionPress.showsFocus(page.cursor == 0)
+            Box(Modifier.inViewWhen(page.cursor == 0).contextMenuRow(focused = actionLit, dim = 1f, u = u, press = actionPress) { onRow(0) }) {
+                ContextMenuRowLabel(page.actionLabel, focused = actionLit, u = u)
             }
             ThemePart.entries.forEachIndexed { i, part ->
                 val row = i + 1
-                val focused = page.cursor == row
+                val press = remember { MutableInteractionSource() }
+                val focused = press.showsFocus(page.cursor == row)
                 val has = part in page.parts
                 val source = partSources[part]?.let { "From $it" } ?: "Your own"
                 Row(
-                    Modifier.inViewWhen(focused).fillMaxWidth().contextMenuRow(focused = focused, dim = if (has || page.current) 1f else 0.4f, u = u) { onRow(row) },
+                    Modifier.inViewWhen(page.cursor == row).fillMaxWidth()
+                        .contextMenuRow(focused = focused, dim = if (has || page.current) 1f else 0.4f, u = u, press = press) { onRow(row) },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // the part, with where it comes from beneath it: side by side, a narrow rail cut it to "From Ry…"

@@ -1,5 +1,6 @@
 package com.echo.core.ui.components
 
+import com.echo.core.ui.theme.showsFocus
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -58,6 +59,9 @@ fun EchoSearchField(
 
     readOnly: Boolean = false,
 ) {
+    // a pressed field shows the bright edge it has when active (spec #3)
+    val press = remember { MutableInteractionSource() }
+    val active = press.showsFocus(active)
     val edge by animateColorAsState(
         targetValue = if (active) colors.searchBorder else colors.searchBorder.copy(alpha = 0.35f),
         animationSpec = tween(160),
@@ -72,10 +76,7 @@ fun EchoSearchField(
             .background(colors.searchField, RoundedCornerShape(FIELD_CORNER))
             .border(FIELD_BORDER, edge, RoundedCornerShape(FIELD_CORNER))
 
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) { onActivate() }
+            .clickable(interactionSource = press, indication = null) { onActivate() }
             .padding(horizontal = 16.dp),
     ) {
         SearchGlyph(colors)

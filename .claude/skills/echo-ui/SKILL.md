@@ -82,7 +82,10 @@ screen's padded column.
   plain `clickable` shows it while the finger is down. Never ask for a Material `ripple()`; `NoRippleTest` fails on one.
   Set `indication = null` only on a scrim or a whole-screen tap. When the tap target is wider than its icon, give the
   clickable an `interactionSource` with `indication = null` and put `Modifier.indication(source, LocalIndication.current)`
-  on the icon (the crossbar rows, the footer's A orb).
+  on the icon (the crossbar rows, the footer's A orb). When the controller's focus is the target's own look, not
+  an icon mark (a menu row's white bar, a tab's underline, an App Drawer case's lift, the search field's edge), give
+  the clickable an `interactionSource` with `indication = null` and draw it focused when
+  `source.showsFocus(focused)` is true (`theme/PressMark.kt`); `contextMenuRow` takes that source.
 - `WaveLayers(style)` draws the wave; the design (PSP, Echo Rings, Echo Arcs) comes from
   `LocalWaveDesign`. The wave sits just above the backdrop (wallpaper or full-screen art) and below
   icons, panels and words.

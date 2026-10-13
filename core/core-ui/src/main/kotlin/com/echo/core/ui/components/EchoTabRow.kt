@@ -1,5 +1,8 @@
 package com.echo.core.ui.components
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
+import com.echo.core.ui.theme.showsFocus
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -76,11 +79,13 @@ fun EchoTabRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             itemsIndexed(labels) { index, label ->
-                val on = index == current
+                // a pressed tab shows the current tab's look, as the controller does (spec #3)
+                val press = remember { MutableInteractionSource() }
+                val on = press.showsFocus(index == current)
                 Column(
                     modifier = Modifier
                         .clip(RoundedCornerShape(u.dp(8)))
-                        .clickable { onPick(index) }
+                        .clickable(interactionSource = press, indication = null) { onPick(index) }
                         .padding(horizontal = u.dp(8), vertical = u.dp(10)),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(u.dp(8)),

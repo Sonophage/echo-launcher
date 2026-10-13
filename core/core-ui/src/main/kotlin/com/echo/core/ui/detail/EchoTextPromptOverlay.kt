@@ -1,5 +1,6 @@
 package com.echo.core.ui.detail
 
+import com.echo.core.ui.theme.showsFocus
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -128,12 +129,16 @@ fun EchoTextPromptOverlay(
                 modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
             )
 
-            Box(Modifier.contextMenuRow(focused = false, dim = 1f, u = u, onClick = onConfirm)) {
-                ContextMenuRowLabel(confirmLabel, focused = false, u = u)
+            val confirmPress = remember { MutableInteractionSource() }
+            val confirmLit = confirmPress.showsFocus(false)
+            Box(Modifier.contextMenuRow(focused = confirmLit, dim = 1f, u = u, press = confirmPress, onClick = onConfirm)) {
+                ContextMenuRowLabel(confirmLabel, focused = confirmLit, u = u)
             }
             if (onReset != null && resetLabel != null) {
-                Box(Modifier.contextMenuRow(focused = false, dim = 1f, u = u, onClick = onReset)) {
-                    ContextMenuRowLabel(resetLabel, focused = false, u = u)
+                val resetPress = remember { MutableInteractionSource() }
+                val resetLit = resetPress.showsFocus(false)
+                Box(Modifier.contextMenuRow(focused = resetLit, dim = 1f, u = u, press = resetPress, onClick = onReset)) {
+                    ContextMenuRowLabel(resetLabel, focused = resetLit, u = u)
                 }
             }
         }

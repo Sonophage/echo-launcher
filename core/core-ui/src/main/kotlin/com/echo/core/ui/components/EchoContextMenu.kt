@@ -1,5 +1,8 @@
 package com.echo.core.ui.components
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
+import com.echo.core.ui.theme.showsFocus
 import com.echo.core.ui.design.RailPanelFill
 import com.echo.core.ui.design.DesignUnits
 import com.echo.core.ui.design.LocalBackdropWave
@@ -214,11 +217,12 @@ fun contextMenuDim(distance: Int, span: Int): Float {
     return dim
 }
 
-fun Modifier.contextMenuRow(focused: Boolean, dim: Float, u: DesignUnits, onClick: () -> Unit): Modifier = this
+// [focused] is press.showsFocus(...): a pressed row shows the white bar the controller's focus shows (spec #3)
+fun Modifier.contextMenuRow(focused: Boolean, dim: Float, u: DesignUnits, press: MutableInteractionSource, onClick: () -> Unit): Modifier = this
     .alpha(if (focused) 1f else dim)
     .clip(RoundedCornerShape(u.dp(12)))
     .then(if (focused) Modifier.background(Color.White) else Modifier)
-    .clickable(onClick = onClick)
+    .clickable(interactionSource = press, indication = null, onClick = onClick)
     .padding(start = u.dp(14), end = u.dp(6), top = u.dp(6), bottom = u.dp(6))
 
 fun contextMenuInk(focused: Boolean): Color = if (focused) RailInk else Color.White
@@ -266,10 +270,12 @@ private fun CrossbarRailRow(
     badge: (@Composable () -> Unit)?,
     onClick: () -> Unit,
 ) {
+    val press = remember { MutableInteractionSource() }
+    val focused = press.showsFocus(focused)
     val tint = if (destructive) RailDestructive else null
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.contextMenuRow(focused, dim, u, onClick),
+        modifier = Modifier.contextMenuRow(focused, dim, u, press, onClick),
     ) {
         ContextMenuRowLabel(
             text = label,

@@ -1,5 +1,8 @@
 package com.echo.feature.appbar.appdrawer
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
+import com.echo.core.ui.theme.showsFocus
 import android.content.pm.ApplicationInfo
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.offset
@@ -189,6 +192,9 @@ internal fun AppWall(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AppCase(app: InstalledApp, height: Dp, focused: Boolean, dimmed: Boolean, u: DesignUnits, onClick: () -> Unit, onLongClick: () -> Unit) {
+    // a pressed case rises as the chosen one does (spec #3)
+    val press = remember { MutableInteractionSource() }
+    val focused = press.showsFocus(focused)
     val lift by animateFloatAsState(if (focused) 1f else 0f, tween(200), label = "caseLift")
     // owner, 2026-10-05: the chosen case stands a little bigger than the rest, and the rest step back
     val shade by animateFloatAsState(if (dimmed) 0.6f else 1f, tween(200), label = "caseShade")
@@ -209,7 +215,7 @@ private fun AppCase(app: InstalledApp, height: Dp, focused: Boolean, dimmed: Boo
             }
             .shadow(u.dp(if (focused) 18 else 10), shape)
             .then(if (focused) Modifier.border(u.dp(3), Color.White, shape) else Modifier)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            .combinedClickable(interactionSource = press, indication = null, onClick = onClick, onLongClick = onLongClick),
     ) {
         if (app.art != null) VhsCoverArt(app.art, u)
         else VhsAppFace(app.label, icon, tint, u, grows = true, logoShare = DRAWER_LOGO_SHARE, markShare = DRAWER_MARK_SHARE, nameGrows = false) {
