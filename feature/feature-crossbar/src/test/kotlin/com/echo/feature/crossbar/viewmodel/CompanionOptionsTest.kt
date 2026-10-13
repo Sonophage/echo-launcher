@@ -7,6 +7,9 @@ import com.echo.core.domain.model.CategoryType
 import com.echo.core.domain.model.HideLocationType
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import com.echo.feature.crossbar.companion.CompanionContent
+import com.echo.feature.crossbar.companion.CrossbarCompanion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +32,21 @@ class CompanionOptionsTest {
     init {
         // the Main Screen has moved on to Games
         every { vm.currentCategory() } answers { ui.value.currentCategoryOrNull() }
+    }
+
+    // the button: Options on the Details the Companion shows opens that item's menu in the Companion's slot, from
+    // where the item was hovered; the running game has no such place and opens from the Main Screen as it is
+    @Test
+    fun `Options on the Companion opens the shown item's menu there, from where it was hovered`() {
+        val companion = CrossbarCompanion(vm, ui, scope, mockk(relaxed = true), MutableStateFlow(null))
+        val song = CrossbarItem(id = "mt_1", title = "Nightcall", type = CrossbarItemType.MUSIC_TRACK)
+        val inMusic = on(BuiltInCategory.MUSIC)
+
+        companion.openMenu(CompanionContent.Details(GameInfoState(song), place = inMusic))
+        verify { vm.openContextMenuFor(song, MenuSlot.COMPANION, inMusic) }
+
+        companion.openMenu(CompanionContent.Details(GameInfoState(song), playing = true))
+        verify { vm.openContextMenuFor(song, MenuSlot.COMPANION, ui.value) }
     }
 
     @Test
