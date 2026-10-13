@@ -3351,21 +3351,7 @@ class CrossbarViewModel @Inject constructor(
                     "uninstall" -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.uninstall(context, pkg) }
 
                     "mark_game" -> appAction {
-                        val existing = gameRepository.getAppEntry(pkg)
-                        if (existing == null) {
-                            gameRepository.upsert(Game(
-                                title         = menu.title,
-                                platformId    = ANDROID_PLATFORM_ID,
-                                packageName   = pkg,
-                                isManualEntry = true,
-                                contentType   = GameContentType.GAME,
-                            ))
-                        } else {
-                            gameRepository.upsert(existing.copy(
-                                platformId  = ANDROID_PLATFORM_ID,
-                                contentType = GameContentType.GAME,
-                            ))
-                        }
+                        gameRepository.upsert(com.echo.core.domain.model.markedAsGame(gameRepository.getAppEntry(pkg), pkg, menu.title))
                         memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
                     }
                     "unmark_game"       -> appAction { gameRepository.getAppEntry(pkg)?.let { gameActions.unmarkAsGame(it.id) } }

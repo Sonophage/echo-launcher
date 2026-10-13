@@ -323,6 +323,39 @@ class AppDrawerViewModelTest {
         assertFalse(AppMenuAction.MARK_GAME in drawnActions)
     }
 
+    // Mark as Game makes the app's row a game in the Android system (a new row when it has none); Unmark as Game
+    // makes it an app shortcut again. Either recounts the Android system's card. The crossbar's menus do the same,
+    // through the same definition (markedAsGame, unmarkedAsGame)
+    @Test
+    fun `the drawer's Mark as Game and Unmark as Game write the app's row in games`() = runTest {
+        val cards = mockk<com.echo.core.data.repository.MemoryCardRepository>(relaxed = true)
+        viewModel = AppDrawerViewModel(repository, mockk(relaxed = true), games, cards, mockk(relaxed = true), mockk(relaxed = true),
+            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+        val android = com.echo.core.domain.model.PlatformIds.ANDROID
+        val gameType = com.echo.core.domain.model.GameContentType.GAME
+
+        coEvery { games.getAppEntry("com.example.browser") } returns null
+        openBrowserMenu()
+        chooseDrawn(AppMenuAction.MARK_GAME)
+        testDispatcher.scheduler.advanceUntilIdle()
+        io.mockk.coVerify { games.upsert(match { it.id == 0L && it.packageName == "com.example.browser" && it.title == "Browser" &&
+            it.isManualEntry && it.platformId == android && it.contentType == gameType }) }
+
+        coEvery { games.getAppEntry("com.example.browser") } returns appRow(7, favorite = true)
+        openBrowserMenu()
+        chooseDrawn(AppMenuAction.MARK_GAME)
+        testDispatcher.scheduler.advanceUntilIdle()
+        io.mockk.coVerify { games.upsert(match { it.id == 7L && it.isFavorite && it.platformId == android && it.contentType == gameType }) }
+
+        coEvery { games.getAppEntry("com.example.browser") } returns appRow(7, game = true)
+        openBrowserMenu()
+        chooseDrawn(AppMenuAction.UNMARK_GAME)
+        testDispatcher.scheduler.advanceUntilIdle()
+        io.mockk.coVerify { games.upsert(match { it.id == 7L && it.platformId == com.echo.core.domain.model.PlatformIds.APP_SHORTCUT &&
+            it.contentType == com.echo.core.domain.model.GameContentType.ANDROID_APP }) }
+        io.mockk.coVerify(exactly = 3) { cards.recountGames(android) }
+    }
+
     private fun drawerWithNothingUsed(usageAccess: Boolean): AppDrawerViewModel {
         coEvery { repository.getInstalledApps() } returns fakeApps().map { it.copy(lastUsedAt = 0L) }
         every { repository.hasUsageAccess() } returns usageAccess

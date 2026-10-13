@@ -102,3 +102,11 @@ fun appShortcut(packageName: String, title: String): Game = Game(
     isManualEntry = true,
     contentType   = GameContentType.ANDROID_APP,
 )
+
+// Mark as Game, from the crossbar's app menu or the App Drawer's: the app's row made a game in the Android system,
+// a new row when the app has none. The caller saves it and recounts the Android system's card
+fun markedAsGame(existing: Game?, packageName: String, title: String): Game =
+    (existing ?: appShortcut(packageName, title)).copy(platformId = PlatformIds.ANDROID, contentType = GameContentType.GAME)
+
+// Unmark as Game, from a game's menu, an app's or the App Drawer's: the row is an app shortcut again
+fun Game.unmarkedAsGame(): Game = copy(platformId = PlatformIds.APP_SHORTCUT, contentType = GameContentType.ANDROID_APP)

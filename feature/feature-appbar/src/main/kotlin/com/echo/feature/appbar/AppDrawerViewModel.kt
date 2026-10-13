@@ -8,6 +8,7 @@ import com.echo.core.domain.model.PlatformIds.ANDROID as ANDROID_PLATFORM_ID
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.echo.core.domain.model.GamepadAction
+import com.echo.core.domain.model.unmarkedAsGame
 import com.echo.core.ui.sound.MenuSound
 import com.echo.core.ui.sound.MenuSoundPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -500,29 +501,8 @@ class AppDrawerViewModel @Inject constructor(
     private fun setMarkedAsGame(app: InstalledApp, marked: Boolean) {
         viewModelScope.launch {
             val existing = gameRepository.getAppEntry(app.packageName)
-            if (marked) {
-                if (existing == null) {
-                    gameRepository.upsert(
-                        com.echo.core.domain.model.Game(
-                            title         = app.label,
-                            platformId    = ANDROID_PLATFORM_ID,
-                            packageName   = app.packageName,
-                            isManualEntry = true,
-                            contentType   = com.echo.core.domain.model.GameContentType.GAME,
-                        )
-                    )
-                } else {
-                    gameRepository.upsert(existing.copy(
-                        platformId  = ANDROID_PLATFORM_ID,
-                        contentType = com.echo.core.domain.model.GameContentType.GAME,
-                    ))
-                }
-            } else if (existing != null) {
-                gameRepository.upsert(existing.copy(
-                    platformId  = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
-                    contentType = com.echo.core.domain.model.GameContentType.ANDROID_APP,
-                ))
-            }
+            if (marked) gameRepository.upsert(com.echo.core.domain.model.markedAsGame(existing, app.packageName, app.label))
+            else if (existing != null) gameRepository.upsert(existing.unmarkedAsGame())
             memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
         }
     }
