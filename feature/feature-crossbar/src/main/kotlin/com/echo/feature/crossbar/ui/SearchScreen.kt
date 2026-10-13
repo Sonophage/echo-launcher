@@ -198,6 +198,9 @@ fun SearchScreen(
         }
 
         if (!imeUp) {
+            // the card wears the focused result's art or icon and its case's colour, as the Crossbar's does (owner, 2026-10-13)
+            val cardArt = focused?.let(::coverArt)
+            val cardIcon = rememberAppIcon(focused?.packageName?.takeIf { focused.isInstalledApp && cardArt == null })
             EchoHintBar(
                 // owner, 2026-10-06: the kind filter is the footer's, LT/RT and the current kind with its count
                 filter = searchKindFilter(state)?.let { (label, next) -> { TriggerFilter(label) { onKindPicked(next) } } },
@@ -208,6 +211,8 @@ fun SearchScreen(
                 ),
                 modifier = Modifier.align(Alignment.BottomCenter),
                 primary = focused?.let { searchLaunchAction(it, launchHold) },
+                accent = cardIcon?.color ?: SearchTint,
+                leading = focused?.let { com.echo.core.ui.components.launchCardTile(cardArt, cardIcon?.bitmap) },
                 onAction = { action ->
                     when (action) {
                         GamepadAction.BACK -> onBack()
@@ -226,7 +231,7 @@ fun SearchScreen(
 internal fun searchLaunchAction(row: CrossbarItem, launchHold: String?): HintAction =
     HintAction(
         GamepadAction.SELECT, primaryVerbFor(row) ?: "Open",
-        listOfNotNull(row.title, row.subtitle).filter { it.isNotBlank() }.joinToString(" · "),
+        com.echo.core.ui.components.launchCardDetail(holdMsFor(row), row.title, row.subtitle),
         holdMs = holdMsFor(row),
         holding = launchHold == row.id,
     )

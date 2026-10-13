@@ -326,6 +326,8 @@ internal fun com.echo.core.domain.model.Game.toSearchRow(platformName: String?):
     lastOpenedAt = lastPlayedAt,
     gameId = id,
     platformId = platformId,
+    // as the Crossbar's game rows: a real game opens on the hold
+    isRealGame = contentType == com.echo.core.domain.model.GameContentType.GAME,
     type = CrossbarItemType.STANDARD,
 )
 

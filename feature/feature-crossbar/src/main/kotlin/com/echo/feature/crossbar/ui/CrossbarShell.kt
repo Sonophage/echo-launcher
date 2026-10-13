@@ -1826,13 +1826,5 @@ private fun Modifier.markTouches(onTouch: () -> Unit): Modifier = pointerInput(o
     }
 }
 
-private fun hintTile(item: CrossbarItem, icon: ImageBitmap?): (@Composable () -> Unit)? {
-    val art = item.coverUri ?: item.iconUri
-    return when {
-        art != null -> { ->
-            AsyncImage(rememberArtworkModel(art), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        }
-        icon != null -> { -> androidx.compose.foundation.Image(icon, null, Modifier.fillMaxSize()) }
-        else -> null
-    }
-}
+private fun hintTile(item: CrossbarItem, icon: ImageBitmap?): (@Composable () -> Unit)? =
+    com.echo.core.ui.components.launchCardTile(item.coverUri ?: item.iconUri, icon)

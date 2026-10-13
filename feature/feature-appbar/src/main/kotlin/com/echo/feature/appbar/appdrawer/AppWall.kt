@@ -365,12 +365,15 @@ private const val TITAN_STRIP_BUTTON_GROW = 1.35f
 internal fun InstalledApp.holdsToOpen(): Boolean = media == null || media.kind != com.echo.feature.appbar.MediaKind.MUSIC
 
 // the footer's A for the focused app: what opens on the hold rises with it (issue #36)
-fun drawerLaunchAction(app: InstalledApp, holdingPackage: String?): com.echo.core.ui.components.HintAction =
-    com.echo.core.ui.components.HintAction(
+fun drawerLaunchAction(app: InstalledApp, holdingPackage: String?): com.echo.core.ui.components.HintAction {
+    val holdMs = if (app.holdsToOpen()) com.echo.core.ui.design.LAUNCH_HOLD_MS else 0L
+    return com.echo.core.ui.components.HintAction(
         com.echo.core.domain.model.GamepadAction.SELECT, actionLabel(app),
-        holdMs = if (app.holdsToOpen()) com.echo.core.ui.design.LAUNCH_HOLD_MS else 0L,
+        com.echo.core.ui.components.launchCardDetail(holdMs, app.label),
+        holdMs = holdMs,
         holding = holdingPackage == app.packageName,
     )
+}
 
 internal fun actionLabel(app: InstalledApp): String = when {
     app.media?.kind == com.echo.feature.appbar.MediaKind.BOOK -> "Read"
@@ -378,6 +381,6 @@ internal fun actionLabel(app: InstalledApp): String = when {
     else -> "Open"
 }
 
-private val NeutralTint = Color(0xFF222838)
+internal val NeutralTint = Color(0xFF222838)
 
 

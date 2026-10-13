@@ -51,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -89,6 +90,24 @@ data class HintAction(
     // what a finger on the card does, when it is not what the button does (Y held is Resume, a tap of Y Options)
     val onTouch: (() -> Unit)? = null,
 )
+
+// the launch card's line under its verb, on every path (owner, 2026-10-13): while A is a hold, what it launches;
+// otherwise the target and its detail
+fun launchCardDetail(holdMs: Long, target: String?, detail: String? = null): String? =
+    if (holdMs > 0L) listOfNotNull("Hold to launch", target).filter { it.isNotBlank() }.joinToString(" ")
+    else listOfNotNull(target, detail).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null }
+
+// the launch card's tile, on every path: the item's art, else its icon; null when it has neither
+fun launchCardTile(art: String?, icon: androidx.compose.ui.graphics.ImageBitmap?): (@androidx.compose.runtime.Composable () -> Unit)? = when {
+    art != null -> { ->
+        coil3.compose.AsyncImage(
+            com.echo.core.ui.image.rememberArtworkModel(art), null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize(),
+        )
+    }
+    icon != null -> { -> androidx.compose.foundation.Image(icon, null, Modifier.fillMaxSize()) }
+    else -> null
+}
 
 fun primaryHint(items: List<ControllerPromptItem>, detail: String? = null): HintAction? =
     items.firstOrNull { it.tappableAction() == GamepadAction.SELECT }

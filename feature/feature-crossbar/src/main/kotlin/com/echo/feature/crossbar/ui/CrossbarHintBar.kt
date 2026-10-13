@@ -48,9 +48,7 @@ fun CrossbarHintBar(
         accent = accent,
         leading = leading.takeIf { prompts.resume == null },
         primary = prompts.primary?.let { p ->
-            val detail = if (prompts.resume != null) p.target
-                else if (holdMs > 0L) listOfNotNull("Hold to launch", p.target).filter { it.isNotBlank() }.joinToString(" ")
-                else listOfNotNull(p.target, p.detail).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null }
+            val detail = if (prompts.resume != null) p.target else com.echo.core.ui.components.launchCardDetail(holdMs, p.target, p.detail)
             HintAction(p.action, p.verb, detail, holdMs, holding)
         },
         secondary = prompts.resume?.let { HintAction(it.action, it.verb, it.target, LAUNCH_HOLD_MS, resumeHolding, onTouch = onResume) },

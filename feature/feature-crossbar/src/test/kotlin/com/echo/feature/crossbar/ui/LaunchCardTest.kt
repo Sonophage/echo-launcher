@@ -5,6 +5,7 @@ import com.echo.feature.appbar.InstalledApp
 import com.echo.feature.appbar.appdrawer.drawerLaunchAction
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.holdMsFor
+import com.echo.feature.crossbar.viewmodel.toSearchRow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -31,6 +32,25 @@ class LaunchCardTest {
             assertEquals("Search: A on ${row.title} is a hold", LAUNCH_HOLD_MS, search.holdMs)
             assertTrue("Search: the card is out while A is held on ${row.title}", search.holding)
         }
+    }
+
+    // found on the Thor, 2026-10-13: Search's game rows were not marked as real games, so A and a touch on its footer
+    // launched a game at once, with no card. The rows above are built by hand; this one is built as Search builds it
+    @Test
+    fun `a game found by Search takes the hold`() {
+        val found = com.echo.core.domain.model.Game(id = 8, title = "Castlevania: Order of Ecclesia", platformId = "nds")
+        val row = found.toSearchRow("Nintendo DS")
+        assertEquals("Search: a game opens on a tap", LAUNCH_HOLD_MS, searchLaunchAction(row, launchHold = null).holdMs)
+    }
+
+    // owner, 2026-10-13: the card in the App Drawer and Search showed no name, so it did not say what A launches.
+    // Every path's card names the item the same way the Crossbar's does
+    @Test
+    fun `the launch card names the focused item on every path`() {
+        val drawerApp = InstalledApp("com.discord", "Discord", icon = null, isGame = false, isEmulator = false)
+        assertEquals("App Drawer", "Hold to launch Discord", drawerLaunchAction(drawerApp, holdingPackage = null).detail)
+        assertEquals("Search", "Hold to launch Discord", searchLaunchAction(app, launchHold = null).detail)
+        assertEquals("Crossbar", "Hold to launch Discord", com.echo.core.ui.components.launchCardDetail(LAUNCH_HOLD_MS, "Discord"))
     }
 
     @Test

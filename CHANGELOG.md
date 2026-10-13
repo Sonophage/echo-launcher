@@ -26,6 +26,8 @@ released; it becomes the next release's notes.
 ### Holds
 
 - A video and a book now open on the hold, as a game or app does: hold A, or hold a finger on the launch button, on the Crossbar, Recent, the App Drawer and Search. A track, an album and a photo still open on a tap.
+- A game found in Search now opens on the hold too. Before, A or a tap on the footer opened it at once.
+- The launch card in the App Drawer and Search shows the focused item's art or icon, its name and its colour, as the Crossbar's does.
 
 ### Touch
 

@@ -354,6 +354,9 @@ internal fun AppDrawerContent(
                     com.echo.core.ui.components.ControllerPromptItem(GamepadAction.NEXT_PAGE, "Search"),
                 ),
                 primary = focused?.let { drawerLaunchAction(it, state.holdingPackage) },
+                // the card wears the focused app's art or icon and its case's colour, as the Crossbar's does (owner, 2026-10-13)
+                accent = focusedIcon?.color ?: com.echo.feature.appbar.appdrawer.NeutralTint,
+                leading = focused?.let { com.echo.core.ui.components.launchCardTile(it.art, focusedIcon?.bitmap) },
                 filter = {
                     com.echo.core.ui.components.TriggerFilter(
                         // the rail's filter beside the section, since nothing else says the list is narrowed
