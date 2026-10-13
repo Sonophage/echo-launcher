@@ -1,5 +1,7 @@
 package com.echo.feature.photos
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.indication
 import com.echo.core.ui.components.EchoTrio
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
@@ -194,10 +196,15 @@ fun PhotoViewerScreen(
                     style = ControllerHintStyle.OVERLAY,
                 )
                 Row(horizontalArrangement = Arrangement.Center) {
-                    TextButton(onClick = viewModel::confirmWallpaper, enabled = !state.applyingWallpaper) {
+                    // a Material component draws its own (switched off) ripple, not LocalIndication: its source carries the press mark (spec #3)
+                    val applyPress = remember { MutableInteractionSource() }
+                    val cancelPress = remember { MutableInteractionSource() }
+                    TextButton(onClick = viewModel::confirmWallpaper, enabled = !state.applyingWallpaper,
+                        interactionSource = applyPress, modifier = Modifier.indication(applyPress, LocalIndication.current)) {
                         Text(if (state.applyingWallpaper) "Applying…" else "Apply", color = menuCursorEdge())
                     }
-                    TextButton(onClick = viewModel::cancelWallpaperPreview, enabled = !state.applyingWallpaper) {
+                    TextButton(onClick = viewModel::cancelWallpaperPreview, enabled = !state.applyingWallpaper,
+                        interactionSource = cancelPress, modifier = Modifier.indication(cancelPress, LocalIndication.current)) {
                         Text("Cancel", color = TextMuted)
                     }
                 }

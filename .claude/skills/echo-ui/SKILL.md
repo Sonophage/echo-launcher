@@ -85,7 +85,10 @@ screen's padded column.
   on the icon (the crossbar rows, the footer's A orb). When the controller's focus is the target's own look, not
   an icon mark (a menu row's white bar, a tab's underline, an App Drawer case's lift, the search field's edge), give
   the clickable an `interactionSource` with `indication = null` and draw it focused when
-  `source.showsFocus(focused)` is true (`theme/PressMark.kt`); `contextMenuRow` takes that source.
+  `source.showsFocus(focused)` is true (`theme/PressMark.kt`); `contextMenuRow` takes that source. A Material
+  control (`Switch`, `Slider`, `Checkbox`, `TextButton`, `IconButton`...) draws its own ripple, which is off, not
+  `LocalIndication`: pass it an `interactionSource` and put `Modifier.indication(source, LocalIndication.current)`
+  on it, or use `showsFocus` when it has its own focus look. `NoRippleTest` fails on a control with no source.
 - `WaveLayers(style)` draws the wave; the design (PSP, Echo Rings, Echo Arcs) comes from
   `LocalWaveDesign`. The wave sits just above the backdrop (wallpaper or full-screen art) and below
   icons, panels and words.

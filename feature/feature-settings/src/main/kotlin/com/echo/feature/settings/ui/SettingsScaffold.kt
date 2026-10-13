@@ -1,5 +1,8 @@
 package com.echo.feature.settings.ui
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.echo.core.ui.design.GlowSide
 import com.echo.core.ui.design.GlowMaskedWave
 import com.echo.core.ui.theme.EchoTextStyle
@@ -1219,9 +1222,13 @@ fun SettingsToggleRow(
 
         onClick = { onToggle(!checked) },
         trailing = {
+            // a Material component draws its own (switched off) ripple, not LocalIndication: its source carries the press mark (spec #3)
+            val press = remember { MutableInteractionSource() }
             Switch(
                 checked = checked,
                 onCheckedChange = onToggle,
+                interactionSource = press,
+                modifier = Modifier.indication(press, LocalIndication.current),
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = PanelBase,
                     checkedTrackColor = Color.White,
