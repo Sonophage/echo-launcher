@@ -126,7 +126,8 @@ class CompanionActivity : ComponentActivity() {
         super.onStop()
     }
 
-    // HOLD: the Main Screen is drawn here in Swap, and typing (Search or a name prompt) takes keys and key focus at once,
+    // HOLD: the field is in this window (the Main Screen drawn here in Swap, or a name prompt opened from the
+    // Companion's menu, ADR 0002), and typing (Search or a name prompt) takes keys and key focus at once,
     // so the keyboard opens; without them the keyboard cannot reach the field and Android reports ECHO as not
     // responding (owner, 2026-10-08). The controller's presses then arrive here and are passed on, so they still
     // drive ECHO. CLAIM: typing on the Main Screen, focus is taken once so the keyboard is drawn here

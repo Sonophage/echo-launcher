@@ -134,6 +134,8 @@ import com.echo.feature.crossbar.viewmodel.fanCoversToDraw
 import com.echo.feature.crossbar.viewmodel.systemArtSlotFor
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
+import com.echo.feature.crossbar.viewmodel.MenuSlot
+import com.echo.feature.crossbar.viewmodel.namePromptSlot
 
 private const val CROSSBAR_BASELINE_HEIGHT_DP = 468f
 
@@ -1428,37 +1430,17 @@ fun CrossbarShell(
                 )
             }
 
-            uiState.renameAppTarget?.let {
-                AppRenameDialog(
-                    text = uiState.renameAppText,
+            // a prompt opened from the Companion's menu is drawn by the Companion Screen (ADR 0002)
+            if (uiState.namePromptSlot == MenuSlot.MAIN) {
+                NamePrompts(
+                    uiState = uiState,
                     onTextChange = onNamePromptTextChanged,
-                    onConfirm = onConfirmAppRename,
-                    onCancel = onCancelAppRename,
-                )
-            }
-
-            uiState.collectionNameDialog?.let { dialog ->
-                CollectionNameDialog(
-                    title = dialog.title,
-                    text = dialog.text,
-                    onTextChange = onNamePromptTextChanged,
-                    onConfirm = onConfirmCollectionName,
-                    onCancel = onCancelCollectionName,
-                    placeholder = dialog.placeholder,
-                    confirmLabel = dialog.confirmLabel,
-                    subtitle = dialog.subtitle,
-                    resetLabel = dialog.resetLabel,
-                    onReset = dialog.resetLabel?.let { { onNamePromptTextChanged("") } },
-                )
-            }
-
-            uiState.playlistNameDialog?.let { dialog ->
-                CollectionNameDialog(
-                    title = dialog.title,
-                    text = dialog.text,
-                    onTextChange = onNamePromptTextChanged,
-                    onConfirm = onConfirmPlaylistName,
-                    onCancel = onCancelPlaylistName,
+                    onConfirmAppRename = onConfirmAppRename,
+                    onCancelAppRename = onCancelAppRename,
+                    onConfirmCollectionName = onConfirmCollectionName,
+                    onCancelCollectionName = onCancelCollectionName,
+                    onConfirmPlaylistName = onConfirmPlaylistName,
+                    onCancelPlaylistName = onCancelPlaylistName,
                 )
             }
 
@@ -1649,6 +1631,54 @@ private fun rememberWaveAccent(uiState: CrossbarUiState): Long? {
     return uiState.focusedItemAccentArgb
         ?: focusedAppIcon?.color?.toArgb()?.toLong()?.and(0xFFFFFFFFL)
         ?: uiState.wallpaperAccent
+}
+
+// the name prompts an item's menu opens (Rename Shortcut, Edit Title, a playlist's name, ...), drawn on the screen of
+// the menu that opened them: by CrossbarShell, or by the Companion Screen (ADR 0002)
+@Composable
+internal fun NamePrompts(
+    uiState: CrossbarUiState,
+    onTextChange: (String) -> Unit,
+    onConfirmAppRename: (String) -> Unit,
+    onCancelAppRename: () -> Unit,
+    onConfirmCollectionName: (String) -> Unit,
+    onCancelCollectionName: () -> Unit,
+    onConfirmPlaylistName: (String) -> Unit,
+    onCancelPlaylistName: () -> Unit,
+) {
+    uiState.renameAppTarget?.let {
+        AppRenameDialog(
+            text = uiState.renameAppText,
+            onTextChange = onTextChange,
+            onConfirm = onConfirmAppRename,
+            onCancel = onCancelAppRename,
+        )
+    }
+
+    uiState.collectionNameDialog?.let { dialog ->
+        CollectionNameDialog(
+            title = dialog.title,
+            text = dialog.text,
+            onTextChange = onTextChange,
+            onConfirm = onConfirmCollectionName,
+            onCancel = onCancelCollectionName,
+            placeholder = dialog.placeholder,
+            confirmLabel = dialog.confirmLabel,
+            subtitle = dialog.subtitle,
+            resetLabel = dialog.resetLabel,
+            onReset = dialog.resetLabel?.let { { onTextChange("") } },
+        )
+    }
+
+    uiState.playlistNameDialog?.let { dialog ->
+        CollectionNameDialog(
+            title = dialog.title,
+            text = dialog.text,
+            onTextChange = onTextChange,
+            onConfirm = onConfirmPlaylistName,
+            onCancel = onCancelPlaylistName,
+        )
+    }
 }
 
 @Composable

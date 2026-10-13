@@ -238,9 +238,9 @@ class CrossbarVideo(
         uiState.update { it.copy(pendingVideoDetailAction = null) }
     }
 
-    internal fun promptCreateVideoPlaylist(forVideoId: String? = null) {
+    internal fun promptCreateVideoPlaylist(forVideoId: String? = null, slot: MenuSlot = MenuSlot.MAIN) {
         uiState.update { it.copy(
-            playlistNameDialog = PlaylistNameDialogState(title = "New Video Playlist", videoContext = true, forVideoId = forVideoId)
+            playlistNameDialog = PlaylistNameDialogState(title = "New Video Playlist", videoContext = true, forVideoId = forVideoId, slot = slot)
         )}
     }
 
@@ -294,13 +294,13 @@ class CrossbarVideo(
         }
     }
 
-    internal fun handleVideoFileAction(videoId: String, itemId: String) {
+    internal fun handleVideoFileAction(videoId: String, itemId: String, slot: MenuSlot = MenuSlot.MAIN) {
         when (itemId) {
             "video_play", "video_resume" ->
                 uiState.update { it.copy(activeVideoId = videoId, activeVideoAutoPlay = true) }
             "video_details" -> uiState.update { it.copy(activeVideoId = videoId, activeVideoAutoPlay = false) }
             "video_favorite", "video_unfavorite" -> vm.appAction { videoRepository.setFavorite(videoId, itemId == "video_favorite") }
-            "video_add_playlist" -> openVideoPlaylistPicker(videoId)
+            "video_add_playlist" -> openVideoPlaylistPicker(videoId, slot = slot)
             "video_remove_playlist" -> (uiState.value.videoNav as? VideoNav.Playlist)?.let { nav ->
                 vm.appAction { videoRepository.removeVideoFromPlaylist(nav.id, videoId) }
             }
@@ -325,7 +325,7 @@ class CrossbarVideo(
         }
     }
 
-    internal fun openVideoPlaylistPicker(videoId: String, selectIndex: Int? = 0) {
+    internal fun openVideoPlaylistPicker(videoId: String, selectIndex: Int? = 0, slot: MenuSlot = MenuSlot.MAIN) {
         scope.launch {
             val playlists = videoRepository.observePlaylists().first()
             val memberOf = videoRepository.getPlaylistIdsForVideo(videoId).toSet()
@@ -333,8 +333,8 @@ class CrossbarVideo(
                 playlists.forEach { pl -> add(CrossbarContextMenuItem("vpl_${pl.id}", pl.name, checked = pl.id in memberOf)) }
                 add(CrossbarContextMenuItem("vpl_new", "Create New Playlist"))
             }
-            uiState.update { it.copy(
-                activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Add to Playlist", rows = items, selectedIndex = selectIndex?.coerceIn(0, items.lastIndex.coerceAtLeast(0))), videoPlaylistPickerVideoId = videoId)
+            uiState.update { it.withMenu(
+                slot, CrossbarContextMenu(state = MenuState(title = "Add to Playlist", rows = items, selectedIndex = selectIndex?.coerceIn(0, items.lastIndex.coerceAtLeast(0))), videoPlaylistPickerVideoId = videoId)
             )}
         }
     }
@@ -391,19 +391,19 @@ class CrossbarVideo(
 
     internal fun videoPlaylistSiblings(): List<CrossbarItem> =
         uiState.value.videoPlaylists.map { CrossbarItem(id = "vpl_${it.id}", title = it.name, playlistId = it.id, type = CrossbarItemType.PLAYLIST) }
-    internal fun onPlaylistPickerItem(itemId: String, menu: CrossbarContextMenu) {
+    internal fun onPlaylistPickerItem(itemId: String, menu: CrossbarContextMenu, slot: MenuSlot = MenuSlot.MAIN) {
         val videoId = menu.videoPlaylistPickerVideoId ?: return
         val keepIndex = menu.selectedIndex
         when {
             itemId == "vpl_new" -> {
-                vm.closeContextMenu()
-                promptCreateVideoPlaylist(forVideoId = videoId)
+                vm.closeContextMenu(slot)
+                promptCreateVideoPlaylist(forVideoId = videoId, slot = slot)
             }
             itemId.startsWith("vpl_") -> {
                 val playlistId = itemId.removePrefix("vpl_").toLongOrNull() ?: return
                 scope.launch {
                     videoRepository.toggleVideoInPlaylist(playlistId, videoId)
-                    openVideoPlaylistPicker(videoId, keepIndex)
+                    openVideoPlaylistPicker(videoId, keepIndex, slot)
                 }
             }
         }

@@ -264,10 +264,10 @@ class CrossbarBookshelf(
         }
     }
 
-    internal fun handleBookAction(bookId: String, itemId: String) {
+    internal fun handleBookAction(bookId: String, itemId: String, slot: MenuSlot = MenuSlot.MAIN) {
         when (itemId) {
             "book_open" -> openBook(bookId)
-            "edit_genre" -> vm.genres.openPicker(GenreTarget.Book(bookId))
+            "edit_genre" -> vm.genres.openPicker(GenreTarget.Book(bookId), slot)
 
             "book_remove_recent" -> vm.appAction { bookRepository.clearBookLastOpened(bookId) }
             "book_remove" -> vm.appAction {

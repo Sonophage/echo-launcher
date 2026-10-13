@@ -102,8 +102,8 @@ class CrossbarArtwork(
         if (id != null) scope.launch { vm.loadItemsForCategory(vm.currentCategory()) }
     }
 
-    internal fun fetchArtworkFor(gameId: Long) {
-        vm.closeContextMenu()
+    internal fun fetchArtworkFor(gameId: Long, slot: MenuSlot = MenuSlot.MAIN) {
+        vm.closeContextMenu(slot)
         if (uiState.value.artworkFetchTitle != null) return
         scope.launch {
             val before = vm.gameRepository.getById(gameId)

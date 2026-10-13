@@ -45,6 +45,9 @@ import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoAction
 import com.echo.feature.crossbar.viewmodel.firstSection
 import com.echo.feature.crossbar.viewmodel.RecentFilter
+import com.echo.feature.crossbar.viewmodel.MenuSlot
+import com.echo.feature.crossbar.viewmodel.namePromptSlot
+import com.echo.feature.crossbar.ui.NamePrompts
 
 // the Companion Screen: the Details, or in Settings the focused setting, that the Companion rule picks
 // (companionContent), with Swap, Options on Details (ADR 0002), and Resume while a
@@ -128,6 +131,19 @@ fun CompanionScreen(
                     state = menu.state,
                     onRowActivated = crossbar.companionScreen::onMenuRow,
                     onDismiss = crossbar.companionScreen::closeMenu,
+                )
+            }
+            // a name prompt a row of that menu opened, finished here by touch (ADR 0002)
+            if (ui.namePromptSlot == MenuSlot.COMPANION) {
+                NamePrompts(
+                    uiState = ui,
+                    onTextChange = crossbar::onNamePromptTextChanged,
+                    onConfirmAppRename = crossbar::onConfirmAppRename,
+                    onCancelAppRename = crossbar::onCancelAppRename,
+                    onConfirmCollectionName = crossbar.gameActions::onConfirmCollectionName,
+                    onCancelCollectionName = crossbar.gameActions::onCancelCollectionName,
+                    onConfirmPlaylistName = crossbar.music::onConfirmPlaylistName,
+                    onCancelPlaylistName = crossbar.music::onCancelPlaylistName,
                 )
             }
         }
