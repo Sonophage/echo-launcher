@@ -3508,7 +3508,7 @@ class CrossbarViewModel @Inject constructor(
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val path = game.romPath ?: return@launch
-            if (!com.echo.core.data.media.FolderOpen.open(context, path)) {
+            if (!com.echo.core.data.media.FolderOpen.open(context, path, launchScreens.mainDisplay())) {
                 _uiState.update { it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = path)) }
             }
         }

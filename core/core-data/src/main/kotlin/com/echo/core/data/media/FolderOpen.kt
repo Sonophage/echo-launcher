@@ -4,9 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import com.echo.core.common.launch.LaunchTransition
 import timber.log.Timber
 
-// owner, 2026-10-10: a game's menu opens the folder its file is in, in the device's file manager
+// owner, 2026-10-10: a game's menu opens the folder its file is in, in the device's file manager. display: the Main
+// Screen's, from LaunchScreens.mainDisplay, as the file manager is not a game or app (#28)
 object FolderOpen {
     private const val EXTERNAL_STORAGE = "com.android.externalstorage.documents"
 
@@ -31,27 +33,27 @@ object FolderOpen {
     }
 
     // opens the folder holding [filePath]; false when nothing could, so the caller shows the path instead
-    fun open(context: Context, filePath: String): Boolean {
+    fun open(context: Context, filePath: String, display: Int): Boolean {
         val folder = filePath.substringBeforeLast('/', missingDelimiterValue = "").ifEmpty { return false }
-        return openFolderId(context, documentId(folder) ?: return false, folder)
+        return openFolderId(context, documentId(folder) ?: return false, folder, display)
     }
 
     // opens the folder holding the file at [documentUri], the storage provider link a media folder's scan gives;
     // false when the file is not on shared storage or nothing could open it
-    fun openDocumentFolder(context: Context, documentUri: String): Boolean {
+    fun openDocumentFolder(context: Context, documentUri: String, display: Int): Boolean {
         val uri = Uri.parse(documentUri)
         if (uri.authority != EXTERNAL_STORAGE) return false
         val fileId = runCatching { DocumentsContract.getDocumentId(uri) }.getOrNull() ?: return false
         val folderId = folderOfDocument(fileId) ?: return false
-        return openFolderId(context, folderId, folderId)
+        return openFolderId(context, folderId, folderId, display)
     }
 
     // a photo's or video's Open Folder (owner, 2026-10-12): opens the folder holding the file; when nothing could, the
     // words to show instead, "In: " and the folder, else the file's name
-    fun openMediaFolder(context: Context, documentUri: String, relativePath: String?, displayName: String): String? =
-        if (openDocumentFolder(context, documentUri)) null else relativePath?.let { "In: $it" } ?: displayName
+    fun openMediaFolder(context: Context, documentUri: String, relativePath: String?, displayName: String, display: Int): String? =
+        if (openDocumentFolder(context, documentUri, display)) null else relativePath?.let { "In: $it" } ?: displayName
 
-    private fun openFolderId(context: Context, id: String, folder: String): Boolean {
+    private fun openFolderId(context: Context, id: String, folder: String, display: Int): Boolean {
         val intent = Intent(Intent.ACTION_VIEW)
             .setDataAndType(DocumentsContract.buildDocumentUri(EXTERNAL_STORAGE, id), DocumentsContract.Document.MIME_TYPE_DIR)
             // no read grant: ECHO holds none to pass on, and asking for one throws (seen on the Konker); the file
@@ -60,7 +62,8 @@ object FolderOpen {
         // Android's own Files app opens the folder itself; Solid Explorer took the same link to the card's root (seen
         // on the Konker), so Files is asked first and any other file manager only when Files is not there
         val tries = FILES_APPS.map { pkg -> Intent(intent).setPackage(pkg) } + intent
-        val opened = tries.any { attempt -> runCatching { context.startActivity(attempt) }.isSuccess }
+        val options = LaunchTransition.options(context, display)
+        val opened = tries.any { attempt -> runCatching { context.startActivity(attempt, options) }.isSuccess }
         if (!opened) Timber.w("Nothing could open the folder $folder")
         return opened
     }
