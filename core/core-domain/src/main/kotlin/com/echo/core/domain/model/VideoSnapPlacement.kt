@@ -1,7 +1,7 @@
 package com.echo.core.domain.model
 
 enum class VideoSnapPlacement(val label: String) {
-    ICON("Icon tile"),
+    ICON("Icon Tile"),
     BACKGROUND("Background");
 
     companion object {

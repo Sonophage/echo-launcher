@@ -10,6 +10,7 @@ import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.data.repository.MemoryCardRepository
 import com.echo.core.domain.model.Game
 import com.echo.core.domain.model.GameContentType
+import com.echo.core.domain.model.unmarkedAsGame
 import com.echo.core.domain.model.MemoryCard
 import com.echo.core.domain.model.PlatformIds.WINDOWS as WINDOWS_PLATFORM_ID
 import com.echo.core.ui.components.MenuState
@@ -249,12 +250,7 @@ class CrossbarGames(
 
     // Unmark as Game, from a game's menu or an app's: the row is an app shortcut again
     internal suspend fun unmarkAsGame(gameId: Long) {
-        vm.gameRepository.getById(gameId)?.let { g ->
-            vm.gameRepository.upsert(g.copy(
-                platformId  = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
-                contentType = GameContentType.ANDROID_APP,
-            ))
-        }
+        vm.gameRepository.getById(gameId)?.let { vm.gameRepository.upsert(it.unmarkedAsGame()) }
         memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
         vm.loadItemsForCategory(vm.currentCategory())
     }

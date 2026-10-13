@@ -71,7 +71,7 @@ fun panelSettingScreen(index: Int): String? =
 enum class PanelTab(val label: String) {
     NOTIFICATIONS("Notifications"),
     PROFILE("Profile"),
-    QUICK("Quick settings"),
+    QUICK("Quick Settings"),
     LIBRARIES("Libraries"),
     SETTINGS("Settings"),
 }
