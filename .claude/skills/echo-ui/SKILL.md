@@ -72,7 +72,9 @@ screen's padded column.
   `focusLook(style, visible, accent)` marks a focused icon: CLASSIC's warm glow, or the HALO, BRACKET or LIFT mark.
   It is the only place that decides glow or mark. Mark a focused icon with it; do not draw a second ring or glow.
 - The theme's motion is one definition in `theme/Motion.kt`: `LocalMotion` is the preset and `glide()` its
-  settle spring (STILL, reduced motion, snaps). `CrossbarShell` provides it, so the App Drawer has it too.
+  settle spring (STILL, reduced motion, snaps). `EchoTheme` provides it and `LocalFocusStyle`: a window's root
+  (`EchoRoot` for both screens, the Reader) passes `EchoThemeStore.themeLook`, and a theme inside it keeps them.
+  Do not provide them a second time.
 - The belly under a finger is `railBelly(touched, rungs, bulge)` (`components/LetterRail.kt`): `Bulge.LEFT` for
   the Side Rail, `Bulge.UP` for a Filter Row, `RailBellyReach` (48 dp) at the touched row, tapering over the
   rail's wave. Do not shape a second belly.

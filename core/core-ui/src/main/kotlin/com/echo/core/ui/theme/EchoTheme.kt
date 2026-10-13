@@ -12,6 +12,8 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.echo.themekit.ColorCascade
+import com.echo.themekit.FocusStyle
+import com.echo.themekit.MotionPreset
 
 data class EchoColors(
     val waveColor: Color,
@@ -91,6 +93,10 @@ private val EchoDarkColorScheme = darkColorScheme(
 @Composable
 fun EchoTheme(
     colors: EchoColors = DefaultEchoColors,
+    // the applied theme's focus style and motion: a window's root passes the settings (themeLook in core-data), and
+    // a theme inside it keeps them, so every window presses in the active style (review of spec #3)
+    focusStyle: FocusStyle = LocalFocusStyle.current,
+    motion: MotionPreset = LocalMotion.current,
     content: @Composable () -> Unit,
 ) {
     val textColors = remember(colors.textPrimary, colors.backgroundTop, colors.backgroundBottom) {
@@ -100,6 +106,8 @@ fun EchoTheme(
     CompositionLocalProvider(
         LocalEchoColors provides colors,
         LocalEchoTextColors provides textColors,
+        LocalFocusStyle provides focusStyle,
+        LocalMotion provides motion,
 
         LocalContentColor provides textColors.primary,
     ) {

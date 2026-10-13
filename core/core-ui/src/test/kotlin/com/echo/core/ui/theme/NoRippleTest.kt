@@ -6,7 +6,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 // spec #3: a press shows the active focus style (PressMark), never Material's ripple. EchoTheme provides the press
-// mark as LocalIndication and turns off the ripple Material components draw; nothing may ask for a ripple itself
+// mark as LocalIndication and turns off the ripple Material components draw; nothing may ask for a ripple itself.
+// EchoThemeTest checks what the theme provides
 class NoRippleTest {
     private val rippleCall = Regex("""\b(ripple|rememberRipple|RippleConfiguration)\s*\(""")
 
@@ -33,12 +34,5 @@ class NoRippleTest {
             f.readLines().mapIndexedNotNull { i, line -> "${f.name}:${i + 1}".takeIf { rippleCall.containsMatchIn(line) } }
         }
         assertEquals(emptyList(), ripples)
-    }
-
-    @Test
-    fun `the theme gives every clickable the press mark and turns the Material ripple off`() {
-        val theme = File(repoRoot(), "core/core-ui/src/main/kotlin/com/echo/core/ui/theme/EchoTheme.kt").readText()
-        assertTrue("LocalIndication provides PressMark" in theme, "EchoTheme does not provide the press mark")
-        assertTrue("LocalRippleConfiguration provides null" in theme, "EchoTheme leaves Material components their ripple")
     }
 }

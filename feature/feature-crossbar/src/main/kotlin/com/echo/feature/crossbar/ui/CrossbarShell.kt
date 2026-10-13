@@ -1,7 +1,5 @@
 package com.echo.feature.crossbar.ui
 
-import com.echo.core.ui.theme.LocalFocusStyle
-import com.echo.core.ui.theme.LocalMotion
 import com.echo.feature.crossbar.viewmodel.noticeCardRows
 
 import com.echo.core.ui.design.LocalBackdropWave
@@ -612,8 +610,6 @@ fun CrossbarShell(
           com.echo.core.ui.icons.LocalCustomIcons provides uiState.customIcons,
           LocalCrossbarLayout provides uiState.layoutSpec,
           com.echo.core.ui.design.LocalPanelTextScale provides uiState.layoutSpec.textScale(),
-          LocalFocusStyle provides uiState.focusStyle,
-          LocalMotion provides uiState.motion,
 
           LocalFocusedGameVideo provides uiState.focusedGameVideo,
 

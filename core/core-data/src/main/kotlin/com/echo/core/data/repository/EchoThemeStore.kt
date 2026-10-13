@@ -20,6 +20,10 @@ import com.echo.themekit.EchoThemeBundle
 import com.echo.themekit.EchoThemeCodec
 import com.echo.themekit.EchoThemeManifest
 import com.echo.themekit.EchoThemeSource
+import com.echo.themekit.FocusStyle
+import com.echo.themekit.MotionPreset
+import com.echo.themekit.focusStyleOf
+import com.echo.themekit.motionPresetOf
 import com.echo.themekit.ThemeImage
 import com.echo.themekit.ThemeMotion
 import com.echo.themekit.ThemeMedia
@@ -35,10 +39,13 @@ import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -727,6 +734,13 @@ class EchoThemeStore @Inject constructor(
         private val KEY_BUTTON_SET = stringPreferencesKey("controller_display_type")
         val KEY_FOCUS_STYLE = stringPreferencesKey("display_focus_style")
         val KEY_MOTION_PRESET = stringPreferencesKey("display_motion_preset")
+
+        // the applied theme's focus style and motion, which a window's root passes to EchoTheme; either unset is
+        // ECHO's own (owner, 2026-10-09)
+        fun themeLook(context: Context): Flow<Pair<FocusStyle, MotionPreset>> =
+            context.echoDataStore.data
+                .map { focusStyleOf(it[KEY_FOCUS_STYLE]) to motionPresetOf(it[KEY_MOTION_PRESET]) }
+                .distinctUntilChanged()
 
         // which theme each part came from, as PART=name lines (owner, 2026-10-07: a theme page)
         val KEY_PART_SOURCES = stringPreferencesKey("theme_part_sources")

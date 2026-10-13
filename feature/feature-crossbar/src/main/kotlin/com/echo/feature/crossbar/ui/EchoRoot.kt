@@ -2,6 +2,13 @@ package com.echo.feature.crossbar.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import com.echo.core.data.repository.EchoThemeStore
+import com.echo.themekit.FocusStyle
+import com.echo.themekit.MotionPreset
 import com.echo.core.data.repository.UiMediaStore
 import com.echo.core.domain.model.UiMediaSlot
 import com.echo.core.ui.components.DiscCeremony
@@ -11,9 +18,9 @@ import com.echo.core.ui.sound.LocalMenuSounds
 import com.echo.core.ui.sound.MenuSoundPlayer
 import com.echo.core.ui.theme.EchoTheme
 
-// what every ECHO window is drawn inside: the theme, the menu sounds, the launch disc's sound and the
-// controller's prompt style. Both screens use it, so a screen moved to the other display (the swap,
-// owner 2026-10-06) keeps its sounds and prompts.
+// what every ECHO window is drawn inside: the theme with its focus style and motion, the menu sounds, the launch
+// disc's sound and the controller's prompt style. Both screens use it, so a screen moved to the other display (the
+// swap, owner 2026-10-06) keeps its sounds and prompts, and the Companion Screen presses in the active style.
 @Composable
 fun EchoRoot(
     menuSounds: MenuSoundPlayer,
@@ -21,7 +28,10 @@ fun EchoRoot(
     uiMediaAudio: UiMediaAudioPlayer,
     content: @Composable () -> Unit,
 ) {
-    EchoTheme {
+    val context = LocalContext.current
+    val look by remember(context) { EchoThemeStore.themeLook(context) }
+        .collectAsState(FocusStyle.CLASSIC to MotionPreset.CLASSIC)
+    EchoTheme(focusStyle = look.first, motion = look.second) {
         CompositionLocalProvider(
             LocalMenuSounds provides { sound -> menuSounds.play(sound) },
             LocalLaunchDiscCue provides {
