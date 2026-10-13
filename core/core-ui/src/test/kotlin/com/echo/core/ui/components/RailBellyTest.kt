@@ -40,4 +40,13 @@ class RailBellyTest {
             railBelly(touched = 4, rungs = 5, bulge = Bulge.LEFT, reach = thumb),
         )
     }
+
+    // owner, 2026-10-12: a Filter Row gets the same belly, bulging up: the chip under the finger rises a thumb width,
+    // its neighbours less, and nothing moves sideways
+    @Test
+    fun `on a Filter Row the touched chip rises a thumb width and its neighbours taper off`() {
+        val belly = railBelly(touched = 1, rungs = 6, bulge = Bulge.UP, reach = thumb)
+        assertArrayEquals("each chip's rise", floatArrayOf(36f, 48f, 36f, 12f, 0f, 0f), belly.map { -it.y.value }.toFloatArray(), 0.01f)
+        assertArrayEquals("no chip moves sideways", FloatArray(6), belly.map { it.x.value }.toFloatArray(), 0.01f)
+    }
 }
