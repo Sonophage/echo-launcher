@@ -13,8 +13,15 @@ import com.echo.feature.settings.ui.StorePreview
 
 // what the Companion Screen shows (ADR 0001)
 sealed interface CompanionContent {
-    // an item's Details; while it is the game ECHO launched and that game runs, with the session clock and Resume
-    data class Details(val info: GameInfoState, val playing: Boolean = false, val playingSince: Long? = null) : CompanionContent
+    // an item's Details; while it is the game ECHO launched and that game runs, with the session clock and Resume.
+    // [place] is the Main Screen's state where the item was hovered, which Options opens its menu from (ADR 0002);
+    // null for the running game and the App Drawer's app, whose menus read the Main Screen as it is
+    data class Details(
+        val info: GameInfoState,
+        val playing: Boolean = false,
+        val playingSince: Long? = null,
+        val place: CrossbarUiState? = null,
+    ) : CompanionContent
 
     // the setting focused in Settings on the Main Screen, its description in large type, and a preview of the
     // focused choice where there is one
@@ -45,8 +52,9 @@ fun companionContent(main: CompanionState, last: CompanionContent?): CompanionCo
     // ponytail: the owner is what was shown when the menu opened; a menu opened within the 150 ms the cursor
     // takes to settle keeps the item before it, until the menu closes. Track the menu's own item if that shows.
     if ((main.open.menu || main.companionMenu) && kept != null) return kept
-    val hovered = if (main.open.search) main.hovered else main.drawer ?: main.hovered
-    return hovered?.let { CompanionContent.Details(it) } ?: kept
+    val drawer = main.drawer.takeUnless { main.open.search }
+    val hovered = drawer?.let { CompanionContent.Details(it) } ?: main.hovered?.let { CompanionContent.Details(it, place = main.hoveredPlace) }
+    return hovered ?: kept
 }
 
 // what the Main Screen has hovered, besides the App Drawer (which reports its own): Search's focused result while

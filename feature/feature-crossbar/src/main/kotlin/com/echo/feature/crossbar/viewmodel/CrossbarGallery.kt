@@ -212,8 +212,9 @@ class CrossbarGallery(
         uiState.update { it.copy(pendingPhotoViewerAction = null) }
     }
 
-    internal fun openPhotoContextMenu(item: CrossbarItem, slot: MenuSlot): Boolean {
-        if (item.menuHostCategory(vm.currentCategory()?.id) != BuiltInCategory.PHOTO) return false
+    // [at]: the Main Screen's state where the item was (openContextMenuFor)
+    internal fun openPhotoContextMenu(item: CrossbarItem, slot: MenuSlot, at: CrossbarUiState): Boolean {
+        if (item.menuHostCategory(at.currentCategoryOrNull()?.id) != BuiltInCategory.PHOTO) return false
         return when {
             item.type == CrossbarItemType.PHOTO_FILE && item.id.startsWith("pho_") -> {
                 openPhotoFileContextMenu(item.id.removePrefix("pho_"), item.title, slot); true
@@ -222,7 +223,7 @@ class CrossbarGallery(
                 openPhotoLibraryContextMenu(item.id.removePrefix("plib_"), item.title, slot); true
             }
             item.packageName != null -> {
-                vm.openAppContextMenu(item, categoryIdOverride = CrossbarViewModel.PHOTO_APPS_CATEGORY_ID, slot = slot); true
+                vm.openAppContextMenu(item, slot, at, categoryIdOverride = CrossbarViewModel.PHOTO_APPS_CATEGORY_ID); true
             }
             else -> false
         }

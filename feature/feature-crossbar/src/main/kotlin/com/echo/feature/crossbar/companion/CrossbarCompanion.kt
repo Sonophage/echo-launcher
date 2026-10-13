@@ -43,13 +43,14 @@ class CrossbarCompanion(
         scope.launch {
             companionShown.flatMapLatest { on ->
                 if (!on) flowOf(null)
-                // the cursor settles before the info is read, so scrolling a column reads only where it stops
-                else uiState.map { mainScreenHover(it)?.takeIf(::companionShows) }
-                    .distinctUntilChanged { a, b -> a?.id == b?.id }
+                // the cursor settles before the info is read, so scrolling a column reads only where it stops. The
+                // state it settled in goes with it: the item's menu reads its column from there (ADR 0002)
+                else uiState.map { s -> mainScreenHover(s)?.takeIf(::companionShows)?.let { it to s } }
+                    .distinctUntilChanged { a, b -> a?.first?.id == b?.first?.id }
                     .debounce(SETTLE_MS)
-            }.collectLatest { item ->
-                val info = item?.let { vm.gameDetail.load(GameInfoState(it)) }
-                link.update { it.copy(hovered = info) }
+            }.collectLatest { hover ->
+                val info = hover?.first?.let { vm.gameDetail.load(GameInfoState(it)) }
+                link.update { it.copy(hovered = info, hoveredPlace = hover?.second) }
             }
         }
         // the App Drawer is on the Main Screen (ADR 0001) and the Companion Screen shows the app hovered in it, with a
@@ -97,8 +98,10 @@ class CrossbarCompanion(
         lastLaunch.value?.gameId?.let(vm.launching::resumeGame)
     }
 
-    // Options on the Companion's Details: the item's menu, opened on the Companion Screen (ADR 0002)
-    fun openMenu(item: CrossbarItem) = vm.openContextMenuFor(item, MenuSlot.COMPANION)
+    // Options on the Companion's Details: the item's menu, opened on the Companion Screen (ADR 0002), as the Main
+    // Screen would open it where the item was hovered ([place]); with no place, as the Main Screen is now
+    fun openMenu(details: CompanionContent.Details) =
+        vm.openContextMenuFor(details.info.item, MenuSlot.COMPANION, details.place ?: uiState.value)
 
     fun onMenuRow(index: Int) = vm.onContextMenuItemActivatedAt(index, MenuSlot.COMPANION)
 

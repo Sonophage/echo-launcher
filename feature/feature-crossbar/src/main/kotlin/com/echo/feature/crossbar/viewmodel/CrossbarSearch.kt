@@ -248,7 +248,7 @@ class CrossbarSearch(
     fun onSearchOptionsAt(index: Int) {
         val row = uiState.value.search?.takeUnless { it.scope == SearchScope.WEB }?.rows?.getOrNull(index)?.takeUnless { it.type == CrossbarItemType.EMPTY } ?: return
         uiState.update { it.copy(search = it.search?.copy(selectedIndex = index)) }
-        vm.openContextMenuFor(row, MenuSlot.MAIN)
+        vm.openContextMenuFor(row, MenuSlot.MAIN, uiState.value)
     }
 
     private fun searchRowCategory(row: CrossbarItem): String? = row.owningCategory()

@@ -121,7 +121,7 @@ fun CompanionScreen(
                 // Resume launches the game again, so it is a hold like every launch
                 if (shown?.playing == true) PanelButton(GamepadAction.SELECT, "Resume", u, holdMs = LAUNCH_HOLD_MS) { crossbar.companionScreen.resume() }
                 // the item's menu, opened here by touch; it stays on its item while the Main Screen's focus moves
-                shown?.let { details -> PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u) { crossbar.companionScreen.openMenu(details.info.item) } }
+                shown?.let { details -> PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u) { crossbar.companionScreen.openMenu(details) } }
                 // the Main Screen and this screen change displays
                 PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.companionScreen.toggleSwap() }
             }

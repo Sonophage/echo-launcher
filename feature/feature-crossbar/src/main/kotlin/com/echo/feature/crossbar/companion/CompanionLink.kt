@@ -14,6 +14,9 @@ import javax.inject.Singleton
 data class CompanionState(
     // the item hovered on the Main Screen: the Crossbar's cursor, or Search's focused result while Search is open
     val hovered: GameInfoState? = null,
+    // the Main Screen's state when the cursor settled on [hovered]: its column and view, which the item's menu reads
+    // (ADR 0002)
+    val hoveredPlace: com.echo.feature.crossbar.viewmodel.CrossbarUiState? = null,
     // the app hovered in the App Drawer while it is open on the Main Screen (ADR 0001)
     val drawer: GameInfoState? = null,
     // what is open on the Main Screen: Search, a menu, Settings, the colour scheme picker

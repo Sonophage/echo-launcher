@@ -114,10 +114,11 @@ class CrossbarGames(
     }
 
 
-    internal fun openGameContextMenu(item: CrossbarItem, slot: MenuSlot) {
+    // [at]: the Main Screen's state where the item was (openContextMenuFor)
+    internal fun openGameContextMenu(item: CrossbarItem, slot: MenuSlot, at: CrossbarUiState) {
         val gameId = item.gameId
         if (gameId == null) {
-            openGameContextMenuCore(item, discCount = 0, slot = slot)
+            openGameContextMenuCore(item, discCount = 0, slot = slot, at = at)
             return
         }
 
@@ -129,18 +130,17 @@ class CrossbarGames(
 
             // the library's file, not the row's: a row built outside the game list may not carry it
             val row = game?.let { item.copy(romPath = it.romPath) } ?: item
-            openGameContextMenuCore(row, discCount, onRecentShelf = game?.lastPlayedAt != null, slot = slot)
+            openGameContextMenuCore(row, discCount, onRecentShelf = game?.lastPlayedAt != null, slot = slot, at = at)
         }
     }
 
-    private fun openGameContextMenuCore(item: CrossbarItem, discCount: Int, onRecentShelf: Boolean = false, slot: MenuSlot) {
-        val state = uiState.value
-        val currentCat = vm.currentCategory()
+    private fun openGameContextMenuCore(item: CrossbarItem, discCount: Int, onRecentShelf: Boolean = false, slot: MenuSlot, at: CrossbarUiState) {
+        val currentCat = at.currentCategoryOrNull()
         val inGamingCategory = currentCat?.isGamingCategory == true
-        val hideLocation = vm.currentHideLocation()
+        val hideLocation = vm.hideLocation(at)
         val items = gameContextMenuItems(
             item = item,
-            state = state,
+            state = at,
             discCount = discCount,
             onRecentShelf = onRecentShelf,
             hideLocation = hideLocation,

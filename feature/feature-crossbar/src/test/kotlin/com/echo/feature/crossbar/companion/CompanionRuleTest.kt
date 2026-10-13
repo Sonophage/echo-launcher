@@ -64,6 +64,17 @@ class CompanionRuleTest {
         assertEquals("the menu closed: the cursor again", Details(castlevania), companionContent(main.copy(companionMenu = false), last = Details(skyrim)))
     }
 
+    // review S2, P4 of spec #32: Options reads the item's column from where it was hovered, so the Details carry it,
+    // and a kept item keeps it after the Main Screen moves on
+    @Test
+    fun `the hovered item's Details carry where it was hovered, and keep it while kept`() {
+        val inMusic = CrossbarUiState(selectedCategoryIndex = 3)
+        val shown = companionContent(CompanionState(hovered = skyrim, hoveredPlace = inMusic), last = null)
+        assertEquals(Details(skyrim, place = inMusic), shown)
+        assertEquals(Details(skyrim, place = inMusic), companionContent(CompanionState(), last = shown))
+        assertNull("the App Drawer's app has no column", (companionContent(CompanionState(hovered = skyrim, hoveredPlace = inMusic, drawer = pocketCasts), last = null) as Details).place)
+    }
+
     @Test
     fun `a menu opened before anything was shown shows the item it was opened on`() {
         assertEquals(Details(skyrim), companionContent(CompanionState(hovered = skyrim, open = MainScreenOpen(menu = true)), last = null))

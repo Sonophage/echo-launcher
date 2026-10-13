@@ -203,8 +203,8 @@ class CrossbarMusic(
     }
 
 
-    private fun currentPlaylistContextId(): Long? =
-        (uiState.value.musicNav as? MusicNav.Playlist)?.id
+    private fun playlistContextId(at: CrossbarUiState): Long? =
+        (at.musicNav as? MusicNav.Playlist)?.id
 
     internal fun handleMusicSelection(item: CrossbarItem): Boolean = when {
         item.id == CrossbarViewModel.SEARCH_ITEM_ID -> { vm.librarySearch.openSearch(SearchScope.MUSIC); true }
@@ -329,8 +329,8 @@ class CrossbarMusic(
         uiState.update { it.copy(musicPlayerVisible = false) }
     }
 
-    private fun openMusicTrackContextMenu(item: CrossbarItem, slot: MenuSlot) {
-        val playlistId = currentPlaylistContextId()
+    private fun openMusicTrackContextMenu(item: CrossbarItem, slot: MenuSlot, at: CrossbarUiState) {
+        val playlistId = playlistContextId(at)
 
         val trackId = item.id.removePrefix("mt_")
         scope.launch {
@@ -373,20 +373,21 @@ class CrossbarMusic(
         uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = item.title, rows = recentAlbumContextMenuItems()), recentAlbum = item)) }
     }
 
-    internal fun openMusicContextMenu(item: CrossbarItem, slot: MenuSlot): Boolean {
-        if (item.menuHostCategory(vm.currentCategory()?.id) != BuiltInCategory.MUSIC) return false
+    // [at]: the Main Screen's state where the item was (openContextMenuFor)
+    internal fun openMusicContextMenu(item: CrossbarItem, slot: MenuSlot, at: CrossbarUiState): Boolean {
+        if (item.menuHostCategory(at.currentCategoryOrNull()?.id) != BuiltInCategory.MUSIC) return false
         return when {
             item.id == CrossbarViewModel.NOW_PLAYING_ITEM_ID -> { vm.openNowPlayingContextMenu(slot); true }
-            item.type == CrossbarItemType.MUSIC_TRACK -> { openMusicTrackContextMenu(item, slot); true }
+            item.type == CrossbarItemType.MUSIC_TRACK -> { openMusicTrackContextMenu(item, slot, at); true }
             // an album's own menu: play it, or set the genre of all its tracks (owner, 2026-10-08)
-            item.type == CrossbarItemType.MUSIC_GROUP && uiState.value.musicNav == MusicNav.Albums && item.musicGroupKey != null -> {
+            item.type == CrossbarItemType.MUSIC_GROUP && at.musicNav == MusicNav.Albums && item.musicGroupKey != null -> {
                 openAlbumMenu(item.musicGroupKey, item.title, slot); true
             }
             item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
                 openPlaylistRowContextMenu(item.playlistId, item.title, slot); true
             }
             item.packageName != null -> {
-                vm.openAppContextMenu(item, categoryIdOverride = CrossbarViewModel.MUSIC_APPS_CATEGORY_ID, slot = slot); true
+                vm.openAppContextMenu(item, slot, at, categoryIdOverride = CrossbarViewModel.MUSIC_APPS_CATEGORY_ID); true
             }
             else -> false
         }

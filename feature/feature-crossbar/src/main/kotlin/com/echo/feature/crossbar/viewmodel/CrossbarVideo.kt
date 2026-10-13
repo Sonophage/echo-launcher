@@ -261,11 +261,12 @@ class CrossbarVideo(
         uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = name, rows = items), videoPlaylistId = playlistId)) }
     }
 
-    internal fun openVideoContextMenu(item: CrossbarItem, slot: MenuSlot): Boolean {
-        if (item.menuHostCategory(vm.currentCategory()?.id) != BuiltInCategory.VIDEO) return false
+    // [at]: the Main Screen's state where the item was (openContextMenuFor)
+    internal fun openVideoContextMenu(item: CrossbarItem, slot: MenuSlot, at: CrossbarUiState): Boolean {
+        if (item.menuHostCategory(at.currentCategoryOrNull()?.id) != BuiltInCategory.VIDEO) return false
         return when {
             item.type == CrossbarItemType.VIDEO_FILE && item.id.startsWith("vid_") -> {
-                openVideoFileContextMenu(item.id.removePrefix("vid_"), item.title, slot); true
+                openVideoFileContextMenu(item.id.removePrefix("vid_"), item.title, slot, at); true
             }
             item.type == CrossbarItemType.VIDEO_FOLDER && item.id.startsWith("vlib_") -> {
                 openVideoLibraryContextMenu(item.id.removePrefix("vlib_"), item.title, slot); true
@@ -274,16 +275,16 @@ class CrossbarVideo(
                 openVideoPlaylistContextMenu(item.playlistId, item.title, slot); true
             }
             item.packageName != null -> {
-                vm.openAppContextMenu(item, categoryIdOverride = CrossbarViewModel.VIDEO_APPS_CATEGORY_ID, slot = slot); true
+                vm.openAppContextMenu(item, slot, at, categoryIdOverride = CrossbarViewModel.VIDEO_APPS_CATEGORY_ID); true
             }
             else -> false
         }
     }
 
-    internal fun openVideoFileContextMenu(videoId: String, title: String, slot: MenuSlot) {
+    internal fun openVideoFileContextMenu(videoId: String, title: String, slot: MenuSlot, at: CrossbarUiState) {
         scope.launch {
             val video = videoRepository.getVideo(videoId) ?: return@launch
-            val inPlaylist = uiState.value.videoNav is VideoNav.Playlist
+            val inPlaylist = at.videoNav is VideoNav.Playlist
             val items = videoFileContextMenuItems(
                 isFavorite = video.isFavorite,
                 resumePositionMs = video.resumePositionMs,
