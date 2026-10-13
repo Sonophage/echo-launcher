@@ -18,6 +18,8 @@ data class CompanionState(
     val drawer: GameInfoState? = null,
     // what is open on the Main Screen: Search, a menu, Settings, the colour scheme picker
     val open: MainScreenOpen = MainScreenOpen(),
+    // the Companion's own menu is open (ADR 0002)
+    val companionMenu: Boolean = false,
     // the setting focused there; null while nothing is, or a touch has hidden the cursor
     val setting: com.echo.feature.settings.ui.SettingsFocusInfo? = null,
     // the theme focused in the Theme Store

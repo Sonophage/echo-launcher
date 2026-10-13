@@ -212,26 +212,26 @@ class CrossbarGallery(
         uiState.update { it.copy(pendingPhotoViewerAction = null) }
     }
 
-    internal fun openPhotoContextMenu(item: CrossbarItem): Boolean {
+    internal fun openPhotoContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN): Boolean {
         if (item.menuHostCategory(vm.currentCategory()?.id) != BuiltInCategory.PHOTO) return false
         return when {
             item.type == CrossbarItemType.PHOTO_FILE && item.id.startsWith("pho_") -> {
-                openPhotoFileContextMenu(item.id.removePrefix("pho_"), item.title); true
+                openPhotoFileContextMenu(item.id.removePrefix("pho_"), item.title, slot); true
             }
             item.type == CrossbarItemType.PHOTO_FOLDER && item.id.startsWith("plib_") -> {
-                openPhotoLibraryContextMenu(item.id.removePrefix("plib_"), item.title); true
+                openPhotoLibraryContextMenu(item.id.removePrefix("plib_"), item.title, slot); true
             }
             item.packageName != null -> {
-                vm.openAppContextMenu(item, categoryIdOverride = CrossbarViewModel.PHOTO_APPS_CATEGORY_ID); true
+                vm.openAppContextMenu(item, categoryIdOverride = CrossbarViewModel.PHOTO_APPS_CATEGORY_ID, slot = slot); true
             }
             else -> false
         }
     }
 
-    private fun openPhotoFileContextMenu(photoId: String, title: String) {
+    private fun openPhotoFileContextMenu(photoId: String, title: String, slot: MenuSlot = MenuSlot.MAIN) {
         scope.launch {
             val items = photoFileContextMenuItems(isFavorite = photoRepository.getPhoto(photoId)?.isFavorite == true)
-            uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = items), photoFileId = photoId)) }
+            uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = title, rows = items), photoFileId = photoId)) }
         }
     }
 
@@ -249,9 +249,9 @@ class CrossbarGallery(
         }
     }
 
-    private fun openPhotoLibraryContextMenu(libraryId: String, name: String) {
+    private fun openPhotoLibraryContextMenu(libraryId: String, name: String, slot: MenuSlot = MenuSlot.MAIN) {
         val items = photoLibraryContextMenuItems()
-        uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = name, rows = items), photoLibraryId = libraryId)) }
+        uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = name, rows = items), photoLibraryId = libraryId)) }
     }
 
     internal fun handlePhotoLibraryAction(libraryId: String, itemId: String) {

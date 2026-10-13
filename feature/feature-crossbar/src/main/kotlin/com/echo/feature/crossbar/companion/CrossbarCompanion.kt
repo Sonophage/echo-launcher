@@ -4,6 +4,7 @@ import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoState
+import com.echo.feature.crossbar.viewmodel.MenuSlot
 import com.echo.feature.crossbar.viewmodel.RecentKind
 import com.echo.feature.crossbar.viewmodel.recentKind
 import com.echo.feature.launcher.OpenSession
@@ -67,6 +68,10 @@ class CrossbarCompanion(
         scope.launch {
             uiState.map(::mainScreenOpen).distinctUntilChanged().collect { open -> link.update { it.copy(open = open) } }
         }
+        // the Companion's own menu keeps its item too (ADR 0002)
+        scope.launch {
+            uiState.map { it.companionMenu != null }.distinctUntilChanged().collect { on -> link.update { it.copy(companionMenu = on) } }
+        }
         scope.launch {
             combine(companionShown, link.hostShown, lastLaunch) { on, shown, last ->
                 if (on) playingGameId(shown, last?.gameId)?.let { it to last?.launchedAt } else null
@@ -91,6 +96,13 @@ class CrossbarCompanion(
     fun resume() {
         lastLaunch.value?.gameId?.let(vm.launching::resumeGame)
     }
+
+    // Options on the Companion's Details: the item's menu, opened on the Companion Screen (ADR 0002)
+    fun openMenu(item: CrossbarItem) = vm.openContextMenuFor(item, MenuSlot.COMPANION)
+
+    fun onMenuRow(index: Int) = vm.onContextMenuItemActivatedAt(index, MenuSlot.COMPANION)
+
+    fun closeMenu() = vm.closeContextMenu(MenuSlot.COMPANION)
 
     private suspend fun itemFor(gameId: Long): CrossbarItem? =
         runCatching { vm.gameRepository.getById(gameId) }.getOrNull()?.let { game -> with(vm) { listOf(game).toCrossbarItems() }.first() }

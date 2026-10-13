@@ -274,8 +274,8 @@ class CrossbarMusic(
         }
     }
 
-    internal fun openAlbumMenu(key: String, title: String) {
-        uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = albumContextMenuItems()), albumKey = key)) }
+    internal fun openAlbumMenu(key: String, title: String, slot: MenuSlot = MenuSlot.MAIN) {
+        uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = title, rows = albumContextMenuItems()), albumKey = key)) }
     }
 
     internal fun openAlbumGenrePicker(key: String) {
@@ -329,7 +329,7 @@ class CrossbarMusic(
         uiState.update { it.copy(musicPlayerVisible = false) }
     }
 
-    private fun openMusicTrackContextMenu(item: CrossbarItem) {
+    private fun openMusicTrackContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
         val playlistId = currentPlaylistContextId()
 
         val trackId = item.id.removePrefix("mt_")
@@ -337,15 +337,15 @@ class CrossbarMusic(
             val onShelf = runCatching { musicRepository.getTrack(trackId) }
                 .getOrNull()?.lastPlayedAt != null
             val items = musicTrackContextMenuItems(playlistId = playlistId, hasPlayStamp = onShelf)
-            uiState.update { it.copy(
-                activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), musicTrackId = trackId, playlistId = playlistId)
+            uiState.update { it.withMenu(
+                slot, CrossbarContextMenu(state = MenuState(title = item.title, rows = items), musicTrackId = trackId, playlistId = playlistId)
             )}
         }
     }
 
-    private fun openPlaylistRowContextMenu(playlistId: Long, name: String) {
+    private fun openPlaylistRowContextMenu(playlistId: Long, name: String, slot: MenuSlot = MenuSlot.MAIN) {
         val items = playlistRowContextMenuItems()
-        uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = name, rows = items), playlistId = playlistId)) }
+        uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = name, rows = items), playlistId = playlistId)) }
     }
 
     internal fun openPlaylistPicker(trackId: String, selectIndex: Int? = 0) {
@@ -369,24 +369,24 @@ class CrossbarMusic(
         vm.appAction { ids.forEach { musicRepository.clearTrackLastPlayed(it) } }
     }
 
-    internal fun openRecentAlbumContextMenu(item: CrossbarItem) {
-        uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = recentAlbumContextMenuItems()), recentAlbum = item)) }
+    internal fun openRecentAlbumContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
+        uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = item.title, rows = recentAlbumContextMenuItems()), recentAlbum = item)) }
     }
 
-    internal fun openMusicContextMenu(item: CrossbarItem): Boolean {
+    internal fun openMusicContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN): Boolean {
         if (item.menuHostCategory(vm.currentCategory()?.id) != BuiltInCategory.MUSIC) return false
         return when {
-            item.id == CrossbarViewModel.NOW_PLAYING_ITEM_ID -> { vm.openNowPlayingContextMenu(); true }
-            item.type == CrossbarItemType.MUSIC_TRACK -> { openMusicTrackContextMenu(item); true }
+            item.id == CrossbarViewModel.NOW_PLAYING_ITEM_ID -> { vm.openNowPlayingContextMenu(slot); true }
+            item.type == CrossbarItemType.MUSIC_TRACK -> { openMusicTrackContextMenu(item, slot); true }
             // an album's own menu: play it, or set the genre of all its tracks (owner, 2026-10-08)
             item.type == CrossbarItemType.MUSIC_GROUP && uiState.value.musicNav == MusicNav.Albums && item.musicGroupKey != null -> {
-                openAlbumMenu(item.musicGroupKey, item.title); true
+                openAlbumMenu(item.musicGroupKey, item.title, slot); true
             }
             item.type == CrossbarItemType.PLAYLIST && item.playlistId != null -> {
-                openPlaylistRowContextMenu(item.playlistId, item.title); true
+                openPlaylistRowContextMenu(item.playlistId, item.title, slot); true
             }
             item.packageName != null -> {
-                vm.openAppContextMenu(item, categoryIdOverride = CrossbarViewModel.MUSIC_APPS_CATEGORY_ID); true
+                vm.openAppContextMenu(item, categoryIdOverride = CrossbarViewModel.MUSIC_APPS_CATEGORY_ID, slot = slot); true
             }
             else -> false
         }

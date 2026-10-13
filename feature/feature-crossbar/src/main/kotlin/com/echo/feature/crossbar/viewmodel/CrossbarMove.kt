@@ -113,8 +113,8 @@ class CrossbarMove(
 
     // the edit rows for the focused row of the crossbar (owner, 2026-10-07): Move and Change Icon for the row
     // when it can, then Move Column, Rename Column and Change Column Icon for its column. They are the Edit Layout
-    // section; Clear Recent is in Remove (owner, 2026-10-12)
-    fun menuRows(state: CrossbarUiState, item: CrossbarItem): List<CrossbarContextMenuItem> = buildList {
+    // section; Clear Recent is in Remove (owner, 2026-10-12). The Companion's menu leaves Edit Layout out (ADR 0002)
+    fun menuRows(state: CrossbarUiState, item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN): List<CrossbarContextMenuItem> = buildList {
         if (state.currentItems.getOrNull(state.selectedItemIndex)?.id != item.id) return@buildList
         fun row(id: String, label: String, group: MenuGroup = MenuGroup.EDIT_LAYOUT) =
             CrossbarContextMenuItem(id, label, group = group, confirms = false)
@@ -126,7 +126,7 @@ class CrossbarMove(
         if (state.columnEditable() && state.columnIconSlot() != null) add(row(CHANGE_COLUMN_ICON, "Change Column Icon"))
         // owner, 2026-10-10: Recent can be emptied from any of its rows, after a confirm
         if (state.onLastPlayedHome) add(row(CLEAR_RECENT, "Clear Recent", MenuGroup.REMOVE).copy(confirms = true))
-    }
+    }.filter { slot == MenuSlot.MAIN || it.group != MenuGroup.EDIT_LAYOUT }
 
     fun promptRenameColumn() {
         val s = uiState.value
