@@ -175,13 +175,14 @@ class CrossbarFolders(
         }
     }
 
-    internal fun openMediaRootContextMenu(item: CrossbarItem) {
+    internal fun openMediaRootContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
         val kind = item.mediaRootKind ?: return
         val treeUri = item.mediaRootUri ?: return
         val linked = item.subtitle?.startsWith("Access lost") != true
         uiState.update {
-            it.copy(
-                activeContextMenu = CrossbarContextMenu(
+            it.withMenu(
+                slot,
+                CrossbarContextMenu(
                     state = MenuState(
                         title = item.title,
                         rows = mediaRootContextMenuItems(linked, kind),
@@ -204,11 +205,12 @@ class CrossbarFolders(
     }
 
 
-    internal fun openMediaFoldersContextMenu(item: CrossbarItem) {
+    internal fun openMediaFoldersContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
         val kind = item.mediaRootKind ?: return
         uiState.update {
-            it.copy(
-                activeContextMenu = CrossbarContextMenu(
+            it.withMenu(
+                slot,
+                CrossbarContextMenu(
                     state = MenuState(title = item.title, rows = mediaFoldersContextMenuItems(kind)),
                     mediaRootKind = kind,
                 ),
@@ -325,11 +327,12 @@ class CrossbarFolders(
         )
     }
 
-    internal fun openRomRootContextMenu(item: CrossbarItem) {
+    internal fun openRomRootContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
         val treeUri = item.mediaRootUri ?: return
         val linked = item.subtitle?.startsWith("Access lost") != true
-        uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(
+        uiState.update { it.withMenu(
+            slot,
+            CrossbarContextMenu(
                 state = MenuState(title = item.title, rows = romRootContextMenuItems(linked)),
                 mediaRootUri = treeUri,
             ),

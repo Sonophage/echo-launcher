@@ -114,10 +114,10 @@ class CrossbarGames(
     }
 
 
-    internal fun openGameContextMenu(item: CrossbarItem) {
+    internal fun openGameContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
         val gameId = item.gameId
         if (gameId == null) {
-            openGameContextMenuCore(item, discCount = 0)
+            openGameContextMenuCore(item, discCount = 0, slot = slot)
             return
         }
 
@@ -129,23 +129,24 @@ class CrossbarGames(
 
             // the library's file, not the row's: a row built outside the game list may not carry it
             val row = game?.let { item.copy(romPath = it.romPath) } ?: item
-            openGameContextMenuCore(row, discCount, onRecentShelf = game?.lastPlayedAt != null)
+            openGameContextMenuCore(row, discCount, onRecentShelf = game?.lastPlayedAt != null, slot = slot)
         }
     }
 
-    private fun openGameContextMenuCore(item: CrossbarItem, discCount: Int, onRecentShelf: Boolean = false) {
+    private fun openGameContextMenuCore(item: CrossbarItem, discCount: Int, onRecentShelf: Boolean = false, slot: MenuSlot = MenuSlot.MAIN) {
         val state = uiState.value
         val currentCat = vm.currentCategory()
         val inGamingCategory = currentCat?.isGamingCategory == true
+        val hideLocation = vm.currentHideLocation()
         val items = gameContextMenuItems(
             item = item,
             state = state,
             discCount = discCount,
             onRecentShelf = onRecentShelf,
-            hideLocation = vm.currentHideLocation(),
+            hideLocation = hideLocation,
         )
-        uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = item.packageName, shortcutId = item.shortcutId, launchIntentUri = item.launchIntentUri, categoryContext = if (inGamingCategory) currentCat.id else null, primaryId = "play")
+        uiState.update { it.withMenu(
+            slot, CrossbarContextMenu(state = MenuState(title = item.title, rows = items), hideLocation = hideLocation, gameId = item.gameId, packageName = item.packageName, shortcutId = item.shortcutId, launchIntentUri = item.launchIntentUri, categoryContext = if (inGamingCategory) currentCat.id else null, primaryId = "play")
         )}
     }
 
@@ -388,7 +389,7 @@ class CrossbarGames(
                 val gid = gameId
                 vm.appAction { vm.removeGameFromLibrary(gid) }
             }
-            "hide_here"              -> vm.currentHideLocation()?.let { (type, id, label) ->
+            "hide_here"              -> menu.hideLocation?.let { (type, id, label) ->
                 vm.persistHide(HiddenPlacement.gameKey(gameId), menu.title, type, id, label)
             }
             "remove_app"             -> {
