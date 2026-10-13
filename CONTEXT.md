@@ -13,7 +13,8 @@ _Avoid_: top screen, primary screen
 
 **Companion Screen**:
 The screen that shows more about what the Main Screen has focused, and takes only touch, except
-for typing on the keyboard. With nothing new to show, it keeps the last thing it showed.
+for typing on the keyboard. With nothing new to show, it keeps the last thing it showed. Its
+Options button opens the item's menu there (ADR 0002).
 _Avoid_: bottom screen, second screen, remote
 
 **Swap**:
@@ -37,9 +38,10 @@ The vertical rail of letters or groups at a screen's edge, slid with a finger to
 list.
 _Avoid_: letter rail, filter rail, scrubber
 
-**Filter Row**:
-A horizontal row of chips that narrows what a screen lists, such as Recent's Games, Apps and All.
-_Avoid_: filter rail, tabs, chips
+**Trigger Filter**:
+The word that leads the footer and changes what a screen lists, such as Recent's Games, Apps and
+All; tap it or use the triggers to change it.
+_Avoid_: filter row, filter rail, tabs, chips
 
 ### Item actions
 
