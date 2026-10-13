@@ -244,8 +244,7 @@ class CrossbarVideo(
         )}
     }
 
-    private fun promptRenameVideoPlaylist(playlistId: Long) {
-        val name = uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
+    private fun promptRenameVideoPlaylist(playlistId: Long, name: String) {
         uiState.update { it.copy(
             playlistNameDialog = PlaylistNameDialogState(
                 title = "Rename Playlist",
@@ -284,26 +283,28 @@ class CrossbarVideo(
     internal fun openVideoFileContextMenu(videoId: String, title: String, slot: MenuSlot, at: CrossbarUiState) {
         scope.launch {
             val video = videoRepository.getVideo(videoId) ?: return@launch
-            val inPlaylist = at.videoNav is VideoNav.Playlist
+            val playlistId = (at.videoNav as? VideoNav.Playlist)?.id
+            val inPlaylist = playlistId != null
             val items = videoFileContextMenuItems(
                 isFavorite = video.isFavorite,
                 resumePositionMs = video.resumePositionMs,
                 hasWatchStamp = video.lastWatchedAt != null,
                 inPlaylist = inPlaylist,
             )
-            uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = title, rows = items), videoFileId = videoId)) }
+            uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = title, rows = items), videoFileId = videoId, playlistId = playlistId)) }
         }
     }
 
-    internal fun handleVideoFileAction(videoId: String, itemId: String, slot: MenuSlot) {
+    // [playlistId]: the playlist the menu opened in, taken when it opened (ADR 0002)
+    internal fun handleVideoFileAction(videoId: String, itemId: String, slot: MenuSlot, playlistId: Long?) {
         when (itemId) {
             "video_play", "video_resume" ->
                 uiState.update { it.copy(activeVideoId = videoId, activeVideoAutoPlay = true) }
             "video_details" -> uiState.update { it.copy(activeVideoId = videoId, activeVideoAutoPlay = false) }
             "video_favorite", "video_unfavorite" -> vm.appAction { videoRepository.setFavorite(videoId, itemId == "video_favorite") }
             "video_add_playlist" -> openVideoPlaylistPicker(videoId, slot = slot)
-            "video_remove_playlist" -> (uiState.value.videoNav as? VideoNav.Playlist)?.let { nav ->
-                vm.appAction { videoRepository.removeVideoFromPlaylist(nav.id, videoId) }
+            "video_remove_playlist" -> if (playlistId != null) {
+                vm.appAction { videoRepository.removeVideoFromPlaylist(playlistId, videoId) }
             }
 
             "video_wallpaper" -> scope.launch {
@@ -355,13 +356,11 @@ class CrossbarVideo(
         }
     }
 
-    internal fun handleVideoPlaylistRowAction(playlistId: Long, itemId: String) {
+    // [name]: the playlist's name when its menu opened (the menu's title)
+    internal fun handleVideoPlaylistRowAction(playlistId: Long, name: String, itemId: String) {
         when (itemId) {
-            "open_video_playlist" -> {
-                val name = uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
-                openVideoView(VideoNav.Playlist(playlistId, name))
-            }
-            "rename_video_playlist" -> promptRenameVideoPlaylist(playlistId)
+            "open_video_playlist" -> openVideoView(VideoNav.Playlist(playlistId, name))
+            "rename_video_playlist" -> promptRenameVideoPlaylist(playlistId, name)
             "delete_video_playlist" -> vm.appAction {
                 videoRepository.deletePlaylist(playlistId)
                 if ((uiState.value.videoNav as? VideoNav.Playlist)?.id == playlistId) openVideoView(VideoNav.Playlists)

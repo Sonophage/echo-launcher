@@ -171,6 +171,8 @@ data class CrossbarContextMenu(
     // place Hide from <column> hides from, and the art an app's launch hands off
     val hideLocation: Triple<com.echo.core.domain.model.HideLocationType, String, String>? = null,
     val itemArt: Any? = null,
+    // the songs listed where a song's menu opened: Play queues them (ADR 0002)
+    val musicQueue: List<com.echo.core.domain.model.MusicTrack> = emptyList(),
 ) {
     val title: String get() = state.title
     val items: List<CrossbarContextMenuItem> get() = state.rows
@@ -3295,7 +3297,7 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         if (menu.videoFileId != null) {
-            video.handleVideoFileAction(menu.videoFileId, itemId, slot)
+            video.handleVideoFileAction(menu.videoFileId, itemId, slot, menu.playlistId)
             return
         }
         if (menu.bookFileId != null) {
@@ -3315,12 +3317,12 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         if (menu.videoPlaylistId != null) {
-            video.handleVideoPlaylistRowAction(menu.videoPlaylistId, itemId)
+            video.handleVideoPlaylistRowAction(menu.videoPlaylistId, menu.title, itemId)
             return
         }
 
         if (menu.playlistId != null && menu.musicTrackId == null) {
-            music.handlePlaylistRowAction(menu.playlistId, itemId)
+            music.handlePlaylistRowAction(menu.playlistId, menu.title, itemId)
             return
         }
 
@@ -3332,7 +3334,7 @@ class CrossbarViewModel @Inject constructor(
                 "music_shuffle"    -> music.musicToggleShuffle()
                 "music_repeat"     -> music.musicCycleRepeat()
             }
-            menu.musicTrackId != null -> music.handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId, slot)
+            menu.musicTrackId != null -> music.handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId, slot, menu.musicQueue)
             menu.mediaRootKind != null && menu.mediaRootUri != null ->
                 folders.handleMediaRootAction(menu.mediaRootKind, menu.mediaRootUri, itemId)
             menu.mediaRootKind == null && menu.mediaRootUri != null ->

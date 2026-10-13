@@ -333,12 +333,13 @@ class CrossbarMusic(
         val playlistId = playlistContextId(at)
 
         val trackId = item.id.removePrefix("mt_")
+        val listed = currentMusicTracks
         scope.launch {
             val onShelf = runCatching { musicRepository.getTrack(trackId) }
                 .getOrNull()?.lastPlayedAt != null
             val items = musicTrackContextMenuItems(playlistId = playlistId, hasPlayStamp = onShelf)
             uiState.update { it.withMenu(
-                slot, CrossbarContextMenu(state = MenuState(title = item.title, rows = items), musicTrackId = trackId, playlistId = playlistId)
+                slot, CrossbarContextMenu(state = MenuState(title = item.title, rows = items), musicTrackId = trackId, playlistId = playlistId, musicQueue = listed)
             )}
         }
     }
@@ -399,8 +400,7 @@ class CrossbarMusic(
         )}
     }
 
-    private fun promptRenamePlaylist(playlistId: Long) {
-        val name = uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
+    private fun promptRenamePlaylist(playlistId: Long, name: String) {
         uiState.update { it.copy(
             playlistNameDialog = PlaylistNameDialogState(
                 title = "Rename Playlist",
@@ -506,23 +506,16 @@ class CrossbarMusic(
         }
     }
 
-    internal fun handleMusicTrackAction(trackId: String, itemId: String, playlistId: Long?, slot: MenuSlot) {
+    // [listed]: the songs listed where the menu opened (CrossbarContextMenu.musicQueue), the queue Play plays in
+    internal fun handleMusicTrackAction(trackId: String, itemId: String, playlistId: Long?, slot: MenuSlot, listed: List<MusicTrack>) {
         when (itemId) {
             "edit_genre" -> vm.genres.openPicker(GenreTarget.Tracks(listOf(trackId)), slot)
-            "play" -> {
-                val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
-                if (currentMusicTracks.isNotEmpty()) {
-                    musicPlayer.setQueue(currentMusicTracks, startIndex)
-                    vm.showMusicPlayer()
-                }
-            }
-
-            "play_background" -> {
-                val startIndex = currentMusicTracks.indexOfFirst { it.id == trackId }.coerceAtLeast(0)
-                if (currentMusicTracks.isNotEmpty()) {
-                    musicPlayer.setQueue(currentMusicTracks, startIndex)
-                    com.echo.feature.crossbar.music.MusicPlaybackService.start(vm.context)
-                }
+            "play", "play_background" -> scope.launch {
+                // a song not in that list plays in its album, as A on a Recent song does (musicQueueFor)
+                val library = if (listed.any { it.id == trackId }) emptyList() else musicRepository.observeAllTracks().first()
+                val (queue, startIndex) = musicQueueFor(trackId, listed, library) ?: return@launch
+                musicPlayer.setQueue(queue, startIndex)
+                if (itemId == "play") vm.showMusicPlayer() else com.echo.feature.crossbar.music.MusicPlaybackService.start(vm.context)
             }
             "add_to_playlist" -> openPlaylistPicker(trackId, slot = slot)
             "remove_from_playlist" -> if (playlistId != null) {
@@ -538,14 +531,12 @@ class CrossbarMusic(
         }
     }
 
-    internal fun handlePlaylistRowAction(playlistId: Long, itemId: String) {
+    // [name]: the playlist's name when its menu opened (the menu's title)
+    internal fun handlePlaylistRowAction(playlistId: Long, name: String, itemId: String) {
         when (itemId) {
-            "open_playlist"   -> {
-                val name = uiState.value.currentItems.firstOrNull { it.playlistId == playlistId }?.title.orEmpty()
-                openMusicView(MusicNav.Playlist(playlistId, name))
-            }
+            "open_playlist"   -> openMusicView(MusicNav.Playlist(playlistId, name))
             "add_tracks"      -> openMusicTrackPicker(playlistId)
-            "rename_playlist" -> promptRenamePlaylist(playlistId)
+            "rename_playlist" -> promptRenamePlaylist(playlistId, name)
             "delete_playlist" -> vm.appAction {
                 musicRepository.deletePlaylist(playlistId)
                 if ((uiState.value.musicNav as? MusicNav.Playlist)?.id == playlistId) closeMusicView()

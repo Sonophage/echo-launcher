@@ -177,9 +177,9 @@ class CrossbarRecents(
         if (!item.removableFromRecent) return
         menuSound.play(MenuSound.SELECT)
         when {
-            item.type == CrossbarItemType.VIDEO_FILE -> vm.video.handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent", MenuSlot.MAIN)
+            item.type == CrossbarItemType.VIDEO_FILE -> vm.video.handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent", MenuSlot.MAIN, playlistId = null)
             item.type == CrossbarItemType.LIBRARY_BOOK -> vm.bookshelf.handleBookAction(item.id.removePrefix("book_"), "book_remove_recent", MenuSlot.MAIN)
-            item.type == CrossbarItemType.MUSIC_TRACK -> vm.music.handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null, MenuSlot.MAIN)
+            item.type == CrossbarItemType.MUSIC_TRACK -> vm.music.handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null, MenuSlot.MAIN, listed = emptyList())
             item.isRecentAlbum -> vm.music.removeAlbumFromRecent(item.musicGroupKey!!)
             item.gameId != null -> dismissGameFromRecents(item.gameId)
             item.packageName != null -> dismissAppFromRecents(item.packageName)
