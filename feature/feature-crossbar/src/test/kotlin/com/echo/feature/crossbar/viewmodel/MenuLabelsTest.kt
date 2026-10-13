@@ -20,6 +20,7 @@ import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.icons.GameIconStyle
 import com.echo.core.ui.wave.WaveDesign
+import com.echo.core.ui.wave.WaveStyle
 import com.echo.feature.appbar.AppMenuAction
 import com.echo.feature.artwork.studio.ArtworkStudioUiState
 import com.echo.feature.artwork.studio.CropShapeChoice
@@ -27,7 +28,9 @@ import com.echo.feature.artwork.studio.StudioAction
 import com.echo.feature.artwork.studio.StudioLeaveChoice
 import com.echo.feature.artwork.studio.StudioReplaceChoice
 import com.echo.feature.crossbar.music.MusicPlaybackState
+import com.echo.feature.crossbar.ui.QuickSettingsState
 import com.echo.feature.crossbar.ui.detail.DetailPanelContent
+import com.echo.feature.crossbar.ui.quickTileText
 import com.echo.feature.photos.PhotoControl
 import com.echo.feature.photos.PhotoInfoAction
 import com.echo.feature.photos.PhotoViewerAction
@@ -62,6 +65,7 @@ class MenuLabelsTest {
         game(), content = DetailPanelContent(title = "Crisis Core", platformName = "PSP"), videoUri = "/v.mp4", manualPath = "/m.pdf",
     ))
     private val video = Video(id = "v", libraryId = "l", uri = "content://v", displayName = "v.mp4", resumePositionMs = 5)
+    private val quickOn = QuickSettingsState(wave = WaveStyle.ANIMATED, backdropOn = true, rowCoverArt = true, recentAppsOn = true, chips = emptyList())
     private val photo = Photo(id = "p", libraryId = "l", uri = "content://p", displayName = "p.jpg")
 
     private val ITEM_MENUS: List<Pair<String, List<MenuRow<*>>>> = listOf(
@@ -121,6 +125,8 @@ class MenuLabelsTest {
         "theme store's parts" to ThemePart.entries.map { it.label },
         "Game Info's views" to (listOf(null) + GameInfoAction.entries).map(::gameInfoSectionLabel),
         "notification panel tabs" to PanelTab.entries.map { it.label },
+        "Quick Settings tiles" to listOf(quickOn, quickOn.copy(backdropOn = false, rowCoverArt = false, recentAppsOn = false, secondScreenOn = false))
+            .flatMap { q -> QuickSetting.entries.flatMap { quickTileText(it, q).toList() } },
     )
 
     private val shown get() = ITEM_MENUS.flatMap { (menu, rows) -> rows.filterNot { it.hidden }.map { menu to it.label } } +
