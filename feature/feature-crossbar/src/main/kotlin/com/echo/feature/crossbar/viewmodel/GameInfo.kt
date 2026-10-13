@@ -76,7 +76,7 @@ fun stepGameInfoSection(info: GameInfoState, delta: Int): GameInfoAction? {
 
 fun gameInfoSectionLabel(section: GameInfoAction?): String = when (section) {
     null -> "Screenshots"
-    GameInfoAction.INFO -> "Info"
+    GameInfoAction.INFO -> "Details"
     GameInfoAction.VIDEO -> "Video"
     GameInfoAction.ACHIEVEMENTS -> "Achievements"
     else -> section.name.lowercase().replaceFirstChar { it.uppercase() }

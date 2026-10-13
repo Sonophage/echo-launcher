@@ -13,10 +13,12 @@ import com.echo.core.domain.model.IconLegibilityStyle
 import com.echo.core.domain.model.ScrollSpeed
 import com.echo.core.domain.model.StickSensitivity
 import com.echo.core.domain.model.TriggerSensitivity
+import com.echo.core.domain.model.VideoSnapPlacement
 import com.echo.core.domain.model.displayLabel
 import com.echo.core.data.repository.ButtonHints
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.ui.components.MenuRow
+import com.echo.core.ui.icons.GameIconStyle
 import com.echo.core.ui.wave.WaveDesign
 import com.echo.feature.appbar.AppMenuAction
 import com.echo.feature.artwork.studio.ArtworkStudioUiState
@@ -35,6 +37,7 @@ import com.echo.feature.settings.ui.addPcGameRows
 import com.echo.feature.settings.ui.savedThemeMenuOptions
 import com.echo.feature.video.VideoDetailUiState
 import com.echo.feature.video.videoOptionsMenu
+import com.echo.themekit.ThemePart
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -106,7 +109,8 @@ class MenuLabelsTest {
         "media genre picker" to (genrePickerRows("Rock", null, listOf("Jazz")) + genrePickerRows(null, "Jazz", emptyList())).map { it.label },
         "settings pickers" to ControllerDisplayType.entries.map { it.displayLabel() } + StickSensitivity.entries.map { it.displayLabel() } +
             TriggerSensitivity.entries.map { it.label } + ScrollSpeed.entries.map { it.displayLabel() } + WaveDesign.entries.map { it.label } +
-            IconLegibilityStyle.entries.map { it.label } + ButtonHints.entries.map { it.label },
+            IconLegibilityStyle.entries.map { it.label } + ButtonHints.entries.map { it.label } +
+            VideoSnapPlacement.entries.map { it.label } + GameIconStyle.entries.map { it.label },
         "Artwork Studio actions" to listOf(false, true).flatMap { nsfw -> StudioAction.entries.map { ArtworkStudioUiState(includeNsfw = nsfw).labelOf(it) } },
         "Artwork Studio prompts" to StudioLeaveChoice.entries.map { it.label } + StudioReplaceChoice.entries.map { it.label } +
             CropShapeChoice.entries.map { it.label },
@@ -114,6 +118,9 @@ class MenuLabelsTest {
         "photo viewer bar" to PhotoControl.entries.map { it.label },
         "photo viewer info panel" to listOf(photo, photo.copy(isFavorite = true)).flatMap { p -> PhotoInfoAction.entries.map { it.labelFor(p) } },
         "Library Manager" to libraryManagerRowLabels(),
+        "theme store's parts" to ThemePart.entries.map { it.label },
+        "Game Info's views" to (listOf(null) + GameInfoAction.entries).map(::gameInfoSectionLabel),
+        "notification panel tabs" to PanelTab.entries.map { it.label },
     )
 
     private val shown get() = ITEM_MENUS.flatMap { (menu, rows) -> rows.filterNot { it.hidden }.map { menu to it.label } } +

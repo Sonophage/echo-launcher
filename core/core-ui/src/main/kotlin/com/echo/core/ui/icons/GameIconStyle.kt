@@ -5,5 +5,5 @@ enum class GameIconStyle(val label: String) {
     CARTRIDGE("Cartridge"),
 
     // owner, 2026-10-05: a game row can show its cover art in place of its icon (Quick Settings)
-    COVER_ART("Cover art"),
+    COVER_ART("Cover Art"),
 }

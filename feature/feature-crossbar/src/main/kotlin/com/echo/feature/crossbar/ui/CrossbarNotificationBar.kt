@@ -470,7 +470,7 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
                 // owner, 2026-10-05: "Crossbar shows Art / Wallpaper" was unclear; this is what fills the background.
                 // owner, 2026-10-07: named for what it does, the game's art behind the crossbar
                 QuickSetting.BACKDROP -> "Game backgrounds" to if (quick.backdropOn) "On" else "Off"
-                QuickSetting.ROW_ART -> "Game rows show" to if (quick.rowCoverArt) "Cover art" else "Icons"
+                QuickSetting.ROW_ART -> "Game rows show" to if (quick.rowCoverArt) com.echo.core.ui.icons.GameIconStyle.COVER_ART.label else "Icons"
                 QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
                 QuickSetting.MINIMAL_HINTS -> "Button hints" to quick.buttonHints.label
                 QuickSetting.SECOND_SCREEN -> "Screens" to if (quick.secondScreenOn) "Dual" else "Single"
@@ -481,7 +481,7 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
                 Icon(quickIcon(setting), null, tint = Color.White, modifier = Modifier.size(u.dp(34)))
                 Column {
                     WholeWordText(label, u.sp(17), Color.White.copy(alpha = 0.75f), FontWeight.Light, lineHeightScale = 1.2f)
-                    // six or seven tiles share the row, so a long value ("Reduced + Static", "Cover art") takes two lines
+                    // six or seven tiles share the row, so a long value ("Reduced + Static", "Cover Art") takes two lines
                     WholeWordText(value, u.sp(22), Color.White, FontWeight.ExtraLight, lineHeightScale = 1.1f, maxLines = 2)
                 }
             }
