@@ -68,9 +68,9 @@ screen's padded column.
 - A Favorites row, on any item in any module, takes its words from `favoritesLabel(isFavorite)` in
   `components/Menu.kt`. Do not write the pair again.
 - `GlowMaskedWave(side)` shows the wave only inside a screen's glow.
-- The focus marks are one definition in `theme/FocusMark.kt`: `LocalFocusStyle` is the theme's style, `focusMark`
-  draws HALO, BRACKET and LIFT, and `focusGlow` draws CLASSIC's warm glow (draw it only when `style.glows`).
-  Mark a focused item with these; do not draw a second ring or glow.
+- The focus marks are one definition in `theme/FocusMark.kt`: `LocalFocusStyle` is the theme's style, and
+  `focusLook(style, visible, accent)` marks a focused icon: CLASSIC's warm glow, or the HALO, BRACKET or LIFT mark.
+  It is the only place that decides glow or mark. Mark a focused icon with it; do not draw a second ring or glow.
 - The theme's motion is one definition in `theme/Motion.kt`: `LocalMotion` is the preset and `glide()` its
   settle spring (STILL, reduced motion, snaps). `CrossbarShell` provides it, so the App Drawer has it too.
 - The belly under a finger is `railBelly(touched, rungs, bulge)` (`components/LetterRail.kt`): `Bulge.LEFT` for

@@ -1,12 +1,9 @@
 package com.echo.feature.crossbar.ui
 
-import com.echo.core.ui.theme.FocusGlow
 import com.echo.core.ui.theme.LocalFocusStyle
 import com.echo.core.ui.theme.LocalMotion
 import com.echo.core.ui.theme.glide
-import com.echo.core.ui.theme.focusGlow
-import com.echo.core.ui.theme.focusMark
-import com.echo.core.ui.theme.glows
+import com.echo.core.ui.theme.focusLook
 import com.echo.feature.crossbar.viewmodel.systemArtSlotFor
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.core.Animatable
@@ -580,12 +577,7 @@ private fun CrossbarVerticalListRow(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .indication(press, LocalIndication.current)
-                        .focusMark(focusStyle, glow, accent)
-                        .focusGlow(
-                            visible = if (focusStyle.glows) glow else 0f,
-                            reach = FocusGlow.RowReach,
-                            alpha = FocusGlow.RowAlpha,
-                        ),
+                        .focusLook(focusStyle, glow, accent),
                 ) {
                     CrossbarItemLeadingIcon(
                         item = item,

@@ -51,11 +51,7 @@ private class PressMarkNode(private val source: InteractionSource) :
 
     override fun ContentDrawScope.draw() {
         val v = visible.value
-        if (v > 0f) {
-            val style = currentValueOf(LocalFocusStyle)
-            if (style.glows) drawFocusGlow(v, FocusGlow.RowReach, FocusGlow.RowAlpha)
-            else drawFocusMark(style, v, currentValueOf(LocalEchoColors).accentColor)
-        }
+        if (v > 0f) drawFocusLook(currentValueOf(LocalFocusStyle), v, currentValueOf(LocalEchoColors).accentColor)
         drawContent()
     }
 }

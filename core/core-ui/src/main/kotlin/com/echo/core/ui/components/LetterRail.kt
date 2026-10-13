@@ -42,14 +42,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.echo.core.ui.design.menuBackdrop
-import com.echo.core.ui.theme.FocusGlow
 import com.echo.core.ui.theme.LocalEchoColors
 import com.echo.core.ui.theme.LocalFocusStyle
 import com.echo.core.ui.theme.LocalMotion
-import com.echo.core.ui.theme.focusGlow
-import com.echo.core.ui.theme.focusMark
+import com.echo.core.ui.theme.focusLook
 import com.echo.core.ui.theme.glide
-import com.echo.core.ui.theme.glows
 import kotlin.math.abs
 
 data class LetterAnchor(val letter: Char, val index: Int)
@@ -363,9 +360,7 @@ private fun Rungs(
             wave = wave,
             metrics = metrics,
             modifier = Modifier.zIndex(wave).offset(x = x.dp),
-            mark = Modifier
-                .focusMark(focusStyle, mark, accent)
-                .focusGlow(if (focusStyle.glows) mark else 0f, FocusGlow.RowReach, FocusGlow.RowAlpha),
+            mark = Modifier.focusLook(focusStyle, mark, accent),
         )
     }
 }

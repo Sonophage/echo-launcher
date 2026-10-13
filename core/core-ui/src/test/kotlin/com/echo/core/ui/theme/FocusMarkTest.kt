@@ -68,6 +68,20 @@ class FocusMarkTest {
         FocusStyle.entries.filter { it != FocusStyle.CLASSIC }.forEach { assertFalse("$it glows", it.glows) }
     }
 
+    // review of spec #3: the press mark, the Side Rail and the crossbar rows decide glow-or-mark in one place
+    @Test
+    fun `classic's focus look is its warm glow`() {
+        val classic = draw(Modifier.focusLook(FocusStyle.CLASSIC, 1f, accent)).at(0.5f, 0.5f)
+        assertTrue("classic glows warm: $classic", classic.red > 0.4f && classic.red > classic.blue)
+    }
+
+    @Test
+    fun `another style's focus look is its mark, with no glow`() {
+        val bracket = draw(Modifier.focusLook(FocusStyle.BRACKET, 1f, accent))
+        assertTrue("bracket marks its corner", bracket.at(0f, 0f).isAccent())
+        assertEquals("bracket draws no glow", Color.Black, bracket.at(0.5f, 0.5f))
+    }
+
     @Test
     fun `the glow is warm and brightest at the centre`() {
         val image = draw(Modifier.focusGlow(visible = 1f, reach = FocusGlow.RowReach, alpha = 1f))

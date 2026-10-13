@@ -19,6 +19,16 @@ val LocalFocusStyle = staticCompositionLocalOf { FocusStyle.CLASSIC }
 // the warm glow behind a focused icon is CLASSIC's own mark
 val FocusStyle.glows: Boolean get() = this == FocusStyle.CLASSIC
 
+// the one decision of how a focused icon is marked: CLASSIC's warm glow, or the style's own mark. The press mark,
+// the Side Rail and the crossbar rows all draw it from here (review of spec #3)
+fun Modifier.focusLook(style: FocusStyle, visible: Float, accent: Color): Modifier =
+    drawBehind { drawFocusLook(style, visible, accent) }
+
+fun DrawScope.drawFocusLook(style: FocusStyle, visible: Float, accent: Color) {
+    if (style.glows) drawFocusGlow(visible, FocusGlow.RowReach, FocusGlow.RowAlpha)
+    else drawFocusMark(style, visible, accent)
+}
+
 // the mark a style draws round a focused icon, faded by [visible]: HALO an accent ring with a glow, BRACKET four
 // accent corners, LIFT a shadow under it. CLASSIC draws its glow through focusGlow
 fun Modifier.focusMark(style: FocusStyle, visible: Float, accent: Color): Modifier =
