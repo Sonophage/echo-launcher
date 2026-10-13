@@ -22,6 +22,7 @@ import com.echo.core.domain.model.settingsEntryFor
 import com.echo.core.ui.preview.CombinedPreviews
 import com.echo.core.ui.preview.EchoScreenPreview
 import com.echo.feature.settings.permissions.AppPermissions
+import com.echo.feature.settings.permissions.onMainScreen
 import com.echo.feature.settings.ui.wizard.WizardScaffold
 import com.echo.feature.settings.ui.wizard.WizardSplash
 import com.echo.feature.settings.viewmodel.InitialSetupUiState
@@ -84,6 +85,7 @@ fun InitialSetupScreen(
 
     var grantToken by remember { mutableIntStateOf(0) }
     val askPermission = rememberPermissionAsker { grantToken++; viewModel.refreshGrants() }
+    val context = androidx.compose.ui.platform.LocalContext.current
     val systemScreen = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { grantToken++; viewModel.refreshGrants() }
@@ -142,7 +144,7 @@ fun InitialSetupScreen(
                     grantToken = grantToken,
                     onRefresh = { grantToken++; viewModel.refreshGrants() },
                     onAsk = askPermission,
-                    onSetAsHome = { systemScreen.launch(viewModel.homeRoleIntent()) },
+                    onSetAsHome = { systemScreen.launch(viewModel.homeRoleIntent().onMainScreen(context)) },
                     onGrantFolder = regrantFolder,
                     onRecentsIncludeApps = viewModel::setRecentsIncludeApps,
                 )

@@ -38,7 +38,7 @@ object MediaOpenIntent {
     } catch (e: Exception) {
         if (intent.`package` != null) {
             Timber.w(e, "Pinned app could not open $logLabel, offering the chooser")
-            launchChooser(context, intent, chooserTitle, noHandlerMessage, logLabel)
+            launchChooser(context, intent, chooserTitle, noHandlerMessage, logLabel, display)
         } else {
             Timber.e(e, "Nothing could open $logLabel")
             noHandlerMessage
@@ -51,13 +51,15 @@ object MediaOpenIntent {
         chooserTitle: String,
         noHandlerMessage: String,
         logLabel: String,
+        // the Main Screen's, from LaunchScreens.mainDisplay: the chooser is not a game or app (#28)
+        display: Int,
     ): String? {
         val open = Intent(intent).apply { `package` = null }
 
         val chooser = Intent.createChooser(open, chooserTitle)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
-            context.startActivity(chooser)
+            context.startActivity(chooser, LaunchTransition.options(context, display))
             null
         } catch (e: Exception) {
             Timber.e(e, "Nothing could open $logLabel")

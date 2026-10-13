@@ -55,6 +55,7 @@ class BookIntentResolver @Inject constructor(
             chooserTitle = CHOOSER_TITLE,
             noHandlerMessage = "No reader is installed.",
             logLabel = "book \"${book.displayTitle}\"",
+            display = launchScreens.mainDisplay(),
         )
 
     fun readerLabel(packageName: String): String? = MediaOpenIntent.label(context, packageName)

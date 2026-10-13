@@ -44,6 +44,7 @@ class VideoIntentResolver @Inject constructor(
             chooserTitle = CHOOSER_TITLE,
             noHandlerMessage = "No video player is installed.",
             logLabel = "video \"${video.displayTitle}\"",
+            display = launchScreens.mainDisplay(),
         )
 
     fun validate(video: Video, playerPackage: String?): String? {

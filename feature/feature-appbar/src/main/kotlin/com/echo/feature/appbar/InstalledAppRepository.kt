@@ -133,9 +133,9 @@ class InstalledAppRepository @Inject constructor(
 
     fun hasOtherScreen(): Boolean = launchScreens.hasOtherScreen()
 
-    fun openAppInfo(packageName: String) = com.echo.core.data.apps.AppSystemActions.openAppInfo(context, packageName)
+    fun openAppInfo(packageName: String) = com.echo.core.data.apps.AppSystemActions.openAppInfo(context, packageName, launchScreens.mainDisplay())
 
-    fun uninstallApp(packageName: String) = com.echo.core.data.apps.AppSystemActions.uninstall(context, packageName)
+    fun uninstallApp(packageName: String) = com.echo.core.data.apps.AppSystemActions.uninstall(context, packageName, launchScreens.mainDisplay())
 
     // a system settings screen: on the Main Screen's display
     fun openUsageAccessSettings() {

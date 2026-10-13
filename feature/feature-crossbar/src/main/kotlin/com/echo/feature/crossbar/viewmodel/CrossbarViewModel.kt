@@ -3344,8 +3344,8 @@ class CrossbarViewModel @Inject constructor(
                     "launch_other_screen" -> launching.launchAppWithDisc(pkg, selectedItemArt(), otherScreen = true)
                     "pin_recent", "unpin_recent" -> { closeContextMenu(); recents.togglePinned(com.echo.core.data.repository.RecentPins.appKey(pkg)) }
                     "app_artwork" -> viewModelScope.launch { artworkTools.openArtworkStudio(ensureAppShortcut(pkg)) }
-                    "app_info"  -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg) }
-                    "uninstall" -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.uninstall(context, pkg) }
+                    "app_info"  -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg, launchScreens.mainDisplay()) }
+                    "uninstall" -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.uninstall(context, pkg, launchScreens.mainDisplay()) }
 
                     "mark_game" -> appAction {
                         gameRepository.upsert(com.echo.core.domain.model.markedAsGame(gameRepository.getAppEntry(pkg), pkg, menu.title))
@@ -3586,7 +3586,7 @@ class CrossbarViewModel @Inject constructor(
                 QuickSetting.ANDROID_SETTINGS -> {
                     panel.closeNotifications()
                     runCatching {
-                        context.startActivity(
+                        launching.startOnMainScreen(
                             android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
                                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                         )
@@ -4197,7 +4197,7 @@ class CrossbarViewModel @Inject constructor(
 
             ANDROID_SETTINGS_ITEM_ID -> {
                 runCatching {
-                    context.startActivity(
+                    launching.startOnMainScreen(
                         android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
                             .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
