@@ -24,7 +24,7 @@ uses. The controller still acts only on the Main Screen (owner, 2026-10-12).
   Open Folder's path or Export Game's report) opens on the Companion Screen and is finished by
   touch there.
 - Full ECHO screens open on the Main Screen, as they do from its own menu: Game Info, Artwork
-  Studio, the manual, Update Metadata and a video's Details (owner default, 2026-10-12). So do
+  Studio, the manual, Update Metadata and a video's Details (owner, 2026-10-13). So do
   Android's own screens (App info, uninstall, a file manager), on the Main Screen's display (#28).
 - The menu stays on the item it opened for when the Main Screen's focus moves; the Main Screen stays
   fully live under the controller.
