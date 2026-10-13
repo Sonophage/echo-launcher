@@ -363,7 +363,7 @@ fun CrossbarShellContainer(
         onGamePickerConfirm = viewModel::confirmGamePicker,
         onGamePickerDismiss = viewModel::closeGamePicker,
         onGamePickerActionConsumed = viewModel::consumeGamePickerAction,
-        onDismissInfoDialog = viewModel::dismissInfoDialog,
+        onDismissInfoDialog = { viewModel.dismissInfoDialog(MenuSlot.MAIN) },
         onWindowsSetupConfirm = viewModel::confirmWindowsSetupPrompt,
         onWindowsSetupDismiss = viewModel::dismissWindowsSetupPrompt,
         onLaunchRecoveryAction = viewModel.launching::onLaunchRecoveryAction,

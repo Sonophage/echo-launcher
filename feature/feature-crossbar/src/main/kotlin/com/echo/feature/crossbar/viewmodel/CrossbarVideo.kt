@@ -244,8 +244,8 @@ class CrossbarVideo(
         ) } }
     }
 
-    private fun promptRenameVideoPlaylist(playlistId: Long, name: String) {
-        uiState.update { it.withPrompts(MenuSlot.MAIN) { copy(
+    private fun promptRenameVideoPlaylist(playlistId: Long, name: String, slot: MenuSlot) {
+        uiState.update { it.withPrompts(slot) { copy(
             playlistNameDialog = PlaylistNameDialogState(
                 title = "Rename Playlist",
                 initialText = name,
@@ -357,10 +357,10 @@ class CrossbarVideo(
     }
 
     // [name]: the playlist's name when its menu opened (the menu's title)
-    internal fun handleVideoPlaylistRowAction(playlistId: Long, name: String, itemId: String) {
+    internal fun handleVideoPlaylistRowAction(playlistId: Long, name: String, itemId: String, slot: MenuSlot) {
         when (itemId) {
             "open_video_playlist" -> openVideoView(VideoNav.Playlist(playlistId, name))
-            "rename_video_playlist" -> promptRenameVideoPlaylist(playlistId, name)
+            "rename_video_playlist" -> promptRenameVideoPlaylist(playlistId, name, slot)
             "delete_video_playlist" -> vm.appAction {
                 videoRepository.deletePlaylist(playlistId)
                 if ((uiState.value.videoNav as? VideoNav.Playlist)?.id == playlistId) openVideoView(VideoNav.Playlists)

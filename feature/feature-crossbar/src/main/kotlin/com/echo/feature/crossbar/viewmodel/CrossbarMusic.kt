@@ -400,8 +400,8 @@ class CrossbarMusic(
         ) } }
     }
 
-    private fun promptRenamePlaylist(playlistId: Long, name: String) {
-        uiState.update { it.withPrompts(MenuSlot.MAIN) { copy(
+    private fun promptRenamePlaylist(playlistId: Long, name: String, slot: MenuSlot) {
+        uiState.update { it.withPrompts(slot) { copy(
             playlistNameDialog = PlaylistNameDialogState(
                 title = "Rename Playlist",
                 initialText = name,
@@ -533,11 +533,11 @@ class CrossbarMusic(
     }
 
     // [name]: the playlist's name when its menu opened (the menu's title)
-    internal fun handlePlaylistRowAction(playlistId: Long, name: String, itemId: String) {
+    internal fun handlePlaylistRowAction(playlistId: Long, name: String, itemId: String, slot: MenuSlot) {
         when (itemId) {
             "open_playlist"   -> openMusicView(MusicNav.Playlist(playlistId, name))
             "add_tracks"      -> openMusicTrackPicker(playlistId)
-            "rename_playlist" -> promptRenamePlaylist(playlistId, name)
+            "rename_playlist" -> promptRenamePlaylist(playlistId, name, slot)
             "delete_playlist" -> vm.appAction {
                 musicRepository.deletePlaylist(playlistId)
                 if ((uiState.value.musicNav as? MusicNav.Playlist)?.id == playlistId) closeMusicView()

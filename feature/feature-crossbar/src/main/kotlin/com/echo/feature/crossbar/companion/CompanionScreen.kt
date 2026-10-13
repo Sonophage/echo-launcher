@@ -134,6 +134,10 @@ fun CompanionScreen(
             }
             // a name prompt a row of that menu opened, finished here by touch (ADR 0002)
             val here = MenuSlot.COMPANION
+            // a message a row of that menu ended with (Open Folder's path, Export Game's report)
+            ui.companionInfoDialog?.let { dialog ->
+                com.echo.core.ui.detail.EchoMessageOverlay(title = dialog.title, message = dialog.message, onDismiss = { crossbar.dismissInfoDialog(here) })
+            }
             NamePromptDialogs(
                 prompts = ui.companionPrompts,
                 onTextChange = { crossbar.onNamePromptTextChanged(it, here) },

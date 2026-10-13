@@ -437,6 +437,10 @@ val NamePrompts.open: Boolean get() = typed("") != null
 
 fun NamePrompts.withText(text: String): NamePrompts = typed(text) ?: this
 
+// a message a menu row ends with (Open Folder's path, Export Game's report), on the screen of the menu the row is on
+fun CrossbarUiState.withInfoDialog(slot: MenuSlot, dialog: InfoDialogState?): CrossbarUiState =
+    if (slot == MenuSlot.MAIN) copy(infoDialog = dialog) else copy(companionInfoDialog = dialog)
+
 fun CrossbarUiState.promptsIn(slot: MenuSlot): NamePrompts = if (slot == MenuSlot.MAIN) mainPrompts else companionPrompts
 
 fun CrossbarUiState.withPrompts(slot: MenuSlot, change: NamePrompts.() -> NamePrompts): CrossbarUiState =
@@ -701,6 +705,8 @@ data class CrossbarUiState(
     val secondScreenEnabled: Boolean = true,
 
     val infoDialog: InfoDialogState? = null,
+    // a message a Companion menu row ends with, drawn on the Companion Screen (withInfoDialog, ADR 0002)
+    val companionInfoDialog: InfoDialogState? = null,
 
     val showWindowsSetupPrompt: Boolean = false,
 
@@ -2868,7 +2874,7 @@ class CrossbarViewModel @Inject constructor(
         }
 
         if (state.infoDialog != null) {
-            if (action == GamepadAction.BACK || action == GamepadAction.SELECT) dismissInfoDialog()
+            if (action == GamepadAction.BACK || action == GamepadAction.SELECT) dismissInfoDialog(MenuSlot.MAIN)
             return
         }
 
@@ -3323,12 +3329,12 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         if (menu.videoPlaylistId != null) {
-            video.handleVideoPlaylistRowAction(menu.videoPlaylistId, menu.title, itemId)
+            video.handleVideoPlaylistRowAction(menu.videoPlaylistId, menu.title, itemId, slot)
             return
         }
 
         if (menu.playlistId != null && menu.musicTrackId == null) {
-            music.handlePlaylistRowAction(menu.playlistId, menu.title, itemId)
+            music.handlePlaylistRowAction(menu.playlistId, menu.title, itemId, slot)
             return
         }
 
@@ -3518,21 +3524,22 @@ class CrossbarViewModel @Inject constructor(
             val game = gameRepository.getById(gameId) ?: return@launch
             val path = game.romPath ?: return@launch
             if (!com.echo.core.data.media.FolderOpen.open(context, path, launchScreens.mainDisplay())) {
-                _uiState.update { it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = path)) }
+                _uiState.update { it.withInfoDialog(slot, InfoDialogState(title = game.displayTitle, message = path)) }
             }
         }
     }
 
-    fun dismissInfoDialog() = _uiState.update { it.copy(infoDialog = null) }
+    fun dismissInfoDialog(slot: MenuSlot) = _uiState.update { it.withInfoDialog(slot, null) }
 
-    internal fun exportGameFromMenu(gameId: Long) {
+    // [slot]: the slot of the menu the row is on; the report is drawn on its screen
+    internal fun exportGameFromMenu(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val report = runCatching { pcGameExporter.exportGame(gameId) }
                 .onFailure { Timber.e(it, "Export Game failed for gameId=$gameId") }
                 .getOrNull()
             _uiState.update {
-                it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = report?.message ?: "Export failed — see the log."))
+                it.withInfoDialog(slot, InfoDialogState(title = game.displayTitle, message = report?.message ?: "Export failed — see the log."))
             }
         }
     }

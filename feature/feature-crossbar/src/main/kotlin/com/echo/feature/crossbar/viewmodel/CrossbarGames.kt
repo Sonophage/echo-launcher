@@ -350,7 +350,7 @@ class CrossbarGames(
             "info_about"             -> vm.gameDetail.onGameInfoAction(GameInfoAction.INFO)
             "info_video"             -> vm.gameDetail.onGameInfoAction(GameInfoAction.VIDEO)
             "choose_disc"             -> vm.openDiscPickerMenu(gameId, slot)
-            "export_game"            -> vm.exportGameFromMenu(gameId)
+            "export_game"            -> vm.exportGameFromMenu(gameId, slot)
             "app_info"               -> com.echo.core.data.apps.AppSystemActions.openAppInfo(vm.context, menu.packageName ?: return, vm.launchScreens.mainDisplay())
             "uninstall"              -> com.echo.core.data.apps.AppSystemActions.uninstall(vm.context, menu.packageName ?: return, vm.launchScreens.mainDisplay())
             "favorite"               -> toggleGameFavorite(gameId, true)
