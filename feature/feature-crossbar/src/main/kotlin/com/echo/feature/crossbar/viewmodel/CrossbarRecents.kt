@@ -290,23 +290,15 @@ class CrossbarRecents(
         if (s.currentItems[index].launchesOut()) uiState.update { it.copy(selectedItemIndex = index) } else vm.onItemSelected(index)
     }
 
-    private var touchHolding = false
-
     // owner, 2026-10-05: holding a game or app's card or row launches it, the same hold as A; a tap only picks it
     fun onRecentCardPress(index: Int, down: Boolean) {
-        if (!down) {
-            if (touchHolding) vm.releaseLaunchHold()
-            touchHolding = false
-            return
-        }
+        if (!down) return vm.liftLaunchPress()
         vm.markTouchInput()
         val s = uiState.value
         val item = s.currentItems.getOrNull(index)
         if (s.hasBlockingOverlay || item == null || !item.launchesOut()) return
         uiState.update { it.copy(selectedItemIndex = index) }
-        touchHolding = true
-        vm.startLaunchHold(item) {
-            touchHolding = false
+        vm.pressToLaunch(item) {
             // by id, in case the column changed under the finger during the hold
             uiState.value.currentItems.indexOfFirst { it.id == item.id }.takeIf { it >= 0 }?.let(vm::onItemSelected)
         }

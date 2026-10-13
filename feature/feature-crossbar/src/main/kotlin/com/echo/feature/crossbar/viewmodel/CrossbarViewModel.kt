@@ -1480,16 +1480,17 @@ class CrossbarViewModel @Inject constructor(
         this, _uiState, viewModelScope, companionLink, launchDispatcher.lastLaunch,
     )
 
-    private val launchHold = LaunchHold(viewModelScope) { id -> _uiState.update { it.copy(launchHold = id) } }
+    private val launchHold = com.echo.core.ui.design.LaunchHold(viewModelScope) { id -> _uiState.update { it.copy(launchHold = id) } }
 
     // true only while a physical A press is being dispatched; a tap on screen launches at once
     // the pad button being dispatched right now, A or Y; a tap on screen acts at once
     private var heldFromPad: GamepadAction? = null
     private var holdButton: GamepadAction? = null
 
-    internal fun startLaunchHold(item: CrossbarItem, launch: () -> Unit) = launchHold.start(item.id, launch)
+    // a finger on a game or app's card or launch button holds as A does, so the footer's card rises (issue #36)
+    internal fun pressToLaunch(item: CrossbarItem, launch: () -> Unit) = launchHold.press(item.id, launch)
 
-    internal fun releaseLaunchHold() { launchHold.release() }
+    internal fun liftLaunchPress() = launchHold.lift()
 
     // starts the launch ring when a pad A press would leave ECHO; false means act now
     internal fun holdToLaunch(item: CrossbarItem, launch: () -> Unit): Boolean {

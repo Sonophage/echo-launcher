@@ -50,6 +50,7 @@ import com.echo.feature.appbar.appdrawer.UninstallConfirmDialog
 import com.echo.feature.appbar.appdrawer.WallBackdrop
 import com.echo.feature.appbar.appdrawer.WallInfo
 import com.echo.feature.appbar.appdrawer.actionLabel
+import com.echo.feature.appbar.appdrawer.drawerLaunchAction
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.design.IsTitan2
 import com.echo.feature.appbar.appdrawer.WallInfoStrip
@@ -240,6 +241,10 @@ fun AppDrawerScreen(
             onTouchInteraction()
             viewModel.openAppMenu(app)
         },
+        onBandPressed = { app, down ->
+            if (down) onTouchInteraction()
+            viewModel.onLaunchPressed(app, down)
+        },
         onMenuRowActivated = viewModel::onMenuRowActivated,
         onLetterRailTouch = viewModel::onLetterRailTouch,
         onLetterRailReleased = viewModel::onLetterRailReleased,
@@ -271,6 +276,7 @@ internal fun AppDrawerContent(
     modifier: Modifier = Modifier,
     onBandLaunch: (InstalledApp) -> Unit = { onAppLaunched(it.packageName) },
     onBandOptions: (InstalledApp) -> Unit = onAppMenu,
+    onBandPressed: (InstalledApp, Boolean) -> Unit = { _, _ -> },
     // the wallpaper under the app's tint (owner, 2026-10-09)
     wallpaper: (@Composable () -> Unit)? = null,
     onMenuRowActivated: (Int) -> Unit = {},
@@ -296,6 +302,7 @@ internal fun AppDrawerContent(
             if (strip) focused?.let { app ->
                 WallInfoStrip(app, focusedIcon, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
                     holding = state.holdingPackage == app.packageName, details = state.gameDetails?.takeIf { it.gameId == app.gameId },
+                    onLaunchPressed = { onBandPressed(app, it) },
                     modifier = Modifier.fillMaxWidth().padding(start = u.dp(46), end = u.dp(52), top = u.dp(16)))
             }
             Row(Modifier.weight(1f).fillMaxWidth().padding(start = u.dp(46), end = u.dp(52))) {
@@ -305,7 +312,8 @@ internal fun AppDrawerContent(
                         Text(drawerHeading(state).uppercase(), style = u.eyebrow(Color.White.copy(alpha = 0.7f)), maxLines = 1)
                         focused?.let { app ->
                             WallInfo(app, focusedIcon, u, onLaunch = { onBandLaunch(app) }, onOptions = { onBandOptions(app) },
-                                holding = state.holdingPackage == app.packageName, details = state.gameDetails?.takeIf { it.gameId == app.gameId })
+                                holding = state.holdingPackage == app.packageName, details = state.gameDetails?.takeIf { it.gameId == app.gameId },
+                                onLaunchPressed = { onBandPressed(app, it) })
                         }
                     }
                     Spacer(Modifier.width(u.dp(56)))
@@ -345,7 +353,7 @@ internal fun AppDrawerContent(
                         ?.let { com.echo.core.ui.components.ControllerPromptItem(GamepadAction.CHANGE_SORT, it.first) },
                     com.echo.core.ui.components.ControllerPromptItem(GamepadAction.NEXT_PAGE, "Search"),
                 ),
-                primary = focused?.let { com.echo.core.ui.components.HintAction(GamepadAction.SELECT, actionLabel(it)) },
+                primary = focused?.let { drawerLaunchAction(it, state.holdingPackage) },
                 filter = {
                     com.echo.core.ui.components.TriggerFilter(
                         // the rail's filter beside the section, since nothing else says the list is narrowed

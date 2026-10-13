@@ -97,6 +97,7 @@ import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import com.echo.feature.crossbar.viewmodel.isInstalledApp
 import com.echo.feature.crossbar.viewmodel.primaryVerbFor
+import com.echo.feature.crossbar.viewmodel.holdMsFor
 import com.echo.core.common.format.relativeTime
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.design.panelDesignUnits
@@ -118,6 +119,10 @@ fun SearchScreen(
     onKindPicked: (SearchKind?) -> Unit = {},
     // the crossbar's wave, which runs behind the shelf (owner, 2026-10-05: in place of the design's pegboard)
     waveStyle: com.echo.core.ui.wave.WaveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
+    // the id A is held on, from the crossbar's launch hold
+    launchHold: String? = null,
+    // a finger down and up on a game or app's Open, for the crossbar's launch hold
+    onOpenPressed: (Int, Boolean) -> Unit = { _, _ -> },
 ) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
@@ -185,7 +190,8 @@ fun SearchScreen(
                 empty != null -> Box(Modifier.padding(horizontal = u.dp(64))) { EmptyNotice(empty, u) }
                 focused != null -> {
                     // the Titan 2's keyboard is hardware: its keyboard strip is a sliver, so there is room for what this is
-                    if (!imeUp || IsTitan2) Info(focused, u, onOpen = { onActivateAt(state.selectedIndex) }, onOptions = { onOptionsAt(state.selectedIndex) }.takeIf { state.scope != SearchScope.WEB })
+                    if (!imeUp || IsTitan2) Info(focused, searchLaunchAction(focused, launchHold), u, onOpen = { onActivateAt(state.selectedIndex) },
+                        onOpenPressed = { onOpenPressed(state.selectedIndex, it) }, onOptions = { onOptionsAt(state.selectedIndex) }.takeIf { state.scope != SearchScope.WEB })
                     Shelf(state, u, onActivateAt, onFocusAt, Modifier.weight(1f).fillMaxWidth())
                 }
             }
@@ -201,7 +207,7 @@ fun SearchScreen(
                     ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options").takeIf { state.scope != SearchScope.WEB },
                 ),
                 modifier = Modifier.align(Alignment.BottomCenter),
-                primary = focused?.let { HintAction(GamepadAction.SELECT, primaryVerbFor(it) ?: "Open", listOfNotNull(it.title, it.subtitle).filter { t -> t.isNotBlank() }.joinToString(" · ")) },
+                primary = focused?.let { searchLaunchAction(it, launchHold) },
                 onAction = { action ->
                     when (action) {
                         GamepadAction.BACK -> onBack()
@@ -214,6 +220,16 @@ fun SearchScreen(
         }
     }
 }
+
+// the footer's A for the selected result: the crossbar's hold, so a game or app's card rises as on the crossbar
+// (issue #36)
+internal fun searchLaunchAction(row: CrossbarItem, launchHold: String?): HintAction =
+    HintAction(
+        GamepadAction.SELECT, primaryVerbFor(row) ?: "Open",
+        listOfNotNull(row.title, row.subtitle).filter { it.isNotBlank() }.joinToString(" · "),
+        holdMs = holdMsFor(row),
+        holding = launchHold == row.id,
+    )
 
 // the kind filter's word (All, then each kind the results hold, with its count) and the kind a tap moves to
 internal fun searchKindFilter(state: SearchState): Pair<String, SearchKind?>? {
@@ -229,7 +245,7 @@ internal fun searchKindFilter(state: SearchState): Pair<String, SearchKind?>? {
 // what the selected result is: its kind, title, a pill of facts and when it was last opened on the left; what is
 // known about it and its buttons on the right
 @Composable
-private fun Info(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOptions: (() -> Unit)?) {
+private fun Info(row: CrossbarItem, open: HintAction, u: DesignUnits, onOpen: () -> Unit, onOpenPressed: (Boolean) -> Unit, onOptions: (() -> Unit)?) {
     val (kind, detail) = kindAndDetail(row)
     val about = (row.description ?: row.metadataLine)?.takeIf { it.isNotBlank() }
     // owner, 2026-10-09: on the Titan 2 the buttons stand on the right, level with the title and larger, and what is
@@ -241,7 +257,7 @@ private fun Info(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOption
                 InfoTitle(row, kind, detail, u)
                 about?.let { InfoAbout(it, u) }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(bu.dp(10))) { InfoButtons(row, bu, onOpen, onOptions) }
+            Row(horizontalArrangement = Arrangement.spacedBy(bu.dp(10))) { InfoButtons(open, bu, onOpen, onOpenPressed, onOptions) }
         }
         return
     }
@@ -249,7 +265,7 @@ private fun Info(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOption
         Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(u.dp(8))) { InfoTitle(row, kind, detail, u) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(u.dp(12))) {
             about?.let { InfoAbout(it, u) }
-            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) { InfoButtons(row, u, onOpen, onOptions) }
+            Row(horizontalArrangement = Arrangement.spacedBy(u.dp(10))) { InfoButtons(open, u, onOpen, onOpenPressed, onOptions) }
         }
     }
 }
@@ -279,8 +295,9 @@ private fun InfoAbout(text: String, u: DesignUnits) {
 }
 
 @Composable
-private fun InfoButtons(row: CrossbarItem, u: DesignUnits, onOpen: () -> Unit, onOptions: (() -> Unit)?) {
-    PanelButton(GamepadAction.SELECT, primaryVerbFor(row) ?: "Open", u, onClick = onOpen)
+private fun InfoButtons(open: HintAction, u: DesignUnits, onOpen: () -> Unit, onOpenPressed: (Boolean) -> Unit, onOptions: (() -> Unit)?) {
+    // a game or app's Open is the footer's A: the same hold, reported to the crossbar so the footer's card rises
+    PanelButton(GamepadAction.SELECT, open.label, u, open.holdMs, open.holding, onOpenPressed.takeIf { open.holdMs > 0L }, onClick = onOpen)
     onOptions?.let { PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = it) }
 }
 
