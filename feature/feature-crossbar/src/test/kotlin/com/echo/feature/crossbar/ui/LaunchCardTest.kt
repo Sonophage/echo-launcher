@@ -34,7 +34,7 @@ class LaunchCardTest {
     }
 
     @Test
-    fun `media in the App Drawer and Search acts at once, with no card`() {
+    fun `a track and an album in the App Drawer and Search act at once, with no card`() {
         val track = CrossbarItem(id = "t", title = "Track", type = com.echo.feature.crossbar.viewmodel.CrossbarItemType.MUSIC_TRACK)
         assertEquals(0L, searchLaunchAction(track, launchHold = null).holdMs)
         val album = InstalledApp(

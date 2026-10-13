@@ -300,7 +300,7 @@ internal fun WallInfo(
                 color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13))
         }
         Row(Modifier.padding(top = u.dp(4)), horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
-            PanelButton(GamepadAction.SELECT, actionLabel(app), u, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onLaunchPressed.takeIf { app.launchesOut() }, onClick = onLaunch)
+            PanelButton(GamepadAction.SELECT, actionLabel(app), u, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onLaunchPressed.takeIf { app.holdsToOpen() }, onClick = onLaunch)
             PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = onOptions)
         }
     }
@@ -352,7 +352,7 @@ internal fun WallInfoStrip(
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(bu.dp(10))) {
-            PanelButton(GamepadAction.SELECT, actionLabel(app), bu, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onLaunchPressed.takeIf { app.launchesOut() }, onClick = onLaunch)
+            PanelButton(GamepadAction.SELECT, actionLabel(app), bu, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onLaunchPressed.takeIf { app.holdsToOpen() }, onClick = onLaunch)
             PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", bu, onClick = onOptions)
         }
     }
@@ -360,14 +360,15 @@ internal fun WallInfoStrip(
 
 private const val TITAN_STRIP_BUTTON_GROW = 1.35f
 
-// media plays inside ECHO, so A acts at once; an app or game leaves ECHO, so A is a hold
-internal fun InstalledApp.launchesOut(): Boolean = media == null
+// opens on the hold: an app or game, and a video or a book. An album opens on a tap (owner, 2026-10-13).
+// The Crossbar's rule is CrossbarItem.holdsToOpen; the two must agree.
+internal fun InstalledApp.holdsToOpen(): Boolean = media == null || media.kind != com.echo.feature.appbar.MediaKind.MUSIC
 
-// the footer's A for the focused app: a launch out is held, so the card rises with the hold (issue #36)
+// the footer's A for the focused app: what opens on the hold rises with it (issue #36)
 fun drawerLaunchAction(app: InstalledApp, holdingPackage: String?): com.echo.core.ui.components.HintAction =
     com.echo.core.ui.components.HintAction(
         com.echo.core.domain.model.GamepadAction.SELECT, actionLabel(app),
-        holdMs = if (app.launchesOut()) com.echo.core.ui.design.LAUNCH_HOLD_MS else 0L,
+        holdMs = if (app.holdsToOpen()) com.echo.core.ui.design.LAUNCH_HOLD_MS else 0L,
         holding = holdingPackage == app.packageName,
     )
 

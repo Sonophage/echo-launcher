@@ -23,6 +23,10 @@ released; it becomes the next release's notes.
 - Every row you can turn on has its pair in the same menu, such as Add to Favorites and Remove from Favorites. Favorites is one set for games, apps, videos and photos, and Shelves lists play states only.
 - Every menu, rail and Quick Settings tile is in Title Case, such as Game Backgrounds and Button Hints. Game Info's view of an item's information is now called Details.
 
+### Holds
+
+- A video and a book now open on the hold, as a game or app does: hold A, or hold a finger on the launch button, on the Crossbar, Recent, the App Drawer and Search. A track, an album and a photo still open on a tap.
+
 ### Touch
 
 - A press shows your theme's focus style (Classic, Halo, Bracket or Lift), the same mark the controller shows. Android's grey ripple is gone.

@@ -1492,9 +1492,9 @@ class CrossbarViewModel @Inject constructor(
 
     internal fun liftLaunchPress() = launchHold.lift()
 
-    // starts the launch ring when a pad A press would leave ECHO; false means act now
+    // starts the launch ring when a pad A press opens on the hold; false means act now
     internal fun holdToLaunch(item: CrossbarItem, launch: () -> Unit): Boolean {
-        if (heldFromPad != GamepadAction.SELECT || !item.launchesOut()) return false
+        if (heldFromPad != GamepadAction.SELECT || !item.holdsToOpen()) return false
         holdButton = GamepadAction.SELECT
         launchHold.start(item.id, launch)
         return true
@@ -4008,8 +4008,8 @@ class CrossbarViewModel @Inject constructor(
         val s = _uiState.value
         if (s.hasBlockingOverlay) return
         if (index == s.selectedItemIndex) {
-            // a game or app launches only by holding the launch button
-            if (s.currentItems.getOrNull(index)?.launchesOut() != true) activateSelected()
+            // a game, an app, a video or a book opens only by holding the launch button
+            if (s.currentItems.getOrNull(index)?.holdsToOpen() != true) activateSelected()
         } else {
             val clamped = index.coerceIn(0, (s.currentItems.size - 1).coerceAtLeast(0))
             if (clamped != s.selectedItemIndex) {

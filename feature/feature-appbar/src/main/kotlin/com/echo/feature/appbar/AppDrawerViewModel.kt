@@ -1,6 +1,6 @@
 package com.echo.feature.appbar
 
-import com.echo.feature.appbar.appdrawer.launchesOut
+import com.echo.feature.appbar.appdrawer.holdsToOpen
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -607,10 +607,10 @@ class AppDrawerViewModel @Inject constructor(
 
     private fun holdToLaunch(packageName: String) = launchHold.start(packageName) { launchApp(packageName) }
 
-    // a finger on an app's Play holds as A does, so the footer's card rises (issue #36); media acts on its tap
+    // a finger on an app's Play holds as A does, so the footer's card rises (issue #36); an album acts on its tap
     fun onLaunchPressed(app: InstalledApp, down: Boolean) {
         if (!down) return launchHold.lift()
-        if (app.launchesOut()) launchHold.press(app.packageName) { launchApp(app.packageName) }
+        if (app.holdsToOpen()) launchHold.press(app.packageName) { launchApp(app.packageName) }
     }
 
     fun handleGamepadAction(action: GamepadAction) {
@@ -685,9 +685,9 @@ class AppDrawerViewModel @Inject constructor(
             }
             GamepadAction.SELECT -> {
                 val app = state.visibleApps.getOrNull(cur)
-                // media plays inside ECHO, so it acts at once; a launch out of ECHO is a hold
+                // an app, a video or a book opens on the hold; an album acts at once (owner, 2026-10-13)
                 if (app == null) Unit
-                else if (app.launchesOut()) holdToLaunch(app.packageName)
+                else if (app.holdsToOpen()) holdToLaunch(app.packageName)
                 else launchApp(app.packageName)
             }
 

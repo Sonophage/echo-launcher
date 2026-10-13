@@ -286,8 +286,8 @@ class CrossbarRecents(
         vm.markTouchInput()
         val s = uiState.value
         if (s.hasBlockingOverlay || index !in s.currentItems.indices) return
-        // a game or app launches only by holding the launch button; tapping its card just picks it
-        if (s.currentItems[index].launchesOut()) uiState.update { it.copy(selectedItemIndex = index) } else vm.onItemSelected(index)
+        // a game, an app, a video or a book opens only by holding the launch button; tapping its card just picks it
+        if (s.currentItems[index].holdsToOpen()) uiState.update { it.copy(selectedItemIndex = index) } else vm.onItemSelected(index)
     }
 
     // owner, 2026-10-05: holding a game or app's card or row launches it, the same hold as A; a tap only picks it
@@ -296,7 +296,7 @@ class CrossbarRecents(
         vm.markTouchInput()
         val s = uiState.value
         val item = s.currentItems.getOrNull(index)
-        if (s.hasBlockingOverlay || item == null || !item.launchesOut()) return
+        if (s.hasBlockingOverlay || item == null || !item.holdsToOpen()) return
         uiState.update { it.copy(selectedItemIndex = index) }
         vm.pressToLaunch(item) {
             // by id, in case the column changed under the finger during the hold

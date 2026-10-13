@@ -244,11 +244,12 @@ class CrossbarSearch(
         }
     }
 
-    // a finger on the banner's Open for a game or app holds as Recent's cards do, so the footer's card rises
+    // a finger on the banner's Open for a game, an app, a video or a book holds as Recent's cards do, so the
+    // footer's card rises
     fun onSearchOpenPress(index: Int, down: Boolean) {
         if (!down) return vm.liftLaunchPress()
         vm.markTouchInput()
-        val row = uiState.value.search?.rows?.getOrNull(index)?.takeIf { it.launchesOut() } ?: return
+        val row = uiState.value.search?.rows?.getOrNull(index)?.takeIf { it.holdsToOpen() } ?: return
         vm.pressToLaunch(row) { onSearchActivatedAt(index) }
     }
 
