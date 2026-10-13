@@ -71,6 +71,11 @@ screen's padded column.
 - The focus marks are one definition in `theme/FocusMark.kt`: `LocalFocusStyle` is the theme's style, `focusMark`
   draws HALO, BRACKET and LIFT, and `focusGlow` draws CLASSIC's warm glow (draw it only when `style.glows`).
   Mark a focused item with these; do not draw a second ring or glow.
+- A press draws the same mark: `PressMark` (`theme/PressMark.kt`) is the `LocalIndication` `EchoTheme` provides, so a
+  plain `clickable` shows it while the finger is down. Never ask for a Material `ripple()`; `NoRippleTest` fails on one.
+  Set `indication = null` only on a scrim or a whole-screen tap. When the tap target is wider than its icon, give the
+  clickable an `interactionSource` with `indication = null` and put `Modifier.indication(source, LocalIndication.current)`
+  on the icon (the crossbar rows, the footer's A orb).
 - `WaveLayers(style)` draws the wave; the design (PSP, Echo Rings, Echo Arcs) comes from
   `LocalWaveDesign`. The wave sits just above the backdrop (wallpaper or full-screen art) and below
   icons, panels and words.

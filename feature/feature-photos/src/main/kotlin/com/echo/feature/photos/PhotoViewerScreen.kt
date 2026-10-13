@@ -297,7 +297,7 @@ private fun androidx.compose.foundation.layout.BoxWithConstraintsScope.ViewerChr
                 Modifier
                     .width(if (focused) u.dp(110) else u.dp(56))
                     .offset(y = if (focused) -u.dp(10) else 0.dp)
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                    .clickable {
                         onTouchInput(); viewModel.activateControl(control)
                     },
                 horizontalAlignment = Alignment.CenterHorizontally,

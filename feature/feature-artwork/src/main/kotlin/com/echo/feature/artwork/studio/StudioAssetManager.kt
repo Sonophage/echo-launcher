@@ -53,7 +53,7 @@ internal fun StudioAssetManagerPanel(
     onClose: () -> Unit,
 ) {
     Box(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.9f)).clickable(onClick = onClose),
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.9f)).clickable(interactionSource = null, indication = null, onClick = onClose),
         contentAlignment = Alignment.Center,
     ) {
         Column(

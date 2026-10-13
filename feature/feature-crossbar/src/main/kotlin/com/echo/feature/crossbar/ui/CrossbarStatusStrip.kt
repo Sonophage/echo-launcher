@@ -28,6 +28,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -450,14 +451,11 @@ private fun NoticeOrb(
         if (count > lastCount) arrivals++
         lastCount = count
     }
+    val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Row(
         Modifier
-            // no clip: the echo rings spread past the orb, so the press shows as an unbounded round ripple
-            .clickable(
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication = androidx.compose.material3.ripple(bounded = false, radius = u.dp(28)),
-                onClick = onTapped,
-            )
+            // the whole row takes the tap; the press mark is drawn on the orb, not round the count (spec #3)
+            .clickable(interactionSource = press, indication = null, onClick = onTapped)
             .semantics { contentDescription = countLabel(count, "notification") },
         verticalAlignment = Alignment.CenterVertically,
         // room for the echo rings between the count and the orb
@@ -467,6 +465,7 @@ private fun NoticeOrb(
         Box(
             Modifier
                 .size(u.dp(44))
+                .indication(press, androidx.compose.foundation.LocalIndication.current)
                 // owner, 2026-10-09: a soft glow while notifications wait, and one wave as each arrives; the battery
                 // moved to the left circle. The bare track keeps the two orbs a pair; joined to its card it gives way
                 .echoPulse(arrivals, accent)

@@ -79,7 +79,7 @@ fun MetadataPreviewPanel(
     onClose: () -> Unit,
 ) {
     Box(
-        Modifier.fillMaxSize().background(Color(0xCC000000)).clickable(onClick = onClose),
+        Modifier.fillMaxSize().background(Color(0xCC000000)).clickable(interactionSource = null, indication = null, onClick = onClose),
         contentAlignment = Alignment.Center,
     ) {
         Column(

@@ -424,7 +424,7 @@ internal fun ArtworkStudioContent(
                 Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.93f))
-                    .clickable(onClick = actions::dismissCandidate),
+                    .clickable(interactionSource = null, indication = null, onClick = actions::dismissCandidate),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -524,7 +524,7 @@ internal fun ArtworkStudioContent(
                 Modifier
                     .fillMaxSize()
                     .background(Color(0xC0000000))
-                    .clickable(onClick = actions::cancelChangeMatch),
+                    .clickable(interactionSource = null, indication = null, onClick = actions::cancelChangeMatch),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
@@ -690,7 +690,7 @@ internal fun ArtworkStudioContent(
                 Modifier
                     .fillMaxSize()
                     .background(Color(0xC0000000))
-                    .clickable(onClick = actions::cancelSearch),
+                    .clickable(interactionSource = null, indication = null, onClick = actions::cancelSearch),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
@@ -816,7 +816,7 @@ internal fun ArtworkStudioContent(
             val info = state.info
             Box(
                 Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.9f))
-                    .clickable(onClick = actions::closeActions),
+                    .clickable(interactionSource = null, indication = null, onClick = actions::closeActions),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
