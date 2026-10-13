@@ -620,7 +620,7 @@ private fun reviewStatusColor(status: StudioReviewStatus): Color = when (status)
 /**
  * The studio's menus, activated the way every other menu in the app is: through
  * MenuState.chose(), which resolves the index against the DRAWN rows. Indexing the
- * source list directly is what made "View File Information" run Clear Artwork.
+ * source list directly is what made the file details row run Clear Artwork.
  *
  * selectedIndex is still an index into the drawn rows, so the source lists also keep
  * destructive rows last -- StudioMenuOrderTest pins that.

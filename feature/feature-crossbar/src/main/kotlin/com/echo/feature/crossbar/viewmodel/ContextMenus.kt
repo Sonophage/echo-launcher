@@ -6,6 +6,7 @@ import com.echo.core.domain.model.HideLocationType
 import com.echo.core.domain.model.PlatformIds
 import com.echo.core.data.repository.MediaRootKind
 import com.echo.core.ui.components.MenuGroup
+import com.echo.core.ui.components.favoritesLabel
 
 internal fun CrossbarUiState.currentCategoryOrNull(): Category? =
     categories.getOrNull(selectedCategoryIndex)
@@ -30,13 +31,12 @@ internal fun gameContextMenuItems(
 
     return buildList {
         add(CrossbarContextMenuItem("play", "Play", hidden = true))
-        if (state.gameInfo == null) add(CrossbarContextMenuItem("game_info", "Game Info"))
+        if (state.gameInfo == null) add(CrossbarContextMenuItem("game_info", "Details", group = MenuGroup.ABOUT))
         // the kit's Game Info has no buttons, so its extras live in Options (owner, 2026-10-04)
         state.gameInfo?.takeIf { it.item.gameId == item.gameId }?.let { info ->
             val offered = gameInfoActions(info)
-            if (GameInfoAction.INFO in offered) add(CrossbarContextMenuItem("info_about", "Info"))
+            if (GameInfoAction.INFO in offered) add(CrossbarContextMenuItem("info_about", "Details", group = MenuGroup.ABOUT))
             if (GameInfoAction.VIDEO in offered) add(CrossbarContextMenuItem("info_video", "Video"))
-            if (GameInfoAction.MANUAL in offered) add(CrossbarContextMenuItem("info_manual", "Manual"))
         }
 
         if (discCount > 1) add(CrossbarContextMenuItem("choose_disc", "Choose Disc"))
@@ -44,13 +44,14 @@ internal fun gameContextMenuItems(
             add(CrossbarContextMenuItem("export_game", "Export Game", group = MenuGroup.SETTINGS))
         }
 
-        add(CrossbarContextMenuItem("shelves", "Shelves", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+        add(CrossbarContextMenuItem("shelves", "Shelves", group = MenuGroup.ORGANIZE))
+        add(favoritesRow(item.isFavorite))
         // owner, 2026-10-08: filter the game lists by this game's genre, or clear the filter
         genreFilterRow(item.genre, state.genreFilter)?.let(::add)
         // owner, 2026-10-08: the drawer's Games buttons switch between systems and genres from here
         if (state.activeAppDrawerFilter != null) add(groupingRow(state.gameGrouping))
         pinKey(item)?.let { add(recentPinRow(it in state.recentPins)) }
-        if (onRecentShelf) add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+        if (onRecentShelf) add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.REMOVE))
 
         if (inGamingCategory) {
             val hasOtherCustomCategory = state.categories.any {
@@ -58,46 +59,35 @@ internal fun gameContextMenuItems(
             }
 
             if (currentCat.id == BuiltInCategory.GAMES) {
-                if (hasOtherCustomCategory) add(CrossbarContextMenuItem("add_category", "Add to Category", group = MenuGroup.CATEGORY))
+                if (hasOtherCustomCategory) add(CrossbarContextMenuItem("add_category", "Add to Category", group = MenuGroup.ORGANIZE))
             } else {
-                if (hasOtherCustomCategory) add(CrossbarContextMenuItem("move_category", "Move to Category", group = MenuGroup.CATEGORY))
-                add(CrossbarContextMenuItem("remove_category", "Remove from Category", group = MenuGroup.CATEGORY))
-                val pinned = item.pinnedInCategory
-                add(
-                    CrossbarContextMenuItem(
-                        if (pinned) "unpin_category" else "pin_category",
-                        if (pinned) "Unpin" else "Pin",
-                        group = MenuGroup.CATEGORY,
-                    ),
-                )
+                if (hasOtherCustomCategory) add(CrossbarContextMenuItem("move_category", "Move to Category", group = MenuGroup.ORGANIZE))
+                add(CrossbarContextMenuItem("remove_category", "Remove from Category", group = MenuGroup.REMOVE))
+                add(pinToTopRow(item.pinnedInCategory, action = "pin_category"))
             }
         }
 
-        add(CrossbarContextMenuItem("detail_title", "Edit Title", group = MenuGroup.METADATA))
-        add(CrossbarContextMenuItem("detail_note", "Edit Note", group = MenuGroup.METADATA))
-        add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.METADATA))
-        add(CrossbarContextMenuItem("detail_ARTWORK", "Artwork", group = MenuGroup.METADATA))
-        add(CrossbarContextMenuItem("detail_METADATA", "Update Metadata", group = MenuGroup.METADATA))
-        add(CrossbarContextMenuItem("detail_MANUAL", "Manual", group = MenuGroup.METADATA))
-        add(CrossbarContextMenuItem("detail_REFRESH", "Refresh Artwork", group = MenuGroup.METADATA))
+        add(CrossbarContextMenuItem("detail_title", "Edit Title", group = MenuGroup.EDIT))
+        add(CrossbarContextMenuItem("detail_note", "Edit Note", group = MenuGroup.EDIT))
+        add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.EDIT))
+        add(CrossbarContextMenuItem("detail_ARTWORK", "Artwork", group = MenuGroup.EDIT))
+        add(CrossbarContextMenuItem("detail_METADATA", "Update Metadata", group = MenuGroup.EDIT))
+        add(CrossbarContextMenuItem("detail_MANUAL", "Manual", group = MenuGroup.EDIT))
+        add(CrossbarContextMenuItem("detail_REFRESH", "Refresh Artwork", group = MenuGroup.EDIT))
 
         if (!item.isAndroidApp) add(CrossbarContextMenuItem("change_emulator", "Change Emulator", group = MenuGroup.SETTINGS))
         launchOnOtherScreenRow(state, item.packageName, item.platformId)?.let(::add)
-        // owner, 2026-10-10: a ROM game opens the folder it is in; a PC or Android game has none, so it shows what it has
-        if (item.isAndroidApp || item.platformId == PlatformIds.WINDOWS) {
-            add(CrossbarContextMenuItem("file_location", "View File Location", group = MenuGroup.SETTINGS))
-        } else {
-            add(CrossbarContextMenuItem("open_folder", "Open Folder", group = MenuGroup.SETTINGS, pinnedToRoot = true))
-        }
+        // the row opens the game's folder (owner, 2026-10-12); a game with no file (PC, Android) has no row
+        if (item.romPath != null) add(CrossbarContextMenuItem("open_folder", "Open Folder", group = MenuGroup.SETTINGS))
 
         hideLocation?.let { (_, _, label) ->
             add(CrossbarContextMenuItem("hide_here", "Hide from $label", group = MenuGroup.REMOVE))
         }
         if (inMissingBucket) {
-            add(CrossbarContextMenuItem("remove_missing", "Remove permanently", isDestructive = true, group = MenuGroup.REMOVE))
+            add(CrossbarContextMenuItem("remove_missing", "Remove from Library", isDestructive = true, group = MenuGroup.REMOVE))
         } else if (item.platformId == PlatformIds.ANDROID && item.packageName != null) {
-            add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.SETTINGS, pinnedToRoot = true))
-            add(CrossbarContextMenuItem("unmark_game", "Unmark as Game", group = MenuGroup.REMOVE))
+            add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.ABOUT))
+            add(CrossbarContextMenuItem("unmark_game", "Unmark as Game", group = MenuGroup.ORGANIZE))
             add(CrossbarContextMenuItem("remove_app", "Remove from Library", isDestructive = true, group = MenuGroup.REMOVE))
             add(CrossbarContextMenuItem("uninstall", "Uninstall", isDestructive = true, group = MenuGroup.REMOVE))
         } else {
@@ -112,43 +102,61 @@ internal fun launchOnOtherScreenRow(state: CrossbarUiState, packageName: String?
     if (!state.secondDisplayPresent || com.echo.core.domain.model.KnownEmulatorPackages.isDualScreen(packageName, platformId)) null
     else CrossbarContextMenuItem("launch_other_screen", "Launch on Other Screen", group = MenuGroup.SETTINGS)
 
+// the games a game's Favorites row changes: every disc of its set, which shows as one game and is a favourite when
+// any disc is (projectGamesForDisplay); else the game alone
+internal fun favoriteIds(gameId: Long, discSet: List<com.echo.core.domain.model.Game>): List<Long> =
+    discSet.map { it.id }.ifEmpty { listOf(gameId) }
+
+internal fun favoritesRow(isFavorite: Boolean): CrossbarContextMenuItem =
+    CrossbarContextMenuItem(if (isFavorite) "unfavorite" else "favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE)
+
+// a game, app or system pins to, or unpins from, the top of its column; the off action is "un" + [action]
+internal fun pinToTopRow(pinned: Boolean, action: String = "pin"): CrossbarContextMenuItem =
+    CrossbarContextMenuItem(if (pinned) "un$action" else action, if (pinned) "Unpin from Top" else "Pin to Top", group = MenuGroup.ORGANIZE)
+
 // owner, 2026-10-06: a game or app pins to, or unpins from, the list under Recent
 internal fun recentPinRow(pinned: Boolean): CrossbarContextMenuItem =
-    if (pinned) CrossbarContextMenuItem("unpin_recent", "Unpin from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true)
-    else CrossbarContextMenuItem("pin_recent", "Pin to Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true)
+    if (pinned) CrossbarContextMenuItem("unpin_recent", "Unpin from Recent", group = MenuGroup.ORGANIZE)
+    else CrossbarContextMenuItem("pin_recent", "Pin to Recent", group = MenuGroup.ORGANIZE)
 
 internal fun appContextMenuItems(
     state: CrossbarUiState,
     categoryId: String?,
     onRecentShelf: Boolean,
     packageName: String? = null,
+    isFavorite: Boolean = false,
+    pinnedInCategory: Boolean = false,
+    isGame: Boolean = false,
 ): List<CrossbarContextMenuItem> = buildList {
     add(CrossbarContextMenuItem("launch", "Launch"))
 
-    add(CrossbarContextMenuItem("mark_game", "Mark as Game", group = MenuGroup.LIBRARY))
-    add(CrossbarContextMenuItem("favorite", "Add to Favorites", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+    add(
+        if (isGame) CrossbarContextMenuItem("unmark_game", "Unmark as Game", group = MenuGroup.ORGANIZE)
+        else CrossbarContextMenuItem("mark_game", "Mark as Game", group = MenuGroup.ORGANIZE),
+    )
+    add(favoritesRow(isFavorite))
     packageName?.let { add(recentPinRow("a:$it" in state.recentPins)) }
     if (onRecentShelf) {
         // Remove clears it until it is used again; Hide keeps it off the panel until unhidden (owner, 2026-10-05)
-        add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+        add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.REMOVE))
         add(CrossbarContextMenuItem("hide_from_recent", "Hide from Recent", group = MenuGroup.REMOVE))
     }
 
     // owner, 2026-10-08: art through Artwork Studio, as a game's; the old app editor changed little but the title
-    add(CrossbarContextMenuItem("app_artwork", "Artwork", group = MenuGroup.METADATA))
-    add(CrossbarContextMenuItem("rename", "Rename Shortcut", group = MenuGroup.SETTINGS))
+    add(CrossbarContextMenuItem("app_artwork", "Artwork", group = MenuGroup.EDIT))
+    add(CrossbarContextMenuItem("rename", "Rename Shortcut", group = MenuGroup.EDIT))
     launchOnOtherScreenRow(state, packageName, platformId = null)?.let(::add)
-    // owner, 2026-10-10: Android's App Info shows at the top of an app's menu, not inside Settings
-    if (packageName != null) add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.SETTINGS, pinnedToRoot = true))
+    // App Info is in About, at the top level (owner, 2026-10-12)
+    if (packageName != null) add(CrossbarContextMenuItem("app_info", "App Info", group = MenuGroup.ABOUT))
 
-    add(CrossbarContextMenuItem("move", "Move to Category", group = MenuGroup.CATEGORY))
-    add(CrossbarContextMenuItem("add", "Add to Category", group = MenuGroup.CATEGORY))
+    add(CrossbarContextMenuItem("move", "Move to Category", group = MenuGroup.ORGANIZE))
+    add(CrossbarContextMenuItem("add", "Add to Category", group = MenuGroup.ORGANIZE))
     if (categoryId != null) {
-        add(CrossbarContextMenuItem("remove", "Remove from Category", group = MenuGroup.CATEGORY))
-        add(CrossbarContextMenuItem("pin", "Pin to Category", group = MenuGroup.CATEGORY))
+        add(CrossbarContextMenuItem("remove", "Remove from Category", group = MenuGroup.REMOVE))
+        add(pinToTopRow(pinnedInCategory))
 
         if (!onRecentShelf) {
-            add(CrossbarContextMenuItem("hide_from_category", "Hide from ${state.categoryDisplayNameOf(categoryId)}", group = MenuGroup.CATEGORY))
+            add(CrossbarContextMenuItem("hide_from_category", "Hide from ${state.categoryDisplayNameOf(categoryId)}", group = MenuGroup.REMOVE))
         }
     }
     add(CrossbarContextMenuItem("hide_everywhere", "Hide Everywhere", group = MenuGroup.REMOVE))
@@ -163,18 +171,18 @@ internal fun videoFileContextMenuItems(
 ): List<CrossbarContextMenuItem> = buildList {
     add(CrossbarContextMenuItem("video_play", "Play"))
     if (resumePositionMs > 0) add(CrossbarContextMenuItem("video_resume", "Resume"))
-    add(CrossbarContextMenuItem("video_details", "Details"))
+    add(CrossbarContextMenuItem("video_details", "Details", group = MenuGroup.ABOUT))
     // owner, 2026-10-08: a video can be the wallpaper; MotionWallpaper decides whether it fits its limits
     add(CrossbarContextMenuItem("video_wallpaper", "Set as Wallpaper"))
 
-    add(CrossbarContextMenuItem("video_favorite", if (isFavorite) "Remove from Favorites" else "Add to Favorites", group = MenuGroup.LIBRARY, pinnedToRoot = true))
-    add(CrossbarContextMenuItem("video_add_playlist", "Add to Playlist", group = MenuGroup.LIBRARY))
-    if (hasWatchStamp) add(CrossbarContextMenuItem("video_remove_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+    add(CrossbarContextMenuItem(if (isFavorite) "video_unfavorite" else "video_favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE))
+    add(CrossbarContextMenuItem("video_add_playlist", "Add to Playlist", group = MenuGroup.ORGANIZE))
+    if (hasWatchStamp) add(CrossbarContextMenuItem("video_remove_recent", "Remove from Recent", group = MenuGroup.REMOVE))
 
     if (inPlaylist) {
-        add(CrossbarContextMenuItem("video_remove_playlist", "Remove from this Playlist", isDestructive = true, confirms = false, group = MenuGroup.REMOVE))
+        add(CrossbarContextMenuItem("video_remove_playlist", "Remove from Playlist", isDestructive = true, confirms = false, group = MenuGroup.REMOVE))
     }
-    add(CrossbarContextMenuItem("video_remove", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("video_remove", "Delete", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
 internal fun videoLibraryContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
@@ -184,14 +192,15 @@ internal fun videoLibraryContextMenuItems(): List<CrossbarContextMenuItem> = lis
 
 internal fun videoPlaylistContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
     CrossbarContextMenuItem("open_video_playlist", "Open"),
-    CrossbarContextMenuItem("rename_video_playlist", "Rename Playlist", group = MenuGroup.SETTINGS),
+    CrossbarContextMenuItem("rename_video_playlist", "Rename Playlist", group = MenuGroup.EDIT),
     CrossbarContextMenuItem("delete_video_playlist", "Delete Playlist", isDestructive = true, group = MenuGroup.REMOVE),
 )
 
-internal fun photoFileContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
+internal fun photoFileContextMenuItems(isFavorite: Boolean = false): List<CrossbarContextMenuItem> = listOf(
     CrossbarContextMenuItem("photo_open", "Open"),
+    CrossbarContextMenuItem(if (isFavorite) "photo_unfavorite" else "photo_favorite", favoritesLabel(isFavorite), group = MenuGroup.ORGANIZE),
     CrossbarContextMenuItem("photo_set_wallpaper", "Set as Launcher Wallpaper", group = MenuGroup.SETTINGS),
-    CrossbarContextMenuItem("photo_remove", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE),
+    CrossbarContextMenuItem("photo_remove", "Delete", isDestructive = true, group = MenuGroup.REMOVE),
 )
 
 internal fun photoLibraryContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
@@ -202,20 +211,20 @@ internal fun photoLibraryContextMenuItems(): List<CrossbarContextMenuItem> = lis
 
 internal fun bookContextMenuItems(hasOpenStamp: Boolean): List<CrossbarContextMenuItem> = buildList {
     add(CrossbarContextMenuItem("book_open", "Read"))
-    add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.METADATA))
-    if (hasOpenStamp) add(CrossbarContextMenuItem("book_remove_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
-    add(CrossbarContextMenuItem("book_remove", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.EDIT))
+    if (hasOpenStamp) add(CrossbarContextMenuItem("book_remove_recent", "Remove from Recent", group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("book_remove", "Delete", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
 // an album's own menu (the Albums view, the App Drawer's Music)
 internal fun albumContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
     CrossbarContextMenuItem("play_album", "Play Album"),
-    CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.METADATA),
+    CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.EDIT),
 )
 
 internal fun recentAlbumContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
     CrossbarContextMenuItem("open_album", "Open Album"),
-    CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true),
+    CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.REMOVE),
 )
 
 // every recent track of the album, not only the run the row was folded from
@@ -229,20 +238,20 @@ internal fun musicTrackContextMenuItems(
     add(CrossbarContextMenuItem("play", "Play"))
     add(CrossbarContextMenuItem("play_background", "Play in Background"))
 
-    add(CrossbarContextMenuItem("add_to_playlist", "Add to Playlist", group = MenuGroup.LIBRARY))
-    add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.METADATA))
-    if (hasPlayStamp) add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.LIBRARY, pinnedToRoot = true))
+    add(CrossbarContextMenuItem("add_to_playlist", "Add to Playlist", group = MenuGroup.ORGANIZE))
+    add(CrossbarContextMenuItem("edit_genre", "Edit Genre", group = MenuGroup.EDIT))
+    if (hasPlayStamp) add(CrossbarContextMenuItem("remove_from_recent", "Remove from Recent", group = MenuGroup.REMOVE))
 
     if (playlistId != null) {
-        add(CrossbarContextMenuItem("remove_from_playlist", "Remove from this Playlist", isDestructive = true, confirms = false, group = MenuGroup.REMOVE))
+        add(CrossbarContextMenuItem("remove_from_playlist", "Remove from Playlist", isDestructive = true, confirms = false, group = MenuGroup.REMOVE))
     }
-    add(CrossbarContextMenuItem("remove_track", "Delete From Device", isDestructive = true, group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("remove_track", "Delete", isDestructive = true, group = MenuGroup.REMOVE))
 }
 
 internal fun playlistRowContextMenuItems(): List<CrossbarContextMenuItem> = listOf(
     CrossbarContextMenuItem("open_playlist", "Open"),
-    CrossbarContextMenuItem("add_tracks", "Add Tracks", group = MenuGroup.LIBRARY),
-    CrossbarContextMenuItem("rename_playlist", "Rename Playlist", group = MenuGroup.SETTINGS),
+    CrossbarContextMenuItem("add_tracks", "Add Tracks", group = MenuGroup.ORGANIZE),
+    CrossbarContextMenuItem("rename_playlist", "Rename Playlist", group = MenuGroup.EDIT),
     CrossbarContextMenuItem("delete_playlist", "Delete Playlist", isDestructive = true, group = MenuGroup.REMOVE),
 )
 
@@ -254,12 +263,12 @@ internal fun musicPlayerMenuItems(playback: com.echo.feature.crossbar.music.Musi
         com.echo.feature.crossbar.music.RepeatMode.ONE -> "Repeat: One"
     }),
     CrossbarContextMenuItem("music_background", "Play in Background"),
-    CrossbarContextMenuItem("music_close", "Stop & Close"),
+    CrossbarContextMenuItem("music_close", "Stop"),
 )
 
 internal fun nowPlayingContextMenuItems(isPlaying: Boolean): List<CrossbarContextMenuItem> = listOf(
     CrossbarContextMenuItem("music_playpause", if (isPlaying) "Pause" else "Resume"),
-    CrossbarContextMenuItem("music_close", "Stop and Close"),
+    CrossbarContextMenuItem("music_close", "Stop"),
 )
 
 internal fun platformContextMenuItems(
@@ -275,8 +284,8 @@ internal fun platformContextMenuItems(
     if (platformId == PlatformIds.WINDOWS) {
         add(CrossbarContextMenuItem("import_pc_games", "Import PC Games"))
     }
-    add(CrossbarContextMenuItem("update_metadata", "Update Metadata", group = MenuGroup.SETTINGS))
-    add(CrossbarContextMenuItem("scrape_missing_artwork", "Scrape Missing Artwork", group = MenuGroup.SETTINGS))
+    add(CrossbarContextMenuItem("update_metadata", "Update Metadata", group = MenuGroup.EDIT))
+    add(CrossbarContextMenuItem("scrape_missing_artwork", "Scrape Missing Artwork", group = MenuGroup.EDIT))
 
     if (emulatorLabel != null) {
         add(CrossbarContextMenuItem("default_emulator", "Default Emulator ($emulatorLabel)", group = MenuGroup.SETTINGS))
@@ -287,21 +296,20 @@ internal fun platformContextMenuItems(
                 "clear_emulator_overrides",
                 "Clear $overrideCount Game Override(s)",
                 isDestructive = true,
-                group = MenuGroup.SETTINGS,
+                group = MenuGroup.REMOVE,
             ),
         )
     }
 
-    add(CrossbarContextMenuItem("rename_card", "Rename System", group = MenuGroup.SETTINGS))
+    add(CrossbarContextMenuItem("rename_card", "Rename System", group = MenuGroup.EDIT))
     if (romDirectory != null) {
         add(CrossbarContextMenuItem("card_rom_directory", "ROM Folder ($romDirectory)", group = MenuGroup.SETTINGS))
     }
     add(CrossbarContextMenuItem("library_manager", "Open in Library Manager", group = MenuGroup.SETTINGS))
 
-    if (pinned) add(CrossbarContextMenuItem("unpin", "Unpin", group = MenuGroup.CATEGORY))
-    else add(CrossbarContextMenuItem("pin", "Pin To Top", group = MenuGroup.CATEGORY))
+    add(pinToTopRow(pinned))
 
-    add(CrossbarContextMenuItem("hide", "Hide From Games", group = MenuGroup.REMOVE))
+    add(CrossbarContextMenuItem("hide", "Hide from Games", group = MenuGroup.REMOVE))
 
     if (platformId != PlatformIds.WINDOWS) {
         add(CrossbarContextMenuItem("remove", "Remove System", isDestructive = true, group = MenuGroup.REMOVE))
@@ -317,8 +325,8 @@ internal fun allGamesContextMenuItems(grouping: GameGrouping = GameGrouping.SYST
 )
 
 internal fun groupingRow(grouping: GameGrouping): CrossbarContextMenuItem =
-    if (grouping == GameGrouping.GENRE) CrossbarContextMenuItem("group_by_system", "Group by System", group = MenuGroup.LIBRARY, pinnedToRoot = true)
-    else CrossbarContextMenuItem("group_by_genre", "Group by Genre", group = MenuGroup.LIBRARY, pinnedToRoot = true)
+    if (grouping == GameGrouping.GENRE) CrossbarContextMenuItem("group_by_system", "Group by System", group = MenuGroup.ORGANIZE)
+    else CrossbarContextMenuItem("group_by_genre", "Group by Genre", group = MenuGroup.ORGANIZE)
 
 enum class GameGrouping {
     SYSTEM, GENRE;
@@ -402,9 +410,9 @@ internal fun mediaRootContextMenuItems(linked: Boolean, kind: MediaRootKind): Li
 
 internal fun mediaFoldersContextMenuItems(kind: MediaRootKind): List<CrossbarContextMenuItem> = buildList {
     add(CrossbarContextMenuItem("media_add_root", "Add Folder"))
-    add(CrossbarContextMenuItem("media_rescan_all", "Rescan ${mediaKindLabel(kind)} Library", group = MenuGroup.LIBRARY))
+    add(CrossbarContextMenuItem("media_rescan_all", "Rescan ${mediaKindLabel(kind)} Library"))
     if (kind == MediaRootKind.BOOK) {
-        add(CrossbarContextMenuItem("media_rescan_all_deep", "Deep Rescan", group = MenuGroup.LIBRARY))
+        add(CrossbarContextMenuItem("media_rescan_all_deep", "Deep Rescan", group = MenuGroup.SETTINGS))
     }
     when (kind) {
         MediaRootKind.MUSIC -> add(CrossbarContextMenuItem("media_default_app", "Default Music Player", group = MenuGroup.SETTINGS))
@@ -420,8 +428,8 @@ internal fun mediaFoldersContextMenuItems(kind: MediaRootKind): List<CrossbarCon
 }
 
 internal fun genreFilterRow(itemGenre: com.echo.core.domain.model.GameGenre?, active: com.echo.core.domain.model.GameGenre?): CrossbarContextMenuItem? = when {
-    active != null -> CrossbarContextMenuItem("genre_all", "Show All Genres", group = MenuGroup.LIBRARY, pinnedToRoot = true)
-    itemGenre != null -> CrossbarContextMenuItem("genre_only", "Show Only ${itemGenre.label}", group = MenuGroup.LIBRARY, pinnedToRoot = true)
+    active != null -> CrossbarContextMenuItem("genre_all", "Show All Genres", group = MenuGroup.ORGANIZE)
+    itemGenre != null -> CrossbarContextMenuItem("genre_only", "Show Only ${itemGenre.label}", group = MenuGroup.ORGANIZE)
     else -> null
 }
 

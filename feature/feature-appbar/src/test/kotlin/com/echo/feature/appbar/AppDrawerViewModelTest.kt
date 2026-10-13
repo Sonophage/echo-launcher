@@ -19,6 +19,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.echo.core.ui.components.rowsShown
+import com.echo.core.ui.components.MenuGroup
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppDrawerViewModelTest {
@@ -274,6 +276,86 @@ class AppDrawerViewModelTest {
         verify(exactly = 1) { repository.launchApp("com.example.browser", otherScreen = true) }
     }
 
+    private fun appRow(id: Long, favorite: Boolean = false, game: Boolean = false) = com.echo.core.domain.model.Game(
+        id = id, title = "Browser", packageName = "com.example.browser", isFavorite = favorite,
+        platformId = if (game) com.echo.core.domain.model.PlatformIds.ANDROID else com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
+        contentType = if (game) com.echo.core.domain.model.GameContentType.GAME else com.echo.core.domain.model.GameContentType.ANDROID_APP,
+    )
+
+    private fun openBrowserMenu() {
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.openAppMenu(viewModel.uiState.value.allApps.first { it.packageName == "com.example.browser" })
+        testDispatcher.scheduler.advanceUntilIdle()
+    }
+
+    private val drawnActions get() = viewModel.uiState.value.appMenu!!.rows.map { it.action }
+
+    // Favorites is one set over games, apps, videos and photos; an app is in it through its row in games, and the
+    // pair is under Organize (spec #2 story 20, owner 2026-10-12)
+    @Test
+    fun `the drawer's app menu shows the Favorites half that fits and sets the app's row in games`() = runTest {
+        coEvery { games.getAppEntry("com.example.browser") } returns appRow(7, favorite = true)
+        openBrowserMenu()
+        assertTrue("a favourite offers Remove from Favorites: $drawnActions", AppMenuAction.REMOVE_FROM_FAVORITES in drawnActions)
+        assertFalse(AppMenuAction.ADD_TO_FAVORITES in drawnActions)
+        assertEquals(MenuGroup.ORGANIZE, AppMenuAction.REMOVE_FROM_FAVORITES.group)
+        chooseDrawn(AppMenuAction.REMOVE_FROM_FAVORITES)
+        testDispatcher.scheduler.advanceUntilIdle()
+        io.mockk.coVerify { games.setFavorite(7, false) }
+
+        // an app not yet in games gets its shortcut row, which is then the favourite
+        coEvery { games.getAppEntry("com.example.browser") } returns null
+        coEvery { games.upsert(any()) } returns 9L
+        openBrowserMenu()
+        assertTrue("an app off the list offers Add to Favorites: $drawnActions", AppMenuAction.ADD_TO_FAVORITES in drawnActions)
+        chooseDrawn(AppMenuAction.ADD_TO_FAVORITES)
+        testDispatcher.scheduler.advanceUntilIdle()
+        io.mockk.coVerify { games.upsert(match { it.packageName == "com.example.browser" && it.platformId == com.echo.core.domain.model.PlatformIds.APP_SHORTCUT }) }
+        io.mockk.coVerify { games.setFavorite(9, true) }
+    }
+
+    // the drawn menu, not only menuActions, shows Unmark as Game once the app's row is read (ticket #15)
+    @Test
+    fun `the drawer's drawn menu offers Unmark as Game for an app marked as a game`() = runTest {
+        coEvery { games.getAppEntry("com.example.browser") } returns appRow(7, game = true)
+        openBrowserMenu()
+        assertTrue("drawn: $drawnActions", AppMenuAction.UNMARK_GAME in drawnActions)
+        assertFalse(AppMenuAction.MARK_GAME in drawnActions)
+    }
+
+    // Mark as Game makes the app's row a game in the Android system (a new row when it has none); Unmark as Game
+    // makes it an app shortcut again. Either recounts the Android system's card. The crossbar's menus do the same,
+    // through the same definition (markedAsGame, unmarkedAsGame)
+    @Test
+    fun `the drawer's Mark as Game and Unmark as Game write the app's row in games`() = runTest {
+        val cards = mockk<com.echo.core.data.repository.MemoryCardRepository>(relaxed = true)
+        viewModel = AppDrawerViewModel(repository, mockk(relaxed = true), games, cards, mockk(relaxed = true), mockk(relaxed = true),
+            appCategories, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+        val android = com.echo.core.domain.model.PlatformIds.ANDROID
+        val gameType = com.echo.core.domain.model.GameContentType.GAME
+
+        coEvery { games.getAppEntry("com.example.browser") } returns null
+        openBrowserMenu()
+        chooseDrawn(AppMenuAction.MARK_GAME)
+        testDispatcher.scheduler.advanceUntilIdle()
+        io.mockk.coVerify { games.upsert(match { it.id == 0L && it.packageName == "com.example.browser" && it.title == "Browser" &&
+            it.isManualEntry && it.platformId == android && it.contentType == gameType }) }
+
+        coEvery { games.getAppEntry("com.example.browser") } returns appRow(7, favorite = true)
+        openBrowserMenu()
+        chooseDrawn(AppMenuAction.MARK_GAME)
+        testDispatcher.scheduler.advanceUntilIdle()
+        io.mockk.coVerify { games.upsert(match { it.id == 7L && it.isFavorite && it.platformId == android && it.contentType == gameType }) }
+
+        coEvery { games.getAppEntry("com.example.browser") } returns appRow(7, game = true)
+        openBrowserMenu()
+        chooseDrawn(AppMenuAction.UNMARK_GAME)
+        testDispatcher.scheduler.advanceUntilIdle()
+        io.mockk.coVerify { games.upsert(match { it.id == 7L && it.platformId == com.echo.core.domain.model.PlatformIds.APP_SHORTCUT &&
+            it.contentType == com.echo.core.domain.model.GameContentType.ANDROID_APP }) }
+        io.mockk.coVerify(exactly = 3) { cards.recountGames(android) }
+    }
+
     private fun drawerWithNothingUsed(usageAccess: Boolean): AppDrawerViewModel {
         coEvery { repository.getInstalledApps() } returns fakeApps().map { it.copy(lastUsedAt = 0L) }
         every { repository.hasUsageAccess() } returns usageAccess
@@ -330,7 +412,7 @@ class AppDrawerViewModelTest {
     }
 
     @Test
-    fun `Add to Cross Bar from the controller hands the app to the cross bar, as a tap does`() = runTest {
+    fun `Add to Crossbar from the controller hands the app to the Crossbar, as a tap does`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.setFilter(AppFilter.EMULATORS)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -339,7 +421,7 @@ class AppDrawerViewModelTest {
         val app = viewModel.uiState.value.menuApp!!.packageName
         assertEquals(AppMenuAction.ADD_TO_CROSS_BAR, viewModel.uiState.value.appMenu!!.rows[0].action)
 
-        viewModel.handleGamepadAction(GamepadAction.SELECT)
+        chooseDrawn(AppMenuAction.ADD_TO_CROSS_BAR)
 
         assertEquals(app, viewModel.uiState.value.pendingCrossBarAdd)
         viewModel.onCrossBarAddHandled()
@@ -436,12 +518,23 @@ class AppDrawerViewModelTest {
     private fun openUninstallPrompt() {
         viewModel.handleGamepadAction(GamepadAction.OPEN_CONTEXT_MENU)
         testDispatcher.scheduler.advanceUntilIdle()
-        val actions = viewModel.uiState.value.menuActions
-        val target = actions.indexOf(AppMenuAction.UNINSTALL)
-        assertTrue("the menu offered no Uninstall row: $actions", target >= 0)
-        repeat(target) { viewModel.handleGamepadAction(GamepadAction.NAVIGATE_DOWN) }
-        viewModel.handleGamepadAction(GamepadAction.SELECT)
+        chooseDrawn(AppMenuAction.UNINSTALL)
         testDispatcher.scheduler.advanceUntilIdle()
+    }
+
+    // walks the cursor to the row as a player does: through its section's submenu when it is folded
+    private fun chooseDrawn(action: AppMenuAction) {
+        fun press(match: (com.echo.core.ui.components.MenuRow<AppMenuAction>) -> Boolean) {
+            val menu = viewModel.uiState.value.appMenu!!
+            val target = menu.rowsShown().indexOfFirst(match)
+            assertTrue("no such row among ${menu.rowsShown().map { it.label }}", target >= 0)
+            repeat(target - (menu.selectedIndex ?: 0)) { viewModel.handleGamepadAction(GamepadAction.NAVIGATE_DOWN) }
+            viewModel.handleGamepadAction(GamepadAction.SELECT)
+        }
+        if (viewModel.uiState.value.appMenu!!.rowsShown().none { it.action == action }) {
+            press { it.opensSubmenu && it.group == action.group }
+        }
+        press { it.action == action }
     }
 
     @Test

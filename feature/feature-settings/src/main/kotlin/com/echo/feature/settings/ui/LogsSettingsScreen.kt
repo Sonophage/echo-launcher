@@ -27,6 +27,9 @@ import com.echo.feature.settings.viewmodel.LogsSettingsViewModel
 import timber.log.Timber
 import java.io.File
 
+// a log file's rail
+val LOGS_MENU_ROWS = listOf(MenuRow("share", "Share"))
+
 @Composable
 fun LogsSettingsScreen(
     onBack: () -> Unit,
@@ -41,7 +44,7 @@ fun LogsSettingsScreen(
     var menuFor by remember { mutableStateOf<String?>(null) }
     var menuIndex by remember { mutableIntStateOf(0) }
     var confirmClear by remember { mutableStateOf(false) }
-    val menuRows = listOf(MenuRow("share", "Share"))
+    val menuRows = LOGS_MENU_ROWS
 
     Box(modifier = modifier) {
     SettingsPageScaffold(

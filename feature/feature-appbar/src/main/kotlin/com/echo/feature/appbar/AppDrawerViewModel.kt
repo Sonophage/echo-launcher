@@ -8,6 +8,7 @@ import com.echo.core.domain.model.PlatformIds.ANDROID as ANDROID_PLATFORM_ID
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.echo.core.domain.model.GamepadAction
+import com.echo.core.domain.model.unmarkedAsGame
 import com.echo.core.ui.sound.MenuSound
 import com.echo.core.ui.sound.MenuSoundPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -71,11 +72,13 @@ enum class AppFilter(val label: String, val subtitle: String) {
 }
 
 enum class AppMenuAction(val label: String, val group: MenuGroup) {
-    ADD_TO_CROSS_BAR("Add to Cross Bar", MenuGroup.MAIN),
-    APP_INFO("App Info", MenuGroup.SETTINGS),
+    ADD_TO_CROSS_BAR("Add to Crossbar", MenuGroup.ORGANIZE),
+    APP_INFO("App Info", MenuGroup.ABOUT),
     LAUNCH_OTHER_SCREEN("Launch on Other Screen", MenuGroup.SETTINGS),
-    MARK_GAME("Mark as Game", MenuGroup.LIBRARY),
-    UNMARK_GAME("Unmark as Game", MenuGroup.LIBRARY),
+    MARK_GAME("Mark as Game", MenuGroup.ORGANIZE),
+    UNMARK_GAME("Unmark as Game", MenuGroup.ORGANIZE),
+    ADD_TO_FAVORITES(com.echo.core.ui.components.favoritesLabel(false), MenuGroup.ORGANIZE),
+    REMOVE_FROM_FAVORITES(com.echo.core.ui.components.favoritesLabel(true), MenuGroup.ORGANIZE),
     // owner, 2026-10-05: hide an app that is never used from the whole layout; undone in Settings > Library > Hidden Items
     HIDE_EVERYWHERE("Hide Everywhere", MenuGroup.REMOVE),
     UNINSTALL("Uninstall", MenuGroup.REMOVE),
@@ -122,6 +125,8 @@ data class AppDrawerUiState(
     val uninstallConfirmFocused: Boolean = false,
 
     val menuAppIsGame: Boolean = false,
+    // the menu's app is a favourite, through its row in games
+    val menuAppIsFavorite: Boolean = false,
 
     // the device has a second display, read as the menu opens
     val hasOtherScreen: Boolean = false,
@@ -190,6 +195,7 @@ data class AppDrawerUiState(
                 add(AppMenuAction.LAUNCH_OTHER_SCREEN)
             }
             add(if (menuAppIsGame) AppMenuAction.UNMARK_GAME else AppMenuAction.MARK_GAME)
+            add(if (menuAppIsFavorite) AppMenuAction.REMOVE_FROM_FAVORITES else AppMenuAction.ADD_TO_FAVORITES)
             add(AppMenuAction.HIDE_EVERYWHERE)
             if (menuApp?.isSystemApp == false) add(AppMenuAction.UNINSTALL)
         }
@@ -411,16 +417,18 @@ class AppDrawerViewModel @Inject constructor(
         }
         menuSound.play(MenuSound.SELECT)
         _uiState.update {
-            it.copy(menuApp = app, menuAppIsGame = false, hasOtherScreen = appRepository.hasOtherScreen()).let { s -> s.copy(appMenu = s.menuStateFor(app)) }
+            it.copy(menuApp = app, menuAppIsGame = false, menuAppIsFavorite = false, hasOtherScreen = appRepository.hasOtherScreen()).let { s -> s.copy(appMenu = s.menuStateFor(app)) }
         }
 
         viewModelScope.launch {
             val entry = gameRepository.getAppEntry(app.packageName)
-            val isGame = entry != null &&
-                entry.platformId == ANDROID_PLATFORM_ID &&
-                entry.contentType == com.echo.core.domain.model.GameContentType.GAME
+            // the drawn menu is rebuilt with the pairs that fit; its rows keep their places, so the cursor stays
             _uiState.update {
-                if (it.menuApp?.packageName == app.packageName) it.copy(menuAppIsGame = isGame) else it
+                if (it.menuApp?.packageName != app.packageName) return@update it
+                val read = it.copy(menuAppIsGame = entry?.isMarkedAsGame == true, menuAppIsFavorite = entry?.isFavorite == true)
+                val menu = read.appMenu
+                if (menu == null || menu.parent != null) read
+                else read.copy(appMenu = read.menuStateFor(app).copy(selectedIndex = menu.selectedIndex))
             }
         }
     }
@@ -466,6 +474,16 @@ class AppDrawerViewModel @Inject constructor(
             AppMenuAction.MARK_GAME   -> { setMarkedAsGame(app, marked = true);  _uiState.update { it.copy(menuApp = null) } }
             AppMenuAction.UNMARK_GAME -> { setMarkedAsGame(app, marked = false); _uiState.update { it.copy(menuApp = null) } }
 
+            AppMenuAction.ADD_TO_FAVORITES, AppMenuAction.REMOVE_FROM_FAVORITES -> {
+                _uiState.update { it.copy(menuApp = null) }
+                viewModelScope.launch {
+                    val on = action == AppMenuAction.ADD_TO_FAVORITES
+                    val id = gameRepository.getAppEntry(app.packageName)?.id
+                        ?: if (on) gameRepository.upsert(com.echo.core.domain.model.appShortcut(app.packageName, app.label)) else return@launch
+                    gameRepository.setFavorite(id, on)
+                }
+            }
+
             AppMenuAction.UNINSTALL -> _uiState.update { it.copy(menuApp = null, confirmUninstall = app, uninstallConfirmFocused = false) }
 
             AppMenuAction.ADD_TO_CROSS_BAR -> _uiState.update { it.copy(menuApp = null, pendingCrossBarAdd = app.packageName) }
@@ -483,29 +501,8 @@ class AppDrawerViewModel @Inject constructor(
     private fun setMarkedAsGame(app: InstalledApp, marked: Boolean) {
         viewModelScope.launch {
             val existing = gameRepository.getAppEntry(app.packageName)
-            if (marked) {
-                if (existing == null) {
-                    gameRepository.upsert(
-                        com.echo.core.domain.model.Game(
-                            title         = app.label,
-                            platformId    = ANDROID_PLATFORM_ID,
-                            packageName   = app.packageName,
-                            isManualEntry = true,
-                            contentType   = com.echo.core.domain.model.GameContentType.GAME,
-                        )
-                    )
-                } else {
-                    gameRepository.upsert(existing.copy(
-                        platformId  = ANDROID_PLATFORM_ID,
-                        contentType = com.echo.core.domain.model.GameContentType.GAME,
-                    ))
-                }
-            } else if (existing != null) {
-                gameRepository.upsert(existing.copy(
-                    platformId  = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
-                    contentType = com.echo.core.domain.model.GameContentType.ANDROID_APP,
-                ))
-            }
+            if (marked) gameRepository.upsert(com.echo.core.domain.model.markedAsGame(existing, app.packageName, app.label))
+            else if (existing != null) gameRepository.upsert(existing.unmarkedAsGame())
             memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
         }
     }

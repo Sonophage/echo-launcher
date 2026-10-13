@@ -503,7 +503,7 @@ private fun speedLabel(speed: Float): String =
 private val TitleShadow = Shadow(Color(0xBF000000), Offset(0f, 2f), 4f)
 
 // each row names its current value; A or RIGHT steps it
-internal fun videoOptionsMenu(
+fun videoOptionsMenu(
     selectedRow: Int,
     speed: Float,
     subtitleLabel: String,

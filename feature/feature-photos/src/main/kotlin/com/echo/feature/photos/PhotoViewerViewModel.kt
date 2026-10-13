@@ -53,29 +53,29 @@ private const val PAN_STEP_PX = 160f
 
 private const val WALLPAPER_MAX_DIM = 2560
 
-enum class PhotoViewerAction(val label: String, val group: MenuGroup = MenuGroup.MAIN) {
+enum class PhotoViewerAction(val label: String, val group: MenuGroup = MenuGroup.DO) {
     ROTATE_LEFT("Rotate Left"),
     ROTATE_RIGHT("Rotate Right"),
     ZOOM_IN("Zoom In"),
     ZOOM_OUT("Zoom Out"),
     RESET_ZOOM("Reset Zoom"),
-    INFO("View Information"),
+    INFO("Details", MenuGroup.ABOUT),
     SET_WALLPAPER("Set as Launcher Wallpaper", MenuGroup.SETTINGS),
-    LOCATION("Open File Location", MenuGroup.SETTINGS),
-    REMOVE("Delete From Device", MenuGroup.REMOVE),
+    LOCATION("Open Folder", MenuGroup.SETTINGS),
+    REMOVE("Delete", MenuGroup.REMOVE),
 }
 
 enum class PhotoControl(val label: String) {
-    ZOOM("Zoom"), ROTATE("Rotate"), SLIDESHOW("Slideshow"), INFO("Info"), WALLPAPER("Set as Wallpaper"), REMOVE("Remove");
+    ZOOM("Zoom"), ROTATE("Rotate"), SLIDESHOW("Slideshow"), INFO("Details"), WALLPAPER("Set as Wallpaper"), REMOVE("Delete");
 
     fun step(delta: Int): PhotoControl = entries[(ordinal + delta).coerceIn(0, entries.lastIndex)]
 }
 
 enum class PhotoInfoAction(val label: String) {
-    WALLPAPER("Set as wallpaper"), FAVORITE("Add to favourites"), ROTATE("Rotate"), REMOVE("Remove from library");
+    WALLPAPER("Set as Wallpaper"), FAVORITE(com.echo.core.ui.components.favoritesLabel(false)), ROTATE("Rotate"), REMOVE("Delete");
 
     fun labelFor(photo: Photo): String =
-        if (this == FAVORITE && photo.isFavorite) "Remove from favourites" else label
+        if (this == FAVORITE) com.echo.core.ui.components.favoritesLabel(photo.isFavorite) else label
 
     fun step(delta: Int): PhotoInfoAction = entries[(ordinal + delta).coerceIn(0, entries.lastIndex)]
 }
@@ -337,10 +337,9 @@ class PhotoViewerViewModel @Inject constructor(
             PhotoViewerAction.ZOOM_OUT      -> zoomBy(1f / ZOOM_STEP)
             PhotoViewerAction.RESET_ZOOM    -> _uiState.update { it.copy(zoom = ZOOM_MIN, panX = 0f, panY = 0f) }
             PhotoViewerAction.INFO          -> _uiState.update { it.copy(infoVisible = true) }
-            PhotoViewerAction.LOCATION      -> {
-                val p = _uiState.value.photo
-                showMessage(p?.relativePath?.let { "In: $it" } ?: p?.displayName ?: "")
-            }
+            PhotoViewerAction.LOCATION      -> _uiState.value.photo
+                ?.let { com.echo.core.data.media.FolderOpen.openMediaFolder(context, it.uri, it.relativePath, it.displayName) }
+                ?.let(::showMessage)
             PhotoViewerAction.REMOVE        -> _uiState.update { it.copy(confirmRemove = true) }
         }
     }

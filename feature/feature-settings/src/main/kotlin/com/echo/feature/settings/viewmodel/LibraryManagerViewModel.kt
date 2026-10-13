@@ -136,7 +136,7 @@ class LibraryManagerViewModel @Inject constructor(
 ) : ViewModel() {
     private val _scratch = MutableStateFlow(LibraryManagerUiState())
 
-    // owner, 2026-10-07: Rescan On Return lives with the other scanning, here, not under Performance
+    // owner, 2026-10-07: Rescan on Return lives with the other scanning, here, not under Performance
     val rescanOnReturn: StateFlow<Boolean> = context.echoDataStore.data
         .map { com.echo.core.data.repository.InterfacePreferences.read(it).rescanOnReturn }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)

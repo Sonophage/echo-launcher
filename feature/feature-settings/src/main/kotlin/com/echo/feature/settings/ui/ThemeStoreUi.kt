@@ -107,6 +107,13 @@ internal data class StoreCard(val id: String, val name: String, val subtitle: St
 internal fun EchoThemeStore.SavedTheme.card() =
     StoreCard(id, name, author?.let { "by $it" } ?: "${parts.size} part${if (parts.size == 1) "" else "s"}", heroPath ?: previewPath, accentArgb)
 
+// a saved theme's rail; the last row erases the theme's folder from the device
+fun savedThemeMenuOptions(apply: () -> Unit, share: () -> Unit, delete: () -> Unit): List<ThemeMenuOption> = listOf(
+    ThemeMenuOption("Apply", action = apply),
+    ThemeMenuOption("Share", action = share),
+    ThemeMenuOption("Delete Theme", destructive = true, action = delete),
+)
+
 // the card that opens the look in use (owner, 2026-10-07: the theme page is also the view of the current look)
 internal const val CURRENT_LOOK_ID = "__current_look"
 
@@ -196,10 +203,10 @@ fun ThemeStoreScreen(
         }
     }
     fun openMenu(theme: EchoThemeStore.SavedTheme) {
-        val options = listOf(
-            ThemeMenuOption("Apply") { viewModel.applySavedTheme(theme.id) },
-            ThemeMenuOption("Share") { viewModel.shareSavedTheme(theme.id) },
-            ThemeMenuOption("Remove and delete its folder", destructive = true) { viewModel.deleteSavedTheme(theme.id) },
+        val options = savedThemeMenuOptions(
+            apply = { viewModel.applySavedTheme(theme.id) },
+            share = { viewModel.shareSavedTheme(theme.id) },
+            delete = { viewModel.deleteSavedTheme(theme.id) },
         )
         menu = MenuState(title = theme.name, rows = options.map { MenuRow(it, it.label, isDestructive = it.destructive) }, selectedIndex = 0)
     }

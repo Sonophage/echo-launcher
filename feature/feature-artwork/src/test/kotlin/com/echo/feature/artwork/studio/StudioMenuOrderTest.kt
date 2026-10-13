@@ -8,12 +8,12 @@ import kotlin.test.assertEquals
 
 /**
  * The studio's three menus are drawn by EchoContextMenuOverlay, which sorts rows
- * through foldedIntoGroups() -- destructive rows move to the end. Activation
+ * through foldedIntoGroups() -- destructive rows move into Remove, the last section. Activation
  * indexes the source list. So the source list must already be in drawn order,
  * or a tap runs the row next to the one the finger landed on.
  *
  * Found on hardware: tapping "Change Provider" ran "Change Match", and tapping
- * "View File Information" would have run "Clear Artwork".
+ * the file details row would have run "Clear Artwork".
  */
 class StudioMenuOrderTest {
     private fun <T> drawn(rows: List<MenuRow<T>>): List<T?> =

@@ -6,26 +6,30 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MenuTest {
-    private enum class Act { PLAY, FAVOURITE, MARK, COLLECT, EMULATOR, ICONS, LOCATION, HIDE, DELETE, UNLINK }
+    private enum class Act { PLAY, DETAILS, FAVOURITE, MARK, COLLECT, NOTE, EMULATOR, ICONS, LOCATION, MOVE, HIDE, DELETE, UNLINK }
 
     private fun row(
         action: Act,
-        group: MenuGroup = MenuGroup.MAIN,
+        group: MenuGroup = MenuGroup.DO,
         destructive: Boolean = false,
         confirms: Boolean = destructive,
-        pinned: Boolean = false,
-    ) = MenuRow(action, action.name, group, destructive, confirms, pinnedToRoot = pinned)
+    ) = MenuRow(action, action.name, group, destructive, confirms)
 
+    // the source order is shuffled on purpose: the fold, not the builder, decides the order
     private val fullMenu = listOf(
-        row(Act.PLAY),
-        row(Act.FAVOURITE, MenuGroup.LIBRARY, pinned = true),
-        row(Act.MARK, MenuGroup.LIBRARY),
-        row(Act.COLLECT, MenuGroup.LIBRARY),
+        row(Act.DETAILS, MenuGroup.ABOUT),
+        row(Act.HIDE, MenuGroup.REMOVE),
+        row(Act.FAVOURITE, MenuGroup.ORGANIZE),
+        row(Act.MARK, MenuGroup.ORGANIZE),
+        row(Act.COLLECT, MenuGroup.ORGANIZE),
+        row(Act.MOVE, MenuGroup.EDIT_LAYOUT),
+        row(Act.NOTE, MenuGroup.EDIT),
         row(Act.EMULATOR, MenuGroup.SETTINGS),
         row(Act.ICONS, MenuGroup.SETTINGS),
+        // declared in Settings, but a destructive row always goes inside Remove
+        row(Act.DELETE, MenuGroup.SETTINGS, destructive = true),
         row(Act.LOCATION, MenuGroup.SETTINGS),
-        row(Act.HIDE, MenuGroup.REMOVE),
-        row(Act.DELETE, MenuGroup.REMOVE, destructive = true),
+        row(Act.PLAY),
     )
 
     private fun menu(rows: List<MenuRow<Act>> = fullMenu) = MenuState("Gran Turismo 4", rows)
@@ -33,16 +37,57 @@ class MenuTest {
     private fun shown(state: MenuState<Act>) = state.rowsShown().map { it.action?.name ?: it.label }
 
     @Test
-    fun `a group of two or more folds, a group of one does not, and pinned rows stay put`() {
+    fun `sections come in order, Do and About at the top level, the rest folded unless they hold one row`() {
         assertEquals(
-            listOf("PLAY", "FAVOURITE", "Library", "Settings", "HIDE", "DELETE"),
+            listOf("PLAY", "DETAILS", "Organize", "NOTE", "Settings", "MOVE", "Remove"),
             shown(menu()),
         )
     }
 
     @Test
-    fun `the delete is the last row even though it is pinned to the root`() {
-        assertEquals("DELETE", shown(menu()).last())
+    fun `the five submenus carry their section names`() {
+        assertEquals(
+            listOf(null, null, "Organize", "Edit", "Settings", "Edit Layout", "Remove"),
+            MenuGroup.entries.map { it.label },
+        )
+    }
+
+    @Test
+    fun `one divider is drawn after the top-level rows and nowhere else`() {
+        assertEquals("the divider goes before the first folded section", 2, menu().dividerIndex())
+
+        val flat = MenuState("Choose Disc", listOf(row(Act.PLAY), row(Act.COLLECT)))
+        assertNull("a flat list has nothing to divide", flat.dividerIndex())
+
+        val noTopLevel = MenuState("t", listOf(row(Act.NOTE, MenuGroup.EDIT), row(Act.HIDE, MenuGroup.REMOVE)))
+        assertNull("a divider with nothing above it divides nothing", noTopLevel.dividerIndex())
+
+        assertNull("a submenu draws no divider", menu().submenuFor(MenuGroup.SETTINGS)!!.dividerIndex())
+    }
+
+    @Test
+    fun `the divider is not a row, so a drawn index still names the row drawn there`() {
+        val state = menu()
+        assertEquals(7, state.rowsShown().size)
+        assertEquals(MenuSelect.Run(Act.NOTE), state.chose(shown(state).indexOf("NOTE")))
+    }
+
+    @Test
+    fun `a destructive row sits inside Remove and still asks first`() {
+        assertTrue("a destructive row was left at the top level", shown(menu()).none { it == "DELETE" })
+
+        val remove = menu().chose(shown(menu()).indexOf("Remove"))
+        assertEquals(
+            "the destructive row is not in the Remove submenu",
+            listOf("HIDE", "DELETE"),
+            (remove as? MenuSelect.Replace)?.state?.let(::shown),
+        )
+        remove as MenuSelect.Replace
+
+        val confirm = (remove.state.chose(1) as MenuSelect.Replace).state
+        assertEquals(listOf(CONFIRM_CANCEL_LABEL, "DELETE"), confirm.rowsShown().map { it.label })
+        assertEquals(0, confirm.selectedIndex)
+        assertEquals("DELETE?", confirm.subtitle)
     }
 
     @Test
@@ -50,14 +95,14 @@ class MenuTest {
         val rows = listOf(
             MenuRow("keep", "Keep"),
             MenuRow("delete", "Delete", isDestructive = true, confirms = false),
-            MenuRow("info", "Info"),
+            MenuRow("info", "Details"),
         )
         val state = MenuState("t", rows)
 
-        assertEquals(listOf("Keep", "Info", "Delete"), state.rowsShown().map { it.label })
+        assertEquals(listOf("Keep", "Details", "Delete"), state.rowsShown().map { it.label })
 
-        // Drawn row 1 is Info, but rows[1] is the delete. A call site that does
-        // sourceList[index] instead of chose(index) runs the delete on an Info tap.
+        // Drawn row 1 is Details, but rows[1] is the delete. A call site that does
+        // sourceList[index] instead of chose(index) runs the delete on a Details tap.
         assertEquals("info", (state.chose(1) as MenuSelect.Run).action)
         assertEquals("delete", rows[1].action)
     }
@@ -68,14 +113,14 @@ class MenuTest {
 
         assertTrue("a withheld row was drawn", shown(state).none { it == "FAVOURITE" || it == "MARK" })
         assertEquals(
-            "with MARK withheld the Library group is down to one row and should hoist",
+            "with MARK withheld the Organize section is down to one row and should show it inline",
             "COLLECT",
-            shown(state)[1],
+            shown(state)[2],
         )
     }
 
     @Test
-    fun `choosing a folded row opens its group, keeping the object's title`() {
+    fun `choosing a folded row opens its section, keeping the object's title`() {
         val opened = menu().chose(shown(menu()).indexOf("Settings"))
 
         assertTrue(opened is MenuSelect.Replace)
@@ -94,29 +139,20 @@ class MenuTest {
     }
 
     @Test
-    fun `a destructive row asks first, and the cursor opens on Cancel`() {
-        val chosen = menu().chose(shown(menu()).indexOf("DELETE"))
-
-        assertTrue("the delete ran without asking", chosen is MenuSelect.Replace)
-        val confirm = (chosen as MenuSelect.Replace).state
-        assertEquals(listOf(CONFIRM_CANCEL_LABEL, "DELETE"), confirm.rowsShown().map { it.label })
-        assertEquals(0, confirm.selectedIndex)
-        assertEquals("DELETE?", confirm.subtitle)
-    }
-
-    @Test
     fun `answering yes runs the action instead of asking again`() {
-        val confirm = (menu().chose(shown(menu()).indexOf("DELETE")) as MenuSelect.Replace).state
+        val remove = menu().submenuFor(MenuGroup.REMOVE)!!
+        val confirm = (remove.chose(shown(remove).indexOf("DELETE")) as MenuSelect.Replace).state
         assertEquals(MenuSelect.Run(Act.DELETE), confirm.chose(1))
     }
 
     @Test
     fun `answering no climbs back to the menu it came from`() {
-        val confirm = (menu().chose(shown(menu()).indexOf("DELETE")) as MenuSelect.Replace).state
+        val remove = menu().submenuFor(MenuGroup.REMOVE)!!
+        val confirm = (remove.chose(shown(remove).indexOf("DELETE")) as MenuSelect.Replace).state
         val cancelled = confirm.chose(0)
 
         assertTrue(cancelled is MenuSelect.Replace)
-        assertEquals(shown(menu()), shown((cancelled as MenuSelect.Replace).state))
+        assertEquals(shown(remove), shown((cancelled as MenuSelect.Replace).state))
     }
 
     @Test
@@ -127,7 +163,7 @@ class MenuTest {
 
     @Test
     fun `Back climbs one level and then reports there is nowhere left to go`() {
-        val submenu = menu().submenuFor(MenuGroup.LIBRARY)!!
+        val submenu = menu().submenuFor(MenuGroup.ORGANIZE)!!
         assertEquals("Gran Turismo 4", submenu.back()?.title)
         assertNull("Back at the root should close rather than loop", menu().back())
     }

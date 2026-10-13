@@ -2,6 +2,7 @@ package com.echo.core.data.media
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.provider.DocumentsContract
 import timber.log.Timber
 
@@ -21,10 +22,36 @@ object FolderOpen {
         }
     }
 
+    // the folder holding a file the storage provider names "volume:path/name": "volume:path"; a file at the volume's
+    // root is in "volume:"; null for an id with no volume
+    fun folderOfDocument(fileDocumentId: String): String? {
+        if (':' !in fileDocumentId) return null
+        val slash = fileDocumentId.lastIndexOf('/')
+        return if (slash >= 0) fileDocumentId.substring(0, slash) else fileDocumentId.substringBefore(':') + ":"
+    }
+
     // opens the folder holding [filePath]; false when nothing could, so the caller shows the path instead
     fun open(context: Context, filePath: String): Boolean {
         val folder = filePath.substringBeforeLast('/', missingDelimiterValue = "").ifEmpty { return false }
-        val id = documentId(folder) ?: return false
+        return openFolderId(context, documentId(folder) ?: return false, folder)
+    }
+
+    // opens the folder holding the file at [documentUri], the storage provider link a media folder's scan gives;
+    // false when the file is not on shared storage or nothing could open it
+    fun openDocumentFolder(context: Context, documentUri: String): Boolean {
+        val uri = Uri.parse(documentUri)
+        if (uri.authority != EXTERNAL_STORAGE) return false
+        val fileId = runCatching { DocumentsContract.getDocumentId(uri) }.getOrNull() ?: return false
+        val folderId = folderOfDocument(fileId) ?: return false
+        return openFolderId(context, folderId, folderId)
+    }
+
+    // a photo's or video's Open Folder (owner, 2026-10-12): opens the folder holding the file; when nothing could, the
+    // words to show instead, "In: " and the folder, else the file's name
+    fun openMediaFolder(context: Context, documentUri: String, relativePath: String?, displayName: String): String? =
+        if (openDocumentFolder(context, documentUri)) null else relativePath?.let { "In: $it" } ?: displayName
+
+    private fun openFolderId(context: Context, id: String, folder: String): Boolean {
         val intent = Intent(Intent.ACTION_VIEW)
             .setDataAndType(DocumentsContract.buildDocumentUri(EXTERNAL_STORAGE, id), DocumentsContract.Document.MIME_TYPE_DIR)
             // no read grant: ECHO holds none to pass on, and asking for one throws (seen on the Konker); the file

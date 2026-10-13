@@ -10,6 +10,7 @@ import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.data.repository.MemoryCardRepository
 import com.echo.core.domain.model.Game
 import com.echo.core.domain.model.GameContentType
+import com.echo.core.domain.model.unmarkedAsGame
 import com.echo.core.domain.model.MemoryCard
 import com.echo.core.domain.model.PlatformIds.WINDOWS as WINDOWS_PLATFORM_ID
 import com.echo.core.ui.components.MenuState
@@ -126,7 +127,9 @@ class CrossbarGames(
                 game?.discSetKey?.let { vm.gameRepository.getDiscSetMembers(it).size } ?: 0
             }.getOrDefault(0)
 
-            openGameContextMenuCore(item, discCount, onRecentShelf = game?.lastPlayedAt != null)
+            // the library's file, not the row's: a row built outside the game list may not carry it
+            val row = game?.let { item.copy(romPath = it.romPath) } ?: item
+            openGameContextMenuCore(row, discCount, onRecentShelf = game?.lastPlayedAt != null)
         }
     }
 
@@ -245,9 +248,17 @@ class CrossbarGames(
         }
     }
 
+    // Unmark as Game, from a game's menu or an app's: the row is an app shortcut again
+    internal suspend fun unmarkAsGame(gameId: Long) {
+        vm.gameRepository.getById(gameId)?.let { vm.gameRepository.upsert(it.unmarkedAsGame()) }
+        memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
+        vm.loadItemsForCategory(vm.currentCategory())
+    }
+
     internal fun toggleGameFavorite(gameId: Long, isFavorite: Boolean) {
         scope.launch {
-            vm.gameRepository.setFavorite(gameId, isFavorite)
+            val discSet = vm.gameRepository.getById(gameId)?.discSetKey?.let { vm.gameRepository.getDiscSetMembers(it) }.orEmpty()
+            favoriteIds(gameId, discSet).forEach { vm.gameRepository.setFavorite(it, isFavorite) }
         }
     }
 
@@ -309,9 +320,6 @@ class CrossbarGames(
                 "REFRESH"  -> vm.artworkTools.fetchArtworkFor(gid)
                 else -> Timber.w("Details row '$what' has no handler")
             }
-        } else if (itemId == "shelf_favorite") {
-            val onShelf = menu.items.firstOrNull { it.action == "shelf_favorite" }?.checked == true
-            toggleGameFavorite(gameId, !onShelf)
         } else if (itemId.startsWith("genre_pick_")) {
             val gid = gameId
             val choice = itemId.removePrefix("genre_pick_")
@@ -340,7 +348,6 @@ class CrossbarGames(
             "game_info"              -> vm.openGameInfoFor(gameId)
             "info_about"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.INFO) }
             "info_video"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.VIDEO) }
-            "info_manual"            -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.MANUAL) }
             "choose_disc"             -> vm.openDiscPickerMenu(gameId)
             "export_game"            -> vm.exportGameFromMenu(gameId)
             "app_info"               -> { vm.closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(vm.context, menu.packageName ?: return) }
@@ -373,7 +380,6 @@ class CrossbarGames(
                     vm.loadItemsForCategory(vm.currentCategory())
                 }
             }
-            "file_location"          -> vm.showGameFileLocation(gameId)
             "open_folder"            -> vm.openGameFolder(gameId)
             "change_emulator"        -> vm.openEmulatorPickerMenu(gameId)
             "shelves"                -> vm.openShelvesPickerMenu(gameId)
@@ -396,16 +402,7 @@ class CrossbarGames(
 
             "unmark_game"            -> {
                 val gid = gameId
-                vm.appAction {
-                    vm.gameRepository.getById(gid)?.let { g ->
-                        vm.gameRepository.upsert(g.copy(
-                            platformId  = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
-                            contentType = GameContentType.ANDROID_APP,
-                        ))
-                    }
-                    memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
-                    vm.loadItemsForCategory(vm.currentCategory())
-                }
+                vm.appAction { unmarkAsGame(gid) }
             }
         }
     }

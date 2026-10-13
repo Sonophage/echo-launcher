@@ -41,3 +41,8 @@ fun shelfCardFor(cardId: String?): ShelfCard? = when {
 val SHELF_CARD_IDS: Set<String> =
     setOf(SHELF_FAVORITES_ID, SHELF_RECENT_ID) +
         PlayState.entries.map { "$SHELF_MARKED_PREFIX${it.name}" }.toSet()
+
+// the Shelves picker sets a play state only; Favorites has its own pair of rows in Organize (owner, 2026-10-12)
+internal fun shelvesPickerItems(current: PlayState?): List<CrossbarContextMenuItem> =
+    PlayState.entries.map { CrossbarContextMenuItem("pstate_${it.name}", it.label, checked = current == it) } +
+        CrossbarContextMenuItem("pstate_none", "Unmarked", checked = current == null)

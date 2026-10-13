@@ -229,8 +229,10 @@ class CrossbarGallery(
     }
 
     private fun openPhotoFileContextMenu(photoId: String, title: String) {
-        val items = photoFileContextMenuItems()
-        uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = items), photoFileId = photoId)) }
+        scope.launch {
+            val items = photoFileContextMenuItems(isFavorite = photoRepository.getPhoto(photoId)?.isFavorite == true)
+            uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = title, rows = items), photoFileId = photoId)) }
+        }
     }
 
     internal fun handlePhotoFileAction(photoId: String, itemId: String) {
@@ -238,6 +240,7 @@ class CrossbarGallery(
             "photo_open"          -> openPhoto(photoId)
 
             "photo_set_wallpaper" -> openPhotoViewer(photoId, wallpaperPreview = true)
+            "photo_favorite", "photo_unfavorite" -> vm.appAction { photoRepository.setFavorite(photoId, itemId == "photo_favorite") }
             "photo_remove"        -> vm.appAction {
                 val photo = photoRepository.getPhoto(photoId) ?: return@appAction
                 val deleted = deleteFromDevice(photo.uri, { deleteMediaFile(vm.context, it) }) { photoRepository.removePhoto(photoId) }

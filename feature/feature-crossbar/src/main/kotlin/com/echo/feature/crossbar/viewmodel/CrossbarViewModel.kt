@@ -2525,12 +2525,7 @@ class CrossbarViewModel @Inject constructor(
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val current = com.echo.core.domain.model.GameGenre.fromName(game.genreOverride)
-            val items = buildList {
-                add(CrossbarContextMenuItem("genre_pick_scraped", game.genre?.takeIf { it.isNotBlank() }?.let { "As scraped · $it" } ?: "As scraped · none", checked = current == null))
-                com.echo.core.domain.model.GameGenre.entries.forEach { g ->
-                    add(CrossbarContextMenuItem("genre_pick_${g.name}", g.label, checked = current == g))
-                }
-            }
+            val items = gameGenrePickerRows(game.genre, current)
             _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Genre", rows = items), gameId = gameId)) }
         }
     }
@@ -3151,10 +3146,17 @@ class CrossbarViewModel @Inject constructor(
         val pkg = item.packageName ?: return
         val categoryId = categoryIdOverride ?: currentCategory()?.id
 
-        val items = appContextMenuItems(_uiState.value, categoryId, onRecentShelf = item.id.startsWith(RECENT_APP_ID_PREFIX), packageName = pkg)
-        _uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = pkg, categoryContext = categoryId)
-        )}
+        viewModelScope.launch {
+            // an app is a favourite, and a game, through its row in games, so read it fresh for the pairs
+            val entry = gameRepository.getAppEntry(pkg)
+            val items = appContextMenuItems(
+                _uiState.value, categoryId, onRecentShelf = item.id.startsWith(RECENT_APP_ID_PREFIX), packageName = pkg,
+                isFavorite = entry?.isFavorite == true, pinnedInCategory = item.pinnedInCategory, isGame = entry?.isMarkedAsGame == true,
+            )
+            _uiState.update { it.copy(
+                activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = pkg, categoryContext = categoryId)
+            )}
+        }
     }
 
     private fun openCategoryPicker(pkg: String, fromCategory: String?, action: String) {
@@ -3349,28 +3351,17 @@ class CrossbarViewModel @Inject constructor(
                     "uninstall" -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.uninstall(context, pkg) }
 
                     "mark_game" -> appAction {
-                        val existing = gameRepository.getAppEntry(pkg)
-                        if (existing == null) {
-                            gameRepository.upsert(Game(
-                                title         = menu.title,
-                                platformId    = ANDROID_PLATFORM_ID,
-                                packageName   = pkg,
-                                isManualEntry = true,
-                                contentType   = GameContentType.GAME,
-                            ))
-                        } else {
-                            gameRepository.upsert(existing.copy(
-                                platformId  = ANDROID_PLATFORM_ID,
-                                contentType = GameContentType.GAME,
-                            ))
-                        }
+                        gameRepository.upsert(com.echo.core.domain.model.markedAsGame(gameRepository.getAppEntry(pkg), pkg, menu.title))
                         memoryCardRepository.recountGames(ANDROID_PLATFORM_ID)
                     }
+                    "unmark_game"       -> appAction { gameRepository.getAppEntry(pkg)?.let { gameActions.unmarkAsGame(it.id) } }
                     "favorite"          -> gameActions.addAppToFavorites(pkg, menu.title)
+                    "unfavorite"        -> appAction { gameRepository.getAppEntry(pkg)?.let { gameRepository.setFavorite(it.id, false) } }
                     "move"      -> openCategoryPicker(pkg, menu.categoryContext, "move")
                     "add"       -> openCategoryPicker(pkg, menu.categoryContext, "add")
                     "remove"    -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.removeFromCategory(pkg, cat) } }
                     "pin"       -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.pinToCategory(pkg, cat) } }
+                    "unpin"     -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.unpinFromCategory(pkg, cat) } }
                     "hide_from_category" -> menu.categoryContext?.let { cat ->
                         persistHide(HiddenPlacement.appKey(pkg), menu.title, HideLocationType.CATEGORY, cat, categoryDisplayName(cat))
                     }
@@ -3393,14 +3384,7 @@ class CrossbarViewModel @Inject constructor(
     internal fun openShelvesPickerMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
-            val current = PlayState.fromName(game.playState)
-            val items = buildList {
-                add(CrossbarContextMenuItem("shelf_favorite", "Favorites", checked = game.isFavorite))
-                PlayState.entries.forEach { state ->
-                    add(CrossbarContextMenuItem("pstate_${state.name}", state.label, checked = current == state))
-                }
-                add(CrossbarContextMenuItem("pstate_none", "Unmarked", checked = current == null))
-            }
+            val items = shelvesPickerItems(PlayState.fromName(game.playState))
             _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Shelves", rows = items), gameId = gameId))}
         }
     }
@@ -3487,24 +3471,16 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    internal fun showGameFileLocation(gameId: Long) {
-        viewModelScope.launch {
-            val game = gameRepository.getById(gameId) ?: return@launch
-            val location = game.romPath
-                ?: game.packageName?.let { "Package: $it" }
-                ?: "No file location on record"
-            _uiState.update {
-                it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = location))
-            }
-        }
-    }
-
-    // the file manager at the game's folder; the path in a dialog when nothing can open it
+    // the file manager at the game's folder; the path in a dialog when nothing can open it. Only a game with a file
+    // has the row
     internal fun openGameFolder(gameId: Long) {
         closeContextMenu()
         viewModelScope.launch {
-            val path = gameRepository.getById(gameId)?.romPath
-            if (path == null || !com.echo.core.data.media.FolderOpen.open(context, path)) showGameFileLocation(gameId)
+            val game = gameRepository.getById(gameId) ?: return@launch
+            val path = game.romPath ?: return@launch
+            if (!com.echo.core.data.media.FolderOpen.open(context, path)) {
+                _uiState.update { it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = path)) }
+            }
         }
     }
 
@@ -4314,16 +4290,7 @@ class CrossbarViewModel @Inject constructor(
                 context.packageManager.getApplicationInfo(packageName, 0)
             ).toString()
         }.getOrDefault(packageName)
-        return gameRepository.upsert(
-            Game(
-                title         = label,
-
-                platformId    = com.echo.core.domain.model.PlatformIds.APP_SHORTCUT,
-                packageName   = packageName,
-                isManualEntry = true,
-                contentType   = GameContentType.ANDROID_APP,
-            )
-        )
+        return gameRepository.upsert(com.echo.core.domain.model.appShortcut(packageName, label))
     }
 
     fun onOpenSettingsScreen(screenId: String) {

@@ -27,17 +27,17 @@ import com.echo.core.ui.components.MenuSelect
 import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.components.MenuGroup
 
-enum class VideoDetailAction(val label: String, val group: MenuGroup = MenuGroup.MAIN) {
+enum class VideoDetailAction(val label: String, val group: MenuGroup = MenuGroup.DO) {
     PLAY("Play"),
     RESUME("Resume"),
     RESTART("Start from Beginning"),
-    INFO("Information"),
-    FAVORITE("Favorite", MenuGroup.LIBRARY),
-    PLAYLIST("Add to Playlist", MenuGroup.LIBRARY),
-    RENAME("Rename Title", MenuGroup.SETTINGS),
-    THUMBNAIL("Change Thumbnail", MenuGroup.SETTINGS),
-    LOCATION("Open File Location", MenuGroup.SETTINGS),
-    REMOVE("Delete From Device", MenuGroup.REMOVE),
+    INFO("Details", MenuGroup.ABOUT),
+    FAVORITE("Favorite", MenuGroup.ORGANIZE),
+    PLAYLIST("Add to Playlist", MenuGroup.ORGANIZE),
+    RENAME("Rename Title", MenuGroup.EDIT),
+    THUMBNAIL("Change Thumbnail", MenuGroup.EDIT),
+    LOCATION("Open Folder", MenuGroup.SETTINGS),
+    REMOVE("Delete", MenuGroup.REMOVE),
 }
 
 data class VideoPlaylistOption(val id: Long, val name: String, val checked: Boolean)
@@ -84,9 +84,7 @@ data class VideoDetailUiState(
             rows = optionsActions.map {
                 MenuRow(
                     action = it,
-                    label = if (it == VideoDetailAction.FAVORITE) {
-                        if (video?.isFavorite == true) "Remove from Favorites" else "Add to Favorites"
-                    } else it.label,
+                    label = if (it == VideoDetailAction.FAVORITE) com.echo.core.ui.components.favoritesLabel(video?.isFavorite == true) else it.label,
                     group = it.group,
                     isDestructive = it == VideoDetailAction.REMOVE,
                     confirms = false,
@@ -209,7 +207,8 @@ class VideoDetailViewModel @Inject constructor(
             VideoDetailAction.RENAME  -> startEditTitle()
             VideoDetailAction.THUMBNAIL -> _uiState.update { it.copy(pickThumbnail = true) }
             VideoDetailAction.INFO    -> _uiState.update { it.copy(infoVisible = true) }
-            VideoDetailAction.LOCATION -> showMessage(video.relativePath?.let { "In: $it" } ?: video.displayName)
+            VideoDetailAction.LOCATION ->
+                com.echo.core.data.media.FolderOpen.openMediaFolder(context, video.uri, video.relativePath, video.displayName)?.let(::showMessage)
             VideoDetailAction.REMOVE  -> _uiState.update { it.copy(confirmRemove = true) }
         }
     }

@@ -253,7 +253,7 @@ private fun LibraryListContent(
             )
 
             SettingsToggleRow(
-                label    = "Rescan On Return",
+                label    = "Rescan on Return",
                 sublabel = "Look for new and missing games when you come back to the launcher, at most every five minutes. " +
                     "Inserting a card still rescans either way",
                 checked  = rescanOnReturn,
@@ -447,7 +447,7 @@ private fun CardDetailContent(
 
                 SettingsGroup("Actions")
                 SettingsRow(
-                    label    = "Scan For Vita Games",
+                    label    = "Scan for Vita Games",
                     sublabel = "Reads installed titles from ux0/app in your Vita3K data folder",
                     onClick  = if (!isScanning && state.vita3KFolderLabel != null) ({ onScanVitaGames() }) else null,
                 )
@@ -540,13 +540,13 @@ private fun CardDetailContent(
             )
             SettingsRow(label = "Rename System", onClick = { onBeginRename(card.platformId) })
             SettingsToggleRow(
-                label    = "Show In Games",
+                label    = "Show in Games",
                 sublabel = "Show or hide this system",
                 checked  = card.enabled,
                 onToggle = { onToggleEnabled(card.platformId, it) },
             )
             SettingsToggleRow(
-                label    = "Pin To Top",
+                label    = "Pin to Top",
                 checked  = card.pinned,
                 onToggle = { onTogglePinned(card.platformId, it) },
             )
@@ -724,7 +724,16 @@ private fun ImportPcGamesContent(
     }
 }
 
-private enum class AddPcRow { ID, NAME, SOURCE, TEST, ADD }
+enum class AddPcRow { ID, NAME, SOURCE, TEST, ADD }
+
+// the Add PC Game rail: the two fields, the source when the launcher has more than one, then Test Launch and Add
+fun addPcGameRows(id: String, title: String, sources: List<String>, source: String?): List<MenuRow<AddPcRow>> = buildList {
+    add(MenuRow(AddPcRow.ID, "Game ID · ${id.ifBlank { "Not Set" }}"))
+    add(MenuRow(AddPcRow.NAME, "Game Name · ${title.ifBlank { "Not Set" }}"))
+    if (sources.size > 1) add(MenuRow(AddPcRow.SOURCE, "Source · $source"))
+    if (id.isNotBlank()) add(MenuRow(AddPcRow.TEST, "Test Launch"))
+    if (id.isNotBlank() && title.isNotBlank()) add(MenuRow(AddPcRow.ADD, "Add"))
+}
 
 // owner, 2026-10-07: on the kit, not a Material dialog. The rail menu holds the fields, the source, Test Launch
 // and Add, so every one is reachable by pad; ID and name open the rail prompt
@@ -743,14 +752,7 @@ private fun AddPcGameDialog(
     var editing by remember { mutableStateOf<AddPcRow?>(null) }
     var draft by remember { mutableStateOf("") }
 
-    val ready = id.isNotBlank() && title.isNotBlank()
-    val rows = buildList {
-        add(MenuRow(AddPcRow.ID, "Game ID · ${id.ifBlank { "not set" }}"))
-        add(MenuRow(AddPcRow.NAME, "Game name · ${title.ifBlank { "not set" }}"))
-        if (adapter != null && adapter.sources.size > 1) add(MenuRow(AddPcRow.SOURCE, "Source · $source"))
-        if (id.isNotBlank()) add(MenuRow(AddPcRow.TEST, "Test Launch"))
-        if (ready) add(MenuRow(AddPcRow.ADD, "Add"))
-    }
+    val rows = addPcGameRows(id, title, adapter?.sources.orEmpty(), source)
     val at = cursor.coerceIn(0, rows.lastIndex)
 
     fun activate(row: AddPcRow) {
@@ -766,7 +768,7 @@ private fun AddPcGameDialog(
     val field = editing
     if (field != null) {
         SettingsTextPromptOverlay(
-            title = if (field == AddPcRow.ID) "Game ID" else "Game name",
+            title = if (field == AddPcRow.ID) "Game ID" else "Game Name",
             value = draft,
             onValueChange = { draft = it },
             onConfirm = {
@@ -788,7 +790,7 @@ private fun AddPcGameDialog(
         }
     }
     EchoContextMenuOverlay(
-        state = MenuState(title = "Add ${launcher.name} game", subtitle = adapter?.idPrompt, rows = rows, selectedIndex = at),
+        state = MenuState(title = "Add ${launcher.name} Game", subtitle = adapter?.idPrompt, rows = rows, selectedIndex = at),
         onRowActivated = { index -> if (index == at) rows[index].action?.let(::activate) else cursor = index },
         onDismiss = onDismiss,
     )

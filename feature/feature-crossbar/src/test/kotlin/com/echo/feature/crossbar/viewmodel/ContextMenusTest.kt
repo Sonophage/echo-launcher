@@ -13,6 +13,7 @@ import org.junit.Test
 import com.echo.core.ui.components.MenuGroup
 import com.echo.core.ui.components.MenuState
 import com.echo.core.ui.components.rowsShown
+import com.echo.core.ui.components.submenuFor
 import com.echo.core.ui.components.foldedIntoGroups
 
 class ContextMenusTest {
@@ -174,12 +175,10 @@ class ContextMenusTest {
     }
 
     @Test
-    fun `one Shelves row replaces the favourite and mark-as rows`() {
+    fun `one Shelves row replaces the mark-as rows`() {
         listOf(false, true).forEach { fav ->
             val items = ids(gameContextMenuItems(game(isFavorite = fav), state(), 1, false, null))
             assertTrue("no way onto a shelf: $items", "shelves" in items)
-            assertFalse("favourite is still offered outside the picker", "favorite" in items)
-            assertFalse("unfavourite is still offered outside the picker", "unfavorite" in items)
             assertFalse("Mark As is still offered outside the picker", "play_state" in items)
         }
     }
@@ -343,7 +342,7 @@ class ContextMenusTest {
         wasBehindDetails.forEach { id ->
             val row = rows.firstOrNull { it.action == id }
             assertTrue("'$id' is no longer reachable from any menu", row != null)
-            assertEquals("$id: not in the Metadata group", MenuGroup.METADATA, row!!.group)
+            assertEquals("$id: not in the Edit section", MenuGroup.EDIT, row!!.group)
         }
 
         assertFalse(
@@ -351,13 +350,14 @@ class ContextMenusTest {
             "game_details" in ids(rows),
         )
 
-        val folded = MenuState("Gran Turismo 4", rows).rowsShown().filter { it.group == MenuGroup.METADATA }
+        val folded = MenuState("Gran Turismo 4", rows).rowsShown().filter { it.group == MenuGroup.EDIT }
         assertEquals("six rows should fold to one", 1, folded.size)
-        assertEquals("Metadata", folded.single().label)
+        assertEquals("Edit", folded.single().label)
     }
 
+    // only Do and About are at the top level, so Remove from Recent is in Remove (owner, 2026-10-12)
     @Test
-    fun `Remove from Recent is one press from the root in every menu that offers it`() {
+    fun `Remove from Recent is in the Remove section in every menu that offers it`() {
         val menus = listOf(
             "game" to gameContextMenuItems(game(), state(), 1, onRecentShelf = true, null),
             "app" to appContextMenuItems(state(), categoryId = BuiltInCategory.GAMES, onRecentShelf = true),
@@ -369,12 +369,11 @@ class ContextMenusTest {
         )
 
         menus.forEach { (name, items) ->
-            val root = MenuState(name, items).rowsShown().map { it.label }
-            assertTrue(
-                "$name: Remove from Recent folded into a submenu, so dropping something off the " +
-                    "shelf costs two presses instead of one",
-                "Remove from Recent" in root,
-            )
+            val root = MenuState(name, items)
+            val topLevel = root.rowsShown().takeWhile { it.group == MenuGroup.DO || it.group == MenuGroup.ABOUT }
+            val inRemove = root.submenuFor(MenuGroup.REMOVE)!!.rowsShown().map { it.label }
+            assertTrue("$name: Remove from Recent is not in Remove", "Remove from Recent" in inRemove)
+            assertTrue("$name: Remove from Recent is at the top level", topLevel.none { it.label == "Remove from Recent" })
         }
     }
 
@@ -387,7 +386,7 @@ class ContextMenusTest {
 
         listOf(0 to "add_category", 1 to "move_category").forEach { (index, id) ->
             val rows = gameContextMenuItems(game(), state(all, index), 1, false, null).sortedBy { it.group.ordinal }
-            val category = rows.filter { it.group == MenuGroup.CATEGORY }.map { it.action }
+            val category = rows.filter { it.group == MenuGroup.ORGANIZE }.map { it.action }
 
             assertTrue("no category rows at all from slot $index", category.isNotEmpty())
             assertTrue("'$id' is not among the category rows", id in category)
@@ -406,23 +405,25 @@ class ContextMenusTest {
             .map { it.group }
 
         assertEquals("a group is split in two", groups.distinct(), groups.distinct().sortedBy { it.ordinal })
-        assertEquals("the menu does not open on its main action", MenuGroup.MAIN, groups.first())
+        assertEquals("the menu does not open on its main action", MenuGroup.DO, groups.first())
         assertEquals("something outranks the removals", MenuGroup.REMOVE, groups.last())
     }
 
     @Test
-    fun `with Game Info open, Options carries its Info, Video and Manual, since the kit's page has no buttons`() {
+    fun `with Game Info open, Options carries its Details and Video, since the kit's page has no buttons`() {
         val info = GameInfoState(game(), content = DetailPanelContent(title = "Crisis Core", platformName = "PSP"),
             videoUri = "/v.mp4", manualPath = "/m.pdf")
         val open = ids(gameContextMenuItems(game(), state().copy(gameInfo = info), 1, false, null))
-        assertTrue(listOf("info_about", "info_video", "info_manual").all { it in open })
+        assertTrue(listOf("info_about", "info_video").all { it in open })
         assertFalse("Game Info does not offer itself", "game_info" in open)
+        // spec #2: the game's own Manual row opens the same manual, so Game Info adds no second one
+        assertEquals("one Manual row", 1, open.count { it == "detail_MANUAL" || it == "info_manual" })
 
         val closed = ids(gameContextMenuItems(game(), state(), 1, false, null))
         assertFalse("the crossbar's menu has no Game Info extras", closed.any { it?.startsWith("info_") == true })
 
         val bare = ids(gameContextMenuItems(game(), state().copy(gameInfo = GameInfoState(game())), 1, false, null))
-        assertFalse("a game without a manual lists no Manual row", "info_manual" in bare)
+        assertFalse("a game with no video lists no Video row", "info_video" in bare)
     }
 
     // Launch on Other Screen means nothing with one display, and a DS or 3DS emulator always opens on the

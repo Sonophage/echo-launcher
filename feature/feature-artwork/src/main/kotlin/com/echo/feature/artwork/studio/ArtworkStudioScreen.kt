@@ -779,7 +779,7 @@ internal fun ArtworkStudioContent(
             StudioMenu(
                 title = STUDIO_TABS[state.tabIndex].label,
                 rows = state.availableActions.map {
-                    com.echo.core.ui.components.MenuRow(it, it.label, isDestructive = it == StudioAction.CLEAR, confirms = false)
+                    com.echo.core.ui.components.MenuRow(it, state.labelOf(it), isDestructive = it == StudioAction.CLEAR, confirms = false)
                 },
                 selectedIndex = state.resolvedActionsIndex,
                 onActivate = actions::runAction,

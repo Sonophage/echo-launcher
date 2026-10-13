@@ -4,15 +4,15 @@ package com.echo.themekit
 enum class ThemePart(val label: String) {
     ICONS("Icons"),
     WALLPAPER("Wallpaper"),
-    COLOURS("Colours and layout"),
+    COLOURS("Colours and Layout"),
     FONT("Font"),
     WAVE("Wave"),
     SOUNDS("Sounds"),
     BOOT("Boot"),
-    GAME_START("Game start"),
+    GAME_START("Game Start"),
     BUTTONS("Buttons"),
-    FOCUS("Focus and motion"),
-    SETTINGS("Display settings"),
+    FOCUS("Focus and Motion"),
+    SETTINGS("Display Settings"),
 }
 
 // the parts this theme has. Colours count when it names an accent, an icon or text colour, or a layout
