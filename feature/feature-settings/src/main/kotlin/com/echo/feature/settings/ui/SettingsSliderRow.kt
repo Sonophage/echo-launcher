@@ -1,7 +1,6 @@
 package com.echo.feature.settings.ui
 
-import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.indication
+import com.echo.core.ui.theme.showsFocus
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.focusable
@@ -64,6 +63,9 @@ fun SettingsSliderRow(
     val adjusting = LocalSettingsSliderAdjusting.current
     val focusInfo = LocalSettingsFocusInfo.current
     var isFocused by remember { mutableStateOf(false) }
+    // a press on the Slider draws the row cursor, as focus does, not a mark on the Slider. Its own ripple is off (spec #3)
+    val press = remember { MutableInteractionSource() }
+    val rowSelected = press.showsFocus(isFocused && cursorVisible)
     val shownValue = valueFormatter(value)
     if (isFocused && focusInfo != null) {
         LaunchedEffect(label, shownValue, sublabel) { focusInfo.value = SettingsFocusInfo(label, shownValue, sublabel) }
@@ -116,7 +118,7 @@ fun SettingsSliderRow(
             }
 
             .drawBehind {
-                if (isFocused && cursorVisible) {
+                if (rowSelected) {
                     drawRect(
                         Brush.horizontalGradient(
                             0f to bloom.copy(alpha = 0.62f),
@@ -135,7 +137,6 @@ fun SettingsSliderRow(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                val rowSelected = isFocused && cursorVisible
                 Text(
                     text = label,
                     color = if (rowSelected) Color.White else SettingsText,
@@ -154,11 +155,8 @@ fun SettingsSliderRow(
             )
         }
         Spacer(Modifier.height(8.dp))
-        // a Material component draws its own (switched off) ripple, not LocalIndication: its source carries the press mark (spec #3)
-        val press = remember { MutableInteractionSource() }
         Slider(
             interactionSource = press,
-            modifier = Modifier.indication(press, LocalIndication.current),
             value = value,
             onValueChange = { v ->
 

@@ -83,7 +83,8 @@ screen's padded column.
   Set `indication = null` only on a scrim or a whole-screen tap. When the tap target is wider than its icon, give the
   clickable an `interactionSource` with `indication = null` and put `Modifier.indication(source, LocalIndication.current)`
   on the icon (the crossbar rows, the footer's A orb). When the controller's focus is the target's own look, not
-  an icon mark (a menu row's white bar, a tab's underline, an App Drawer case's lift, the search field's edge), give
+  an icon mark (a menu row's white bar, a tab's underline, an App Drawer case's lift, the search field's edge, a
+  Settings row's cursor, which its Switch or Slider shares), give
   the clickable an `interactionSource` with `indication = null` and draw it focused when
   `source.showsFocus(focused)` is true (`theme/PressMark.kt`); `contextMenuRow` takes that source. A Material
   control (`Switch`, `Slider`, `Checkbox`, `TextButton`, `IconButton`...) draws its own ripple, which is off, not
