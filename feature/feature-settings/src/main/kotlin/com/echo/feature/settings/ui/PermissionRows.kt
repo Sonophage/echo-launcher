@@ -60,9 +60,8 @@ internal fun RestrictedSettingsRow(rows: List<AppPermission>, readToken: Int) {
         label = "Usage or notification access refused?",
         sublabel = "Android blocks them for apps installed outside a store. Open App info, tap ⋮, choose Allow restricted settings, then grant again",
         onClick = {
-            runCatching {
-                context.startActivity(appDetailsIntent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), LaunchScreens.mainScreenOptions(context))
-            }
+            val options = LaunchScreens.mainScreenOptions(context)
+            runCatching { context.startActivity(appDetailsIntent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options) }
         },
     )
 }
@@ -80,7 +79,8 @@ internal fun rememberPermissionAsker(onDone: () -> Unit): (AppPermission) -> Uni
         if (!granted && permission?.manifestName != null && activity != null &&
             !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission.manifestName)
         ) {
-            runCatching { context.startActivity(appDetailsIntent(context), LaunchScreens.mainScreenOptions(context)) }
+            val options = LaunchScreens.mainScreenOptions(context)
+            runCatching { context.startActivity(appDetailsIntent(context), options) }
         }
         onDone()
     }
@@ -88,7 +88,10 @@ internal fun rememberPermissionAsker(onDone: () -> Unit): (AppPermission) -> Uni
     return { permission ->
         when (permission.route) {
             GrantRoute.REQUEST -> permission.manifestName?.let { asking = permission; request.launch(it) }
-            GrantRoute.SYSTEM_SCREEN -> runCatching { screen.launch(systemScreenIntent(context, permission).onMainScreen(context)) }
+            GrantRoute.SYSTEM_SCREEN -> {
+                val intent = systemScreenIntent(context, permission).onMainScreen(context)
+                runCatching { screen.launch(intent) }
+            }
             GrantRoute.INSTALL_TIME -> Unit
         }
     }

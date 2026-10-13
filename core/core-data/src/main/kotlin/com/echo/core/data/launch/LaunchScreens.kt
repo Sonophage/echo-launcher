@@ -46,6 +46,9 @@ class LaunchScreens @Inject constructor(
     // info, uninstall, the share sheet, a chooser and Android Settings (#28)
     fun mainDisplay(): Int = mainScreenDisplay(mainOnSecond, secondDisplay(context)?.displayId)
 
+    // the launch options that open an Android screen on the Main Screen's display (#28)
+    fun mainScreenOptions(): Bundle? = LaunchTransition.options(context, mainDisplay())
+
     fun hasOtherScreen(): Boolean = secondDisplay(context) != null
 
     // the display to start packageName on, which becomes the Launch Screen of the game (gameId) or else the app.
@@ -121,12 +124,10 @@ class LaunchScreens @Inject constructor(
                 ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).orEmpty()
                 .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
 
-        // the launch options that open an Android screen on the Main Screen's display, for a composable, which
-        // cannot inject LaunchScreens (#28)
-        fun mainScreenOptions(context: Context): Bundle? {
-            val screens = EntryPointAccessors.fromApplication(context.applicationContext, Access::class.java).launchScreens()
-            return LaunchTransition.options(context, screens.mainDisplay())
-        }
+        // the same, for a composable, which cannot inject LaunchScreens (#28). A failed lookup throws: read it
+        // outside the runCatching that guards the start, so it is not taken for a start that failed
+        fun mainScreenOptions(context: Context): Bundle? =
+            EntryPointAccessors.fromApplication(context.applicationContext, Access::class.java).launchScreens().mainScreenOptions()
 
         @EntryPoint
         @InstallIn(SingletonComponent::class)

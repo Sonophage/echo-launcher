@@ -145,6 +145,7 @@ private fun logFileUri(context: Context, fileName: String): Uri? {
 }
 
 private fun openLogExternally(context: Context, fileName: String) {
+    val options = LaunchScreens.mainScreenOptions(context)
     runCatching {
         val uri = logFileUri(context, fileName) ?: return
         val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -154,12 +155,13 @@ private fun openLogExternally(context: Context, fileName: String) {
         context.startActivity(
             Intent.createChooser(intent, "Open log with")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            LaunchScreens.mainScreenOptions(context),
+            options,
         )
     }.onFailure { Timber.w(it, "Could not open log file externally") }
 }
 
 private fun shareLogFile(context: Context, fileName: String) {
+    val options = LaunchScreens.mainScreenOptions(context)
     runCatching {
         val uri = logFileUri(context, fileName) ?: return
         val intent = Intent(Intent.ACTION_SEND).apply {
@@ -171,7 +173,7 @@ private fun shareLogFile(context: Context, fileName: String) {
         context.startActivity(
             Intent.createChooser(intent, "Share log file")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            LaunchScreens.mainScreenOptions(context),
+            options,
         )
     }.onFailure { Timber.w(it, "Could not share log file") }
 }

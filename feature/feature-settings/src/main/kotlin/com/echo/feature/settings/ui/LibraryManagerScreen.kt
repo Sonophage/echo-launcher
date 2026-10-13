@@ -659,7 +659,10 @@ private fun ImportPcGamesContent(
                     "Using \"Add to home\" inside a supported launcher imports the game here automatically"
                 else
                     "Set ECHO as your Home app so a launcher's \"Add to home\" option imports the game into ECHO",
-                onClick  = { runCatching { homeLauncher.launch(homeRoleIntentProvider()?.onMainScreen(context)) } },
+                onClick  = {
+                    val intent = homeRoleIntentProvider()?.onMainScreen(context)
+                    if (intent != null) runCatching { homeLauncher.launch(intent) }
+                },
             )
 
             SettingsGroup("Exported Games")
