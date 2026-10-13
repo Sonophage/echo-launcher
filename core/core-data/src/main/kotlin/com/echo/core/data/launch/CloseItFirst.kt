@@ -6,4 +6,4 @@ package com.echo.core.data.launch
 // moved covers ECHO on the target display, and one that stayed covers it on the old display. A launch that did not
 // start covers neither, and is not warned.
 internal fun stayedOnOldDisplay(old: Int, target: Int, echoShownOn: Set<Int>): Boolean =
-    target != old && target in echoShownOn && old !in echoShownOn
+    target in echoShownOn && old !in echoShownOn
