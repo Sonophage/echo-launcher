@@ -30,6 +30,9 @@ import androidx.compose.ui.graphics.PathMeasure
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -449,6 +452,8 @@ private fun RestOrb(
     val edge = lerp(accent, Color.White, 0.3f)
     val style = LocalControllerPromptStyle.current
     var presses by remember { mutableIntStateOf(0) }
+    // the press mark is drawn on the orb, not on the row's padding below it (spec #3)
+    val press = remember { MutableInteractionSource() }
     Row(
         modifier
             // the bar is shorter than the orb on a large screen; it rises out of it like the card, so it stays round
@@ -458,7 +463,7 @@ private fun RestOrb(
             // down, so the wrapper's hold never started (owner, 2026-10-04)
             .then(
                 if (onAction == null) Modifier
-                else Modifier.clickable(role = Role.Button, onClickLabel = primary.label, indication = null, interactionSource = null) {
+                else Modifier.clickable(role = Role.Button, onClickLabel = primary.label, indication = null, interactionSource = press) {
                     presses++
                     onAction(primary.action)
                 },
@@ -469,6 +474,7 @@ private fun RestOrb(
         Box(
             Modifier
                 .size(u.dp(44))
+                .indication(press, LocalIndication.current)
                 .echoPulse(presses, edge)
                 .drawBehind { drawCircle(Brush.radialGradient(listOf(edge.copy(alpha = 0.45f), Color.Transparent), center, size.minDimension * 0.8f)) }
                 .clip(CircleShape)

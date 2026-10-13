@@ -91,7 +91,7 @@ fun <T> EchoContextMenuOverlay(
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val u = panelDesignUnits(maxWidth.value, maxHeight.value, LocalDensity.current)
-        Box(Modifier.fillMaxSize().clickable(onClick = onDismiss))
+        Box(Modifier.fillMaxSize().clickable(interactionSource = null, indication = null, onClick = onDismiss))
         RailPanelBacking(u, backdropArt)
 
         // the column fills the rail's height and centres what it holds, so a long menu scrolls its rows and its

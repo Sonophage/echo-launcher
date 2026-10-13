@@ -71,7 +71,7 @@ fun MusicTrackPicker(
                     1f to echoColors.backgroundBottom.copy(alpha = 0.94f),
                 )
             )
-            .clickable(onClick = onDismiss),
+            .clickable(interactionSource = null, indication = null, onClick = onDismiss),
     ) {
         MusicTrackPickerHintBar(
             selectedCount = state.selected.size,

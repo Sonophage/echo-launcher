@@ -26,6 +26,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -196,6 +198,8 @@ private fun CrossbarCategoryItem(
         label = "crossbarCategoryScale",
     )
     val accent = com.echo.core.ui.theme.LocalEchoColors.current.accentColor
+    // the column takes the tap; the press mark is drawn round the icon, where the focus mark is (spec #3)
+    val press = remember { MutableInteractionSource() }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -203,7 +207,7 @@ private fun CrossbarCategoryItem(
             .height(112.dp)
 
             .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = press,
                 indication = null,
                 onClick = onClick,
                 onLongClick = onLongPress,
@@ -215,6 +219,7 @@ private fun CrossbarCategoryItem(
             modifier = Modifier
                 .size(60.dp)
                 .graphicsLayer { scaleX = iconScale; scaleY = iconScale }
+                .indication(press, LocalIndication.current)
                 .focusMark(focusStyle, labelAlpha, accent)
                 .alpha(itemAlpha),
         ) {

@@ -4,7 +4,6 @@ import com.echo.core.ui.theme.EchoTextStyle
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -265,7 +264,7 @@ fun VideoPlayerScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
-            .clickable { poke() },
+            .clickable(interactionSource = null, indication = null) { poke() },
     ) {
         if (errorMessage == null) {
             AndroidView(
@@ -457,7 +456,7 @@ private fun ControlSlot(
         Modifier
             .width(if (focused) u.dp(96) else u.dp(64))
             .offset(y = if (focused) -u.dp(14) else 0.dp)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+            .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(u.dp(10)),
     ) {

@@ -1,6 +1,8 @@
 package com.echo.core.ui.theme
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -104,8 +106,15 @@ fun EchoTheme(
         MaterialTheme(
             colorScheme = EchoDarkColorScheme,
             typography = echoTypography(),
-            content = content,
-        )
+        ) {
+            // MaterialTheme sets the ripple as LocalIndication, so ECHO's press mark is provided inside it. A Material
+            // component draws its own ripple, not LocalIndication: the null configuration turns that off (spec #3)
+            CompositionLocalProvider(
+                LocalIndication provides PressMark,
+                LocalRippleConfiguration provides null,
+                content = content,
+            )
+        }
     }
 }
 

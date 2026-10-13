@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.echo.themekit.FocusStyle
@@ -20,8 +21,12 @@ val FocusStyle.glows: Boolean get() = this == FocusStyle.CLASSIC
 
 // the mark a style draws round a focused icon, faded by [visible]: HALO an accent ring with a glow, BRACKET four
 // accent corners, LIFT a shadow under it. CLASSIC draws its glow through focusGlow
-fun Modifier.focusMark(style: FocusStyle, visible: Float, accent: Color): Modifier = drawBehind {
-    if (visible <= 0f) return@drawBehind
+fun Modifier.focusMark(style: FocusStyle, visible: Float, accent: Color): Modifier =
+    drawBehind { drawFocusMark(style, visible, accent) }
+
+// the mark itself, for a draw that is not a modifier (the press indication)
+fun DrawScope.drawFocusMark(style: FocusStyle, visible: Float, accent: Color) {
+    if (visible <= 0f) return
     val stroke = 2.dp.toPx()
     when (style) {
         FocusStyle.HALO -> {
@@ -80,11 +85,13 @@ fun Modifier.focusGlow(
     visible: Float,
     reach: Float,
     alpha: Float,
-): Modifier = drawBehind {
-    if (visible <= 0f || alpha <= 0f) return@drawBehind
+): Modifier = drawBehind { drawFocusGlow(visible, reach, alpha) }
+
+fun DrawScope.drawFocusGlow(visible: Float, reach: Float, alpha: Float) {
+    if (visible <= 0f || alpha <= 0f) return
 
     val radius = size.minDimension / 2f * (1f + 2f * reach)
-    if (radius <= 0f) return@drawBehind
+    if (radius <= 0f) return
     val peak = alpha * visible
     drawCircle(
         brush = Brush.radialGradient(

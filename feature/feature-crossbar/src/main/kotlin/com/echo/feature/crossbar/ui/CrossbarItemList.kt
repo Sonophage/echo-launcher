@@ -20,6 +20,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -531,6 +533,8 @@ private fun CrossbarVerticalListRow(
         label = "crossbarRowGlow",
     )
     val accent = LocalEchoColors.current.accentColor
+    // the row takes the tap; the press mark is drawn round the icon, where the focus mark is (spec #3)
+    val press = remember { MutableInteractionSource() }
 
     val subtitleStyle = if (textShadow) EchoTextStyle.copy(shadow = CrossbarTextShadow) else EchoTextStyle
 
@@ -560,7 +564,7 @@ private fun CrossbarVerticalListRow(
                 .height(TAP_TARGET_HEIGHT)
 
                 .combinedClickable(
-                    interactionSource = remember { MutableInteractionSource() },
+                    interactionSource = press,
                     indication = null,
                     onClick = onClick,
                     onLongClick = onLongPress,
@@ -575,6 +579,7 @@ private fun CrossbarVerticalListRow(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
+                        .indication(press, LocalIndication.current)
                         .focusMark(focusStyle, glow, accent)
                         .focusGlow(
                             visible = if (focusStyle.glows) glow else 0f,

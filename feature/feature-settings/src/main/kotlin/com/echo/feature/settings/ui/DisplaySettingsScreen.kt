@@ -619,7 +619,7 @@ fun DisplaySettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-                .clickable { viewModel.hideWallpaperPreview() },
+                .clickable(interactionSource = null, indication = null) { viewModel.hideWallpaperPreview() },
         ) {
             val posterPath = state.customWallpaperPath
             val motionPath = state.motionWallpaperPath

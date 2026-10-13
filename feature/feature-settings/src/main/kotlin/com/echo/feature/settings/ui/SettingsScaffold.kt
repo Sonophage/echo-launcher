@@ -754,12 +754,7 @@ fun SettingsScaffold(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable(
-                            interactionSource = remember {
-                                androidx.compose.foundation.interaction.MutableInteractionSource()
-                            },
-                            indication = null,
-                        ) { onBack() },
+                        modifier = Modifier.clickable { onBack() },
                     ) {
                         Text(
                             text = "◀",
