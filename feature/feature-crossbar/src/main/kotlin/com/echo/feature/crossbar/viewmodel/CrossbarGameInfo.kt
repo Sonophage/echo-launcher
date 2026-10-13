@@ -45,7 +45,7 @@ class CrossbarGameInfo(
         if (gameId == null) kotlinx.coroutines.flow.flowOf(null)
         else vm.achievementController.observeSetForGame(gameId).map { achievementsStatOf(it) }
 
-    // also what the bottom screen shows, so both screens describe an item the same way
+    // also what the Companion Screen shows, so both screens describe an item the same way
     internal suspend fun load(info: GameInfoState): GameInfoState =
         withContext(Dispatchers.IO) { if (info.isApp) vm.loadAppInfo(info) else loadGameInfo(info) }
 

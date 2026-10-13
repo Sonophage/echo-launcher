@@ -694,7 +694,7 @@ data class CrossbarUiState(
 
     val search: SearchState? = null,
 
-    // a second screen is showing ECHO (the AYN Thor's bottom screen)
+    // a Companion Screen is attached on a second display (the AYN Thor's lower display)
     val secondScreen: Boolean = false,
     // Swap: the Main Screen on the second display and the Companion Screen on the first; remembered
     val screensSwapped: Boolean = false,

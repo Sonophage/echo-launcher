@@ -20,10 +20,17 @@ uses. The controller still acts only on the Main Screen (owner, 2026-10-12).
 - It is the same item menu the Main Screen shows for that item, from the same builder: the same
   sections, rows and names.
 - Edit Layout is left out: Move and Move Column are crossbar actions on the Main Screen.
-- Everything a row opens (confirms, pickers, text prompts) opens on the Companion Screen and is
-  finished by touch there.
+- Everything a row opens (confirms, pickers, text prompts, and a message a row ends with, such as
+  Open Folder's path or Export Game's report) opens on the Companion Screen and is finished by
+  touch there.
+- Full ECHO screens open on the Main Screen, as they do from its own menu: Game Info, Artwork
+  Studio, the manual, Update Metadata and a video's Details (owner default, 2026-10-12). So do
+  Android's own screens (App info, uninstall, a file manager), on the Main Screen's display (#28).
 - The menu stays on the item it opened for when the Main Screen's focus moves; the Main Screen stays
   fully live under the controller.
+- The menu is the one the Main Screen shows for the item in the column and view where it was
+  hovered, which the Companion Screen keeps with the item, and its rows act on what the menu opened
+  for, not on what the Main Screen shows when they run (review of spec #32, 2026-10-12).
 
 ## Consequences
 
