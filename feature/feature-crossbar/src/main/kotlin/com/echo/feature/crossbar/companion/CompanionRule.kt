@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarItemType
@@ -32,7 +32,7 @@ sealed interface SettingPreview {
 // theme focused in the Theme Store or the focused setting, else the item an open menu belongs to (the one shown
 // when it opened), else the hovered item (the App Drawer's over the Crossbar's, Search's result over both), else
 // what it showed [last], so it never goes blank. A game kept after it ends loses its clock and Resume.
-fun companionContent(main: BottomScreenState, last: CompanionContent?): CompanionContent? {
+fun companionContent(main: CompanionState, last: CompanionContent?): CompanionContent? {
     main.playing?.let { return CompanionContent.Details(it, playing = true, playingSince = main.playingSince) }
     val kept = (last as? CompanionContent.Details)?.copy(playing = false, playingSince = null) ?: last
     main.open.colorScheme?.let { return CompanionContent.Setting(SettingsFocusInfo(it.label, null, it.sublabel), SettingPreview.Colors(it)) }

@@ -1,6 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
-import com.echo.feature.crossbar.bottomscreen.hasInfo
+import com.echo.feature.crossbar.companion.hasInfo
 import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.components.MenuSelect
 import com.echo.core.ui.components.MenuState
@@ -1408,7 +1408,7 @@ class CrossbarViewModel @Inject constructor(
     internal val achievementCredentials: com.echo.core.data.achievement.AchievementCredentialsProvider,
     internal val discordSocial: com.echo.core.data.discord.DiscordSocialRepository,
     internal val launchScreens: com.echo.core.data.launch.LaunchScreens,
-    bottomScreenLink: com.echo.feature.crossbar.bottomscreen.BottomScreenLink,
+    companionLink: com.echo.feature.crossbar.companion.CompanionLink,
 ) : ViewModel() {
     @Volatile
     private var lastInteractionMs: Long = 0L
@@ -1432,8 +1432,8 @@ class CrossbarViewModel @Inject constructor(
     internal val recents = CrossbarRecents(this, _uiState, viewModelScope, menuSound)
 
     internal val gameDetail = CrossbarGameInfo(this, _uiState, viewModelScope, menuSound)
-    internal val bottomScreen = com.echo.feature.crossbar.bottomscreen.CrossbarBottomScreen(
-        this, _uiState, viewModelScope, bottomScreenLink, launchDispatcher.lastLaunch,
+    internal val companionScreen = com.echo.feature.crossbar.companion.CrossbarCompanion(
+        this, _uiState, viewModelScope, companionLink, launchDispatcher.lastLaunch,
     )
 
     private val launchHold = LaunchHold(viewModelScope) { id -> _uiState.update { it.copy(launchHold = id) } }
@@ -1501,7 +1501,7 @@ class CrossbarViewModel @Inject constructor(
         observeIconPreferences()
         observeFocusedGameVideo()
         observeFocusedItemAccent()
-        bottomScreen.observe()
+        companionScreen.observe()
         recents.observeRecentTopAccent()
         observeBackgroundSettings()
         observeTouchNavButtonMode()
@@ -2716,8 +2716,8 @@ class CrossbarViewModel @Inject constructor(
 
         // L3 or R3: the same as the Swap button, over anything open, on one display or two; and B from the Companion
         // Screen shown in place (pressSwaps)
-        if (com.echo.feature.crossbar.bottomscreen.pressSwaps(state, action)) {
-            bottomScreen.toggleSwap()
+        if (com.echo.feature.crossbar.companion.pressSwaps(state, action)) {
+            companionScreen.toggleSwap()
             return
         }
         // the Companion Screen shown in place ignores every other press: the hidden Main Screen never acts on a press
@@ -3581,7 +3581,7 @@ class CrossbarViewModel @Inject constructor(
                         it.setButtonHints(buttonHintsOf(s.contextMenuHintEnabled, s.interfaceChoices.minimalHints).next)
                     }
                 }
-                QuickSetting.SECOND_SCREEN -> bottomScreen.setSecondScreenEnabled(!s.secondScreenEnabled)
+                QuickSetting.SECOND_SCREEN -> companionScreen.setSecondScreenEnabled(!s.secondScreenEnabled)
                 QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
                 QuickSetting.ANDROID_SETTINGS -> {
                     panel.closeNotifications()

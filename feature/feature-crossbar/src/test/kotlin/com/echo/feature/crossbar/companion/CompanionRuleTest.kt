@@ -1,7 +1,7 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
-import com.echo.feature.crossbar.bottomscreen.CompanionContent.Details
-import com.echo.feature.crossbar.bottomscreen.CompanionContent.Setting
+import com.echo.feature.crossbar.companion.CompanionContent.Details
+import com.echo.feature.crossbar.companion.CompanionContent.Setting
 import com.echo.core.domain.model.CrossbarColorScheme
 import com.echo.core.domain.model.GamepadAction
 import com.echo.feature.crossbar.viewmodel.ColorSchemeOption
@@ -29,49 +29,49 @@ class CompanionRuleTest {
 
     @Test
     fun `the hovered item's Details are shown`() {
-        assertEquals(Details(skyrim), companionContent(BottomScreenState(hovered = skyrim), last = null))
+        assertEquals(Details(skyrim), companionContent(CompanionState(hovered = skyrim), last = null))
     }
 
     @Test
     fun `the App Drawer's hovered app wins over the Crossbar's cursor under the drawer`() {
-        val main = BottomScreenState(hovered = skyrim, drawer = pocketCasts)
+        val main = CompanionState(hovered = skyrim, drawer = pocketCasts)
         assertEquals(Details(pocketCasts), companionContent(main, last = null))
     }
 
     @Test
     fun `while searching, the hovered result wins over the drawer the search was opened from`() {
-        val main = BottomScreenState(hovered = castlevania, drawer = pocketCasts, open = MainScreenOpen(search = true))
+        val main = CompanionState(hovered = castlevania, drawer = pocketCasts, open = MainScreenOpen(search = true))
         assertEquals(Details(castlevania), companionContent(main, last = null))
     }
 
     @Test
     fun `nothing new hovered keeps the last thing shown`() {
-        assertEquals(Details(skyrim), companionContent(BottomScreenState(), last = Details(skyrim)))
+        assertEquals(Details(skyrim), companionContent(CompanionState(), last = Details(skyrim)))
     }
 
     @Test
     fun `an open menu keeps the item it belongs to, though the cursor moves under it`() {
-        val main = BottomScreenState(hovered = castlevania, open = MainScreenOpen(menu = true))
+        val main = CompanionState(hovered = castlevania, open = MainScreenOpen(menu = true))
         assertEquals(Details(skyrim), companionContent(main, last = Details(skyrim)))
         assertEquals("the menu closed: the cursor again", Details(castlevania), companionContent(main.copy(open = MainScreenOpen()), last = Details(skyrim)))
     }
 
     @Test
     fun `a menu opened before anything was shown shows the item it was opened on`() {
-        assertEquals(Details(skyrim), companionContent(BottomScreenState(hovered = skyrim, open = MainScreenOpen(menu = true)), last = null))
+        assertEquals(Details(skyrim), companionContent(CompanionState(hovered = skyrim, open = MainScreenOpen(menu = true)), last = null))
     }
 
     @Test
     fun `the running game wins over everything, with its session clock`() {
-        val main = BottomScreenState(hovered = skyrim, drawer = pocketCasts, playing = castlevania, playingSince = 1_000L)
+        val main = CompanionState(hovered = skyrim, drawer = pocketCasts, playing = castlevania, playingSince = 1_000L)
         assertEquals(Details(castlevania, playing = true, playingSince = 1_000L), companionContent(main, last = Details(skyrim)))
     }
 
     @Test
     fun `when the game ends, the hovered item is shown, or the game kept without its clock or Resume`() {
         val played = Details(castlevania, playing = true, playingSince = 1_000L)
-        assertEquals(Details(skyrim), companionContent(BottomScreenState(hovered = skyrim), last = played))
-        assertEquals(Details(castlevania), companionContent(BottomScreenState(), last = played))
+        assertEquals(Details(skyrim), companionContent(CompanionState(hovered = skyrim), last = played))
+        assertEquals(Details(castlevania), companionContent(CompanionState(), last = played))
     }
 
     // ticket #8: while Settings is open on the Main Screen, the Companion Screen shows the focused setting's
@@ -80,14 +80,14 @@ class CompanionRuleTest {
 
     @Test
     fun `in Settings the focused setting's description is shown, not the item hovered before`() {
-        val main = BottomScreenState(hovered = skyrim, open = MainScreenOpen(settings = true), setting = wave)
+        val main = CompanionState(hovered = skyrim, open = MainScreenOpen(settings = true), setting = wave)
         assertEquals(Setting(wave), companionContent(main, last = Details(skyrim)))
     }
 
     @Test
     fun `in Settings with no setting focused, the last thing shown is kept`() {
-        assertEquals(Setting(wave), companionContent(BottomScreenState(hovered = skyrim, open = MainScreenOpen(settings = true)), last = Setting(wave)))
-        assertEquals("a touch hides the cursor: the game is kept", Details(skyrim), companionContent(BottomScreenState(open = MainScreenOpen(settings = true)), last = Details(skyrim)))
+        assertEquals(Setting(wave), companionContent(CompanionState(hovered = skyrim, open = MainScreenOpen(settings = true)), last = Setting(wave)))
+        assertEquals("a touch hides the cursor: the game is kept", Details(skyrim), companionContent(CompanionState(open = MainScreenOpen(settings = true)), last = Details(skyrim)))
     }
 
     // a theme focused in the Theme Store: its name, its line, and a preview of its wallpaper and accent
@@ -95,7 +95,7 @@ class CompanionRuleTest {
 
     @Test
     fun `in the Theme Store the focused theme is previewed`() {
-        val main = BottomScreenState(open = MainScreenOpen(settings = true), setting = wave, theme = neon)
+        val main = CompanionState(open = MainScreenOpen(settings = true), setting = wave, theme = neon)
         assertEquals(
             Setting(SettingsFocusInfo("Neon Night", null, "by Echo  ·  version 2"), SettingPreview.Theme(neon)),
             companionContent(main, last = null),
@@ -107,7 +107,7 @@ class CompanionRuleTest {
 
     @Test
     fun `in the colour scheme picker the highlighted scheme is previewed`() {
-        val main = BottomScreenState(open = MainScreenOpen(settings = true, colorScheme = sunset), setting = wave)
+        val main = CompanionState(open = MainScreenOpen(settings = true, colorScheme = sunset), setting = wave)
         assertEquals(
             Setting(SettingsFocusInfo("Sunset Orange", null, null), SettingPreview.Colors(sunset)),
             companionContent(main, last = Setting(wave)),
@@ -116,7 +116,7 @@ class CompanionRuleTest {
 
     @Test
     fun `Settings closed, the hovered item is shown again`() {
-        assertEquals(Details(skyrim), companionContent(BottomScreenState(hovered = skyrim, setting = wave), last = Setting(wave)))
+        assertEquals(Details(skyrim), companionContent(CompanionState(hovered = skyrim, setting = wave), last = Setting(wave)))
     }
 
     // what the Main Screen has hovered: Search's focused result while Search is open, else the Crossbar's cursor

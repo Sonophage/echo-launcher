@@ -1,6 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
-import com.echo.feature.crossbar.bottomscreen.hasInfo
+import com.echo.feature.crossbar.companion.hasInfo
 import com.echo.core.domain.model.GamepadAction
 
 data class CrossbarPrompt(

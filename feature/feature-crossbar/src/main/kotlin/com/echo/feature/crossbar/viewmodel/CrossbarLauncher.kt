@@ -8,7 +8,7 @@ import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.domain.model.Game
 import com.echo.core.domain.model.resolve
 import com.echo.feature.appbar.LauncherShortcutRepository
-import com.echo.feature.crossbar.bottomscreen.mainScreenOnSecondDisplay
+import com.echo.feature.crossbar.companion.mainScreenOnSecondDisplay
 import com.echo.feature.launcher.LaunchDispatchResult
 import com.echo.feature.launcher.LaunchRecoveryAction
 import com.echo.feature.launcher.ResolvedLaunch

@@ -22,7 +22,7 @@
              activity as a secondary home and falls back to the system's one, so this is singleTop.
              Exported, because the system resolves and starts it. -->
         <activity
-            android:name="com.echo.feature.crossbar.bottomscreen.BottomScreenActivity"
+            android:name="com.echo.feature.crossbar.companion.CompanionActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity="${applicationId}.bottom"
@@ -40,7 +40,7 @@
              as a new task brought to the front is what moves focus. Translucent, so the Companion window
              under it is never stopped. -->
         <activity
-            android:name="com.echo.feature.crossbar.bottomscreen.CompanionFocusActivity"
+            android:name="com.echo.feature.crossbar.companion.CompanionFocusActivity"
             android:exported="false"
             android:taskAffinity="${applicationId}.focus"
             android:excludeFromRecents="true"

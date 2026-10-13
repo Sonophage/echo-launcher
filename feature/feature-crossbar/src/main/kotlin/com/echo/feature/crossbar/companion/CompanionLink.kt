@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
@@ -11,7 +11,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 // the Main Screen's state the Companion Screen follows, and what it shows from it (companionContent)
-data class BottomScreenState(
+data class CompanionState(
     // the item hovered on the Main Screen: the Crossbar's cursor, or Search's focused result while Search is open
     val hovered: GameInfoState? = null,
     // the app hovered in the App Drawer while it is open on the Main Screen (ADR 0001)
@@ -46,9 +46,9 @@ data class MainScreenOpen(
 // (ADR 0001). The Companion Screen is a second activity with no view model of its own: it draws this state and
 // acts through the Crossbar.
 @Singleton
-class BottomScreenLink @Inject constructor() {
-    private val _state = MutableStateFlow(BottomScreenState())
-    val state: StateFlow<BottomScreenState> = _state.asStateFlow()
+class CompanionLink @Inject constructor() {
+    private val _state = MutableStateFlow(CompanionState())
+    val state: StateFlow<CompanionState> = _state.asStateFlow()
 
     // the crossbar of the running ECHO, while it lives
     private val _crossbar = MutableStateFlow<CrossbarViewModel?>(null)
@@ -63,7 +63,7 @@ class BottomScreenLink @Inject constructor() {
     val hostShown: StateFlow<Boolean> = _hostShown.asStateFlow()
 
     // every change goes through the Companion rule, which keeps what is shown
-    fun update(change: (BottomScreenState) -> BottomScreenState) =
+    fun update(change: (CompanionState) -> CompanionState) =
         _state.update { old -> change(old).let { it.copy(shown = companionContent(it, last = old.shown)) } }
 
     // the App Drawer's focused app while the drawer is open on the Main Screen; null once it closes

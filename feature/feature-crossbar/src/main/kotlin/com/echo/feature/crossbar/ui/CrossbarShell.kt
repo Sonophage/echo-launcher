@@ -207,9 +207,9 @@ fun CrossbarShellContainer(
     val playbackPositions = remember(viewModel) { PlaybackPositions(viewModel.musicPositionMs, viewModel.externalPositionMs) }
     // Settings reports its focused setting and the Theme Store its focused theme only while a Companion Screen is
     // on show to preview them; the Main Screen draws the same either way (ADR 0001)
-    val companionShown = com.echo.feature.crossbar.bottomscreen.companionOnShow(uiState.secondScreen, uiState.companionInPlace)
-    val settingFocused = remember(viewModel) { { info: com.echo.feature.settings.ui.SettingsFocusInfo? -> viewModel.bottomScreen.settingFocused(info) } }
-    val themeFocused = remember(viewModel) { { p: com.echo.feature.settings.ui.StorePreview? -> viewModel.bottomScreen.themeFocused(p) } }
+    val companionShown = com.echo.feature.crossbar.companion.companionOnShow(uiState.secondScreen, uiState.companionInPlace)
+    val settingFocused = remember(viewModel) { { info: com.echo.feature.settings.ui.SettingsFocusInfo? -> viewModel.companionScreen.settingFocused(info) } }
+    val themeFocused = remember(viewModel) { { p: com.echo.feature.settings.ui.StorePreview? -> viewModel.companionScreen.themeFocused(p) } }
     CompositionLocalProvider(
         LocalPlaybackPositions provides playbackPositions,
         com.echo.core.ui.wave.LocalWaveDesign provides uiState.waveDesign,
@@ -310,7 +310,7 @@ fun CrossbarShellContainer(
         onGameInfoPanelClose = viewModel.gameDetail::closeGameInfoPanel,
         onGameInfoScrollMax = viewModel.gameDetail::onGameInfoScrollMax,
         onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
-        onDrawerFocused = viewModel.bottomScreen::drawerFocused,
+        onDrawerFocused = viewModel.companionScreen::drawerFocused,
         recentAchievements = recentAchievements,
         onProfileSet = viewModel.panel::onProfileSetTapped,
         onProfileBadge = viewModel.panel::onProfileBadgeTapped,
@@ -1367,7 +1367,7 @@ fun CrossbarShell(
             }
 
             // every menu is drawn here, on the Main Screen (ADR 0001)
-            com.echo.feature.crossbar.bottomscreen.mainScreenMenu(uiState)?.let { menu ->
+            com.echo.feature.crossbar.companion.mainScreenMenu(uiState)?.let { menu ->
 
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
                     EchoContextMenuOverlay(

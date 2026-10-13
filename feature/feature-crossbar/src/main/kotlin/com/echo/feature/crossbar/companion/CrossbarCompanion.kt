@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
@@ -28,11 +28,11 @@ import kotlinx.coroutines.launch
 // keeps the Companion Screen's state current from the Main Screen's, and acts on its taps. Nothing is loaded
 // while no Companion Screen is on show, so a one-screen device pays nothing until Swap shows it.
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-class CrossbarBottomScreen(
+class CrossbarCompanion(
     private val vm: CrossbarViewModel,
     private val uiState: MutableStateFlow<CrossbarUiState>,
     private val scope: CoroutineScope,
-    private val link: BottomScreenLink,
+    private val link: CompanionLink,
     private val lastLaunch: StateFlow<OpenSession?>,
 ) {
     private val companionShown = combine(link.attached, uiState.map { it.companionInPlace }, ::companionOnShow)

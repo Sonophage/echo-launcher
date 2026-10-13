@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -51,8 +51,8 @@ import com.echo.feature.crossbar.viewmodel.RecentFilter
 // keyboard, which the Thor puts here, shows over this screen. It takes touch only: a tap never moves the
 // controller from the Main Screen (ADR 0001).
 @Composable
-fun BottomScreen(
-    state: BottomScreenState,
+fun CompanionScreen(
+    state: CompanionState,
     crossbar: CrossbarViewModel,
     modifier: Modifier = Modifier,
 ) {
@@ -115,9 +115,9 @@ fun BottomScreen(
             ) {
                 Spacer(Modifier.weight(1f))
                 // Resume launches the game again, so it is a hold like every launch
-                if (shown?.playing == true) PanelButton(GamepadAction.SELECT, "Resume", u, holdMs = LAUNCH_HOLD_MS) { crossbar.bottomScreen.resume() }
+                if (shown?.playing == true) PanelButton(GamepadAction.SELECT, "Resume", u, holdMs = LAUNCH_HOLD_MS) { crossbar.companionScreen.resume() }
                 // the Main Screen and this screen change displays
-                PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.bottomScreen.toggleSwap() }
+                PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.companionScreen.toggleSwap() }
             }
         }
     }
