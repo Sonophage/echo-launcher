@@ -90,6 +90,24 @@ fun Modifier.pressAndHold(holdMs: Long, label: String, onPressing: (Boolean) -> 
     }
 }
 
+// a launch button whose hold the view model runs (LaunchHold.press): it reports the finger down and up and launches
+// nothing itself, so the footer's card rises and fills as for A (issue #36). A screen reader's click acts at once
+@Composable
+fun Modifier.reportPress(label: String, onPressed: (Boolean) -> Unit, onClick: () -> Unit): Modifier {
+    val pressed by rememberUpdatedState(onPressed)
+    val click by rememberUpdatedState(onClick)
+    return semantics {
+        role = Role.Button
+        onClick(label) { click(); true }
+    }.pointerInput(Unit) {
+        detectTapGestures(onPress = {
+            pressed(true)
+            tryAwaitRelease()
+            pressed(false)
+        })
+    }
+}
+
 // kit "Echo · press": two rings pulse out from an orb and fade over 400 ms; bump trigger to fire
 @Composable
 fun Modifier.echoPulse(trigger: Int, color: Color): Modifier {

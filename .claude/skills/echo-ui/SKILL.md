@@ -38,8 +38,12 @@ screen's padded column.
 
 - `Modifier.pressAndHold(holdMs, label, onPressing, onHeld)` (`design/HoldRing.kt`). Launches use
   `LAUNCH_HOLD_MS` (1000).
-- A card or row that launches by touch reports the finger down and up to the view model, which
-  runs the same `LaunchHold` as pad A, so the footer card rises and fills (`onRecentCardPress`).
+- A card, row or launch button that launches by touch reports the finger down and up to the view
+  model, which runs the same `LaunchHold` (`design/LaunchHold.kt`) as pad A: `press` on down, `lift`
+  on up. The footer card then rises and fills (`onRecentCardPress`). A `PanelButton` reports the
+  finger when it is given `onPressed`, and does not launch by itself then.
+- Every footer whose A can launch out of ECHO gives its `HintAction` the hold (`holdMs`, `holding`).
+  Without it the card never rises on that screen.
 - Trap: `animateFloatAsState` starts at its target on first composition. A ring composed mid-hold
   shows full. Use an `Animatable` that starts at 0 (see `holdProgress`).
 - Trap: a `clickable(enabled = false)` inside a gesture wrapper still takes the finger down, so the

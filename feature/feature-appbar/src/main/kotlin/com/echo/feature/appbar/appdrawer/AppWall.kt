@@ -236,6 +236,8 @@ internal fun WallInfo(
     modifier: Modifier = Modifier,
     holding: Boolean = false,
     details: com.echo.feature.appbar.GameDetails? = null,
+    // a finger down and up on Play, for the drawer's launch hold
+    onLaunchPressed: (Boolean) -> Unit = {},
 ) {
     val game = app.isGame || app.gameId != null
     val kind = when {
@@ -298,7 +300,7 @@ internal fun WallInfo(
                 color = Color.White.copy(alpha = 0.65f), fontSize = u.sp(13))
         }
         Row(Modifier.padding(top = u.dp(4)), horizontalArrangement = Arrangement.spacedBy(u.dp(10))) {
-            PanelButton(GamepadAction.SELECT, actionLabel(app), u, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onClick = onLaunch)
+            PanelButton(GamepadAction.SELECT, actionLabel(app), u, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onLaunchPressed.takeIf { app.launchesOut() }, onClick = onLaunch)
             PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u, onClick = onOptions)
         }
     }
@@ -316,6 +318,8 @@ internal fun WallInfoStrip(
     modifier: Modifier = Modifier,
     holding: Boolean = false,
     details: com.echo.feature.appbar.GameDetails? = null,
+    // a finger down and up on Play, for the drawer's launch hold
+    onLaunchPressed: (Boolean) -> Unit = {},
 ) {
     val game = app.isGame || app.gameId != null
     val tint = icon?.color ?: NeutralTint
@@ -348,7 +352,7 @@ internal fun WallInfoStrip(
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(bu.dp(10))) {
-            PanelButton(GamepadAction.SELECT, actionLabel(app), bu, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onClick = onLaunch)
+            PanelButton(GamepadAction.SELECT, actionLabel(app), bu, com.echo.core.ui.design.LAUNCH_HOLD_MS, holding, onLaunchPressed.takeIf { app.launchesOut() }, onClick = onLaunch)
             PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", bu, onClick = onOptions)
         }
     }

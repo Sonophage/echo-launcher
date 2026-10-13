@@ -347,6 +347,7 @@ fun CrossbarShellContainer(
         onSearchBack = viewModel.librarySearch::closeSearch,
         onSearchFocusedAt = viewModel.librarySearch::onSearchFocusedAt,
         onSearchOptionsAt = viewModel.librarySearch::onSearchOptionsAt,
+        onSearchOpenPressed = viewModel.librarySearch::onSearchOpenPress,
         onSearchKindPicked = viewModel.librarySearch::pickSearchKind,
         onAppPickerTileTapped = viewModel.appPickerSection::onAppPickerTileTapped,
         onAppPickerTouchBrowse = viewModel.appPickerSection::onAppPickerTouchBrowse,
@@ -553,6 +554,7 @@ fun CrossbarShell(
 
     onSearchFocusedAt: (Int) -> Unit = {},
     onSearchOptionsAt: (Int) -> Unit = {},
+    onSearchOpenPressed: (Int, Boolean) -> Unit = { _, _ -> },
     onSearchKindPicked: (com.echo.feature.crossbar.viewmodel.SearchKind?) -> Unit = {},
     onMusicTrackPickerActivatedAt: (Int) -> Unit = {},
     onMusicTrackPickerConfirm: () -> Unit = {},
@@ -1318,6 +1320,7 @@ fun CrossbarShell(
                     onKindPicked = onSearchKindPicked,
                     waveStyle = uiState.waveStyle,
                     launchHold = uiState.launchHold,
+                    onOpenPressed = onSearchOpenPressed,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

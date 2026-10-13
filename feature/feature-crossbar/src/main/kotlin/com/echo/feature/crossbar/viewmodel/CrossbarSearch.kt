@@ -244,6 +244,14 @@ class CrossbarSearch(
         }
     }
 
+    // a finger on the banner's Open for a game or app holds as Recent's cards do, so the footer's card rises
+    fun onSearchOpenPress(index: Int, down: Boolean) {
+        if (!down) return vm.liftLaunchPress()
+        vm.markTouchInput()
+        val row = uiState.value.search?.rows?.getOrNull(index)?.takeIf { it.launchesOut() } ?: return
+        vm.pressToLaunch(row) { onSearchActivatedAt(index) }
+    }
+
     // the banner's Options (owner, 2026-10-05): the row's own menu, drawn over the search
     fun onSearchOptionsAt(index: Int) {
         val row = uiState.value.search?.takeUnless { it.scope == SearchScope.WEB }?.rows?.getOrNull(index)?.takeUnless { it.type == CrossbarItemType.EMPTY } ?: return
