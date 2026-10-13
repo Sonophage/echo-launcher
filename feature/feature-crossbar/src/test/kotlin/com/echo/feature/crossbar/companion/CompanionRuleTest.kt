@@ -12,6 +12,9 @@ import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.GameInfoState
 import com.echo.feature.crossbar.viewmodel.NamePrompts
+import com.echo.feature.crossbar.viewmodel.MenuSlot
+import com.echo.feature.crossbar.viewmodel.CollectionNameDialogState
+import com.echo.feature.crossbar.viewmodel.withPrompts
 import com.echo.feature.crossbar.viewmodel.SearchScope
 import com.echo.feature.crossbar.viewmodel.SearchState
 import org.junit.Assert.assertEquals
@@ -197,6 +200,30 @@ class CompanionRuleTest {
         assertEquals("a name prompt on the Main Screen", CompanionKeys.CLAIM, companionKeys(dual.copy(mainPrompts = NamePrompts(renameAppTarget = "a"))))
         assertEquals("Search in Swap is in the Companion's window", CompanionKeys.HOLD, companionKeys(search.copy(screensSwapped = true)))
         assertEquals(CompanionKeys.NONE, companionKeys(dual.copy(screensSwapped = true)))
+    }
+
+    // review P5, P7 of spec #32: a prompt opened from the Companion's menu is drawn by CompanionScreen, in the
+    // Companion's window outside Swap and in MainActivity in Swap. The window that holds the field takes the keys:
+    // the Companion's window holds them outside Swap, and in Swap claims once and gives them back to MainActivity
+    @Test
+    fun `a Companion prompt's keys go to the window that draws it`() {
+        val dual = CrossbarUiState(secondDisplayPresent = true, secondScreenEnabled = true, secondScreen = true)
+        val prompt = dual.withPrompts(MenuSlot.COMPANION) { copy(collectionNameDialog = CollectionNameDialogState(title = "Edit Title")) }
+        assertEquals("outside Swap the field is in the Companion's window", CompanionKeys.HOLD, companionKeys(prompt))
+        assertEquals("in Swap MainActivity draws it", CompanionKeys.CLAIM, companionKeys(prompt.copy(screensSwapped = true)))
+        assertTrue("so MainActivity shows the keyboard again when the claim ends", reshowsKeyboard(windowFocused = true, prompt.copy(screensSwapped = true)))
+    }
+
+    @Test
+    fun `MainActivity types only into a field it draws`() {
+        val dual = CrossbarUiState(secondDisplayPresent = true, secondScreenEnabled = true, secondScreen = true)
+        val prompt = dual.withPrompts(MenuSlot.COMPANION) { copy(collectionNameDialog = CollectionNameDialogState(title = "Edit Title")) }
+        assertFalse("a Companion prompt on the second display: B on the Main Screen is not taken to hide a keyboard", firstWindowTyping(prompt))
+        assertTrue("in Swap MainActivity draws the Companion's prompt", firstWindowTyping(prompt.copy(screensSwapped = true)))
+        assertTrue("so it does in the in-place view on one display", firstWindowTyping(CrossbarUiState(companionInPlace = true).withPrompts(MenuSlot.COMPANION) { prompt.companionPrompts }))
+        assertTrue("a Main Screen prompt", firstWindowTyping(dual.copy(mainPrompts = NamePrompts(renameAppTarget = "a"))))
+        assertTrue("Search", firstWindowTyping(dual.copy(search = SearchState(scope = SearchScope.ALL))))
+        assertFalse("nothing typed", firstWindowTyping(dual))
     }
 
     // on the Thor the Companion's claim moves focus away from the Main Screen and back, and Android hides the

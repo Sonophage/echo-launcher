@@ -41,7 +41,6 @@ import timber.log.Timber
 import com.echo.feature.crossbar.gamepad.GamepadInputHandler
 import com.echo.feature.crossbar.gamepad.AskedKeyboard
 import com.echo.feature.crossbar.gamepad.backHidesKeyboard
-import com.echo.feature.crossbar.viewmodel.typing
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.launcher.notification.EchoNotificationListener
 import com.echo.launcher.receiver.InstallShortcutReceiver
@@ -125,9 +124,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // Search and a name prompt focus their field, which asks for the keyboard
+        // Search and a name prompt focus their field, which asks for the keyboard; only a field this window draws
+        // (firstWindowTyping), so a prompt on the Companion Screen's display does not take the Main Screen's B
         lifecycleScope.launch {
-            crossbarViewModel.uiState.map { it.typing }.distinctUntilChanged()
+            crossbarViewModel.uiState.map { com.echo.feature.crossbar.companion.firstWindowTyping(it) }.distinctUntilChanged()
                 .collect { keyboard.typing(it) }
         }
         ContextCompat.registerReceiver(

@@ -112,17 +112,27 @@ fun swap(s: CrossbarUiState): Swap =
 
 // what the Companion Screen's window does with key focus. The Thor draws the keyboard on the Companion Screen's
 // display (ime_show_on_second), and only for the window last focused there, so the Companion's window must take
-// focus for it to show. CLAIM: typing on the Main Screen, it takes focus once and gives it back, so the controller
-// and the field stay on the Main Screen (ADR 0001). HOLD: the field is in this window, which keeps the keys while
-// typing: in Swap, or a name prompt opened from the Companion's menu (ADR 0002). NONE: touch only.
+// focus for it to show. CLAIM: the field is in MainActivity's window (the Main Screen's, or in Swap a prompt of the
+// Companion's menu), so it takes focus once and gives it back, and the controller and the field stay there (ADR
+// 0001). HOLD: the field is in this window, which keeps the keys while typing: the Main Screen's in Swap, or outside
+// Swap a name prompt opened from the Companion's menu (ADR 0002). NONE: touch only.
 enum class CompanionKeys { NONE, CLAIM, HOLD }
 
 fun companionKeys(s: CrossbarUiState): CompanionKeys = when {
     !s.typing -> CompanionKeys.NONE
-    s.screensSwapped -> CompanionKeys.HOLD
-    s.search == null && !s.mainPrompts.open && s.companionPrompts.open -> CompanionKeys.HOLD
+    // ponytail: with a field on each screen at once, the Companion's window keeps the keys; ask which field was opened last if that matters
+    s.screensSwapped && mainScreenTyping(s) || !s.screensSwapped && s.companionPrompts.open -> CompanionKeys.HOLD
     else -> CompanionKeys.CLAIM
 }
+
+// the window on the first display (MainActivity) has a field typed into, which asks for the keyboard (review P7): the
+// Main Screen's Search or prompt, or a prompt of the Companion Screen while MainActivity draws it (Swap, or the
+// in-place view on one display). A Companion prompt on the second display is not, so B there is not taken to hide it
+fun firstWindowTyping(s: CrossbarUiState): Boolean =
+    mainScreenTyping(s) || s.companionPrompts.open && firstDisplayShowsCompanion(s)
+
+// the Main Screen's own field: Search, or a prompt CrossbarShell draws
+private fun mainScreenTyping(s: CrossbarUiState): Boolean = s.search != null || s.mainPrompts.open
 
 // the Companion's CLAIM has ended while typing with a Companion attached and the Main Screen's window has focus: the
 // claim moved the focused display away and back, which hid the keyboard, so the Main Screen shows it again for its
