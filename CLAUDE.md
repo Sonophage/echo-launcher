@@ -12,8 +12,9 @@ Open work and recent decisions are in the handoff, outside this repo:
 
 Run `tools/gate.sh` before a commit that changes code. It is the full check: `checkStructure`, every
 module's unit tests (the four JVM modules run `test`, not `testDebugUnitTest`) and `lintDebug`. It
-deletes old results, then counts the new ones from the test XML; quote its `gate:` line, not Gradle's
-summary.
+deletes old results, then counts the new ones from the test XML, and fails when a module with tests
+wrote none. Quote `build/gate.txt` (the `gate:` line and the commit it ran on), not Gradle's summary.
+One gate runs per checkout at a time; a worktree takes the Discord SDK aar from the main checkout.
 
 - `feature-settings` tests can hang (a Robolectric DataStore deadlock). If the gate runs past five
   minutes, get a stack with `jstack` before you stop it.
