@@ -461,22 +461,26 @@ private fun NoticeRow(entry: PanelEntry, u: DesignUnits, onClick: () -> Unit) {
 
 private data class RowText(val pkg: String, val title: String, val app: String, val postedAt: Long)
 
+// a Quick Settings tile's caption and value
+internal fun quickTileText(setting: QuickSetting, quick: QuickSettingsState): Pair<String, String> = when (setting) {
+    QuickSetting.WAVE -> "Wave" to quick.wave.label
+    // owner, 2026-10-05: "Crossbar shows Art / Wallpaper" was unclear; this is what fills the background.
+    // owner, 2026-10-07: named for what it does, the game's art behind the crossbar.
+    // the captions are in Title Case, "Game Backgrounds" (owner, 2026-10-12)
+    QuickSetting.BACKDROP -> "Game Backgrounds" to if (quick.backdropOn) "On" else "Off"
+    QuickSetting.ROW_ART -> "Game Rows Show" to if (quick.rowCoverArt) com.echo.core.ui.icons.GameIconStyle.COVER_ART.label else "Icons"
+    QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
+    QuickSetting.MINIMAL_HINTS -> "Button Hints" to quick.buttonHints.label
+    QuickSetting.SECOND_SCREEN -> "Screens" to if (quick.secondScreenOn) "Dual" else "Single"
+    QuickSetting.ANDROID_SETTINGS -> "Android Settings" to "Open"
+    QuickSetting.LIBRARIES -> "" to ""
+}
+
 @Composable
 private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: DesignUnits, onTapped: (QuickSetting, Int) -> Unit, modifier: Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u.dp(16))) {
         com.echo.feature.crossbar.viewmodel.quickSettingsFor(quick.secondDisplay).forEach { setting ->
-            val (label, value) = when (setting) {
-                QuickSetting.WAVE -> "Wave" to quick.wave.label
-                // owner, 2026-10-05: "Crossbar shows Art / Wallpaper" was unclear; this is what fills the background.
-                // owner, 2026-10-07: named for what it does, the game's art behind the crossbar
-                QuickSetting.BACKDROP -> "Game backgrounds" to if (quick.backdropOn) "On" else "Off"
-                QuickSetting.ROW_ART -> "Game rows show" to if (quick.rowCoverArt) com.echo.core.ui.icons.GameIconStyle.COVER_ART.label else "Icons"
-                QuickSetting.RECENT_APPS -> "Apps in Recent" to if (quick.recentAppsOn) "On" else "Off"
-                QuickSetting.MINIMAL_HINTS -> "Button hints" to quick.buttonHints.label
-                QuickSetting.SECOND_SCREEN -> "Screens" to if (quick.secondScreenOn) "Dual" else "Single"
-                QuickSetting.ANDROID_SETTINGS -> "Android settings" to "Open"
-                QuickSetting.LIBRARIES -> "" to ""
-            }
+            val (label, value) = quickTileText(setting, quick)
             Tile(setting == focus, u.dp(300), u.dp(18), u.dp(28), u, Modifier.weight(1f), { onTapped(setting, 0) }) {
                 Icon(quickIcon(setting), null, tint = Color.White, modifier = Modifier.size(u.dp(34)))
                 Column {
@@ -489,7 +493,7 @@ private fun QuickTiles(quick: QuickSettingsState, focus: QuickSetting, u: Design
     }
 }
 
-// a tile's words wrap between words, never inside one: on the Thor's narrow tiles "Game backgrounds" broke as
+// a tile's words wrap between words, never inside one: on the Thor's narrow tiles "Game Backgrounds" broke as
 // "backgroun / ds". The size steps down until the longest word fits the tile's width (owner, 2026-10-08)
 @Composable
 private fun WholeWordText(text: String, size: androidx.compose.ui.unit.TextUnit, color: Color, weight: FontWeight, lineHeightScale: Float, maxLines: Int = 3) {

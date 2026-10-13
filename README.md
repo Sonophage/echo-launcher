@@ -132,7 +132,7 @@ whatever is playing. The footer leads with the screen's filter: one LT/RT mark a
 for the current filter or sort (a tap steps to the next). Then **Back**, the **A** action in
 the centre, and the screen's own actions on the right, with **LB** (Apps) and **RB** (Search) side
 by side as icons. **Home** has no hint; the Guide button, or Start held, goes home. *Quick
-settings ▸ Button hints ▸ Minimal* leaves only the filter and the A action in the footer. Games and apps
+Settings ▸ Button Hints ▸ Minimal* leaves only the filter and the A action in the footer. Games and apps
 launch when you **hold A** until the ring fills, so a stray press never launches anything.
 
 | | |
