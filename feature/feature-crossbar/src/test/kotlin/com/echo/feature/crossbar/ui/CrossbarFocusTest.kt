@@ -2,6 +2,8 @@ package com.echo.feature.crossbar.ui
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import com.echo.core.ui.theme.GLIDE_STIFFNESS
+import com.echo.core.ui.theme.glide
 import com.echo.themekit.FocusStyle
 import com.echo.themekit.MotionPreset
 import com.echo.themekit.focusStyleOf

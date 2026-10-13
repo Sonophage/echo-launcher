@@ -5,13 +5,8 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.runtime.staticCompositionLocalOf
 import com.echo.themekit.FocusStyle
 import com.echo.themekit.MotionPreset
-
-// the applied theme's motion (owner, 2026-10-09); the default is ECHO's own. Its focus style is LocalFocusStyle
-// in core-ui
-val LocalCrossbarMotion = staticCompositionLocalOf { MotionPreset.CLASSIC }
 
 // a row's size, focused and not. CLASSIC's numbers are the ones the crossbar always drew
 internal fun FocusStyle.rowScale(selected: Boolean): Float = when (this) {
@@ -25,8 +20,8 @@ internal fun FocusStyle.restAlpha(alpha: Float): Float = if (this == FocusStyle.
 
 internal fun FocusStyle.categoryScale(selected: Boolean): Float = if (this == FocusStyle.LIFT && selected) 1.18f else 1f
 
-// pop is a row's size, fade its brightness and mark, glide the column. CLASSIC's are the springs the crossbar
-// always used
+// pop is a row's size, fade its brightness and mark; glide, the column's, is in core-ui (theme/Motion.kt).
+// CLASSIC's are the springs the crossbar always used
 internal fun MotionPreset.pop(): AnimationSpec<Float> = when (this) {
     MotionPreset.CLASSIC -> spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessHigh)
     MotionPreset.SNAPPY -> spring(Spring.DampingRatioNoBouncy, Spring.StiffnessHigh)
@@ -41,9 +36,3 @@ internal fun MotionPreset.fade(): AnimationSpec<Float> = when (this) {
     MotionPreset.STILL -> tween(120)
 }
 
-internal fun MotionPreset.glide(): AnimationSpec<Float> = when (this) {
-    MotionPreset.CLASSIC -> spring(dampingRatio = 1f, stiffness = GLIDE_STIFFNESS)
-    MotionPreset.SNAPPY -> spring(dampingRatio = 1f, stiffness = GLIDE_STIFFNESS * 3)
-    MotionPreset.SOFT -> spring(dampingRatio = 1f, stiffness = GLIDE_STIFFNESS / 3)
-    MotionPreset.STILL -> snap()
-}

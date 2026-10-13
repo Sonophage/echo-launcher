@@ -1,5 +1,6 @@
 package com.echo.core.ui.components
 
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloat
@@ -20,6 +21,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.alpha
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,11 +36,20 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.echo.core.ui.design.menuBackdrop
+import com.echo.core.ui.theme.FocusGlow
+import com.echo.core.ui.theme.LocalEchoColors
+import com.echo.core.ui.theme.LocalFocusStyle
+import com.echo.core.ui.theme.LocalMotion
+import com.echo.core.ui.theme.focusGlow
+import com.echo.core.ui.theme.focusMark
+import com.echo.core.ui.theme.glide
+import com.echo.core.ui.theme.glows
 import kotlin.math.abs
 
 data class LetterAnchor(val letter: Char, val index: Int)
@@ -117,6 +130,20 @@ internal fun railWave(distance: Int): Float {
     val d = abs(distance).toFloat() / WAVE_REACH
     return if (d >= 1f) 0f else (0.5f + 0.5f * kotlin.math.cos(Math.PI * d)).toFloat()
 }
+
+// which way a belly bulges: the Side Rail's to the left, a Filter Row's up
+enum class Bulge(internal val x: Float, internal val y: Float) { LEFT(-1f, 0f), UP(0f, -1f) }
+
+// owner, 2026-10-12: about a thumb width, so the item under the finger is clear of it
+val RailBellyReach = 48.dp
+
+// the belly under a finger: each of [rungs] rows moves [reach] toward [bulge] at the [touched] row, less over the
+// rail's wave, and not at all further away. One shape for the Side Rail and the Filter Row
+fun railBelly(touched: Int, rungs: Int, bulge: Bulge, reach: Dp = RailBellyReach): List<DpOffset> =
+    List(rungs) { row ->
+        val pull = reach * railWave(row - touched)
+        DpOffset(pull * bulge.x, pull * bulge.y)
+    }
 
 internal val RailEdgeZone = RailIcon + RailEdgeGap * 2
 
@@ -205,10 +232,21 @@ fun SideRail(
         val metrics = railMetrics(maxHeight - (edge + growth) * 2, runs.size)
         val rungs = remember(runs, metrics.rungs) { bucketIndices(runs.size, metrics.rungs).map { runs[it] } }
 
-        if (cursor != null) {
+        // owner, 2026-10-12: while a finger is on the rail it bulges left, clear of the thumb, and when the finger
+        // lifts it settles back at the theme's motion speed, still drawn until it has
+        var touching by remember { mutableStateOf(false) }
+        val bulging = touching && cursor != null
+        val glide = LocalMotion.current.glide()
+        val belly by animateFloatAsState(if (bulging) 1f else 0f, glide, label = "railBelly")
+        var lastCursor by remember { mutableStateOf(cursor) }
+        if (cursor != null) lastCursor = cursor
+        val shown = cursor ?: lastCursor?.takeIf { belly > 0f }
+
+        if (shown != null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .alpha(if (cursor != null) 1f else belly)
                     .menuBackdrop(),
             ) {
                 Column(
@@ -220,18 +258,18 @@ fun SideRail(
                         .padding(top = edge + growth, bottom = edge + growth, end = RailEdgeGap)
                         .width(metrics.badge * ACTIVE_SCALE),
                 ) {
-                    Rungs(letters, rungs, cursor, metrics)
+                    Rungs(letters, rungs, shown, metrics, bulging, glide, belly)
                 }
                 // the chosen group's full name, beside its rung
-                cursor?.let { letters.getOrNull(it) }?.takeIf { it.name != it.glyph }?.let { rung ->
-                    val active = rungs.indexOfLast { it <= cursor }.coerceAtLeast(0)
+                letters.getOrNull(shown)?.takeIf { it.name != it.glyph }?.let { rung ->
+                    val active = rungs.indexOfLast { it <= shown }.coerceAtLeast(0)
                     val span = metrics.badge * rungs.size + metrics.gap * (rungs.size - 1)
                     val lead = (railHeight - span) / 2
                     RailName(
                         rung.name,
                         Modifier
                             .align(Alignment.TopEnd)
-                            .padding(end = RailEdgeGap + metrics.badge * ACTIVE_SCALE + RailEdgeGap)
+                            .padding(end = RailEdgeGap + metrics.badge * ACTIVE_SCALE + RailEdgeGap + RailBellyReach * belly)
                             .offset { androidx.compose.ui.unit.IntOffset(0, (lead + metrics.pitch * active + metrics.badge / 2).roundToPx()) }
                             .graphicsLayer { translationY = -size.height / 2 },
                     )
@@ -248,7 +286,11 @@ fun SideRail(
                 .fillMaxHeight()
                 .width(RailEdgeZone)
                 .padding(top = edge + growth, bottom = edge + growth)
-                .railSlide(rungs, letters.size, metrics, onTouch = onTouch, onReleased = onReleased),
+                .railSlide(
+                    rungs, letters.size, metrics,
+                    onTouch = { touching = true; onTouch(it) },
+                    onReleased = { touching = false; onReleased() },
+                ),
         )
     }
 }
@@ -302,16 +344,28 @@ private fun Rungs(
     rungs: List<Int>,
     cursor: Int?,
     metrics: RailMetrics,
+    bulging: Boolean,
+    glide: AnimationSpec<Float>,
+    belly: Float,
 ) {
     val activeRung = cursor?.let { c -> rungs.indexOfLast { it <= c }.coerceAtLeast(0) }
     val glyphs = railGlyphs(letters, rungs, cursor)
+    val bulge = activeRung?.takeIf { bulging }?.let { railBelly(it, rungs.size, Bulge.LEFT) }
+    val focusStyle = LocalFocusStyle.current
+    val accent = LocalEchoColors.current.accentColor
     rungs.forEachIndexed { rung, _ ->
         val wave = activeRung?.let { railWave(rung - it) } ?: 0f
+        val x by animateFloatAsState(bulge?.get(rung)?.x?.value ?: 0f, glide, label = "railBellyX")
+        // the chosen rung in the belly wears the theme's focus style, fading out as the belly settles
+        val mark = if (rung == activeRung) belly else 0f
         RailLetter(
             glyph = glyphs[rung],
             wave = wave,
             metrics = metrics,
-            modifier = Modifier.zIndex(wave),
+            modifier = Modifier.zIndex(wave).offset(x = x.dp),
+            mark = Modifier
+                .focusMark(focusStyle, mark, accent)
+                .focusGlow(if (focusStyle.glows) mark else 0f, FocusGlow.RowReach, FocusGlow.RowAlpha),
         )
     }
 }
@@ -322,6 +376,7 @@ private fun RailLetter(
     wave: Float,
     metrics: RailMetrics,
     modifier: Modifier = Modifier,
+    mark: Modifier = Modifier,
 ) {
     val scale by animateFloatAsState(1f + (ACTIVE_SCALE - 1f) * wave, tween(140), label = "railLetterScale")
     val alpha by animateFloatAsState(INACTIVE_ALPHA + (1f - INACTIVE_ALPHA) * wave, tween(140), label = "railLetterAlpha")
@@ -333,7 +388,8 @@ private fun RailLetter(
                 scaleX = scale
                 scaleY = scale
                 this.alpha = alpha
-            },
+            }
+            .then(mark),
     ) {
         Text(
             text = glyph,

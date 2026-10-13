@@ -1,6 +1,7 @@
 package com.echo.feature.crossbar.ui
 
 import com.echo.core.ui.theme.LocalFocusStyle
+import com.echo.core.ui.theme.LocalMotion
 import com.echo.core.ui.theme.focusMark
 import com.echo.core.ui.icons.LocalCrossbarIconOverrides
 import com.echo.core.ui.icons.LocalCustomIcons
@@ -172,7 +173,7 @@ private fun CrossbarCategoryItem(
     // the theme's selected size, on top of the focus style's own scale
     val iconSize = (layout.categoryIconDp * XMB_ICON_SCALE * if (isSelected) layout.selectedIconScale() else 1f).dp
     val focusStyle = LocalFocusStyle.current
-    val motion = LocalCrossbarMotion.current
+    val motion = LocalMotion.current
     val itemAlpha by animateFloatAsState(
 
         targetValue = when {

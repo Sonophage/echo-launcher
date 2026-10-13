@@ -2,6 +2,8 @@ package com.echo.feature.crossbar.ui
 
 import com.echo.core.ui.theme.FocusGlow
 import com.echo.core.ui.theme.LocalFocusStyle
+import com.echo.core.ui.theme.LocalMotion
+import com.echo.core.ui.theme.glide
 import com.echo.core.ui.theme.focusGlow
 import com.echo.core.ui.theme.focusMark
 import com.echo.core.ui.theme.glows
@@ -504,7 +506,7 @@ private fun CrossbarVerticalListRow(
     modifier: Modifier = Modifier,
 ) {
     val focusStyle = LocalFocusStyle.current
-    val motion = LocalCrossbarMotion.current
+    val motion = LocalMotion.current
     val scale by animateFloatAsState(
         targetValue = focusStyle.rowScale(isSelected),
         animationSpec = motion.pop(),
@@ -1184,8 +1186,6 @@ private fun shelfGlyphFor(cardId: String): ImageVector = when (val shelf = shelf
 
 const val GLIDE_MAX_LEAD_ROWS = 3
 
-const val GLIDE_STIFFNESS = 700f
-
 fun columnRows(selected: Int, size: Int, rowsBelow: Int): IntRange =
     selected until minOf(size, selected + rowsBelow + GLIDE_MAX_LEAD_ROWS)
 
@@ -1200,7 +1200,7 @@ fun glideStart(current: Float, target: Int, maxLead: Int = GLIDE_MAX_LEAD_ROWS):
 @Composable
 private fun rememberGlidePosition(target: Int): State<Float> {
     val position = remember { Animatable(target.toFloat()) }
-    val glide = LocalCrossbarMotion.current.glide()
+    val glide = LocalMotion.current.glide()
     LaunchedEffect(target) {
         position.snapTo(glideStart(position.value, target))
         position.animateTo(target.toFloat(), glide)

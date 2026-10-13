@@ -71,6 +71,11 @@ screen's padded column.
 - The focus marks are one definition in `theme/FocusMark.kt`: `LocalFocusStyle` is the theme's style, `focusMark`
   draws HALO, BRACKET and LIFT, and `focusGlow` draws CLASSIC's warm glow (draw it only when `style.glows`).
   Mark a focused item with these; do not draw a second ring or glow.
+- The theme's motion is one definition in `theme/Motion.kt`: `LocalMotion` is the preset and `glide()` its
+  settle spring (STILL, reduced motion, snaps). `CrossbarShell` provides it, so the App Drawer has it too.
+- The belly under a finger is `railBelly(touched, rungs, bulge)` (`components/LetterRail.kt`): `Bulge.LEFT` for
+  the Side Rail, `Bulge.UP` for a Filter Row, `RailBellyReach` (48 dp) at the touched row, tapering over the
+  rail's wave. Do not shape a second belly.
 - `WaveLayers(style)` draws the wave; the design (PSP, Echo Rings, Echo Arcs) comes from
   `LocalWaveDesign`. The wave sits just above the backdrop (wallpaper or full-screen art) and below
   icons, panels and words.
