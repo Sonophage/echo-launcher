@@ -56,6 +56,14 @@ class CompanionRuleTest {
         assertEquals("the menu closed: the cursor again", Details(castlevania), companionContent(main.copy(open = MainScreenOpen()), last = Details(skyrim)))
     }
 
+    // ADR 0002: the Companion's own menu stays on its item while the Main Screen's focus moves under the controller
+    @Test
+    fun `the Companion's menu keeps the item it opened on, though the Main Screen's cursor moves`() {
+        val main = CompanionState(hovered = castlevania, companionMenu = true)
+        assertEquals(Details(skyrim), companionContent(main, last = Details(skyrim)))
+        assertEquals("the menu closed: the cursor again", Details(castlevania), companionContent(main.copy(companionMenu = false), last = Details(skyrim)))
+    }
+
     @Test
     fun `a menu opened before anything was shown shows the item it was opened on`() {
         assertEquals(Details(skyrim), companionContent(CompanionState(hovered = skyrim, open = MainScreenOpen(menu = true)), last = null))

@@ -30,8 +30,8 @@ sealed interface SettingPreview {
 
 // the Companion rule: the running game, else the colour scheme highlighted in the picker, else in Settings the
 // theme focused in the Theme Store or the focused setting, else the item an open menu belongs to (the one shown
-// when it opened), else the hovered item (the App Drawer's over the Crossbar's, Search's result over both), else
-// what it showed [last], so it never goes blank. A game kept after it ends loses its clock and Resume.
+// when it opened; the Main Screen's or the Companion's own, ADR 0002), else the hovered item (the App Drawer's over
+// the Crossbar's, Search's result over both), else what it showed [last], so it never goes blank. A game kept after it ends loses its clock and Resume.
 fun companionContent(main: CompanionState, last: CompanionContent?): CompanionContent? {
     main.playing?.let { return CompanionContent.Details(it, playing = true, playingSince = main.playingSince) }
     val kept = (last as? CompanionContent.Details)?.copy(playing = false, playingSince = null) ?: last
@@ -42,7 +42,7 @@ fun companionContent(main: CompanionState, last: CompanionContent?): CompanionCo
     }
     // ponytail: the owner is what was shown when the menu opened; a menu opened within the 150 ms the cursor
     // takes to settle keeps the item before it, until the menu closes. Track the menu's own item if that shows.
-    if (main.open.menu && kept != null) return kept
+    if ((main.open.menu || main.companionMenu) && kept != null) return kept
     val hovered = if (main.open.search) main.hovered else main.drawer ?: main.hovered
     return hovered?.let { CompanionContent.Details(it) } ?: kept
 }
