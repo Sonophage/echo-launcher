@@ -312,6 +312,7 @@ class ThemesSettingsViewModel @Inject constructor(
             }
             context.startActivity(
                 Intent.createChooser(send, "Share theme").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                com.echo.core.data.launch.LaunchScreens.mainScreenOptions(context),
             )
         }
     }

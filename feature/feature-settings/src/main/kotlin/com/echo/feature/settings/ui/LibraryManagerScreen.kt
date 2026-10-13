@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import com.echo.core.ui.components.MenuState
 import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.components.EchoContextMenuOverlay
+import com.echo.feature.settings.permissions.onMainScreen
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -639,6 +640,7 @@ private fun ImportPcGamesContent(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri -> uri?.let { onScanPcGamesFolder(it) } }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     val homeLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { onRefreshHomeStatus() }
@@ -657,7 +659,7 @@ private fun ImportPcGamesContent(
                     "Using \"Add to home\" inside a supported launcher imports the game here automatically"
                 else
                     "Set ECHO as your Home app so a launcher's \"Add to home\" option imports the game into ECHO",
-                onClick  = { runCatching { homeLauncher.launch(homeRoleIntentProvider()) } },
+                onClick  = { runCatching { homeLauncher.launch(homeRoleIntentProvider()?.onMainScreen(context)) } },
             )
 
             SettingsGroup("Exported Games")

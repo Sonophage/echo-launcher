@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.echo.core.data.launch.LaunchScreens
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.EchoContextMenuOverlay
 import com.echo.core.ui.components.MenuRow
@@ -152,7 +153,8 @@ private fun openLogExternally(context: Context, fileName: String) {
         }
         context.startActivity(
             Intent.createChooser(intent, "Open log with")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            LaunchScreens.mainScreenOptions(context),
         )
     }.onFailure { Timber.w(it, "Could not open log file externally") }
 }
@@ -168,7 +170,8 @@ private fun shareLogFile(context: Context, fileName: String) {
         }
         context.startActivity(
             Intent.createChooser(intent, "Share log file")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            LaunchScreens.mainScreenOptions(context),
         )
     }.onFailure { Timber.w(it, "Could not share log file") }
 }
