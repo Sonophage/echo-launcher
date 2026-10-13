@@ -356,6 +356,17 @@ internal fun WallInfoStrip(
 
 private const val TITAN_STRIP_BUTTON_GROW = 1.35f
 
+// media plays inside ECHO, so A acts at once; an app or game leaves ECHO, so A is a hold
+internal fun InstalledApp.launchesOut(): Boolean = media == null
+
+// the footer's A for the focused app: a launch out is held, so the card rises with the hold (issue #36)
+fun drawerLaunchAction(app: InstalledApp, holdingPackage: String?): com.echo.core.ui.components.HintAction =
+    com.echo.core.ui.components.HintAction(
+        com.echo.core.domain.model.GamepadAction.SELECT, actionLabel(app),
+        holdMs = if (app.launchesOut()) com.echo.core.ui.design.LAUNCH_HOLD_MS else 0L,
+        holding = holdingPackage == app.packageName,
+    )
+
 internal fun actionLabel(app: InstalledApp): String = when {
     app.media?.kind == com.echo.feature.appbar.MediaKind.BOOK -> "Read"
     app.media != null || app.isGame || app.gameId != null -> "Play"

@@ -274,7 +274,12 @@ class CrossbarSearch(
             GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action))
             // the kinds are filters, so the triggers (owner, 2026-10-06)
             GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY -> stepKind(if (action == GamepadAction.PREV_CATEGORY) -1 else 1)
-            GamepadAction.SELECT        -> onSearchActivatedAt(state.search?.selectedIndex ?: return)
+            // a game or app takes the crossbar's launch hold, so the footer's card rises here too (issue #36)
+            GamepadAction.SELECT        -> {
+                val index = state.search?.selectedIndex ?: return
+                val row = state.search.rows.getOrNull(index)
+                if (row == null || !vm.holdToLaunch(row) { onSearchActivatedAt(index) }) onSearchActivatedAt(index)
+            }
             GamepadAction.OPEN_CONTEXT_MENU -> onSearchOptionsAt(state.search?.selectedIndex ?: return)
             GamepadAction.BACK          -> closeSearch()
             else -> Unit

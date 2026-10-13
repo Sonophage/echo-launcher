@@ -97,6 +97,7 @@ import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import com.echo.feature.crossbar.viewmodel.isInstalledApp
 import com.echo.feature.crossbar.viewmodel.primaryVerbFor
+import com.echo.feature.crossbar.viewmodel.holdMsFor
 import com.echo.core.common.format.relativeTime
 import com.echo.core.ui.icons.rememberAppIcon
 import com.echo.core.ui.design.panelDesignUnits
@@ -118,6 +119,8 @@ fun SearchScreen(
     onKindPicked: (SearchKind?) -> Unit = {},
     // the crossbar's wave, which runs behind the shelf (owner, 2026-10-05: in place of the design's pegboard)
     waveStyle: com.echo.core.ui.wave.WaveStyle = com.echo.core.ui.wave.WaveStyle.OFF,
+    // the id A is held on, from the crossbar's launch hold
+    launchHold: String? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
@@ -201,7 +204,7 @@ fun SearchScreen(
                     ControllerPromptItem(GamepadAction.OPEN_CONTEXT_MENU, "Options").takeIf { state.scope != SearchScope.WEB },
                 ),
                 modifier = Modifier.align(Alignment.BottomCenter),
-                primary = focused?.let { HintAction(GamepadAction.SELECT, primaryVerbFor(it) ?: "Open", listOfNotNull(it.title, it.subtitle).filter { t -> t.isNotBlank() }.joinToString(" · ")) },
+                primary = focused?.let { searchLaunchAction(it, launchHold) },
                 onAction = { action ->
                     when (action) {
                         GamepadAction.BACK -> onBack()
@@ -214,6 +217,16 @@ fun SearchScreen(
         }
     }
 }
+
+// the footer's A for the selected result: the crossbar's hold, so a game or app's card rises as on the crossbar
+// (issue #36)
+internal fun searchLaunchAction(row: CrossbarItem, launchHold: String?): HintAction =
+    HintAction(
+        GamepadAction.SELECT, primaryVerbFor(row) ?: "Open",
+        listOfNotNull(row.title, row.subtitle).filter { it.isNotBlank() }.joinToString(" · "),
+        holdMs = holdMsFor(row),
+        holding = launchHold == row.id,
+    )
 
 // the kind filter's word (All, then each kind the results hold, with its count) and the kind a tap moves to
 internal fun searchKindFilter(state: SearchState): Pair<String, SearchKind?>? {

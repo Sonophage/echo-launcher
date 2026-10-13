@@ -1,5 +1,6 @@
 package com.echo.feature.appbar
 
+import com.echo.feature.appbar.appdrawer.launchesOut
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -692,8 +693,9 @@ class AppDrawerViewModel @Inject constructor(
             GamepadAction.SELECT -> {
                 val app = state.visibleApps.getOrNull(cur)
                 // media plays inside ECHO, so it acts at once; a launch out of ECHO is a hold
-                if (app?.media != null) launchApp(app.packageName)
-                else if (app != null) holdToLaunch(app.packageName)
+                if (app == null) Unit
+                else if (app.launchesOut()) holdToLaunch(app.packageName)
+                else launchApp(app.packageName)
             }
 
             else -> Unit

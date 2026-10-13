@@ -1317,6 +1317,7 @@ fun CrossbarShell(
                     onOptionsAt = onSearchOptionsAt,
                     onKindPicked = onSearchKindPicked,
                     waveStyle = uiState.waveStyle,
+                    launchHold = uiState.launchHold,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

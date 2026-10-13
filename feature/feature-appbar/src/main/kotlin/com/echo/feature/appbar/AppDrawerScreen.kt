@@ -50,6 +50,7 @@ import com.echo.feature.appbar.appdrawer.UninstallConfirmDialog
 import com.echo.feature.appbar.appdrawer.WallBackdrop
 import com.echo.feature.appbar.appdrawer.WallInfo
 import com.echo.feature.appbar.appdrawer.actionLabel
+import com.echo.feature.appbar.appdrawer.drawerLaunchAction
 import com.echo.core.ui.design.panelDesignUnits
 import com.echo.core.ui.design.IsTitan2
 import com.echo.feature.appbar.appdrawer.WallInfoStrip
@@ -345,7 +346,7 @@ internal fun AppDrawerContent(
                         ?.let { com.echo.core.ui.components.ControllerPromptItem(GamepadAction.CHANGE_SORT, it.first) },
                     com.echo.core.ui.components.ControllerPromptItem(GamepadAction.NEXT_PAGE, "Search"),
                 ),
-                primary = focused?.let { com.echo.core.ui.components.HintAction(GamepadAction.SELECT, actionLabel(it)) },
+                primary = focused?.let { drawerLaunchAction(it, state.holdingPackage) },
                 filter = {
                     com.echo.core.ui.components.TriggerFilter(
                         // the rail's filter beside the section, since nothing else says the list is narrowed
