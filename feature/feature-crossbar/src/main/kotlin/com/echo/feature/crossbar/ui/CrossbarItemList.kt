@@ -1,5 +1,10 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.FocusGlow
+import com.echo.core.ui.theme.LocalFocusStyle
+import com.echo.core.ui.theme.focusGlow
+import com.echo.core.ui.theme.focusMark
+import com.echo.core.ui.theme.glows
 import com.echo.feature.crossbar.viewmodel.systemArtSlotFor
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.core.Animatable
@@ -569,10 +574,10 @@ private fun CrossbarVerticalListRow(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .focusMark(focusStyle, glow, accent)
-                        .crossbarFocusGlow(
+                        .focusGlow(
                             visible = if (focusStyle.glows) glow else 0f,
-                            reach = CrossbarGlow.RowReach,
-                            alpha = CrossbarGlow.RowAlpha,
+                            reach = FocusGlow.RowReach,
+                            alpha = FocusGlow.RowAlpha,
                         ),
                 ) {
                     CrossbarItemLeadingIcon(

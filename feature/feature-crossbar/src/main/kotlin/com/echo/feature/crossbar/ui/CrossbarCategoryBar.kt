@@ -1,5 +1,7 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.LocalFocusStyle
+import com.echo.core.ui.theme.focusMark
 import com.echo.core.ui.icons.LocalCrossbarIconOverrides
 import com.echo.core.ui.icons.LocalCustomIcons
 import com.echo.core.ui.icons.categoryIconFor

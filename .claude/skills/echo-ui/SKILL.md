@@ -68,6 +68,9 @@ screen's padded column.
 - A Favorites row, on any item in any module, takes its words from `favoritesLabel(isFavorite)` in
   `components/Menu.kt`. Do not write the pair again.
 - `GlowMaskedWave(side)` shows the wave only inside a screen's glow.
+- The focus marks are one definition in `theme/FocusMark.kt`: `LocalFocusStyle` is the theme's style, `focusMark`
+  draws HALO, BRACKET and LIFT, and `focusGlow` draws CLASSIC's warm glow (draw it only when `style.glows`).
+  Mark a focused item with these; do not draw a second ring or glow.
 - `WaveLayers(style)` draws the wave; the design (PSP, Echo Rings, Echo Arcs) comes from
   `LocalWaveDesign`. The wave sits just above the backdrop (wallpaper or full-screen art) and below
   icons, panels and words.

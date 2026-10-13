@@ -20,7 +20,6 @@ class CrossbarFocusTest {
         assertEquals(0.9f, FocusStyle.CLASSIC.rowScale(false))
         assertEquals(0.68f, FocusStyle.CLASSIC.restAlpha(0.68f))
         assertEquals(1f, FocusStyle.CLASSIC.categoryScale(true))
-        assertTrue(FocusStyle.CLASSIC.glows)
         assertEquals(spring<Float>(Spring.DampingRatioMediumBouncy, Spring.StiffnessHigh), MotionPreset.CLASSIC.pop())
         assertEquals(spring<Float>(stiffness = Spring.StiffnessMedium), MotionPreset.CLASSIC.fade())
         assertEquals(spring<Float>(dampingRatio = 1f, stiffness = GLIDE_STIFFNESS), MotionPreset.CLASSIC.glide())

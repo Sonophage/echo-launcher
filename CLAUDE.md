@@ -50,7 +50,7 @@ than `(owner, YYYY-MM-DD)`.
 | `:core:core-common` | Small shared utilities: formatting, logging, keystore secrets. |
 | `:core:core-domain` | Models and repository interfaces. |
 | `:core:core-data` | Room database, DataStore, repositories, scanners' storage, permissions helpers, the SteamGridDB client and its key. |
-| `:core:core-ui` | The UI kit: footer (`EchoHintBar`), context menus, panels, waves, holds, design units, theme. |
+| `:core:core-ui` | The UI kit: footer (`EchoHintBar`), context menus, panels, waves, holds, design units, theme, focus marks. |
 | `:core:core-navigation` | Pure JVM navigation logic. |
 | `:discord:discord-native` | Discord rich presence through the native SDK. Needs the SDK aar (`tools/fetch-discord-sdk.sh`). |
 | `:feature:feature-crossbar` | Host. The crossbar shell, Last Played, the status strip and island, search, music, game info, app detail, the second screen's activity. |

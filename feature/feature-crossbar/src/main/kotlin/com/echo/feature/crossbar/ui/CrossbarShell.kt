@@ -1,5 +1,6 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.LocalFocusStyle
 import com.echo.feature.crossbar.viewmodel.noticeCardRows
 
 import com.echo.core.ui.design.LocalBackdropWave
