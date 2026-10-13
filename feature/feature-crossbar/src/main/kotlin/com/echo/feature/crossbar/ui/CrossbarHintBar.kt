@@ -30,7 +30,7 @@ fun CrossbarHintBar(
     holding: Boolean = false,
     resumeHolding: Boolean = false,
     onResume: () -> Unit = {},
-    // the filter row, after Home and Back
+    // the Trigger Filter, after Home and Back
     filters: (@Composable () -> Unit)? = null,
 ) {
     EchoHintBar(
