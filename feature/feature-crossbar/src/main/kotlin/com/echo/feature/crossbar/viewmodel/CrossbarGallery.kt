@@ -212,7 +212,7 @@ class CrossbarGallery(
         uiState.update { it.copy(pendingPhotoViewerAction = null) }
     }
 
-    internal fun openPhotoContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN): Boolean {
+    internal fun openPhotoContextMenu(item: CrossbarItem, slot: MenuSlot): Boolean {
         if (item.menuHostCategory(vm.currentCategory()?.id) != BuiltInCategory.PHOTO) return false
         return when {
             item.type == CrossbarItemType.PHOTO_FILE && item.id.startsWith("pho_") -> {
@@ -228,7 +228,7 @@ class CrossbarGallery(
         }
     }
 
-    private fun openPhotoFileContextMenu(photoId: String, title: String, slot: MenuSlot = MenuSlot.MAIN) {
+    private fun openPhotoFileContextMenu(photoId: String, title: String, slot: MenuSlot) {
         scope.launch {
             val items = photoFileContextMenuItems(isFavorite = photoRepository.getPhoto(photoId)?.isFavorite == true)
             uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = title, rows = items), photoFileId = photoId)) }
@@ -249,7 +249,7 @@ class CrossbarGallery(
         }
     }
 
-    private fun openPhotoLibraryContextMenu(libraryId: String, name: String, slot: MenuSlot = MenuSlot.MAIN) {
+    private fun openPhotoLibraryContextMenu(libraryId: String, name: String, slot: MenuSlot) {
         val items = photoLibraryContextMenuItems()
         uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = name, rows = items), photoLibraryId = libraryId)) }
     }

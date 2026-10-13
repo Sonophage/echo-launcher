@@ -237,7 +237,7 @@ class CrossbarMusic(
             vm.folders.openMediaFolders(MediaRootKind.MUSIC)
             true
         }
-        item.id == CrossbarViewModel.CREATE_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreatePlaylist(); true }
+        item.id == CrossbarViewModel.CREATE_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreatePlaylist(slot = MenuSlot.MAIN); true }
         item.id == CrossbarViewModel.ADD_MUSIC_APPS_ITEM_ID -> {
             menuSound.play(MenuSound.SELECT)
             vm.appPickerSection.openAppPicker(AppPickerTarget.CategoryShortcuts(CrossbarViewModel.MUSIC_APPS_CATEGORY_ID), "Add Music Apps")
@@ -274,11 +274,11 @@ class CrossbarMusic(
         }
     }
 
-    internal fun openAlbumMenu(key: String, title: String, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openAlbumMenu(key: String, title: String, slot: MenuSlot) {
         uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = title, rows = albumContextMenuItems()), albumKey = key)) }
     }
 
-    internal fun openAlbumGenrePicker(key: String, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openAlbumGenrePicker(key: String, slot: MenuSlot) {
         scope.launch {
             val ids = musicRepository.observeAllTracks().first().filter { it.album.musicGroupKey() == key }.map { it.id }
             vm.genres.openPicker(GenreTarget.Tracks(ids), slot)
@@ -329,7 +329,7 @@ class CrossbarMusic(
         uiState.update { it.copy(musicPlayerVisible = false) }
     }
 
-    private fun openMusicTrackContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
+    private fun openMusicTrackContextMenu(item: CrossbarItem, slot: MenuSlot) {
         val playlistId = currentPlaylistContextId()
 
         val trackId = item.id.removePrefix("mt_")
@@ -343,12 +343,12 @@ class CrossbarMusic(
         }
     }
 
-    private fun openPlaylistRowContextMenu(playlistId: Long, name: String, slot: MenuSlot = MenuSlot.MAIN) {
+    private fun openPlaylistRowContextMenu(playlistId: Long, name: String, slot: MenuSlot) {
         val items = playlistRowContextMenuItems()
         uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = name, rows = items), playlistId = playlistId)) }
     }
 
-    internal fun openPlaylistPicker(trackId: String, selectIndex: Int? = 0, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openPlaylistPicker(trackId: String, selectIndex: Int? = 0, slot: MenuSlot) {
         scope.launch {
             val playlists = musicRepository.observePlaylists().first()
             val memberOf = musicRepository.getPlaylistIdsForTrack(trackId).toSet()
@@ -369,11 +369,11 @@ class CrossbarMusic(
         vm.appAction { ids.forEach { musicRepository.clearTrackLastPlayed(it) } }
     }
 
-    internal fun openRecentAlbumContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openRecentAlbumContextMenu(item: CrossbarItem, slot: MenuSlot) {
         uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = item.title, rows = recentAlbumContextMenuItems()), recentAlbum = item)) }
     }
 
-    internal fun openMusicContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN): Boolean {
+    internal fun openMusicContextMenu(item: CrossbarItem, slot: MenuSlot): Boolean {
         if (item.menuHostCategory(vm.currentCategory()?.id) != BuiltInCategory.MUSIC) return false
         return when {
             item.id == CrossbarViewModel.NOW_PLAYING_ITEM_ID -> { vm.openNowPlayingContextMenu(slot); true }
@@ -392,7 +392,7 @@ class CrossbarMusic(
         }
     }
 
-    internal fun promptCreatePlaylist(forTrackId: String? = null, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun promptCreatePlaylist(forTrackId: String? = null, slot: MenuSlot) {
         uiState.update { it.copy(
             playlistNameDialog = PlaylistNameDialogState(title = "New Playlist", forTrackId = forTrackId, slot = slot)
         )}
@@ -505,7 +505,7 @@ class CrossbarMusic(
         }
     }
 
-    internal fun handleMusicTrackAction(trackId: String, itemId: String, playlistId: Long?, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun handleMusicTrackAction(trackId: String, itemId: String, playlistId: Long?, slot: MenuSlot) {
         when (itemId) {
             "edit_genre" -> vm.genres.openPicker(GenreTarget.Tracks(listOf(trackId)), slot)
             "play" -> {
@@ -610,7 +610,7 @@ class CrossbarMusic(
         }
     }
 
-    internal fun onPlaylistPickerItem(itemId: String, menu: CrossbarContextMenu, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun onPlaylistPickerItem(itemId: String, menu: CrossbarContextMenu, slot: MenuSlot) {
         val trackId = menu.playlistPickerTrackId ?: return
         val keepIndex = menu.selectedIndex
         when {

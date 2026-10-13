@@ -177,7 +177,7 @@ class CrossbarVideo(
         item.id == CrossbarViewModel.RECENTLY_WATCHED_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.RecentlyWatched); true }
         item.id == CrossbarViewModel.FAVORITE_VIDEOS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Favorites); true }
         item.id == CrossbarViewModel.VIDEO_PLAYLISTS_ITEM_ID -> { menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Playlists); true }
-        item.id == CrossbarViewModel.CREATE_VIDEO_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreateVideoPlaylist(); true }
+        item.id == CrossbarViewModel.CREATE_VIDEO_PLAYLIST_ITEM_ID -> { menuSound.play(MenuSound.SELECT); promptCreateVideoPlaylist(slot = MenuSlot.MAIN); true }
         item.id.startsWith("vpl_") && item.playlistId != null -> {
             menuSound.play(MenuSound.SELECT); openVideoView(VideoNav.Playlist(item.playlistId, item.title)); true
         }
@@ -238,7 +238,7 @@ class CrossbarVideo(
         uiState.update { it.copy(pendingVideoDetailAction = null) }
     }
 
-    internal fun promptCreateVideoPlaylist(forVideoId: String? = null, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun promptCreateVideoPlaylist(forVideoId: String? = null, slot: MenuSlot) {
         uiState.update { it.copy(
             playlistNameDialog = PlaylistNameDialogState(title = "New Video Playlist", videoContext = true, forVideoId = forVideoId, slot = slot)
         )}
@@ -256,12 +256,12 @@ class CrossbarVideo(
         )}
     }
 
-    private fun openVideoPlaylistContextMenu(playlistId: Long, name: String, slot: MenuSlot = MenuSlot.MAIN) {
+    private fun openVideoPlaylistContextMenu(playlistId: Long, name: String, slot: MenuSlot) {
         val items = videoPlaylistContextMenuItems()
         uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = name, rows = items), videoPlaylistId = playlistId)) }
     }
 
-    internal fun openVideoContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN): Boolean {
+    internal fun openVideoContextMenu(item: CrossbarItem, slot: MenuSlot): Boolean {
         if (item.menuHostCategory(vm.currentCategory()?.id) != BuiltInCategory.VIDEO) return false
         return when {
             item.type == CrossbarItemType.VIDEO_FILE && item.id.startsWith("vid_") -> {
@@ -280,7 +280,7 @@ class CrossbarVideo(
         }
     }
 
-    internal fun openVideoFileContextMenu(videoId: String, title: String, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openVideoFileContextMenu(videoId: String, title: String, slot: MenuSlot) {
         scope.launch {
             val video = videoRepository.getVideo(videoId) ?: return@launch
             val inPlaylist = uiState.value.videoNav is VideoNav.Playlist
@@ -294,7 +294,7 @@ class CrossbarVideo(
         }
     }
 
-    internal fun handleVideoFileAction(videoId: String, itemId: String, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun handleVideoFileAction(videoId: String, itemId: String, slot: MenuSlot) {
         when (itemId) {
             "video_play", "video_resume" ->
                 uiState.update { it.copy(activeVideoId = videoId, activeVideoAutoPlay = true) }
@@ -325,7 +325,7 @@ class CrossbarVideo(
         }
     }
 
-    internal fun openVideoPlaylistPicker(videoId: String, selectIndex: Int? = 0, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openVideoPlaylistPicker(videoId: String, selectIndex: Int? = 0, slot: MenuSlot) {
         scope.launch {
             val playlists = videoRepository.observePlaylists().first()
             val memberOf = videoRepository.getPlaylistIdsForVideo(videoId).toSet()
@@ -339,7 +339,7 @@ class CrossbarVideo(
         }
     }
 
-    private fun openVideoLibraryContextMenu(libraryId: String, name: String, slot: MenuSlot = MenuSlot.MAIN) {
+    private fun openVideoLibraryContextMenu(libraryId: String, name: String, slot: MenuSlot) {
         val items = videoLibraryContextMenuItems()
         uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = name, rows = items), videoLibraryId = libraryId)) }
     }
@@ -391,7 +391,7 @@ class CrossbarVideo(
 
     internal fun videoPlaylistSiblings(): List<CrossbarItem> =
         uiState.value.videoPlaylists.map { CrossbarItem(id = "vpl_${it.id}", title = it.name, playlistId = it.id, type = CrossbarItemType.PLAYLIST) }
-    internal fun onPlaylistPickerItem(itemId: String, menu: CrossbarContextMenu, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun onPlaylistPickerItem(itemId: String, menu: CrossbarContextMenu, slot: MenuSlot) {
         val videoId = menu.videoPlaylistPickerVideoId ?: return
         val keepIndex = menu.selectedIndex
         when {

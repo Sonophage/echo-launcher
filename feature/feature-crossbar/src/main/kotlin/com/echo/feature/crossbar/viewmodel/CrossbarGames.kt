@@ -102,9 +102,8 @@ class CrossbarGames(
         type     = CrossbarItemType.EMPTY,
     )
 
-    internal fun promptRenameCard(platformId: String, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun promptRenameCard(platformId: String, slot: MenuSlot) {
         val card = vm.enabledCards.firstOrNull { it.platformId == platformId } ?: return
-        vm.closeContextMenu(slot)
         uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
             title = "Rename System",
             subtitle = "The name this console shows under on the crossbar.",
@@ -115,7 +114,7 @@ class CrossbarGames(
     }
 
 
-    internal fun openGameContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openGameContextMenu(item: CrossbarItem, slot: MenuSlot) {
         val gameId = item.gameId
         if (gameId == null) {
             openGameContextMenuCore(item, discCount = 0, slot = slot)
@@ -134,7 +133,7 @@ class CrossbarGames(
         }
     }
 
-    private fun openGameContextMenuCore(item: CrossbarItem, discCount: Int, onRecentShelf: Boolean = false, slot: MenuSlot = MenuSlot.MAIN) {
+    private fun openGameContextMenuCore(item: CrossbarItem, discCount: Int, onRecentShelf: Boolean = false, slot: MenuSlot) {
         val state = uiState.value
         val currentCat = vm.currentCategory()
         val inGamingCategory = currentCat?.isGamingCategory == true
@@ -282,8 +281,9 @@ class CrossbarGames(
 
     internal suspend fun existingCards(): List<MemoryCard> =
         runCatching { memoryCardRepository.getAll() }.getOrDefault(emptyList())
-    // [slot] is the slot of the menu the row is on: a picker or prompt it opens is drawn there (ADR 0002)
-    internal fun onGameMenuItem(itemId: String, menu: CrossbarContextMenu, slot: MenuSlot = MenuSlot.MAIN) {
+    // [slot] is the slot of the menu the row is on: a picker or prompt it opens is drawn there (ADR 0002).
+    // activateContextMenuItem has closed that menu before this runs
+    internal fun onGameMenuItem(itemId: String, menu: CrossbarContextMenu, slot: MenuSlot) {
         val gameId = menu.gameId ?: return
         if (itemId.startsWith("emu_pick_")) {
             val gid = gameId
@@ -296,7 +296,6 @@ class CrossbarGames(
             when (val what = itemId.removePrefix("detail_")) {
                 "title" -> scope.launch {
                     val game = vm.gameRepository.getById(gid) ?: return@launch
-                    vm.closeContextMenu(slot)
                     uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
                         title = "Edit Title",
                         subtitle = "The name shown in the launcher and used when scraping artwork.",
@@ -309,7 +308,6 @@ class CrossbarGames(
                 }
                 "note" -> scope.launch {
                     val game = vm.gameRepository.getById(gid) ?: return@launch
-                    vm.closeContextMenu(slot)
                     uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
                         title = "Edit Note",
                         subtitle = "Kept with the game. Only you see it.",
@@ -322,7 +320,7 @@ class CrossbarGames(
                 "ARTWORK"  -> vm.artworkTools.openArtworkStudio(gid)
                 "MANUAL"   -> vm.gameDetail.openManualFor(gid)
                 "METADATA" -> vm.artworkTools.openMetadataPreviewFor(gid)
-                "REFRESH"  -> vm.artworkTools.fetchArtworkFor(gid, slot)
+                "REFRESH"  -> vm.artworkTools.fetchArtworkFor(gid)
                 else -> Timber.w("Details row '$what' has no handler")
             }
         } else if (itemId.startsWith("genre_pick_")) {
@@ -351,17 +349,17 @@ class CrossbarGames(
             "group_by_genre"         -> vm.setGameGrouping(GameGrouping.GENRE)
             "group_by_system"        -> vm.setGameGrouping(GameGrouping.SYSTEM)
             "game_info"              -> vm.openGameInfoFor(gameId)
-            "info_about"             -> { vm.closeContextMenu(slot); vm.gameDetail.onGameInfoAction(GameInfoAction.INFO) }
-            "info_video"             -> { vm.closeContextMenu(slot); vm.gameDetail.onGameInfoAction(GameInfoAction.VIDEO) }
+            "info_about"             -> vm.gameDetail.onGameInfoAction(GameInfoAction.INFO)
+            "info_video"             -> vm.gameDetail.onGameInfoAction(GameInfoAction.VIDEO)
             "choose_disc"             -> vm.openDiscPickerMenu(gameId, slot)
             "export_game"            -> vm.exportGameFromMenu(gameId)
-            "app_info"               -> { vm.closeContextMenu(slot); com.echo.core.data.apps.AppSystemActions.openAppInfo(vm.context, menu.packageName ?: return, vm.launchScreens.mainDisplay()) }
-            "uninstall"              -> { vm.closeContextMenu(slot); com.echo.core.data.apps.AppSystemActions.uninstall(vm.context, menu.packageName ?: return, vm.launchScreens.mainDisplay()) }
+            "app_info"               -> com.echo.core.data.apps.AppSystemActions.openAppInfo(vm.context, menu.packageName ?: return, vm.launchScreens.mainDisplay())
+            "uninstall"              -> com.echo.core.data.apps.AppSystemActions.uninstall(vm.context, menu.packageName ?: return, vm.launchScreens.mainDisplay())
             "favorite"               -> toggleGameFavorite(gameId, true)
             "unfavorite"             -> toggleGameFavorite(gameId, false)
 
-            "pin_recent", "unpin_recent" -> { vm.closeContextMenu(slot); vm.recents.togglePinned(com.echo.core.data.repository.RecentPins.gameKey(gameId)) }
-            "remove_from_recent"     -> { vm.closeContextMenu(slot); vm.recents.dismissGameFromRecents(gameId) }
+            "pin_recent", "unpin_recent" -> vm.recents.togglePinned(com.echo.core.data.repository.RecentPins.gameKey(gameId))
+            "remove_from_recent"     -> vm.recents.dismissGameFromRecents(gameId)
             "add_category"           -> menu.categoryContext?.let { vm.openGameCategoryPicker(gameId, it, "add", slot) }
             "move_category"          -> menu.categoryContext?.let { vm.openGameCategoryPicker(gameId, it, "move", slot) }
             "remove_category"        -> menu.categoryContext?.let { cat ->

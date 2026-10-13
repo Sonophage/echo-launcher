@@ -198,7 +198,7 @@ class CrossbarGameInfo(
     }
 
     private fun openGameInfoOptions(info: GameInfoState) {
-        if (info.isApp) vm.openAppContextMenu(info.item) else vm.gameActions.openGameContextMenu(info.item)
+        if (info.isApp) vm.openAppContextMenu(info.item, slot = MenuSlot.MAIN) else vm.gameActions.openGameContextMenu(info.item, MenuSlot.MAIN)
     }
 
     private fun playFromGameInfo(item: CrossbarItem) {
@@ -211,7 +211,6 @@ class CrossbarGameInfo(
     }
 
     internal fun openManualFor(gameId: Long) {
-        vm.closeContextMenu()
         scope.launch {
             val game = vm.gameRepository.getById(gameId) ?: return@launch
             val path = vm.artworkStore.find(gameId, ArtworkKind.MANUAL)

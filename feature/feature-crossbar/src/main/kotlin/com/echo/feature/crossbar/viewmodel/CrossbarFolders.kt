@@ -175,7 +175,7 @@ class CrossbarFolders(
         }
     }
 
-    internal fun openMediaRootContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openMediaRootContextMenu(item: CrossbarItem, slot: MenuSlot) {
         val kind = item.mediaRootKind ?: return
         val treeUri = item.mediaRootUri ?: return
         val linked = item.subtitle?.startsWith("Access lost") != true
@@ -205,7 +205,7 @@ class CrossbarFolders(
     }
 
 
-    internal fun openMediaFoldersContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openMediaFoldersContextMenu(item: CrossbarItem, slot: MenuSlot) {
         val kind = item.mediaRootKind ?: return
         uiState.update {
             it.withMenu(
@@ -327,7 +327,7 @@ class CrossbarFolders(
         )
     }
 
-    internal fun openRomRootContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openRomRootContextMenu(item: CrossbarItem, slot: MenuSlot) {
         val treeUri = item.mediaRootUri ?: return
         val linked = item.subtitle?.startsWith("Access lost") != true
         uiState.update { it.withMenu(
@@ -411,7 +411,7 @@ class CrossbarFolders(
             menuSound.play(MenuSound.SELECT); requestRomRootPick(); true
         }
         item.id.startsWith("romroot_") -> {
-            menuSound.play(MenuSound.SELECT); openRomRootContextMenu(item); true
+            menuSound.play(MenuSound.SELECT); openRomRootContextMenu(item, MenuSlot.MAIN); true
         }
         else -> null
     }
@@ -426,7 +426,7 @@ class CrossbarFolders(
                 menuSound.play(MenuSound.SELECT); requestMediaRootPick(kind); true
             }
             item.mediaRootUri != null -> {
-                menuSound.play(MenuSound.SELECT); openMediaRootContextMenu(item); true
+                menuSound.play(MenuSound.SELECT); openMediaRootContextMenu(item, MenuSlot.MAIN); true
             }
             else -> null
         }

@@ -41,7 +41,7 @@ class CrossbarGenres(
     private val uiState: kotlinx.coroutines.flow.MutableStateFlow<CrossbarUiState>,
     private val scope: kotlinx.coroutines.CoroutineScope,
 ) {
-    fun openPicker(target: GenreTarget, slot: MenuSlot = MenuSlot.MAIN) {
+    fun openPicker(target: GenreTarget, slot: MenuSlot) {
         scope.launch {
             val rows = when (target) {
                 is GenreTarget.Tracks -> {
@@ -61,7 +61,7 @@ class CrossbarGenres(
         }
     }
 
-    fun onPick(target: GenreTarget, itemId: String, slot: MenuSlot = MenuSlot.MAIN) {
+    fun onPick(target: GenreTarget, itemId: String, slot: MenuSlot) {
         vm.closeContextMenu(slot)
         if (itemId == GENRE_PICK_NEW) {
             uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(title = "New Genre", editGenreTarget = target, placeholder = "e.g. Synthwave, Cozy Mystery", slot = slot)) }

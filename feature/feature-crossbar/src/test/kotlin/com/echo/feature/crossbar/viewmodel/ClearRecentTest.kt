@@ -24,7 +24,7 @@ class ClearRecentTest {
 
     private fun rowsFor(categoryId: String) = on(categoryId).let { (state, item) ->
         CrossbarMove(mockk(relaxed = true), MutableStateFlow(state), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
-            .menuRows(state, item)
+            .menuRows(state, item, MenuSlot.MAIN)
     }
 
     @Test

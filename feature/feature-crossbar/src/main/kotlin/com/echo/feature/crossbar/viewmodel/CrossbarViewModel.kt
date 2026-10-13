@@ -2121,7 +2121,7 @@ class CrossbarViewModel @Inject constructor(
         if (index >= 0) onCategorySelected(index)
     }
 
-    internal fun openNowPlayingContextMenu(slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openNowPlayingContextMenu(slot: MenuSlot) {
         val playback = _uiState.value.musicPlayback
         if (playback.track == null) return
         _uiState.update {
@@ -2516,9 +2516,9 @@ class CrossbarViewModel @Inject constructor(
     // owner, 2026-10-08: Y on an album, video or book in the App Drawer gives it the menu it has in its own column
     fun openDrawerMediaMenu(media: com.echo.feature.appbar.DrawerMedia, title: String) {
         when (media.kind) {
-            com.echo.feature.appbar.MediaKind.MUSIC -> music.openAlbumMenu(media.ref, title)
-            com.echo.feature.appbar.MediaKind.VIDEO -> video.openVideoFileContextMenu(media.ref, title)
-            com.echo.feature.appbar.MediaKind.BOOK -> bookshelf.openBookMenu(media.ref, title)
+            com.echo.feature.appbar.MediaKind.MUSIC -> music.openAlbumMenu(media.ref, title, MenuSlot.MAIN)
+            com.echo.feature.appbar.MediaKind.VIDEO -> video.openVideoFileContextMenu(media.ref, title, MenuSlot.MAIN)
+            com.echo.feature.appbar.MediaKind.BOOK -> bookshelf.openBookMenu(media.ref, title, MenuSlot.MAIN)
         }
     }
 
@@ -2549,7 +2549,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    internal fun openGenrePickerMenu(gameId: Long, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openGenrePickerMenu(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val current = com.echo.core.domain.model.GameGenre.fromName(game.genreOverride)
@@ -2805,13 +2805,13 @@ class CrossbarViewModel @Inject constructor(
                     val menu = state.activeContextMenu
                     val picked = menu.selectedIndex?.let { state.menuRows().getOrNull(it) }
                     when {
-                        picked != null -> onContextMenuItemActivatedAt(menu.selectedIndex!!)
-                        menu.primaryId != null -> activateContextMenuItem(menu.primaryId)
+                        picked != null -> onContextMenuItemActivatedAt(menu.selectedIndex!!, MenuSlot.MAIN)
+                        menu.primaryId != null -> activateContextMenuItem(menu.primaryId, MenuSlot.MAIN)
                         else -> Unit
                     }
                 }
                 GamepadAction.BACK                   -> popContextMenu()
-                GamepadAction.OPEN_CONTEXT_MENU      -> closeContextMenu()
+                GamepadAction.OPEN_CONTEXT_MENU      -> closeContextMenu(MenuSlot.MAIN)
                 else -> Unit
             }
             return
@@ -3102,7 +3102,7 @@ class CrossbarViewModel @Inject constructor(
         return info.copy(appVersion = version, appStorageBytes = storage)
     }
 
-    private fun openPlatformContextMenu(platformId: String, slot: MenuSlot = MenuSlot.MAIN) {
+    private fun openPlatformContextMenu(platformId: String, slot: MenuSlot) {
         val card = enabledCards.firstOrNull { it.platformId == platformId } ?: return
         viewModelScope.launch {
             val choices = platformChoices(platformId)
@@ -3135,7 +3135,7 @@ class CrossbarViewModel @Inject constructor(
         )
     }
 
-    internal fun openDefaultEmulatorMenu(platformId: String, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openDefaultEmulatorMenu(platformId: String, slot: MenuSlot) {
         viewModelScope.launch {
             val choices = platformChoices(platformId) ?: return@launch
             val rows = buildList {
@@ -3166,13 +3166,13 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun openAllGamesContextMenu(slot: MenuSlot = MenuSlot.MAIN) {
+    private fun openAllGamesContextMenu(slot: MenuSlot) {
         _uiState.update { it.withMenu(
             slot, CrossbarContextMenu(state = MenuState(title = "All Games", rows = allGamesContextMenuItems(_uiState.value.gameGrouping)), isAllGames = true)
         )}
     }
 
-    internal fun openAppContextMenu(item: CrossbarItem, categoryIdOverride: String? = null, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openAppContextMenu(item: CrossbarItem, categoryIdOverride: String? = null, slot: MenuSlot) {
         val pkg = item.packageName ?: return
         val categoryId = categoryIdOverride ?: currentCategory()?.id
 
@@ -3213,7 +3213,7 @@ class CrossbarViewModel @Inject constructor(
         _uiState.update { it.copy(activeContextMenu = menu.withSelected(next)) }
     }
 
-    private fun activateContextMenuItem(itemId: String, slot: MenuSlot = MenuSlot.MAIN) {
+    private fun activateContextMenuItem(itemId: String, slot: MenuSlot) {
         val state  = _uiState.value
         val menu   = state.menuIn(slot) ?: return
 
@@ -3375,10 +3375,10 @@ class CrossbarViewModel @Inject constructor(
                 } else when (itemId) {
                     "launch"    -> launching.launchAppWithDisc(pkg, menu.itemArt)
                     "launch_other_screen" -> launching.launchAppWithDisc(pkg, menu.itemArt, otherScreen = true)
-                    "pin_recent", "unpin_recent" -> { closeContextMenu(slot); recents.togglePinned(com.echo.core.data.repository.RecentPins.appKey(pkg)) }
+                    "pin_recent", "unpin_recent" -> recents.togglePinned(com.echo.core.data.repository.RecentPins.appKey(pkg))
                     "app_artwork" -> viewModelScope.launch { artworkTools.openArtworkStudio(ensureAppShortcut(pkg)) }
-                    "app_info"  -> { closeContextMenu(slot); com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg, launchScreens.mainDisplay()) }
-                    "uninstall" -> { closeContextMenu(slot); com.echo.core.data.apps.AppSystemActions.uninstall(context, pkg, launchScreens.mainDisplay()) }
+                    "app_info"  -> com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg, launchScreens.mainDisplay())
+                    "uninstall" -> com.echo.core.data.apps.AppSystemActions.uninstall(context, pkg, launchScreens.mainDisplay())
 
                     "mark_game" -> appAction {
                         gameRepository.upsert(com.echo.core.domain.model.markedAsGame(gameRepository.getAppEntry(pkg), pkg, menu.title))
@@ -3411,7 +3411,7 @@ class CrossbarViewModel @Inject constructor(
         viewModelScope.launch { block() }
     }
 
-    internal fun openShelvesPickerMenu(gameId: Long, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openShelvesPickerMenu(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val items = shelvesPickerItems(PlayState.fromName(game.playState))
@@ -3419,7 +3419,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    internal fun openEmulatorPickerMenu(gameId: Long, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openEmulatorPickerMenu(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val profiles = emulatorProfileRepository.getProfilesForPlatform(game.platformId)
@@ -3431,7 +3431,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    internal fun openDiscPickerMenu(gameId: Long, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openDiscPickerMenu(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val key = game.discSetKey ?: return@launch
@@ -3503,8 +3503,7 @@ class CrossbarViewModel @Inject constructor(
 
     // the file manager at the game's folder; the path in a dialog when nothing can open it. Only a game with a file
     // has the row
-    internal fun openGameFolder(gameId: Long, slot: MenuSlot = MenuSlot.MAIN) {
-        closeContextMenu(slot)
+    internal fun openGameFolder(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val path = game.romPath ?: return@launch
@@ -3530,20 +3529,20 @@ class CrossbarViewModel @Inject constructor(
 
     private fun openContextMenuForFocusedItem() {
         val state = _uiState.value
-        openContextMenuFor(state.currentItems.getOrNull(state.selectedItemIndex))
+        openContextMenuFor(state.currentItems.getOrNull(state.selectedItemIndex), MenuSlot.MAIN)
     }
 
     // a library game's Options from the App Drawer: the same menu as on the crossbar, drawn over the drawer
     fun openGameMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
-            openContextMenuFor(listOf(game).toCrossbarItems().first())
+            openContextMenuFor(listOf(game).toCrossbarItems().first(), MenuSlot.MAIN)
         }
     }
 
     // the one place an item's Options menu is chosen: the crossbar, a long press, Search's banner and the drawer
     // the Companion's Options opens it in the Companion's slot, less Edit Layout (ADR 0002)
-    internal fun openContextMenuFor(item: CrossbarItem?, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openContextMenuFor(item: CrossbarItem?, slot: MenuSlot) {
         val before = _uiState.value.menuIn(slot)
         // the focused row of the crossbar also offers Move (when it can move) and Move Column
         val moveRows = item?.let { move.menuRows(_uiState.value, it, slot) }.orEmpty()
@@ -3812,7 +3811,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
 
-    fun onContextMenuItemActivatedAt(index: Int, slot: MenuSlot = MenuSlot.MAIN) {
+    fun onContextMenuItemActivatedAt(index: Int, slot: MenuSlot) {
         val menu = _uiState.value.menuIn(slot) ?: return
 
         when (val chosen = menu.state.chose(index)) {
@@ -3825,7 +3824,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    fun closeContextMenu(slot: MenuSlot = MenuSlot.MAIN) {
+    fun closeContextMenu(slot: MenuSlot) {
         _uiState.update { it.withMenu(slot, null) }
     }
 
@@ -3872,7 +3871,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    internal fun openGameCategoryPicker(gameId: Long, fromCategoryId: String, action: String, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openGameCategoryPicker(gameId: Long, fromCategoryId: String, action: String, slot: MenuSlot) {
         val items = buildList {
             _uiState.value.categories
                 .filter { it.isGamingCategory && it.id != fromCategoryId && it.id != BuiltInCategory.GAMES }
@@ -3889,7 +3888,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
     fun onPlatformLongPress(categoryIndex: Int) {
-        _uiState.value.currentItems.getOrNull(categoryIndex)?.platformId?.let(::openPlatformContextMenu)
+        _uiState.value.currentItems.getOrNull(categoryIndex)?.platformId?.let { openPlatformContextMenu(it, MenuSlot.MAIN) }
     }
 
     internal fun cardName(platformId: String): String =
@@ -4260,7 +4259,7 @@ class CrossbarViewModel @Inject constructor(
 
     fun onItemLongPress(index: Int) {
         if (_uiState.value.hasBlockingOverlay) return
-        openContextMenuFor(_uiState.value.currentItems.getOrNull(index))
+        openContextMenuFor(_uiState.value.currentItems.getOrNull(index), MenuSlot.MAIN)
     }
 
     private fun openPlatformFolder(platformId: String) {

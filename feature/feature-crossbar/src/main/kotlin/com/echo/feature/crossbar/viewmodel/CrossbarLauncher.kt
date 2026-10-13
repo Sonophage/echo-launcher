@@ -76,14 +76,14 @@ class CrossbarLauncher(
             LaunchRecoveryAction.CHANGE_EMULATOR -> {
                 val gameId = uiState.value.launchRecovery?.gameId ?: return
                 launchDispatcher.dismissRecovery()
-                vm.openEmulatorPickerMenu(gameId)
+                vm.openEmulatorPickerMenu(gameId, MenuSlot.MAIN)
             }
             LaunchRecoveryAction.PER_SYSTEM_DEFAULTS -> {
                 val gameId = uiState.value.launchRecovery?.gameId
                 launchDispatcher.dismissRecovery()
                 scope.launch {
                     val platformId = gameId?.let { vm.gameRepository.getById(it) }?.platformId
-                    if (platformId != null) vm.openDefaultEmulatorMenu(platformId)
+                    if (platformId != null) vm.openDefaultEmulatorMenu(platformId, MenuSlot.MAIN)
                     else uiState.update { it.withSettingsOpen("settings_library") }
                 }
             }

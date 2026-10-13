@@ -246,14 +246,14 @@ class CrossbarBookshelf(
 
     internal fun closeBooksView() = openBooksView(BooksNav.Root)
 
-    internal fun openBookContextMenu(item: CrossbarItem, slot: MenuSlot = MenuSlot.MAIN): Boolean {
+    internal fun openBookContextMenu(item: CrossbarItem, slot: MenuSlot): Boolean {
         if (item.menuHostCategory(vm.currentCategory()?.id) != BuiltInCategory.LIBRARY) return false
         if (item.type != CrossbarItemType.LIBRARY_BOOK || !item.id.startsWith("book_")) return false
         openBookMenu(item.id.removePrefix("book_"), item.title, slot)
         return true
     }
 
-    internal fun openBookMenu(bookId: String, title: String, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun openBookMenu(bookId: String, title: String, slot: MenuSlot) {
         scope.launch {
             val onShelf = runCatching { bookRepository.getBook(bookId) }
                 .getOrNull()?.lastOpenedAt != null
@@ -264,7 +264,7 @@ class CrossbarBookshelf(
         }
     }
 
-    internal fun handleBookAction(bookId: String, itemId: String, slot: MenuSlot = MenuSlot.MAIN) {
+    internal fun handleBookAction(bookId: String, itemId: String, slot: MenuSlot) {
         when (itemId) {
             "book_open" -> openBook(bookId)
             "edit_genre" -> vm.genres.openPicker(GenreTarget.Book(bookId), slot)

@@ -36,13 +36,13 @@ class CompanionPromptsTest {
     }
 
     @Test
-    fun `Edit Title from the Companion's menu is a prompt on the Companion, and closes only the Companion's menu`() {
+    fun `Edit Title from the Companion's menu is a prompt on the Companion`() {
         coEvery { vm.gameRepository.getById(1L) } returns mockk<Game>(relaxed = true) { every { displayTitle } returns "Crisis Core" }
         games.onGameMenuItem("detail_title", menu, MenuSlot.COMPANION)
         assertEquals("Edit Title", ui.value.collectionNameDialog?.title)
         assertEquals("the prompt is drawn on the Companion", MenuSlot.COMPANION, ui.value.namePromptSlot)
-        verify { vm.closeContextMenu(MenuSlot.COMPANION) }
-        verify(exactly = 0) { vm.closeContextMenu(MenuSlot.MAIN) }
+        // the row's menu is closed by activateContextMenuItem, before the row runs; the row closes no menu of its own
+        verify(exactly = 0) { vm.closeContextMenu(any()) }
     }
 
     @Test
