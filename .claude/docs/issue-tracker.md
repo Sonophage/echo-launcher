@@ -25,3 +25,4 @@ Run `gh issue view <number> --comments`.
 - **Blocking**: GitHub's native issue dependencies: `gh api --method POST repos/Sonophage/echo-launcher/issues/<ticket>/dependencies/blocked_by -F issue_id=<blocker-db-id>`. The db id is `gh api repos/Sonophage/echo-launcher/issues/<n> --jq .id`, not the `#number`. Where that fails, put `Blocked by: #<n>, #<n>` at the top of the ticket body.
 - **Frontier**: open tickets under the spec with no open blocker.
 - **Done**: a ticket closes when its commit lands (`Closes #<n>` in the PR body, or `gh issue close`).
+- **After a merge**: run `gh issue list --state open` and close, with `gh issue close`, any issue the PR named that GitHub left open (a squash merge left 4 of 10 open on 2026-10-12).

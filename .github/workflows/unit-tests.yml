@@ -2,11 +2,13 @@ name: Unit tests
 
 # Guards against unit-test drift: assembleDebug skips unit tests, so broken tests (a stale fake that
 # stops implementing an interface that grew, or a ViewModel refactor that outpaces its test) can land
-# unnoticed. This runs every module's JVM unit tests on each push/PR, excluding only :app and
+# unnoticed. This runs every module's JVM unit tests on each push to main and each PR, excluding only :app and
 # :discord:discord-native, the two targets that pull the Discord SDK aar (not committed, see
 # tools/fetch-discord-sdk.sh) and the NDK. Every other module needs no aar, no NDK and no device.
 on:
+  # main only: a push to a PR's branch is already tested by its pull_request run.
   push:
+    branches: [main]
   pull_request:
 
 concurrency:
