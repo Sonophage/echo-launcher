@@ -7,6 +7,15 @@ import org.junit.Test
 class LaunchScreenTest {
     private val both = listOf(0, 2)
 
+    // #28: what is not a game or app (app info, uninstall, the share sheet, a chooser, Android Settings) opens on
+    // the Main Screen's display, decided by this one rule
+    @Test
+    fun `the Main Screen's display is the second one while a Swap has put the Main Screen there`() {
+        assertEquals(2, mainScreenDisplay(mainOnSecond = true, secondDisplay = 2))
+        assertEquals(0, mainScreenDisplay(mainOnSecond = false, secondDisplay = 2))
+        assertEquals(0, mainScreenDisplay(mainOnSecond = true, secondDisplay = null))
+    }
+
     @Test
     fun `an app opens on the display ECHO last launched it on`() {
         assertEquals(2, launchScreen(remembered = 2, dualScreen = false, otherScreen = false, mainDisplay = 0, displays = both))

@@ -112,7 +112,7 @@ class CrossbarLauncher(
     }
 
     // an app ECHO opens without knowing its package (the camera, Quick Search's browser) has no Launch Screen, so it
-    // opens on the Main Screen's display
+    // opens on the Main Screen's display; so do Android Settings and the theme share sheet (#28)
     internal fun startOnMainScreen(intent: Intent) =
         vm.context.startActivity(intent, com.echo.core.common.launch.LaunchTransition.options(vm.context, vm.launchScreens.mainDisplay()))
 

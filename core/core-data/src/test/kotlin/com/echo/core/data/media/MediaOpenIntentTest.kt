@@ -52,6 +52,7 @@ class MediaOpenIntentTest {
             chooserTitle = "Play video with…",
             noHandlerMessage = "nothing installed",
             logLabel = "the file",
+            display = 0,
         )
 
         assertNull(error, "the chooser started, so there is nothing to report")
@@ -66,8 +67,19 @@ class MediaOpenIntentTest {
         val context = ApplicationProvider.getApplicationContext<Application>()
         val pinned = MediaOpenIntent.build(uri, "video/*", "com.example.player")
 
-        MediaOpenIntent.launchChooser(context, pinned, "t", "none", "the file")
+        MediaOpenIntent.launchChooser(context, pinned, "t", "none", "the file", display = 0)
 
         assertEquals("com.example.player", pinned.`package`)
+    }
+
+    // #28: the chooser is not a game or app, so it opens on the Main Screen's display, which its caller passes
+    @Test
+    fun `the chooser opens on the display it is given`() {
+        val context = ApplicationProvider.getApplicationContext<Application>()
+
+        MediaOpenIntent.launchChooser(context, MediaOpenIntent.build(uri, "video/*", null), "t", "none", "the file", display = 2)
+
+        val started = shadowOf(context).nextStartedActivityForResult
+        assertEquals(2, started.options?.getInt("android.activity.launchDisplayId", -1))
     }
 }

@@ -170,7 +170,8 @@ fun CrossbarShellContainer(
                 putExtra(android.content.Intent.EXTRA_STREAM, uri)
                 addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            shareContext.startActivity(
+            // the share sheet opens on the Main Screen's display (#28)
+            viewModel.launching.startOnMainScreen(
                 android.content.Intent.createChooser(send, "Share theme")
                     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
             )

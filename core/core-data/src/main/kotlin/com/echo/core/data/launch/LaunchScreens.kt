@@ -2,12 +2,18 @@ package com.echo.core.data.launch
 
 import android.content.Context
 import android.hardware.display.DisplayManager
+import android.os.Bundle
 import android.view.Display
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.echo.core.common.launch.LaunchTransition
 import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.domain.model.KnownEmulatorPackages
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,8 +37,9 @@ class LaunchScreens @Inject constructor(
 
     // the Main Screen's display. Media opened in another app (music, video, photo, book) and an app ECHO opens
     // without knowing its package (the camera, a browser, a system settings screen) open here, not through
-    // displayFor: the Launch Screen is for games and apps (CONTEXT.md)
-    fun mainDisplay(): Int = if (mainOnSecond) secondDisplay(context)?.displayId ?: Display.DEFAULT_DISPLAY else Display.DEFAULT_DISPLAY
+    // displayFor: the Launch Screen is for games and apps (CONTEXT.md). So do Android's own screens ECHO opens: app
+    // info, uninstall, the share sheet, a chooser and Android Settings (#28)
+    fun mainDisplay(): Int = mainScreenDisplay(mainOnSecond, secondDisplay(context)?.displayId)
 
     fun hasOtherScreen(): Boolean = secondDisplay(context) != null
 
@@ -75,12 +82,27 @@ class LaunchScreens @Inject constructor(
                 ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).orEmpty()
                 .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
 
+        // the launch options that open an Android screen on the Main Screen's display, for a composable, which
+        // cannot inject LaunchScreens (#28)
+        fun mainScreenOptions(context: Context): Bundle? {
+            val screens = EntryPointAccessors.fromApplication(context.applicationContext, Access::class.java).launchScreens()
+            return LaunchTransition.options(context, screens.mainDisplay())
+        }
+
+        @EntryPoint
+        @InstallIn(SingletonComponent::class)
+        interface Access { fun launchScreens(): LaunchScreens }
+
         private fun encode(map: Map<String, Int>): Set<String> = map.mapTo(mutableSetOf()) { (pkg, display) -> "$pkg=$display" }
 
         private fun decode(set: Set<String>): Map<String, Int> =
             set.mapNotNull { entry -> entry.substringAfterLast('=').toIntOrNull()?.let { entry.substringBeforeLast('=') to it } }.toMap()
     }
 }
+
+// the Main Screen's display: the second one while a Swap has put the Main Screen there, else the first
+internal fun mainScreenDisplay(mainOnSecond: Boolean, secondDisplay: Int?): Int =
+    if (mainOnSecond) secondDisplay ?: Display.DEFAULT_DISPLAY else Display.DEFAULT_DISPLAY
 
 // what a Launch Screen is remembered by: a game by its id, so two games on one emulator keep their own screens; an
 // app by its package (owner, 2026-10-12). A package name has no ':', so the two never meet
