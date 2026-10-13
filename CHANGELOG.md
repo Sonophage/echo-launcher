@@ -22,3 +22,8 @@ released; it becomes the next release's notes.
 - Each action has one name everywhere: Details, Open Folder, Delete (erases the file), Remove from Library (the file stays), Pin to Top, Pin to Recent and Stop. A game has one Manual row. Open Folder opens the folder.
 - Every row you can turn on has its pair in the same menu, such as Add to Favorites and Remove from Favorites. Favorites is one set for games, apps, videos and photos, and Shelves lists play states only.
 - Every menu, rail and Quick Settings tile is in Title Case, such as Game Backgrounds and Button Hints. Game Info's view of an item's information is now called Details.
+
+### Touch
+
+- A press shows your theme's focus style (Classic, Halo, Bracket or Lift), the same mark the controller shows. Android's grey ripple is gone.
+- While your finger is on the Side Rail, the letter or group under it bulges out to the left, clear of your thumb, with its neighbours tapering. The chosen one wears the focus style. The rail settles back at your theme's motion speed, or at once with motion reduced.

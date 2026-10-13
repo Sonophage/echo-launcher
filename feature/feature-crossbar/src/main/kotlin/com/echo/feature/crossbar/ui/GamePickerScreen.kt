@@ -1,5 +1,9 @@
 package com.echo.feature.crossbar.ui
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
 import com.echo.core.ui.components.EchoTrio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -199,9 +203,13 @@ private fun PlatformGroupHeader(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // a Material component draws its own (switched off) ripple, not LocalIndication: its source carries the press mark (spec #3)
+        val press = remember { MutableInteractionSource() }
         Checkbox(
             checked = group.isAllSelected || group.selectedCount > 0,
             onCheckedChange = { selectAll -> onToggleSelectAll(selectAll) },
+            interactionSource = press,
+            modifier = Modifier.indication(press, LocalIndication.current),
         )
 
         Text(
@@ -221,7 +229,8 @@ private fun PlatformGroupHeader(
             modifier = Modifier.padding(end = 8.dp),
         )
 
-        TextButton(onClick = onToggleExpanded) {
+        val expandPress = remember { MutableInteractionSource() }
+        TextButton(onClick = onToggleExpanded, interactionSource = expandPress, modifier = Modifier.indication(expandPress, LocalIndication.current)) {
             Text(if (isExpanded) "▼" else "▶", fontSize = 12.sp, color = PickerText)
         }
     }
@@ -242,9 +251,12 @@ private fun GamePickerRow(
             .menuCursor(isSelected),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val press = remember { MutableInteractionSource() }
         Checkbox(
             checked = isChecked,
             onCheckedChange = { onToggle() },
+            interactionSource = press,
+            modifier = Modifier.indication(press, LocalIndication.current),
         )
         Text(
             text = title,

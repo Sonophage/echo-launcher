@@ -1,5 +1,10 @@
 package com.echo.feature.reader
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
+import com.echo.core.data.repository.EchoThemeStore
+import com.echo.themekit.FocusStyle
+import com.echo.themekit.MotionPreset
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.KeyEvent
@@ -105,7 +110,12 @@ class ReaderActivity : FragmentActivity() {
             },
         )
         root.addView(ComposeView(this).apply {
-            setContent { EchoTheme { ReaderChrome(ui, ::onCommand) } }
+            setContent {
+                // the Reader presses in the theme's focus style, as ECHO's own windows do
+                val look by remember { EchoThemeStore.themeLook(this@ReaderActivity) }
+                    .collectAsState(FocusStyle.CLASSIC to MotionPreset.CLASSIC)
+                EchoTheme(focusStyle = look.first, motion = look.second) { ReaderChrome(ui, ::onCommand) }
+            }
         })
         setContentView(root)
 

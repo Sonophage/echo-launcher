@@ -68,6 +68,27 @@ screen's padded column.
 - A Favorites row, on any item in any module, takes its words from `favoritesLabel(isFavorite)` in
   `components/Menu.kt`. Do not write the pair again.
 - `GlowMaskedWave(side)` shows the wave only inside a screen's glow.
+- The focus marks are one definition in `theme/FocusMark.kt`: `LocalFocusStyle` is the theme's style, and
+  `focusLook(style, visible, accent)` marks a focused icon: CLASSIC's warm glow, or the HALO, BRACKET or LIFT mark.
+  It is the only place that decides glow or mark. Mark a focused icon with it; do not draw a second ring or glow.
+- The theme's motion is one definition in `theme/Motion.kt`: `LocalMotion` is the preset and `glide()` its
+  settle spring (STILL, reduced motion, snaps). `EchoTheme` provides it and `LocalFocusStyle`: a window's root
+  (`EchoRoot` for both screens, the Reader) passes `EchoThemeStore.themeLook`, and a theme inside it keeps them.
+  Do not provide them a second time.
+- The belly under a finger is `railBelly(touched, rungs, bulge)` (`components/LetterRail.kt`): `Bulge.LEFT` for
+  the Side Rail, `Bulge.UP` for a Filter Row, `RailBellyReach` (48 dp) at the touched row, tapering over the
+  rail's wave. Do not shape a second belly.
+- A press draws the same mark: `PressMark` (`theme/PressMark.kt`) is the `LocalIndication` `EchoTheme` provides, so a
+  plain `clickable` shows it while the finger is down. Never ask for a Material `ripple()`; `NoRippleTest` fails on one.
+  Set `indication = null` only on a scrim or a whole-screen tap. When the tap target is wider than its icon, give the
+  clickable an `interactionSource` with `indication = null` and put `Modifier.indication(source, LocalIndication.current)`
+  on the icon (the crossbar rows, the footer's A orb). When the controller's focus is the target's own look, not
+  an icon mark (a menu row's white bar, a tab's underline, an App Drawer case's lift, the search field's edge), give
+  the clickable an `interactionSource` with `indication = null` and draw it focused when
+  `source.showsFocus(focused)` is true (`theme/PressMark.kt`); `contextMenuRow` takes that source. A Material
+  control (`Switch`, `Slider`, `Checkbox`, `TextButton`, `IconButton`...) draws its own ripple, which is off, not
+  `LocalIndication`: pass it an `interactionSource` and put `Modifier.indication(source, LocalIndication.current)`
+  on it, or use `showsFocus` when it has its own focus look. `NoRippleTest` fails on a control with no source.
 - `WaveLayers(style)` draws the wave; the design (PSP, Echo Rings, Echo Arcs) comes from
   `LocalWaveDesign`. The wave sits just above the backdrop (wallpaper or full-screen art) and below
   icons, panels and words.

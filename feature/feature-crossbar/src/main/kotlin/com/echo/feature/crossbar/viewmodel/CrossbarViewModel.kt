@@ -741,8 +741,6 @@ data class CrossbarUiState(
     val saveThemeNameDialog: PlaylistNameDialogState? = null,
 
     val layoutSpec: com.echo.themekit.CrossbarLayoutSpec = com.echo.themekit.CrossbarLayoutSpec.DEFAULT,
-    val focusStyle: com.echo.themekit.FocusStyle = com.echo.themekit.FocusStyle.CLASSIC,
-    val motion: com.echo.themekit.MotionPreset = com.echo.themekit.MotionPreset.CLASSIC,
 
 
     val crossbarLayoutAdjustMap: Map<String, com.echo.themekit.CrossbarLayoutAdjust> = emptyMap(),
@@ -1512,7 +1510,6 @@ class CrossbarViewModel @Inject constructor(
         checkInitialSetup()
         logStartupSequence()
         look.observeColorScheme()
-        look.observeFocusAndMotion()
         observeCategoryBar()
         observeLibraryChips()
         panel.observeProfilePrefs()

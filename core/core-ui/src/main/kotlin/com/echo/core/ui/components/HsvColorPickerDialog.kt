@@ -59,7 +59,7 @@ fun HsvColorPickerDialog(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xCC000000))
-            .clickable(onClick = onCancel),
+            .clickable(interactionSource = null, indication = null, onClick = onCancel),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -68,7 +68,7 @@ fun HsvColorPickerDialog(
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color(0xFF15151F))
 
-                .clickable(onClick = {})
+                .clickable(interactionSource = null, indication = null, onClick = {})
                 .padding(24.dp),
         ) {
             Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)

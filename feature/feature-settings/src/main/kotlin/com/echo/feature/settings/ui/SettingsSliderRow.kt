@@ -1,5 +1,8 @@
 package com.echo.feature.settings.ui
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -151,7 +154,11 @@ fun SettingsSliderRow(
             )
         }
         Spacer(Modifier.height(8.dp))
+        // a Material component draws its own (switched off) ripple, not LocalIndication: its source carries the press mark (spec #3)
+        val press = remember { MutableInteractionSource() }
         Slider(
+            interactionSource = press,
+            modifier = Modifier.indication(press, LocalIndication.current),
             value = value,
             onValueChange = { v ->
 

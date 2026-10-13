@@ -1,7 +1,5 @@
 package com.echo.feature.crossbar.ui
 
-import androidx.compose.material.icons.outlined.VideogameAsset
-import com.echo.feature.appbar.AppFilter
 import com.echo.core.ui.design.RailPanelFill
 import com.echo.core.ui.design.RAIL_PANEL_WIDTH
 import androidx.compose.foundation.border
@@ -43,7 +41,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Games
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material3.Icon
@@ -482,58 +479,6 @@ internal fun factsLine(item: CrossbarItem, achievements: String?): String? =
 
 private fun subLine(item: CrossbarItem): String? =
     (item.progressLabel ?: item.subtitle)?.takeIf { it.isNotBlank() && it != kindLabel(item) }
-
-@Composable
-fun RecentFilterRow(
-    filter: RecentFilter,
-    u: DesignUnits,
-    modifier: Modifier = Modifier,
-
-    onFilterTapped: (RecentFilter) -> Unit = {},
-
-    filters: List<RecentFilter> = listOf(RecentFilter.ALL),
-) {
-    StripSections(
-        labels = filters.map { it.label },
-        selected = filters.indexOf(filter),
-        onTapped = { onFilterTapped(filters[it]) },
-        u = u,
-        shoulders = true,
-        modifier = modifier,
-    ) { i, tint, m -> Icon(filterGlyph(filters[i]), null, m, tint = tint) }
-}
-
-// the app drawer's sections as icons in the top bar, LT and RT at the ends (owner, 2026-10-04)
-@Composable
-fun DrawerSectionRow(active: AppFilter, sections: List<AppFilter>, u: DesignUnits, modifier: Modifier = Modifier, onTapped: (AppFilter) -> Unit) {
-    StripSections(
-        labels = sections.map { it.label },
-        selected = sections.indexOf(active),
-        onTapped = { onTapped(sections[it]) },
-        u = u,
-        shoulders = true,
-        modifier = modifier,
-    ) { i, tint, m -> Icon(drawerGlyph(sections[i]), null, m, tint = tint) }
-}
-
-private fun drawerGlyph(section: AppFilter): ImageVector = when (section) {
-    AppFilter.RECENT -> Icons.Outlined.History
-    AppFilter.APPS -> Icons.Outlined.Apps
-    AppFilter.EMULATORS -> Icons.Outlined.VideogameAsset
-    AppFilter.GAMES -> Icons.Outlined.Games
-    AppFilter.MUSIC -> Icons.Outlined.MusicNote
-    AppFilter.VIDEOS -> Icons.Outlined.Movie
-    AppFilter.BOOKS -> Icons.AutoMirrored.Outlined.MenuBook
-}
-
-private fun filterGlyph(filter: RecentFilter): ImageVector = when (filter) {
-    RecentFilter.ALL -> Icons.Outlined.History
-    RecentFilter.GAMES -> Icons.Outlined.Games
-    RecentFilter.MUSIC -> Icons.Outlined.MusicNote
-    RecentFilter.BOOKS -> Icons.AutoMirrored.Outlined.MenuBook
-    RecentFilter.VIDEO -> Icons.Outlined.Movie
-    RecentFilter.APPS -> Icons.Outlined.Apps
-}
 
 @Composable
 private fun Eyebrow(item: CrossbarItem, u: DesignUnits) {

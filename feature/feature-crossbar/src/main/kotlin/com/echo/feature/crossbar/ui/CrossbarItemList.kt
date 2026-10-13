@@ -1,5 +1,9 @@
 package com.echo.feature.crossbar.ui
 
+import com.echo.core.ui.theme.LocalFocusStyle
+import com.echo.core.ui.theme.LocalMotion
+import com.echo.core.ui.theme.glide
+import com.echo.core.ui.theme.focusLook
 import com.echo.feature.crossbar.viewmodel.systemArtSlotFor
 import com.echo.core.ui.theme.EchoTextStyle
 import androidx.compose.animation.core.Animatable
@@ -13,6 +17,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -499,7 +505,7 @@ private fun CrossbarVerticalListRow(
     modifier: Modifier = Modifier,
 ) {
     val focusStyle = LocalFocusStyle.current
-    val motion = LocalCrossbarMotion.current
+    val motion = LocalMotion.current
     val scale by animateFloatAsState(
         targetValue = focusStyle.rowScale(isSelected),
         animationSpec = motion.pop(),
@@ -524,6 +530,8 @@ private fun CrossbarVerticalListRow(
         label = "crossbarRowGlow",
     )
     val accent = LocalEchoColors.current.accentColor
+    // the row takes the tap; the press mark is drawn round the icon, where the focus mark is (spec #3)
+    val press = remember { MutableInteractionSource() }
 
     val subtitleStyle = if (textShadow) EchoTextStyle.copy(shadow = CrossbarTextShadow) else EchoTextStyle
 
@@ -553,7 +561,7 @@ private fun CrossbarVerticalListRow(
                 .height(TAP_TARGET_HEIGHT)
 
                 .combinedClickable(
-                    interactionSource = remember { MutableInteractionSource() },
+                    interactionSource = press,
                     indication = null,
                     onClick = onClick,
                     onLongClick = onLongPress,
@@ -568,12 +576,8 @@ private fun CrossbarVerticalListRow(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .focusMark(focusStyle, glow, accent)
-                        .crossbarFocusGlow(
-                            visible = if (focusStyle.glows) glow else 0f,
-                            reach = CrossbarGlow.RowReach,
-                            alpha = CrossbarGlow.RowAlpha,
-                        ),
+                        .indication(press, LocalIndication.current)
+                        .focusLook(focusStyle, glow, accent),
                 ) {
                     CrossbarItemLeadingIcon(
                         item = item,
@@ -1179,8 +1183,6 @@ private fun shelfGlyphFor(cardId: String): ImageVector = when (val shelf = shelf
 
 const val GLIDE_MAX_LEAD_ROWS = 3
 
-const val GLIDE_STIFFNESS = 700f
-
 fun columnRows(selected: Int, size: Int, rowsBelow: Int): IntRange =
     selected until minOf(size, selected + rowsBelow + GLIDE_MAX_LEAD_ROWS)
 
@@ -1195,7 +1197,7 @@ fun glideStart(current: Float, target: Int, maxLead: Int = GLIDE_MAX_LEAD_ROWS):
 @Composable
 private fun rememberGlidePosition(target: Int): State<Float> {
     val position = remember { Animatable(target.toFloat()) }
-    val glide = LocalCrossbarMotion.current.glide()
+    val glide = LocalMotion.current.glide()
     LaunchedEffect(target) {
         position.snapTo(glideStart(position.value, target))
         position.animateTo(target.toFloat(), glide)

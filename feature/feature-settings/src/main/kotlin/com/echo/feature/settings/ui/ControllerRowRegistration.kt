@@ -1,5 +1,7 @@
 package com.echo.feature.settings.ui
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.echo.core.ui.theme.showsFocus
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -124,8 +126,11 @@ internal fun SettingsRowActionButton(
             reportRemoved(actionFr)
         }
     }
+    // the button's focus look is its background: a press shows it too (spec #3). IconButton's own ripple is off
+    val press = remember { MutableInteractionSource() }
     IconButton(
         onClick = action.onClick,
+        interactionSource = press,
         modifier = Modifier
             .pointerInput(actionKey, action.onClick, action.onLongPress) {
                 detectTapGestures(
@@ -147,7 +152,7 @@ internal fun SettingsRowActionButton(
         Box(
             modifier = Modifier
                 .background(
-                    if (actionFocused) action.actionFocusBackgroundColor else Color.Transparent,
+                    if (press.showsFocus(actionFocused)) action.actionFocusBackgroundColor else Color.Transparent,
                     RoundedCornerShape(6.dp),
                 ),
             contentAlignment = Alignment.Center,

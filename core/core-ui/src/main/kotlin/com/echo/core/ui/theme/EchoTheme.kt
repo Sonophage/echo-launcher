@@ -1,6 +1,8 @@
 package com.echo.core.ui.theme
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -10,6 +12,8 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.echo.themekit.ColorCascade
+import com.echo.themekit.FocusStyle
+import com.echo.themekit.MotionPreset
 
 data class EchoColors(
     val waveColor: Color,
@@ -89,6 +93,10 @@ private val EchoDarkColorScheme = darkColorScheme(
 @Composable
 fun EchoTheme(
     colors: EchoColors = DefaultEchoColors,
+    // the applied theme's focus style and motion: a window's root passes the settings (themeLook in core-data), and
+    // a theme inside it keeps them, so every window presses in the active style (review of spec #3)
+    focusStyle: FocusStyle = LocalFocusStyle.current,
+    motion: MotionPreset = LocalMotion.current,
     content: @Composable () -> Unit,
 ) {
     val textColors = remember(colors.textPrimary, colors.backgroundTop, colors.backgroundBottom) {
@@ -98,14 +106,23 @@ fun EchoTheme(
     CompositionLocalProvider(
         LocalEchoColors provides colors,
         LocalEchoTextColors provides textColors,
+        LocalFocusStyle provides focusStyle,
+        LocalMotion provides motion,
 
         LocalContentColor provides textColors.primary,
     ) {
         MaterialTheme(
             colorScheme = EchoDarkColorScheme,
             typography = echoTypography(),
-            content = content,
-        )
+        ) {
+            // MaterialTheme sets the ripple as LocalIndication, so ECHO's press mark is provided inside it. A Material
+            // component draws its own ripple, not LocalIndication: the null configuration turns that off (spec #3)
+            CompositionLocalProvider(
+                LocalIndication provides PressMark,
+                LocalRippleConfiguration provides null,
+                content = content,
+            )
+        }
     }
 }
 
