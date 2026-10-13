@@ -64,7 +64,7 @@ class CrossbarGenres(
     fun onPick(target: GenreTarget, itemId: String, slot: MenuSlot) {
         vm.closeContextMenu(slot)
         if (itemId == GENRE_PICK_NEW) {
-            uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(title = "New Genre", editGenreTarget = target, placeholder = "e.g. Synthwave, Cozy Mystery", slot = slot)) }
+            uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = CollectionNameDialogState(title = "New Genre", editGenreTarget = target, placeholder = "e.g. Synthwave, Cozy Mystery")) } }
             return
         }
         set(target, genreOfPick(itemId))

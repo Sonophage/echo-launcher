@@ -135,7 +135,8 @@ import com.echo.feature.crossbar.viewmodel.systemArtSlotFor
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.MenuSlot
-import com.echo.feature.crossbar.viewmodel.namePromptSlot
+import com.echo.feature.crossbar.viewmodel.NamePrompts
+
 
 private const val CROSSBAR_BASELINE_HEIGHT_DP = 468f
 
@@ -332,13 +333,13 @@ fun CrossbarShellContainer(
         onCustomColorAdjust = viewModel.look::adjustCustomColor,
         onCustomColorConfirm = viewModel.look::confirmCustomColor,
         onCustomColorCancel = viewModel.look::cancelCustomColor,
-        onNamePromptTextChanged = viewModel::onNamePromptTextChanged,
-        onConfirmAppRename = viewModel::onConfirmAppRename,
-        onCancelAppRename = viewModel::onCancelAppRename,
-        onConfirmCollectionName = viewModel.gameActions::onConfirmCollectionName,
-        onCancelCollectionName = viewModel.gameActions::onCancelCollectionName,
-        onConfirmPlaylistName = viewModel.music::onConfirmPlaylistName,
-        onCancelPlaylistName = viewModel.music::onCancelPlaylistName,
+        onNamePromptTextChanged = { viewModel.onNamePromptTextChanged(it, MenuSlot.MAIN) },
+        onConfirmAppRename = { viewModel.onConfirmAppRename(it, MenuSlot.MAIN) },
+        onCancelAppRename = { viewModel.onCancelAppRename(MenuSlot.MAIN) },
+        onConfirmCollectionName = { viewModel.gameActions.onConfirmCollectionName(it, MenuSlot.MAIN) },
+        onCancelCollectionName = { viewModel.gameActions.onCancelCollectionName(MenuSlot.MAIN) },
+        onConfirmPlaylistName = { viewModel.music.onConfirmPlaylistName(it, MenuSlot.MAIN) },
+        onCancelPlaylistName = { viewModel.music.onCancelPlaylistName(MenuSlot.MAIN) },
         onMusicTrackPickerActivatedAt = viewModel.music::onMusicTrackPickerActivatedAt,
         onMusicTrackPickerConfirm = viewModel.music::onMusicTrackPickerConfirm,
         onMusicTrackPickerDismiss = viewModel.music::closeMusicTrackPicker,
@@ -1420,7 +1421,7 @@ fun CrossbarShell(
                 )
             }
 
-            uiState.saveThemeNameDialog?.let { dialog ->
+            uiState.mainPrompts.saveThemeNameDialog?.let { dialog ->
                 CollectionNameDialog(
                     title = dialog.title,
                     text = dialog.text,
@@ -1430,19 +1431,17 @@ fun CrossbarShell(
                 )
             }
 
-            // a prompt opened from the Companion's menu is drawn by the Companion Screen (ADR 0002)
-            if (uiState.namePromptSlot == MenuSlot.MAIN) {
-                NamePrompts(
-                    uiState = uiState,
-                    onTextChange = onNamePromptTextChanged,
-                    onConfirmAppRename = onConfirmAppRename,
-                    onCancelAppRename = onCancelAppRename,
-                    onConfirmCollectionName = onConfirmCollectionName,
-                    onCancelCollectionName = onCancelCollectionName,
-                    onConfirmPlaylistName = onConfirmPlaylistName,
-                    onCancelPlaylistName = onCancelPlaylistName,
-                )
-            }
+            // the Main Screen's prompts; one opened from the Companion's menu is the Companion Screen's (ADR 0002)
+            NamePromptDialogs(
+                prompts = uiState.mainPrompts,
+                onTextChange = onNamePromptTextChanged,
+                onConfirmAppRename = onConfirmAppRename,
+                onCancelAppRename = onCancelAppRename,
+                onConfirmCollectionName = onConfirmCollectionName,
+                onCancelCollectionName = onCancelCollectionName,
+                onConfirmPlaylistName = onConfirmPlaylistName,
+                onCancelPlaylistName = onCancelPlaylistName,
+            )
 
             uiState.infoDialog?.let { dialog ->
                 InfoDialog(
@@ -1634,10 +1633,11 @@ private fun rememberWaveAccent(uiState: CrossbarUiState): Long? {
 }
 
 // the name prompts an item's menu opens (Rename Shortcut, Edit Title, a playlist's name, ...), drawn on the screen of
-// the menu that opened them: by CrossbarShell, or by the Companion Screen (ADR 0002)
+// the menu that opened them: the Main Screen's by CrossbarShell, the Companion's by the Companion Screen (ADR 0002).
+// Save Current Look as Theme is drawn by CrossbarShell on its own
 @Composable
-internal fun NamePrompts(
-    uiState: CrossbarUiState,
+internal fun NamePromptDialogs(
+    prompts: NamePrompts,
     onTextChange: (String) -> Unit,
     onConfirmAppRename: (String) -> Unit,
     onCancelAppRename: () -> Unit,
@@ -1646,16 +1646,16 @@ internal fun NamePrompts(
     onConfirmPlaylistName: (String) -> Unit,
     onCancelPlaylistName: () -> Unit,
 ) {
-    uiState.renameAppTarget?.let {
+    prompts.renameAppTarget?.let {
         AppRenameDialog(
-            text = uiState.renameAppText,
+            text = prompts.renameAppText,
             onTextChange = onTextChange,
             onConfirm = onConfirmAppRename,
             onCancel = onCancelAppRename,
         )
     }
 
-    uiState.collectionNameDialog?.let { dialog ->
+    prompts.collectionNameDialog?.let { dialog ->
         CollectionNameDialog(
             title = dialog.title,
             text = dialog.text,
@@ -1670,7 +1670,7 @@ internal fun NamePrompts(
         )
     }
 
-    uiState.playlistNameDialog?.let { dialog ->
+    prompts.playlistNameDialog?.let { dialog ->
         CollectionNameDialog(
             title = dialog.title,
             text = dialog.text,

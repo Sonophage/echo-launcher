@@ -5,7 +5,7 @@ import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.typing
 import com.echo.feature.crossbar.viewmodel.MenuSlot
-import com.echo.feature.crossbar.viewmodel.namePromptSlot
+import com.echo.feature.crossbar.viewmodel.open
 import com.echo.feature.crossbar.viewmodel.ColorSchemeOption
 import com.echo.feature.crossbar.viewmodel.GameInfoState
 import com.echo.feature.settings.ui.SettingsFocusInfo
@@ -120,7 +120,7 @@ enum class CompanionKeys { NONE, CLAIM, HOLD }
 fun companionKeys(s: CrossbarUiState): CompanionKeys = when {
     !s.typing -> CompanionKeys.NONE
     s.screensSwapped -> CompanionKeys.HOLD
-    s.search == null && s.namePromptSlot == MenuSlot.COMPANION -> CompanionKeys.HOLD
+    s.search == null && !s.mainPrompts.open && s.companionPrompts.open -> CompanionKeys.HOLD
     else -> CompanionKeys.CLAIM
 }
 

@@ -104,13 +104,12 @@ class CrossbarGames(
 
     internal fun promptRenameCard(platformId: String, slot: MenuSlot) {
         val card = vm.enabledCards.firstOrNull { it.platformId == platformId } ?: return
-        uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+        uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = CollectionNameDialogState(
             title = "Rename System",
             subtitle = "The name this console shows under on the crossbar.",
             initialText = card.displayName,
             renameCardPlatformId = platformId,
-            slot = slot,
-        ))}
+        )) } }
     }
 
 
@@ -150,9 +149,10 @@ class CrossbarGames(
         )}
     }
 
-    fun onConfirmCollectionName(name: String) {
-        val dialog = uiState.value.collectionNameDialog ?: return
-        uiState.update { it.copy(collectionNameDialog = null) }
+    // [slot]: the screen the prompt is on
+    fun onConfirmCollectionName(name: String, slot: MenuSlot) {
+        val dialog = uiState.value.promptsIn(slot).collectionNameDialog ?: return
+        uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = null) } }
         if (dialog.editTitleGameId != null) {
             scope.launch {
                 vm.gameRepository.updateUserTitleOverride(dialog.editTitleGameId, name.trim().ifBlank { null })
@@ -187,8 +187,8 @@ class CrossbarGames(
         }
     }
 
-    fun onCancelCollectionName() {
-        uiState.update { it.copy(collectionNameDialog = null) }
+    fun onCancelCollectionName(slot: MenuSlot) {
+        uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = null) } }
     }
 
     internal suspend fun removeAndroidGames(platformId: String, packages: Set<String>) {
@@ -296,26 +296,24 @@ class CrossbarGames(
             when (val what = itemId.removePrefix("detail_")) {
                 "title" -> scope.launch {
                     val game = vm.gameRepository.getById(gid) ?: return@launch
-                    uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+                    uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = CollectionNameDialogState(
                         title = "Edit Title",
                         subtitle = "The name shown in the launcher and used when scraping artwork.",
                         resetLabel = "Use Scanned Name",
                         initialText = game.displayTitle,
                         editTitleGameId = gid,
                         placeholder = "Leave blank to use the scanned name",
-                        slot = slot,
-                    ))}
+                    )) } }
                 }
                 "note" -> scope.launch {
                     val game = vm.gameRepository.getById(gid) ?: return@launch
-                    uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+                    uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = CollectionNameDialogState(
                         title = "Edit Note",
                         subtitle = "Kept with the game. Only you see it.",
                         initialText = game.userNote.orEmpty(),
                         editNoteGameId = gid,
                         placeholder = "Anything you want to remember about this game",
-                        slot = slot,
-                    ))}
+                    )) } }
                 }
                 "ARTWORK"  -> vm.artworkTools.openArtworkStudio(gid)
                 "MANUAL"   -> vm.gameDetail.openManualFor(gid)

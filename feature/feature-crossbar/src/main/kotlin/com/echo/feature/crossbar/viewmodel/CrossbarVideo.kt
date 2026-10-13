@@ -239,20 +239,20 @@ class CrossbarVideo(
     }
 
     internal fun promptCreateVideoPlaylist(forVideoId: String? = null, slot: MenuSlot) {
-        uiState.update { it.copy(
-            playlistNameDialog = PlaylistNameDialogState(title = "New Video Playlist", videoContext = true, forVideoId = forVideoId, slot = slot)
-        )}
+        uiState.update { it.withPrompts(slot) { copy(
+            playlistNameDialog = PlaylistNameDialogState(title = "New Video Playlist", videoContext = true, forVideoId = forVideoId)
+        ) } }
     }
 
     private fun promptRenameVideoPlaylist(playlistId: Long, name: String) {
-        uiState.update { it.copy(
+        uiState.update { it.withPrompts(MenuSlot.MAIN) { copy(
             playlistNameDialog = PlaylistNameDialogState(
                 title = "Rename Playlist",
                 initialText = name,
                 renamePlaylistId = playlistId,
                 videoContext = true,
             )
-        )}
+        ) } }
     }
 
     private fun openVideoPlaylistContextMenu(playlistId: Long, name: String, slot: MenuSlot) {

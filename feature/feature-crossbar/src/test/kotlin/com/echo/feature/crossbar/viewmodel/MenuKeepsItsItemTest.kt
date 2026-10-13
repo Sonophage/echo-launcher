@@ -63,6 +63,6 @@ class MenuKeepsItsItemTest {
 
         music.handlePlaylistRowAction(7L, "Night Drive", "rename_playlist")
 
-        assertEquals("Night Drive", ui.value.playlistNameDialog?.text)
+        assertEquals("Night Drive", ui.value.mainPrompts.playlistNameDialog?.text)
     }
 }

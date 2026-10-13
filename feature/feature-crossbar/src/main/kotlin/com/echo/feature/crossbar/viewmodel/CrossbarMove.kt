@@ -131,13 +131,13 @@ class CrossbarMove(
     fun promptRenameColumn() {
         val s = uiState.value
         val column = s.categories.getOrNull(s.selectedCategoryIndex) ?: return
-        uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+        uiState.update { it.withPrompts(MenuSlot.MAIN) { copy(collectionNameDialog = CollectionNameDialogState(
             title = "Rename Column",
             subtitle = "The name under this column's icon.",
             initialText = column.name,
             renameCategoryId = column.id,
             placeholder = column.name,
-        ))}
+        )) } }
     }
 
     fun renameColumn(id: String, name: String) {

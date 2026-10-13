@@ -14,7 +14,7 @@ class BlockingOverlayBranchTest {
     @Test
     fun `the save-as-theme dialog blocks the crossbar`() {
         val open = idle().copy(
-            saveThemeNameDialog = PlaylistNameDialogState(title = "Save Current Look as Theme"),
+            mainPrompts = NamePrompts(saveThemeNameDialog = PlaylistNameDialogState(title = "Save Current Look as Theme")),
         )
         assertTrue(open.hasBlockingOverlay, "the crossbar would navigate behind an open dialog")
     }

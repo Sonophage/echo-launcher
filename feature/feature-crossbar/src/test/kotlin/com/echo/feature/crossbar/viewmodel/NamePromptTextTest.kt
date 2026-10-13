@@ -5,28 +5,12 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class NamePromptTextTest {
-    private val prompts: List<Triple<String, (CrossbarUiState) -> CrossbarUiState, (CrossbarUiState) -> String?>> =
+    private val prompts: List<Triple<String, NamePrompts, (NamePrompts) -> String?>> =
         listOf(
-            Triple(
-                "rename shortcut",
-                { s: CrossbarUiState -> s.copy(renameAppTarget = "com.example", renameAppCurrent = "Example") },
-                { s: CrossbarUiState -> s.renameAppText },
-            ),
-            Triple(
-                "edit title",
-                { s: CrossbarUiState -> s.copy(collectionNameDialog = CollectionNameDialogState(title = "Edit Title")) },
-                { s: CrossbarUiState -> s.collectionNameDialog?.text },
-            ),
-            Triple(
-                "playlist name",
-                { s: CrossbarUiState -> s.copy(playlistNameDialog = PlaylistNameDialogState(title = "New Playlist")) },
-                { s: CrossbarUiState -> s.playlistNameDialog?.text },
-            ),
-            Triple(
-                "save theme name",
-                { s: CrossbarUiState -> s.copy(saveThemeNameDialog = PlaylistNameDialogState(title = "Save as Theme")) },
-                { s: CrossbarUiState -> s.saveThemeNameDialog?.text },
-            ),
+            Triple("rename shortcut", NamePrompts(renameAppTarget = "com.example", renameAppCurrent = "Example"), { p -> p.renameAppText }),
+            Triple("edit title", NamePrompts(collectionNameDialog = CollectionNameDialogState(title = "Edit Title")), { p -> p.collectionNameDialog?.text }),
+            Triple("playlist name", NamePrompts(playlistNameDialog = PlaylistNameDialogState(title = "New Playlist")), { p -> p.playlistNameDialog?.text }),
+            Triple("save theme name", NamePrompts(saveThemeNameDialog = PlaylistNameDialogState(title = "Save as Theme")), { p -> p.saveThemeNameDialog?.text }),
         )
 
     @Test
@@ -34,8 +18,8 @@ class NamePromptTextTest {
         assertEquals("the prompt table must cover all four name prompts", 4, prompts.size)
 
         for ((name, open, read) in prompts) {
-            val typed = open(CrossbarUiState()).withNamePromptText("Backlog")
-            assertEquals("$name must receive the typed text", "Backlog", read(typed))
+            val typed = CrossbarUiState(mainPrompts = open).withNamePromptText(MenuSlot.MAIN, "Backlog")
+            assertEquals("$name must receive the typed text", "Backlog", read(typed.mainPrompts))
         }
     }
 
@@ -48,25 +32,27 @@ class NamePromptTextTest {
     @Test
     fun `typing with no prompt open changes nothing`() {
         val idle = CrossbarUiState()
-        val after = idle.withNamePromptText("stray")
-        assertEquals("no prompt open means no rename text", "", after.renameAppText)
-        assertNull("no prompt open means no text prompt", after.collectionNameDialog)
+        val after = idle.withNamePromptText(MenuSlot.MAIN, "stray")
+        assertEquals("no prompt open means no rename text", "", after.mainPrompts.renameAppText)
+        assertNull("no prompt open means no text prompt", after.mainPrompts.collectionNameDialog)
         assertEquals("the state is untouched", idle, after)
     }
 
     @Test
     fun `the first prompt in gamepad order wins when two are somehow open`() {
         val both = CrossbarUiState(
-            renameAppTarget = "com.example",
-            renameAppCurrent = "Example",
-            collectionNameDialog = CollectionNameDialogState(title = "Edit Title"),
-        ).withNamePromptText("Backlog")
+            mainPrompts = NamePrompts(
+                renameAppTarget = "com.example",
+                renameAppCurrent = "Example",
+                collectionNameDialog = CollectionNameDialogState(title = "Edit Title"),
+            ),
+        ).withNamePromptText(MenuSlot.MAIN, "Backlog")
 
-        assertEquals("the rename prompt is checked first, so it takes the text", "Backlog", both.renameAppText)
+        assertEquals("the rename prompt is checked first, so it takes the text", "Backlog", both.mainPrompts.renameAppText)
         assertEquals(
             "the text prompt must not also take it",
             "",
-            both.collectionNameDialog?.text,
+            both.mainPrompts.collectionNameDialog?.text,
         )
     }
 }

@@ -11,6 +11,7 @@ import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.GameInfoState
+import com.echo.feature.crossbar.viewmodel.NamePrompts
 import com.echo.feature.crossbar.viewmodel.SearchScope
 import com.echo.feature.crossbar.viewmodel.SearchState
 import org.junit.Assert.assertEquals
@@ -193,7 +194,7 @@ class CompanionRuleTest {
         val search = dual.copy(search = SearchState(scope = SearchScope.ALL))
         assertEquals(CompanionKeys.NONE, companionKeys(dual))
         assertEquals("Search on the Main Screen", CompanionKeys.CLAIM, companionKeys(search))
-        assertEquals("a name prompt on the Main Screen", CompanionKeys.CLAIM, companionKeys(dual.copy(renameAppTarget = "a")))
+        assertEquals("a name prompt on the Main Screen", CompanionKeys.CLAIM, companionKeys(dual.copy(mainPrompts = NamePrompts(renameAppTarget = "a"))))
         assertEquals("Search in Swap is in the Companion's window", CompanionKeys.HOLD, companionKeys(search.copy(screensSwapped = true)))
         assertEquals(CompanionKeys.NONE, companionKeys(dual.copy(screensSwapped = true)))
     }
@@ -206,7 +207,7 @@ class CompanionRuleTest {
         val dual = CrossbarUiState(secondDisplayPresent = true, secondScreenEnabled = true, secondScreen = true)
         val search = dual.copy(search = SearchState(scope = SearchScope.ALL))
         assertTrue("Search open, focus back from the claim", reshowsKeyboard(windowFocused = true, search))
-        assertTrue("a name prompt too", reshowsKeyboard(windowFocused = true, dual.copy(renameAppTarget = "a")))
+        assertTrue("a name prompt too", reshowsKeyboard(windowFocused = true, dual.copy(mainPrompts = NamePrompts(renameAppTarget = "a"))))
         assertFalse("losing focus shows nothing", reshowsKeyboard(windowFocused = false, search))
         assertFalse("not typing", reshowsKeyboard(windowFocused = true, dual))
         assertFalse("in Swap this window is the Companion and has no field", reshowsKeyboard(windowFocused = true, search.copy(screensSwapped = true)))

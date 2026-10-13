@@ -55,14 +55,17 @@ class MediaGenreViewsTest {
     fun `every prompt that takes typed text counts as an open name prompt`() {
         val base = CrossbarUiState(showBootSequence = false)
         val prompts = listOf(
-            base.copy(collectionNameDialog = CollectionNameDialogState(title = "New Genre", editGenreTarget = GenreTarget.Book("b"))),
-            base.copy(playlistNameDialog = PlaylistNameDialogState(title = "New Playlist")),
-            base.copy(saveThemeNameDialog = PlaylistNameDialogState(title = "Save")),
-            base.copy(renameAppTarget = "com.a"),
+            NamePrompts(collectionNameDialog = CollectionNameDialogState(title = "New Genre", editGenreTarget = GenreTarget.Book("b"))),
+            NamePrompts(playlistNameDialog = PlaylistNameDialogState(title = "New Playlist")),
+            NamePrompts(saveThemeNameDialog = PlaylistNameDialogState(title = "Save")),
+            NamePrompts(renameAppTarget = "com.a"),
         )
-        prompts.forEach { s ->
-            assertTrue(s.namePromptOpen)
-            assertTrue("typed text reaches it", s.withNamePromptText("x") != s)
+        prompts.forEach { p ->
+            MenuSlot.entries.forEach { slot ->
+                val s = base.withPrompts(slot) { p }
+                assertTrue(s.namePromptOpen)
+                assertTrue("typed text reaches it", s.withNamePromptText(slot, "x") != s)
+            }
         }
         assertEquals(false, base.namePromptOpen)
     }

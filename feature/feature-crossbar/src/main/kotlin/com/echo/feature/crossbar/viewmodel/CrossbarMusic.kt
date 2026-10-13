@@ -395,24 +395,25 @@ class CrossbarMusic(
     }
 
     internal fun promptCreatePlaylist(forTrackId: String? = null, slot: MenuSlot) {
-        uiState.update { it.copy(
-            playlistNameDialog = PlaylistNameDialogState(title = "New Playlist", forTrackId = forTrackId, slot = slot)
-        )}
+        uiState.update { it.withPrompts(slot) { copy(
+            playlistNameDialog = PlaylistNameDialogState(title = "New Playlist", forTrackId = forTrackId)
+        ) } }
     }
 
     private fun promptRenamePlaylist(playlistId: Long, name: String) {
-        uiState.update { it.copy(
+        uiState.update { it.withPrompts(MenuSlot.MAIN) { copy(
             playlistNameDialog = PlaylistNameDialogState(
                 title = "Rename Playlist",
                 initialText = name,
                 renamePlaylistId = playlistId,
             )
-        )}
+        ) } }
     }
 
-    fun onConfirmPlaylistName(name: String) {
-        val dialog = uiState.value.playlistNameDialog ?: return
-        uiState.update { it.copy(playlistNameDialog = null) }
+    // [slot]: the screen the prompt is on
+    fun onConfirmPlaylistName(name: String, slot: MenuSlot) {
+        val dialog = uiState.value.promptsIn(slot).playlistNameDialog ?: return
+        uiState.update { it.withPrompts(slot) { copy(playlistNameDialog = null) } }
         if (name.isBlank()) return
         scope.launch {
             val renameId = dialog.renamePlaylistId
@@ -432,8 +433,8 @@ class CrossbarMusic(
         }
     }
 
-    fun onCancelPlaylistName() {
-        uiState.update { it.copy(playlistNameDialog = null) }
+    fun onCancelPlaylistName(slot: MenuSlot) {
+        uiState.update { it.withPrompts(slot) { copy(playlistNameDialog = null) } }
     }
 
     private fun openMusicTrackPicker(playlistId: Long) {
@@ -594,10 +595,11 @@ class CrossbarMusic(
         }
     }
 
-    internal fun onPlaylistNameButton(action: GamepadAction, state: CrossbarUiState) {
+    // the controller on the Main Screen's playlist name prompt
+    internal fun onPlaylistNameButton(action: GamepadAction, dialog: PlaylistNameDialogState) {
         when (action) {
-            GamepadAction.SELECT -> onConfirmPlaylistName(state.playlistNameDialog?.text ?: return)
-            GamepadAction.BACK   -> onCancelPlaylistName()
+            GamepadAction.SELECT -> onConfirmPlaylistName(dialog.text, MenuSlot.MAIN)
+            GamepadAction.BACK   -> onCancelPlaylistName(MenuSlot.MAIN)
             else                 -> Unit
         }
     }

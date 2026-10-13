@@ -218,8 +218,6 @@ data class CollectionNameDialogState(
 
     val placeholder: String = "e.g. RPGs, Currently Playing",
     val confirmLabel: String = "Save",
-    // the screen it is drawn on: the slot of the menu whose row opened it (ADR 0002)
-    val slot: MenuSlot = MenuSlot.MAIN,
 )
 
 data class InfoDialogState(
@@ -408,9 +406,41 @@ data class PlaylistNameDialogState(
     val videoContext: Boolean = false,
 
     val forVideoId: String? = null,
-    // the screen it is drawn on: the slot of the menu whose row opened it (ADR 0002)
-    val slot: MenuSlot = MenuSlot.MAIN,
 )
+
+// the name prompts one screen draws. The Main Screen's and the Companion's are kept apart (ADR 0002), so both can be
+// open at once, and each screen draws, and is typed into, its own: a prompt opens in the slot of the menu whose row
+// opened it. Save Current Look as Theme opens on the Main Screen only
+data class NamePrompts(
+    val renameAppTarget: String? = null,
+    val renameAppCurrent: String? = null,
+    val renameAppText: String = "",
+
+    val collectionNameDialog: CollectionNameDialogState? = null,
+
+    val playlistNameDialog: PlaylistNameDialogState? = null,
+
+    val saveThemeNameDialog: PlaylistNameDialogState? = null,
+)
+
+// the one list of the prompts with a text field (review M3): these prompts with [text] typed into the open one, the
+// rename first; null while none is open. open and withText both read it, so they cannot name different prompts
+private fun NamePrompts.typed(text: String): NamePrompts? = when {
+    renameAppTarget != null      -> copy(renameAppText = text)
+    collectionNameDialog != null -> copy(collectionNameDialog = collectionNameDialog.copy(text = text))
+    playlistNameDialog != null   -> copy(playlistNameDialog = playlistNameDialog.copy(text = text))
+    saveThemeNameDialog != null  -> copy(saveThemeNameDialog = saveThemeNameDialog.copy(text = text))
+    else -> null
+}
+
+val NamePrompts.open: Boolean get() = typed("") != null
+
+fun NamePrompts.withText(text: String): NamePrompts = typed(text) ?: this
+
+fun CrossbarUiState.promptsIn(slot: MenuSlot): NamePrompts = if (slot == MenuSlot.MAIN) mainPrompts else companionPrompts
+
+fun CrossbarUiState.withPrompts(slot: MenuSlot, change: NamePrompts.() -> NamePrompts): CrossbarUiState =
+    if (slot == MenuSlot.MAIN) copy(mainPrompts = mainPrompts.change()) else copy(companionPrompts = companionPrompts.change())
 
 data class MusicTrackPickerState(
     val playlistId: Long,
@@ -652,15 +682,9 @@ data class CrossbarUiState(
     val colorSchemePicker: ColorSchemePickerState? = null,
     val customColorPicker: CustomColorPickerState? = null,
 
-    val renameAppTarget: String? = null,
-    // the screen Rename Shortcut is drawn on: the slot of the menu it was opened from (ADR 0002)
-    val renameAppSlot: MenuSlot = MenuSlot.MAIN,
-    val renameAppCurrent: String? = null,
-    val renameAppText: String = "",
-
-    val collectionNameDialog: CollectionNameDialogState? = null,
-
-    val playlistNameDialog: PlaylistNameDialogState? = null,
+    // the name prompts the Main Screen draws, and those the Companion Screen draws (NamePrompts, ADR 0002)
+    val mainPrompts: NamePrompts = NamePrompts(),
+    val companionPrompts: NamePrompts = NamePrompts(),
 
     val musicTrackPicker: MusicTrackPickerState? = null,
 
@@ -761,8 +785,6 @@ data class CrossbarUiState(
     val pendingThemeShareFile: java.io.File? = null,
 
     val pendingCustomIconsAction: GamepadAction? = null,
-
-    val saveThemeNameDialog: PlaylistNameDialogState? = null,
 
     val layoutSpec: com.echo.themekit.CrossbarLayoutSpec = com.echo.themekit.CrossbarLayoutSpec.DEFAULT,
 
@@ -887,9 +909,8 @@ data class CrossbarUiState(
             colorSchemePicker != null ||
             customColorPicker != null ||
             customIconSession != null ||
-            saveThemeNameDialog != null ||
             // a name prompt on the Companion Screen does not block the Main Screen (ADR 0002)
-            namePromptSlot == MenuSlot.MAIN ||
+            mainPrompts.open ||
             musicTrackPicker != null ||
             musicPlayerVisible ||
             infoDialog != null ||
@@ -1326,7 +1347,7 @@ enum class GlobalStep { APPS, SEARCH, CLOSE_SEARCH, NOTIFICATIONS, HOME }
 internal fun globalStep(action: GamepadAction, s: CrossbarUiState): GlobalStep? {
     val keepsItsButtons = s.activePhotoViewer != null || s.activeVideoId != null || s.metadataPreview != null ||
         s.manualViewer != null || s.artworkStudioGameId != null || s.showBootSequence || s.activeGameBoot != null ||
-        s.customIconSession != null || s.saveThemeNameDialog != null
+        s.customIconSession != null || s.mainPrompts.saveThemeNameDialog != null
     if (keepsItsButtons) return null
     return when (action) {
         // LB in the drawer closes it, as RB in Search closes Search; from the drawer's own search, back to it
@@ -1360,27 +1381,11 @@ internal fun CrossbarUiState.withGameInfoOpen(info: GameInfoState): CrossbarUiSt
 // Search or a name prompt is open: a field that asks for the keyboard
 val CrossbarUiState.typing: Boolean get() = search != null || namePromptOpen
 
-// a prompt with a text field is open; the same four withNamePromptText fills
-val CrossbarUiState.namePromptOpen: Boolean get() = namePromptSlot != null
+// a prompt with a text field is open, on either screen
+val CrossbarUiState.namePromptOpen: Boolean get() = mainPrompts.open || companionPrompts.open
 
-// the screen the open name prompt is drawn on, in withNamePromptText's order: the Companion Screen when a row of the
-// Companion's menu opened it (ADR 0002), else the Main Screen; null while none is open
-val CrossbarUiState.namePromptSlot: MenuSlot?
-    get() = when {
-        renameAppTarget != null      -> renameAppSlot
-        collectionNameDialog != null -> collectionNameDialog.slot
-        playlistNameDialog != null   -> playlistNameDialog.slot
-        saveThemeNameDialog != null  -> MenuSlot.MAIN
-        else -> null
-    }
-
-fun CrossbarUiState.withNamePromptText(text: String): CrossbarUiState = when {
-    renameAppTarget != null      -> copy(renameAppText = text)
-    collectionNameDialog != null -> copy(collectionNameDialog = collectionNameDialog.copy(text = text))
-    playlistNameDialog != null   -> copy(playlistNameDialog = playlistNameDialog.copy(text = text))
-    saveThemeNameDialog != null  -> copy(saveThemeNameDialog = saveThemeNameDialog.copy(text = text))
-    else -> this
-}
+// text typed into the open prompt of the screen in [slot]
+fun CrossbarUiState.withNamePromptText(slot: MenuSlot, text: String): CrossbarUiState = withPrompts(slot) { withText(text) }
 
 @HiltViewModel
 class CrossbarViewModel @Inject constructor(
@@ -2838,26 +2843,27 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
-        // a name prompt on the Companion Screen is finished there by touch; the controller stays on the Main Screen
-        // (ADR 0002)
-        if (state.namePromptSlot == MenuSlot.MAIN && state.renameAppTarget != null) {
+        // the controller acts on the Main Screen's prompts only: a prompt on the Companion Screen is finished there by
+        // touch (ADR 0002)
+        val prompts = state.mainPrompts
+        if (prompts.renameAppTarget != null) {
             when (action) {
-                GamepadAction.SELECT -> onConfirmAppRename(state.renameAppText)
-                GamepadAction.BACK   -> onCancelAppRename()
+                GamepadAction.SELECT -> onConfirmAppRename(prompts.renameAppText, MenuSlot.MAIN)
+                GamepadAction.BACK   -> onCancelAppRename(MenuSlot.MAIN)
                 else                 -> Unit
             }
             return
         }
-        if (state.namePromptSlot == MenuSlot.MAIN && state.collectionNameDialog != null) {
+        if (prompts.collectionNameDialog != null) {
             when (action) {
-                GamepadAction.SELECT -> gameActions.onConfirmCollectionName(state.collectionNameDialog.text)
-                GamepadAction.BACK   -> gameActions.onCancelCollectionName()
+                GamepadAction.SELECT -> gameActions.onConfirmCollectionName(prompts.collectionNameDialog.text, MenuSlot.MAIN)
+                GamepadAction.BACK   -> gameActions.onCancelCollectionName(MenuSlot.MAIN)
                 else                 -> Unit
             }
             return
         }
-        if (state.namePromptSlot == MenuSlot.MAIN && state.playlistNameDialog != null) {
-            music.onPlaylistNameButton(action, state)
+        if (prompts.playlistNameDialog != null) {
+            music.onPlaylistNameButton(action, prompts.playlistNameDialog)
             return
         }
 
@@ -2957,9 +2963,9 @@ class CrossbarViewModel @Inject constructor(
                 }
                 return
             }
-            state.saveThemeNameDialog != null -> {
+            state.mainPrompts.saveThemeNameDialog != null -> {
                 when (action) {
-                    GamepadAction.SELECT -> look.confirmSaveCurrentLookAsTheme(state.saveThemeNameDialog.text)
+                    GamepadAction.SELECT -> look.confirmSaveCurrentLookAsTheme(state.mainPrompts.saveThemeNameDialog.text)
                     GamepadAction.BACK   -> look.dismissSaveThemeNameDialog()
                     else                 -> Unit
                 }
@@ -3403,7 +3409,7 @@ class CrossbarViewModel @Inject constructor(
                     "hide_from_recent" -> persistHide(HiddenPlacement.appKey(pkg), menu.title, HideLocationType.RECENTS, "", "Recent")
                     "hide_everywhere" -> appAction { appCategoryRepository.setHidden(pkg, true) }
                     "rename"    -> _uiState.update {
-                        it.copy(renameAppTarget = pkg, renameAppCurrent = menu.title, renameAppText = menu.title, renameAppSlot = slot)
+                        it.withPrompts(slot) { copy(renameAppTarget = pkg, renameAppCurrent = menu.title, renameAppText = menu.title) }
                     }
                 }
             }
@@ -3462,20 +3468,21 @@ class CrossbarViewModel @Inject constructor(
         loadItemsForCategory(currentCategory())
     }
 
-    fun onConfirmAppRename(newLabel: String) {
-        val pkg = _uiState.value.renameAppTarget ?: return
+    // [slot]: the screen the prompt is on
+    fun onConfirmAppRename(newLabel: String, slot: MenuSlot) {
+        val pkg = _uiState.value.promptsIn(slot).renameAppTarget ?: return
         viewModelScope.launch {
             appCategoryRepository.rename(pkg, newLabel.ifBlank { null })
-            _uiState.update { it.copy(renameAppTarget = null, renameAppCurrent = null) }
+            _uiState.update { it.withPrompts(slot) { copy(renameAppTarget = null, renameAppCurrent = null) } }
         }
     }
 
-    fun onNamePromptTextChanged(text: String) {
-        _uiState.update { it.withNamePromptText(text) }
+    fun onNamePromptTextChanged(text: String, slot: MenuSlot) {
+        _uiState.update { it.withNamePromptText(slot, text) }
     }
 
-    fun onCancelAppRename() {
-        _uiState.update { it.copy(renameAppTarget = null, renameAppCurrent = null) }
+    fun onCancelAppRename(slot: MenuSlot) {
+        _uiState.update { it.withPrompts(slot) { copy(renameAppTarget = null, renameAppCurrent = null) } }
     }
 
     internal fun runQuickSearch(text: String) {
@@ -4438,7 +4445,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
     fun closeCustomIcons() {
-        _uiState.update { it.copy(customIconSession = null, saveThemeNameDialog = null) }
+        _uiState.update { it.copy(customIconSession = null).withPrompts(MenuSlot.MAIN) { copy(saveThemeNameDialog = null) } }
     }
 
     fun onCustomIconGroupMove(dir: Int) {
