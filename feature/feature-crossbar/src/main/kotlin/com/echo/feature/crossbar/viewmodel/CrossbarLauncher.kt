@@ -8,7 +8,7 @@ import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.domain.model.Game
 import com.echo.core.domain.model.resolve
 import com.echo.feature.appbar.LauncherShortcutRepository
-import com.echo.feature.crossbar.bottomscreen.mainScreenOnSecondDisplay
+import com.echo.feature.crossbar.companion.mainScreenOnSecondDisplay
 import com.echo.feature.launcher.LaunchDispatchResult
 import com.echo.feature.launcher.LaunchRecoveryAction
 import com.echo.feature.launcher.ResolvedLaunch
@@ -76,14 +76,14 @@ class CrossbarLauncher(
             LaunchRecoveryAction.CHANGE_EMULATOR -> {
                 val gameId = uiState.value.launchRecovery?.gameId ?: return
                 launchDispatcher.dismissRecovery()
-                vm.openEmulatorPickerMenu(gameId)
+                vm.openEmulatorPickerMenu(gameId, MenuSlot.MAIN)
             }
             LaunchRecoveryAction.PER_SYSTEM_DEFAULTS -> {
                 val gameId = uiState.value.launchRecovery?.gameId
                 launchDispatcher.dismissRecovery()
                 scope.launch {
                     val platformId = gameId?.let { vm.gameRepository.getById(it) }?.platformId
-                    if (platformId != null) vm.openDefaultEmulatorMenu(platformId)
+                    if (platformId != null) vm.openDefaultEmulatorMenu(platformId, MenuSlot.MAIN)
                     else uiState.update { it.withSettingsOpen("settings_library") }
                 }
             }
@@ -112,7 +112,7 @@ class CrossbarLauncher(
     }
 
     // an app ECHO opens without knowing its package (the camera, Quick Search's browser) has no Launch Screen, so it
-    // opens on the Main Screen's display
+    // opens on the Main Screen's display; so do Android Settings and the theme share sheet (#28)
     internal fun startOnMainScreen(intent: Intent) =
         vm.context.startActivity(intent, com.echo.core.common.launch.LaunchTransition.options(vm.context, vm.launchScreens.mainDisplay()))
 

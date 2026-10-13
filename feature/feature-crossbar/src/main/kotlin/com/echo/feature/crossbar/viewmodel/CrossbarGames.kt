@@ -102,22 +102,22 @@ class CrossbarGames(
         type     = CrossbarItemType.EMPTY,
     )
 
-    internal fun promptRenameCard(platformId: String) {
+    internal fun promptRenameCard(platformId: String, slot: MenuSlot) {
         val card = vm.enabledCards.firstOrNull { it.platformId == platformId } ?: return
-        vm.closeContextMenu()
-        uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+        uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = CollectionNameDialogState(
             title = "Rename System",
             subtitle = "The name this console shows under on the crossbar.",
             initialText = card.displayName,
             renameCardPlatformId = platformId,
-        ))}
+        )) } }
     }
 
 
-    internal fun openGameContextMenu(item: CrossbarItem) {
+    // [at]: the Main Screen's state where the item was (openContextMenuFor)
+    internal fun openGameContextMenu(item: CrossbarItem, slot: MenuSlot, at: CrossbarUiState) {
         val gameId = item.gameId
         if (gameId == null) {
-            openGameContextMenuCore(item, discCount = 0)
+            openGameContextMenuCore(item, discCount = 0, slot = slot, at = at)
             return
         }
 
@@ -129,29 +129,30 @@ class CrossbarGames(
 
             // the library's file, not the row's: a row built outside the game list may not carry it
             val row = game?.let { item.copy(romPath = it.romPath) } ?: item
-            openGameContextMenuCore(row, discCount, onRecentShelf = game?.lastPlayedAt != null)
+            openGameContextMenuCore(row, discCount, onRecentShelf = game?.lastPlayedAt != null, slot = slot, at = at)
         }
     }
 
-    private fun openGameContextMenuCore(item: CrossbarItem, discCount: Int, onRecentShelf: Boolean = false) {
-        val state = uiState.value
-        val currentCat = vm.currentCategory()
+    private fun openGameContextMenuCore(item: CrossbarItem, discCount: Int, onRecentShelf: Boolean = false, slot: MenuSlot, at: CrossbarUiState) {
+        val currentCat = at.currentCategoryOrNull()
         val inGamingCategory = currentCat?.isGamingCategory == true
+        val hideLocation = vm.hideLocation(at)
         val items = gameContextMenuItems(
             item = item,
-            state = state,
+            state = at,
             discCount = discCount,
             onRecentShelf = onRecentShelf,
-            hideLocation = vm.currentHideLocation(),
+            hideLocation = hideLocation,
         )
-        uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = item.packageName, shortcutId = item.shortcutId, launchIntentUri = item.launchIntentUri, categoryContext = if (inGamingCategory) currentCat.id else null, primaryId = "play")
+        uiState.update { it.withMenu(
+            slot, CrossbarContextMenu(state = MenuState(title = item.title, rows = items), hideLocation = hideLocation, gameId = item.gameId, packageName = item.packageName, shortcutId = item.shortcutId, launchIntentUri = item.launchIntentUri, categoryContext = if (inGamingCategory) currentCat.id else null, primaryId = "play")
         )}
     }
 
-    fun onConfirmCollectionName(name: String) {
-        val dialog = uiState.value.collectionNameDialog ?: return
-        uiState.update { it.copy(collectionNameDialog = null) }
+    // [slot]: the screen the prompt is on
+    fun onConfirmCollectionName(name: String, slot: MenuSlot) {
+        val dialog = uiState.value.promptsIn(slot).collectionNameDialog ?: return
+        uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = null) } }
         if (dialog.editTitleGameId != null) {
             scope.launch {
                 vm.gameRepository.updateUserTitleOverride(dialog.editTitleGameId, name.trim().ifBlank { null })
@@ -186,8 +187,8 @@ class CrossbarGames(
         }
     }
 
-    fun onCancelCollectionName() {
-        uiState.update { it.copy(collectionNameDialog = null) }
+    fun onCancelCollectionName(slot: MenuSlot) {
+        uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = null) } }
     }
 
     internal suspend fun removeAndroidGames(platformId: String, packages: Set<String>) {
@@ -280,7 +281,9 @@ class CrossbarGames(
 
     internal suspend fun existingCards(): List<MemoryCard> =
         runCatching { memoryCardRepository.getAll() }.getOrDefault(emptyList())
-    internal fun onGameMenuItem(itemId: String, menu: CrossbarContextMenu) {
+    // [slot] is the slot of the menu the row is on: a picker or prompt it opens is drawn there (ADR 0002).
+    // activateContextMenuItem has closed that menu before this runs
+    internal fun onGameMenuItem(itemId: String, menu: CrossbarContextMenu, slot: MenuSlot) {
         val gameId = menu.gameId ?: return
         if (itemId.startsWith("emu_pick_")) {
             val gid = gameId
@@ -293,26 +296,24 @@ class CrossbarGames(
             when (val what = itemId.removePrefix("detail_")) {
                 "title" -> scope.launch {
                     val game = vm.gameRepository.getById(gid) ?: return@launch
-                    vm.closeContextMenu()
-                    uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+                    uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = CollectionNameDialogState(
                         title = "Edit Title",
                         subtitle = "The name shown in the launcher and used when scraping artwork.",
                         resetLabel = "Use Scanned Name",
                         initialText = game.displayTitle,
                         editTitleGameId = gid,
                         placeholder = "Leave blank to use the scanned name",
-                    ))}
+                    )) } }
                 }
                 "note" -> scope.launch {
                     val game = vm.gameRepository.getById(gid) ?: return@launch
-                    vm.closeContextMenu()
-                    uiState.update { it.copy(collectionNameDialog = CollectionNameDialogState(
+                    uiState.update { it.withPrompts(slot) { copy(collectionNameDialog = CollectionNameDialogState(
                         title = "Edit Note",
                         subtitle = "Kept with the game. Only you see it.",
                         initialText = game.userNote.orEmpty(),
                         editNoteGameId = gid,
                         placeholder = "Anything you want to remember about this game",
-                    ))}
+                    )) } }
                 }
                 "ARTWORK"  -> vm.artworkTools.openArtworkStudio(gid)
                 "MANUAL"   -> vm.gameDetail.openManualFor(gid)
@@ -340,25 +341,25 @@ class CrossbarGames(
 
             "play"                   -> vm.launching.launchGameDirectly(gameId)
             "launch_other_screen"    -> vm.launching.launchGameDirectly(gameId, otherScreen = true)
-            "edit_genre"             -> vm.openGenrePickerMenu(gameId)
+            "edit_genre"             -> vm.openGenrePickerMenu(gameId, slot)
             "genre_only"             -> vm.filterByGenreOf(gameId)
             "genre_all"              -> vm.setGenreFilter(null)
             "group_by_genre"         -> vm.setGameGrouping(GameGrouping.GENRE)
             "group_by_system"        -> vm.setGameGrouping(GameGrouping.SYSTEM)
             "game_info"              -> vm.openGameInfoFor(gameId)
-            "info_about"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.INFO) }
-            "info_video"             -> { vm.closeContextMenu(); vm.gameDetail.onGameInfoAction(GameInfoAction.VIDEO) }
-            "choose_disc"             -> vm.openDiscPickerMenu(gameId)
-            "export_game"            -> vm.exportGameFromMenu(gameId)
-            "app_info"               -> { vm.closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(vm.context, menu.packageName ?: return) }
-            "uninstall"              -> { vm.closeContextMenu(); com.echo.core.data.apps.AppSystemActions.uninstall(vm.context, menu.packageName ?: return) }
+            "info_about"             -> vm.gameDetail.onGameInfoAction(GameInfoAction.INFO)
+            "info_video"             -> vm.gameDetail.onGameInfoAction(GameInfoAction.VIDEO)
+            "choose_disc"             -> vm.openDiscPickerMenu(gameId, slot)
+            "export_game"            -> vm.exportGameFromMenu(gameId, slot)
+            "app_info"               -> com.echo.core.data.apps.AppSystemActions.openAppInfo(vm.context, menu.packageName ?: return, vm.launchScreens.mainDisplay())
+            "uninstall"              -> com.echo.core.data.apps.AppSystemActions.uninstall(vm.context, menu.packageName ?: return, vm.launchScreens.mainDisplay())
             "favorite"               -> toggleGameFavorite(gameId, true)
             "unfavorite"             -> toggleGameFavorite(gameId, false)
 
-            "pin_recent", "unpin_recent" -> { vm.closeContextMenu(); vm.recents.togglePinned(com.echo.core.data.repository.RecentPins.gameKey(gameId)) }
-            "remove_from_recent"     -> { vm.closeContextMenu(); vm.recents.dismissGameFromRecents(gameId) }
-            "add_category"           -> menu.categoryContext?.let { vm.openGameCategoryPicker(gameId, it, "add") }
-            "move_category"          -> menu.categoryContext?.let { vm.openGameCategoryPicker(gameId, it, "move") }
+            "pin_recent", "unpin_recent" -> vm.recents.togglePinned(com.echo.core.data.repository.RecentPins.gameKey(gameId))
+            "remove_from_recent"     -> vm.recents.dismissGameFromRecents(gameId)
+            "add_category"           -> menu.categoryContext?.let { vm.openGameCategoryPicker(gameId, it, "add", slot) }
+            "move_category"          -> menu.categoryContext?.let { vm.openGameCategoryPicker(gameId, it, "move", slot) }
             "remove_category"        -> menu.categoryContext?.let { cat ->
                 val gid = gameId
                 vm.appAction {
@@ -380,15 +381,15 @@ class CrossbarGames(
                     vm.loadItemsForCategory(vm.currentCategory())
                 }
             }
-            "open_folder"            -> vm.openGameFolder(gameId)
-            "change_emulator"        -> vm.openEmulatorPickerMenu(gameId)
-            "shelves"                -> vm.openShelvesPickerMenu(gameId)
+            "open_folder"            -> vm.openGameFolder(gameId, slot)
+            "change_emulator"        -> vm.openEmulatorPickerMenu(gameId, slot)
+            "shelves"                -> vm.openShelvesPickerMenu(gameId, slot)
 
             "remove_game", "remove_missing" -> {
                 val gid = gameId
                 vm.appAction { vm.removeGameFromLibrary(gid) }
             }
-            "hide_here"              -> vm.currentHideLocation()?.let { (type, id, label) ->
+            "hide_here"              -> menu.hideLocation?.let { (type, id, label) ->
                 vm.persistHide(HiddenPlacement.gameKey(gameId), menu.title, type, id, label)
             }
             "remove_app"             -> {

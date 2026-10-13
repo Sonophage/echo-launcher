@@ -113,6 +113,7 @@ class VideoDetailViewModel @Inject constructor(
     private val intentResolver: com.echo.core.data.video.VideoIntentResolver,
     private val mediaLaunchGate: com.echo.core.data.launch.MediaLaunchGate,
     private val artworkAccent: com.echo.core.data.repository.ArtworkAccent,
+    private val launchScreens: com.echo.core.data.launch.LaunchScreens,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(VideoDetailUiState())
     val uiState: StateFlow<VideoDetailUiState> = _uiState.asStateFlow()
@@ -208,7 +209,7 @@ class VideoDetailViewModel @Inject constructor(
             VideoDetailAction.THUMBNAIL -> _uiState.update { it.copy(pickThumbnail = true) }
             VideoDetailAction.INFO    -> _uiState.update { it.copy(infoVisible = true) }
             VideoDetailAction.LOCATION ->
-                com.echo.core.data.media.FolderOpen.openMediaFolder(context, video.uri, video.relativePath, video.displayName)?.let(::showMessage)
+                com.echo.core.data.media.FolderOpen.openMediaFolder(context, video.uri, video.relativePath, video.displayName, launchScreens.mainDisplay())?.let(::showMessage)
             VideoDetailAction.REMOVE  -> _uiState.update { it.copy(confirmRemove = true) }
         }
     }

@@ -31,6 +31,8 @@ fun PanelButton(
     // over 0, A must be held this long (the launch ring); holding is true while it fills
     holdMs: Long = 0L,
     holding: Boolean = false,
+    // set for a launch whose hold the view model runs: the button reports the finger, and holding shows the ring
+    onPressed: ((Boolean) -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val primary = button == GamepadAction.SELECT
@@ -43,7 +45,13 @@ fun PanelButton(
             .clip(RoundedCornerShape(u.dp(26)))
             .background(if (primary) Color.White else Color.White.copy(alpha = 0.12f))
             .holdOutline(progress, ink, u.dp(3))
-            .then(if (holdMs > 0L) Modifier.pressAndHold(holdMs, label, { pressing = it }, onClick) else Modifier.clickable(onClick = onClick))
+            .then(
+                when {
+                    onPressed != null -> Modifier.reportPress(label, onPressed, onClick)
+                    holdMs > 0L -> Modifier.pressAndHold(holdMs, label, { pressing = it }, onClick)
+                    else -> Modifier.clickable(onClick = onClick)
+                },
+            )
             .padding(horizontal = u.dp(if (primary) 26 else 22)),
         contentAlignment = Alignment.Center,
     ) {

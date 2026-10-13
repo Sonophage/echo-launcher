@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import com.echo.core.domain.model.GamepadAction
+import com.echo.core.ui.components.EchoContextMenuOverlay
 import com.echo.core.ui.components.LocalPadPrompts
 import com.echo.core.ui.design.LAUNCH_HOLD_MS
 import com.echo.core.ui.design.PanelBase
@@ -44,15 +45,17 @@ import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoAction
 import com.echo.feature.crossbar.viewmodel.firstSection
 import com.echo.feature.crossbar.viewmodel.RecentFilter
+import com.echo.feature.crossbar.viewmodel.MenuSlot
+import com.echo.feature.crossbar.ui.NamePromptDialogs
 
 // the Companion Screen: the Details, or in Settings the focused setting, that the Companion rule picks
-// (companionContent), with Swap, and Resume while a
+// (companionContent), with Swap, Options on Details (ADR 0002), and Resume while a
 // game runs. The App Drawer, Search and Settings are on the Main Screen (ADR 0001); while Search is open the
 // keyboard, which the Thor puts here, shows over this screen. It takes touch only: a tap never moves the
 // controller from the Main Screen (ADR 0001).
 @Composable
-fun BottomScreen(
-    state: BottomScreenState,
+fun CompanionScreen(
+    state: CompanionState,
     crossbar: CrossbarViewModel,
     modifier: Modifier = Modifier,
 ) {
@@ -107,7 +110,7 @@ fun BottomScreen(
                     )
                 }
             }
-            // the Companion Screen's only controls: Resume while a game runs, and Swap
+            // the Companion Screen's only controls: Resume while a game runs, Options on Details, and Swap
             Row(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = u.dp(40), vertical = u.dp(24)),
                 verticalAlignment = Alignment.CenterVertically,
@@ -115,10 +118,36 @@ fun BottomScreen(
             ) {
                 Spacer(Modifier.weight(1f))
                 // Resume launches the game again, so it is a hold like every launch
-                if (shown?.playing == true) PanelButton(GamepadAction.SELECT, "Resume", u, holdMs = LAUNCH_HOLD_MS) { crossbar.bottomScreen.resume() }
+                if (shown?.playing == true) PanelButton(GamepadAction.SELECT, "Resume", u, holdMs = LAUNCH_HOLD_MS) { crossbar.companionScreen.resume() }
+                // the item's menu, opened here by touch; it stays on its item while the Main Screen's focus moves
+                shown?.let { details -> PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Options", u) { crossbar.companionScreen.openMenu(details) } }
                 // the Main Screen and this screen change displays
-                PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.bottomScreen.toggleSwap() }
+                PanelButton(GamepadAction.OPEN_CONTEXT_MENU, "Swap", u) { crossbar.companionScreen.toggleSwap() }
             }
+            // the Companion's own menu, over everything here and drawn on whichever display shows this screen
+            ui.companionMenu?.let { menu ->
+                EchoContextMenuOverlay(
+                    state = menu.state,
+                    onRowActivated = crossbar.companionScreen::onMenuRow,
+                    onDismiss = crossbar.companionScreen::closeMenu,
+                )
+            }
+            // a name prompt a row of that menu opened, finished here by touch (ADR 0002)
+            val here = MenuSlot.COMPANION
+            // a message a row of that menu ended with (Open Folder's path, Export Game's report)
+            ui.companionInfoDialog?.let { dialog ->
+                com.echo.core.ui.detail.EchoMessageOverlay(title = dialog.title, message = dialog.message, onDismiss = { crossbar.dismissInfoDialog(here) })
+            }
+            NamePromptDialogs(
+                prompts = ui.companionPrompts,
+                onTextChange = { crossbar.onNamePromptTextChanged(it, here) },
+                onConfirmAppRename = { crossbar.onConfirmAppRename(it, here) },
+                onCancelAppRename = { crossbar.onCancelAppRename(here) },
+                onConfirmCollectionName = { crossbar.gameActions.onConfirmCollectionName(it, here) },
+                onCancelCollectionName = { crossbar.gameActions.onCancelCollectionName(here) },
+                onConfirmPlaylistName = { crossbar.music.onConfirmPlaylistName(it, here) },
+                onCancelPlaylistName = { crossbar.music.onCancelPlaylistName(here) },
+            )
         }
     }
 }

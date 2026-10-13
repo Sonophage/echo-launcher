@@ -2,6 +2,7 @@ package com.echo.feature.settings.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.echo.core.domain.model.GamepadAction
 import com.echo.core.ui.components.EchoCheckMark
+import com.echo.core.ui.theme.showsFocus
 import com.echo.core.ui.detail.EchoDetailLaunchButton
 import com.echo.core.ui.detail.EchoOverlayCard
 import com.echo.core.ui.detail.EchoOverlayTitle
@@ -136,13 +138,15 @@ fun SettingsChoiceOverlay(
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             options.forEachIndexed { index, label ->
-                val focused = index == cursor
+                // a press shows the row cursor the controller's focus shows, not the press mark (spec #3)
+                val press = remember { MutableInteractionSource() }
+                val focused = press.showsFocus(index == cursor)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .background(if (focused) Color(0x33FFFFFF) else Color.Transparent)
-                        .clickable { onPick(index) }
+                        .clickable(interactionSource = press, indication = null) { onPick(index) }
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

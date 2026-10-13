@@ -199,13 +199,13 @@ class CrossbarPanel(
     fun editProfileName() {
         menuSound.play(MenuSound.SELECT)
         uiState.update {
-            it.copy(collectionNameDialog = CollectionNameDialogState(
+            it.withPrompts(MenuSlot.MAIN) { copy(collectionNameDialog = CollectionNameDialogState(
                 title = "Profile name",
                 subtitle = "The name your profile shows. It stays on this device.",
                 initialText = it.profileName,
                 renameProfile = true,
                 placeholder = DEFAULT_PROFILE_NAME,
-            ))
+            )) }
         }
     }
 

@@ -1,13 +1,24 @@
 package com.echo.core.data.launch
 
+import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.hardware.display.DisplayManager
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Display
+import android.widget.Toast
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.echo.core.common.launch.LaunchTransition
 import com.echo.core.data.datastore.echoDataStore
 import com.echo.core.domain.model.KnownEmulatorPackages
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,8 +42,12 @@ class LaunchScreens @Inject constructor(
 
     // the Main Screen's display. Media opened in another app (music, video, photo, book) and an app ECHO opens
     // without knowing its package (the camera, a browser, a system settings screen) open here, not through
-    // displayFor: the Launch Screen is for games and apps (CONTEXT.md)
-    fun mainDisplay(): Int = if (mainOnSecond) secondDisplay(context)?.displayId ?: Display.DEFAULT_DISPLAY else Display.DEFAULT_DISPLAY
+    // displayFor: the Launch Screen is for games and apps (CONTEXT.md). So do Android's own screens ECHO opens: app
+    // info, uninstall, the share sheet, a chooser and Android Settings (#28)
+    fun mainDisplay(): Int = mainScreenDisplay(mainOnSecond, secondDisplay(context)?.displayId)
+
+    // the launch options that open an Android screen on the Main Screen's display (#28)
+    fun mainScreenOptions(): Bundle? = LaunchTransition.options(context, mainDisplay())
 
     fun hasOtherScreen(): Boolean = secondDisplay(context) != null
 
@@ -46,7 +61,38 @@ class LaunchScreens @Inject constructor(
         val before = key?.let(remembered::get)
         val display = resolveLaunchScreen(remembered, key, dualScreen, otherScreen, mainDisplay(), displays)
         if (key != null && remembered[key] != before) save()
+        val old = launchScreen(before, dualScreen, otherScreen = false, mainDisplay(), displays)
+        if (otherScreen && packageName != null && display != old) closeItFirst(packageName, old, display)
         return display
+    }
+
+    // the displays an ECHO window is resumed on. An app brought to the front on a display pauses ECHO's window there
+    private val echoShownOn = ConcurrentHashMap<Activity, Int>()
+
+    init {
+        (context.applicationContext as? Application)?.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+            // Activity.getDisplay needs API 30
+            @Suppress("DEPRECATION")
+            override fun onActivityResumed(activity: Activity) { echoShownOn[activity] = activity.windowManager.defaultDisplay.displayId }
+            override fun onActivityPaused(activity: Activity) { echoShownOn.remove(activity) }
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+            override fun onActivityStarted(activity: Activity) = Unit
+            override fun onActivityStopped(activity: Activity) = Unit
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+            override fun onActivityDestroyed(activity: Activity) = Unit
+        })
+    }
+
+    // Close it first (CloseItFirst.kt): a second after Launch on Other Screen, an app still on its old display is
+    // named on the Main Screen
+    private fun closeItFirst(packageName: String, old: Int, target: Int) {
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (!stayedOnOldDisplay(old, target, echoShownOn.values.toSet())) return@postDelayed
+            val pm = context.packageManager
+            val label = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)) }.getOrNull() ?: packageName
+            val main = context.getSystemService(DisplayManager::class.java)?.getDisplay(mainDisplay()) ?: return@postDelayed
+            Toast.makeText(context.createDisplayContext(main), "Close $label first to move it to the other screen.", Toast.LENGTH_LONG).show()
+        }, CLOSE_IT_FIRST_DELAY_MS)
     }
 
     // ponytail: read once, blocking, on the first launch; the crossbar has loaded this DataStore long before
@@ -69,11 +115,23 @@ class LaunchScreens @Inject constructor(
     companion object {
         private val KEY = stringSetPreferencesKey("display_launch_screens")
 
+        // about a second (owner, 2026-10-12)
+        private const val CLOSE_IT_FIRST_DELAY_MS = 1_000L
+
         // the device's second display, if it has one: the AYN Thor's lower display
         fun secondDisplay(context: Context): Display? =
             context.getSystemService(DisplayManager::class.java)
                 ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).orEmpty()
                 .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+
+        // the same, for a composable, which cannot inject LaunchScreens (#28). A failed lookup throws: read it
+        // outside the runCatching that guards the start, so it is not taken for a start that failed
+        fun mainScreenOptions(context: Context): Bundle? =
+            EntryPointAccessors.fromApplication(context.applicationContext, Access::class.java).launchScreens().mainScreenOptions()
+
+        @EntryPoint
+        @InstallIn(SingletonComponent::class)
+        interface Access { fun launchScreens(): LaunchScreens }
 
         private fun encode(map: Map<String, Int>): Set<String> = map.mapTo(mutableSetOf()) { (pkg, display) -> "$pkg=$display" }
 
@@ -81,6 +139,10 @@ class LaunchScreens @Inject constructor(
             set.mapNotNull { entry -> entry.substringAfterLast('=').toIntOrNull()?.let { entry.substringBeforeLast('=') to it } }.toMap()
     }
 }
+
+// the Main Screen's display: the second one while a Swap has put the Main Screen there, else the first
+internal fun mainScreenDisplay(mainOnSecond: Boolean, secondDisplay: Int?): Int =
+    if (mainOnSecond) secondDisplay ?: Display.DEFAULT_DISPLAY else Display.DEFAULT_DISPLAY
 
 // what a Launch Screen is remembered by: a game by its id, so two games on one emulator keep their own screens; an
 // app by its package (owner, 2026-10-12). A package name has no ':', so the two never meet

@@ -281,18 +281,18 @@ class CrossbarLook(
 
     fun requestSaveCurrentLookAsTheme() {
         uiState.update {
-            it.copy(saveThemeNameDialog = PlaylistNameDialogState(title = "Save Current Look as Theme"))
+            it.withPrompts(MenuSlot.MAIN) { copy(saveThemeNameDialog = PlaylistNameDialogState(title = "Save Current Look as Theme")) }
         }
     }
 
     fun confirmSaveCurrentLookAsTheme(name: String) {
-        uiState.update { it.copy(saveThemeNameDialog = null) }
+        uiState.update { it.withPrompts(MenuSlot.MAIN) { copy(saveThemeNameDialog = null) } }
         menuSound.play(MenuSound.CONFIRM)
         saveCurrentLookAsTheme(name)
     }
 
     fun dismissSaveThemeNameDialog() {
-        uiState.update { it.copy(saveThemeNameDialog = null) }
+        uiState.update { it.withPrompts(MenuSlot.MAIN) { copy(saveThemeNameDialog = null) } }
     }
 
     fun saveCurrentLookAsTheme(name: String) {

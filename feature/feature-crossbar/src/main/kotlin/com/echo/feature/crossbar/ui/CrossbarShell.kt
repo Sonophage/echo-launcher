@@ -134,6 +134,9 @@ import com.echo.feature.crossbar.viewmodel.fanCoversToDraw
 import com.echo.feature.crossbar.viewmodel.systemArtSlotFor
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
+import com.echo.feature.crossbar.viewmodel.MenuSlot
+import com.echo.feature.crossbar.viewmodel.NamePrompts
+
 
 private const val CROSSBAR_BASELINE_HEIGHT_DP = 468f
 
@@ -170,7 +173,8 @@ fun CrossbarShellContainer(
                 putExtra(android.content.Intent.EXTRA_STREAM, uri)
                 addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            shareContext.startActivity(
+            // the share sheet opens on the Main Screen's display (#28)
+            viewModel.launching.startOnMainScreen(
                 android.content.Intent.createChooser(send, "Share theme")
                     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
             )
@@ -207,9 +211,9 @@ fun CrossbarShellContainer(
     val playbackPositions = remember(viewModel) { PlaybackPositions(viewModel.musicPositionMs, viewModel.externalPositionMs) }
     // Settings reports its focused setting and the Theme Store its focused theme only while a Companion Screen is
     // on show to preview them; the Main Screen draws the same either way (ADR 0001)
-    val companionShown = com.echo.feature.crossbar.bottomscreen.companionOnShow(uiState.secondScreen, uiState.companionInPlace)
-    val settingFocused = remember(viewModel) { { info: com.echo.feature.settings.ui.SettingsFocusInfo? -> viewModel.bottomScreen.settingFocused(info) } }
-    val themeFocused = remember(viewModel) { { p: com.echo.feature.settings.ui.StorePreview? -> viewModel.bottomScreen.themeFocused(p) } }
+    val companionShown = com.echo.feature.crossbar.companion.companionOnShow(uiState.secondScreen, uiState.companionInPlace)
+    val settingFocused = remember(viewModel) { { info: com.echo.feature.settings.ui.SettingsFocusInfo? -> viewModel.companionScreen.settingFocused(info) } }
+    val themeFocused = remember(viewModel) { { p: com.echo.feature.settings.ui.StorePreview? -> viewModel.companionScreen.themeFocused(p) } }
     CompositionLocalProvider(
         LocalPlaybackPositions provides playbackPositions,
         com.echo.core.ui.wave.LocalWaveDesign provides uiState.waveDesign,
@@ -310,7 +314,7 @@ fun CrossbarShellContainer(
         onGameInfoPanelClose = viewModel.gameDetail::closeGameInfoPanel,
         onGameInfoScrollMax = viewModel.gameDetail::onGameInfoScrollMax,
         onPanelProfileTapped = viewModel.panel::onPanelProfileTapped,
-        onDrawerFocused = viewModel.bottomScreen::drawerFocused,
+        onDrawerFocused = viewModel.companionScreen::drawerFocused,
         recentAchievements = recentAchievements,
         onProfileSet = viewModel.panel::onProfileSetTapped,
         onProfileBadge = viewModel.panel::onProfileBadgeTapped,
@@ -318,8 +322,8 @@ fun CrossbarShellContainer(
         onProfileFriend = viewModel.panel::onProfileFriendTapped,
         onProfileEditName = viewModel.panel::editProfileName,
         onProfilePickAvatar = viewModel.panel::pickProfileAvatar,
-        onContextMenuItemActivated = viewModel::onContextMenuItemActivatedAt,
-        onContextMenuDismiss = viewModel::closeContextMenu,
+        onContextMenuItemActivated = { viewModel.onContextMenuItemActivatedAt(it, MenuSlot.MAIN) },
+        onContextMenuDismiss = { viewModel.closeContextMenu(MenuSlot.MAIN) },
         onOpenColorSchemePicker = viewModel.look::openColorSchemePicker,
         onColorSchemeHighlightedAt = viewModel.look::onColorSchemeHighlightedAt,
         onColorSchemeConfirm = viewModel.look::confirmColorSchemePicker,
@@ -329,13 +333,13 @@ fun CrossbarShellContainer(
         onCustomColorAdjust = viewModel.look::adjustCustomColor,
         onCustomColorConfirm = viewModel.look::confirmCustomColor,
         onCustomColorCancel = viewModel.look::cancelCustomColor,
-        onNamePromptTextChanged = viewModel::onNamePromptTextChanged,
-        onConfirmAppRename = viewModel::onConfirmAppRename,
-        onCancelAppRename = viewModel::onCancelAppRename,
-        onConfirmCollectionName = viewModel.gameActions::onConfirmCollectionName,
-        onCancelCollectionName = viewModel.gameActions::onCancelCollectionName,
-        onConfirmPlaylistName = viewModel.music::onConfirmPlaylistName,
-        onCancelPlaylistName = viewModel.music::onCancelPlaylistName,
+        onNamePromptTextChanged = { viewModel.onNamePromptTextChanged(it, MenuSlot.MAIN) },
+        onConfirmAppRename = { viewModel.onConfirmAppRename(it, MenuSlot.MAIN) },
+        onCancelAppRename = { viewModel.onCancelAppRename(MenuSlot.MAIN) },
+        onConfirmCollectionName = { viewModel.gameActions.onConfirmCollectionName(it, MenuSlot.MAIN) },
+        onCancelCollectionName = { viewModel.gameActions.onCancelCollectionName(MenuSlot.MAIN) },
+        onConfirmPlaylistName = { viewModel.music.onConfirmPlaylistName(it, MenuSlot.MAIN) },
+        onCancelPlaylistName = { viewModel.music.onCancelPlaylistName(MenuSlot.MAIN) },
         onMusicTrackPickerActivatedAt = viewModel.music::onMusicTrackPickerActivatedAt,
         onMusicTrackPickerConfirm = viewModel.music::onMusicTrackPickerConfirm,
         onMusicTrackPickerDismiss = viewModel.music::closeMusicTrackPicker,
@@ -344,6 +348,7 @@ fun CrossbarShellContainer(
         onSearchBack = viewModel.librarySearch::closeSearch,
         onSearchFocusedAt = viewModel.librarySearch::onSearchFocusedAt,
         onSearchOptionsAt = viewModel.librarySearch::onSearchOptionsAt,
+        onSearchOpenPressed = viewModel.librarySearch::onSearchOpenPress,
         onSearchKindPicked = viewModel.librarySearch::pickSearchKind,
         onAppPickerTileTapped = viewModel.appPickerSection::onAppPickerTileTapped,
         onAppPickerTouchBrowse = viewModel.appPickerSection::onAppPickerTouchBrowse,
@@ -359,7 +364,7 @@ fun CrossbarShellContainer(
         onGamePickerConfirm = viewModel::confirmGamePicker,
         onGamePickerDismiss = viewModel::closeGamePicker,
         onGamePickerActionConsumed = viewModel::consumeGamePickerAction,
-        onDismissInfoDialog = viewModel::dismissInfoDialog,
+        onDismissInfoDialog = { viewModel.dismissInfoDialog(MenuSlot.MAIN) },
         onWindowsSetupConfirm = viewModel::confirmWindowsSetupPrompt,
         onWindowsSetupDismiss = viewModel::dismissWindowsSetupPrompt,
         onLaunchRecoveryAction = viewModel.launching::onLaunchRecoveryAction,
@@ -550,6 +555,7 @@ fun CrossbarShell(
 
     onSearchFocusedAt: (Int) -> Unit = {},
     onSearchOptionsAt: (Int) -> Unit = {},
+    onSearchOpenPressed: (Int, Boolean) -> Unit = { _, _ -> },
     onSearchKindPicked: (com.echo.feature.crossbar.viewmodel.SearchKind?) -> Unit = {},
     onMusicTrackPickerActivatedAt: (Int) -> Unit = {},
     onMusicTrackPickerConfirm: () -> Unit = {},
@@ -1314,6 +1320,8 @@ fun CrossbarShell(
                     onOptionsAt = onSearchOptionsAt,
                     onKindPicked = onSearchKindPicked,
                     waveStyle = uiState.waveStyle,
+                    launchHold = uiState.launchHold,
+                    onOpenPressed = onSearchOpenPressed,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -1367,7 +1375,7 @@ fun CrossbarShell(
             }
 
             // every menu is drawn here, on the Main Screen (ADR 0001)
-            com.echo.feature.crossbar.bottomscreen.mainScreenMenu(uiState)?.let { menu ->
+            com.echo.feature.crossbar.companion.mainScreenMenu(uiState)?.let { menu ->
 
                 CompositionLocalProvider(LocalBackdropWave provides homeWave) {
                     EchoContextMenuOverlay(
@@ -1417,7 +1425,7 @@ fun CrossbarShell(
                 )
             }
 
-            uiState.saveThemeNameDialog?.let { dialog ->
+            uiState.mainPrompts.saveThemeNameDialog?.let { dialog ->
                 CollectionNameDialog(
                     title = dialog.title,
                     text = dialog.text,
@@ -1427,39 +1435,17 @@ fun CrossbarShell(
                 )
             }
 
-            uiState.renameAppTarget?.let {
-                AppRenameDialog(
-                    text = uiState.renameAppText,
-                    onTextChange = onNamePromptTextChanged,
-                    onConfirm = onConfirmAppRename,
-                    onCancel = onCancelAppRename,
-                )
-            }
-
-            uiState.collectionNameDialog?.let { dialog ->
-                CollectionNameDialog(
-                    title = dialog.title,
-                    text = dialog.text,
-                    onTextChange = onNamePromptTextChanged,
-                    onConfirm = onConfirmCollectionName,
-                    onCancel = onCancelCollectionName,
-                    placeholder = dialog.placeholder,
-                    confirmLabel = dialog.confirmLabel,
-                    subtitle = dialog.subtitle,
-                    resetLabel = dialog.resetLabel,
-                    onReset = dialog.resetLabel?.let { { onNamePromptTextChanged("") } },
-                )
-            }
-
-            uiState.playlistNameDialog?.let { dialog ->
-                CollectionNameDialog(
-                    title = dialog.title,
-                    text = dialog.text,
-                    onTextChange = onNamePromptTextChanged,
-                    onConfirm = onConfirmPlaylistName,
-                    onCancel = onCancelPlaylistName,
-                )
-            }
+            // the Main Screen's prompts; one opened from the Companion's menu is the Companion Screen's (ADR 0002)
+            NamePromptDialogs(
+                prompts = uiState.mainPrompts,
+                onTextChange = onNamePromptTextChanged,
+                onConfirmAppRename = onConfirmAppRename,
+                onCancelAppRename = onCancelAppRename,
+                onConfirmCollectionName = onConfirmCollectionName,
+                onCancelCollectionName = onCancelCollectionName,
+                onConfirmPlaylistName = onConfirmPlaylistName,
+                onCancelPlaylistName = onCancelPlaylistName,
+            )
 
             uiState.infoDialog?.let { dialog ->
                 InfoDialog(
@@ -1648,6 +1634,55 @@ private fun rememberWaveAccent(uiState: CrossbarUiState): Long? {
     return uiState.focusedItemAccentArgb
         ?: focusedAppIcon?.color?.toArgb()?.toLong()?.and(0xFFFFFFFFL)
         ?: uiState.wallpaperAccent
+}
+
+// the name prompts an item's menu opens (Rename Shortcut, Edit Title, a playlist's name, ...), drawn on the screen of
+// the menu that opened them: the Main Screen's by CrossbarShell, the Companion's by the Companion Screen (ADR 0002).
+// Save Current Look as Theme is drawn by CrossbarShell on its own
+@Composable
+internal fun NamePromptDialogs(
+    prompts: NamePrompts,
+    onTextChange: (String) -> Unit,
+    onConfirmAppRename: (String) -> Unit,
+    onCancelAppRename: () -> Unit,
+    onConfirmCollectionName: (String) -> Unit,
+    onCancelCollectionName: () -> Unit,
+    onConfirmPlaylistName: (String) -> Unit,
+    onCancelPlaylistName: () -> Unit,
+) {
+    prompts.renameAppTarget?.let {
+        AppRenameDialog(
+            text = prompts.renameAppText,
+            onTextChange = onTextChange,
+            onConfirm = onConfirmAppRename,
+            onCancel = onCancelAppRename,
+        )
+    }
+
+    prompts.collectionNameDialog?.let { dialog ->
+        CollectionNameDialog(
+            title = dialog.title,
+            text = dialog.text,
+            onTextChange = onTextChange,
+            onConfirm = onConfirmCollectionName,
+            onCancel = onCancelCollectionName,
+            placeholder = dialog.placeholder,
+            confirmLabel = dialog.confirmLabel,
+            subtitle = dialog.subtitle,
+            resetLabel = dialog.resetLabel,
+            onReset = dialog.resetLabel?.let { { onTextChange("") } },
+        )
+    }
+
+    prompts.playlistNameDialog?.let { dialog ->
+        CollectionNameDialog(
+            title = dialog.title,
+            text = dialog.text,
+            onTextChange = onTextChange,
+            onConfirm = onConfirmPlaylistName,
+            onCancel = onCancelPlaylistName,
+        )
+    }
 }
 
 @Composable

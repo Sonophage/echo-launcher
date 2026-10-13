@@ -26,7 +26,7 @@ class EditLayoutTest {
             currentItems = listOf(item),
         )
         return CrossbarMove(mockk(relaxed = true), MutableStateFlow(state), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
-            .menuRows(state, item)
+            .menuRows(state, item, MenuSlot.MAIN)
     }
 
     private val game = CrossbarItem(id = "g1", title = "Crisis Core", gameId = 1L, platformId = "psp")

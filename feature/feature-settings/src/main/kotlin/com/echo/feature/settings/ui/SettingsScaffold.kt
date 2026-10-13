@@ -1,8 +1,8 @@
 package com.echo.feature.settings.ui
 
-import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import com.echo.core.ui.theme.showsFocus
 import com.echo.core.ui.design.GlowSide
 import com.echo.core.ui.design.GlowMaskedWave
 import com.echo.core.ui.theme.EchoTextStyle
@@ -1044,6 +1044,8 @@ fun SettingsRow(
     hideRowHighlightOnActionFocus: Boolean = false,
 
     enabled: Boolean = true,
+    // a press on the row (or a control in it that shares this source) draws the row cursor, as focus does (spec #3)
+    press: MutableInteractionSource = remember { MutableInteractionSource() },
 ) {
     val click = onClick?.takeIf { enabled }
     val help = LocalSettingsHelp.current
@@ -1083,7 +1085,7 @@ fun SettingsRow(
     )
 
     val rowSelected =
-        isFocused && cursorVisible && !(hideRowHighlightOnActionFocus && anyActionFocused)
+        press.showsFocus(isFocused && cursorVisible && !(hideRowHighlightOnActionFocus && anyActionFocused))
     val rail = LocalSettingsRailUnits.current
     val ink = if (rail != null) contextMenuInk(rowSelected) else Color.White
     val textSize = rail?.sp(17) ?: CrossbarLayoutSpec.DEFAULT.itemTextSp.sp
@@ -1097,6 +1099,12 @@ fun SettingsRow(
 
             .pointerInput(row.rowKey, click, onLongPress) {
                 detectTapGestures(
+                    onPress = { at ->
+                        if (click == null && onLongPress == null) return@detectTapGestures
+                        val down = PressInteraction.Press(at)
+                        press.emit(down)
+                        press.emit(if (tryAwaitRelease()) PressInteraction.Release(down) else PressInteraction.Cancel(down))
+                    },
                     onTap = { touchInput(); click?.invoke() },
                     onLongPress = { touchInput(); onLongPress?.invoke() },
                 )
@@ -1213,7 +1221,11 @@ fun SettingsToggleRow(
     checked: Boolean,
     onToggle: (Boolean) -> Unit,
 ) {
+    // the Switch shares the row's source, so a press on it draws the row cursor too, not a mark on the Switch.
+    // Its own ripple is off (spec #3)
+    val press = remember { MutableInteractionSource() }
     SettingsRow(
+        press = press,
         label = label,
         sublabel = sublabel,
         focusKey = focusKey,
@@ -1222,13 +1234,10 @@ fun SettingsToggleRow(
 
         onClick = { onToggle(!checked) },
         trailing = {
-            // a Material component draws its own (switched off) ripple, not LocalIndication: its source carries the press mark (spec #3)
-            val press = remember { MutableInteractionSource() }
             Switch(
                 checked = checked,
                 onCheckedChange = onToggle,
                 interactionSource = press,
-                modifier = Modifier.indication(press, LocalIndication.current),
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = PanelBase,
                     checkedTrackColor = Color.White,

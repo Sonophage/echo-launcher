@@ -45,7 +45,7 @@ class CrossbarGameInfo(
         if (gameId == null) kotlinx.coroutines.flow.flowOf(null)
         else vm.achievementController.observeSetForGame(gameId).map { achievementsStatOf(it) }
 
-    // also what the bottom screen shows, so both screens describe an item the same way
+    // also what the Companion Screen shows, so both screens describe an item the same way
     internal suspend fun load(info: GameInfoState): GameInfoState =
         withContext(Dispatchers.IO) { if (info.isApp) vm.loadAppInfo(info) else loadGameInfo(info) }
 
@@ -198,7 +198,7 @@ class CrossbarGameInfo(
     }
 
     private fun openGameInfoOptions(info: GameInfoState) {
-        if (info.isApp) vm.openAppContextMenu(info.item) else vm.gameActions.openGameContextMenu(info.item)
+        if (info.isApp) vm.openAppContextMenu(info.item, MenuSlot.MAIN, uiState.value) else vm.gameActions.openGameContextMenu(info.item, MenuSlot.MAIN, uiState.value)
     }
 
     private fun playFromGameInfo(item: CrossbarItem) {
@@ -211,7 +211,6 @@ class CrossbarGameInfo(
     }
 
     internal fun openManualFor(gameId: Long) {
-        vm.closeContextMenu()
         scope.launch {
             val game = vm.gameRepository.getById(gameId) ?: return@launch
             val path = vm.artworkStore.find(gameId, ArtworkKind.MANUAL)

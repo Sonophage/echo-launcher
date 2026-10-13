@@ -9,6 +9,7 @@ import com.echo.core.data.repository.CoreInventory
 import com.echo.core.data.repository.RetroArchLink
 import com.echo.core.data.repository.RomRootRepository
 import com.echo.core.data.repository.Vita3KLibrary
+import com.echo.core.data.datastore.echoDataStore
 import com.echo.feature.artwork.MetadataApiKeyProvider
 import com.echo.feature.artwork.api.ArtworkImportManager
 import com.echo.core.data.steamgriddb.SgdbApiKeyProvider
@@ -17,6 +18,8 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -78,6 +81,12 @@ class InitialSetupViewModelTest {
 
     @Before fun setUp() {
         Dispatchers.setMain(dispatcher)
+        // the real DataStore reads on Dispatchers.IO and resumes on Main, which can land after tearDown's
+        // resetMain and fail whichever runTest starts next; this one answers on the test's own dispatcher
+        mockkStatic(ECHO_DATA_STORE)
+        every { any<Context>().echoDataStore } returns mockk(relaxed = true) {
+            every { data } returns flowOf(androidx.datastore.preferences.core.emptyPreferences())
+        }
         every { context.packageManager } returns packageManager
 
         every { packageManager.getPackageInfo(any<String>(), any<Int>()) } throws
@@ -96,7 +105,10 @@ class InitialSetupViewModelTest {
         vm = buildVm()
     }
 
-    @After fun tearDown() = Dispatchers.resetMain()
+    @After fun tearDown() {
+        Dispatchers.resetMain()
+        unmockkStatic(ECHO_DATA_STORE)
+    }
 
     private fun TestScope.collectState() = launch { vm.uiState.collect {} }
 
@@ -353,5 +365,9 @@ class InitialSetupViewModelTest {
 
         saved[com.echo.core.data.repository.InitialSetupFlag.KEY_SEEN] = true
         assertNull("setup opened from Settings starts at the beginning", savedStepIn(saved))
+    }
+
+    private companion object {
+        const val ECHO_DATA_STORE = "com.echo.core.data.datastore.EchoDataStoreKt"
     }
 }

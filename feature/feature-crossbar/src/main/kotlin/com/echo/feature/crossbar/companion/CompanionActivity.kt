@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -28,10 +28,10 @@ import timber.log.Timber
 import javax.inject.Inject
 
 // ECHO on a device's second display (the AYN Thor's lower display): the Companion Screen, or in Swap the Main
-// Screen. It draws BottomScreenLink's state and sends its taps back; the crossbar does the work.
+// Screen. It draws CompanionLink's state and sends its taps back; the crossbar does the work.
 @AndroidEntryPoint
-class BottomScreenActivity : ComponentActivity() {
-    @Inject lateinit var link: BottomScreenLink
+class CompanionActivity : ComponentActivity() {
+    @Inject lateinit var link: CompanionLink
 
     @Inject lateinit var gamepad: com.echo.feature.crossbar.gamepad.GamepadInputHandler
 
@@ -64,7 +64,7 @@ class BottomScreenActivity : ComponentActivity() {
                     val keys = companionKeys(ui)
                     LaunchedEffect(keys) { onKeys(keys) }
                     // Swap: the Main Screen (the Crossbar) is drawn here, the Companion Screen on the first display
-                    if (ui.screensSwapped) CrossbarShellContainer(viewModel = vm) else BottomScreen(state, vm)
+                    if (ui.screensSwapped) CrossbarShellContainer(viewModel = vm) else CompanionScreen(state, vm)
                 }
             }
         }
@@ -126,7 +126,8 @@ class BottomScreenActivity : ComponentActivity() {
         super.onStop()
     }
 
-    // HOLD: the Main Screen is drawn here in Swap, and typing (Search or a name prompt) takes keys and key focus at once,
+    // HOLD: the field is in this window (the Main Screen drawn here in Swap, or a name prompt opened from the
+    // Companion's menu, ADR 0002), and typing (Search or a name prompt) takes keys and key focus at once,
     // so the keyboard opens; without them the keyboard cannot reach the field and Android reports ECHO as not
     // responding (owner, 2026-10-08). The controller's presses then arrive here and are passed on, so they still
     // drive ECHO. CLAIM: typing on the Main Screen, focus is taken once so the keyboard is drawn here
@@ -198,13 +199,13 @@ class BottomScreenActivity : ComponentActivity() {
             val target = secondDisplay(activity) ?: return
             val options = ActivityOptions.makeBasic().setLaunchDisplayId(target.displayId).toBundle()
             runCatching {
-                activity.startActivity(Intent(activity, BottomScreenActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options)
+                activity.startActivity(Intent(activity, CompanionActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options)
             }.onFailure { Timber.w(it, "Could not show ECHO on display ${target.displayId}") }
         }
     }
 }
 
-// takes Android's key focus to the Companion's display and closes at once (BottomScreenActivity.takeFocus).
+// takes Android's key focus to the Companion's display and closes at once (CompanionActivity.takeFocus).
 // Translucent, so the Companion window under it is only paused, not stopped and started again.
 class CompanionFocusActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {

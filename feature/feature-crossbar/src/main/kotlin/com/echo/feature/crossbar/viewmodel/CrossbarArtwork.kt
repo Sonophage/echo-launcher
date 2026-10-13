@@ -89,7 +89,6 @@ class CrossbarArtwork(
     }
 
     fun openArtworkStudio(gameId: Long) {
-        vm.closeContextMenu()
         uiState.update { it.copy(artworkStudioGameId = gameId) }
     }
 
@@ -103,7 +102,6 @@ class CrossbarArtwork(
     }
 
     internal fun fetchArtworkFor(gameId: Long) {
-        vm.closeContextMenu()
         if (uiState.value.artworkFetchTitle != null) return
         scope.launch {
             val before = vm.gameRepository.getById(gameId)
@@ -126,7 +124,6 @@ class CrossbarArtwork(
     }
 
     internal fun openMetadataPreviewFor(gameId: Long) {
-        vm.closeContextMenu()
         if (uiState.value.metadataPreview != null) return
         val generation = ++metadataPreviewGeneration
         uiState.update { it.copy(metadataPreview = MetadataPreviewUi(), metadataPreviewGameId = gameId) }

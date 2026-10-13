@@ -17,7 +17,9 @@ import androidx.core.app.ActivityCompat
 import com.echo.feature.settings.permissions.AppPermission
 import com.echo.feature.settings.permissions.GrantRoute
 import com.echo.feature.settings.permissions.appDetailsIntent
+import com.echo.core.data.launch.LaunchScreens
 import com.echo.feature.settings.permissions.isGranted
+import com.echo.feature.settings.permissions.onMainScreen
 import com.echo.feature.settings.permissions.permissionStateLabel
 import com.echo.feature.settings.permissions.restrictedSettingsApply
 import com.echo.feature.settings.permissions.systemScreenIntent
@@ -57,7 +59,10 @@ internal fun RestrictedSettingsRow(rows: List<AppPermission>, readToken: Int) {
     SettingsRow(
         label = "Usage or notification access refused?",
         sublabel = "Android blocks them for apps installed outside a store. Open App info, tap ⋮, choose Allow restricted settings, then grant again",
-        onClick = { runCatching { context.startActivity(appDetailsIntent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
+        onClick = {
+            val options = LaunchScreens.mainScreenOptions(context)
+            runCatching { context.startActivity(appDetailsIntent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options) }
+        },
     )
 }
 
@@ -74,7 +79,8 @@ internal fun rememberPermissionAsker(onDone: () -> Unit): (AppPermission) -> Uni
         if (!granted && permission?.manifestName != null && activity != null &&
             !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission.manifestName)
         ) {
-            runCatching { context.startActivity(appDetailsIntent(context)) }
+            val options = LaunchScreens.mainScreenOptions(context)
+            runCatching { context.startActivity(appDetailsIntent(context), options) }
         }
         onDone()
     }
@@ -82,7 +88,10 @@ internal fun rememberPermissionAsker(onDone: () -> Unit): (AppPermission) -> Uni
     return { permission ->
         when (permission.route) {
             GrantRoute.REQUEST -> permission.manifestName?.let { asking = permission; request.launch(it) }
-            GrantRoute.SYSTEM_SCREEN -> runCatching { screen.launch(systemScreenIntent(context, permission)) }
+            GrantRoute.SYSTEM_SCREEN -> {
+                val intent = systemScreenIntent(context, permission).onMainScreen(context)
+                runCatching { screen.launch(intent) }
+            }
             GrantRoute.INSTALL_TIME -> Unit
         }
     }

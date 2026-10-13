@@ -244,11 +244,19 @@ class CrossbarSearch(
         }
     }
 
+    // a finger on the banner's Open for a game or app holds as Recent's cards do, so the footer's card rises
+    fun onSearchOpenPress(index: Int, down: Boolean) {
+        if (!down) return vm.liftLaunchPress()
+        vm.markTouchInput()
+        val row = uiState.value.search?.rows?.getOrNull(index)?.takeIf { it.launchesOut() } ?: return
+        vm.pressToLaunch(row) { onSearchActivatedAt(index) }
+    }
+
     // the banner's Options (owner, 2026-10-05): the row's own menu, drawn over the search
     fun onSearchOptionsAt(index: Int) {
         val row = uiState.value.search?.takeUnless { it.scope == SearchScope.WEB }?.rows?.getOrNull(index)?.takeUnless { it.type == CrossbarItemType.EMPTY } ?: return
         uiState.update { it.copy(search = it.search?.copy(selectedIndex = index)) }
-        vm.openContextMenuFor(row)
+        vm.openContextMenuFor(row, MenuSlot.MAIN, uiState.value)
     }
 
     private fun searchRowCategory(row: CrossbarItem): String? = row.owningCategory()
@@ -274,7 +282,12 @@ class CrossbarSearch(
             GamepadAction.NAVIGATE_RIGHT -> moveSearch(searchStep(action))
             // the kinds are filters, so the triggers (owner, 2026-10-06)
             GamepadAction.PREV_CATEGORY, GamepadAction.NEXT_CATEGORY -> stepKind(if (action == GamepadAction.PREV_CATEGORY) -1 else 1)
-            GamepadAction.SELECT        -> onSearchActivatedAt(state.search?.selectedIndex ?: return)
+            // a game or app takes the crossbar's launch hold, so the footer's card rises here too (issue #36)
+            GamepadAction.SELECT        -> {
+                val index = state.search?.selectedIndex ?: return
+                val row = state.search.rows.getOrNull(index)
+                if (row == null || !vm.holdToLaunch(row) { onSearchActivatedAt(index) }) onSearchActivatedAt(index)
+            }
             GamepadAction.OPEN_CONTEXT_MENU -> onSearchOptionsAt(state.search?.selectedIndex ?: return)
             GamepadAction.BACK          -> closeSearch()
             else -> Unit

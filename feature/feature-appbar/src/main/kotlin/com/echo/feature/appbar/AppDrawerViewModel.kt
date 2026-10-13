@@ -1,5 +1,6 @@
 package com.echo.feature.appbar
 
+import com.echo.feature.appbar.appdrawer.launchesOut
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -577,7 +578,7 @@ class AppDrawerViewModel @Inject constructor(
 
     private var filterAtGestureStart: Any? = null
 
-    private var launchHold: kotlinx.coroutines.Job? = null
+    private val launchHold = com.echo.core.ui.design.LaunchHold(viewModelScope) { pkg -> _uiState.update { it.copy(holdingPackage = pkg) } }
 
     init {
         viewModelScope.launch {
@@ -602,21 +603,14 @@ class AppDrawerViewModel @Inject constructor(
     // A must be held before an app opens, as everywhere in ECHO; the crossbar reports A coming up
     fun onSelectReleased() = cancelLaunchHold()
 
-    private fun cancelLaunchHold() {
-        launchHold?.cancel()
-        launchHold = null
-        if (_uiState.value.holdingPackage != null) _uiState.update { it.copy(holdingPackage = null) }
-    }
+    private fun cancelLaunchHold() { launchHold.release() }
 
-    private fun holdToLaunch(packageName: String) {
-        cancelLaunchHold()
-        _uiState.update { it.copy(holdingPackage = packageName) }
-        launchHold = viewModelScope.launch {
-            kotlinx.coroutines.delay(com.echo.core.ui.design.LAUNCH_HOLD_MS)
-            launchHold = null
-            _uiState.update { it.copy(holdingPackage = null) }
-            launchApp(packageName)
-        }
+    private fun holdToLaunch(packageName: String) = launchHold.start(packageName) { launchApp(packageName) }
+
+    // a finger on an app's Play holds as A does, so the footer's card rises (issue #36); media acts on its tap
+    fun onLaunchPressed(app: InstalledApp, down: Boolean) {
+        if (!down) return launchHold.lift()
+        if (app.launchesOut()) launchHold.press(app.packageName) { launchApp(app.packageName) }
     }
 
     fun handleGamepadAction(action: GamepadAction) {
@@ -692,8 +686,9 @@ class AppDrawerViewModel @Inject constructor(
             GamepadAction.SELECT -> {
                 val app = state.visibleApps.getOrNull(cur)
                 // media plays inside ECHO, so it acts at once; a launch out of ECHO is a hold
-                if (app?.media != null) launchApp(app.packageName)
-                else if (app != null) holdToLaunch(app.packageName)
+                if (app == null) Unit
+                else if (app.launchesOut()) holdToLaunch(app.packageName)
+                else launchApp(app.packageName)
             }
 
             else -> Unit

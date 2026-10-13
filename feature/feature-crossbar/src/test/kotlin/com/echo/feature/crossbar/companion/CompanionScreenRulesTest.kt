@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import org.junit.Assert.assertEquals
@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // the Companion Screen's rules besides what it shows, which CompanionRuleTest covers
-class BottomScreenRulesTest {
+class CompanionScreenRulesTest {
     @Test
     fun `a game is playing only while ECHO is behind it`() {
         assertEquals(2L, playingGameId(hostShown = false, lastLaunchGameId = 2L))
@@ -34,7 +34,7 @@ class BottomScreenRulesTest {
 
     @Test
     fun `the second screen is put back only when it is wanted and not already showing`() {
-        val link = BottomScreenLink()
+        val link = CompanionLink()
         assertTrue("wanted, hidden: show it", link.needsCompanion(enabled = true))
         assertFalse("turned off in Quick settings", link.needsCompanion(enabled = false))
         link.attach(true)
@@ -45,7 +45,7 @@ class BottomScreenRulesTest {
     // new one starts, and that must not mark the Companion Screen as gone
     @Test
     fun `a second Companion window stopping does not detach the one on show`() {
-        val link = BottomScreenLink()
+        val link = CompanionLink()
         link.attach(true)
         link.attach(true)
         link.attach(false)

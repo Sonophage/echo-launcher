@@ -339,38 +339,40 @@ and a 2400×1504 tablet. The same build runs on both. Phones and foldables work 
 
 ### Dual screens
 
-On a handheld with a second screen, such as the **AYN Thor**, ECHO uses both. The XMB stays on
-the top screen, and the bottom screen is a **companion**. Devices with one screen are unchanged.
+On a handheld with a second display, such as the **AYN Thor**, ECHO shows the **Main Screen** on
+one display and the **Companion Screen** on the other. The Main Screen is ECHO as it is on a device
+with one display, and the controller acts only there. The Companion Screen shows more about what
+the Main Screen has focused and takes touch only. Devices with one display are unchanged.
 
-- **Info** follows the XMB's cursor: the focused game's or app's details, play time, achievements,
-  screenshots and description. While a game you launched from ECHO is running, Info shows that game
-  and a **Resume** button (hold it, like every launch).
-- **Recent** is the Last Played screen, with its filters. With a second screen, Last Played leaves
-  the XMB and lives here. Tap to pick, hold to launch. It follows the crossbar's column (Music shows
-  recent music), and RIGHT closes its list to show the selected item in full; LEFT opens it again.
-- **A session clock** ("NOW PLAYING · 12 MIN") counts while a game you launched is running.
-- **A music remote**: while music plays the companion is its remote (A play/pause, up and down skip)
-  and the crossbar stays free. **B** goes to Recent, and **Y** has Stop & Close.
-- **The App Drawer, Search and Settings open on the bottom screen**, whether you open them with
-  **RB**, **LB**, a menu or a tap. The controller still drives them. The other screen shows the
-  drawer's focused game as Recent does (art, play time, details and achievements), and Search's
-  results while you type below. Search opens the keyboard, which the Thor shows on the bottom
-  screen; **B** hides the keyboard first, and the next **B** closes Search. The first-run setup stays
-  on the top screen. A menu opens on the screen that asked for it, and the theme store shows the
-  theme in focus, large, on the other screen.
+- **Details** follow the Main Screen's cursor: the focused game's or app's details, play time,
+  achievements and description, or a song, video, book, photo or system. With nothing new to show,
+  the Companion Screen keeps what it showed last. While a game you launched from ECHO is running,
+  it shows that game, a session clock and a **Resume** button (hold it, like every launch).
+- **In Settings** it shows the focused setting's description, and previews the theme or colour
+  scheme in focus.
+- **Search** opens on the Main Screen; the Thor shows its keyboard on the Companion Screen. **B**
+  hides the keyboard first, and the next **B** closes Search. The App Drawer, Settings, every menu
+  the controller opens and the music player stay on the Main Screen.
+- **Options** on the Companion Screen's Details opens that item's menu there, by touch: the same
+  menu the Main Screen shows, without Edit Layout. Confirms, pickers and name prompts it opens
+  finish on the Companion Screen. Full screens (Game Info, Artwork Studio, the manual, Update
+  Metadata and a video's Details) open on the Main Screen. The menu stays on its item while the
+  Main Screen's cursor moves.
+- **Swap** (the Swap button, or a click of one stick, **L3** or **R3**) exchanges the two displays,
+  and ECHO remembers it. On a device with one display, Swap shows the Companion Screen in place of
+  the Main Screen until **B**, **L3** or **R3**.
+- **Games and apps open on their Launch Screen**: the display ECHO last launched them on, or the
+  Main Screen's display the first time. **Launch on Other Screen** in a game's or app's menu opens
+  it on the other display. An app that is already running may stay where it is; ECHO then asks you
+  to close it first. DS and 3DS emulators always open on the Main Screen's display. Android's own
+  screens (App info, uninstall, share, a file manager, Android Settings) open on the Main Screen's
+  display.
 - **A keyboard you drive with the controller:** [Inlay](https://github.com/dakingeman/inlay), a
   free, open-source gamepad keyboard for Android handhelds, works well with ECHO on two screens.
   Install it and choose it as your keyboard in Android's settings.
-- **Tap a screen to give it the controller.** On the companion, the d-pad's left and right change
-  page, up and down move through Recent, LT and RT change its filter, A opens and **B** hands the
-  controller back to the XMB. The screen the controller is on has a light outline.
-- **Swap** (on the companion's bar, or a click of one stick, **L3** or **R3**) puts the XMB on the bottom screen and the
-  companion on the top, and back. ECHO remembers it. The controller stays with the XMB.
-- **Games always open on the main screen.** DS and 3DS emulators keep the bottom screen while a
-  game runs, and ECHO comes back to it when you return.
-- **Dual or single:** the top panel's **Quick settings ▸ Screens** turns the second screen off
+- **Dual or single:** the top panel's **Quick settings ▸ Screens** turns the second display off
   (Single), which gives it back to Android, and on again (Dual). The tile only shows on a device
-  with a second screen.
+  with a second display.
 
 ---
 

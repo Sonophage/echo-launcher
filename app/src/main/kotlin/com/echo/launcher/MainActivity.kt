@@ -41,7 +41,6 @@ import timber.log.Timber
 import com.echo.feature.crossbar.gamepad.GamepadInputHandler
 import com.echo.feature.crossbar.gamepad.AskedKeyboard
 import com.echo.feature.crossbar.gamepad.backHidesKeyboard
-import com.echo.feature.crossbar.viewmodel.typing
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.launcher.notification.EchoNotificationListener
 import com.echo.launcher.receiver.InstallShortcutReceiver
@@ -83,7 +82,7 @@ class MainActivity : ComponentActivity() {
     lateinit var discordBootstrap: com.echo.launcher.discord.DiscordBootstrap
 
     @Inject
-    lateinit var bottomScreenLink: com.echo.feature.crossbar.bottomscreen.BottomScreenLink
+    lateinit var companionLink: com.echo.feature.crossbar.companion.CompanionLink
 
     private val crossbarViewModel: CrossbarViewModel by viewModels()
 
@@ -121,13 +120,14 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 crossbarViewModel.uiState.map { it.secondScreenEnabled }.distinctUntilChanged().collect { on ->
-                    if (on) com.echo.feature.crossbar.bottomscreen.BottomScreenActivity.showBeside(this@MainActivity)
+                    if (on) com.echo.feature.crossbar.companion.CompanionActivity.showBeside(this@MainActivity)
                 }
             }
         }
-        // Search and a name prompt focus their field, which asks for the keyboard
+        // Search and a name prompt focus their field, which asks for the keyboard; only a field this window draws
+        // (firstWindowTyping), so a prompt on the Companion Screen's display does not take the Main Screen's B
         lifecycleScope.launch {
-            crossbarViewModel.uiState.map { it.typing }.distinctUntilChanged()
+            crossbarViewModel.uiState.map { com.echo.feature.crossbar.companion.firstWindowTyping(it) }.distinctUntilChanged()
                 .collect { keyboard.typing(it) }
         }
         ContextCompat.registerReceiver(
@@ -170,11 +170,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             com.echo.feature.crossbar.ui.EchoRoot(menuSoundPlayer, uiMediaStore, uiMediaAudioPlayer) {
                 val ui by crossbarViewModel.uiState.collectAsState()
-                if (com.echo.feature.crossbar.bottomscreen.firstDisplayShowsCompanion(ui)) {
+                if (com.echo.feature.crossbar.companion.firstDisplayShowsCompanion(ui)) {
                     // Swap: the Companion Screen is drawn here, and the Main Screen is on the second display, or
                     // hidden until the next Swap on a device with one display (ADR 0001)
-                    val bottom by bottomScreenLink.state.collectAsState()
-                    com.echo.feature.crossbar.bottomscreen.BottomScreen(bottom, crossbarViewModel)
+                    val bottom by companionLink.state.collectAsState()
+                    com.echo.feature.crossbar.companion.CompanionScreen(bottom, crossbarViewModel)
                 } else {
                     AppCrossbarHost()
                 }
@@ -235,8 +235,8 @@ class MainActivity : ComponentActivity() {
         discordBootstrap.onResume()
         rebindNotificationListenerIfDetached()
         // HOME, or a reinstall, can leave Android's launcher on the second screen while this one never stopped
-        if (bottomScreenLink.needsCompanion(crossbarViewModel.uiState.value.secondScreenEnabled)) {
-            com.echo.feature.crossbar.bottomscreen.BottomScreenActivity.showBeside(this)
+        if (companionLink.needsCompanion(crossbarViewModel.uiState.value.secondScreenEnabled)) {
+            com.echo.feature.crossbar.companion.CompanionActivity.showBeside(this)
         }
 
         if (wasStopped) {
@@ -272,12 +272,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        bottomScreenLink.hostShown(true)
-        crossbarViewModel.secondDisplayPresent(com.echo.feature.crossbar.bottomscreen.BottomScreenActivity.secondDisplay(this) != null)
+        companionLink.hostShown(true)
+        crossbarViewModel.secondDisplayPresent(com.echo.feature.crossbar.companion.CompanionActivity.secondDisplay(this) != null)
     }
 
     override fun onStop() {
-        bottomScreenLink.hostShown(false)
+        companionLink.hostShown(false)
         menuMusicPlayer.setWanted(wanted = false, track = null)
 
         launchDispatcher.onHostStopped()
@@ -323,8 +323,8 @@ class MainActivity : ComponentActivity() {
     private fun reshowKeyboardAfterClaims() {
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
-                bottomScreenLink.keyboardClaims.drop(1).collect {
-                    if (com.echo.feature.crossbar.bottomscreen.reshowsKeyboard(hasWindowFocus(), crossbarViewModel.uiState.value)) {
+                companionLink.keyboardClaims.drop(1).collect {
+                    if (com.echo.feature.crossbar.companion.reshowsKeyboard(hasWindowFocus(), crossbarViewModel.uiState.value)) {
                         WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.ime())
                         keyboard.typing(true)
                     }

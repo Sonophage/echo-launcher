@@ -220,13 +220,13 @@ class AudioSettingsViewModelTest {
             advanceUntilIdle()
 
             vm.requestReset()
-            vm.confirmReset()
+            // joined, not polled: the store deletes the file before its DataStore edit, so a poll on the
+            // file ends the test while that edit is still on Dispatchers.IO and resumes after resetMain
+            vm.confirmReset().join()
 
-            eventually("the seven sounds are cleared") {
-                !mediaFile(UiMediaSlot.SOUND_SCROLL, "wav").isFile &&
-                    !mediaFile(UiMediaSlot.SOUND_NOTIFICATION, "wav").isFile &&
-                    !mediaFile(UiMediaSlot.BOOT_AUDIO, "wav").isFile
-            }
+            assertFalse(mediaFile(UiMediaSlot.SOUND_SCROLL, "wav").isFile)
+            assertFalse(mediaFile(UiMediaSlot.SOUND_NOTIFICATION, "wav").isFile)
+            assertFalse(mediaFile(UiMediaSlot.BOOT_AUDIO, "wav").isFile)
 
             assertTrue(mediaFile(UiMediaSlot.BOOT_VIDEO, "mp4").isFile, "reset must never touch the boot video")
             assertTrue(mediaFile(UiMediaSlot.GAMEBOOT_VIDEO, "mp4").isFile, "reset must never touch GameBoot media")
@@ -235,11 +235,9 @@ class AudioSettingsViewModelTest {
     @Test fun `useDefault drops the boot audio assignment`() = runTest(dispatcher) {
         seedAssignment(UiMediaSlot.BOOT_AUDIO)
 
-        vm.useDefault(UiMediaSlot.BOOT_AUDIO)
+        vm.useDefault(UiMediaSlot.BOOT_AUDIO).join()
 
-        eventually("the boot audio file is removed") {
-            !mediaFile(UiMediaSlot.BOOT_AUDIO, "wav").isFile
-        }
+        assertFalse(mediaFile(UiMediaSlot.BOOT_AUDIO, "wav").isFile, "the boot audio file is removed")
     }
 
     @Test fun `a rejected import surfaces the reason and plays the error sound`() = runTest(dispatcher) {

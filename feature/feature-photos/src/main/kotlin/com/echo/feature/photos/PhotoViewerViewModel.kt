@@ -136,6 +136,7 @@ data class PhotoViewerUiState(
 class PhotoViewerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val photoRepository: PhotoRepository,
+    private val launchScreens: com.echo.core.data.launch.LaunchScreens,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PhotoViewerUiState())
     val uiState: StateFlow<PhotoViewerUiState> = _uiState.asStateFlow()
@@ -338,7 +339,7 @@ class PhotoViewerViewModel @Inject constructor(
             PhotoViewerAction.RESET_ZOOM    -> _uiState.update { it.copy(zoom = ZOOM_MIN, panX = 0f, panY = 0f) }
             PhotoViewerAction.INFO          -> _uiState.update { it.copy(infoVisible = true) }
             PhotoViewerAction.LOCATION      -> _uiState.value.photo
-                ?.let { com.echo.core.data.media.FolderOpen.openMediaFolder(context, it.uri, it.relativePath, it.displayName) }
+                ?.let { com.echo.core.data.media.FolderOpen.openMediaFolder(context, it.uri, it.relativePath, it.displayName, launchScreens.mainDisplay()) }
                 ?.let(::showMessage)
             PhotoViewerAction.REMOVE        -> _uiState.update { it.copy(confirmRemove = true) }
         }

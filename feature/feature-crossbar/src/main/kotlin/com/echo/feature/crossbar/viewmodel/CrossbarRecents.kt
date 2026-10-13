@@ -177,9 +177,9 @@ class CrossbarRecents(
         if (!item.removableFromRecent) return
         menuSound.play(MenuSound.SELECT)
         when {
-            item.type == CrossbarItemType.VIDEO_FILE -> vm.video.handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent")
-            item.type == CrossbarItemType.LIBRARY_BOOK -> vm.bookshelf.handleBookAction(item.id.removePrefix("book_"), "book_remove_recent")
-            item.type == CrossbarItemType.MUSIC_TRACK -> vm.music.handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null)
+            item.type == CrossbarItemType.VIDEO_FILE -> vm.video.handleVideoFileAction(item.id.removePrefix("vid_"), "video_remove_recent", MenuSlot.MAIN, playlistId = null)
+            item.type == CrossbarItemType.LIBRARY_BOOK -> vm.bookshelf.handleBookAction(item.id.removePrefix("book_"), "book_remove_recent", MenuSlot.MAIN)
+            item.type == CrossbarItemType.MUSIC_TRACK -> vm.music.handleMusicTrackAction(item.id.removePrefix("mt_"), "remove_from_recent", null, MenuSlot.MAIN, listed = emptyList())
             item.isRecentAlbum -> vm.music.removeAlbumFromRecent(item.musicGroupKey!!)
             item.gameId != null -> dismissGameFromRecents(item.gameId)
             item.packageName != null -> dismissAppFromRecents(item.packageName)
@@ -290,23 +290,15 @@ class CrossbarRecents(
         if (s.currentItems[index].launchesOut()) uiState.update { it.copy(selectedItemIndex = index) } else vm.onItemSelected(index)
     }
 
-    private var touchHolding = false
-
     // owner, 2026-10-05: holding a game or app's card or row launches it, the same hold as A; a tap only picks it
     fun onRecentCardPress(index: Int, down: Boolean) {
-        if (!down) {
-            if (touchHolding) vm.releaseLaunchHold()
-            touchHolding = false
-            return
-        }
+        if (!down) return vm.liftLaunchPress()
         vm.markTouchInput()
         val s = uiState.value
         val item = s.currentItems.getOrNull(index)
         if (s.hasBlockingOverlay || item == null || !item.launchesOut()) return
         uiState.update { it.copy(selectedItemIndex = index) }
-        touchHolding = true
-        vm.startLaunchHold(item) {
-            touchHolding = false
+        vm.pressToLaunch(item) {
             // by id, in case the column changed under the finger during the hold
             uiState.value.currentItems.indexOfFirst { it.id == item.id }.takeIf { it >= 0 }?.let(vm::onItemSelected)
         }

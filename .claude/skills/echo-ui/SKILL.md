@@ -38,8 +38,12 @@ screen's padded column.
 
 - `Modifier.pressAndHold(holdMs, label, onPressing, onHeld)` (`design/HoldRing.kt`). Launches use
   `LAUNCH_HOLD_MS` (1000).
-- A card or row that launches by touch reports the finger down and up to the view model, which
-  runs the same `LaunchHold` as pad A, so the footer card rises and fills (`onRecentCardPress`).
+- A card, row or launch button that launches by touch reports the finger down and up to the view
+  model, which runs the same `LaunchHold` (`design/LaunchHold.kt`) as pad A: `press` on down, `lift`
+  on up. The footer card then rises and fills (`onRecentCardPress`). A `PanelButton` reports the
+  finger when it is given `onPressed`, and does not launch by itself then.
+- Every footer whose A can launch out of ECHO gives its `HintAction` the hold (`holdMs`, `holding`).
+  Without it the card never rises on that screen.
 - Trap: `animateFloatAsState` starts at its target on first composition. A ring composed mid-hold
   shows full. Use an `Animatable` that starts at 0 (see `holdProgress`).
 - Trap: a `clickable(enabled = false)` inside a gesture wrapper still takes the finger down, so the
@@ -75,15 +79,15 @@ screen's padded column.
   settle spring (STILL, reduced motion, snaps). `EchoTheme` provides it and `LocalFocusStyle`: a window's root
   (`EchoRoot` for both screens, the Reader) passes `EchoThemeStore.themeLook`, and a theme inside it keeps them.
   Do not provide them a second time.
-- The belly under a finger is `railBelly(touched, rungs, bulge)` (`components/LetterRail.kt`): `Bulge.LEFT` for
-  the Side Rail, `Bulge.UP` for a Filter Row, `RailBellyReach` (48 dp) at the touched row, tapering over the
-  rail's wave. Do not shape a second belly.
+- The belly under a finger is `railBelly(touched, rungs)` (`components/LetterRail.kt`): the Side Rail bulges left,
+  `RailBellyReach` (48 dp) at the touched row, tapering over the rail's wave. Do not shape a second belly.
 - A press draws the same mark: `PressMark` (`theme/PressMark.kt`) is the `LocalIndication` `EchoTheme` provides, so a
   plain `clickable` shows it while the finger is down. Never ask for a Material `ripple()`; `NoRippleTest` fails on one.
   Set `indication = null` only on a scrim or a whole-screen tap. When the tap target is wider than its icon, give the
   clickable an `interactionSource` with `indication = null` and put `Modifier.indication(source, LocalIndication.current)`
   on the icon (the crossbar rows, the footer's A orb). When the controller's focus is the target's own look, not
-  an icon mark (a menu row's white bar, a tab's underline, an App Drawer case's lift, the search field's edge), give
+  an icon mark (a menu row's white bar, a tab's underline, an App Drawer case's lift, the search field's edge, a
+  Settings row's cursor, which its Switch or Slider shares), give
   the clickable an `interactionSource` with `indication = null` and draw it focused when
   `source.showsFocus(focused)` is true (`theme/PressMark.kt`); `contextMenuRow` takes that source. A Material
   control (`Switch`, `Slider`, `Checkbox`, `TextButton`, `IconButton`...) draws its own ripple, which is off, not

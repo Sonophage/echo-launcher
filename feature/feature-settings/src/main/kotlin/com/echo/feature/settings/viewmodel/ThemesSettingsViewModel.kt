@@ -123,6 +123,7 @@ class ThemesSettingsViewModel @Inject constructor(
     private val catalog: ThemeCatalogRepository,
     private val themeFolders: com.echo.feature.artwork.portable.ThemeFolderSync,
     private val folderRepository: com.echo.core.data.repository.ArtworkFolderRepository,
+    private val launchScreens: com.echo.core.data.launch.LaunchScreens,
 ) : ViewModel() {
     init { refreshOnline() }
 
@@ -312,6 +313,7 @@ class ThemesSettingsViewModel @Inject constructor(
             }
             context.startActivity(
                 Intent.createChooser(send, "Share theme").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                launchScreens.mainScreenOptions(),
             )
         }
     }

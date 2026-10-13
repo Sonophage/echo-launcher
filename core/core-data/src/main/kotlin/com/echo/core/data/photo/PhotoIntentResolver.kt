@@ -16,7 +16,7 @@ class PhotoIntentResolver @Inject constructor(
     fun launch(photo: Photo, viewerPackage: String?): String? {
         val intent = MediaOpenIntent.build(photo.uri, photo.mimeType ?: IMAGE_MIME, viewerPackage)
         return if (viewerPackage == null) {
-            MediaOpenIntent.launchChooser(context, intent, CHOOSER_TITLE, NO_VIEWER, label(photo))
+            MediaOpenIntent.launchChooser(context, intent, CHOOSER_TITLE, NO_VIEWER, label(photo), launchScreens.mainDisplay())
         } else {
             MediaOpenIntent.launch(context, intent, CHOOSER_TITLE, NO_VIEWER, label(photo), launchScreens.mainDisplay())
         }

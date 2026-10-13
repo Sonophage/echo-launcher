@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import com.echo.core.domain.model.BuiltInCategory
 import com.echo.core.domain.model.Category

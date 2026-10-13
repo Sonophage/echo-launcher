@@ -1,9 +1,10 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.CrossbarViewModel
 import com.echo.feature.crossbar.viewmodel.GameInfoState
+import com.echo.feature.crossbar.viewmodel.MenuSlot
 import com.echo.feature.crossbar.viewmodel.RecentKind
 import com.echo.feature.crossbar.viewmodel.recentKind
 import com.echo.feature.launcher.OpenSession
@@ -28,11 +29,11 @@ import kotlinx.coroutines.launch
 // keeps the Companion Screen's state current from the Main Screen's, and acts on its taps. Nothing is loaded
 // while no Companion Screen is on show, so a one-screen device pays nothing until Swap shows it.
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-class CrossbarBottomScreen(
+class CrossbarCompanion(
     private val vm: CrossbarViewModel,
     private val uiState: MutableStateFlow<CrossbarUiState>,
     private val scope: CoroutineScope,
-    private val link: BottomScreenLink,
+    private val link: CompanionLink,
     private val lastLaunch: StateFlow<OpenSession?>,
 ) {
     private val companionShown = combine(link.attached, uiState.map { it.companionInPlace }, ::companionOnShow)
@@ -42,13 +43,14 @@ class CrossbarBottomScreen(
         scope.launch {
             companionShown.flatMapLatest { on ->
                 if (!on) flowOf(null)
-                // the cursor settles before the info is read, so scrolling a column reads only where it stops
-                else uiState.map { mainScreenHover(it)?.takeIf(::companionShows) }
-                    .distinctUntilChanged { a, b -> a?.id == b?.id }
+                // the cursor settles before the info is read, so scrolling a column reads only where it stops. The
+                // state it settled in goes with it: the item's menu reads its column from there (ADR 0002)
+                else uiState.map { s -> mainScreenHover(s)?.takeIf(::companionShows)?.let { it to s } }
+                    .distinctUntilChanged { a, b -> a?.first?.id == b?.first?.id }
                     .debounce(SETTLE_MS)
-            }.collectLatest { item ->
-                val info = item?.let { vm.gameDetail.load(GameInfoState(it)) }
-                link.update { it.copy(hovered = info) }
+            }.collectLatest { hover ->
+                val info = hover?.first?.let { vm.gameDetail.load(GameInfoState(it)) }
+                link.update { it.copy(hovered = info, hoveredPlace = hover?.second) }
             }
         }
         // the App Drawer is on the Main Screen (ADR 0001) and the Companion Screen shows the app hovered in it, with a
@@ -66,6 +68,10 @@ class CrossbarBottomScreen(
         // Search, a menu, Settings and the colour scheme picker open on the Main Screen, which the Companion rule reads
         scope.launch {
             uiState.map(::mainScreenOpen).distinctUntilChanged().collect { open -> link.update { it.copy(open = open) } }
+        }
+        // the Companion's own menu keeps its item too (ADR 0002)
+        scope.launch {
+            uiState.map { it.companionMenu != null }.distinctUntilChanged().collect { on -> link.update { it.copy(companionMenu = on) } }
         }
         scope.launch {
             combine(companionShown, link.hostShown, lastLaunch) { on, shown, last ->
@@ -91,6 +97,15 @@ class CrossbarBottomScreen(
     fun resume() {
         lastLaunch.value?.gameId?.let(vm.launching::resumeGame)
     }
+
+    // Options on the Companion's Details: the item's menu, opened on the Companion Screen (ADR 0002), as the Main
+    // Screen would open it where the item was hovered ([place]); with no place, as the Main Screen is now
+    fun openMenu(details: CompanionContent.Details) =
+        vm.openContextMenuFor(details.info.item, MenuSlot.COMPANION, details.place ?: uiState.value)
+
+    fun onMenuRow(index: Int) = vm.onContextMenuItemActivatedAt(index, MenuSlot.COMPANION)
+
+    fun closeMenu() = vm.closeContextMenu(MenuSlot.COMPANION)
 
     private suspend fun itemFor(gameId: Long): CrossbarItem? =
         runCatching { vm.gameRepository.getById(gameId) }.getOrNull()?.let { game -> with(vm) { listOf(game).toCrossbarItems() }.first() }

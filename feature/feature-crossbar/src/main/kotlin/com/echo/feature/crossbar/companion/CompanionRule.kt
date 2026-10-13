@@ -1,9 +1,11 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import com.echo.feature.crossbar.viewmodel.CrossbarItem
 import com.echo.feature.crossbar.viewmodel.CrossbarItemType
 import com.echo.feature.crossbar.viewmodel.CrossbarUiState
 import com.echo.feature.crossbar.viewmodel.typing
+import com.echo.feature.crossbar.viewmodel.MenuSlot
+import com.echo.feature.crossbar.viewmodel.open
 import com.echo.feature.crossbar.viewmodel.ColorSchemeOption
 import com.echo.feature.crossbar.viewmodel.GameInfoState
 import com.echo.feature.settings.ui.SettingsFocusInfo
@@ -11,8 +13,15 @@ import com.echo.feature.settings.ui.StorePreview
 
 // what the Companion Screen shows (ADR 0001)
 sealed interface CompanionContent {
-    // an item's Details; while it is the game ECHO launched and that game runs, with the session clock and Resume
-    data class Details(val info: GameInfoState, val playing: Boolean = false, val playingSince: Long? = null) : CompanionContent
+    // an item's Details; while it is the game ECHO launched and that game runs, with the session clock and Resume.
+    // [place] is the Main Screen's state where the item was hovered, which Options opens its menu from (ADR 0002);
+    // null for the running game and the App Drawer's app, whose menus read the Main Screen as it is
+    data class Details(
+        val info: GameInfoState,
+        val playing: Boolean = false,
+        val playingSince: Long? = null,
+        val place: CrossbarUiState? = null,
+    ) : CompanionContent
 
     // the setting focused in Settings on the Main Screen, its description in large type, and a preview of the
     // focused choice where there is one
@@ -30,9 +39,9 @@ sealed interface SettingPreview {
 
 // the Companion rule: the running game, else the colour scheme highlighted in the picker, else in Settings the
 // theme focused in the Theme Store or the focused setting, else the item an open menu belongs to (the one shown
-// when it opened), else the hovered item (the App Drawer's over the Crossbar's, Search's result over both), else
-// what it showed [last], so it never goes blank. A game kept after it ends loses its clock and Resume.
-fun companionContent(main: BottomScreenState, last: CompanionContent?): CompanionContent? {
+// when it opened; the Main Screen's or the Companion's own, ADR 0002), else the hovered item (the App Drawer's over
+// the Crossbar's, Search's result over both), else what it showed [last], so it never goes blank. A game kept after it ends loses its clock and Resume.
+fun companionContent(main: CompanionState, last: CompanionContent?): CompanionContent? {
     main.playing?.let { return CompanionContent.Details(it, playing = true, playingSince = main.playingSince) }
     val kept = (last as? CompanionContent.Details)?.copy(playing = false, playingSince = null) ?: last
     main.open.colorScheme?.let { return CompanionContent.Setting(SettingsFocusInfo(it.label, null, it.sublabel), SettingPreview.Colors(it)) }
@@ -42,9 +51,10 @@ fun companionContent(main: BottomScreenState, last: CompanionContent?): Companio
     }
     // ponytail: the owner is what was shown when the menu opened; a menu opened within the 150 ms the cursor
     // takes to settle keeps the item before it, until the menu closes. Track the menu's own item if that shows.
-    if (main.open.menu && kept != null) return kept
-    val hovered = if (main.open.search) main.hovered else main.drawer ?: main.hovered
-    return hovered?.let { CompanionContent.Details(it) } ?: kept
+    if ((main.open.menu || main.companionMenu) && kept != null) return kept
+    val drawer = main.drawer.takeUnless { main.open.search }
+    val hovered = drawer?.let { CompanionContent.Details(it) } ?: main.hovered?.let { CompanionContent.Details(it, place = main.hoveredPlace) }
+    return hovered ?: kept
 }
 
 // what the Main Screen has hovered, besides the App Drawer (which reports its own): Search's focused result while
@@ -102,16 +112,27 @@ fun swap(s: CrossbarUiState): Swap =
 
 // what the Companion Screen's window does with key focus. The Thor draws the keyboard on the Companion Screen's
 // display (ime_show_on_second), and only for the window last focused there, so the Companion's window must take
-// focus for it to show. CLAIM: typing on the Main Screen, it takes focus once and gives it back, so the controller
-// and the field stay on the Main Screen (ADR 0001). HOLD: in Swap the field is in this window, which keeps the keys
-// while typing. NONE: touch only.
+// focus for it to show. CLAIM: the field is in MainActivity's window (the Main Screen's, or in Swap a prompt of the
+// Companion's menu), so it takes focus once and gives it back, and the controller and the field stay there (ADR
+// 0001). HOLD: the field is in this window, which keeps the keys while typing: the Main Screen's in Swap, or outside
+// Swap a name prompt opened from the Companion's menu (ADR 0002). NONE: touch only.
 enum class CompanionKeys { NONE, CLAIM, HOLD }
 
 fun companionKeys(s: CrossbarUiState): CompanionKeys = when {
     !s.typing -> CompanionKeys.NONE
-    s.screensSwapped -> CompanionKeys.HOLD
+    // ponytail: with a field on each screen at once, the Companion's window keeps the keys; ask which field was opened last if that matters
+    s.screensSwapped && mainScreenTyping(s) || !s.screensSwapped && s.companionPrompts.open -> CompanionKeys.HOLD
     else -> CompanionKeys.CLAIM
 }
+
+// the window on the first display (MainActivity) has a field typed into, which asks for the keyboard (review P7): the
+// Main Screen's Search or prompt, or a prompt of the Companion Screen while MainActivity draws it (Swap, or the
+// in-place view on one display). A Companion prompt on the second display is not, so B there is not taken to hide it
+fun firstWindowTyping(s: CrossbarUiState): Boolean =
+    mainScreenTyping(s) || s.companionPrompts.open && firstDisplayShowsCompanion(s)
+
+// the Main Screen's own field: Search, or a prompt CrossbarShell draws
+private fun mainScreenTyping(s: CrossbarUiState): Boolean = s.search != null || s.mainPrompts.open
 
 // the Companion's CLAIM has ended while typing with a Companion attached and the Main Screen's window has focus: the
 // claim moved the focused display away and back, which hid the keyboard, so the Main Screen shows it again for its

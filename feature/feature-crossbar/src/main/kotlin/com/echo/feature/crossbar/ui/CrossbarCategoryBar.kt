@@ -260,7 +260,7 @@ private fun CrossbarCategoryItem(
 
 private const val XMB_ICON_SCALE = 0.72f
 
-// the built-in categories drawn with the icons the Recent filter row uses; a theme's own icon or a
+// the built-in categories drawn with the icons Recent's Trigger Filter uses; a theme's own icon or a
 // console's icon still wins
 internal fun xmbFilterIcon(iconKey: String): ImageVector? = when (categoryIconFor(iconKey).key) {
     "ic_recent" -> Icons.Outlined.History

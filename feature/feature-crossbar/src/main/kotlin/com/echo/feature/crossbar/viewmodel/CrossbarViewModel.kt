@@ -1,6 +1,6 @@
 package com.echo.feature.crossbar.viewmodel
 
-import com.echo.feature.crossbar.bottomscreen.hasInfo
+import com.echo.feature.crossbar.companion.hasInfo
 import com.echo.core.ui.components.MenuRow
 import com.echo.core.ui.components.MenuSelect
 import com.echo.core.ui.components.MenuState
@@ -166,6 +166,13 @@ data class CrossbarContextMenu(
 
     val mediaRootUri: String? = null,
     val mediaRootKind: MediaRootKind? = null,
+
+    // taken when the menu opens, so its rows act on its item after the Main Screen's focus moves (ADR 0002): the
+    // place Hide from <column> hides from, and the art an app's launch hands off
+    val hideLocation: Triple<com.echo.core.domain.model.HideLocationType, String, String>? = null,
+    val itemArt: Any? = null,
+    // the songs listed where a song's menu opened: Play queues them (ADR 0002)
+    val musicQueue: List<com.echo.core.domain.model.MusicTrack> = emptyList(),
 ) {
     val title: String get() = state.title
     val items: List<CrossbarContextMenuItem> get() = state.rows
@@ -177,6 +184,14 @@ data class CrossbarContextMenu(
 }
 
 typealias CrossbarContextMenuItem = MenuRow<String>
+
+// where an item menu opens: the Main Screen's slot, or the Companion Screen's (ADR 0002)
+enum class MenuSlot { MAIN, COMPANION }
+
+fun CrossbarUiState.menuIn(slot: MenuSlot): CrossbarContextMenu? = if (slot == MenuSlot.MAIN) activeContextMenu else companionMenu
+
+fun CrossbarUiState.withMenu(slot: MenuSlot, menu: CrossbarContextMenu?): CrossbarUiState =
+    if (slot == MenuSlot.MAIN) copy(activeContextMenu = menu) else copy(companionMenu = menu)
 
 data class CollectionNameDialogState(
     val title: String,
@@ -392,6 +407,44 @@ data class PlaylistNameDialogState(
 
     val forVideoId: String? = null,
 )
+
+// the name prompts one screen draws. The Main Screen's and the Companion's are kept apart (ADR 0002), so both can be
+// open at once, and each screen draws, and is typed into, its own: a prompt opens in the slot of the menu whose row
+// opened it. Save Current Look as Theme opens on the Main Screen only
+data class NamePrompts(
+    val renameAppTarget: String? = null,
+    val renameAppCurrent: String? = null,
+    val renameAppText: String = "",
+
+    val collectionNameDialog: CollectionNameDialogState? = null,
+
+    val playlistNameDialog: PlaylistNameDialogState? = null,
+
+    val saveThemeNameDialog: PlaylistNameDialogState? = null,
+)
+
+// the one list of the prompts with a text field (review M3): these prompts with [text] typed into the open one, the
+// rename first; null while none is open. open and withText both read it, so they cannot name different prompts
+private fun NamePrompts.typed(text: String): NamePrompts? = when {
+    renameAppTarget != null      -> copy(renameAppText = text)
+    collectionNameDialog != null -> copy(collectionNameDialog = collectionNameDialog.copy(text = text))
+    playlistNameDialog != null   -> copy(playlistNameDialog = playlistNameDialog.copy(text = text))
+    saveThemeNameDialog != null  -> copy(saveThemeNameDialog = saveThemeNameDialog.copy(text = text))
+    else -> null
+}
+
+val NamePrompts.open: Boolean get() = typed("") != null
+
+fun NamePrompts.withText(text: String): NamePrompts = typed(text) ?: this
+
+// a message a menu row ends with (Open Folder's path, Export Game's report), on the screen of the menu the row is on
+fun CrossbarUiState.withInfoDialog(slot: MenuSlot, dialog: InfoDialogState?): CrossbarUiState =
+    if (slot == MenuSlot.MAIN) copy(infoDialog = dialog) else copy(companionInfoDialog = dialog)
+
+fun CrossbarUiState.promptsIn(slot: MenuSlot): NamePrompts = if (slot == MenuSlot.MAIN) mainPrompts else companionPrompts
+
+fun CrossbarUiState.withPrompts(slot: MenuSlot, change: NamePrompts.() -> NamePrompts): CrossbarUiState =
+    if (slot == MenuSlot.MAIN) copy(mainPrompts = mainPrompts.change()) else copy(companionPrompts = companionPrompts.change())
 
 data class MusicTrackPickerState(
     val playlistId: Long,
@@ -624,25 +677,24 @@ data class CrossbarUiState(
     val pendingPhotoViewerAction: GamepadAction? = null,
 
     val activeContextMenu: CrossbarContextMenu? = null,
+    // the item menu the Companion Screen draws, opened by its Options button (ADR 0002). It is not the Main
+    // Screen's: it neither shows there nor blocks the controller
+    val companionMenu: CrossbarContextMenu? = null,
 
     val moving: MoveSession? = null,
 
     val colorSchemePicker: ColorSchemePickerState? = null,
     val customColorPicker: CustomColorPickerState? = null,
 
-    val renameAppTarget: String? = null,
-    val renameAppCurrent: String? = null,
-    val renameAppText: String = "",
-
-    val collectionNameDialog: CollectionNameDialogState? = null,
-
-    val playlistNameDialog: PlaylistNameDialogState? = null,
+    // the name prompts the Main Screen draws, and those the Companion Screen draws (NamePrompts, ADR 0002)
+    val mainPrompts: NamePrompts = NamePrompts(),
+    val companionPrompts: NamePrompts = NamePrompts(),
 
     val musicTrackPicker: MusicTrackPickerState? = null,
 
     val search: SearchState? = null,
 
-    // a second screen is showing ECHO (the AYN Thor's bottom screen)
+    // a Companion Screen is attached on a second display (the AYN Thor's lower display)
     val secondScreen: Boolean = false,
     // Swap: the Main Screen on the second display and the Companion Screen on the first; remembered
     val screensSwapped: Boolean = false,
@@ -653,6 +705,8 @@ data class CrossbarUiState(
     val secondScreenEnabled: Boolean = true,
 
     val infoDialog: InfoDialogState? = null,
+    // a message a Companion menu row ends with, drawn on the Companion Screen (withInfoDialog, ADR 0002)
+    val companionInfoDialog: InfoDialogState? = null,
 
     val showWindowsSetupPrompt: Boolean = false,
 
@@ -737,8 +791,6 @@ data class CrossbarUiState(
     val pendingThemeShareFile: java.io.File? = null,
 
     val pendingCustomIconsAction: GamepadAction? = null,
-
-    val saveThemeNameDialog: PlaylistNameDialogState? = null,
 
     val layoutSpec: com.echo.themekit.CrossbarLayoutSpec = com.echo.themekit.CrossbarLayoutSpec.DEFAULT,
 
@@ -863,10 +915,8 @@ data class CrossbarUiState(
             colorSchemePicker != null ||
             customColorPicker != null ||
             customIconSession != null ||
-            saveThemeNameDialog != null ||
-            renameAppTarget != null ||
-            collectionNameDialog != null ||
-            playlistNameDialog != null ||
+            // a name prompt on the Companion Screen does not block the Main Screen (ADR 0002)
+            mainPrompts.open ||
             musicTrackPicker != null ||
             musicPlayerVisible ||
             infoDialog != null ||
@@ -1303,7 +1353,7 @@ enum class GlobalStep { APPS, SEARCH, CLOSE_SEARCH, NOTIFICATIONS, HOME }
 internal fun globalStep(action: GamepadAction, s: CrossbarUiState): GlobalStep? {
     val keepsItsButtons = s.activePhotoViewer != null || s.activeVideoId != null || s.metadataPreview != null ||
         s.manualViewer != null || s.artworkStudioGameId != null || s.showBootSequence || s.activeGameBoot != null ||
-        s.customIconSession != null || s.saveThemeNameDialog != null
+        s.customIconSession != null || s.mainPrompts.saveThemeNameDialog != null
     if (keepsItsButtons) return null
     return when (action) {
         // LB in the drawer closes it, as RB in Search closes Search; from the drawer's own search, back to it
@@ -1337,17 +1387,11 @@ internal fun CrossbarUiState.withGameInfoOpen(info: GameInfoState): CrossbarUiSt
 // Search or a name prompt is open: a field that asks for the keyboard
 val CrossbarUiState.typing: Boolean get() = search != null || namePromptOpen
 
-// a prompt with a text field is open; the same four withNamePromptText fills
-val CrossbarUiState.namePromptOpen: Boolean
-    get() = renameAppTarget != null || collectionNameDialog != null || playlistNameDialog != null || saveThemeNameDialog != null
+// a prompt with a text field is open, on either screen
+val CrossbarUiState.namePromptOpen: Boolean get() = mainPrompts.open || companionPrompts.open
 
-fun CrossbarUiState.withNamePromptText(text: String): CrossbarUiState = when {
-    renameAppTarget != null      -> copy(renameAppText = text)
-    collectionNameDialog != null -> copy(collectionNameDialog = collectionNameDialog.copy(text = text))
-    playlistNameDialog != null   -> copy(playlistNameDialog = playlistNameDialog.copy(text = text))
-    saveThemeNameDialog != null  -> copy(saveThemeNameDialog = saveThemeNameDialog.copy(text = text))
-    else -> this
-}
+// text typed into the open prompt of the screen in [slot]
+fun CrossbarUiState.withNamePromptText(slot: MenuSlot, text: String): CrossbarUiState = withPrompts(slot) { withText(text) }
 
 @HiltViewModel
 class CrossbarViewModel @Inject constructor(
@@ -1408,7 +1452,7 @@ class CrossbarViewModel @Inject constructor(
     internal val achievementCredentials: com.echo.core.data.achievement.AchievementCredentialsProvider,
     internal val discordSocial: com.echo.core.data.discord.DiscordSocialRepository,
     internal val launchScreens: com.echo.core.data.launch.LaunchScreens,
-    bottomScreenLink: com.echo.feature.crossbar.bottomscreen.BottomScreenLink,
+    companionLink: com.echo.feature.crossbar.companion.CompanionLink,
 ) : ViewModel() {
     @Volatile
     private var lastInteractionMs: Long = 0L
@@ -1432,20 +1476,21 @@ class CrossbarViewModel @Inject constructor(
     internal val recents = CrossbarRecents(this, _uiState, viewModelScope, menuSound)
 
     internal val gameDetail = CrossbarGameInfo(this, _uiState, viewModelScope, menuSound)
-    internal val bottomScreen = com.echo.feature.crossbar.bottomscreen.CrossbarBottomScreen(
-        this, _uiState, viewModelScope, bottomScreenLink, launchDispatcher.lastLaunch,
+    internal val companionScreen = com.echo.feature.crossbar.companion.CrossbarCompanion(
+        this, _uiState, viewModelScope, companionLink, launchDispatcher.lastLaunch,
     )
 
-    private val launchHold = LaunchHold(viewModelScope) { id -> _uiState.update { it.copy(launchHold = id) } }
+    private val launchHold = com.echo.core.ui.design.LaunchHold(viewModelScope) { id -> _uiState.update { it.copy(launchHold = id) } }
 
     // true only while a physical A press is being dispatched; a tap on screen launches at once
     // the pad button being dispatched right now, A or Y; a tap on screen acts at once
     private var heldFromPad: GamepadAction? = null
     private var holdButton: GamepadAction? = null
 
-    internal fun startLaunchHold(item: CrossbarItem, launch: () -> Unit) = launchHold.start(item.id, launch)
+    // a finger on a game or app's card or launch button holds as A does, so the footer's card rises (issue #36)
+    internal fun pressToLaunch(item: CrossbarItem, launch: () -> Unit) = launchHold.press(item.id, launch)
 
-    internal fun releaseLaunchHold() { launchHold.release() }
+    internal fun liftLaunchPress() = launchHold.lift()
 
     // starts the launch ring when a pad A press would leave ECHO; false means act now
     internal fun holdToLaunch(item: CrossbarItem, launch: () -> Unit): Boolean {
@@ -1501,7 +1546,7 @@ class CrossbarViewModel @Inject constructor(
         observeIconPreferences()
         observeFocusedGameVideo()
         observeFocusedItemAccent()
-        bottomScreen.observe()
+        companionScreen.observe()
         recents.observeRecentTopAccent()
         observeBackgroundSettings()
         observeTouchNavButtonMode()
@@ -1982,9 +2027,9 @@ class CrossbarViewModel @Inject constructor(
             ?: shelfCardFor(platformId)?.title
             ?: platformCache[platformId]?.name
 
-    internal fun currentHideLocation(): Triple<HideLocationType, String, String>? {
-        val s = _uiState.value
-        val cat = currentCategory()
+    // where Hide from <column> hides an item, read from [s], the Main Screen's state where the item was
+    internal fun hideLocation(s: CrossbarUiState): Triple<HideLocationType, String, String>? {
+        val cat = s.currentCategoryOrNull()
         return when {
             s.selectedPlatformId == FAVORITES_PLATFORM_ID || cat?.id == BuiltInCategory.FAVORITES ->
                 Triple(HideLocationType.FAVORITES, "", "Favorites")
@@ -2090,12 +2135,12 @@ class CrossbarViewModel @Inject constructor(
         if (index >= 0) onCategorySelected(index)
     }
 
-    internal fun openNowPlayingContextMenu() {
+    internal fun openNowPlayingContextMenu(slot: MenuSlot) {
         val playback = _uiState.value.musicPlayback
         if (playback.track == null) return
         _uiState.update {
-            it.copy(
-                activeContextMenu = CrossbarContextMenu(state = MenuState(title = playback.track.displayTitle, rows = nowPlayingContextMenuItems(playback.isPlaying)), musicTrackId = MUSIC_PLAYER_MENU_MARKER)
+            it.withMenu(
+                slot, CrossbarContextMenu(state = MenuState(title = playback.track.displayTitle, rows = nowPlayingContextMenuItems(playback.isPlaying)), musicTrackId = MUSIC_PLAYER_MENU_MARKER)
             )
         }
     }
@@ -2485,9 +2530,9 @@ class CrossbarViewModel @Inject constructor(
     // owner, 2026-10-08: Y on an album, video or book in the App Drawer gives it the menu it has in its own column
     fun openDrawerMediaMenu(media: com.echo.feature.appbar.DrawerMedia, title: String) {
         when (media.kind) {
-            com.echo.feature.appbar.MediaKind.MUSIC -> music.openAlbumMenu(media.ref, title)
-            com.echo.feature.appbar.MediaKind.VIDEO -> video.openVideoFileContextMenu(media.ref, title)
-            com.echo.feature.appbar.MediaKind.BOOK -> bookshelf.openBookMenu(media.ref, title)
+            com.echo.feature.appbar.MediaKind.MUSIC -> music.openAlbumMenu(media.ref, title, MenuSlot.MAIN)
+            com.echo.feature.appbar.MediaKind.VIDEO -> video.openVideoFileContextMenu(media.ref, title, MenuSlot.MAIN, _uiState.value)
+            com.echo.feature.appbar.MediaKind.BOOK -> bookshelf.openBookMenu(media.ref, title, MenuSlot.MAIN)
         }
     }
 
@@ -2518,12 +2563,12 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    internal fun openGenrePickerMenu(gameId: Long) {
+    internal fun openGenrePickerMenu(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val current = com.echo.core.domain.model.GameGenre.fromName(game.genreOverride)
             val items = gameGenrePickerRows(game.genre, current)
-            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Genre", rows = items), gameId = gameId)) }
+            _uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = "Genre", rows = items), gameId = gameId)) }
         }
     }
 
@@ -2716,8 +2761,8 @@ class CrossbarViewModel @Inject constructor(
 
         // L3 or R3: the same as the Swap button, over anything open, on one display or two; and B from the Companion
         // Screen shown in place (pressSwaps)
-        if (com.echo.feature.crossbar.bottomscreen.pressSwaps(state, action)) {
-            bottomScreen.toggleSwap()
+        if (com.echo.feature.crossbar.companion.pressSwaps(state, action)) {
+            companionScreen.toggleSwap()
             return
         }
         // the Companion Screen shown in place ignores every other press: the hidden Main Screen never acts on a press
@@ -2774,13 +2819,13 @@ class CrossbarViewModel @Inject constructor(
                     val menu = state.activeContextMenu
                     val picked = menu.selectedIndex?.let { state.menuRows().getOrNull(it) }
                     when {
-                        picked != null -> onContextMenuItemActivatedAt(menu.selectedIndex!!)
-                        menu.primaryId != null -> activateContextMenuItem(menu.primaryId)
+                        picked != null -> onContextMenuItemActivatedAt(menu.selectedIndex!!, MenuSlot.MAIN)
+                        menu.primaryId != null -> activateContextMenuItem(menu.primaryId, MenuSlot.MAIN)
                         else -> Unit
                     }
                 }
                 GamepadAction.BACK                   -> popContextMenu()
-                GamepadAction.OPEN_CONTEXT_MENU      -> closeContextMenu()
+                GamepadAction.OPEN_CONTEXT_MENU      -> closeContextMenu(MenuSlot.MAIN)
                 else -> Unit
             }
             return
@@ -2805,29 +2850,32 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
-        if (state.renameAppTarget != null) {
+        // the controller acts on the Main Screen's prompts only: a prompt on the Companion Screen is finished there by
+        // touch (ADR 0002)
+        val prompts = state.mainPrompts
+        if (prompts.renameAppTarget != null) {
             when (action) {
-                GamepadAction.SELECT -> onConfirmAppRename(state.renameAppText)
-                GamepadAction.BACK   -> onCancelAppRename()
+                GamepadAction.SELECT -> onConfirmAppRename(prompts.renameAppText, MenuSlot.MAIN)
+                GamepadAction.BACK   -> onCancelAppRename(MenuSlot.MAIN)
                 else                 -> Unit
             }
             return
         }
-        if (state.collectionNameDialog != null) {
+        if (prompts.collectionNameDialog != null) {
             when (action) {
-                GamepadAction.SELECT -> gameActions.onConfirmCollectionName(state.collectionNameDialog.text)
-                GamepadAction.BACK   -> gameActions.onCancelCollectionName()
+                GamepadAction.SELECT -> gameActions.onConfirmCollectionName(prompts.collectionNameDialog.text, MenuSlot.MAIN)
+                GamepadAction.BACK   -> gameActions.onCancelCollectionName(MenuSlot.MAIN)
                 else                 -> Unit
             }
             return
         }
-        if (state.playlistNameDialog != null) {
-            music.onPlaylistNameButton(action, state)
+        if (prompts.playlistNameDialog != null) {
+            music.onPlaylistNameButton(action, prompts.playlistNameDialog)
             return
         }
 
         if (state.infoDialog != null) {
-            if (action == GamepadAction.BACK || action == GamepadAction.SELECT) dismissInfoDialog()
+            if (action == GamepadAction.BACK || action == GamepadAction.SELECT) dismissInfoDialog(MenuSlot.MAIN)
             return
         }
 
@@ -2922,9 +2970,9 @@ class CrossbarViewModel @Inject constructor(
                 }
                 return
             }
-            state.saveThemeNameDialog != null -> {
+            state.mainPrompts.saveThemeNameDialog != null -> {
                 when (action) {
-                    GamepadAction.SELECT -> look.confirmSaveCurrentLookAsTheme(state.saveThemeNameDialog.text)
+                    GamepadAction.SELECT -> look.confirmSaveCurrentLookAsTheme(state.mainPrompts.saveThemeNameDialog.text)
                     GamepadAction.BACK   -> look.dismissSaveThemeNameDialog()
                     else                 -> Unit
                 }
@@ -3069,7 +3117,7 @@ class CrossbarViewModel @Inject constructor(
         return info.copy(appVersion = version, appStorageBytes = storage)
     }
 
-    private fun openPlatformContextMenu(platformId: String) {
+    private fun openPlatformContextMenu(platformId: String, slot: MenuSlot) {
         val card = enabledCards.firstOrNull { it.platformId == platformId } ?: return
         viewModelScope.launch {
             val choices = platformChoices(platformId)
@@ -3084,8 +3132,8 @@ class CrossbarViewModel @Inject constructor(
                 romDirectory = card.romDirectory,
             )
 
-            _uiState.update { it.copy(
-                activeContextMenu = CrossbarContextMenu(state = MenuState(title = card.displayName, rows = items), platformId = platformId)
+            _uiState.update { it.withMenu(
+                slot, CrossbarContextMenu(state = MenuState(title = card.displayName, rows = items), platformId = platformId)
             )}
         }
     }
@@ -3102,7 +3150,7 @@ class CrossbarViewModel @Inject constructor(
         )
     }
 
-    internal fun openDefaultEmulatorMenu(platformId: String) {
+    internal fun openDefaultEmulatorMenu(platformId: String, slot: MenuSlot) {
         viewModelScope.launch {
             val choices = platformChoices(platformId) ?: return@launch
             val rows = buildList {
@@ -3124,8 +3172,8 @@ class CrossbarViewModel @Inject constructor(
                     )
                 }
             }
-            _uiState.update { it.copy(
-                activeContextMenu = CrossbarContextMenu(
+            _uiState.update { it.withMenu(
+                slot, CrossbarContextMenu(
                     state = MenuState(title = "Default Emulator", rows = rows),
                     platformId = platformId,
                 ),
@@ -3133,35 +3181,36 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    private fun openAllGamesContextMenu() {
-        _uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(state = MenuState(title = "All Games", rows = allGamesContextMenuItems(_uiState.value.gameGrouping)), isAllGames = true)
+    private fun openAllGamesContextMenu(slot: MenuSlot) {
+        _uiState.update { it.withMenu(
+            slot, CrossbarContextMenu(state = MenuState(title = "All Games", rows = allGamesContextMenuItems(_uiState.value.gameGrouping)), isAllGames = true)
         )}
     }
 
-    internal fun openAppContextMenu(item: CrossbarItem, categoryIdOverride: String? = null) {
+    // [at]: the Main Screen's state where the item was (openContextMenuFor)
+    internal fun openAppContextMenu(item: CrossbarItem, slot: MenuSlot, at: CrossbarUiState, categoryIdOverride: String? = null) {
         val pkg = item.packageName ?: return
-        val categoryId = categoryIdOverride ?: currentCategory()?.id
+        val categoryId = categoryIdOverride ?: at.currentCategoryOrNull()?.id
 
         viewModelScope.launch {
             // an app is a favourite, and a game, through its row in games, so read it fresh for the pairs
             val entry = gameRepository.getAppEntry(pkg)
             val items = appContextMenuItems(
-                _uiState.value, categoryId, onRecentShelf = item.id.startsWith(RECENT_APP_ID_PREFIX), packageName = pkg,
+                at, categoryId, onRecentShelf = item.id.startsWith(RECENT_APP_ID_PREFIX), packageName = pkg,
                 isFavorite = entry?.isFavorite == true, pinnedInCategory = item.pinnedInCategory, isGame = entry?.isMarkedAsGame == true,
             )
-            _uiState.update { it.copy(
-                activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = pkg, categoryContext = categoryId)
+            _uiState.update { it.withMenu(
+                slot, CrossbarContextMenu(state = MenuState(title = item.title, rows = items), gameId = item.gameId, packageName = pkg, categoryContext = categoryId, itemArt = item.shelfCoverArt)
             )}
         }
     }
 
-    private fun openCategoryPicker(pkg: String, fromCategory: String?, action: String) {
+    private fun openCategoryPicker(pkg: String, fromCategory: String?, action: String, slot: MenuSlot) {
         val items = _uiState.value.categories.map { cat ->
             CrossbarContextMenuItem("pick_${cat.id}", cat.name)
         }
-        _uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(state = MenuState(title = if (action == "move") "Move To…" else "Add To…", rows = items), packageName = pkg, categoryContext = fromCategory, pendingAppAction = action)
+        _uiState.update { it.withMenu(
+            slot, CrossbarContextMenu(state = MenuState(title = if (action == "move") "Move To…" else "Add To…", rows = items), packageName = pkg, categoryContext = fromCategory, pendingAppAction = action)
         )}
     }
 
@@ -3180,16 +3229,16 @@ class CrossbarViewModel @Inject constructor(
         _uiState.update { it.copy(activeContextMenu = menu.withSelected(next)) }
     }
 
-    private fun activateContextMenuItem(itemId: String) {
+    private fun activateContextMenuItem(itemId: String, slot: MenuSlot) {
         val state  = _uiState.value
-        val menu   = state.activeContextMenu ?: return
+        val menu   = state.menuIn(slot) ?: return
 
         if (itemId.startsWith("cat_") && menu.gameId != null && menu.categoryContext != null && menu.pendingAppAction != null) {
             val gameId = menu.gameId
             val fromCategory = menu.categoryContext
             val toCategory = itemId.removePrefix("cat_")
             val action = menu.pendingAppAction
-            closeContextMenu()
+            closeContextMenu(slot)
 
             appAction {
                 when (action) {
@@ -3203,21 +3252,21 @@ class CrossbarViewModel @Inject constructor(
             return
         }
 
-        menu.genreTarget?.let { return genres.onPick(it, itemId) }
+        menu.genreTarget?.let { return genres.onPick(it, itemId, slot) }
 
         if (itemId == CLEAR_RECENT) {
-            closeContextMenu()
+            closeContextMenu(slot)
             recents.clearRecent()
             return
         }
         if (itemId == MOVE_ROW || itemId == MOVE_COLUMN) {
-            closeContextMenu()
+            closeContextMenu(slot)
             move.lift(column = itemId == MOVE_COLUMN)
             return
         }
         if (itemId == RENAME_COLUMN || itemId == CHANGE_COLUMN_ICON || itemId == CHANGE_SYSTEM_ICON || itemId == CHANGE_SYSTEM_ART) {
             val focused = state.currentItems.getOrNull(state.selectedItemIndex)
-            closeContextMenu()
+            closeContextMenu(slot)
             when (itemId) {
                 RENAME_COLUMN -> move.promptRenameColumn()
                 CHANGE_COLUMN_ICON -> openCustomIcons(state.columnIconSlot())
@@ -3229,27 +3278,27 @@ class CrossbarViewModel @Inject constructor(
 
         if (menu.isAddMenu) {
             val row = currentAddActions().firstOrNull { it.id == itemId }
-            closeContextMenu()
+            closeContextMenu(slot)
             if (row != null) dispatchCategorySelection(row)
             return
         }
 
         if (menu.videoPlaylistPickerVideoId != null) {
-            video.onPlaylistPickerItem(itemId, menu)
+            video.onPlaylistPickerItem(itemId, menu, slot)
             return
         }
 
         if (menu.playlistPickerTrackId != null) {
-            music.onPlaylistPickerItem(itemId, menu)
+            music.onPlaylistPickerItem(itemId, menu, slot)
             return
         }
 
-        closeContextMenu()
+        closeContextMenu(slot)
 
         menu.albumKey?.let { key ->
             when (itemId) {
                 "play_album" -> music.playAlbum(key)
-                "edit_genre" -> music.openAlbumGenrePicker(key)
+                "edit_genre" -> music.openAlbumGenrePicker(key, slot)
             }
             return
         }
@@ -3261,11 +3310,11 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         if (menu.videoFileId != null) {
-            video.handleVideoFileAction(menu.videoFileId, itemId)
+            video.handleVideoFileAction(menu.videoFileId, itemId, slot, menu.playlistId)
             return
         }
         if (menu.bookFileId != null) {
-            bookshelf.handleBookAction(menu.bookFileId, itemId)
+            bookshelf.handleBookAction(menu.bookFileId, itemId, slot)
             return
         }
         if (menu.videoLibraryId != null) {
@@ -3281,12 +3330,12 @@ class CrossbarViewModel @Inject constructor(
             return
         }
         if (menu.videoPlaylistId != null) {
-            video.handleVideoPlaylistRowAction(menu.videoPlaylistId, itemId)
+            video.handleVideoPlaylistRowAction(menu.videoPlaylistId, menu.title, itemId, slot)
             return
         }
 
         if (menu.playlistId != null && menu.musicTrackId == null) {
-            music.handlePlaylistRowAction(menu.playlistId, itemId)
+            music.handlePlaylistRowAction(menu.playlistId, menu.title, itemId, slot)
             return
         }
 
@@ -3298,7 +3347,7 @@ class CrossbarViewModel @Inject constructor(
                 "music_shuffle"    -> music.musicToggleShuffle()
                 "music_repeat"     -> music.musicCycleRepeat()
             }
-            menu.musicTrackId != null -> music.handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId)
+            menu.musicTrackId != null -> music.handleMusicTrackAction(menu.musicTrackId, itemId, menu.playlistId, slot, menu.musicQueue)
             menu.mediaRootKind != null && menu.mediaRootUri != null ->
                 folders.handleMediaRootAction(menu.mediaRootKind, menu.mediaRootUri, itemId)
             menu.mediaRootKind == null && menu.mediaRootUri != null ->
@@ -3314,10 +3363,10 @@ class CrossbarViewModel @Inject constructor(
             menu.platformId != null -> if (itemId.startsWith(PLATFORM_EMU_PREFIX)) {
                 launching.setPlatformEmulator(menu.platformId, itemId.removePrefix(PLATFORM_EMU_PREFIX))
             } else when (itemId) {
-                "default_emulator" -> openDefaultEmulatorMenu(menu.platformId)
+                "default_emulator" -> openDefaultEmulatorMenu(menu.platformId, slot)
                 "emu_automatic"    -> launching.setPlatformEmulator(menu.platformId, null)
                 "clear_emulator_overrides" -> launching.clearPlatformEmulatorOverrides(menu.platformId)
-                "rename_card"      -> gameActions.promptRenameCard(menu.platformId)
+                "rename_card"      -> gameActions.promptRenameCard(menu.platformId, slot)
                 "card_rom_directory" -> folders.openRomFolders()
                 "find_games"       -> appPickerSection.openAppPicker(AppPickerTarget.AndroidGames(menu.platformId), "Find Games")
                 "import_pc_games"  -> _uiState.update { it.withSettingsOpen("settings_import_pc") }
@@ -3330,7 +3379,7 @@ class CrossbarViewModel @Inject constructor(
                 "hide"             -> gameActions.hideCard(menu.platformId)
                 "remove"           -> gameActions.removeCard(menu.platformId)
             }
-            menu.gameId != null -> gameActions.onGameMenuItem(itemId, menu)
+            menu.gameId != null -> gameActions.onGameMenuItem(itemId, menu, slot)
             menu.packageName != null -> {
                 val pkg = menu.packageName
                 if (itemId.startsWith("pick_")) {
@@ -3340,12 +3389,12 @@ class CrossbarViewModel @Inject constructor(
                         "add"  -> appAction { appCategoryRepository.addToCategory(pkg, targetCategory) }
                     }
                 } else when (itemId) {
-                    "launch"    -> launching.launchAppWithDisc(pkg, selectedItemArt())
-                    "launch_other_screen" -> launching.launchAppWithDisc(pkg, selectedItemArt(), otherScreen = true)
-                    "pin_recent", "unpin_recent" -> { closeContextMenu(); recents.togglePinned(com.echo.core.data.repository.RecentPins.appKey(pkg)) }
+                    "launch"    -> launching.launchAppWithDisc(pkg, menu.itemArt)
+                    "launch_other_screen" -> launching.launchAppWithDisc(pkg, menu.itemArt, otherScreen = true)
+                    "pin_recent", "unpin_recent" -> recents.togglePinned(com.echo.core.data.repository.RecentPins.appKey(pkg))
                     "app_artwork" -> viewModelScope.launch { artworkTools.openArtworkStudio(ensureAppShortcut(pkg)) }
-                    "app_info"  -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg) }
-                    "uninstall" -> { closeContextMenu(); com.echo.core.data.apps.AppSystemActions.uninstall(context, pkg) }
+                    "app_info"  -> com.echo.core.data.apps.AppSystemActions.openAppInfo(context, pkg, launchScreens.mainDisplay())
+                    "uninstall" -> com.echo.core.data.apps.AppSystemActions.uninstall(context, pkg, launchScreens.mainDisplay())
 
                     "mark_game" -> appAction {
                         gameRepository.upsert(com.echo.core.domain.model.markedAsGame(gameRepository.getAppEntry(pkg), pkg, menu.title))
@@ -3354,8 +3403,8 @@ class CrossbarViewModel @Inject constructor(
                     "unmark_game"       -> appAction { gameRepository.getAppEntry(pkg)?.let { gameActions.unmarkAsGame(it.id) } }
                     "favorite"          -> gameActions.addAppToFavorites(pkg, menu.title)
                     "unfavorite"        -> appAction { gameRepository.getAppEntry(pkg)?.let { gameRepository.setFavorite(it.id, false) } }
-                    "move"      -> openCategoryPicker(pkg, menu.categoryContext, "move")
-                    "add"       -> openCategoryPicker(pkg, menu.categoryContext, "add")
+                    "move"      -> openCategoryPicker(pkg, menu.categoryContext, "move", slot)
+                    "add"       -> openCategoryPicker(pkg, menu.categoryContext, "add", slot)
                     "remove"    -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.removeFromCategory(pkg, cat) } }
                     "pin"       -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.pinToCategory(pkg, cat) } }
                     "unpin"     -> menu.categoryContext?.let { cat -> appAction { appCategoryRepository.unpinFromCategory(pkg, cat) } }
@@ -3367,7 +3416,7 @@ class CrossbarViewModel @Inject constructor(
                     "hide_from_recent" -> persistHide(HiddenPlacement.appKey(pkg), menu.title, HideLocationType.RECENTS, "", "Recent")
                     "hide_everywhere" -> appAction { appCategoryRepository.setHidden(pkg, true) }
                     "rename"    -> _uiState.update {
-                        it.copy(renameAppTarget = pkg, renameAppCurrent = menu.title, renameAppText = menu.title)
+                        it.withPrompts(slot) { copy(renameAppTarget = pkg, renameAppCurrent = menu.title, renameAppText = menu.title) }
                     }
                 }
             }
@@ -3378,15 +3427,15 @@ class CrossbarViewModel @Inject constructor(
         viewModelScope.launch { block() }
     }
 
-    internal fun openShelvesPickerMenu(gameId: Long) {
+    internal fun openShelvesPickerMenu(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val items = shelvesPickerItems(PlayState.fromName(game.playState))
-            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Shelves", rows = items), gameId = gameId))}
+            _uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = "Shelves", rows = items), gameId = gameId))}
         }
     }
 
-    internal fun openEmulatorPickerMenu(gameId: Long) {
+    internal fun openEmulatorPickerMenu(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val profiles = emulatorProfileRepository.getProfilesForPlatform(game.platformId)
@@ -3394,11 +3443,11 @@ class CrossbarViewModel @Inject constructor(
                 add(CrossbarContextMenuItem("emu_pick_default", "Use Platform Default"))
                 profiles.forEach { add(CrossbarContextMenuItem("emu_pick_${it.id}", it.name)) }
             }
-            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Choose Emulator", rows = items), gameId = gameId))}
+            _uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = "Choose Emulator", rows = items), gameId = gameId))}
         }
     }
 
-    internal fun openDiscPickerMenu(gameId: Long) {
+    internal fun openDiscPickerMenu(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val key = game.discSetKey ?: return@launch
@@ -3414,7 +3463,7 @@ class CrossbarViewModel @Inject constructor(
                         checked = member.id == preferredDiscId,
                     )
                 }
-            _uiState.update { it.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = "Choose Disc", rows = items), gameId = gameId))}
+            _uiState.update { it.withMenu(slot, CrossbarContextMenu(state = MenuState(title = "Choose Disc", rows = items), gameId = gameId))}
         }
     }
 
@@ -3426,20 +3475,21 @@ class CrossbarViewModel @Inject constructor(
         loadItemsForCategory(currentCategory())
     }
 
-    fun onConfirmAppRename(newLabel: String) {
-        val pkg = _uiState.value.renameAppTarget ?: return
+    // [slot]: the screen the prompt is on
+    fun onConfirmAppRename(newLabel: String, slot: MenuSlot) {
+        val pkg = _uiState.value.promptsIn(slot).renameAppTarget ?: return
         viewModelScope.launch {
             appCategoryRepository.rename(pkg, newLabel.ifBlank { null })
-            _uiState.update { it.copy(renameAppTarget = null, renameAppCurrent = null) }
+            _uiState.update { it.withPrompts(slot) { copy(renameAppTarget = null, renameAppCurrent = null) } }
         }
     }
 
-    fun onNamePromptTextChanged(text: String) {
-        _uiState.update { it.withNamePromptText(text) }
+    fun onNamePromptTextChanged(text: String, slot: MenuSlot) {
+        _uiState.update { it.withNamePromptText(slot, text) }
     }
 
-    fun onCancelAppRename() {
-        _uiState.update { it.copy(renameAppTarget = null, renameAppCurrent = null) }
+    fun onCancelAppRename(slot: MenuSlot) {
+        _uiState.update { it.withPrompts(slot) { copy(renameAppTarget = null, renameAppCurrent = null) } }
     }
 
     internal fun runQuickSearch(text: String) {
@@ -3470,68 +3520,71 @@ class CrossbarViewModel @Inject constructor(
 
     // the file manager at the game's folder; the path in a dialog when nothing can open it. Only a game with a file
     // has the row
-    internal fun openGameFolder(gameId: Long) {
-        closeContextMenu()
+    internal fun openGameFolder(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val path = game.romPath ?: return@launch
-            if (!com.echo.core.data.media.FolderOpen.open(context, path)) {
-                _uiState.update { it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = path)) }
+            if (!com.echo.core.data.media.FolderOpen.open(context, path, launchScreens.mainDisplay())) {
+                _uiState.update { it.withInfoDialog(slot, InfoDialogState(title = game.displayTitle, message = path)) }
             }
         }
     }
 
-    fun dismissInfoDialog() = _uiState.update { it.copy(infoDialog = null) }
+    fun dismissInfoDialog(slot: MenuSlot) = _uiState.update { it.withInfoDialog(slot, null) }
 
-    internal fun exportGameFromMenu(gameId: Long) {
+    // [slot]: the slot of the menu the row is on; the report is drawn on its screen
+    internal fun exportGameFromMenu(gameId: Long, slot: MenuSlot) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
             val report = runCatching { pcGameExporter.exportGame(gameId) }
                 .onFailure { Timber.e(it, "Export Game failed for gameId=$gameId") }
                 .getOrNull()
             _uiState.update {
-                it.copy(infoDialog = InfoDialogState(title = game.displayTitle, message = report?.message ?: "Export failed — see the log."))
+                it.withInfoDialog(slot, InfoDialogState(title = game.displayTitle, message = report?.message ?: "Export failed — see the log."))
             }
         }
     }
 
     private fun openContextMenuForFocusedItem() {
         val state = _uiState.value
-        openContextMenuFor(state.currentItems.getOrNull(state.selectedItemIndex))
+        openContextMenuFor(state.currentItems.getOrNull(state.selectedItemIndex), MenuSlot.MAIN, state)
     }
 
     // a library game's Options from the App Drawer: the same menu as on the crossbar, drawn over the drawer
     fun openGameMenu(gameId: Long) {
         viewModelScope.launch {
             val game = gameRepository.getById(gameId) ?: return@launch
-            openContextMenuFor(listOf(game).toCrossbarItems().first())
+            openContextMenuFor(listOf(game).toCrossbarItems().first(), MenuSlot.MAIN, _uiState.value)
         }
     }
 
     // the one place an item's Options menu is chosen: the crossbar, a long press, Search's banner and the drawer
-    internal fun openContextMenuFor(item: CrossbarItem?) {
-        val before = _uiState.value.activeContextMenu
+    // the Companion's Options opens it in the Companion's slot, less Edit Layout (ADR 0002). [at] is the Main
+    // Screen's state where the item was: now for the Main Screen; for the Companion, when it took the item, so a kept
+    // item has the menu of its own column after the Main Screen moves on
+    internal fun openContextMenuFor(item: CrossbarItem?, slot: MenuSlot, at: CrossbarUiState) {
+        val before = _uiState.value.menuIn(slot)
         // the focused row of the crossbar also offers Move (when it can move) and Move Column
-        val moveRows = item?.let { move.menuRows(_uiState.value, it) }.orEmpty()
-        openItemMenu(item)
+        val moveRows = item?.let { move.menuRows(at, it, slot) }.orEmpty()
+        openItemMenu(item, slot, at)
         if (item == null || moveRows.isEmpty()) return
         fun CrossbarContextMenu.withMove() = copy(state = state.copy(rows = state.rows + moveRows))
-        val now = _uiState.value.activeContextMenu
+        val now = _uiState.value.menuIn(slot)
         if (now != null && now !== before) {
-            _uiState.update { it.copy(activeContextMenu = now.withMove()) }
+            _uiState.update { it.withMenu(slot, now.withMove()) }
             return
         }
         // some menus are built in a coroutine (a system's reads its emulators first): add the rows when it
         // opens. ponytail: a row with no menu of its own waits MENU_WAIT_MS before its Move-only menu shows
         viewModelScope.launch {
             val opened = withTimeoutOrNull(MENU_WAIT_MS) {
-                _uiState.first { it.activeContextMenu != null && it.activeContextMenu !== before }.activeContextMenu
+                _uiState.first { it.menuIn(slot) != null && it.menuIn(slot) !== before }.menuIn(slot)
             }
             _uiState.update { s ->
                 when {
-                    opened != null && s.activeContextMenu === opened -> s.copy(activeContextMenu = opened.withMove())
-                    opened == null && s.activeContextMenu == null && s.moving == null ->
-                        s.copy(activeContextMenu = CrossbarContextMenu(state = MenuState(title = item.title, rows = moveRows)))
+                    opened != null && s.menuIn(slot) === opened -> s.withMenu(slot, opened.withMove())
+                    opened == null && s.menuIn(slot) == null && s.moving == null ->
+                        s.withMenu(slot, CrossbarContextMenu(state = MenuState(title = item.title, rows = moveRows)))
                     else -> s
                 }
             }
@@ -3544,21 +3597,21 @@ class CrossbarViewModel @Inject constructor(
         _uiState.update { it.withMusicPlayer() }
     }
 
-    private fun openItemMenu(item: CrossbarItem?) {
+    private fun openItemMenu(item: CrossbarItem?, slot: MenuSlot, at: CrossbarUiState) {
         when {
-            item?.mediaRootUri != null && item.mediaRootKind == null -> folders.openRomRootContextMenu(item)
-            item?.mediaRootUri != null -> folders.openMediaRootContextMenu(item)
+            item?.mediaRootUri != null && item.mediaRootKind == null -> folders.openRomRootContextMenu(item, slot)
+            item?.mediaRootUri != null -> folders.openMediaRootContextMenu(item, slot)
             item?.mediaRootKind != null && item.type == CrossbarItemType.MEDIA_ROOT ->
-                folders.openMediaFoldersContextMenu(item)
-            item?.isRecentAlbum == true -> music.openRecentAlbumContextMenu(item)
-            item != null && music.openMusicContextMenu(item) -> Unit
-            item != null && video.openVideoContextMenu(item) -> Unit
-            item != null && bookshelf.openBookContextMenu(item) -> Unit
-            item != null && gallery.openPhotoContextMenu(item) -> Unit
-            item?.gameId != null -> gameActions.openGameContextMenu(item)
-            item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu()
-            item?.platformId != null -> openPlatformContextMenu(item.platformId)
-            item?.packageName != null -> openAppContextMenu(item)
+                folders.openMediaFoldersContextMenu(item, slot)
+            item?.isRecentAlbum == true -> music.openRecentAlbumContextMenu(item, slot)
+            item != null && music.openMusicContextMenu(item, slot, at) -> Unit
+            item != null && video.openVideoContextMenu(item, slot, at) -> Unit
+            item != null && bookshelf.openBookContextMenu(item, slot, at) -> Unit
+            item != null && gallery.openPhotoContextMenu(item, slot, at) -> Unit
+            item?.gameId != null -> gameActions.openGameContextMenu(item, slot, at)
+            item?.type == CrossbarItemType.ALL_GAMES -> openAllGamesContextMenu(slot)
+            item?.platformId != null -> openPlatformContextMenu(item.platformId, slot)
+            item?.packageName != null -> openAppContextMenu(item, slot, at)
         }
     }
 
@@ -3581,12 +3634,12 @@ class CrossbarViewModel @Inject constructor(
                         it.setButtonHints(buttonHintsOf(s.contextMenuHintEnabled, s.interfaceChoices.minimalHints).next)
                     }
                 }
-                QuickSetting.SECOND_SCREEN -> bottomScreen.setSecondScreenEnabled(!s.secondScreenEnabled)
+                QuickSetting.SECOND_SCREEN -> companionScreen.setSecondScreenEnabled(!s.secondScreenEnabled)
                 QuickSetting.LIBRARIES -> s.libraryChips.getOrNull(chip)?.let { categoryRepository.setVisible(it.id, !it.visible) }
                 QuickSetting.ANDROID_SETTINGS -> {
                     panel.closeNotifications()
                     runCatching {
-                        context.startActivity(
+                        launching.startOnMainScreen(
                             android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
                                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                         )
@@ -3778,22 +3831,21 @@ class CrossbarViewModel @Inject constructor(
     }
 
 
-    fun onContextMenuItemActivatedAt(index: Int) {
-        val state = _uiState.value
-        val menu = state.activeContextMenu ?: return
+    fun onContextMenuItemActivatedAt(index: Int, slot: MenuSlot) {
+        val menu = _uiState.value.menuIn(slot) ?: return
 
-        when (val chosen = state.activeContextMenu?.state?.chose(index)) {
-            is MenuSelect.Replace -> _uiState.update { it.copy(activeContextMenu = menu.copy(state = chosen.state)) }
+        when (val chosen = menu.state.chose(index)) {
+            is MenuSelect.Replace -> _uiState.update { it.withMenu(slot, menu.copy(state = chosen.state)) }
             is MenuSelect.Run -> {
-                _uiState.update { it.copy(activeContextMenu = menu.withSelected(index)) }
-                activateContextMenuItem(chosen.action)
+                _uiState.update { it.withMenu(slot, menu.withSelected(index)) }
+                activateContextMenuItem(chosen.action, slot)
             }
             else -> Unit
         }
     }
 
-    fun closeContextMenu() {
-        _uiState.update { it.copy(activeContextMenu = null) }
+    fun closeContextMenu(slot: MenuSlot) {
+        _uiState.update { it.withMenu(slot, null) }
     }
 
     fun popContextMenu() {
@@ -3839,7 +3891,7 @@ class CrossbarViewModel @Inject constructor(
         }
     }
 
-    internal fun openGameCategoryPicker(gameId: Long, fromCategoryId: String, action: String) {
+    internal fun openGameCategoryPicker(gameId: Long, fromCategoryId: String, action: String, slot: MenuSlot) {
         val items = buildList {
             _uiState.value.categories
                 .filter { it.isGamingCategory && it.id != fromCategoryId && it.id != BuiltInCategory.GAMES }
@@ -3850,13 +3902,13 @@ class CrossbarViewModel @Inject constructor(
 
         if (items.isEmpty()) return
 
-        _uiState.update { it.copy(
-            activeContextMenu = CrossbarContextMenu(state = MenuState(title = if (action == "move") "Move Game To" else "Add Game To", rows = items), gameId = gameId, categoryContext = fromCategoryId, pendingAppAction = action)
+        _uiState.update { it.withMenu(
+            slot, CrossbarContextMenu(state = MenuState(title = if (action == "move") "Move Game To" else "Add Game To", rows = items), gameId = gameId, categoryContext = fromCategoryId, pendingAppAction = action)
         )}
     }
 
     fun onPlatformLongPress(categoryIndex: Int) {
-        _uiState.value.currentItems.getOrNull(categoryIndex)?.platformId?.let(::openPlatformContextMenu)
+        _uiState.value.currentItems.getOrNull(categoryIndex)?.platformId?.let { openPlatformContextMenu(it, MenuSlot.MAIN) }
     }
 
     internal fun cardName(platformId: String): String =
@@ -4197,7 +4249,7 @@ class CrossbarViewModel @Inject constructor(
 
             ANDROID_SETTINGS_ITEM_ID -> {
                 runCatching {
-                    context.startActivity(
+                    launching.startOnMainScreen(
                         android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
                             .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
@@ -4227,7 +4279,7 @@ class CrossbarViewModel @Inject constructor(
 
     fun onItemLongPress(index: Int) {
         if (_uiState.value.hasBlockingOverlay) return
-        openContextMenuFor(_uiState.value.currentItems.getOrNull(index))
+        openContextMenuFor(_uiState.value.currentItems.getOrNull(index), MenuSlot.MAIN, _uiState.value)
     }
 
     private fun openPlatformFolder(platformId: String) {
@@ -4401,7 +4453,7 @@ class CrossbarViewModel @Inject constructor(
     }
 
     fun closeCustomIcons() {
-        _uiState.update { it.copy(customIconSession = null, saveThemeNameDialog = null) }
+        _uiState.update { it.copy(customIconSession = null).withPrompts(MenuSlot.MAIN) { copy(saveThemeNameDialog = null) } }
     }
 
     fun onCustomIconGroupMove(dir: Int) {
@@ -4486,9 +4538,6 @@ class CrossbarViewModel @Inject constructor(
         if (!bootEnabled || !bootOnResume) return
         _uiState.update { it.copy(showBootSequence = true) }
     }
-
-    private fun selectedItemArt(): Any? =
-        _uiState.value.currentItems.getOrNull(_uiState.value.selectedItemIndex)?.shelfCoverArt
 
     fun onStartupPermissionsSettled() {
         Timber.d("StartupSeq: notification permission settled")

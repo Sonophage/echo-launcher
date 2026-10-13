@@ -1,4 +1,4 @@
-package com.echo.feature.crossbar.bottomscreen
+package com.echo.feature.crossbar.companion
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

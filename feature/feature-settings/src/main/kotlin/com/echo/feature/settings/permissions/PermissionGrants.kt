@@ -23,6 +23,13 @@ fun appDetailsIntent(context: Context): Intent =
 // "Allow restricted settings" is turned on in its App info
 fun restrictedSettingsApply(sdk: Int): Boolean = sdk >= android.os.Build.VERSION_CODES.TIRAMISU
 
+// an Android screen started for a result opens on the Main Screen's display (#28); StartActivityForResult reads
+// its launch options from this extra
+fun Intent.onMainScreen(context: Context): Intent = putExtra(
+    androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult.EXTRA_ACTIVITY_OPTIONS_BUNDLE,
+    com.echo.core.data.launch.LaunchScreens.mainScreenOptions(context),
+)
+
 fun systemScreenIntent(context: Context, permission: AppPermission): Intent = when (permission.id) {
     AppPermissions.NOTIFICATION_LISTENER -> AndroidNotifications.settingsIntent()
     AppPermissions.USAGE_ACCESS -> UsageAccess.settingsIntent()
