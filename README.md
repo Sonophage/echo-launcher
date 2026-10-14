@@ -5,9 +5,10 @@
 **Extensible Console Handheld Operator: a controller-first Android home screen inspired by the XMB.**
 
 <p align="center">
-  <a href="https://echo.sonophage.dev"><img src="https://img.shields.io/badge/site-echo.sonophage.dev-7a5cff" alt="Site"></a>
-  <a href="https://echo.sonophage.dev/docs.html"><img src="https://img.shields.io/badge/docs-read%20the%20guide-2f80ed" alt="Documentation"></a>
-  <a href="#with-obtainium-recommended-updates-arrive-by-themselves"><img src="https://img.shields.io/badge/Obtainium-get%20updates-6d4aff" alt="Get it with Obtainium"></a>
+  <a href="https://echo.sonophage.dev"><img src="https://img.shields.io/badge/Site-echo.sonophage.dev-7a5cff?style=for-the-badge" alt="Site" height="40"></a>
+  <a href="https://echo.sonophage.dev/docs.html"><img src="https://img.shields.io/badge/Docs-read%20the%20guide-2f80ed?style=for-the-badge" alt="Documentation" height="40"></a>
+  <a href="#with-obtainium-recommended-updates-arrive-by-themselves"><img src="https://img.shields.io/badge/Obtainium-get%20updates-6d4aff?style=for-the-badge" alt="Get it with Obtainium" height="40"></a>
+  <a href="https://discord.gg/ytsyZ26URr"><img src="https://img.shields.io/badge/Discord-join%20the%20server-5865f2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord" height="40"></a>
 </p>
 
 <p align="center">
