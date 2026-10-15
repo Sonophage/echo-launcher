@@ -445,7 +445,7 @@ private fun EmptyDrawerMessage(
         if (filter == AppFilter.RECENT && !hasUsageAccess) {
             Spacer(Modifier.height(u.dp(14)))
             Text(
-                text = "Open Usage Access",
+                text = "Grant Access",
                 color = Color.White,
                 fontSize = u.sp(15),
                 modifier = Modifier

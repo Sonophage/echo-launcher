@@ -139,13 +139,11 @@ class InstalledAppRepository @Inject constructor(
 
     // a system settings screen: on the Main Screen's display
     fun openUsageAccessSettings() {
-        val intent = com.echo.core.data.permission.UsageAccess.settingsIntent()
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        runCatching {
-            context.startActivity(intent, LaunchTransition.options(context, launchScreens.mainDisplay()))
-        }.onFailure { e ->
-            Timber.w(e, "Could not open usage access settings")
+        val options = LaunchTransition.options(context, launchScreens.mainDisplay())
+        val opened = com.echo.core.data.permission.UsageAccess.settingsIntents(context.packageName).any { intent ->
+            runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options) }.isSuccess
         }
+        if (!opened) openAppInfo(context.packageName)
     }
 
     fun loadLastUsedTimestamps(): Map<String, Long> {

@@ -22,6 +22,7 @@ import com.echo.core.domain.model.settingsEntryFor
 import com.echo.core.ui.preview.CombinedPreviews
 import com.echo.core.ui.preview.EchoScreenPreview
 import com.echo.feature.settings.permissions.AppPermissions
+import com.echo.feature.settings.permissions.GrantRoute
 import com.echo.feature.settings.permissions.onMainScreen
 import com.echo.feature.settings.ui.wizard.WizardScaffold
 import com.echo.feature.settings.ui.wizard.WizardSplash
@@ -84,6 +85,7 @@ fun InitialSetupScreen(
     ) { uri -> if (uri != null) viewModel.linkVitaFolder(uri) }
 
     var grantToken by remember { mutableIntStateOf(0) }
+    var restrictedSteps by remember { mutableStateOf(false) }
     val askPermission = rememberPermissionAsker { grantToken++; viewModel.refreshGrants() }
     val context = androidx.compose.ui.platform.LocalContext.current
     val systemScreen = rememberLauncherForActivityResult(
@@ -147,6 +149,7 @@ fun InitialSetupScreen(
                     onSetAsHome = { systemScreen.launch(viewModel.homeRoleIntent().onMainScreen(context)) },
                     onGrantFolder = regrantFolder,
                     onRecentsIncludeApps = viewModel::setRecentsIncludeApps,
+                    onShowRestrictedSteps = { restrictedSteps = true },
                 )
                 continueRow()
             }
@@ -177,6 +180,7 @@ fun InitialSetupScreen(
             )
         }
     }
+    if (restrictedSteps) RestrictedSettingsSteps(onDismiss = { restrictedSteps = false })
 }
 
 private const val RETROARCH_PICK_STEPS =
@@ -244,6 +248,7 @@ private fun PermissionsPage(
     onSetAsHome: () -> Unit,
     onGrantFolder: (com.echo.feature.settings.viewmodel.FolderAccessRow) -> Unit,
     onRecentsIncludeApps: (Boolean) -> Unit = {},
+    onShowRestrictedSteps: () -> Unit = {},
 ) {
     LifecycleResumeEffect(Unit) {
         onRefresh()
@@ -251,7 +256,11 @@ private fun PermissionsPage(
     }
 
     val rows = remember(state.media) { AppPermissions.forWizard(Build.VERSION.SDK_INT, state.media) }
-    AppPermissionRows(rows, grantToken, onAsk, firstFocusKey = "perm_first")
+    // the restricted-setting hint sits under the two special accesses it explains (usage access is first)
+    val (special, asked) = rows.partition { it.route == GrantRoute.SYSTEM_SCREEN }
+    AppPermissionRows(special, grantToken, onAsk, firstFocusKey = "perm_first")
+    RestrictedSettingsRow(special, grantToken, onShowRestrictedSteps)
+    AppPermissionRows(asked, grantToken, onAsk)
     // owner, 2026-10-09: off on a new install, so Recent stayed empty for someone who only opens apps
     SettingsToggleRow(
         label = "Apps On The Recent Shelf",
@@ -259,7 +268,6 @@ private fun PermissionsPage(
         checked = state.recentsIncludeApps,
         onToggle = onRecentsIncludeApps,
     )
-    RestrictedSettingsRow(rows, grantToken)
     SettingsValueRow(
         label = "ECHO as Home",
         value = if (state.isHomeLauncher) "Active" else "Set…",

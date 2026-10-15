@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -40,6 +41,7 @@ fun PermissionsSettingsScreen(
     val regrantFolder = rememberFolderRegrant(viewModel::regrant)
 
     var readToken by remember { mutableIntStateOf(0) }
+    var restrictedSteps by remember { mutableStateOf(false) }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -69,7 +71,7 @@ fun PermissionsSettingsScreen(
         ) {
             SettingsGroup("Special access")
             AppPermissionRows(rows.filter { it.route == GrantRoute.SYSTEM_SCREEN }, readToken, ask)
-            RestrictedSettingsRow(rows, readToken)
+            RestrictedSettingsRow(rows, readToken) { restrictedSteps = true }
 
             if (folders.isNotEmpty()) {
                 SettingsGroup("Folders")
@@ -83,4 +85,5 @@ fun PermissionsSettingsScreen(
             AppPermissionRows(rows.filter { it.route == GrantRoute.INSTALL_TIME }, readToken, ask)
         }
     }
+    if (restrictedSteps) RestrictedSettingsSteps(onDismiss = { restrictedSteps = false })
 }

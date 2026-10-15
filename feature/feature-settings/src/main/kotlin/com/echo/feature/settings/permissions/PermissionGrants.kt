@@ -19,9 +19,17 @@ fun isGranted(context: Context, permission: AppPermission): Boolean = when (perm
 fun appDetailsIntent(context: Context): Intent =
     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
 
-// Android 13 and later block usage and notification access for an app installed outside a store until
-// "Allow restricted settings" is turned on in its App info
-fun restrictedSettingsApply(sdk: Int): Boolean = sdk >= android.os.Build.VERSION_CODES.TIRAMISU
+// Android blocks a special access for an app installed outside a store until "Allow restricted settings" is
+// turned on in its App info: notification access from Android 13, usage access from Android 15. An adb install
+// is not blocked, so a debug build does not show it
+fun restrictedSettingsApply(sdk: Int, permission: AppPermission): Boolean = when (permission.id) {
+    AppPermissions.NOTIFICATION_LISTENER -> sdk >= android.os.Build.VERSION_CODES.TIRAMISU
+    AppPermissions.USAGE_ACCESS -> sdk >= android.os.Build.VERSION_CODES.VANILLA_ICE_CREAM
+    else -> false
+}
+
+fun restrictedHintShows(sdk: Int, rows: List<AppPermission>, granted: (AppPermission) -> Boolean): Boolean =
+    rows.any { restrictedSettingsApply(sdk, it) && !granted(it) }
 
 // an Android screen started for a result opens on the Main Screen's display (#28); StartActivityForResult reads
 // its launch options from this extra
@@ -30,8 +38,9 @@ fun Intent.onMainScreen(context: Context): Intent = putExtra(
     com.echo.core.data.launch.LaunchScreens.mainScreenOptions(context),
 )
 
-fun systemScreenIntent(context: Context, permission: AppPermission): Intent = when (permission.id) {
-    AppPermissions.NOTIFICATION_LISTENER -> AndroidNotifications.settingsIntent()
-    AppPermissions.USAGE_ACCESS -> UsageAccess.settingsIntent()
-    else -> appDetailsIntent(context)
-}
+// the screens to try, in order; the last is ECHO's App info, for a ROM that has none of the others
+fun systemScreenIntents(context: Context, permission: AppPermission): List<Intent> = when (permission.id) {
+    AppPermissions.NOTIFICATION_LISTENER -> listOf(AndroidNotifications.settingsIntent())
+    AppPermissions.USAGE_ACCESS -> UsageAccess.settingsIntents(context.packageName)
+    else -> emptyList()
+} + appDetailsIntent(context)
